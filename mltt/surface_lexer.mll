@@ -1,7 +1,7 @@
 {
   open Surface_parser
 
-  exception Error of string
+  exception Error
 }
 
 let whitespace = [' ' '\t' '\n']
@@ -25,4 +25,4 @@ rule token = parse
 | '{'           { LBRACE }
 | '}'           { RBRACE }
 | eof           { END }
-| _             { raise (Error (Printf.sprintf "At offset %d: unexpected character.\n" (Lexing.lexeme_start lexbuf))) }
+| _             { raise Error }

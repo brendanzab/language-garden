@@ -18,18 +18,28 @@
   - [ ] REPL
 *)
 
+let print_error (pos : Lexing.position) message =
+  Printf.fprintf stderr "%s:%d:%d: %s\n%!"
+      pos.pos_fname
+      pos.pos_lnum
+      pos.pos_cnum
+      message
+
 let main () =
   let term =
     let source = Stdio.In_channel.(input_all stdin) in
     let lexbuf = Lexing.from_string source in
+    Lexing.set_filename lexbuf "<input>";
     try
       Surface_parser.main Surface_lexer.token lexbuf
     with
-    | Surface_lexer.Error msg ->
-        Printf.fprintf stderr "%s%!" msg;
+    | Surface_lexer.Error ->
+        let pos = Lexing.lexeme_start_p lexbuf in
+        print_error pos "unexpected character";
         exit 1
     | Surface_parser.Error ->
-        Printf.fprintf stderr "At offset %d: syntax error.\n%!" (Lexing.lexeme_start lexbuf);
+        let pos = Lexing.lexeme_start_p lexbuf in
+        print_error pos "syntax error";
         exit 1
     in
 
