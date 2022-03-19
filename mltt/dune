@@ -1,3 +1,8 @@
 (executable
  (name main)
- (libraries angstrom pp stdio))
+ (libraries pp stdio))
+
+(menhir
+ (modules surface_parser))
+
+(ocamllex surface_lexer)
