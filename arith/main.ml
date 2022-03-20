@@ -39,7 +39,7 @@ module StackArith = struct
   module Semantics = struct
 
     type value = int
-    type stack = int list
+    type stack = value list
 
     type state = {
       program : program;
