@@ -27,8 +27,7 @@ let print_error (pos : Lexing.position) message =
 
 let main () =
   let term =
-    let source = Stdio.In_channel.(input_all stdin) in
-    let lexbuf = Lexing.from_string source in
+    let lexbuf = Lexing.from_channel stdin in
     Lexing.set_filename lexbuf "<input>";
     try
       Surface_parser.main Surface_lexer.token lexbuf

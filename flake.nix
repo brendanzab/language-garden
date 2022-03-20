@@ -29,9 +29,7 @@
           ];
 
           buildInputs = [
-            ocamlPackages.angstrom
             ocamlPackages.pp
-            ocamlPackages.stdio
           ];
         };
       });
