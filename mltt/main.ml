@@ -30,13 +30,13 @@ let main () =
     let lexbuf = Lexing.from_channel stdin in
     Lexing.set_filename lexbuf "<input>";
     try
-      Surface_parser.main Surface_lexer.token lexbuf
+      SurfaceParser.main SurfaceLexer.token lexbuf
     with
-    | Surface_lexer.Error ->
+    | SurfaceLexer.Error ->
         let pos = Lexing.lexeme_start_p lexbuf in
         print_error pos "unexpected character";
         exit 1
-    | Surface_parser.Error ->
+    | SurfaceParser.Error ->
         let pos = Lexing.lexeme_start_p lexbuf in
         print_error pos "syntax error";
         exit 1

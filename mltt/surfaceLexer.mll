@@ -1,5 +1,5 @@
 {
-  open Surface_parser
+  open SurfaceParser
 
   exception Error
 }

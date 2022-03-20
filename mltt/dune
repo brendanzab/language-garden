@@ -3,6 +3,6 @@
  (libraries pp))
 
 (menhir
- (modules surface_parser))
+ (modules surfaceParser))
 
-(ocamllex surface_lexer)
+(ocamllex surfaceLexer)
