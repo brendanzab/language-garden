@@ -1,5 +1,3 @@
-open Base
-
 type term =
   | Name of string
   (* TODO: | Placeholder *)
@@ -49,6 +47,8 @@ module Elaboration : sig
   val synth_term : context -> term -> (Core.term * Core.Semantics.value, string) result
 
 end = struct
+
+  module List = Base.List
 
   type context = {
     level : Core.level;
