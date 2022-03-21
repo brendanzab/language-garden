@@ -56,12 +56,12 @@ let main () =
                 Pp.text ":";
               ]);
               Pp.space;
-              Pp.hvbox (Core.pp_term ty);
+              Pp.hvbox (Core.Pretty.term ty);
               Pp.space;
               Pp.text ":=";
             ]);
             Pp.space;
-            Pp.hvbox (Core.pp_term expr);
+            Pp.hvbox (Core.Pretty.term expr);
           ]));
         exit 0
     | Error message ->
