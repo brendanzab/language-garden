@@ -17,9 +17,9 @@ rule token = parse
 | ":"           { COLON }
 | ":="          { COLON_EQUALS }
 | "=>"          { EQUALS_GREATER }
-| "->"          { DASH_GREATER }
-| "."           { DOT }
-| ";"           { SEMI }
+| "->"          { HYPHEN_GREATER }
+| "."           { FULL_STOP }
+| ";"           { SEMICOLON }
 | '('           { LPAREN }
 | ')'           { RPAREN }
 | '{'           { LBRACE }

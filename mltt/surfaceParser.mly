@@ -6,9 +6,9 @@
 %token COLON ":"
 %token COLON_EQUALS ":="
 %token EQUALS_GREATER "=>"
-%token DASH_GREATER "->"
-%token DOT "."
-%token SEMI ";"
+%token HYPHEN_GREATER "->"
+%token FULL_STOP "."
+%token SEMICOLON ";"
 
 %token LPAREN "("
 %token RPAREN ")"
