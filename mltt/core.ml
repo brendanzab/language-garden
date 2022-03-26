@@ -112,13 +112,11 @@ end = struct
   and record_proj expr label =
     match expr with
     | Neutral neu -> Neutral (RecordProj (neu, label))
-    | RecordLit fields ->
-        let rec find_field = function
-          | [] -> raise (Error "field not found")
-          | ((label', expr) :: _) when label = label' -> expr
-          | (_ :: fields) -> find_field fields
-        in
-        find_field fields
+    | RecordLit fields -> begin
+        match fields |> List.find_opt (fun (l, _) -> l = label) with
+        | Some (_, expr) -> expr
+        | None -> raise (Error "field not found")
+    end
     | _ -> raise (Error "invalid record projection")
 
   let telescope_uncons = function
