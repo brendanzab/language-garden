@@ -17,7 +17,7 @@
       {
         devShell = legacyPackages.mkShell {
           nativeBuildInputs = [
-            ocamlPackages.dune_2
+            ocamlPackages.dune_3
             ocamlPackages.menhir
             ocamlPackages.ocaml
             ocamlPackages.findlib
