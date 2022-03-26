@@ -31,7 +31,7 @@ let term :=
 | let_term
 
 let let_term :=
-| "let"; p = pattern; ":"; t1 = let_term; ":="; t2 = let_term; ";"; t3 = let_term;
+| "let"; p = pattern; ":"; t1 = let_term; ":="; t2 = term; ";"; t3 = let_term;
     { Surface.Let (p, t1, t2, t3) }
 | app_term
 
