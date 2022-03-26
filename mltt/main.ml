@@ -46,7 +46,10 @@ let main () =
     let context = initial_context in
     match synth_term context term with
     | Ok (expr, ty) ->
+        let expr' = eval context expr in
+        let expr = quote context expr' in
         let ty = quote context ty in
+
         Format.printf "%a@." Pp.to_fmt
           (Pp.hvbox ~indent:2 (Pp.concat [
             Pp.hvbox ~indent:2 (Pp.concat [
