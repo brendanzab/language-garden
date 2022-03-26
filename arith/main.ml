@@ -84,3 +84,8 @@ module TreeToStack : Translation
     | TreeArith.Sub (n1, n2) -> translate n1 @ translate n2 @ [StackArith.Sub]
 
 end
+
+let main () =
+  ()
+
+let () = main ()

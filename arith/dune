@@ -1,2 +1,4 @@
 (executable
- (name main))
+ (name main)
+ (public_name arith)
+ (package arith))

@@ -1,5 +1,7 @@
 (executable
  (name main)
+ (public_name mltt)
+ (package mltt)
  (libraries pp))
 
 (menhir
