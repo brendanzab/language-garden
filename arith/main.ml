@@ -17,19 +17,19 @@ module type Translation = sig
   val translate : source -> target
 end
 
-(** Converts between the {!TreeArith} language and the {!StackArith} language *)
+(** Translation pass between the {!TreeLang} and {!StackLang} *)
 module TreeToStack : Translation
 
-  with type source := TreeArith.term
-  with type target := StackArith.program
+  with type source := TreeLang.term
+  with type target := StackLang.program
 
 = struct
 
-  let rec translate : TreeArith.term -> StackArith.program =
+  let rec translate : TreeLang.term -> StackLang.program =
     function
-    | TreeArith.Num n -> [StackArith.Num n]
-    | TreeArith.Add (n1, n2) -> translate n1 @ translate n2 @ [StackArith.Add]
-    | TreeArith.Sub (n1, n2) -> translate n1 @ translate n2 @ [StackArith.Sub]
+    | TreeLang.Num n -> [StackLang.Num n]
+    | TreeLang.Add (n1, n2) -> translate n1 @ translate n2 @ [StackLang.Add]
+    | TreeLang.Sub (n1, n2) -> translate n1 @ translate n2 @ [StackLang.Sub]
 
 end
 
@@ -59,8 +59,8 @@ let main () =
 
   let program = TreeToStack.translate term in
   program |> List.iter (function
-    | StackArith.Num n -> Printf.fprintf stdout "num %d\n" n
-    | StackArith.Add -> Printf.fprintf stdout "add\n"
-    | StackArith.Sub -> Printf.fprintf stdout "sub\n")
+    | StackLang.Num n -> Printf.fprintf stdout "num %d\n" n
+    | StackLang.Add -> Printf.fprintf stdout "add\n"
+    | StackLang.Sub -> Printf.fprintf stdout "sub\n")
 
 let () = main ()

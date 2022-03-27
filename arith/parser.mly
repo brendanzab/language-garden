@@ -5,7 +5,7 @@
 %token CLOSE_PAREN ")"
 %token END
 
-%start <TreeArith.term> main
+%start <TreeLang.term> main
 
 %%
 
@@ -15,13 +15,13 @@ let main :=
 
 let term :=
 | t1 = atomic_term; "+"; t2 = term;
-    { TreeArith.Add (t1, t2) }
+    { TreeLang.Add (t1, t2) }
 | t1 = atomic_term; "-"; t2 = term;
-    { TreeArith.Sub (t1, t2) }
+    { TreeLang.Sub (t1, t2) }
 | atomic_term
 
 let atomic_term :=
 | "("; t = term; ")";
     { t }
 | n = NUMBER;
-    { TreeArith.Num n }
+    { TreeLang.Num n }
