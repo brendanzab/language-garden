@@ -1,0 +1,6 @@
+<input> : Type :=
+  {
+    Carrier : Type;
+    append : fun (_ : @0) -> fun (_ : @1) -> @2;
+    empty : @1;
+  }

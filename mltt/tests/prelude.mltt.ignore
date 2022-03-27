@@ -1,0 +1,160 @@
+-- Combinators
+
+let id : fun (A : _) -> A -> A :=
+  fun _ a => a;
+
+let always : fun (A : _) (B : _) -> A -> B -> A :=
+  fun _ _ a _ => a;
+
+let compose : fun (A : _) (B : _) (C : _) -> (A -> B) -> (B -> C) -> (A -> C) :=
+  fun _ _ _ ab bc =>
+      fun a => bc (ab a);
+
+
+-- Booleans
+
+let Bool : Type :=
+  fun (Bool : _) ->
+      fun (true : Bool) ->
+      fun (false : Bool) ->
+        Bool;
+
+let true : Bool :=
+  fun Bool true false => true;
+
+let false : Bool :=
+  fun Bool true false => false;
+
+
+let not : Bool -> Bool :=
+  fun bool =>
+      fun Bool true false =>
+        bool Bool false true;
+
+
+-- Natural numbers
+
+let Nat : Type :=
+  fun (Nat : _) ->
+      fun (succ : Nat -> Nat) ->
+      fun (zero : Nat) ->
+        Nat;
+
+let zero : Nat
+    := fun Nat succ zero => zero;
+
+let succ : Nat -> Nat
+    := fun prev Nat succ zero =>
+        succ (prev _ succ zero);
+
+
+let add : Nat -> Nat -> Nat :=
+  fun n0 n1 Nat succ zero =>
+      n0 Nat succ (n1 Nat succ zero);
+
+let mul : Nat -> Nat -> Nat :=
+  fun n0 n1 =>
+      fun Nat succ zero =>
+        n0 Nat (n1 Nat succ) zero;
+
+
+-- Lists
+
+let List : Type -> Type :=
+  fun Elem =>
+      fun (List : _) ->
+      fun (nil : List) ->
+      fun (cons : Elem -> List -> List) ->
+        List;
+
+let nil : fun (Elem : _) -> List Elem :=
+  fun Elem =>
+      fun List nil cons => nil;
+
+let cons : fun (Elem : _) -> Elem -> List Elem -> List Elem :=
+  fun Elem head tail =>
+      fun List nil cons =>
+        cons head (tail _ nil cons);
+
+
+-- Vectors
+
+let Vec : Type -> Nat -> Type :=
+  fun Elem len =>
+      fun (Vec : Nat -> Type) ->
+      fun (nil : Vec zero) ->
+      fun (cons : fun (len : _) -> Elem -> Vec len -> Vec (succ len)) ->
+        Vec len;
+
+let vec-nil : fun (Elem : _) -> Vec Elem zero :=
+  fun Elem =>
+      fun Vec nil cons => nil;
+
+let vec-cons : fun (Elem : _) (len : _) -> Elem -> Vec Elem len -> Vec Elem (succ len) :=
+  fun Elem len head tail =>
+      fun Vec nil cons =>
+        cons _ head (tail Vec nil cons);
+
+
+-- Void
+
+let Void : Type :=
+  fun (Void : Type) -> Void;
+
+let absurd : fun (A : Type) -> Void -> A :=
+  fun A void => void A;
+
+
+-- Unit
+
+let Unit : Type :=
+  fun (Unit : Type) ->
+      fun (unit : Unit) ->
+        Unit;
+
+let unit : Unit :=
+  fun Unit unit => unit;
+
+
+-- Leibniz equality
+
+-- This states that two things of the same type are equal if every property of
+-- one is also a property of the other.
+let Eq : fun (A : _) -> A -> A -> Type :=
+  fun A a0 a1 =>
+      fun (P : A -> Type) -> P a0 -> P a1;
+
+let refl : fun (A : _) (a : A) -> Eq A a a :=
+  fun A a P => id (P a);
+
+
+let trans : fun (A : _) (a0 : A) (a1 : A) (a2 : A) ->
+    Eq _ a0 a1 -> Eq _ a1 a2 -> Eq _ a0 a2 :=
+  fun _ a0 a1 a2 p0 p1 =>
+      fun P => compose _ _ _ (p0 P) (p1 P);
+
+let sym : fun (A : _) (a0 : A) (a1 : A) -> Eq _ a0 a1 -> Eq _ a1 a0 :=
+  fun _ a0 a1 p =>
+      p (fun a1 => Eq _ a1 a0) (refl _ _);
+
+
+-- Examples
+
+let id_elim_type := (fun a => a) Type;
+
+let list1 : List Bool :=
+  cons _ (id _ true) (nil _);
+
+let five : Nat := succ (succ (succ (succ (succ zero))));
+let ten : Nat := add five five;
+let hundred : Nat := mul ten ten;
+let thousand : Nat := mul ten hundred;
+
+let eq_test : Eq _ hundred hundred := refl _ _;
+
+let eq-id-elim-type : Eq _ ((fun a => a) Type) Type := refl _ _;
+let eq-id-elim-true : Eq _ ((fun a => a) true) true := refl _ _;
+let eq-id-elim-false : Eq _ ((fun a => a) false) false := refl _ _;
+
+
+Type

@@ -30,6 +30,7 @@
 
           buildInputs = [
             ocamlPackages.pp
+            ocamlPackages.ppx_string
           ];
         };
       });

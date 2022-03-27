@@ -1,0 +1,3 @@
+-- test let expressions
+let x : Type := {};
+x
