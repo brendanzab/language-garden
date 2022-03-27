@@ -1,10 +1,10 @@
 (executable
- (name main)
- (public_name mltt)
- (package mltt)
- (libraries pp))
+  (name main)
+  (public_name mltt)
+  (package mltt)
+  (libraries pp))
 
 (menhir
- (modules surfaceParser))
+  (modules surfaceParser))
 
 (ocamllex surfaceLexer)

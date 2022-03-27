@@ -1,9 +1,9 @@
 (executable
- (name main)
- (public_name arith)
- (package arith))
+  (name main)
+  (public_name arith)
+  (package arith))
 
 (menhir
- (modules parser))
+  (modules parser))
 
 (ocamllex lexer)
