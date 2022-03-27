@@ -2,3 +2,8 @@
  (name main)
  (public_name arith)
  (package arith))
+
+(menhir
+ (modules parser))
+
+(ocamllex lexer)

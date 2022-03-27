@@ -5,58 +5,6 @@
   - https://www.marigold.dev/post/efficiently-implementing-the-lambda-calculus-with-zinc
 *)
 
-module TreeArith = struct
-
-  type term =
-    | Num of int
-    | Add of term * term
-    | Sub of term * term
-
-  module Semantics = struct
-
-    type value = int
-
-    let rec eval : term -> value =
-      function
-      | Num n -> n
-      | Add (n1, n2) -> eval n1 + eval n2
-      | Sub (n1, n2) -> eval n1 - eval n2
-
-  end
-
-end
-
-module StackArith = struct
-
-  type instruction =
-    | Num of int
-    | Add
-    | Sub
-
-  type program =
-    instruction list
-
-  module Semantics = struct
-
-    type value = int
-    type stack = value list
-
-    type state = {
-      program : program;
-      stack : stack;
-    }
-
-    let step : state -> state =
-      function
-      | { program = Num n :: program; stack } -> { program = program; stack = n :: stack }
-      | { program = Add :: program; stack = n1 :: n2 :: stack } -> { program = program; stack = n1 + n2 :: stack }
-      | { program = Sub :: program; stack = n1 :: n2 :: stack } -> { program = program; stack = n1 - n2 :: stack }
-      | { program = _; stack = _ } -> failwith "invalid program"
-
-  end
-
-end
-
 (** A translation pass between two languages *)
 module type Translation = sig
   (** The source language *)
@@ -85,7 +33,34 @@ module TreeToStack : Translation
 
 end
 
+let print_error (pos : Lexing.position) message =
+  Printf.fprintf stderr "%s:%d:%d: %s\n%!"
+      pos.pos_fname
+      pos.pos_lnum
+      pos.pos_cnum
+      message
+
 let main () =
-  ()
+  let term =
+    let lexbuf = Lexing.from_channel stdin in
+    Lexing.set_filename lexbuf "<input>";
+    try
+      Parser.main Lexer.token lexbuf
+    with
+    | Lexer.Error ->
+        let pos = Lexing.lexeme_start_p lexbuf in
+        print_error pos "unexpected character";
+        exit 1
+    | Parser.Error ->
+        let pos = Lexing.lexeme_start_p lexbuf in
+        print_error pos "syntax error";
+        exit 1
+  in
+
+  let program = TreeToStack.translate term in
+  program |> List.iter (function
+    | StackArith.Num n -> Printf.fprintf stdout "num %d\n" n
+    | StackArith.Add -> Printf.fprintf stdout "add\n"
+    | StackArith.Sub -> Printf.fprintf stdout "sub\n")
 
 let () = main ()
