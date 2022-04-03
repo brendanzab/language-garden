@@ -81,7 +81,7 @@ end = struct
     | Var index -> begin
       match List.nth_opt env index with
       | Some value -> value
-      | None -> raise (Error "var not found")
+      | None -> raise (Error ("var not found @" ^ string_of_int index))
     end
     | Let (_, def_expr, body_expr) ->
         eval (eval env def_expr :: env) body_expr
@@ -232,7 +232,7 @@ module Pretty = struct
           ] in
 
     function
-    | Var index -> Pp.text (string_of_int index)
+    | Var index -> Pp.text ("@" ^ string_of_int index)
     | Let (def_ty, def_expr, body_expr) ->
         Pp.concat [
           Pp.hvbox ~indent (Pp.concat [
