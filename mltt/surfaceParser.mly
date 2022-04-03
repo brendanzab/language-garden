@@ -33,15 +33,20 @@ let term :=
 let let_term :=
 | "let"; p = pattern; ":"; t1 = let_term; ":="; t2 = term; ";"; t3 = let_term;
     { Surface.Let (p, t1, t2, t3) }
+| fun_term
+
+let fun_term :=
+| t1 =  app_term; "->"; t2 = fun_term;
+    { Surface.Arrow (t1, t2) }
+| "fun"; "("; p = pattern; ":"; t1 = term; ")"; "->"; t2 = fun_term;
+    { Surface.FunctionType (p, t1, t2) }
+| "fun"; "("; p = pattern; ":"; t1 = term; ")"; "=>"; t2 = fun_term;
+    { Surface.FunctionLit (p, Some t1, t2) }
+| "fun"; p = pattern; "=>"; t2 = fun_term;
+    { Surface.FunctionLit (p, None, t2) }
 | app_term
 
 let app_term :=
-| "fun"; "("; p = pattern; ":"; t1 = term; ")"; "->"; t2 = app_term;
-    { Surface.FunctionType (p, t1, t2) }
-| "fun"; "("; p = pattern; ":"; t1 = term; ")"; "=>"; t2 = app_term;
-    { Surface.FunctionLit (p, Some t1, t2) }
-| "fun"; p = pattern; "=>"; t2 = app_term;
-    { Surface.FunctionLit (p, None, t2) }
 | t = atomic_term; ts = nonempty_list(atomic_term);
     { Surface.App (t, ts) }
 | atomic_term
