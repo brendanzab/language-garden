@@ -29,6 +29,8 @@ module Elaboration : sig
   (** Bind a new parameter in the {!context} *)
   val bind_param : context -> string option -> Core.Semantics.value -> context
 
+  (** Normalise a {!Core.term} in the given {!context} *)
+  val norm : context -> Core.term -> Core.term
 
   (** Evaluate a {!Core.term} in the given {!context} *)
   val eval : context -> Core.term -> Core.Semantics.value
@@ -83,6 +85,9 @@ end = struct
     let* index = List.elem_index (Some name) context.names in
     let* ty = List.nth_opt context.types index in
     Some (index, ty)
+
+  let norm context =
+    Core.Semantics.norm context.exprs
 
   let eval context =
     Core.Semantics.eval context.exprs

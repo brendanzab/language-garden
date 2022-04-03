@@ -41,7 +41,7 @@ module Semantics : sig
 
   val eval : env -> term -> value
   val quote : level -> value -> term
-  val normalise : env -> term -> term
+  val norm : env -> term -> term
 
   val closure_app : closure -> value -> value
   val telescope_uncons : telescope -> (value * (value -> telescope)) option
@@ -153,7 +153,7 @@ end = struct
     let var = Neutral (Var size) in
     quote (size + 1) (closure_app closure var)
 
-  let normalise env term =
+  let norm env term =
     let value = eval env term
     in quote (List.length env) value
 

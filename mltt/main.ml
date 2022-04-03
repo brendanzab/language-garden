@@ -25,7 +25,37 @@ let print_error (pos : Lexing.position) message =
       pos.pos_cnum
       message
 
+let print_result name ty expr =
+  Format.printf "%a@." Pp.to_fmt
+    (Pp.hvbox ~indent:2 (Pp.concat [
+      Pp.hvbox ~indent:2 (Pp.concat [
+        Pp.hvbox ~indent:2 (Pp.concat [
+          Pp.text name;
+          Pp.space;
+          Pp.text ":";
+        ]);
+        Pp.space;
+        Pp.hvbox (Core.Pretty.term ty);
+        Pp.space;
+        Pp.text ":=";
+      ]);
+      Pp.space;
+      Pp.hvbox (Core.Pretty.term expr);
+    ]))
+
 let main () =
+  let mode =
+    match Array.to_list Sys.argv with
+      | [ _; "elab" ] -> `elab
+      | [ _; "norm" ] -> `norm
+      | _ ->
+          Printf.fprintf stderr "error: unexpected CLI arguments\n";
+          Printf.fprintf stderr "Usage:\n";
+          Printf.fprintf stderr "    mltt elab\n";
+          Printf.fprintf stderr "    mltt norm\n";
+          exit 1
+    in
+
   let term =
     let lexbuf = Lexing.from_channel stdin in
     Lexing.set_filename lexbuf "<input>";
@@ -46,26 +76,14 @@ let main () =
     let context = initial_context in
     match synth_term context term with
     | Ok (expr, ty) ->
-        let expr' = eval context expr in
-        let expr = quote context expr' in
         let ty = quote context ty in
+        let expr =
+          match mode with
+          | `elab -> expr
+          | `norm -> norm context expr
+        in
 
-        Format.printf "%a@." Pp.to_fmt
-          (Pp.hvbox ~indent:2 (Pp.concat [
-            Pp.hvbox ~indent:2 (Pp.concat [
-              Pp.hvbox ~indent:2 (Pp.concat [
-                Pp.text "input";
-                Pp.space;
-                Pp.text ":";
-              ]);
-              Pp.space;
-              Pp.hvbox (Core.Pretty.term ty);
-              Pp.space;
-              Pp.text ":=";
-            ]);
-            Pp.space;
-            Pp.hvbox (Core.Pretty.term expr);
-          ]));
+        print_result "<input>" ty expr;
         exit 0
     | Error message ->
         print_endline ("error: " ^ message);
