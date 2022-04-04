@@ -124,7 +124,9 @@ end = struct
     | Cons (value, _, []) ->
         Some (value, fun _ -> Nil)
     | Cons (value, env, term :: terms) ->
-        Some (value, fun value -> Cons (eval env term, value :: env, terms))
+        Some (value, fun value ->
+          let env = value :: env in
+          Cons (eval env term, env, terms))
 
   let rec quote size : value -> term = function
     | Neutral neu -> quote_neu size neu
