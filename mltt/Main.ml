@@ -22,7 +22,7 @@ let print_error (pos : Lexing.position) message =
   Printf.fprintf stderr "%s:%d:%d: %s\n%!"
       pos.pos_fname
       pos.pos_lnum
-      pos.pos_cnum
+      (pos.pos_cnum - pos.pos_bol)
       message
 
 let print_result name ty expr =

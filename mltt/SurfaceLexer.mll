@@ -4,13 +4,15 @@
   exception Error
 }
 
-let whitespace = [' ' '\t' '\n']
-let comment = "--" [^ '\n' ]* '\n'
+let newline = '\n'
+let whitespace = [' ' '\t']
+let comment = "--" [^ '\n']* newline
 let ident = ['a'-'z' 'A'-'Z']['-' '_' 'a'-'z' 'A'-'Z' '0'-'9']*
 
 rule token = parse
 | whitespace    { token lexbuf }
-| comment       { token lexbuf }
+| newline       { Lexing.new_line lexbuf; token lexbuf }
+| comment       { Lexing.new_line lexbuf; token lexbuf }
 | "_"           { UNDERSCORE }
 | "fun"         { FUN }
 | "let"         { LET }
