@@ -4,6 +4,6 @@
   (package arith))
 
 (menhir
-  (modules parser))
+  (modules Parser))
 
-(ocamllex lexer)
+(ocamllex Lexer)
