@@ -17,7 +17,7 @@
 
 %token END
 
-%start <Surface.term> main
+%start <SurfaceSyntax.term> main
 
 %%
 
@@ -27,45 +27,45 @@ let main :=
 
 let term :=
 | t1 = let_term; ":"; t2 = let_term;
-    { Surface.Ann (t1, t2) }
+    { SurfaceSyntax.Ann (t1, t2) }
 | let_term
 
 let let_term :=
 | "let"; p = pattern; ":"; t1 = let_term; ":="; t2 = term; ";"; t3 = let_term;
-    { Surface.Let (p, t1, t2, t3) }
+    { SurfaceSyntax.Let (p, t1, t2, t3) }
 | fun_term
 
 let fun_term :=
 | t1 =  app_term; "->"; t2 = fun_term;
-    { Surface.Arrow (t1, t2) }
+    { SurfaceSyntax.Arrow (t1, t2) }
 | "fun"; "("; p = pattern; ":"; t1 = term; ")"; "->"; t2 = fun_term;
-    { Surface.FunctionType (p, t1, t2) }
+    { SurfaceSyntax.FunctionType (p, t1, t2) }
 | "fun"; "("; p = pattern; ":"; t1 = term; ")"; "=>"; t2 = fun_term;
-    { Surface.FunctionLit (p, Some t1, t2) }
+    { SurfaceSyntax.FunctionLit (p, Some t1, t2) }
 | "fun"; p = pattern; "=>"; t2 = fun_term;
-    { Surface.FunctionLit (p, None, t2) }
+    { SurfaceSyntax.FunctionLit (p, None, t2) }
 | app_term
 
 let app_term :=
 | t = atomic_term; ts = nonempty_list(atomic_term);
-    { Surface.App (t, ts) }
+    { SurfaceSyntax.App (t, ts) }
 | atomic_term
 
 let atomic_term :=
 | n = NAME;
-    { Surface.Name n }
+    { SurfaceSyntax.Name n }
 | "Type";
-    { Surface.Type }
+    { SurfaceSyntax.Type }
 | "("; t = term; ")";
     { t }
 | "{"; "}";
-    { Surface.Unit }
+    { SurfaceSyntax.Unit }
 | "{"; fs = nonempty_sequence(l = NAME; ":"; t = term; { l, t }); "}";
-    { Surface.RecordType fs }
+    { SurfaceSyntax.RecordType fs }
 | "{"; fs = nonempty_sequence(l = NAME; ":="; t = term; { l, t }); "}";
-    { Surface.RecordLit fs }
+    { SurfaceSyntax.RecordLit fs }
 | t = atomic_term; "."; l = NAME;
-    { Surface.Proj (t, l) }
+    { SurfaceSyntax.Proj (t, l) }
 
 let pattern :=
 | "_";

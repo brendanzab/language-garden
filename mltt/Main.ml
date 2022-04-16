@@ -18,6 +18,10 @@
   - [ ] REPL
 *)
 
+module Lexer = Surface.Lexer
+module Parser = Surface.Parser
+module Elaborator = Surface.Elaborator
+
 let print_error (pos : Lexing.position) message =
   Printf.fprintf stderr "%s:%d:%d: %s\n%!"
       pos.pos_fname
@@ -60,34 +64,32 @@ let main () =
     let lexbuf = Lexing.from_channel stdin in
     Lexing.set_filename lexbuf "<input>";
     try
-      SurfaceParser.main SurfaceLexer.token lexbuf
+      Parser.main Lexer.token lexbuf
     with
-    | SurfaceLexer.Error ->
+    | Lexer.Error ->
         let pos = Lexing.lexeme_start_p lexbuf in
         print_error pos "unexpected character";
         exit 1
-    | SurfaceParser.Error ->
+    | Parser.Error ->
         let pos = Lexing.lexeme_start_p lexbuf in
         print_error pos "syntax error";
         exit 1
     in
 
-  Surface.Elaboration.(
-    let context = initial_context in
-    match synth_term context term with
-    | Ok (expr, ty) ->
-        let ty = quote context ty in
-        let expr =
-          match mode with
-          | `elab -> expr
-          | `norm -> norm context expr
-        in
+  let context = Elaborator.initial_context in
+  match Elaborator.synth_term context term with
+  | Ok (expr, ty) ->
+      let ty = Elaborator.quote context ty in
+      let expr =
+        match mode with
+        | `elab -> expr
+        | `norm -> Elaborator.norm context expr
+      in
 
-        print_result "<input>" ty expr;
-        exit 0
-    | Error message ->
-        print_endline ("error: " ^ message);
-        exit 1
-  )
+      print_result "<input>" ty expr;
+      exit 0
+  | Error message ->
+      print_endline ("error: " ^ message);
+      exit 1
 
 let () = main ()
