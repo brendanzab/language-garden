@@ -5,16 +5,12 @@ type term =
   | Var of index
   | Let of term * term * term
   | UnivType
-  (* TODO: | TypeFormat *)
   | TypeFunction of term * term
   | TypeRecord of (string * term) list
   | FunctionLit of term * term
   | FunctionApp of term * term
   | RecordLit of (string * term) list
   | RecordProj of term * string
-  (* TODO: | FormatSequence of (string * term) list *)
-  (* TODO: | FormatArray of term * term *)
-  (* TODO: | FormatRepr of term *)
 
 module Semantics : sig
 
@@ -24,7 +20,6 @@ module Semantics : sig
   type value =
     | Neutral of neu
     | UnivType
-    (* TODO: | TypeFormat *)
     | TypeFunction of value * closure
     | TypeRecord of string list * telescope
     | FunctionLit of value * closure
@@ -56,7 +51,6 @@ end = struct
   type value =
     | Neutral of neu
     | UnivType
-    (* TODO: | TypeFormat *)
     | TypeFunction of value * closure
     | TypeRecord of string list * telescope
     | FunctionLit of value * closure
@@ -65,7 +59,6 @@ end = struct
     | Var of level
     | FunctionApp of neu * value
     | RecordProj of neu * string
-    (* TODO: | FormatRepr of neu *)
   and closure = {
     env : env;
     term : term;
