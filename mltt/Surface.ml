@@ -219,8 +219,8 @@ end = struct
               match labels, Core.Semantics.telescope_uncons tys with
               | [], _ | _, None -> Error ("label `" ^ label ^ "` not found in record")
               | label' :: _, Some (ty, _) when label = label' -> Ok ty
-              | _ :: labels, Some (_, tys) ->
-                  get_ty labels (tys (Core.Semantics.record_proj head_expr' label))
+              | label' :: labels, Some (_, tys) ->
+                  get_ty labels (tys (Core.Semantics.record_proj head_expr' label'))
             in
             let* ty = get_ty labels tys in
             Ok (Core.RecordProj (head_expr, label), ty)
