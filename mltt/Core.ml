@@ -124,9 +124,10 @@ end = struct
     | Cons (value, _, []) ->
         Some (value, fun _ -> Nil)
     | Cons (value, env, term :: terms) ->
-        Some (value, fun value ->
+        let values value =
           let env = value :: env in
-          Cons (eval env term, env, terms))
+          Cons (eval env term, env, terms) in
+        Some (value, values)
 
   let rec quote size : value -> term = function
     | Neutral neu -> quote_neu size neu
@@ -166,7 +167,7 @@ end = struct
     | UnivType, UnivType -> true
     | TypeFunction (param_ty1, body_ty1), TypeFunction (param_ty2, body_ty2) ->
         is_convertible size param_ty1 param_ty2
-        && is_convertible_closure size body_ty1 body_ty2
+          && is_convertible_closure size body_ty1 body_ty2
     | TypeRecord (labels1, tys1), TypeRecord (labels2, tys2) ->
         labels1 = labels2
           && is_convertible_tele size tys1 tys2
