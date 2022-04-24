@@ -26,6 +26,9 @@
             legacyPackages.fswatch # for `dune build --watch ...`
             ocamlPackages.ocamlformat-rpc-lib
             ocamlPackages.ocaml-lsp
+
+            # for REPL support
+            ocamlPackages.utop
           ];
 
           buildInputs = [
