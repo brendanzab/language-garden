@@ -5,7 +5,6 @@
 %token <string> NAME
 %token COLON ":"
 %token COLON_EQUALS ":="
-%token EQUALS_GREATER "=>"
 %token HYPHEN_GREATER "->"
 %token FULL_STOP "."
 %token SEMICOLON ";"
@@ -40,9 +39,9 @@ let fun_term :=
     { SurfaceSyntax.Arrow (t1, t2) }
 | "fun"; "("; p = pattern; ":"; t1 = term; ")"; "->"; t2 = fun_term;
     { SurfaceSyntax.FunctionType (p, t1, t2) }
-| "fun"; "("; p = pattern; ":"; t1 = term; ")"; "=>"; t2 = fun_term;
+| "fun"; "("; p = pattern; ":"; t1 = term; ")"; ":="; t2 = fun_term;
     { SurfaceSyntax.FunctionLit (p, Some t1, t2) }
-| "fun"; p = pattern; "=>"; t2 = fun_term;
+| "fun"; p = pattern; ":="; t2 = fun_term;
     { SurfaceSyntax.FunctionLit (p, None, t2) }
 | app_term
 

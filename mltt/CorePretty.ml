@@ -87,7 +87,7 @@ let rec term ?(indent = 2) =
           Pp.space;
           Pp.hvbox (param param_ty);
           Pp.space;
-          Pp.text "=>";
+          Pp.text ":=";
           Pp.space;
         ]);
         term body_expr;

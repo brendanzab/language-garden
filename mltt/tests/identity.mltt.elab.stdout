@@ -1,7 +1,7 @@
 <input> : { A : Type; } :=
-  let _ : fun (_ : Type) -> fun (_ : @0) -> @1 := fun (_ : Type) => fun
+  let _ : fun (_ : Type) -> fun (_ : @0) -> @1 := fun (_ : Type) := fun
                                                                     (_ : @0)
-                                                                    =>
+                                                                    :=
                                                                     @0;
     @0
   {

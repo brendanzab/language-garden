@@ -1,13 +1,13 @@
 -- Combinators
 
 let id : fun (A : Type) -> A -> A :=
-  fun _ => fun a => a;
+  fun _ := fun a := a;
 
 let always : fun (A : Type) -> fun (B : Type) -> A -> B -> A :=
-  fun _ => fun _ => fun a => fun _ => a;
+  fun _ := fun _ := fun a := fun _ := a;
 
 let compose : fun (A : Type) -> fun (B : Type) -> fun (C : Type) -> (A -> B) -> (B -> C) -> (A -> C) :=
-  fun _ => fun _ => fun _ => fun ab => fun bc =>
-      fun a => bc (ab a);
+  fun _ := fun _ := fun _ := fun ab := fun bc :=
+      fun a := bc (ab a);
 
 Type
