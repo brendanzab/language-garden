@@ -126,6 +126,56 @@
     (diff prelude.mltt.norm.stdout prelude.mltt.norm.stdout.exp)))
 
 
+; record-proj-1.mltt
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to record-proj-1.mltt.elab.stdout.exp
+      (with-stdin-from record-proj-1.mltt (run mltt elab)))))
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to record-proj-1.mltt.norm.stdout.exp
+      (with-stdin-from record-proj-1.mltt (run mltt norm)))))
+
+(rule
+  (alias runtest)
+  (action
+    (diff record-proj-1.mltt.elab.stdout record-proj-1.mltt.elab.stdout.exp)))
+
+(rule
+  (alias runtest)
+  (action
+    (diff record-proj-1.mltt.norm.stdout record-proj-1.mltt.norm.stdout.exp)))
+
+
+; record-proj-2.mltt
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to record-proj-2.mltt.elab.stdout.exp
+      (with-stdin-from record-proj-2.mltt (run mltt elab)))))
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to record-proj-2.mltt.norm.stdout.exp
+      (with-stdin-from record-proj-2.mltt (run mltt norm)))))
+
+(rule
+  (alias runtest)
+  (action
+    (diff record-proj-2.mltt.elab.stdout record-proj-2.mltt.elab.stdout.exp)))
+
+(rule
+  (alias runtest)
+  (action
+    (diff record-proj-2.mltt.norm.stdout record-proj-2.mltt.norm.stdout.exp)))
+
+
 ; type.mltt
 
 (rule
