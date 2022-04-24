@@ -37,8 +37,7 @@ let rec eval env : Syntax.term -> value = function
       TypeFunction (eval env param_ty, { env; term = body_ty })
   | Syntax.TypeRecord [] -> TypeRecord ([], Nil)
   | Syntax.TypeRecord ((label, ty) :: fields) ->
-      let labels = List.map (fun (label, _) -> label) fields in
-      let tys = List.map (fun (_, ty) -> ty) fields in
+      let labels, tys = List.split fields in
       TypeRecord (label :: labels, Cons (eval env ty, env, tys))
   | Syntax.FunctionLit (param_ty, body) ->
       FunctionLit (eval env param_ty, { env; term = body })
