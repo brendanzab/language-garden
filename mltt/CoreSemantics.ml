@@ -1,3 +1,4 @@
+module List = Base.List
 module Syntax = CoreSyntax
 
 type level = int
@@ -84,7 +85,7 @@ let rec quote size : value -> Syntax.term = function
       let rec quote_fields size labels tys =
         match labels, telescope_uncons tys with
         | [], None -> []
-        | [], _ | _, None -> raise (Error "invalid record type telescope")
+        | [], _ | _::_, None -> raise (Error "mismatched labels and telescope")
         | label :: labels, Some (ty, tys) ->
             let var = Neutral (Var size) in
             (label, quote size ty) :: quote_fields (size + 1) labels (tys var)

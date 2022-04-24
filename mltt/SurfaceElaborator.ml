@@ -166,7 +166,8 @@ and synth_term context expr =
           let head_expr' = eval context head_expr in
           let rec get_ty labels tys =
             match labels, Core.Semantics.telescope_uncons tys with
-            | [], _ | _, None -> Error ("label `" ^ label ^ "` not found in record")
+            | [], None -> Error ("label `" ^ label ^ "` not found in record")
+            | [], _ | _::_, None -> Error ("bug: mismatched labels and telescope")
             | label' :: _, Some (ty, _) when label = label' -> Ok ty
             | label' :: labels, Some (_, tys) ->
                 get_ty labels (tys (Core.Semantics.record_proj head_expr' label'))
