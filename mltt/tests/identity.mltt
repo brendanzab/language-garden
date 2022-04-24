@@ -1,0 +1,4 @@
+let id : fun (A : Type) -> A -> A :=
+  fun A => fun a => a;
+
+id { A : Type } { A := {} }
