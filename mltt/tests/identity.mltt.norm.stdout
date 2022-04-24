@@ -1,1 +1,1 @@
-<input> : { A : Type; } := { A = {}; }
+<input> : { A : Type; } := { A := {}; }

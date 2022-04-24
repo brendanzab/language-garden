@@ -47,7 +47,7 @@ let rec term ?(indent = 2) =
             ]);
             term def_ty;
             Pp.space;
-            Pp.text "=";
+            Pp.text ":=";
             Pp.space;
           ]);
           term def_expr;
@@ -104,7 +104,7 @@ let rec term ?(indent = 2) =
         Pp.hvbox (Pp.concat [
           Pp.text label;
           Pp.space;
-          Pp.text "=";
+          Pp.text ":=";
           Pp.space;
         ]);
         term expr;

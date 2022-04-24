@@ -1,1 +1,1 @@
-<input> : Type := let _ : Type = {}; @0
+<input> : Type := let _ : Type := {}; @0
