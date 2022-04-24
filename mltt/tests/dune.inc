@@ -101,6 +101,31 @@
     (diff monoid.mltt.norm.stdout monoid.mltt.norm.stdout.exp)))
 
 
+; prelude.mltt
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to prelude.mltt.elab.stdout.exp
+      (with-stdin-from prelude.mltt (run mltt elab)))))
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to prelude.mltt.norm.stdout.exp
+      (with-stdin-from prelude.mltt (run mltt norm)))))
+
+(rule
+  (alias runtest)
+  (action
+    (diff prelude.mltt.elab.stdout prelude.mltt.elab.stdout.exp)))
+
+(rule
+  (alias runtest)
+  (action
+    (diff prelude.mltt.norm.stdout prelude.mltt.norm.stdout.exp)))
+
+
 ; type.mltt
 
 (rule
