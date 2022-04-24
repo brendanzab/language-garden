@@ -61,7 +61,7 @@ and check_term context expr expected_ty =
       let body_context = bind_def context def_name def_ty' (eval context def_expr) in
       let* body_expr = check_term body_context body_expr expected_ty in
       Ok (Core.Syntax.Let (def_ty, def_expr, body_expr))
-  | Syntax.FunctionLit (param_name, None, body_expr), Core.Semantics.TypeFunction (param_ty, body_ty) ->
+  | Syntax.FunctionLit ((param_name, None), body_expr), Core.Semantics.TypeFunction (param_ty, body_ty) ->
       let param_expr = Core.Semantics.Neutral (Core.Semantics.Var context.level) in
       let body_ty = Core.Semantics.closure_app body_ty param_expr in
       let body_context = bind_param context param_name param_ty in
@@ -122,13 +122,15 @@ and synth_term context expr =
       let body_context = bind_param context None (eval context param_ty) in
       let* body_ty = check_ty body_context body_ty in
       Ok (Core.Syntax.TypeFunction (param_ty, body_ty), Core.Semantics.UnivType)
-  | Syntax.FunctionType (param_name, param_ty, body_ty) ->
+  | Syntax.FunctionType ((param_name, Some param_ty), body_ty) ->
       let* param_ty = check_ty context param_ty in
       let body_context = bind_param context param_name (eval context param_ty) in
       let* body_ty = check_ty body_context body_ty in
       Ok (Core.Syntax.TypeFunction (param_ty, body_ty), Core.Semantics.UnivType)
-  | Syntax.FunctionLit (_, _, _) ->
-      Error "type annotations required"
+  | Syntax.FunctionType ((_, None), _) ->
+      Error "type annotations required for function type parameter"
+  | Syntax.FunctionLit (_, _) ->
+      Error "type annotations required for function literal"
   | Syntax.RecordType fields ->
       (* TODO: make tail recursive *)
       let rec check_fields context seen_labels = function

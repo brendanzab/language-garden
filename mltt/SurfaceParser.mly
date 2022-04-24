@@ -37,12 +37,10 @@ let let_term :=
 let fun_term :=
 | t1 =  app_term; "->"; t2 = fun_term;
     { SurfaceSyntax.Arrow (t1, t2) }
-| "fun"; "("; p = pattern; ":"; t1 = term; ")"; "->"; t2 = fun_term;
-    { SurfaceSyntax.FunctionType (p, t1, t2) }
-| "fun"; "("; p = pattern; ":"; t1 = term; ")"; ":="; t2 = fun_term;
-    { SurfaceSyntax.FunctionLit (p, Some t1, t2) }
-| "fun"; p = pattern; ":="; t2 = fun_term;
-    { SurfaceSyntax.FunctionLit (p, None, t2) }
+| "fun"; ps = nonempty_list(param); "->"; t = fun_term;
+    { List.fold_right (fun p t -> SurfaceSyntax.FunctionType (p, t)) ps t }
+| "fun"; ps = nonempty_list(param); ":="; t = fun_term;
+    { List.fold_right (fun p t -> SurfaceSyntax.FunctionLit (p, t)) ps t }
 | app_term
 
 let app_term :=
@@ -71,6 +69,12 @@ let pattern :=
     { None }
 | n = NAME;
     { Some n }
+
+let param :=
+| "("; p = pattern; ":"; t = term; ")";
+    { p, Some t }
+| p = pattern;
+    { p, None }
 
 let nonempty_sequence(T) :=
 | t = T; option(";");

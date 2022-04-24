@@ -6,8 +6,8 @@ type term =
   | Let of string option * term * term * term
   | Type
   | Arrow of term * term
-  | FunctionType of string option * term * term
-  | FunctionLit of string option * term option * term
+  | FunctionType of (string option * term option) * term
+  | FunctionLit of (string option * term option) * term
   | RecordType of (string * term) list
   | RecordLit of (string * term) list
   | Unit
