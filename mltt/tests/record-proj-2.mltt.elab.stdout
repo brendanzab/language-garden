@@ -1,0 +1,6 @@
+<input> : { A : Type; a : @0; } :=
+  let _ : Type := { A : Type; a : @0; }; let _ : @0 := {
+                                             A := @0;
+                                             a := { A := Type; a := @0; };
+                                           };
+                                           @0.a

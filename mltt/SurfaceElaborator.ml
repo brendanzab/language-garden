@@ -68,22 +68,20 @@ and check_term context expr expected_ty =
       let* body_expr = check_term body_context body_expr body_ty in
       Ok (Core.Syntax.FunctionLit (quote context param_ty, body_expr))
   | Syntax.RecordLit fields, Core.Semantics.TypeRecord (labels, tys) ->
-      (* TODO: make tail recursive *)
-      let rec check_fields context fields labels tys =
+      let rec check_fields fields labels tys =
         match fields, labels, Core.Semantics.telescope_uncons tys with
         | [], [], None -> Ok []
         | [], _, _ -> Error "not enough fields in record literal"
-        | _, [], _ | _, _, None -> Error "too many fields in record literal"
+        | _, [], None -> Error "too many fields in record literal"
+        | _, [], Some _ | _, _::_, None -> Error "bug: mismatched labels and telescope"
         | (label, _) :: _, label' :: _, _ when label <> label' ->
             Error ("unexpected field, found `" ^ label ^ "` expected `" ^ label' ^ "`")
         | (label, expr) :: fields, _ :: labels, Some (ty, tys) ->
             let* expr = check_term context expr ty in
-            let expr' = eval context expr in
-            let fields_context = bind_def context (Some label) ty expr' in
-            let* fields = check_fields fields_context fields labels (tys expr') in
+            let* fields = check_fields fields labels (tys (eval context expr)) in
             Ok ((label, expr) :: fields)
       in
-      let* fields = check_fields context fields labels tys in
+      let* fields = check_fields fields labels tys in
       Ok (Core.Syntax.RecordLit fields)
   | Syntax.Unit, Core.Semantics.UnivType ->
       Ok (Core.Syntax.TypeRecord [])
@@ -132,7 +130,6 @@ and synth_term context expr =
   | Syntax.FunctionLit (_, _) ->
       Error "type annotations required for function literal"
   | Syntax.RecordType fields ->
-      (* TODO: make tail recursive *)
       let rec check_fields context seen_labels = function
         | [] -> Ok []
         | (label, _) :: _ when List.mem label seen_labels ->
