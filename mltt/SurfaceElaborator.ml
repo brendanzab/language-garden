@@ -158,19 +158,23 @@ and synth_term context expr =
           | _ -> Error "function expected")
         (synth_term context head_expr)
         arg_exprs
-  | Syntax.Proj (head_expr, label) ->
-      let* (head_expr, head_ty) = synth_term context head_expr in
-      match head_ty with
-      | Core.Semantics.TypeRecord (labels, tys) ->
-          let head_expr' = eval context head_expr in
-          let rec get_ty labels tys =
-            match labels, Core.Semantics.telescope_uncons tys with
-            | [], None -> Error ("label `" ^ label ^ "` not found in record")
-            | [], _ | _::_, None -> Error ("bug: mismatched labels and telescope")
-            | label' :: _, Some (ty, _) when label = label' -> Ok ty
-            | label' :: labels, Some (_, tys) ->
-                get_ty labels (tys (Core.Semantics.record_proj head_expr' label'))
-          in
-          let* ty = get_ty labels tys in
-          Ok (Core.Syntax.RecordProj (head_expr, label), ty)
-      | _ -> Error "record expected"
+  | Syntax.Proj (head_expr, labels) ->
+      let rec proj_ty head_expr label labels tys =
+        match labels, Core.Semantics.telescope_uncons tys with
+        | [], None -> Error ("label `" ^ label ^ "` not found in record")
+        | [], _ | _::_, None -> Error ("bug: mismatched labels and telescope")
+        | label' :: _, Some (ty, _) when label = label' -> Ok ty
+        | label' :: labels, Some (_, tys) ->
+            let tys = tys (Core.Semantics.record_proj head_expr label') in
+            proj_ty head_expr label labels tys
+      in
+      List.fold_left
+        (fun head_expr label ->
+          let* (head_expr, head_ty) = head_expr in
+          match head_ty with
+          | Core.Semantics.TypeRecord (labels, tys) ->
+              let* ty = proj_ty (eval context head_expr) label labels tys in
+              Ok (Core.Syntax.RecordProj (head_expr, label), ty)
+          | _ -> Error "record expected")
+        (synth_term context head_expr)
+        labels

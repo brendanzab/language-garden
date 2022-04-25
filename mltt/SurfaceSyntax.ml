@@ -12,4 +12,4 @@ type term =
   | RecordLit of (string * term) list
   | Unit
   | App of term * term list
-  | Proj of term * string
+  | Proj of term * string list

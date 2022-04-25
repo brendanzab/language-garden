@@ -44,8 +44,13 @@ let fun_term :=
 | app_term
 
 let app_term :=
-| t = atomic_term; ts = nonempty_list(atomic_term);
+| t = proj_term; ts = nonempty_list(proj_term);
     { SurfaceSyntax.App (t, ts) }
+| proj_term
+
+let proj_term :=
+| t = atomic_term; ls = nonempty_list("."; l = NAME; { l });
+    { SurfaceSyntax.Proj (t, ls) }
 | atomic_term
 
 let atomic_term :=
@@ -61,8 +66,6 @@ let atomic_term :=
     { SurfaceSyntax.RecordType fs }
 | "{"; fs = nonempty_sequence(l = NAME; ":="; t = term; { l, t }); "}";
     { SurfaceSyntax.RecordLit fs }
-| t = atomic_term; "."; l = NAME;
-    { SurfaceSyntax.Proj (t, l) }
 
 let pattern :=
 | "_";
