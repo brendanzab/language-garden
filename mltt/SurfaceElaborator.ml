@@ -52,6 +52,27 @@ let (let*) = Result.bind
 let rec check_ty context ty =
   check_term context ty Core.Semantics.UnivType
 
+and check_param (name, ty) expected_ty context =
+  match ty with
+  | Some ty ->
+      let* ty = check_ty context ty in
+      let ty' = eval context ty in
+      if is_convertible context ty' expected_ty then
+        Ok (ty, bind_param context name ty')
+      else
+        Error "mismatched parameter types"
+  | None ->
+      let ty = quote context expected_ty in
+      Ok (ty, bind_param context name expected_ty)
+
+and synth_param (name, ty) context =
+  match ty with
+  | Some ty ->
+      let* ty = check_ty context ty in
+      let ty' = eval context ty in
+      Ok (ty, bind_param context name ty')
+  | None -> Error "type annotations required for parameter"
+
 and check_term context expr expected_ty =
   match expr, expected_ty with
   | Syntax.Let (def_name, def_ty, def_expr, body_expr), _ ->
@@ -61,12 +82,12 @@ and check_term context expr expected_ty =
       let body_context = bind_def context def_name def_ty' (eval context def_expr) in
       let* body_expr = check_term body_context body_expr expected_ty in
       Ok (Core.Syntax.Let (def_ty, def_expr, body_expr))
-  | Syntax.FunctionLit ((param_name, None), body_expr), Core.Semantics.TypeFunction (param_ty, body_ty) ->
+  | Syntax.FunctionLit (param, body_expr), Core.Semantics.TypeFunction (param_ty, body_ty) ->
+      let* (param_ty, body_context) = check_param param param_ty context in
       let param_expr = Core.Semantics.Neutral (Core.Semantics.Var context.level) in
       let body_ty = Core.Semantics.closure_app body_ty param_expr in
-      let body_context = bind_param context param_name param_ty in
       let* body_expr = check_term body_context body_expr body_ty in
-      Ok (Core.Syntax.FunctionLit (quote context param_ty, body_expr))
+      Ok (Core.Syntax.FunctionLit (param_ty, body_expr))
   | Syntax.RecordLit fields, Core.Semantics.TypeRecord (labels, tys) ->
       let rec check_fields fields labels tys =
         match fields, labels, Core.Semantics.telescope_uncons tys with
@@ -120,15 +141,16 @@ and synth_term context expr =
       let body_context = bind_param context None (eval context param_ty) in
       let* body_ty = check_ty body_context body_ty in
       Ok (Core.Syntax.TypeFunction (param_ty, body_ty), Core.Semantics.UnivType)
-  | Syntax.FunctionType ((param_name, Some param_ty), body_ty) ->
-      let* param_ty = check_ty context param_ty in
-      let body_context = bind_param context param_name (eval context param_ty) in
+  | Syntax.FunctionType (param, body_ty) ->
+      let* (param_ty, body_context) = synth_param param context in
       let* body_ty = check_ty body_context body_ty in
       Ok (Core.Syntax.TypeFunction (param_ty, body_ty), Core.Semantics.UnivType)
-  | Syntax.FunctionType ((_, None), _) ->
-      Error "type annotations required for function type parameter"
-  | Syntax.FunctionLit (_, _) ->
-      Error "type annotations required for function literal"
+  | Syntax.FunctionLit (param, body_expr) ->
+      let* (param_ty, body_context) = synth_param param context in
+      let* (body_expr, body_ty) = synth_term body_context body_expr in
+      (* TODO: avoid re-evaluating of param_ty *)
+      let fun_ty = Core.Syntax.TypeFunction (param_ty, quote body_context body_ty) in
+      Ok (Core.Syntax.FunctionLit (param_ty, body_expr), eval context fun_ty)
   | Syntax.RecordType fields ->
       let rec check_fields context seen_labels = function
         | [] -> Ok []
