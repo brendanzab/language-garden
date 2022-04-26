@@ -4,6 +4,7 @@ let print_stanza name =
 ; %{name}
 
 (rule
+  (alias "%{name}.elab")
   (deps ../main.exe)
   (action
     (with-stdin-from %{name}
@@ -11,6 +12,7 @@ let print_stanza name =
         (run mltt elab)))))
 
 (rule
+  (alias "%{name}.norm")
   (deps ../main.exe)
   (action
     (with-stdin-from %{name}
@@ -19,13 +21,15 @@ let print_stanza name =
 
 (rule
   (alias runtest)
+  (deps (alias %{name}.elab))
   (action
-    (diff %{name}.elab.stdout %{name}.elab.stdout.exp)))
+    (diff expected/%{name}.elab.stdout %{name}.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (deps (alias %{name}.norm))
   (action
-    (diff %{name}.norm.stdout %{name}.norm.stdout.exp)))
+    (diff expected/%{name}.norm.stdout %{name}.norm.stdout.exp)))
 |}]
 
 
