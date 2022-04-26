@@ -73,13 +73,24 @@ and synth_param (name, ty) context =
       Ok (ty, bind_param context name ty')
   | None -> Error "type annotations required for parameter"
 
+and synth_def (name, ty, expr) context =
+  match ty with
+  | Some ty ->
+      let* ty = check_ty context ty in
+      let ty' = eval context ty in
+      let* expr = check_term context expr ty' in
+      let body_context = bind_def context name ty' (eval context expr) in
+      Ok (ty, expr, body_context)
+  | None ->
+      let* expr, ty' = synth_term context expr in
+      let ty = quote context ty' in
+      let body_context = bind_def context name ty' (eval context expr) in
+      Ok (ty, expr, body_context)
+
 and check_term context expr expected_ty =
   match expr, expected_ty with
   | Syntax.Let (def_name, def_ty, def_expr, body_expr), _ ->
-      let* def_ty = check_ty context def_ty in
-      let def_ty' = eval context def_ty in
-      let* def_expr = check_term context def_expr def_ty' in
-      let body_context = bind_def context def_name def_ty' (eval context def_expr) in
+      let* def_ty, def_expr, body_context = synth_def (def_name, def_ty, def_expr) context in
       let* body_expr = check_term body_context body_expr expected_ty in
       Ok (Core.Syntax.Let (def_ty, def_expr, body_expr))
   | Syntax.FunctionLit (param, body_expr), Core.Semantics.TypeFunction (param_ty, body_ty) ->
@@ -128,10 +139,7 @@ and synth_term context expr =
       let* expr = check_term context expr ty' in
       Ok (expr, ty')
   | Syntax.Let (def_name, def_ty, def_expr, body_expr) ->
-      let* def_ty = check_ty context def_ty in
-      let def_ty' = eval context def_ty in
-      let* def_expr = check_term context def_expr def_ty' in
-      let body_context = bind_def context def_name def_ty' (eval context def_expr) in
+      let* def_ty, def_expr, body_context = synth_def (def_name, def_ty, def_expr) context in
       let* (body_expr, body_ty) = synth_term body_context body_expr in
       Ok (Core.Syntax.Let (def_ty, def_expr, body_expr), body_ty)
   | Syntax.Type ->

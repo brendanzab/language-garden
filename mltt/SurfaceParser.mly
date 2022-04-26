@@ -30,7 +30,7 @@ let term :=
 | let_term
 
 let let_term :=
-| "let"; p = pattern; ":"; t1 = let_term; ":="; t2 = term; ";"; t3 = let_term;
+| "let"; p = pattern; t1 = option(":"; t1 = let_term; { t1 }); ":="; t2 = term; ";"; t3 = let_term;
     { SurfaceSyntax.Let (p, t1, t2, t3) }
 | fun_term
 

@@ -26,6 +26,31 @@
     (diff dependent-record.mltt.norm.stdout dependent-record.mltt.norm.stdout.exp)))
 
 
+; identity-synth.mltt
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to identity-synth.mltt.elab.stdout.exp
+      (with-stdin-from identity-synth.mltt (run mltt elab)))))
+
+(rule
+  (deps ../main.exe)
+  (action
+    (with-stdout-to identity-synth.mltt.norm.stdout.exp
+      (with-stdin-from identity-synth.mltt (run mltt norm)))))
+
+(rule
+  (alias runtest)
+  (action
+    (diff identity-synth.mltt.elab.stdout identity-synth.mltt.elab.stdout.exp)))
+
+(rule
+  (alias runtest)
+  (action
+    (diff identity-synth.mltt.norm.stdout identity-synth.mltt.norm.stdout.exp)))
+
+
 ; identity.mltt
 
 (rule
