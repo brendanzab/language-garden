@@ -1,6 +1,6 @@
 (*
 
-  An implementation of MLTT with records
+  A simple implementation of Matin-Löf Type Theory with records
 
   Inspiration
 
@@ -8,14 +8,6 @@
   - [Bidirectional typechecking for higher-rank polymorphism](https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7)
   - [Very simple typechecker for MLTT](https://gist.github.com/mb64/4a49d710dcdd1875bebdbc59081acb85)
 
-  TODO:
-
-  - [x] interpreter
-  - [x] elaborator
-    - [ ] unifier
-  - [x] parser
-  - [x] pretty printer
-  - [ ] REPL
 *)
 
 module Lexer = Surface.Lexer
