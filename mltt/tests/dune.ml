@@ -6,14 +6,16 @@ let print_stanza name =
 (rule
   (deps ../main.exe)
   (action
-    (with-stdout-to %{name}.elab.stdout.exp
-      (with-stdin-from %{name} (run mltt elab)))))
+    (with-stdin-from %{name}
+      (with-stdout-to %{name}.elab.stdout.exp
+        (run mltt elab)))))
 
 (rule
   (deps ../main.exe)
   (action
-    (with-stdout-to %{name}.norm.stdout.exp
-      (with-stdin-from %{name} (run mltt norm)))))
+    (with-stdin-from %{name}
+      (with-stdout-to %{name}.norm.stdout.exp
+        (run mltt norm)))))
 
 (rule
   (alias runtest)
