@@ -1,11 +1,11 @@
 let R : Type := {
-    A : Type;
-    a : A;
+  A : Type;
+  a : A;
 };
 
 let r : R := {
-    A := Type;
-    a := {};
+  A := Type;
+  a := {};
 };
 
 r.a
