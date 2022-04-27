@@ -1,3 +1,4 @@
+-- Identity function, defined using an annotated function literal
 let id := fun (A : Type) (a : A) := a;
 
 id { A : Type } { A := {} }

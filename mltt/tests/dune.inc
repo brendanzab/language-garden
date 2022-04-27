@@ -32,66 +32,66 @@
     (diff expected/dependent-record.mltt.norm.stdout dependent-record.mltt.norm.stdout.exp)))
 
 
-; identity-synth.mltt
+; identity-fun-lit-check.mltt
 
 (rule
-  (alias "identity-synth.mltt.elab")
+  (alias "identity-fun-lit-check.mltt.elab")
   (deps ../main.exe)
   (action
-    (with-stdin-from identity-synth.mltt
-      (with-stdout-to identity-synth.mltt.elab.stdout.exp
+    (with-stdin-from identity-fun-lit-check.mltt
+      (with-stdout-to identity-fun-lit-check.mltt.elab.stdout.exp
         (run mltt elab)))))
 
 (rule
-  (alias "identity-synth.mltt.norm")
+  (alias "identity-fun-lit-check.mltt.norm")
   (deps ../main.exe)
   (action
-    (with-stdin-from identity-synth.mltt
-      (with-stdout-to identity-synth.mltt.norm.stdout.exp
+    (with-stdin-from identity-fun-lit-check.mltt
+      (with-stdout-to identity-fun-lit-check.mltt.norm.stdout.exp
         (run mltt norm)))))
 
 (rule
   (alias runtest)
-  (deps (alias identity-synth.mltt.elab))
+  (deps (alias identity-fun-lit-check.mltt.elab))
   (action
-    (diff expected/identity-synth.mltt.elab.stdout identity-synth.mltt.elab.stdout.exp)))
+    (diff expected/identity-fun-lit-check.mltt.elab.stdout identity-fun-lit-check.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (deps (alias identity-synth.mltt.norm))
+  (deps (alias identity-fun-lit-check.mltt.norm))
   (action
-    (diff expected/identity-synth.mltt.norm.stdout identity-synth.mltt.norm.stdout.exp)))
+    (diff expected/identity-fun-lit-check.mltt.norm.stdout identity-fun-lit-check.mltt.norm.stdout.exp)))
 
 
-; identity.mltt
+; identity-fun-lit-synth.mltt
 
 (rule
-  (alias "identity.mltt.elab")
+  (alias "identity-fun-lit-synth.mltt.elab")
   (deps ../main.exe)
   (action
-    (with-stdin-from identity.mltt
-      (with-stdout-to identity.mltt.elab.stdout.exp
+    (with-stdin-from identity-fun-lit-synth.mltt
+      (with-stdout-to identity-fun-lit-synth.mltt.elab.stdout.exp
         (run mltt elab)))))
 
 (rule
-  (alias "identity.mltt.norm")
+  (alias "identity-fun-lit-synth.mltt.norm")
   (deps ../main.exe)
   (action
-    (with-stdin-from identity.mltt
-      (with-stdout-to identity.mltt.norm.stdout.exp
+    (with-stdin-from identity-fun-lit-synth.mltt
+      (with-stdout-to identity-fun-lit-synth.mltt.norm.stdout.exp
         (run mltt norm)))))
 
 (rule
   (alias runtest)
-  (deps (alias identity.mltt.elab))
+  (deps (alias identity-fun-lit-synth.mltt.elab))
   (action
-    (diff expected/identity.mltt.elab.stdout identity.mltt.elab.stdout.exp)))
+    (diff expected/identity-fun-lit-synth.mltt.elab.stdout identity-fun-lit-synth.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (deps (alias identity.mltt.norm))
+  (deps (alias identity-fun-lit-synth.mltt.norm))
   (action
-    (diff expected/identity.mltt.norm.stdout identity.mltt.norm.stdout.exp)))
+    (diff expected/identity-fun-lit-synth.mltt.norm.stdout identity-fun-lit-synth.mltt.norm.stdout.exp)))
 
 
 ; let.mltt
