@@ -15,6 +15,9 @@ let initial_context = {
   exprs = [];
 }
 
+let next_var context =
+  Core.Semantics.Neutral (Core.Semantics.Var context.level)
+
 let bind_def context name ty expr = {
   level = context.level + 1;
   names = name :: context.names;
@@ -26,7 +29,7 @@ let bind_param context name ty = {
   level = context.level + 1;
   names = name :: context.names;
   types = ty :: context.types;
-  exprs = Core.Semantics.Neutral (Core.Semantics.Var context.level) :: context.exprs;
+  exprs = next_var context :: context.exprs;
 }
 
 let lookup context name =
@@ -95,8 +98,7 @@ and check_term context expr expected_ty =
       Ok (Core.Syntax.Let (def_ty, def_expr, body_expr))
   | Syntax.FunctionLit (param, body_expr), Core.Semantics.TypeFunction (param_ty, body_ty) ->
       let* (param_ty, body_context) = check_param param param_ty context in
-      let param_expr = Core.Semantics.Neutral (Core.Semantics.Var context.level) in
-      let body_ty = Core.Semantics.closure_app body_ty param_expr in
+      let body_ty = Core.Semantics.closure_app body_ty (next_var context) in
       let* body_expr = check_term body_context body_expr body_ty in
       Ok (Core.Syntax.FunctionLit (param_ty, body_expr))
   | Syntax.RecordLit fields, Core.Semantics.TypeRecord (labels, tys) ->
