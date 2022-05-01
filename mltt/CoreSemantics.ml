@@ -121,10 +121,18 @@ let rec is_convertible size value1 value2 =
   | FunctionLit (param_ty1, body_expr1), FunctionLit (param_ty2, body_expr2) ->
       is_convertible size param_ty1 param_ty2
         && is_convertible_closure size body_expr1 body_expr2
+  | FunctionLit (_, body_expr), value | value, FunctionLit (_, body_expr) ->
+      let var = Neutral (Var size) in
+      is_convertible (size + 1) (closure_app body_expr var) (function_app value var)
   | RecordLit fields1, RecordLit fields2 ->
       let on_field (label1, expr1) (label2, expr2) =
         label1 = label2 && is_convertible size expr1 expr2 in
       List.for_all2 on_field fields1 fields2
+  | RecordLit fields, value | value, RecordLit fields ->
+      List.for_all
+        (fun (label, expr) ->
+          is_convertible size expr (record_proj value label))
+        fields
   | _, _ -> false
 and is_convertible_neu size nue1 nue2 =
   match nue1, nue2 with
