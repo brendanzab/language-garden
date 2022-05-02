@@ -14,9 +14,9 @@ rule token = parse
 | newline       { Lexing.new_line lexbuf; token lexbuf }
 | comment       { Lexing.new_line lexbuf; token lexbuf }
 | "_"           { UNDERSCORE }
-| "fun"         { FUN }
-| "let"         { LET }
-| "Type"        { TYPE }
+| "fun"         { KEYWORD_FUN }
+| "let"         { KEYWORD_LET }
+| "Type"        { KEYWORD_TYPE }
 | ident as n    { NAME n }
 | ":"           { COLON }
 | ":="          { COLON_EQUALS }

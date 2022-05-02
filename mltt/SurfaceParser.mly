@@ -1,7 +1,7 @@
 %token UNDERSCORE "_"
-%token FUN "fun"
-%token LET "let"
-%token TYPE "Type"
+%token KEYWORD_FUN "fun"
+%token KEYWORD_LET "let"
+%token KEYWORD_TYPE "Type"
 %token <string> NAME
 %token COLON ":"
 %token COLON_EQUALS ":="
