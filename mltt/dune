@@ -5,6 +5,7 @@
   (libraries pp))
 
 (menhir
-  (modules SurfaceParser))
+  (modules SurfaceParser)
+  (flags --explain --strict))
 
 (ocamllex SurfaceLexer)
