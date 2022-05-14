@@ -1,14 +1,69 @@
 -- Combinators
 
+-- The polymorphic identity function
 let id : fun (A : Type) -> A -> A :=
   fun _ a := a;
 
+-- A function that always returns the same value
 let always : fun (A : Type) (B : Type) -> A -> B -> A :=
   fun _ _ a _ := a;
 
+-- Flip the order of the first two inputs to a function
+let flip : fun (A : Type) (B : Type) (C : Type) -> (A -> B -> C) -> (B -> A -> C) :=
+  fun _ _ _ a-b-c :=
+    fun b a := a-b-c a b;
+
+-- Function composition
 let compose : fun (A : Type) (B : Type) (C : Type) -> (A -> B) -> (B -> C) -> (A -> C) :=
-  fun _ _ _ ab bc :=
-    fun a := bc (ab a);
+  fun _ _ _ a-b b-c :=
+    fun a := b-c (a-b a);
+
+-- Substitution
+let subst : fun (A : Type) (B : Type) (C : Type) -> (A -> B -> C) -> (A -> B) -> A -> C :=
+  fun _ _ _ a-b-c a-b a :=
+    a-b-c a (a-b a);
+
+
+-- Dependent Combinators
+
+-- Flip the order of the first two inputs to a dependent function
+let dep-flip :
+  fun (A : Type) (B : Type) (C : A -> B -> Type) ->
+  fun (a-b-c : fun (a : A) (b : B) -> C a b) ->
+    (fun (b : B) (a : A) -> C a b) :=
+      fun _ _ _ a-b-c :=
+        fun b a := a-b-c a b;
+
+-- Dependent function composition
+let dep-compose :
+  fun (A : Type) (B : A -> Type) (C : fun (a : A) -> B a -> Type) ->
+  fun (a-b : fun (a : A) -> B a) ->
+  fun (a-b-c : fun (a : A) (b : B a) -> C a b) ->
+    (fun (a : A) -> C a (a-b a)) :=
+      fun _ _ _ a-b a-b-c :=
+        fun a := a-b-c a (a-b a);
+
+-- Dependent substitution.
+--
+-- Takes three inputs and then returns the first input applied to the third,
+-- which is then applied to the result of the second input applied to the third.
+--
+-- Also known as the 'S Combinator' in the [SKI combinator calculus][ski-wiki].
+--
+-- # References
+--
+-- - [Outrageous but Meaningful Coincidences: Dependent type-safe syntax and evaluation][dep-rep]
+--   (Described in Section 5 as an infix `_ˢ_` operator)
+--
+-- [ski-wiki]: https://en.wikipedia.org/wiki/SKI_combinator_calculus
+-- [dep-rep]: https://personal.cis.strath.ac.uk/conor.mcbride/pub/DepRep/DepRep.pdf
+let dep-subst :
+  fun (A : Type) (B : A -> Type) (C : fun (a : A) -> B a -> Type) ->
+  fun (a-b-c : fun (a : A) (b : B a) -> C a b) ->
+  fun (a-b : fun (a : A) -> B a) ->
+    (fun (a : A) -> C a (a-b a)) :=
+      fun _ _ _ a-b-c a-b :=
+        fun a :=  a-b-c a (a-b a);
 
 
 -- Booleans
