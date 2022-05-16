@@ -1,32 +1,61 @@
 -- Combinators
 
 -- The polymorphic identity function
+--
+-- Also known as the ‘I combinator’ in [combinatory logic].
+--
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
 let id : fun (A : Type) -> A -> A :=
   fun _ a := a;
 
 -- A function that always returns the same value
+--
+-- Also known as the ‘C combinator’ in [combinatory logic].
+--
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
 let always : fun (A : Type) (B : Type) -> A -> B -> A :=
   fun _ _ a _ := a;
 
 -- Flip the order of the first two inputs to a function
+--
+-- Also known as the ‘T combinator’ in [combinatory logic].
+--
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
 let flip : fun (A : Type) (B : Type) (C : Type) -> (A -> B -> C) -> (B -> A -> C) :=
   fun _ _ _ a-b-c :=
     fun b a := a-b-c a b;
 
--- Function composition
+-- Connect the outputs of one function to the inputs of another function
+--
+-- Also known as the ‘Z combinator’ in [combinatory logic].
+--
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
 let compose : fun (A : Type) (B : Type) (C : Type) -> (A -> B) -> (B -> C) -> (A -> C) :=
   fun _ _ _ a-b b-c :=
     fun a := b-c (a-b a);
 
--- Substitution
-let subst : fun (A : Type) (B : Type) (C : Type) -> (A -> B -> C) -> (A -> B) -> A -> C :=
-  fun _ _ _ a-b-c a-b a :=
-    a-b-c a (a-b a);
+-- Fuse two functions with the same input.
+--
+-- Also known as the ‘S combinator’ in [combinatory logic].
+--
+-- # References
+--
+-- * [Why is the S combinator an S?][s-combinator-blog]
+--
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
+-- [s-combinator-blog]: https://blog.plover.com/math/combinator-s.html
+let fuse : fun (A : Type) (B : Type) (C : Type) -> (A -> B -> C) -> (A -> B) -> (A -> C) :=
+  fun _ _ _ a-b-c a-b :=
+    fun a := a-b-c a (a-b a);
 
 
 -- Dependent Combinators
 
 -- Flip the order of the first two inputs to a dependent function
+--
+-- Also known as the ‘T combinator’ in [combinatory logic].
+--
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
 let dep-flip :
   fun (A : Type) (B : Type) (C : A -> B -> Type) ->
   fun (a-b-c : fun (a : A) (b : B) -> C a b) ->
@@ -35,6 +64,10 @@ let dep-flip :
         fun b a := a-b-c a b;
 
 -- Dependent function composition
+--
+-- Also known as the ‘Z combinator’ in [combinatory logic].
+--
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
 let dep-compose :
   fun (A : Type) (B : A -> Type) (C : fun (a : A) -> B a -> Type) ->
   fun (a-b : fun (a : A) -> B a) ->
@@ -43,21 +76,20 @@ let dep-compose :
       fun _ _ _ a-b a-b-c :=
         fun a := a-b-c a (a-b a);
 
--- Dependent substitution.
+-- Dependent fusion
 --
--- Takes three inputs and then returns the first input applied to the third,
--- which is then applied to the result of the second input applied to the third.
---
--- Also known as the 'S Combinator' in the [SKI combinator calculus][ski-wiki].
+-- Also known as the ‘S combinator’ in [combinatory logic].
 --
 -- # References
 --
--- - [Outrageous but Meaningful Coincidences: Dependent type-safe syntax and evaluation][dep-rep]
+-- * [Outrageous but Meaningful Coincidences: Dependent type-safe syntax and evaluation][dep-rep]
 --   (Described in Section 5 as an infix `_ˢ_` operator)
+-- * [Why is the S combinator an S?][s-combinator-blog]
 --
--- [ski-wiki]: https://en.wikipedia.org/wiki/SKI_combinator_calculus
+-- [combinatory logic]: https://en.wikipedia.org/wiki/Combinatory_logic
 -- [dep-rep]: https://personal.cis.strath.ac.uk/conor.mcbride/pub/DepRep/DepRep.pdf
-let dep-subst :
+-- [s-combinator-blog]: https://blog.plover.com/math/combinator-s.html
+let dep-fuse :
   fun (A : Type) (B : A -> Type) (C : fun (a : A) -> B a -> Type) ->
   fun (a-b-c : fun (a : A) (b : B a) -> C a b) ->
   fun (a-b : fun (a : A) -> B a) ->
