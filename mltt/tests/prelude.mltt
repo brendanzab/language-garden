@@ -98,6 +98,82 @@ let dep-fuse :
         fun a :=  a-b-c a (a-b a);
 
 
+-- Abstract algebra
+
+-- A carrier equipped with an associative operation
+let Semigroup := {
+  -- The carrier type
+  Carrier : Type;
+  -- The associative operation
+  append : Carrier -> Carrier -> Carrier;
+};
+
+
+-- Category theory
+
+let Category := {
+  -- An object in the category
+  Object : Type;
+  -- Arrows between the objects in the category
+  Arrow : Object -> Object -> Type;
+  -- The identity arrow
+  id : fun (A : Object) -> Arrow A A;
+  -- Compose two arrows
+  compose : fun (A : Object) (B : Object) (C : Object) -> Arrow A B -> Arrow B C -> Arrow A C;
+};
+
+-- Category of types and functions
+let type-category : Category := {
+    Object := Type;
+    Arrow := fun A B := A -> B;
+    id := id;
+    compose := compose;
+};
+
+-- Opposite category
+let opposite-category : Category -> Category :=
+  fun c := {
+      Object := c.Object;
+      Arrow := fun A B := c.Arrow B A;
+      id := c.id;
+      compose := fun A B C a-b b-c := c.compose C B A b-c a-b;
+  };
+
+-- A mapping from a source category into a target category.
+let Functor := {
+  -- The category to map from
+  source : Category;
+  -- The category to map into
+  target : Category;
+  -- Mapping from a source object into a target object
+  Map : source.Object -> target.Object;
+  -- Mapping from a source arrow into a target arrow
+  map : fun (A : source.Object) (B : source.Object) ->
+    (source.Arrow A B) ->
+    (target.Arrow (Map A) (Map B));
+};
+
+-- A mapping from a category to itself.
+let Endofunctor := {
+  -- The category to map between
+  self : Category;
+  -- Mapping between objects in the category
+  Map : self.Object -> self.Object;
+  -- Mapping between arrows in the category
+  map : fun (A : self.Object) (B : self.Object) -> (self.Arrow A B) -> (self.Arrow (Map A) (Map B));
+};
+
+-- An endofunctor is a functor where the source category is the same as the
+-- target category.
+let endofunctor-functor : Endofunctor -> Functor :=
+  fun endofunctor := {
+    source := endofunctor.self;
+    target := endofunctor.self;
+    Map := endofunctor.Map;
+    map := endofunctor.map;
+  };
+
+
 -- Booleans
 
 let Bool : Type :=
@@ -137,13 +213,26 @@ let succ : Nat -> Nat :=
 
 
 let add : Nat -> Nat -> Nat :=
-  fun n0 n1 Nat succ zero :=
-    n0 Nat succ (n1 Nat succ zero);
+  fun n0 n1 :=
+    fun Nat succ zero :=
+      n0 Nat succ (n1 Nat succ zero);
 
 let mul : Nat -> Nat -> Nat :=
   fun n0 n1 :=
     fun Nat succ zero :=
       n0 Nat (n1 Nat succ) zero;
+
+
+let nat-semigroup-add : Semigroup := {
+  Carrier := Nat;
+  append := add;
+};
+
+let nat-semigroup-mul : Semigroup := {
+  Carrier := Nat;
+  append := mul;
+};
+
 
 
 -- Lists
@@ -236,7 +325,7 @@ let ten : Nat := add five five;
 let hundred : Nat := mul ten ten;
 let thousand : Nat := mul ten hundred;
 
-let eq_test : Eq Nat hundred hundred := refl Nat hundred;
+let eq-test : Eq Nat hundred hundred := refl Nat hundred;
 
 let eq-id-elim-type : Eq Type ((id Type) Type) Type := refl Type Type;
 let eq-id-elim-true : Eq Bool ((id Bool) true) true := refl Bool true;
@@ -245,4 +334,5 @@ let eq-id-elim-false : Eq Bool ((id Bool) false) false := refl Bool false;
 
 --
 
+-- TODO: return a record containing the contents of the prelude
 Type
