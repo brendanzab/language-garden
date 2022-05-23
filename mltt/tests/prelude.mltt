@@ -254,6 +254,12 @@ let cons : fun (Elem : Type) -> Elem -> List Elem -> List Elem :=
       cons head (tail List nil cons);
 
 
+let list-map : fun (A : Type) (B : Type) -> (A -> B) -> List A -> List B :=
+  fun A B a-b as :=
+    fun List nil cons :=
+      as List nil (fun a bs := cons (a-b a) bs);
+
+
 -- Vectors
 
 let Vec : Type -> Nat -> Type :=
@@ -330,6 +336,13 @@ let eq-test : Eq Nat hundred hundred := refl Nat hundred;
 let eq-id-elim-type : Eq Type ((id Type) Type) Type := refl Type Type;
 let eq-id-elim-true : Eq Bool ((id Bool) true) true := refl Bool true;
 let eq-id-elim-false : Eq Bool ((id Bool) false) false := refl Bool false;
+
+let eq-list-map :
+  Eq (List Nat)
+    (list-map Bool Nat (fun b := b Nat zero five) (cons Bool false list1))
+    (cons Nat five (cons Nat zero (nil Nat)))
+:=
+  refl (List Nat) (cons Nat five (cons Nat zero (nil Nat)));
 
 
 --
