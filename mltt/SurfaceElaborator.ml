@@ -25,12 +25,8 @@ let bind_def context name ty expr = {
   exprs = expr :: context.exprs;
 }
 
-let bind_param context name ty = {
-  level = context.level + 1;
-  names = name :: context.names;
-  types = ty :: context.types;
-  exprs = next_var context :: context.exprs;
-}
+let bind_param context name ty =
+  bind_def context name ty (next_var context)
 
 let lookup context name =
   let (let*) = Option.bind in
