@@ -124,10 +124,10 @@ let Category := {
 
 -- Category of types and functions
 let type-category : Category := {
-    Object := Type;
-    Arrow := fun A B := A -> B;
-    id := id;
-    compose := compose;
+  Object := Type;
+  Arrow := fun A B := A -> B;
+  id := id;
+  compose := compose;
 };
 
 -- Opposite category
