@@ -6,3 +6,6 @@
 
 (package
  (name mltt))
+
+(package
+ (name record-patching))
