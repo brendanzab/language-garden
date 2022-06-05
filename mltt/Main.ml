@@ -1,12 +1,12 @@
-(*
+(** {0 Martin-Löf Type Theory}
 
-  A simple implementation of Matin-Löf Type Theory with records
+    An implementation of Martin-Löf Type Theory with dependent record types.
 
-  Inspiration
+    {1 Inspiration}
 
-  - [Typechecking for higher-rank polymorphism](https://gist.github.com/mb64/f49ccb1bbf2349c8026d8ccf29bd158e)
-  - [Bidirectional typechecking for higher-rank polymorphism](https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7)
-  - [Very simple typechecker for MLTT](https://gist.github.com/mb64/4a49d710dcdd1875bebdbc59081acb85)
+    - {{: https://gist.github.com/mb64/f49ccb1bbf2349c8026d8ccf29bd158e} Typechecking for higher-rank polymorphism}
+    - {{: https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7} Bidirectional typechecking for higher-rank polymorphism}
+    - {{: https://gist.github.com/mb64/4a49d710dcdd1875bebdbc59081acb85} Very simple typechecker for MLTT}
 
 *)
 
