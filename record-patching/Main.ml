@@ -2,7 +2,7 @@
 
     Record patching is a way to constrain the values of fields in a record type.
     Given a record type [ R ], a record patch can be applied using the syntax
-    [ R.{ l := t; ... } ]. For example:
+    [ R [ l := t; ... ] ]. For example:
 
     {[
       let Monoid := {
@@ -11,7 +11,7 @@
         append : T -> T -> T;
       };
 
-      let string-monoid : Monoid.{ T := String } := {
+      let string-monoid : Monoid [ T := String ] := {
         T := String;
         empty := "";
         append := string-append;
@@ -25,7 +25,7 @@
     equality constraints} in type parameter bounds.
 
     Patches are soley a feature of the surface language and are removed during
-    elaboration. The expression [ Monoid.{ T := String } ] in the example above
+    elaboration. The expression [ Monoid [ T := String ] ] in the example above
     elaborates to a new record type, where the type of the [ T ] field is
     constrained to [ String ] through the use of a singleton type:
 
@@ -42,12 +42,12 @@
     mention the [ T ] field in the following record literal:
 
     {[
-      let nat-add-monoid : Monoid.{ T := Nat } := {
+      let nat-add-monoid : Monoid [ T := Nat ] := {
         empty := 0;
         append := fun x y := x + y;
       };
 
-      let nat-mul-monoid : Monoid.{ T := Nat } := {
+      let nat-mul-monoid : Monoid [ T := Nat ] := {
         empty := 1;
         append := fun x y := x * y;
       };
@@ -56,7 +56,7 @@
     Patches don’t need to be limited to types either:
 
     {[
-      let nat-mul-monoid-2 : Monoid.{ T := Nat; empty := 1 } :=
+      let nat-mul-monoid-2 : Monoid [ T := Nat; empty := 1 ] :=
         nat-mul-monoid;
     ]}
 
@@ -412,7 +412,7 @@ module Surface = struct
     | RecType of (string * tm) list       (** Record types, eg. [ { x : A; ... } ]*)
     | RecLit of (string * tm) list        (** Record literals, eg. [ { x := A; ... } ]*)
     | Proj of tm * string                 (** Projections, eg. [ r.l ] *)
-    | Patch of tm * (string * tm) list    (** Record type patching, eg. [ R.{ B := A; ... } ] *)
+    | Patch of tm * (string * tm) list    (** Record type patching, eg. [ R [ B := A; ... ] ] *)
     | SingType of tm * tm                 (** Singleton types, eg. [ A [= x ] ] *)
     (** There’s no need to add surface syntax for introducing and eliminating
         singletons, as this is done implicitly during elaboration:
@@ -724,16 +724,16 @@ module Examples = struct
       f : A -> B;
     };
 
-    let _ := (fun x := x) : F.{ B := A } -> F;
-    let _ := (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F;
-    let _ := (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A; f := fun x := x } -> F;
-    let _ := (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F.{ B := A };
-    let _ := (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F.{ A := A };
-    let _ := (fun C x := x) : fun (C : Type) -> F.{ A := C; B := C } -> F.{ B := C };
+    let _ := (fun x := x) : F [ B := A ] -> F;
+    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F;
+    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F;
+    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ];
+    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ];
+    let _ := (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ];
 
-    let _ := (fun C := { f := fun x := x }) : fun (C : Type) -> F.{ A := C; B := C };
-    let _ := (fun C := {}) : fun (C : Type) -> F.{ A := C; B := C; f := fun x := x };
-    let _ := (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F.{ A := C; B := C };
+    let _ := (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
+    let _ := (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ];
+    let _ := (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
 
     let _ :=
       (fun B r := r) :
@@ -759,8 +759,8 @@ module Examples = struct
     let category := {
       Ob : Type;
       Hom : { s : Ob; t : Ob } -> Type;
-      id : fun (x : Ob) -> Hom.{ s := x; t := x };
-      seq : fun (f : Hom) (g : Hom.{ s := f.t }) -> Hom.{ s := f.s; t := g.t };
+      id : fun (x : Ob) -> Hom [ s := x; t := x ];
+      seq : fun (f : Hom) (g : Hom [ s := f.t ]) -> Hom [ s := f.s; t := g.t ];
     };
 
     let types : category := {
@@ -784,14 +784,14 @@ module Examples = struct
   let patch_tm1 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun x := x) : F.{ B := A } -> F *)
+      (* (fun x := x) : F [ B := A ] -> F *)
       Ann (FunLit (["x"], Name "x"),
         FunArrow (Patch (Name "F", ["B", Name "A"]), Name "F")))
 
   let patch_tm2 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F *)
+      (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]), Name "F"))))
@@ -799,7 +799,7 @@ module Examples = struct
   let patch_tm3 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A; f := fun x := x } -> F *)
+      (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"; "f", FunLit (["x"], Name "x")]),
@@ -808,7 +808,7 @@ module Examples = struct
   let patch_tm4 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F.{ B := A } *)
+      (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ] *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
@@ -817,7 +817,7 @@ module Examples = struct
   let patch_tm5 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F.{ A := A } *)
+      (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ] *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
@@ -826,7 +826,7 @@ module Examples = struct
   let patch_tm6 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun C x := x) : fun (C : Type) -> F.{ A := C; B := C } -> F.{ B := C } *)
+      (* (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ] *)
       Ann (FunLit (["C"; "x"], Name "x"),
         FunType (["C", Univ],
           FunArrow (Patch (Name "F", ["A", Name "C"; "B", Name "C"]),
@@ -835,21 +835,21 @@ module Examples = struct
   let patch_tm_lit1 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun C := { f := fun x := x }) : fun (C : Type) -> F.{ A := C; B := C } *)
+      (* (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
       Ann (FunLit (["C"], RecLit ["f", FunLit (["x"], Name "x")]),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
   let patch_tm_lit2 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun C := {}) : fun (C : Type) -> F.{ A := C; B := C; f := fun x := x } *)
+      (* (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ] *)
       Ann (FunLit (["C"], RecLit []),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"; "f", FunLit (["x"], Name "x")]))))
 
   let patch_tm_lit3 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
-      (* (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F.{ A := C; B := C } *)
+      (* (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
       Ann (FunLit (["C"], RecLit ["B", Name "C"; "f", FunLit (["x"], Name "x")]),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
@@ -908,8 +908,8 @@ module Examples = struct
     let category := {
       Ob : Type;
       Hom : { s : Ob; t : Ob } -> Type;
-      id : fun (x : Ob) -> Hom.{ s := x; t := x };
-      seq : fun (f : Hom) (g : Hom.{ s := f.t }) -> Hom.{ s := f.s; t := g.t };
+      id : fun (x : Ob) -> Hom [ s := x; t := x ];
+      seq : fun (f : Hom) (g : Hom [ s := f.t }) -> Hom [ s := f.s; t := g.t ];
     };
   *)
   let category_ty =
