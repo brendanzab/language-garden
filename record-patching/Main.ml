@@ -12,7 +12,6 @@
       };
 
       let string-monoid : Monoid [ T := String ] := {
-        T := String;
         empty := "";
         append := string-append;
       };
@@ -24,40 +23,41 @@
     syntax for {{: https://rust-lang.github.io/rfcs/0195-associated-items.html#constraining-associated-types}
     equality constraints} in type parameter bounds.
 
-    Patches are soley a feature of the surface language and are removed during
-    elaboration. The expression [ Monoid [ T := String ] ] in the example above
-    elaborates to a new record type, where the type of the [ T ] field is
-    constrained to [ String ] through the use of a singleton type:
+    Patches don’t need to be limited to types either. For example:
 
     {[
-      {
-        T : Type [= String ];
-        empty : T;
-        append : T -> T -> T;
-      }
-    ]}
-
-    We can also infer the definitions of fields from singletons. This works
-    nicely in combination with record patching. Note how we don't need to
-    mention the [ T ] field in the following record literal:
-
-    {[
-      let nat-add-monoid : Monoid [ T := Nat ] := {
-        empty := 0;
-        append := fun x y := x + y;
-      };
-
       let nat-mul-monoid : Monoid [ T := Nat ] := {
         empty := 1;
         append := fun x y := x * y;
       };
-    ]}
 
-    Patches don’t need to be limited to types either:
-
-    {[
       let nat-mul-monoid-2 : Monoid [ T := Nat; empty := 1 ] :=
         nat-mul-monoid;
+    ]}
+
+    {1 Elaboration of patches}
+
+    Patches only exist as a feature of the surface language and are removed
+    during elaboration. The expression [ Monoid [ T := String ] ] in the example
+    above elaborates to a new record type, where the type of the [ T ] field is
+    constrained to [ String ] through the use of a singleton type.
+
+    We also infer the definitions of fields from singletons. This works nicely
+    in combination with record patching. Note how we don't need to mention the
+    field [ T ] in the definition of [ string-monoid ].
+
+    With that in mind, the definition of [ string-monoid ] is elaborated to:
+
+    {[
+      let string-monoid : {
+        T : Type [= String ]; -- singleton type patched here
+        empty : T;
+        append : T -> T -> T;
+      } := {
+        T := String; -- definition inferred from the singleton
+        empty := "";
+        append := string-append;
+      };
     ]}
 
     {1 References}
@@ -84,10 +84,13 @@
     - Figure out how to implement ‘total space conversion’, like in CoolTT. This
       automatically converts [ F : { l : T; ... } -> Type ] to the record type
       [ { l : T; ..., fibre : F { l := l; ... } } ] where necessary.
-    - Experiment with implementing unification of metavariables and implicit
-      function types. This could be difficult in the presence subtyping,
-      however. Total space conversion apparently makes implicit parameters less
-      necessary, but I'm still a little skeptical of this!
+    - Attempt to implementing metavariables, unification, and implicit function
+      types. This could be challenging in the presence subtyping, however. Total
+      space conversion apparently makes implicit parameters less necessary, but
+      I'm still a little skeptical of this!
+    - Figure out ways to avoid the bloat that patches introduce (note how each
+      patch elaborates to a copy of the original record type). This could become
+      a perfomance issue if patching is used heavily.
 *)
 
 (** Returns the index of the given element in the list *)
@@ -187,6 +190,9 @@ module Core = struct
       | FunApp of neu * tm
       | RecProj of neu * label
 
+    (** Internal error encountered in the semantics. These should never occur if
+        terms are used in a way that respects the type system of the core
+        language. *)
     exception Error of string
 
     (** Compute a function application *)
@@ -430,24 +436,26 @@ module Surface = struct
 
   (** Terms in the surface language *)
   type tm =
-    | Let of string * tm * tm             (** Let expressions, eg. [ let x := t; f x ] *)
-    | Name of string                      (** References to named things, eg. [ x ] *)
-    | Ann of tm * tm                      (** Terms annotated with types, eg. [ x : A ] *)
-    | Univ                                (** Universe of types, eg. [ Type ] *)
-    | FunType of (string * tm) list * tm  (** Function types, eg. [ fun (x : A) -> B x ] *)
-    | FunArrow of tm * tm                 (** Function arrow types, eg. [ A -> B ] *)
-    | FunLit of string list * tm          (** Function literals, eg. [ fun x := f x ] *)
-    | App of tm * tm                      (** Applications, eg. [ f x ] *)
-    | RecType of (string * tm) list       (** Record types, eg. [ { x : A; ... } ]*)
-    | RecLit of (string * tm) list        (** Record literals, eg. [ { x := A; ... } ]*)
-    | Proj of tm * string                 (** Projections, eg. [ r.l ] *)
-    | Patch of tm * (string * tm) list    (** Record type patching, eg. [ R [ B := A; ... ] ] *)
-    | SingType of tm * tm                 (** Singleton types, eg. [ A [= x ] ] *)
-  (** Note that we don’t need to add surface syntax for introducing and
-      eliminating singletons, as these are added implicitly during elaboration:
+    | Let of string * tm * tm             (** Let expressions: [ let x := t; f x ] *)
+    | Name of string                      (** References to named things: [ x ] *)
+    | Ann of tm * tm                      (** Terms annotated with types: [ x : A ] *)
+    | Univ                                (** Universe of types: [ Type ] *)
+    | FunType of (string * tm) list * tm  (** Function types: [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                 (** Function arrow types: [ A -> B ] *)
+    | FunLit of string list * tm          (** Function literals: [ fun x := f x ] *)
+    | App of tm * tm                      (** Applications: [ f x ] *)
+    | RecType of (string * tm) list       (** Record types: [ { x : A; ... } ]*)
+    | RecLit of (string * tm) list        (** Record literals: [ { x := A; ... } ]*)
+    | Proj of tm * string                 (** Projections: [ r.l ] *)
+    | Patch of tm * (string * tm) list    (** Record type patching: [ R [ B := A; ... ] ] *)
+    | SingType of tm * tm                 (** Singleton types: [ A [= x ] ] *)
 
-      - introduction: [ x : A [= x ] ]
-      - elimination: [ (x : A [= x ]) : A ]
+  (** Note that we don’t need to add surface syntax for introducing and
+      eliminating singletons, as these will be added implicitly during
+      elaboration. For example, given [ a : A ] and [x : A [= a ] ]:
+
+      - introduction: [ x : A [= a ] ] elaborates to [ sing-intro x ]
+      - elimination: [ x : A ] elaborates to [ sing-elim x a ]
   *)
 
   (** Elaboration context *)
@@ -567,9 +575,8 @@ module Surface = struct
           | (label, tm) :: fields, label' :: labels, Semantics.Cons (ty, tys) when label = label' ->
               let tm = check context tm ty in
               (label, tm) :: go fields labels (tys (eval context tm))
-          (* If the field is missing from the record literal we can infer it if
-            the expected field was fixed with a singleton type. This is a bit
-            like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
+          (* Missing fields can be inferred from singleton types in the expected
+             field. This is a bit like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
           | fields, label :: labels, Semantics.Cons (Semantics.SingType (ty, sing_tm), tys) ->
               let tm = quote context sing_tm ty in
               (label, tm) :: go fields labels (tys (eval context tm))
