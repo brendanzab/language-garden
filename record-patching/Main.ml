@@ -374,49 +374,49 @@ module Surface = struct
   module Syntax = Core.Syntax
   module Semantics = Core.Semantics
 
+  (** Terms in the surface language *)
   type tm =
-    | Let of name * tm * tm
-    | Name of name
-    | Ann of tm * tm
-    | Univ
-    | FunType of (name * tm) list * tm  (** Function types, eg. [ fun (a : A) -> B a ] *)
+    | Let of name * tm * tm             (** Let expressions, eg. [ let x := t; f x ] *)
+    | Name of name                      (** References to named things, eg. [ x ] *)
+    | Ann of tm * tm                    (** Terms annotated with types, eg. [ x : A ] *)
+    | Univ                              (** Universe of types, eg. [ Type ] *)
+    | FunType of (name * tm) list * tm  (** Function types, eg. [ fun (x : A) -> B x ] *)
     | FunArrow of tm * tm               (** Function arrow types, eg. [ A -> B ] *)
-    | FunLit of name list * tm          (** Function literals, eg. [ fun a := b a ] *)
+    | FunLit of name list * tm          (** Function literals, eg. [ fun x := f x ] *)
     | App of tm * tm                    (** Applications, eg. [ f x ] *)
-    | RecType of (label * tm) list      (** Record types, eg. [ { a : A; ... } ]*)
-    | RecLit of (label * tm) list       (** Record literals, eg. [ { a := A; ... } ]*)
+    | RecType of (label * tm) list      (** Record types, eg. [ { x : A; ... } ]*)
+    | RecLit of (label * tm) list       (** Record literals, eg. [ { x := A; ... } ]*)
     | Proj of tm * label                (** Projections, eg. [ r.l ] *)
-    (* Record type patching, eg. [ R.{ B := A; ... } ]
+    | Patch of tm * (label * tm) list   (** Record type patching, eg. [ R.{ B := A; ... } ] *)
+    | SingType of tm * tm               (** Singleton types, eg. [ A [ x ] ] *)
+    (** Note that there’s no need to add surface syntax for introducing and
+        eliminating singletons, as this is done implicitly during elaboration:
 
-      Syntax bikeshed:
-
-      -  [ R [ B := A; ... ] ]
-      -  [ R.{ B := A; ... } ]
-      -  [ R # [ B .= A, ... ] ] (like in CoolTT)
-      -  [ R # { B := A; ... } ]
-      -  [ R (B := A, ...) ] (possibly overloaded with function application)
-      -  [ R where B := A, ... ] (like in Standard-ML)
+        - introduction: [ x : A [ x ] ]
+        - elimination: [ (x : A [ x ]) : A ]
     *)
-    | Patch of tm * (label * tm) list
-    (* Singleton types, eg. [ A [ x ] ]
 
-      There’s no need to add surface syntax for introducing and eliminating
-      singletons, as this is done implicitly during elaboration:
+  (* Syntax bikeshed
 
-      - introduction: [ x : A [ x ] ]
-      - elimination: [ (x : A [ x ]) : A ]
+    Record patching:
 
-      Syntax bikeshed:
+    -  [ R [ B := A; ... ] ]
+    -  [ R.{ B := A; ... } ]
+    -  [ R # [ B .= A, ... ] ] (like in CoolTT)
+    -  [ R # { B := A; ... } ]
+    -  [ R (B := A, ...) ] (possibly overloaded with function application)
+    -  [ R where B := A, ... ] (like in Standard-ML)
 
-      - [ A [ x ] ]
-      - [ A [= x ] ] (riffing on the idea of using square brackets for ‘refinement’)
-      - [ A [:= x ] ] (another similar idea)
-      - [ (= x : A) ]
-      - [ (:= x : A) ]
-      - [ A (= x) ]
-      - [ A (:= x) ] (parens read like, “btw, it's equal to [ x ]”)
-    *)
-    | SingType of tm * tm
+    Singleton types:
+
+    - [ A [ x ] ]
+    - [ A [= x ] ] (riffing on the idea of using square brackets for ‘refinement’)
+    - [ A [:= x ] ] (another similar idea)
+    - [ (= x : A) ]
+    - [ (:= x : A) ]
+    - [ A (= x) ]
+    - [ A (:= x) ] (parens read like, “btw, it's equal to [ x ]”)
+  *)
 
   (** Elaboration context *)
   type context = {
@@ -669,8 +669,7 @@ module Surface = struct
   (** Eliminate implicit connectives from a term.
 
       It's useful to employ this prior to calling {!coerce}, or when elaborating
-      the head of an elimination form.
-  *)
+      the head of an elimination form. *)
   and elim_implicits context tm = function
     (* Convert the singleton back to its underlying term using {!Syntax.SingElim} *)
     | Semantics.SingType (ty, sing_tm) ->
@@ -687,10 +686,11 @@ module Surface = struct
     elim_implicits context tm ty
 end
 
-(** Example terms, for testing purposes *)
-(* TODO: Implement a parser and convert to promote tests *)
+(** Example terms for testing *)
 module Examples = struct
   open Surface
+
+  (* TODO: Implement a parser and convert to promote tests *)
 
   (*
     let F := {
