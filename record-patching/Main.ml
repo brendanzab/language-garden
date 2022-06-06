@@ -31,7 +31,7 @@
 
     {[
       {
-        T : Type [ String ];
+        T : Type [= String ];
         empty : T;
         append : T -> T -> T;
       }
@@ -107,7 +107,7 @@ module Core = struct
       | RecType of label list * tele
       | RecLit of (label * tm) list
       | RecProj of tm * label
-      (* Singleton type former, eg. [ A [ x ] ].
+      (* Singleton type former, eg. [ A [= x ] ].
 
         These types constrain a type [ A ] to be equal to a single value [ x ].
       *)
@@ -115,14 +115,14 @@ module Core = struct
       (* Introduction form for singletons.
 
         This does not appear in user code, but is inserted during elaboration.
-        For example, if [ x : Nat ] and [ x ≡ 7 ], using [ x ] as [ Nat [ 7 ] ]
+        For example, if [ x : Nat ] and [ x ≡ 7 ], using [ x ] as [ Nat [= 7 ] ]
         elaborates to [ SingIntro x ].
       *)
       | SingIntro of tm
       (* Elimination form for singletons.
 
         This does not appear in user code, but is inserted during elaboration.
-        For example, if we have a [ x : Nat [ 7 ] ], we can convert [ x ] back
+        For example, if we have a [ x : Nat [= 7 ] ], we can convert [ x ] back
         to [ Nat ] by elaborating to [ SingElim (x, 7) ]. The [ 7 ] is used during
         typechecking (note the case in {!Core.Semantics.eval}), but should be
         erased in compiled code.
@@ -193,7 +193,11 @@ module Core = struct
       | Syntax.Cons (tm, tms) ->
           Cons (eval env tm, fun x -> eval_tele (x :: env) tms)
 
-    (** Typed quotation from the sematic domain back into the syntax. *)
+    (** Typed quotation from the sematic domain back into the syntax.
+
+        We only really use the types here as a way to restore the values of
+        singletons that were erased during evaluation.
+    *)
     let rec quote size tys tm ty : Syntax.tm =
       match tm with
       | Neu neu -> fst (quote_neu size tys neu)
@@ -255,7 +259,16 @@ module Core = struct
           let x = Neu (Var size) in
           Syntax.Cons (quote size tys ty Univ, quote_tele (size + 1) (ty :: tys) (tele x))
 
-    (** Typed conversion checking *)
+    (** Typed-directed conversion checking
+
+        Typed conversion lets us support full eta for unit types. These show up
+        in our language as empty records and singletons. If we wanted to stick
+        to untyped conversion, according to Andras Korvacs we could instead:
+
+        - perform best-effort eta, where unit elements are the same as anything
+        - detect definitionally irrelevant types during elaboration, marking
+          irrelevant terms
+    *)
     let rec is_convertible size tys tm1 tm2 : ty -> bool = function
       | Neu _ ->
           begin match tm1, tm2 with
@@ -328,6 +341,7 @@ module Core = struct
             && is_convertible_tele (size + 1) (ty1 :: tys) (tele1 var) (tele2 var)
       | _, _ -> false
 
+    (** Rough-and-ready pretty printer *)
     let pretty size names tm =
       let (<<) f g x = f (g x) in
       let str s rest = s ^ rest in
@@ -350,7 +364,7 @@ module Core = struct
                   str label << str " := " << go false size names tm << str "; " << rest)
                 fields (str "}")
         | SingType (ty, sing_tm) ->
-            parens wrap (go false size names ty << str " [ " <<
+            parens wrap (go false size names ty << str " [= " <<
               go false size names sing_tm << str " ]")
         | SingIntro -> str "sing-intro"
       and go_neu size names = function
@@ -388,12 +402,12 @@ module Surface = struct
     | RecLit of (label * tm) list       (** Record literals, eg. [ { x := A; ... } ]*)
     | Proj of tm * label                (** Projections, eg. [ r.l ] *)
     | Patch of tm * (label * tm) list   (** Record type patching, eg. [ R.{ B := A; ... } ] *)
-    | SingType of tm * tm               (** Singleton types, eg. [ A [ x ] ] *)
-    (** Note that there’s no need to add surface syntax for introducing and
-        eliminating singletons, as this is done implicitly during elaboration:
+    | SingType of tm * tm               (** Singleton types, eg. [ A [= x ] ] *)
+    (** There’s no need to add surface syntax for introducing and eliminating
+        singletons, as this is done implicitly during elaboration:
 
-        - introduction: [ x : A [ x ] ]
-        - elimination: [ (x : A [ x ]) : A ]
+        - introduction: [ x : A [= x ] ]
+        - elimination: [ (x : A [= x ]) : A ]
     *)
 
   (* Syntax bikeshed
@@ -712,20 +726,20 @@ module Examples = struct
 
     let _ :=
       (fun B r := r) :
-        fun (B : Type) (r : { A : Type [ B ]; a : B })
+        fun (B : Type) (r : { A : Type [= B ]; a : B })
           -> { A : Type; a : A };
     let _ :=
       (fun B b := { A := B; a := b } : { A : Type; a : B }) :
         fun (B : Type) (b : Type) -> { A : Type; a : A };
 
-    let _ := (fun A x := x) : fun (A : Type) (x : A) -> A [ x ];
-    let _ := (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [ x ]) -> A;
+    let _ := (fun A x := x) : fun (A : Type) (x : A) -> A [= x ];
+    let _ := (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A;
 
     let _ :=
       (fun A P f prf := prf) :
         fun (A : Type)
-            (P : (fun (x : A) -> A [ x ]) -> Type)
-            (f : fun (x : A) -> A [ x ])
+            (P : (fun (x : A) -> A [= x ]) -> Type)
+            (f : fun (x : A) -> A [= x ])
             (prf : P (fun x := x))
         -> P f;
 
@@ -830,7 +844,7 @@ module Examples = struct
 
   (*
     (fun B r := r) :
-      fun (B : Type) (r : { A : Type [ B ]; a : B })
+      fun (B : Type) (r : { A : Type [= B ]; a : B })
         -> { A : Type; a : A }
   *)
   let record_lit_coerce1 =
@@ -849,14 +863,14 @@ module Examples = struct
       FunType (["B", Univ; "b", Name "B"], RecType ["A", Univ; "a", Name "A"]))
 
   (*
-     (fun A x := x) : fun (A : Type) (x : A) -> A [ x ]
+     (fun A x := x) : fun (A : Type) (x : A) -> A [= x ]
   *)
   let intro_sing =
     Ann (FunLit (["A"; "x"], Name "x"),
       FunType (["A", Univ; "x", Name "A"], SingType (Name "A", Name "x")))
 
   (*
-     (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [ x ]) -> A
+     (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A
   *)
   let elim_sing =
     Ann (FunLit (["A"; "x"; "sing-x"], Name "sing-x"),
@@ -865,8 +879,8 @@ module Examples = struct
   (*
     (fun A P f pf := pf) :
       fun (A : Type)
-          (P : (fun (x : A) -> A [ x ]) -> Type)
-          (f : fun (x : A) -> A [ x ])
+          (P : (fun (x : A) -> A [= x ]) -> Type)
+          (f : fun (x : A) -> A [= x ])
           (pf : P (fun x := x))
       -> P f
   *)
