@@ -358,7 +358,7 @@ module Core = struct
       let str s rest = s ^ rest in
       let parens wrap s rest = if wrap then "(" ^ s (")" ^ rest) else s rest in
       let rec go wrap size names = function
-        | Neu neu -> parens wrap (go_neu size names neu)
+        | Neu neu -> go_neu wrap size names neu
         | Univ -> str "Type"
         | FunType (name, param_ty, body_ty) ->
             parens wrap (str "fun (" << str name << str " : " << go false size names param_ty <<
@@ -378,10 +378,11 @@ module Core = struct
             parens wrap (go false size names ty << str " [= " <<
               go false size names sing_tm << str " ]")
         | SingIntro -> str "sing-intro"
-      and go_neu size names = function
+      and go_neu wrap size names = function
         | Var level -> str (List.nth names (size - level - 1))
-        | FunApp (head, arg) -> go_neu size names head << str " " << go true size names arg
-        | RecProj (head, label) -> go_neu size names head << str "." << str label
+        | FunApp (head, arg) ->
+            parens wrap (go_neu false size names head << str " " <<  go true size names arg)
+        | RecProj (head, label) -> go_neu false size names head << str "." << str label
       and go_field_tys size names labels tys =
         match labels, tys with
         | [], Nil -> str ""
