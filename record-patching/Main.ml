@@ -76,12 +76,6 @@
         slides} from WITS’22.
 *)
 
-type name = string
-type label = string
-
-type index = int
-type level = int
-
 (** Returns the index of the given element in the list *)
 let elem_index a =
   let rec go i = function
@@ -91,8 +85,21 @@ let elem_index a =
 
 (** Core language *)
 module Core = struct
+
+  (** Identifiers that are significant to the equality of terms. Typically used
+      in the fields of records, and in record projections. *)
+  type label = string
+
+  (** Identifiers that serve as hints when pretty printing binders and
+      variables, but should not impact the equality of terms. *)
+  type name = string
+
   (** Core Syntax *)
   module Syntax = struct
+
+    (** De-bruijn index *)
+    type index = int
+
     (** For documenting where variables are bound *)
     type 'a binds = 'a
 
@@ -135,6 +142,10 @@ module Core = struct
 
   (** Semantic domain *)
   module Semantics = struct
+
+    (** De-bruijn level *)
+    type level = int
+
     type ty = tm
     and tm =
       | Neu of neu
@@ -390,19 +401,19 @@ module Surface = struct
 
   (** Terms in the surface language *)
   type tm =
-    | Let of name * tm * tm             (** Let expressions, eg. [ let x := t; f x ] *)
-    | Name of name                      (** References to named things, eg. [ x ] *)
-    | Ann of tm * tm                    (** Terms annotated with types, eg. [ x : A ] *)
-    | Univ                              (** Universe of types, eg. [ Type ] *)
-    | FunType of (name * tm) list * tm  (** Function types, eg. [ fun (x : A) -> B x ] *)
-    | FunArrow of tm * tm               (** Function arrow types, eg. [ A -> B ] *)
-    | FunLit of name list * tm          (** Function literals, eg. [ fun x := f x ] *)
-    | App of tm * tm                    (** Applications, eg. [ f x ] *)
-    | RecType of (label * tm) list      (** Record types, eg. [ { x : A; ... } ]*)
-    | RecLit of (label * tm) list       (** Record literals, eg. [ { x := A; ... } ]*)
-    | Proj of tm * label                (** Projections, eg. [ r.l ] *)
-    | Patch of tm * (label * tm) list   (** Record type patching, eg. [ R.{ B := A; ... } ] *)
-    | SingType of tm * tm               (** Singleton types, eg. [ A [= x ] ] *)
+    | Let of string * tm * tm             (** Let expressions, eg. [ let x := t; f x ] *)
+    | Name of string                      (** References to named things, eg. [ x ] *)
+    | Ann of tm * tm                      (** Terms annotated with types, eg. [ x : A ] *)
+    | Univ                                (** Universe of types, eg. [ Type ] *)
+    | FunType of (string * tm) list * tm  (** Function types, eg. [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                 (** Function arrow types, eg. [ A -> B ] *)
+    | FunLit of string list * tm          (** Function literals, eg. [ fun x := f x ] *)
+    | App of tm * tm                      (** Applications, eg. [ f x ] *)
+    | RecType of (string * tm) list       (** Record types, eg. [ { x : A; ... } ]*)
+    | RecLit of (string * tm) list        (** Record literals, eg. [ { x := A; ... } ]*)
+    | Proj of tm * string                 (** Projections, eg. [ r.l ] *)
+    | Patch of tm * (string * tm) list    (** Record type patching, eg. [ R.{ B := A; ... } ] *)
+    | SingType of tm * tm                 (** Singleton types, eg. [ A [= x ] ] *)
     (** There’s no need to add surface syntax for introducing and eliminating
         singletons, as this is done implicitly during elaboration:
 
@@ -437,8 +448,8 @@ module Surface = struct
     (* Number of entries bound in the context. We could compute this from the
        other environments, but given we are using linked lists this would be an
        [ O(n) ] operation. *)
-    size : level;
-    names : name list;
+    size : Semantics.level;
+    names : Core.name list;
     tys : Semantics.ty list;
     tms : Semantics.tm list;
   }
