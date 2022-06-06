@@ -1,4 +1,4 @@
-(** {0 Elaboration with Singletons and Record patching}
+(** {0 Elaboration with Record Patching and Singleton Types}
 
     Record patching is a way to constrain the values of fields in a record type.
     Given a record type [ R ], a record patch can be applied using the syntax
@@ -18,10 +18,10 @@
       };
     ]}
 
-    This is similar to Standard ML’s [ where type ] {{: https://smlfamily.github.io/sml97-defn.pdf#page=28}
-    syntax for type realisation}, OCaml’s [ with ] {{: https://v2.ocaml.org/manual/modtypes.html#ss%3Amty-with}
-    operator for constraining module types}, or Rust’s [ Iterator<Item = T> ]
-    shorthand syntax for {{: https://rust-lang.github.io/rfcs/0195-associated-items.html#constraining-associated-types}
+    This is similar to Standard ML’s [ where type ] syntax for {{: https://smlfamily.github.io/sml97-defn.pdf#page=28}
+    type realisation}, OCaml’s [ with ] operator for {{: https://v2.ocaml.org/manual/modtypes.html#ss%3Amty-with}
+    constraining module types}, and Rust’s [ Iterator<Item = T> ] shorthand
+    syntax for {{: https://rust-lang.github.io/rfcs/0195-associated-items.html#constraining-associated-types}
     equality constraints} in type parameter bounds.
 
     Patches are soley a feature of the surface language and are removed during
@@ -74,6 +74,20 @@
       - Reed Mullanix's {{: https://www.youtube.com/watch?v=1_ZJIYu2BRk}
         presentation} and {{: https://cofree.coffee/~totbwf/slides/WITS-2022.pdf}
         slides} from WITS’22.
+
+    {1 Future work}
+
+    - Implement a parser for the surface language.
+    - Experiment with adding ‘generativity’. This would allow the contents
+      of a record to be hidden, allowing us to use them as a way to define
+      abstract data types.
+    - Figure out how to implement ‘total space conversion’, like in CoolTT. This
+      automatically converts [ F : { l : T; ... } -> Type ] to the record type
+      [ { l : T; ..., fibre : F { l := l; ... } } ] where necessary.
+    - Experiment with implementing unification of metavariables and implicit
+      function types. This could be difficult in the presence subtyping,
+      however. Total space conversion apparently makes implicit parameters less
+      necessary, but I'm still a little skeptical of this!
 *)
 
 (** Returns the index of the given element in the list *)
@@ -103,7 +117,10 @@ module Core = struct
     (** For documenting where variables are bound *)
     type 'a binds = 'a
 
+    (** Types *)
     type ty = tm
+
+    (** Terms *)
     and tm =
       | Let of name * tm * tm
       | Var of index
@@ -135,6 +152,7 @@ module Core = struct
         erased in compiled code.
       *)
       | SingElim of tm * tm
+    (** Telescopes *)
     and tele =
       | Nil
       | Cons of ty * (tele binds)
@@ -146,7 +164,10 @@ module Core = struct
     (** De-bruijn level *)
     type level = int
 
+    (** Types *)
     type ty = tm
+
+    (** Terms *)
     and tm =
       | Neu of neu
       | Univ
@@ -156,9 +177,11 @@ module Core = struct
       | RecLit of (label * tm) list
       | SingType of ty * tm
       | SingIntro
+    (** Telescopes *)
     and tele =
       | Nil
       | Cons of ty * (tm -> tele)
+    (** Neutral terms *)
     and neu =
       | Var of level
       | FunApp of neu * tm
@@ -166,17 +189,20 @@ module Core = struct
 
     exception Error of string
 
+    (** Compute a function application *)
     let app : tm -> tm -> tm = function
       | FunLit (_, body) -> body
       | Neu neu -> fun arg -> Neu (FunApp (neu, arg))
       | _ -> raise (Error "invalid app")
 
+    (** Compute a record projection *)
     let proj : tm -> label -> tm = function
       | RecLit fields -> fun label ->
           fields |> List.find (fun (l, _) -> l = label) |> snd
       | Neu neu -> fun label -> Neu (RecProj (neu, label))
       | _ -> raise (Error "invalid proj")
 
+    (** Returns the type of a record projection *)
     let proj_ty head (labels, tele) label =
       let rec go labels tele =
         match labels, tele with
@@ -186,6 +212,7 @@ module Core = struct
           | _, _ -> None in
       go labels tele
 
+    (** Evaluate a term from the synatax into a term in the semantic domain *)
     let rec eval env : Syntax.tm -> tm = function
       | Syntax.Let (_, def, body) -> eval (eval env def :: env) body
       | Syntax.Var index -> List.nth env index
@@ -274,7 +301,8 @@ module Core = struct
 
         Typed conversion lets us support full eta for unit types. These show up
         in our language as empty records and singletons. If we wanted to stick
-        to untyped conversion, according to Andras Korvacs we could instead:
+        to untyped conversion checking, according to Andras Korvacs we could
+        alternatively:
 
         - perform best-effort eta, where unit elements are the same as anything
         - detect definitionally irrelevant types during elaboration, marking
@@ -415,40 +443,18 @@ module Surface = struct
     | Proj of tm * string                 (** Projections, eg. [ r.l ] *)
     | Patch of tm * (string * tm) list    (** Record type patching, eg. [ R [ B := A; ... ] ] *)
     | SingType of tm * tm                 (** Singleton types, eg. [ A [= x ] ] *)
-    (** There’s no need to add surface syntax for introducing and eliminating
-        singletons, as this is done implicitly during elaboration:
+  (** Note that we don’t need to add surface syntax for introducing and
+      eliminating singletons, as these are added implicitly during elaboration:
 
-        - introduction: [ x : A [= x ] ]
-        - elimination: [ (x : A [= x ]) : A ]
-    *)
-
-  (* Syntax bikeshed
-
-    Record patching:
-
-    -  [ R [ B := A; ... ] ]
-    -  [ R.{ B := A; ... } ]
-    -  [ R # [ B .= A, ... ] ] (like in CoolTT)
-    -  [ R # { B := A; ... } ]
-    -  [ R (B := A, ...) ] (possibly overloaded with function application)
-    -  [ R where B := A, ... ] (like in Standard-ML)
-
-    Singleton types:
-
-    - [ A [ x ] ]
-    - [ A [= x ] ] (riffing on the idea of using square brackets for ‘refinement’)
-    - [ A [:= x ] ] (another similar idea)
-    - [ (= x : A) ]
-    - [ (:= x : A) ]
-    - [ A (= x) ]
-    - [ A (:= x) ] (parens read like, “btw, it's equal to [ x ]”)
+      - introduction: [ x : A [= x ] ]
+      - elimination: [ (x : A [= x ]) : A ]
   *)
 
   (** Elaboration context *)
   type context = {
     (* Number of entries bound in the context. We could compute this from the
        other environments, but given we are using linked lists this would be an
-       [ O(n) ] operation. *)
+       [ O(n) ] operation. This allows us to access it in [ O(1) ]. *)
     size : Semantics.level;
     names : Core.name list;
     tys : Semantics.ty list;
@@ -957,7 +963,7 @@ module Examples = struct
     "intro_sing", intro_sing;
     "elim_sing", elim_sing;
     "sing_tm1", sing_tm1;
-    (* TODO: these require total space conversion, like in CoolTT *)
+    (* TODO: requires total space conversion like in CoolTT *)
     (* "category_ty", category_ty; *)
     (* "types_tm", types_tm; *)
   ]
@@ -995,3 +1001,25 @@ let () =
     ("testing result: " ^ (if failed = 0 then "ok" else "error") ^ ". " ^
       string_of_int passed ^ " passed; " ^
       string_of_int failed ^ " failed")
+
+(* Syntax bikeshed
+
+  Record patching:
+
+  -  [ R [ B := A; ... ] ]
+  -  [ R.{ B := A; ... } ]
+  -  [ R # [ B .= A, ... ] ] (like in CoolTT)
+  -  [ R # { B := A; ... } ]
+  -  [ R (B := A, ...) ] (possibly overloaded with function application)
+  -  [ R where B := A, ... ] (like in Standard-ML)
+
+  Singleton types:
+
+  - [ A [ x ] ]
+  - [ A [= x ] ] (riffing on the idea of using square brackets for ‘refinement’)
+  - [ A [:= x ] ] (another similar idea)
+  - [ (= x : A) ]
+  - [ (:= x : A) ]
+  - [ A (= x) ]
+  - [ A (:= x) ] (parens read like, “btw, it's equal to [ x ]”)
+*)
