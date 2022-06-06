@@ -190,6 +190,11 @@ module Core = struct
       | FunApp of neu * tm
       | RecProj of neu * label
 
+    (** Environment of bound entries that can be looked up directly using a
+        {!Syntax.index}, or by inverting a {!level} using [ size - level - 1 ],
+        where [ size ] is the number of entries bound in the environment. *)
+    type 'a env = 'a list
+
     (** Internal error encountered in the semantics. These should never occur if
         terms are used in a way that respects the type system of the core
         language. *)
@@ -219,23 +224,23 @@ module Core = struct
       go labels tele
 
     (** Evaluate a term from the synatax into a term in the semantic domain *)
-    let rec eval env : Syntax.tm -> tm = function
-      | Syntax.Let (_, def, body) -> eval (eval env def :: env) body
-      | Syntax.Var index -> List.nth env index
+    let rec eval tms : Syntax.tm -> tm = function
+      | Syntax.Let (_, def, body) -> eval (eval tms def :: tms) body
+      | Syntax.Var index -> List.nth tms index
       | Syntax.Univ -> Univ
-      | Syntax.FunType (name, param_ty, body_ty) -> FunType (name, eval env param_ty, fun x -> eval (x :: env) body_ty)
-      | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: env) body)
-      | Syntax.FunApp (head, arg) -> app (eval env head) (eval env arg)
-      | Syntax.RecType (labels, tys) -> RecType (labels, eval_tele env tys)
-      | Syntax.RecLit fields -> RecLit (List.map (fun (label, expr) -> (label, eval env expr)) fields)
-      | Syntax.RecProj (head, label) -> proj (eval env head) label
-      | Syntax.SingType (ty, sing_tm) -> SingType (eval env ty, eval env sing_tm)
+      | Syntax.FunType (name, param_ty, body_ty) -> FunType (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
+      | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: tms) body)
+      | Syntax.FunApp (head, arg) -> app (eval tms head) (eval tms arg)
+      | Syntax.RecType (labels, tys) -> RecType (labels, eval_tele tms tys)
+      | Syntax.RecLit fields -> RecLit (List.map (fun (label, expr) -> (label, eval tms expr)) fields)
+      | Syntax.RecProj (head, label) -> proj (eval tms head) label
+      | Syntax.SingType (ty, sing_tm) -> SingType (eval tms ty, eval tms sing_tm)
       | Syntax.SingIntro _ -> SingIntro
-      | Syntax.SingElim (_, sing_tm) -> eval env sing_tm
-    and eval_tele env : Syntax.tele -> tele = function
+      | Syntax.SingElim (_, sing_tm) -> eval tms sing_tm
+    and eval_tele tms : Syntax.tele -> tele = function
       | Syntax.Nil -> Nil
-      | Syntax.Cons (tm, tms) ->
-          Cons (eval env tm, fun x -> eval_tele (x :: env) tms)
+      | Syntax.Cons (tm, tele) ->
+          Cons (eval tms tm, fun x -> eval_tele (x :: tms) tele)
 
     (** Typed quotation from the sematic domain back into the syntax.
 
@@ -460,14 +465,15 @@ module Surface = struct
 
   (** Elaboration context *)
   type context = {
-    (* Number of entries bound in the context. We could compute this from the
-       other environments, but given we are using linked lists this would be an
-       [ O(n) ] operation. This allows us to access it in [ O(1) ]. *)
-    size : Semantics.level;
-    names : Core.name list;
-    tys : Semantics.ty list;
-    tms : Semantics.tm list;
+    size : Semantics.level;             (** Number of entries bound. *)
+    names : Core.name Semantics.env;    (** Name environment *)
+    tys : Semantics.ty Semantics.env;   (** Type environment *)
+    tms : Semantics.tm Semantics.env;   (** Term environment *)
   }
+  (** We could compute {!size} from the other environments, but because we are
+      using linked lists for these this would be an [ O(n) ] operation. This
+      allows us to access it in [ O(1) ].
+  *)
 
   (** Empty elaboration context *)
   let initial_context = {
