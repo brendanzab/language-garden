@@ -101,33 +101,33 @@ module Core = struct
       | Let of name * tm * tm
       | Var of index
       | Univ
-      | Pi of name * ty * (ty binds)
-      | Lam of name * (tm binds)
-      | App of tm * tm
-      | Sig of label list * tele
-      | Record of (label * tm) list
-      | Proj of tm * label
+      | FunType of name * ty * (ty binds)
+      | FunLit of name * (tm binds)
+      | FunApp of tm * tm
+      | RecType of label list * tele
+      | RecLit of (label * tm) list
+      | RecProj of tm * label
       (* Singleton type former, eg. [ A [ x ] ].
 
         These types constrain a type [ A ] to be equal to a single value [ x ].
       *)
-      | Sing of ty * tm
+      | SingType of ty * tm
       (* Introduction form for singletons.
 
         This does not appear in user code, but is inserted during elaboration.
         For example, if [ x : Nat ] and [ x ≡ 7 ], using [ x ] as [ Nat [ 7 ] ]
-        elaborates to [ MkSing x ].
+        elaborates to [ SingIntro x ].
       *)
-      | MkSing of tm
+      | SingIntro of tm
       (* Elimination form for singletons.
 
         This does not appear in user code, but is inserted during elaboration.
         For example, if we have a [ x : Nat [ 7 ] ], we can convert [ x ] back
-        to [ Nat ] by elaborating to [ UnSing (x, 7) ]. The [ 7 ] is used during
+        to [ Nat ] by elaborating to [ SingElim (x, 7) ]. The [ 7 ] is used during
         typechecking (note the case in {!Core.Semantics.eval}), but should be
         erased in compiled code.
       *)
-      | UnSing of tm * tm
+      | SingElim of tm * tm
     and tele =
       | Nil
       | Cons of ty * (tele binds)
@@ -139,31 +139,31 @@ module Core = struct
     and tm =
       | Neu of neu
       | Univ
-      | Pi of name * ty * (tm -> ty)
-      | Lam of name * (tm -> tm)
-      | Sig of label list * tele
-      | Record of (label * tm) list
-      | Sing of ty * tm
-      | MkSing
+      | FunType of name * ty * (tm -> ty)
+      | FunLit of name * (tm -> tm)
+      | RecType of label list * tele
+      | RecLit of (label * tm) list
+      | SingType of ty * tm
+      | SingIntro
     and tele =
       | Nil
       | Cons of ty * (tm -> tele)
     and neu =
       | Var of level
-      | App of neu * tm
-      | Proj of neu * label
+      | FunApp of neu * tm
+      | RecProj of neu * label
 
     exception Error of string
 
     let app : tm -> tm -> tm = function
-      | Lam (_, body) -> body
-      | Neu neu -> fun arg -> Neu (App (neu, arg))
+      | FunLit (_, body) -> body
+      | Neu neu -> fun arg -> Neu (FunApp (neu, arg))
       | _ -> raise (Error "invalid app")
 
     let proj : tm -> label -> tm = function
-      | Record fields -> fun label ->
+      | RecLit fields -> fun label ->
           fields |> List.find (fun (l, _) -> l = label) |> snd
-      | Neu neu -> fun label -> Neu (Proj (neu, label))
+      | Neu neu -> fun label -> Neu (RecProj (neu, label))
       | _ -> raise (Error "invalid proj")
 
     let proj_ty head (labels, tele) label =
@@ -179,15 +179,15 @@ module Core = struct
       | Syntax.Let (_, def, body) -> eval (eval env def :: env) body
       | Syntax.Var index -> List.nth env index
       | Syntax.Univ -> Univ
-      | Syntax.Pi (name, param_ty, body_ty) -> Pi (name, eval env param_ty, fun x -> eval (x :: env) body_ty)
-      | Syntax.Lam (name, body) -> Lam (name, fun x -> eval (x :: env) body)
-      | Syntax.App (head, arg) -> app (eval env head) (eval env arg)
-      | Syntax.Sig (labels, tys) -> Sig (labels, eval_tele env tys)
-      | Syntax.Record fields -> Record (List.map (fun (label, expr) -> (label, eval env expr)) fields)
-      | Syntax.Proj (head, label) -> proj (eval env head) label
-      | Syntax.Sing (ty, sing_tm) -> Sing (eval env ty, eval env sing_tm)
-      | Syntax.MkSing _ -> MkSing
-      | Syntax.UnSing (_, sing_tm) -> eval env sing_tm
+      | Syntax.FunType (name, param_ty, body_ty) -> FunType (name, eval env param_ty, fun x -> eval (x :: env) body_ty)
+      | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: env) body)
+      | Syntax.FunApp (head, arg) -> app (eval env head) (eval env arg)
+      | Syntax.RecType (labels, tys) -> RecType (labels, eval_tele env tys)
+      | Syntax.RecLit fields -> RecLit (List.map (fun (label, expr) -> (label, eval env expr)) fields)
+      | Syntax.RecProj (head, label) -> proj (eval env head) label
+      | Syntax.SingType (ty, sing_tm) -> SingType (eval env ty, eval env sing_tm)
+      | Syntax.SingIntro _ -> SingIntro
+      | Syntax.SingElim (_, sing_tm) -> eval env sing_tm
     and eval_tele env : Syntax.tele -> tele = function
       | Syntax.Nil -> Nil
       | Syntax.Cons (tm, tms) ->
@@ -198,22 +198,22 @@ module Core = struct
       match tm with
       | Neu neu -> fst (quote_neu size tys neu)
       | Univ -> Syntax.Univ
-      | Pi (name, param_ty, body_ty) ->
+      | FunType (name, param_ty, body_ty) ->
           let x = Neu (Var size) in
           let param_ty = quote size tys param_ty Univ in
           let body_ty = quote (size + 1) (Univ :: tys) (body_ty x) Univ in
-          Syntax.Pi (name, param_ty, body_ty)
-      | Lam (name, body) ->
+          Syntax.FunType (name, param_ty, body_ty)
+      | FunLit (name, body) ->
           begin match ty with
-          | Pi (_, param_ty, body_ty) ->
+          | FunType (_, param_ty, body_ty) ->
               let x = Neu (Var size) in
-              Syntax.Lam (name, quote (size + 1) (param_ty :: tys) (body x) (body_ty x))
+              Syntax.FunLit (name, quote (size + 1) (param_ty :: tys) (body x) (body_ty x))
           | _ -> raise (Error "not a function type")
           end
-      | Sig (labels, tele) -> Syntax.Sig (labels, quote_tele size tys tele)
-      | Record fields ->
+      | RecType (labels, tele) -> Syntax.RecType (labels, quote_tele size tys tele)
+      | RecLit fields ->
           begin match ty with
-          | Sig (_, tele) ->
+          | RecType (_, tele) ->
               let rec go fields tele =
                 match fields, tele with
                 | [], Nil -> []
@@ -221,32 +221,32 @@ module Core = struct
                     (label, quote size tys tm ty) :: go fields (tele tm)
                 | _, _ -> raise (Error "mismatched telescope length")
               in
-              Syntax.Record (go fields tele)
+              Syntax.RecLit (go fields tele)
           | _ -> raise (Error "not a record type")
           end
-      | Sing (ty, sing_tm) ->
-          Syntax.Sing (quote size tys ty Univ, quote size tys sing_tm ty)
-      | MkSing ->
+      | SingType (ty, sing_tm) ->
+          Syntax.SingType (quote size tys ty Univ, quote size tys sing_tm ty)
+      | SingIntro ->
           begin match ty with
           (* Restore the erased term from the singleton type *)
-          | Sing (ty, sing_tm) -> Syntax.MkSing (quote size tys ty sing_tm)
+          | SingType (ty, sing_tm) -> Syntax.SingIntro (quote size tys ty sing_tm)
           | _ -> raise (Error "not a singleton type")
           end
     and quote_neu size tys : neu -> Syntax.tm * ty = function
       | Var level ->
           let index = size - level - 1 in
           (Syntax.Var index, List.nth tys index)
-      | App (head, arg) ->
+      | FunApp (head, arg) ->
           begin match quote_neu size tys head with
-          | head, Pi (_, param_ty, body_ty) ->
-              (Syntax.App (head, (quote size tys arg param_ty)), body_ty arg)
+          | head, FunType (_, param_ty, body_ty) ->
+              (Syntax.FunApp (head, (quote size tys arg param_ty)), body_ty arg)
           | _ -> raise (Error "not a function type")
           end
-      | Proj (head, label) ->
+      | RecProj (head, label) ->
           begin match quote_neu size tys head with
-          | head', Sig (labels, tele) ->
+          | head', RecType (labels, tele) ->
               let ty = proj_ty (Neu head) (labels, tele) label |> Option.get in
-              (Syntax.Proj (head', label), ty)
+              (Syntax.RecProj (head', label), ty)
           | _ -> raise (Error "not a record type")
           end
     and quote_tele size tys : tele -> Syntax.tele = function
@@ -266,22 +266,22 @@ module Core = struct
           begin match tm1, tm2 with
           | Univ, Univ -> true
           | Neu neu1, Neu neu2 -> Option.is_some (is_convertible_neu size tys neu1 neu2)
-          | Pi (_, param_ty1, body_ty1), Pi (_, param_ty2, body_ty2) ->
+          | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
               let x = Neu (Var size) in
               is_convertible size tys param_ty1 param_ty2 Univ
                 && is_convertible (size + 1) (param_ty1 :: tys) (body_ty1 x) (body_ty2 x) Univ
-          | Sig (labels1, tele1), Sig (labels2, tele2) when labels1 = labels2 ->
+          | RecType (labels1, tele1), RecType (labels2, tele2) when labels1 = labels2 ->
               is_convertible_tele size tys tele1 tele2
-          | Sing (ty1, sing_tm1), Sing (ty2, sing_tm2) ->
+          | SingType (ty1, sing_tm1), SingType (ty2, sing_tm2) ->
               is_convertible size tys ty1 ty2 Univ
                 && is_convertible size tys sing_tm1 sing_tm2 ty1
           | _, _ -> false
           end
-      | Pi (_, param_ty, body_ty) ->
+      | FunType (_, param_ty, body_ty) ->
           (* Eta for functions *)
           let x = Neu (Var size) in
           is_convertible (size + 1) (param_ty :: tys) (app tm1 x) (app tm2 x) (body_ty x)
-      | Sig (labels, tele) ->
+      | RecType (labels, tele) ->
           (* Eta for records
 
             Record patching introduces subtyping problems that go inside records.
@@ -300,21 +300,21 @@ module Core = struct
             | _, _ -> raise (Error "mismatched telescope length")
           in
           go labels tele
-      | Sing (_, _) -> true
+      | SingType (_, _) -> true
       | _ -> raise (Error "not a type")
     and is_convertible_neu size tys neu1 neu2 =
       match neu1, neu2 with
       | Var level1, Var level2 when level1 = level2 -> Some (List.nth tys (size - level1 - 1))
-      | App (func1, arg1), App (func2, arg2) ->
+      | FunApp (func1, arg1), FunApp (func2, arg2) ->
           begin match is_convertible_neu size tys func1 func2 with
-          | Some (Pi (_, param_ty, body_ty)) ->
+          | Some (FunType (_, param_ty, body_ty)) ->
               if is_convertible size tys arg1 arg2 param_ty then Some (body_ty arg1) else None
           | Some _ -> raise (Error "not a function type")
           | None -> None
           end
-      | Proj (record1, label1), Proj (record2, label2) when label1 = label2 ->
+      | RecProj (record1, label1), RecProj (record2, label2) when label1 = label2 ->
           begin match is_convertible_neu size tys record1 record2 with
-          | Some (Sig (labels, tele)) -> proj_ty (Neu record1) (labels, tele) label1
+          | Some (RecType (labels, tele)) -> proj_ty (Neu record1) (labels, tele) label1
           | Some _ -> raise (Error "not a record type")
           | None -> None
           end
@@ -335,28 +335,28 @@ module Core = struct
       let rec go wrap size names = function
         | Neu neu -> parens wrap (go_neu size names neu)
         | Univ -> str "Type"
-        | Pi (name, param_ty, body_ty) ->
+        | FunType (name, param_ty, body_ty) ->
             parens wrap (str "fun (" << str name << str " : " << go false size names param_ty <<
               str ") -> " << go false (size + 1) (name :: names) (body_ty (Neu (Var size))))
-        | Lam (name, body) ->
+        | FunLit (name, body) ->
             parens wrap (str "fun " << str name << str " := " <<
               go false (size + 1) (name :: names) (body (Neu (Var size))))
-        | Sig (labels, tys) ->
+        | RecType (labels, tys) ->
             str "{ " << go_field_tys size names labels tys << str "}"
-        | Record fields ->
+        | RecLit fields ->
             str "{ " <<
               List.fold_right
                 (fun (label, tm) rest ->
                   str label << str " := " << go false size names tm << str "; " << rest)
                 fields (str "}")
-        | Sing (ty, sing_tm) ->
+        | SingType (ty, sing_tm) ->
             parens wrap (go false size names ty << str " [ " <<
               go false size names sing_tm << str " ]")
-        | MkSing -> str "mk-sing"
+        | SingIntro -> str "sing-intro"
       and go_neu size names = function
         | Var level -> str (List.nth names (size - level - 1))
-        | App (head, arg) -> go_neu size names head << str " " << go true size names arg
-        | Proj (head, label) -> go_neu size names head << str "." << str label
+        | FunApp (head, arg) -> go_neu size names head << str " " << go true size names arg
+        | RecProj (head, label) -> go_neu size names head << str "." << str label
       and go_field_tys size names labels tys =
         match labels, tys with
         | [], Nil -> str ""
@@ -379,13 +379,13 @@ module Surface = struct
     | Name of name
     | Ann of tm * tm
     | Univ
-    | Pi of (name * tm) list * tm
-    | Arrow of tm * tm
-    | Lam of name list * tm
-    | App of tm * tm
-    | Sig of (label * tm) list
-    | Record of (label * tm) list
-    | Proj of tm * label
+    | FunType of (name * tm) list * tm  (** Function types, eg. [ fun (a : A) -> B a ] *)
+    | FunArrow of tm * tm               (** Function arrow types, eg. [ A -> B ] *)
+    | FunLit of name list * tm          (** Function literals, eg. [ fun a := b a ] *)
+    | App of tm * tm                    (** Applications, eg. [ f x ] *)
+    | RecType of (label * tm) list      (** Record types, eg. [ { a : A; ... } ]*)
+    | RecLit of (label * tm) list       (** Record literals, eg. [ { a := A; ... } ]*)
+    | Proj of tm * label                (** Projections, eg. [ r.l ] *)
     (* Record type patching, eg. [ R.{ B := A; ... } ]
 
       Syntax bikeshed:
@@ -416,7 +416,7 @@ module Surface = struct
       - [ A (= x) ]
       - [ A (:= x) ] (parens read like, “btw, it's equal to [ x ]”)
     *)
-    | Sing of tm * tm
+    | SingType of tm * tm
 
   (** Elaboration context *)
   type context = {
@@ -475,33 +475,33 @@ module Surface = struct
     match from_ty, to_ty with
     (* No need to coerce the term if both types are already the same! *)
     | from_ty, to_ty when is_convertible context from_ty to_ty Semantics.Univ -> tm
-    (* Coerce the term to a singleton with {!Syntax.MkSing}, if the term is
+    (* Coerce the term to a singleton with {!Syntax.SingIntro}, if the term is
       convertible to the term expected by the singleton *)
-    | from_ty, Semantics.Sing (to_ty, sing_tm) ->
+    | from_ty, Semantics.SingType (to_ty, sing_tm) ->
         let tm = coerce context tm from_ty to_ty in
         let tm' = eval context tm in
-        if is_convertible context sing_tm tm' to_ty then Syntax.MkSing tm else
+        if is_convertible context sing_tm tm' to_ty then Syntax.SingIntro tm else
           let expected = pretty context sing_tm in
           let found = pretty context tm' in
           let ty = pretty context to_ty in
           raise (Error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`"))
-    (* Coerce the singleton back to its underlying term with {!Syntax.UnSing}
+    (* Coerce the singleton back to its underlying term with {!Syntax.SingElim}
       and attempt further coercions from its underlying type *)
-    | Semantics.Sing (from_ty, sing_tm), to_ty ->
-        let tm = Syntax.UnSing (tm, quote context sing_tm from_ty) in
+    | Semantics.SingType (from_ty, sing_tm), to_ty ->
+        let tm = Syntax.SingElim (tm, quote context sing_tm from_ty) in
         coerce context tm from_ty to_ty
     (* Coerce the fields of a record with record eta expansion *)
-    | Semantics.Sig (labels, from_tys), Semantics.Sig (labels', to_tys) when labels = labels' ->
+    | Semantics.RecType (labels, from_tys), Semantics.RecType (labels', to_tys) when labels = labels' ->
         let rec go labels from_tys to_tys =
           match labels, from_tys, to_tys with
           | [], Semantics.Nil, Semantics.Nil -> []
           | label :: labels, Semantics.Cons (from_ty, from_tys), Semantics.Cons (to_ty, to_tys) ->
-              let from_tm = eval context (Syntax.Proj (tm, label)) in
-              let to_tm = coerce context (Syntax.Proj (tm, label)) from_ty to_ty in
+              let from_tm = eval context (Syntax.RecProj (tm, label)) in
+              let to_tm = coerce context (Syntax.RecProj (tm, label)) from_ty to_ty in
               (label, to_tm) :: go labels (from_tys from_tm) (to_tys (eval context to_tm))
           | _, _, _ -> raise (Semantics.Error "mismatched telescope length")
         in
-        Syntax.Record (go labels from_tys to_tys)
+        Syntax.RecLit (go labels from_tys to_tys)
     (* TODO: subtyping for functions! *)
     | from_ty, to_ty  ->
         let expected = pretty context to_ty in
@@ -516,18 +516,18 @@ module Surface = struct
         let def, def_ty = infer context def in
         let context = bind_def context name def_ty (eval context def) in
         Syntax.Let (name, def, check context body ty)
-    | Lam (names, body), ty ->
+    | FunLit (names, body), ty ->
         let rec go context names ty =
           match names, ty with
           | [], body_ty -> check context body body_ty
-          | name :: names, Semantics.Pi (_, param_ty, body_ty) ->
+          | name :: names, Semantics.FunType (_, param_ty, body_ty) ->
               let var = next_var context in
               let context = bind_def context name param_ty var in
-              Syntax.Lam (name, go context names (body_ty var))
+              Syntax.FunLit (name, go context names (body_ty var))
           | _, _ -> raise (Error "too many parameters in function literal")
         in
         go context names ty
-    | Record fields, Semantics.Sig (labels, tys) ->
+    | RecLit fields, Semantics.RecType (labels, tys) ->
         (* TODO: elaborate fields out of order? *)
         let rec go fields labels tys =
           match fields, labels, tys with
@@ -538,18 +538,18 @@ module Surface = struct
           (* If the field is missing from the record literal we can infer it if
             the expected field was fixed with a singleton type. This is a bit
             like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
-          | fields, label :: labels, Semantics.Cons (Semantics.Sing (ty, sing_tm), tys) ->
+          | fields, label :: labels, Semantics.Cons (Semantics.SingType (ty, sing_tm), tys) ->
               let tm = quote context sing_tm ty in
               (label, tm) :: go fields labels (tys (eval context tm))
           | _, label :: _, _ -> raise (Error ("field `" ^ label ^ "` is missing from record literal"))
           | (label, _) :: _, [], Semantics.Nil -> raise (Error ("unexpected field `" ^ label ^ "` in record literal"))
           | _, _, _ -> raise (Semantics.Error "mismatched telescope length")
         in
-        Syntax.Record (go fields labels tys)
-    | tm, Semantics.Sing (ty, sing_tm) ->
+        Syntax.RecLit (go fields labels tys)
+    | tm, Semantics.SingType (ty, sing_tm) ->
         let tm = check context tm ty in
         let tm' = eval context tm in
-        if is_convertible context sing_tm tm' ty then Syntax.MkSing tm else
+        if is_convertible context sing_tm tm' ty then Syntax.SingIntro tm else
           let expected = pretty context sing_tm in
           let found = pretty context tm' in
           let ty = pretty context ty in
@@ -579,31 +579,31 @@ module Surface = struct
         (tm, ty')
     | Univ ->
         (Syntax.Univ, Semantics.Univ)
-    | Pi (params, body_ty) ->
+    | FunType (params, body_ty) ->
         let rec go context = function
           | [] -> check context body_ty Semantics.Univ
           | (name, param_ty) :: params ->
               let param_ty = check context param_ty Semantics.Univ in
               let context = bind_param context name (eval context param_ty) in
-              Syntax.Pi (name, param_ty, go context params)
+              Syntax.FunType (name, param_ty, go context params)
         in
         (go context params, Semantics.Univ)
-    | Arrow (param_ty, body_ty) ->
+    | FunArrow (param_ty, body_ty) ->
         let param_ty = check context param_ty Semantics.Univ in
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
-        (Syntax.Pi ("_", param_ty, body_ty), Semantics.Univ)
-    | Lam (_, _) ->
+        (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
+    | FunLit (_, _) ->
         raise (Error "ambiguous function literal")
     | App (head, arg) ->
         let head, head_ty = infer_and_elim_implicits context head in
         begin match head_ty with
-        | Semantics.Pi (_, param_ty, body_ty) ->
+        | Semantics.FunType (_, param_ty, body_ty) ->
             let arg = check context arg param_ty in
-            (Syntax.App (head, arg), body_ty (eval context arg))
+            (Syntax.FunApp (head, arg), body_ty (eval context arg))
         | _ -> raise (Error "not a function")
         end
-    | Sig field_tys ->
+    | RecType field_tys ->
         let rec go context seen_labels = function
           | [] -> ([], Syntax.Nil)
           | (label, _) :: _ when List.mem label seen_labels ->
@@ -615,15 +615,15 @@ module Surface = struct
               (label :: labels, Syntax.Cons (ty, tys))
         in
         let labels, tys = go context [] field_tys in
-        (Syntax.Sig (labels, tys), Semantics.Univ)
-    | Record _ ->
+        (Syntax.RecType (labels, tys), Semantics.Univ)
+    | RecLit _ ->
         raise (Error "ambiguous record literal")
     | Proj (head, label) ->
         let head, head_ty = infer_and_elim_implicits context head in
         begin match head_ty with
-        | Semantics.Sig (labels, tys) ->
+        | Semantics.RecType (labels, tys) ->
             begin match Semantics.proj_ty (eval context head) (labels, tys) label with
-            | Some ty -> (Syntax.Proj (head, label), ty)
+            | Some ty -> (Syntax.RecProj (head, label), ty)
             | None -> raise (Error ("field `" ^ label ^ "` not found in record"))
             end
         | _ -> raise (Error "not a record")
@@ -640,9 +640,9 @@ module Surface = struct
               | Some patch_tm ->
                   let tm = check context patch_tm ty in
                   let tm' = eval context tm in
-                  let context = bind_def context label (Semantics.Sing (ty, tm')) tm' in
+                  let context = bind_def context label (Semantics.SingType (ty, tm')) tm' in
                   let patches = List.remove_assoc label patches in
-                  Syntax.Cons (Syntax.Sing (ty', tm), go context labels (tys tm') patches)
+                  Syntax.Cons (Syntax.SingType (ty', tm), go context labels (tys tm') patches)
               | None ->
                   let var = next_var context in
                   let context = bind_def context label ty var in
@@ -656,15 +656,15 @@ module Surface = struct
         else
           let head = check context head Semantics.Univ in
           begin match eval context head with
-          | Semantics.Sig (labels, tys) ->
+          | Semantics.RecType (labels, tys) ->
               let tys = go context labels tys patches in
-              (Syntax.Sig (labels, tys), Semantics.Univ)
+              (Syntax.RecType (labels, tys), Semantics.Univ)
           | _ -> raise (Error "can only patch record types")
           end
-    | Sing (ty, sing_tm) ->
+    | SingType (ty, sing_tm) ->
         let ty = check context ty Semantics.Univ in
         let sing_tm = check context sing_tm (eval context ty) in
-        (Syntax.Sing (ty, sing_tm), Semantics.Univ)
+        (Syntax.SingType (ty, sing_tm), Semantics.Univ)
 
   (** Eliminate implicit connectives from a term.
 
@@ -672,9 +672,9 @@ module Surface = struct
       the head of an elimination form.
   *)
   and elim_implicits context tm = function
-    (* Convert the singleton back to its underlying term using {!Syntax.UnSing} *)
-    | Semantics.Sing (ty, sing_tm) ->
-        let tm = Syntax.UnSing (tm, quote context sing_tm ty) in
+    (* Convert the singleton back to its underlying term using {!Syntax.SingElim} *)
+    | Semantics.SingType (ty, sing_tm) ->
+        let tm = Syntax.SingElim (tm, quote context sing_tm ty) in
         elim_implicits context tm ty
     (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
       for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
@@ -750,83 +750,83 @@ module Examples = struct
 
   (* let F := { A : Set; B : Set; f : A -> B }; *)
   let fun_record_ty =
-    Sig [
+    RecType [
       "A", Univ;
       "B", Univ;
-      "f", Arrow (Name "A", Name "B");
+      "f", FunArrow (Name "A", Name "B");
     ]
 
   let patch_tm1 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun x := x) : F.{ B := A } -> F *)
-      Ann (Lam (["x"], Name "x"),
-        Arrow (Patch (Name "F", ["B", Name "A"]), Name "F")))
+      Ann (FunLit (["x"], Name "x"),
+        FunArrow (Patch (Name "F", ["B", Name "A"]), Name "F")))
 
   let patch_tm2 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F *)
-      Ann (Lam (["A"; "x"], Name "x"),
-        Pi (["A", Univ],
-          Arrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]), Name "F"))))
+      Ann (FunLit (["A"; "x"], Name "x"),
+        FunType (["A", Univ],
+          FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]), Name "F"))))
 
   let patch_tm3 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A; f := fun x := x } -> F *)
-      Ann (Lam (["A"; "x"], Name "x"),
-        Pi (["A", Univ],
-          Arrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"; "f", Lam (["x"], Name "x")]),
+      Ann (FunLit (["A"; "x"], Name "x"),
+        FunType (["A", Univ],
+          FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"; "f", FunLit (["x"], Name "x")]),
             Name "F"))))
 
   let patch_tm4 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F.{ B := A } *)
-      Ann (Lam (["A"; "x"], Name "x"),
-        Pi (["A", Univ],
-          Arrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
-          Patch (Name "F", ["B", Name "A"])))))
+      Ann (FunLit (["A"; "x"], Name "x"),
+        FunType (["A", Univ],
+          FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
+            Patch (Name "F", ["B", Name "A"])))))
 
   let patch_tm5 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F.{ A := A; B := A } -> F.{ A := A } *)
-      Ann (Lam (["A"; "x"], Name "x"),
-        Pi (["A", Univ],
-          Arrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
-          Patch (Name "F", ["A", Name "A"])))))
+      Ann (FunLit (["A"; "x"], Name "x"),
+        FunType (["A", Univ],
+          FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
+            Patch (Name "F", ["A", Name "A"])))))
 
   let patch_tm6 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun C x := x) : fun (C : Type) -> F.{ A := C; B := C } -> F.{ B := C } *)
-      Ann (Lam (["C"; "x"], Name "x"),
-        Pi (["C", Univ],
-          Arrow (Patch (Name "F", ["A", Name "C"; "B", Name "C"]),
-          Patch (Name "F", ["B", Name "C"])))))
+      Ann (FunLit (["C"; "x"], Name "x"),
+        FunType (["C", Univ],
+          FunArrow (Patch (Name "F", ["A", Name "C"; "B", Name "C"]),
+            Patch (Name "F", ["B", Name "C"])))))
 
   let patch_tm_lit1 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun C := { f := fun x := x }) : fun (C : Type) -> F.{ A := C; B := C } *)
-      Ann (Lam (["C"], Record ["f", Lam (["x"], Name "x")]),
-        Pi (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
+      Ann (FunLit (["C"], RecLit ["f", FunLit (["x"], Name "x")]),
+        FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
   let patch_tm_lit2 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun C := {}) : fun (C : Type) -> F.{ A := C; B := C; f := fun x := x } *)
-      Ann (Lam (["C"], Record []),
-        Pi (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"; "f", Lam (["x"], Name "x")]))))
+      Ann (FunLit (["C"], RecLit []),
+        FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"; "f", FunLit (["x"], Name "x")]))))
 
   let patch_tm_lit3 =
     (* let F := { A : Set; B : Set; f : A -> B }; *)
     Let ("F", fun_record_ty,
       (* (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F.{ A := C; B := C } *)
-      Ann (Lam (["C"], Record ["B", Name "C"; "f", Lam (["x"], Name "x")]),
-        Pi (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
+      Ann (FunLit (["C"], RecLit ["B", Name "C"; "f", FunLit (["x"], Name "x")]),
+        FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
   (*
     (fun B r := r) :
@@ -834,33 +834,33 @@ module Examples = struct
         -> { A : Type; a : A }
   *)
   let record_lit_coerce1 =
-    Ann (Lam (["B"; "r"], Name "r"),
-      Pi (["B", Univ; "r", Sig ["A", Sing (Univ, Name "B"); "a", Name "B"]],
-        Sig ["A", Univ; "a", Name "A"]))
+    Ann (FunLit (["B"; "r"], Name "r"),
+      FunType (["B", Univ; "r", RecType ["A", SingType (Univ, Name "B"); "a", Name "B"]],
+        RecType ["A", Univ; "a", Name "A"]))
 
   (*
     (fun B b := { A := B; a := b } : { A : Type; a : B }) :
       fun (B : Type) (b : Type) -> { A : Type; a : A }
   *)
   let record_lit_coerce2 =
-    Ann (Lam (["B"; "b"],
-        Ann (Record ["A", Name "B"; "a", Name "b"],
-          Sig ["A", Univ; "a", Name "B"])),
-      Pi (["B", Univ; "b", Name "B"], Sig ["A", Univ; "a", Name "A"]))
+    Ann (FunLit (["B"; "b"],
+        Ann (RecLit ["A", Name "B"; "a", Name "b"],
+          RecType ["A", Univ; "a", Name "B"])),
+      FunType (["B", Univ; "b", Name "B"], RecType ["A", Univ; "a", Name "A"]))
 
   (*
      (fun A x := x) : fun (A : Type) (x : A) -> A [ x ]
   *)
   let intro_sing =
-    Ann (Lam (["A"; "x"], Name "x"),
-      Pi (["A", Univ; "x", Name "A"], Sing (Name "A", Name "x")))
+    Ann (FunLit (["A"; "x"], Name "x"),
+      FunType (["A", Univ; "x", Name "A"], SingType (Name "A", Name "x")))
 
   (*
      (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [ x ]) -> A
   *)
   let elim_sing =
-    Ann (Lam (["A"; "x"; "sing-x"], Name "sing-x"),
-      Pi (["A", Univ; "x", Name "A"; "sing-x", Sing (Name "A", Name "x")], Name "A"))
+    Ann (FunLit (["A"; "x"; "sing-x"], Name "sing-x"),
+      FunType (["A", Univ; "x", Name "A"; "sing-x", SingType (Name "A", Name "x")], Name "A"))
 
   (*
     (fun A P f pf := pf) :
@@ -871,12 +871,12 @@ module Examples = struct
       -> P f
   *)
   let sing_tm1 =
-    Ann (Lam (["A"; "P"; "f"; "prf"], Name "prf"),
-      Pi ([
+    Ann (FunLit (["A"; "P"; "f"; "prf"], Name "prf"),
+      FunType ([
         "A", Univ;
-        "P", Pi (["_", Pi (["x", Name "A"], Sing (Name "A", Name "x"))], Univ);
-        "f", Pi (["x", Name "A"], Sing (Name "A", Name "x"));
-        "prf", App (Name "P", Lam (["x"], Name "x"));
+        "P", FunType (["_", FunType (["x", Name "A"], SingType (Name "A", Name "x"))], Univ);
+        "f", FunType (["x", Name "A"], SingType (Name "A", Name "x"));
+        "prf", App (Name "P", FunLit (["x"], Name "x"));
       ], App (Name "P", Name "f")))
 
   (*
@@ -888,11 +888,11 @@ module Examples = struct
     };
   *)
   let category_ty =
-    Sig [
+    RecType [
       "Ob", Univ;
-      "Hom", Arrow (Sig ["s", Name "Ob"; "t", Name "Ob"], Univ);
-      "id", Pi (["x", Name "Ob"], Patch (Name "Hom", ["s", Name "x"; "t", Name "x"]));
-      "seq", Pi (["f", Name "Hom"; "g", Patch (Name "Hom", ["s", Proj (Name "f", "t")])],
+      "Hom", FunArrow (RecType ["s", Name "Ob"; "t", Name "Ob"], Univ);
+      "id", FunType (["x", Name "Ob"], Patch (Name "Hom", ["s", Name "x"; "t", Name "x"]));
+      "seq", FunType (["f", Name "Hom"; "g", Patch (Name "Hom", ["s", Proj (Name "f", "t")])],
         Patch (Name "Hom", ["s", Proj (Name "f", "s"); "t", Proj (Name "g", "t")]));
     ]
 
@@ -907,14 +907,13 @@ module Examples = struct
   let types_tm =
     Let ("category", category_ty,
       Ann (
-        Record [
+        RecLit [
           "Ob", Univ;
-          "Hom", Lam (["params"], Arrow (Proj (Name "params", "s"), Proj (Name "params", "t")));
-          "id", Lam (["A"; "a"], Name "a");
-          "seq", Lam (["f"; "g"; "a"], App (Name "g", App (Name "f", Name "a")));
+          "Hom", FunLit (["params"], FunArrow (Proj (Name "params", "s"), Proj (Name "params", "t")));
+          "id", FunLit (["A"; "a"], Name "a");
+          "seq", FunLit (["f"; "g"; "a"], App (Name "g", App (Name "f", Name "a")));
         ],
-        category_ty
-      ))
+        Name "category"))
 
   let terms = [
     "fun_record_ty", fun_record_ty;
