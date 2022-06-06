@@ -159,6 +159,7 @@ module Core = struct
     and tele =
       | Nil
       | Cons of ty * (tele binds)
+
   end
 
   (** Semantic domain *)
@@ -228,7 +229,8 @@ module Core = struct
       | Syntax.Let (_, def, body) -> eval (eval tms def :: tms) body
       | Syntax.Var index -> List.nth tms index
       | Syntax.Univ -> Univ
-      | Syntax.FunType (name, param_ty, body_ty) -> FunType (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
+      | Syntax.FunType (name, param_ty, body_ty) ->
+          FunType (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
       | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: tms) body)
       | Syntax.FunApp (head, arg) -> app (eval tms head) (eval tms arg)
       | Syntax.RecType (labels, tys) -> RecType (labels, eval_tele tms tys)
@@ -432,12 +434,11 @@ module Core = struct
       in
       go false size names tm ""
     end
+
 end
 
 (** Surface language *)
 module Surface = struct
-  module Syntax = Core.Syntax
-  module Semantics = Core.Semantics
 
   (** Terms in the surface language *)
   type tm =
@@ -462,6 +463,9 @@ module Surface = struct
       - introduction: [ x : A [= a ] ] elaborates to [ sing-intro x ]
       - elimination: [ x : A ] elaborates to [ sing-elim x a ]
   *)
+
+  module Syntax = Core.Syntax
+  module Semantics = Core.Semantics
 
   (** Elaboration context *)
   type context = {
@@ -729,10 +733,12 @@ module Surface = struct
   and infer_and_elim_implicits context tm : Syntax.tm * Semantics.ty =
     let tm, ty = infer context tm in
     elim_implicits context tm ty
+
 end
 
 (** Example terms for testing *)
 module Examples = struct
+
   open Surface
 
   (* TODO: Implement a parser and convert to promote tests *)
@@ -980,6 +986,7 @@ module Examples = struct
     (* "category_ty", category_ty; *)
     (* "types_tm", types_tm; *)
   ]
+
 end
 
 let () =
