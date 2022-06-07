@@ -126,6 +126,7 @@ module Core = struct
     (** Terms *)
     and tm =
       | Let of name * tm * tm
+      | Ann of tm * ty
       | Var of index
       | Univ
       | FunType of name * ty * (ty binds)
@@ -226,6 +227,7 @@ module Core = struct
     (** Evaluate a term from the synatax into a term in the semantic domain *)
     let rec eval tms : Syntax.tm -> tm = function
       | Syntax.Let (_, def, body) -> eval (eval tms def :: tms) body
+      | Syntax.Ann (tm, _) -> eval tms tm
       | Syntax.Var index -> List.nth tms index
       | Syntax.Univ -> Univ
       | Syntax.FunType (name, param_ty, body_ty) ->
@@ -626,7 +628,7 @@ module Surface = struct
         let ty = check context ty Semantics.Univ in
         let ty' = eval context ty in
         let tm = check context tm ty' in
-        (tm, ty')
+        (Syntax.Ann (tm, ty), ty')
     | Univ ->
         (Syntax.Univ, Semantics.Univ)
     | FunType (params, body_ty) ->
