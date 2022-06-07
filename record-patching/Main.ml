@@ -209,8 +209,7 @@ module Core = struct
 
     (** Compute a record projection *)
     let proj : tm -> label -> tm = function
-      | RecLit fields -> fun label ->
-          fields |> List.find (fun (l, _) -> l = label) |> snd
+      | RecLit fields -> fun label -> fields |> List.find (fun (l, _) -> l = label) |> snd
       | Neu neu -> fun label -> Neu (RecProj (neu, label))
       | _ -> raise (Error "invalid proj")
 
@@ -234,7 +233,8 @@ module Core = struct
       | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: tms) body)
       | Syntax.FunApp (head, arg) -> app (eval tms head) (eval tms arg)
       | Syntax.RecType (labels, tele) -> RecType (labels, eval_tele tms tele)
-      | Syntax.RecLit fields -> RecLit (List.map (fun (label, expr) -> (label, eval tms expr)) fields)
+      | Syntax.RecLit fields ->
+          RecLit (List.map (fun (label, expr) -> (label, eval tms expr)) fields)
       | Syntax.RecProj (head, label) -> proj (eval tms head) label
       | Syntax.SingType (ty, sing_tm) -> SingType (eval tms ty, eval tms sing_tm)
       | Syntax.SingIntro _ -> SingIntro
