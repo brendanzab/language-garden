@@ -312,10 +312,10 @@ module Core = struct
 
     (** Typed-directed conversion checking
 
-        Typed conversion lets us support full eta for unit types. These show up
-        in our language as empty records and singletons. If we wanted to stick
-        to untyped conversion checking, according to Andras Korvacs we could
-        alternatively:
+        A type-directed approach allows us to support full eta for unit types.
+        These show up in our language as empty records and singletons. If we
+        wanted to stick to untyped conversion checking, according to Andras
+        Korvacs we could alternatively:
 
         - perform best-effort eta, where unit elements are the same as anything
         - detect definitionally irrelevant types during elaboration, marking
@@ -585,8 +585,9 @@ module Surface = struct
           | (label, tm) :: fields, label' :: labels, Semantics.Cons (ty, tele) when label = label' ->
               let tm = check context tm ty in
               (label, tm) :: go fields labels (tele (eval context tm))
-          (* Missing fields can be inferred from singleton types in the expected
-             field. This is a bit like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
+          (* The definition of a missing field can be inferred from the record
+             type if the field’s expected type is a singleton. This is a bit
+             like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
           | fields, label :: labels, Semantics.Cons (Semantics.SingType (ty, sing_tm), tele) ->
               let tm = quote context sing_tm ty in
               (label, tm) :: go fields labels (tele (eval context tm))
