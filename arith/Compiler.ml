@@ -13,10 +13,13 @@ end
 (** Translation pass between the {!TreeLang} and {!StackLang} *)
 module TreeToStack : Translation
 
-  with type source := TreeLang.term
-  with type target := StackLang.program
+  with type source = TreeLang.term
+  with type target = StackLang.program
 
 = struct
+
+  type source = TreeLang.term
+  type target = StackLang.program
 
   let rec translate : TreeLang.term -> StackLang.program =
     function
