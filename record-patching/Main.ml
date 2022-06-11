@@ -454,8 +454,8 @@ module Surface = struct
     | RecType of (string * tm) list       (** Record types: [ { x : A; ... } ]*)
     | RecLit of (string * tm) list        (** Record literals: [ { x := A; ... } ]*)
     | SingType of tm * tm                 (** Singleton types: [ A [= x ] ] *)
-    | App of tm * tm                      (** Applications: [ f x ] *)
-    | Proj of tm * string                 (** Projections: [ r.l ] *)
+    | App of tm * tm list                 (** Applications: [ f x ] *)
+    | Proj of tm * string list            (** Projections: [ r.l ] *)
     | Patch of tm * (string * tm) list    (** Record patches: [ R [ B := A; ... ] ] *)
 
   (** Note that we don’t need to add surface syntax for introducing and
@@ -666,24 +666,28 @@ module Surface = struct
         let ty = check context ty Semantics.Univ in
         let sing_tm = check context sing_tm (eval context ty) in
         (Syntax.SingType (ty, sing_tm), Semantics.Univ)
-    | App (head, arg) ->
-        let head, head_ty = infer_and_elim_implicits context head in
-        begin match head_ty with
-        | Semantics.FunType (_, param_ty, body_ty) ->
-            let arg = check context arg param_ty in
-            (Syntax.FunApp (head, arg), body_ty (eval context arg))
-        | _ -> raise (Error "not a function")
-        end
-    | Proj (head, label) ->
-        let head, head_ty = infer_and_elim_implicits context head in
-        begin match head_ty with
-        | Semantics.RecType (labels, tys) ->
-            begin match Semantics.proj_ty (eval context head) (labels, tys) label with
-            | Some ty -> (Syntax.RecProj (head, label), ty)
-            | None -> raise (Error ("field `" ^ label ^ "` not found in record"))
-            end
-        | _ -> raise (Error "not a record")
-        end
+    | App (head, args) ->
+        List.fold_left
+          (fun (head, head_ty) arg ->
+            match elim_implicits context head head_ty with
+            | head, Semantics.FunType (_, param_ty, body_ty) ->
+                let arg = check context arg param_ty in
+                (Syntax.FunApp (head, arg), body_ty (eval context arg))
+            | _ -> raise (Error "not a function"))
+          (infer context head)
+          args
+    | Proj (head, labels) ->
+        List.fold_left
+          (fun (head, head_ty) label ->
+            match elim_implicits context head head_ty with
+            | head, Semantics.RecType (labels, tys) ->
+                begin match Semantics.proj_ty (eval context head) (labels, tys) label with
+                | Some ty -> (Syntax.RecProj (head, label), ty)
+                | None -> raise (Error ("field `" ^ label ^ "` not found in record"))
+                end
+            | _ -> raise (Error "not a record"))
+          (infer context head)
+          labels
     | Patch (head, patches) ->
         let rec go context labels tys patches =
           match labels, tys, patches with
@@ -930,8 +934,8 @@ module Examples = struct
         "A", Univ;
         "P", FunType (["_", FunType (["x", Name "A"], SingType (Name "A", Name "x"))], Univ);
         "f", FunType (["x", Name "A"], SingType (Name "A", Name "x"));
-        "prf", App (Name "P", FunLit (["x"], Name "x"));
-      ], App (Name "P", Name "f")))
+        "prf", App (Name "P", [FunLit (["x"], Name "x")]);
+      ], App (Name "P", [Name "f"])))
 
   (*
     let category := {
@@ -946,8 +950,8 @@ module Examples = struct
       "Ob", Univ;
       "Hom", FunArrow (RecType ["s", Name "Ob"; "t", Name "Ob"], Univ);
       "id", FunType (["x", Name "Ob"], Patch (Name "Hom", ["s", Name "x"; "t", Name "x"]));
-      "seq", FunType (["f", Name "Hom"; "g", Patch (Name "Hom", ["s", Proj (Name "f", "t")])],
-        Patch (Name "Hom", ["s", Proj (Name "f", "s"); "t", Proj (Name "g", "t")]));
+      "seq", FunType (["f", Name "Hom"; "g", Patch (Name "Hom", ["s", Proj (Name "f", ["t"])])],
+        Patch (Name "Hom", ["s", Proj (Name "f", ["s"]); "t", Proj (Name "g", ["t"])]));
     ]
 
   (*
@@ -963,9 +967,9 @@ module Examples = struct
       Ann (
         RecLit [
           "Ob", Univ;
-          "Hom", FunLit (["params"], FunArrow (Proj (Name "params", "s"), Proj (Name "params", "t")));
+          "Hom", FunLit (["params"], FunArrow (Proj (Name "params", ["s"]), Proj (Name "params", ["t"])));
           "id", FunLit (["A"; "a"], Name "a");
-          "seq", FunLit (["f"; "g"; "a"], App (Name "g", App (Name "f", Name "a")));
+          "seq", FunLit (["f"; "g"; "a"], App (Name "g", [Name "f"; Name "a"]));
         ],
         Name "category"))
 
