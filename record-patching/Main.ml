@@ -87,20 +87,45 @@
 
     {1 Future work}
 
-    - Implement a parser for the surface language.
-    - Experiment with adding ‘generativity’. This would allow the contents
-      of a record to be hidden, allowing us to use them as a way to define
-      abstract data types.
-    - Figure out how to implement ‘total space conversion’, like in CoolTT. This
-      automatically converts [ F : { l : T; ... } -> Type ] to the record type
-      [ { l : T; ..., fibre : F { l := l; ... } } ] where necessary.
-    - Attempt to implementing metavariables, unification, and implicit function
-      types. This could be challenging in the presence subtyping, however. Total
-      space conversion apparently makes implicit parameters less necessary, but
-      I'm still a little skeptical of this!
-    - Figure out ways to avoid the bloat that patches introduce (note how each
-      patch elaborates to a copy of the original record type). This could become
-      a perfomance issue if patching is used heavily.
+    {2 Parser}
+
+    Implement a parser for the surface language.
+
+    {2 Opaque ascription }
+
+    Experiment with adding a ‘sealing operator’ [ e :> t ] to the surface
+    language. This would allow the contents of an expression to be made opaque,
+    with the goal of allowing records to be used to define abstract data types.
+
+    We could implement this by elaborating the sealing operator into function
+    literals and applications. For example, we could elaborate the term
+    [ ... (e :> t) ... ] into something like: [ (fun (x : t) := ... x ...) e ].
+    Let expressions [ let x :> t := e; ... ] could be alaborated to
+    [ (fun (x : t) := ...) e ].
+
+    {2 Total space conversion}
+
+    Figure out how to implement ‘total space conversion’, like in CoolTT. This
+    automatically converts [ F : { l : T; ... } -> Type ] to the record type
+    [ { l : T; ..., fibre : F { l := l; ... } } ] where necessary.
+
+    {2 Metavariables and unification}
+
+    Attempt to implementing metavariables, unification, and implicit function
+    types. This could be challenging in the presence subtyping, however. Total
+    space conversion apparently makes implicit parameters less necessary, but
+    I'm still a little skeptical of this!
+
+    {2 Address patch bloat}
+
+    Figure out ways to avoid the bloat that patches introduce (note how each
+    patch elaborates to a copy of the original record type). This could become
+    a perfomance issue if patching is used heavily.
+
+    {2 Use patches on record literals}
+
+    The same syntax used by patches could be used as a way to update the fields
+    of record literals.
 *)
 
 (** Returns the index of the given element in the list *)
@@ -1093,24 +1118,25 @@ let () =
       string_of_int passed ^ " passed; " ^
       string_of_int failed ^ " failed")
 
-(* Syntax bikeshed
+(** {1 Syntax bikeshedding}
 
-  Record patching:
+    {2 Record patching}
 
-  -  [ R [ B := A; ... ] ]
-  -  [ R.{ B := A; ... } ]
-  -  [ R # [ B .= A, ... ] ] (like in CoolTT)
-  -  [ R # { B := A; ... } ]
-  -  [ R (B := A, ...) ] (possibly overloaded with function application)
-  -  [ R where B := A, ... ] (like in Standard-ML)
+    - [ R [ B := A; ... ] ]
+    - [ R.{ B := A; ... } ]
+    - [ R # [ B .= A, ... ] ] (like in CoolTT)
+    - [ R # { B := A; ... } ]
+    - [ R (B := A, ...) ] (possibly overloaded with function application)
+    - [ R where B := A, ... ] (like in Standard-ML)
 
-  Singleton types:
+    {2 Singleton types}
 
-  - [ A [ x ] ]
-  - [ A [= x ] ] (riffing on the idea of using square brackets for ‘refinement’)
-  - [ A [:= x ] ] (another similar idea)
-  - [ (= x : A) ]
-  - [ (:= x : A) ]
-  - [ A (= x) ]
-  - [ A (:= x) ] (parens read like, “btw, it's equal to [ x ]”)
+    - [ A [ x ] ] (like in mb64’s original implementation)
+    - [ A [= x ] ] (riffing on the idea of using square brackets for ‘refinement’)
+    - [ A [:= x ] ] (another similar idea)
+    - [ (= x) ] (like in 1ML)
+    - [ (= x : A) ]
+    - [ (:= x : A) ]
+    - [ A (= x) ]
+    - [ A (:= x) ] (parens read like, “btw, it's equal to [ x ]”)
 *)
