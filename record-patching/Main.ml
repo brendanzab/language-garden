@@ -409,6 +409,7 @@ module Core = struct
         | FunLit (name, body) ->
             parens wrap (str "fun " << str name << str " := " <<
               go false (size + 1) (name :: names) (body (Neu (Var size))))
+        | RecType ([], Nil) | RecLit [] -> str "{}"
         | RecType (labels, tele) ->
             str "{ " << go_field_tys size names labels tele << str "}"
         | RecLit fields ->
@@ -453,6 +454,7 @@ module Surface = struct
     | FunLit of string list * tm          (** Function literals: [ fun x := f x ] *)
     | RecType of (string * tm) list       (** Record types: [ { x : A; ... } ]*)
     | RecLit of (string * tm) list        (** Record literals: [ { x := A; ... } ]*)
+    | RecUnit                             (** Unit records: [ {} ] *)
     | SingType of tm * tm                 (** Singleton types: [ A [= x ] ] *)
     | App of tm * tm list                 (** Applications: [ f x ] *)
     | Proj of tm * string list            (** Projections: [ r.l ] *)
@@ -598,6 +600,10 @@ module Surface = struct
           | _, _, _ -> raise (Semantics.Error "mismatched telescope length")
         in
         Syntax.RecLit (go fields labels tele)
+    | RecUnit, Semantics.Univ ->
+        Syntax.RecType ([], Nil)
+    | RecUnit, Semantics.RecType ([], _) ->
+        Syntax.RecLit []
     | tm, Semantics.SingType (ty, sing_tm) ->
         let tm = check context tm ty in
         let tm' = eval context tm in
@@ -662,6 +668,8 @@ module Surface = struct
         (Syntax.RecType (labels, tele), Semantics.Univ)
     | RecLit _ ->
         raise (Error "ambiguous record literal")
+    | RecUnit ->
+        raise (Error "ambiguous unit record")
     | SingType (ty, sing_tm) ->
         let ty = check context ty Semantics.Univ in
         let sing_tm = check context sing_tm (eval context ty) in
