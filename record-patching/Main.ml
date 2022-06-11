@@ -757,29 +757,29 @@ module Examples = struct
       f : A -> B;
     };
 
-    let _ := (fun x := x) : F [ B := A ] -> F;
-    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F;
-    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F;
-    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ];
-    let _ := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ];
-    let _ := (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ];
+    let patch_tm1 := (fun x := x) : F [ B := A ] -> F;
+    let patch_tm2 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F;
+    let patch_tm3 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F;
+    let patch_tm4 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ];
+    let patch_tm5 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ];
+    let patch_tm6 := (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ];
 
-    let _ := (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
-    let _ := (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ];
-    let _ := (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
+    let patch_tm_lit1 := (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
+    let patch_tm_lit2 := (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ];
+    let patch_tm_lit3 := (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
 
-    let _ :=
+    let record_lit_coerce1 :=
       (fun B r := r) :
         fun (B : Type) (r : { A : Type [= B ]; a : B })
           -> { A : Type; a : A };
-    let _ :=
+    let record_lit_coerce2 :=
       (fun B b := { A := B; a := b } : { A : Type; a : B }) :
         fun (B : Type) (b : Type) -> { A : Type; a : A };
 
-    let _ := (fun A x := x) : fun (A : Type) (x : A) -> A [= x ];
-    let _ := (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A;
+    let intro_sing := (fun A x := x) : fun (A : Type) (x : A) -> A [= x ];
+    let elim_sing := (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A;
 
-    let _ :=
+    let sing_tm1 :=
       (fun A P f prf := prf) :
         fun (A : Type)
             (P : (fun (x : A) -> A [= x ]) -> Type)
