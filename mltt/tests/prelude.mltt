@@ -193,6 +193,14 @@ let not : Bool -> Bool :=
   fun b :=
     b Bool false true;
 
+let and : Bool -> Bool -> Bool :=
+  fun b0 b1 :=
+    b0 Bool (b1 Bool true false) false;
+
+let or : Bool -> Bool -> Bool :=
+  fun b0 b1 :=
+    b0 Bool true (b1 Bool true false);
+
 
 -- Natural numbers
 
