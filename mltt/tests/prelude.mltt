@@ -190,9 +190,8 @@ let false : Bool :=
 
 
 let not : Bool -> Bool :=
-  fun bool :=
-    fun Out true false :=
-      bool Out false true;
+  fun b :=
+    b Bool false true;
 
 
 -- Natural numbers
