@@ -857,6 +857,49 @@ module Examples = struct
         fun A a := a;
       id {} {};
 
+    -- Example from page 4 of “1ML – Core and Modules United”
+    let map-functor :=
+
+      let Bool := fun (Out : Type) { true : Out; false : Out } -> Out;
+      let true : Bool := fun Out cases := cases.true;
+      let false : Bool := fun Out cases := cases.false;
+
+      let Option : Type -> Type := fun A :=
+        fun (Out : Type) { some : A -> Out; none : Out } -> Out;
+
+      let none : fun (A : Type) -> Option A :=
+        fun A := fun Out cases := cases.none;
+      let some : fun (A : Type) -> A -> Option A :=
+        fun A a := fun Out cases := cases.some a;
+
+      let Eq := {
+        T : Type;
+        eq : T -> T -> Bool;
+      };
+
+      let Map := {
+        Key : Type;
+        Map : Type -> Type;
+        empty : fun (A : Type) -> Map A;
+        add : fun (A : Type) -> Key -> A -> Map A -> Map A;
+        lookup : fun (A : Type) -> Key -> Map A -> Option A;
+      };
+
+      -- TODO: sealing operator
+      let eq-map : fun (key : Eq) -> Map [ Key := key.T ] :=
+        fun key := {
+          Map := fun A := key.T -> Option A
+          empty := fun A := fun x := none A;
+          add := fun A k v map :=
+            fun x := (key.eq x k) (Option A) {
+              true := some A v;
+              false := map x;
+            };
+          lookup := fun A k map := map k;
+        };
+
+      Type;
+
     -- TODO: requires total space conversion like in CoolTT
 
     let category := {
@@ -1025,6 +1068,92 @@ module Examples = struct
       App (Name "id", [RecUnit; RecUnit]))
 
   (*
+    -- Example from page 4 of “1ML – Core and Modules United”
+
+    let Bool := fun (Out : Type) (cases : { true : Out; false : Out }) -> Out;
+    let true : Bool := fun Out cases := cases.true;
+    let false : Bool := fun Out cases := cases.false;
+
+    let Option : Type -> Type := fun A :=
+      fun (Out : Type) (cases : { some : A -> Out; none : Out }) -> Out;
+
+    let none : fun (A : Type) -> Option A :=
+      fun A := fun Out cases := cases.none;
+    let some : fun (A : Type) -> A -> Option A :=
+      fun A a := fun Out cases := cases.some a;
+
+    let Eq := {
+      T : Type;
+      eq : T -> T -> Bool;
+    };
+
+    let Map := {
+      Key : Type;
+      Map : Type -> Type;
+      empty : fun (A : Type) -> Map A;
+      add : fun (A : Type) -> Key -> A -> Map A -> Map A;
+      lookup : fun (A : Type) -> Key -> Map A -> Option A;
+    };
+
+    -- TODO: sealing operator
+    let eq-map : fun (key : Eq) -> Map [ Key := key.T ] :=
+      fun key := {
+        Map := fun A := key.T -> Option A
+        empty := fun A := fun x := none A;
+        add := fun A k v map :=
+          fun x := (key.eq x k) (Option A) {
+            true := some A v;
+            false := map x;
+          };
+        lookup := fun A k map := map k;
+      };
+
+    Type
+  *)
+  let map_functor =
+    Let ("Bool", None, FunType (["Out", Univ; "cases", RecType ["true", Name "Out"; "false", Name "Out"]], Name "Out"),
+    Let ("true", Some (Name "Bool"), FunLit (["Out"; "cases"], Proj (Name "cases", ["true"])),
+    Let ("false", Some (Name "Bool"), FunLit (["Out"; "cases"], Proj (Name "cases", ["false"])),
+
+    Let ("Option", Some (FunArrow (Univ, Univ)),
+      FunLit (["A"], FunType (["Out", Univ; "cases", RecType ["some", FunArrow (Name "A", Name "Out"); "none", Name "Out"]], Name "Out")),
+    Let ("none", Some (FunType (["A", Univ], App (Name "Option", [Name "A"]))),
+      FunLit (["A"], FunLit (["Out"; "cases"], Proj (Name "cases", ["none"]))),
+    Let ("some", Some (FunType (["A", Univ], FunArrow (Name "A", App (Name "Option", [Name "A"])))),
+      FunLit (["A"; "a"], FunLit (["Out"; "cases"], App (Proj (Name "cases", ["some"]), [Name "a"]))),
+
+    Let ("Eq", None,
+      RecType ["T", Univ; "eq", FunArrow (Name "T", FunArrow (Name "T", Name "Bool"))],
+    Let ("Map", None,
+      RecType [
+        "Key", Univ;
+        "Map", FunArrow (Univ, Univ);
+        "empty", FunType (["A", Univ], App (Name "Map", [Name "A"]));
+        "add", FunType (["A", Univ],
+          FunArrow (Name "Key", FunArrow (Name "A",
+            FunArrow (App (Name "Map", [Name "A"]), App (Name "Map", [Name "A"])))));
+        "lookup", FunType (["A", Univ],
+          FunArrow (Name "Key",
+            FunArrow (App (Name "Map", [Name "A"]), App (Name "Option", [Name "A"]))));
+      ],
+    Let ("eq-map", Some (FunType (["key", Name "Eq"], Patch (Name "Map", ["Key", Proj (Name "key", ["T"])]))),
+      FunLit (["key"],
+        RecLit [
+          "Map", FunLit (["A"], FunArrow (Proj (Name "key", ["T"]), App (Name "Option", [Name "A"])));
+          "empty", FunLit (["A"], FunLit (["k"], App (Name "none", [Name "A"])));
+          "add", FunLit (["A"; "k"; "v"; "map"],
+            FunLit (["x"], App (App (Proj (Name "key", ["eq"]), [Name "x"; Name "k"]), [
+              App (Name "Option", [Name "A"]);
+              RecLit [
+                "true", App (Name "some", [Name "A"; Name "v"]);
+                "false", App (Name "none", [Name "A"]);
+              ];
+            ])));
+          "lookup", FunLit (["A"; "k"; "map"], App (Name "map", [Name "k"]));
+        ]),
+      Univ)))))))))
+
+  (*
     let category := {
       Ob : Type;
       Hom : { s : Ob; t : Ob } -> Type;
@@ -1078,6 +1207,7 @@ module Examples = struct
     "sing_tm1", sing_tm1;
     "let_ann_check", let_ann_check;
     "let_ann_synth", let_ann_synth;
+    "map_functor", map_functor;
     (* TODO: requires total space conversion like in CoolTT *)
     (* "category_ty", category_ty; *)
     (* "types_tm", types_tm; *)
