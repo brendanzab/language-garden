@@ -177,57 +177,75 @@ let endofunctor-functor : Endofunctor -> Functor :=
 -- Booleans
 
 let Bool : Type :=
-  fun (Out : Type) ->
-    fun (true : Out) ->
-    fun (false : Out) ->
-      Out;
+  fun (Out : Type) -> {
+    true : Out;
+    false : Out;
+  } -> Out;
 
-let true : Bool :=
-  fun Out true false := true;
-
-let false : Bool :=
-  fun Out true false := false;
+let true : Bool := fun Out cases := cases.true;
+let false : Bool := fun Out cases := cases.false;
 
 
 let not : Bool -> Bool :=
-  fun b :=
-    b Bool false true;
+  fun b := b Bool {
+    true := false;
+    false := true;
+  };
 
 let and : Bool -> Bool -> Bool :=
-  fun b0 b1 :=
-    b0 Bool (b1 Bool true false) false;
+  fun b0 b1 := b0 Bool {
+    true := b1 Bool {
+      true := true;
+      false := false;
+    };
+    false := false;
+  };
 
 let or : Bool -> Bool -> Bool :=
-  fun b0 b1 :=
-    b0 Bool true (b1 Bool true false);
+  fun b0 b1 := b0 Bool {
+    true := true;
+    false := b1 Bool {
+      true := true;
+      false := false;
+    };
+  };
 
 
 -- Natural numbers
 
 let Nat : Type :=
-  fun (Out : Type) ->
-    fun (succ : Out -> Out) ->
-    fun (zero : Out) ->
-      Out;
+  fun (Out : Type) -> {
+    succ : Out -> Out;
+    zero : Out;
+  } -> Out;
 
 let zero : Nat :=
-  fun Out succ zero := zero;
+  fun Out cases := cases.zero;
 
 let succ : Nat -> Nat :=
   fun prev :=
-    fun Out succ zero :=
-      succ (prev Out succ zero);
+    fun Out cases :=
+      cases.succ (prev Out cases);
 
 
 let add : Nat -> Nat -> Nat :=
   fun n0 n1 :=
-    fun Out succ zero :=
-      n0 Out succ (n1 Out succ zero);
+    fun Out cases :=
+      n0 Out {
+        succ := cases.succ;
+        zero := n1 Out cases;
+      };
 
 let mul : Nat -> Nat -> Nat :=
   fun n0 n1 :=
-    fun Out succ zero :=
-      n0 Out (n1 Out succ) zero;
+    fun Out cases :=
+      n0 Out {
+        succ := fun n0 := n1 Out {
+          succ := cases.succ;
+          zero := cases.zero;
+        };
+        zero := cases.zero;
+      };
 
 
 let nat-semigroup-add : Semigroup := {
@@ -241,49 +259,71 @@ let nat-semigroup-mul : Semigroup := {
 };
 
 
+-- Options
+
+let Option : Type -> Type := fun Elem :=
+  fun (Out : Type) -> {
+    some : Elem -> Out;
+    none : Out;
+  } -> Out;
+
+let none : fun (Elem : Type) -> Option Elem :=
+  fun Elem := fun Out cases := cases.none;
+let some : fun (Elem : Type) -> Elem -> Option Elem :=
+  fun Elem a := fun Out cases := cases.some a;
+
+
+let option-map : fun (A : Type) (B : Type) -> (A -> B) -> Option A -> Option B :=
+  fun A B a-b option-a :=
+    option-a (Option B) {
+      some := fun a := some B (a-b a);
+      none := none B;
+    };
+
 
 -- Lists
 
 let List : Type -> Type :=
   fun Elem :=
-    fun (Out : Type) ->
-      fun (nil : Out) ->
-      fun (cons : Elem -> Out -> Out) ->
-        Out;
+    fun (Out : Type) -> {
+      nil : Out;
+      cons : Elem -> Out -> Out;
+    } -> Out;
 
 let nil : fun (Elem : Type) -> List Elem :=
-  fun Elem :=
-    fun Out nil cons := nil;
+  fun Elem := fun Out cases := cases.nil;
 
 let cons : fun (Elem : Type) -> Elem -> List Elem -> List Elem :=
   fun Elem head tail :=
-    fun Out nil cons :=
-      cons head (tail Out nil cons);
+    fun Out cases :=
+      cases.cons head (tail Out cases);
 
 
 let list-map : fun (A : Type) (B : Type) -> (A -> B) -> List A -> List B :=
   fun A B a-b as :=
-    fun Out nil cons :=
-      as Out nil (fun a bs := cons (a-b a) bs);
+    fun Out cases :=
+      as Out {
+        nil := cases.nil;
+        cons := fun a bs := cases.cons (a-b a) bs;
+      };
 
 
 -- Vectors
 
 let Vec : Type -> Nat -> Type :=
   fun Elem len :=
-    fun (Out : Nat -> Type) ->
-      fun (nil : Out zero) ->
-      fun (cons : fun (len : Nat) -> Elem -> Out len -> Out (succ len)) ->
-        Out len;
+    fun (Out : Nat -> Type) -> {
+      nil : Out zero;
+      cons : fun (len : Nat) -> Elem -> Out len -> Out (succ len);
+    } -> Out len;
 
 let vec-nil : fun (Elem : Type) -> Vec Elem zero :=
-  fun Elem :=
-    fun Out nil cons := nil;
+  fun Elem := fun Out cases := cases.nil;
 
 let vec-cons : fun (Elem : Type) (len : Nat) -> Elem -> Vec Elem len -> Vec Elem (succ len) :=
   fun Elem len head tail :=
-    fun Out nil cons :=
-      cons len head (tail Out nil cons);
+    fun Out cases :=
+      cases.cons len head (tail Out cases);
 
 
 -- Void
@@ -298,12 +338,12 @@ let absurd : fun (A : Type) -> Void -> A :=
 -- Unit
 
 let Unit : Type :=
-  fun (Out : Type) ->
-    fun (unit : Out) ->
-      Out;
+  fun (Out : Type) -> {
+    unit : Out;
+  } -> Out;
 
 let unit : Unit :=
-  fun Out unit := unit;
+  fun Out cases := cases.unit;
 
 
 -- Leibniz equality
@@ -346,7 +386,12 @@ let eq-id-elim-false : Eq Bool ((id Bool) false) false := refl Bool false;
 
 let eq-list-map :
   Eq (List Nat)
-    (list-map Bool Nat (fun b := b Nat zero five) (cons Bool false list1))
+    (list-map Bool Nat
+      (fun b := b Nat {
+        true := zero;
+        false := five;
+      })
+      (cons Bool false list1))
     (cons Nat five (cons Nat zero (nil Nat)))
 :=
   refl (List Nat) (cons Nat five (cons Nat zero (nil Nat)));
