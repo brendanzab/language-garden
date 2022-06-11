@@ -1,5 +1,15 @@
 (** {0 Elaboration with Record Patching and Singleton Types}
 
+    This is a minimal implementation of a dependently typed language with some
+    useful additions intended to support using records as first-class
+    modules, like those found in languages like Standard ML and OCaml.
+
+    The type system is implemented in terms of an elaborator, where a
+    programmer-friendly ‘surface language’ is type checked and translated into a
+    simpler, more minimal ‘core language’.
+
+    {1 Record patching}
+
     Record patching is a way to constrain the values of fields in a record type.
     Given a record type [ R ], a record patch can be applied using the syntax
     [ R [ l := t; ... ] ]. For example:
@@ -35,7 +45,7 @@
         nat-mul-monoid;
     ]}
 
-    {1 Elaboration of patches}
+    {2 Elaboration of patches}
 
     Patches only exist as a feature of the surface language and are removed
     during elaboration. The expression [ Monoid [ T := String ] ] in the example
