@@ -133,10 +133,10 @@ let type-category : Category := {
 -- Opposite category
 let opposite-category : Category -> Category :=
   fun c := {
-      Object := c.Object;
-      Arrow := fun A B := c.Arrow B A;
-      id := c.id;
-      compose := fun A B C a-b b-c := c.compose C B A b-c a-b;
+    Object := c.Object;
+    Arrow := fun A B := c.Arrow B A;
+    id := c.id;
+    compose := fun A B C a-b b-c := c.compose C B A b-c a-b;
   };
 
 -- A mapping from a source category into a target category.
@@ -177,50 +177,50 @@ let endofunctor-functor : Endofunctor -> Functor :=
 -- Booleans
 
 let Bool : Type :=
-  fun (Bool : Type) ->
-    fun (true : Bool) ->
-    fun (false : Bool) ->
-      Bool;
+  fun (Out : Type) ->
+    fun (true : Out) ->
+    fun (false : Out) ->
+      Out;
 
 let true : Bool :=
-  fun Bool true false := true;
+  fun Out true false := true;
 
 let false : Bool :=
-  fun Bool true false := false;
+  fun Out true false := false;
 
 
 let not : Bool -> Bool :=
   fun bool :=
-    fun Bool true false :=
-      bool Bool false true;
+    fun Out true false :=
+      bool Out false true;
 
 
 -- Natural numbers
 
 let Nat : Type :=
-  fun (Nat : Type) ->
-    fun (succ : Nat -> Nat) ->
-    fun (zero : Nat) ->
-      Nat;
+  fun (Out : Type) ->
+    fun (succ : Out -> Out) ->
+    fun (zero : Out) ->
+      Out;
 
 let zero : Nat :=
-  fun Nat succ zero := zero;
+  fun Out succ zero := zero;
 
 let succ : Nat -> Nat :=
   fun prev :=
-    fun Nat succ zero :=
-      succ (prev Nat succ zero);
+    fun Out succ zero :=
+      succ (prev Out succ zero);
 
 
 let add : Nat -> Nat -> Nat :=
   fun n0 n1 :=
-    fun Nat succ zero :=
-      n0 Nat succ (n1 Nat succ zero);
+    fun Out succ zero :=
+      n0 Out succ (n1 Out succ zero);
 
 let mul : Nat -> Nat -> Nat :=
   fun n0 n1 :=
-    fun Nat succ zero :=
-      n0 Nat (n1 Nat succ) zero;
+    fun Out succ zero :=
+      n0 Out (n1 Out succ) zero;
 
 
 let nat-semigroup-add : Semigroup := {
@@ -239,50 +239,50 @@ let nat-semigroup-mul : Semigroup := {
 
 let List : Type -> Type :=
   fun Elem :=
-    fun (List : Type) ->
-    fun (nil : List) ->
-    fun (cons : Elem -> List -> List) ->
-      List;
+    fun (Out : Type) ->
+      fun (nil : Out) ->
+      fun (cons : Elem -> Out -> Out) ->
+        Out;
 
 let nil : fun (Elem : Type) -> List Elem :=
   fun Elem :=
-    fun List nil cons := nil;
+    fun Out nil cons := nil;
 
 let cons : fun (Elem : Type) -> Elem -> List Elem -> List Elem :=
   fun Elem head tail :=
-    fun List nil cons :=
-      cons head (tail List nil cons);
+    fun Out nil cons :=
+      cons head (tail Out nil cons);
 
 
 let list-map : fun (A : Type) (B : Type) -> (A -> B) -> List A -> List B :=
   fun A B a-b as :=
-    fun List nil cons :=
-      as List nil (fun a bs := cons (a-b a) bs);
+    fun Out nil cons :=
+      as Out nil (fun a bs := cons (a-b a) bs);
 
 
 -- Vectors
 
 let Vec : Type -> Nat -> Type :=
   fun Elem len :=
-    fun (Vec : Nat -> Type) ->
-    fun (nil : Vec zero) ->
-    fun (cons : fun (len : Nat) -> Elem -> Vec len -> Vec (succ len)) ->
-      Vec len;
+    fun (Out : Nat -> Type) ->
+      fun (nil : Out zero) ->
+      fun (cons : fun (len : Nat) -> Elem -> Out len -> Out (succ len)) ->
+        Out len;
 
 let vec-nil : fun (Elem : Type) -> Vec Elem zero :=
   fun Elem :=
-    fun Vec nil cons := nil;
+    fun Out nil cons := nil;
 
 let vec-cons : fun (Elem : Type) (len : Nat) -> Elem -> Vec Elem len -> Vec Elem (succ len) :=
   fun Elem len head tail :=
-    fun Vec nil cons :=
-      cons len head (tail Vec nil cons);
+    fun Out nil cons :=
+      cons len head (tail Out nil cons);
 
 
 -- Void
 
 let Void : Type :=
-  fun (Void : Type) -> Void;
+  fun (Out : Type) -> Out;
 
 let absurd : fun (A : Type) -> Void -> A :=
   fun A void := void A;
@@ -291,12 +291,12 @@ let absurd : fun (A : Type) -> Void -> A :=
 -- Unit
 
 let Unit : Type :=
-  fun (Unit : Type) ->
-    fun (unit : Unit) ->
-      Unit;
+  fun (Out : Type) ->
+    fun (unit : Out) ->
+      Out;
 
 let unit : Unit :=
-  fun Unit unit := unit;
+  fun Out unit := unit;
 
 
 -- Leibniz equality
