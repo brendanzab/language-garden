@@ -455,20 +455,20 @@ module Surface = struct
 
   (** Terms in the surface language *)
   type tm =
-    | Let of string * tm * tm             (** Let expressions: [ let x := t; f x ] *)
-    | Name of string                      (** References to named things: [ x ] *)
-    | Ann of tm * tm                      (** Terms annotated with types: [ x : A ] *)
-    | Univ                                (** Universe of types: [ Type ] *)
-    | FunType of (string * tm) list * tm  (** Function types: [ fun (x : A) -> B x ] *)
-    | FunArrow of tm * tm                 (** Function arrow types: [ A -> B ] *)
-    | FunLit of string list * tm          (** Function literals: [ fun x := f x ] *)
-    | RecType of (string * tm) list       (** Record types: [ { x : A; ... } ]*)
-    | RecLit of (string * tm) list        (** Record literals: [ { x := A; ... } ]*)
-    | RecUnit                             (** Unit records: [ {} ] *)
-    | SingType of tm * tm                 (** Singleton types: [ A [= x ] ] *)
-    | App of tm * tm list                 (** Applications: [ f x ] *)
-    | Proj of tm * string list            (** Projections: [ r.l ] *)
-    | Patch of tm * (string * tm) list    (** Record patches: [ R [ B := A; ... ] ] *)
+    | Let of string * tm option * tm * tm    (** Let expressions: [ let x : A := t; f x ] *)
+    | Name of string                         (** References to named things: [ x ] *)
+    | Ann of tm * tm                         (** Terms annotated with types: [ x : A ] *)
+    | Univ                                   (** Universe of types: [ Type ] *)
+    | FunType of (string * tm) list * tm     (** Function types: [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                    (** Function arrow types: [ A -> B ] *)
+    | FunLit of string list * tm             (** Function literals: [ fun x := f x ] *)
+    | RecType of (string * tm) list          (** Record types: [ { x : A; ... } ]*)
+    | RecLit of (string * tm) list           (** Record literals: [ { x := A; ... } ]*)
+    | RecUnit                                (** Unit records: [ {} ] *)
+    | SingType of tm * tm                    (** Singleton types: [ A [= x ] ] *)
+    | App of tm * tm list                    (** Applications: [ f x ] *)
+    | Proj of tm * string list               (** Projections: [ r.l ] *)
+    | Patch of tm * (string * tm) list       (** Record patches: [ R [ B := A; ... ] ] *)
 
   (** Note that we don’t need to add surface syntax for introducing and
       eliminating singletons, as these will be added implicitly during
@@ -576,10 +576,19 @@ module Surface = struct
       in the presence of a type annotation. *)
   let rec check context tm ty : Syntax.tm =
     match tm, ty with
-    | Let (name, def, body), ty ->
-        let def, def_ty = infer context def in
-        let context = bind_def context name def_ty (eval context def) in
-        Syntax.Let (name, def, check context body ty)
+    | Let (name, def_ty, def, body), ty ->
+        begin match def_ty with
+        | Some def_ty ->
+            let def_ty = check context def_ty Semantics.Univ in
+            let def_ty' = eval context def_ty in
+            let def = check context def def_ty' in
+            let context = bind_def context name def_ty' (eval context def) in
+            Syntax.Let (name, Ann (def, def_ty), check context body ty)
+        | None ->
+            let def, def_ty = infer context def in
+            let context = bind_def context name def_ty (eval context def) in
+            Syntax.Let (name, def, check context body ty)
+        end
     | FunLit (names, body), ty ->
         let rec go context names ty =
           match names, ty with
@@ -629,12 +638,21 @@ module Surface = struct
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
   and infer context : tm -> Syntax.tm * Semantics.ty = function
-    | Let (name, def, body) ->
-        let def, def_ty = infer context def in
-        let def' = eval context def in
-        let context = bind_def context name def_ty def' in
-        let body, body_ty = infer context body in
-        (Syntax.Let (name, def, body), body_ty)
+    | Let (name, def_ty, def, body) ->
+        begin match def_ty with
+        | Some def_ty ->
+            let def_ty = check context def_ty Semantics.Univ in
+            let def_ty' = eval context def_ty in
+            let def = check context def def_ty' in
+            let context = bind_def context name def_ty' (eval context def) in
+            let body, body_ty = infer context body in
+            (Syntax.Let (name, Ann (def, def_ty), body), body_ty)
+        | None ->
+            let def, def_ty = infer context def in
+            let context = bind_def context name def_ty (eval context def) in
+            let body, body_ty = infer context body in
+            (Syntax.Let (name, def, body), body_ty)
+        end
     | Name name ->
         begin match elem_index name context.names with
         | Some index -> (Syntax.Var index, List.nth context.tys index)
@@ -805,6 +823,15 @@ module Examples = struct
             (prf : P (fun x := x))
         -> P f;
 
+    let let_ann_check :=
+      (let id : fun (A : Type) -> A -> A :=
+        fun A a := a; {}) : Type;
+
+    let let_ann_synth :=
+      let id : fun (A : Type) -> A -> A :=
+        fun A a := a;
+      id {} {};
+
     -- TODO: requires total space conversion like in CoolTT
 
     let category := {
@@ -824,7 +851,7 @@ module Examples = struct
     Type
   *)
 
-  (* let F := { A : Set; B : Set; f : A -> B }; *)
+  (* let F := { A : Type; B : Type; f : A -> B }; *)
   let fun_record_ty =
     RecType [
       "A", Univ;
@@ -833,23 +860,23 @@ module Examples = struct
     ]
 
   let patch_tm1 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun x := x) : F [ B := A ] -> F *)
       Ann (FunLit (["x"], Name "x"),
         FunArrow (Patch (Name "F", ["B", Name "A"]), Name "F")))
 
   let patch_tm2 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]), Name "F"))))
 
   let patch_tm3 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
@@ -857,8 +884,8 @@ module Examples = struct
             Name "F"))))
 
   let patch_tm4 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ] *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
@@ -866,8 +893,8 @@ module Examples = struct
             Patch (Name "F", ["B", Name "A"])))))
 
   let patch_tm5 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ] *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
@@ -875,8 +902,8 @@ module Examples = struct
             Patch (Name "F", ["A", Name "A"])))))
 
   let patch_tm6 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ] *)
       Ann (FunLit (["C"; "x"], Name "x"),
         FunType (["C", Univ],
@@ -884,22 +911,22 @@ module Examples = struct
             Patch (Name "F", ["B", Name "C"])))))
 
   let patch_tm_lit1 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
       Ann (FunLit (["C"], RecLit ["f", FunLit (["x"], Name "x")]),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
   let patch_tm_lit2 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ] *)
       Ann (FunLit (["C"], RecLit []),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"; "f", FunLit (["x"], Name "x")]))))
 
   let patch_tm_lit3 =
-    (* let F := { A : Set; B : Set; f : A -> B }; *)
-    Let ("F", fun_record_ty,
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
       (* (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
       Ann (FunLit (["C"], RecLit ["B", Name "C"; "f", FunLit (["x"], Name "x")]),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
@@ -956,6 +983,23 @@ module Examples = struct
       ], App (Name "P", [Name "f"])))
 
   (*
+    (let id : fun (A : Type) -> A -> A :=
+      fun A a := a; {}) : Type
+  *)
+  let let_ann_check =
+    Ann (Let ("id", Some (FunType (["A", Univ], FunArrow (Name "A", Name "A"))), FunLit (["A"; "a"], Name "a"),
+      RecUnit), Univ)
+
+  (*
+    let id : fun (A : Type) -> A -> A :=
+      fun A a := a;
+    id {} {}
+  *)
+  let let_ann_synth =
+    Let ("id", Some (FunType (["A", Univ], FunArrow (Name "A", Name "A"))), FunLit (["A"; "a"], Name "a"),
+      App (Name "id", [RecUnit; RecUnit]))
+
+  (*
     let category := {
       Ob : Type;
       Hom : { s : Ob; t : Ob } -> Type;
@@ -981,7 +1025,7 @@ module Examples = struct
     };
   *)
   let types_tm =
-    Let ("category", category_ty,
+    Let ("category", None, category_ty,
       Ann (
         RecLit [
           "Ob", Univ;
@@ -1007,6 +1051,8 @@ module Examples = struct
     "intro_sing", intro_sing;
     "elim_sing", elim_sing;
     "sing_tm1", sing_tm1;
+    "let_ann_check", let_ann_check;
+    "let_ann_synth", let_ann_synth;
     (* TODO: requires total space conversion like in CoolTT *)
     (* "category_ty", category_ty; *)
     (* "types_tm", types_tm; *)
