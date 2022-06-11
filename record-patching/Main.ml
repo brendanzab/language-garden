@@ -451,12 +451,12 @@ module Surface = struct
     | FunType of (string * tm) list * tm  (** Function types: [ fun (x : A) -> B x ] *)
     | FunArrow of tm * tm                 (** Function arrow types: [ A -> B ] *)
     | FunLit of string list * tm          (** Function literals: [ fun x := f x ] *)
-    | App of tm * tm                      (** Applications: [ f x ] *)
     | RecType of (string * tm) list       (** Record types: [ { x : A; ... } ]*)
     | RecLit of (string * tm) list        (** Record literals: [ { x := A; ... } ]*)
-    | Proj of tm * string                 (** Projections: [ r.l ] *)
-    | Patch of tm * (string * tm) list    (** Record type patching: [ R [ B := A; ... ] ] *)
     | SingType of tm * tm                 (** Singleton types: [ A [= x ] ] *)
+    | App of tm * tm                      (** Applications: [ f x ] *)
+    | Proj of tm * string                 (** Projections: [ r.l ] *)
+    | Patch of tm * (string * tm) list    (** Record patches: [ R [ B := A; ... ] ] *)
 
   (** Note that we don’t need to add surface syntax for introducing and
       eliminating singletons, as these will be added implicitly during
@@ -647,14 +647,6 @@ module Surface = struct
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
     | FunLit (_, _) ->
         raise (Error "ambiguous function literal")
-    | App (head, arg) ->
-        let head, head_ty = infer_and_elim_implicits context head in
-        begin match head_ty with
-        | Semantics.FunType (_, param_ty, body_ty) ->
-            let arg = check context arg param_ty in
-            (Syntax.FunApp (head, arg), body_ty (eval context arg))
-        | _ -> raise (Error "not a function")
-        end
     | RecType field_tys ->
         let rec go context seen_labels = function
           | [] -> ([], Syntax.Nil)
@@ -670,6 +662,18 @@ module Surface = struct
         (Syntax.RecType (labels, tele), Semantics.Univ)
     | RecLit _ ->
         raise (Error "ambiguous record literal")
+    | SingType (ty, sing_tm) ->
+        let ty = check context ty Semantics.Univ in
+        let sing_tm = check context sing_tm (eval context ty) in
+        (Syntax.SingType (ty, sing_tm), Semantics.Univ)
+    | App (head, arg) ->
+        let head, head_ty = infer_and_elim_implicits context head in
+        begin match head_ty with
+        | Semantics.FunType (_, param_ty, body_ty) ->
+            let arg = check context arg param_ty in
+            (Syntax.FunApp (head, arg), body_ty (eval context arg))
+        | _ -> raise (Error "not a function")
+        end
     | Proj (head, label) ->
         let head, head_ty = infer_and_elim_implicits context head in
         begin match head_ty with
@@ -713,10 +717,6 @@ module Surface = struct
               (Syntax.RecType (labels, tys), Semantics.Univ)
           | _ -> raise (Error "can only patch record types")
           end
-    | SingType (ty, sing_tm) ->
-        let ty = check context ty Semantics.Univ in
-        let sing_tm = check context sing_tm (eval context ty) in
-        (Syntax.SingType (ty, sing_tm), Semantics.Univ)
 
   (** Eliminate implicit connectives from a term.
 
