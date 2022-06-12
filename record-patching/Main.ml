@@ -62,6 +62,10 @@
 
     {1 Related work and Acknowledgements}
 
+    This implementation is heavily based on {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
+    Mark Barbone’s implementation sketch in Haskell}, but contains various bug
+    fixes, alterations, and extensions.
+
     Record patching was originally proposed and implemented for CoolTT in the
     setting of cubical type theory:
 
@@ -69,16 +73,19 @@
       SML [ where type ])}
     - {{: https://github.com/RedPRL/cooltt/issues/267} Support for auto-
       converting between fibered and parameterized type families}
-    - Reed Mullanix's {{: https://www.youtube.com/watch?v=1_ZJIYu2BRk}
-      presentation} and {{: https://cofree.coffee/~totbwf/slides/WITS-2022.pdf}
-      slides} from WITS’22.
 
-    This implementation of record patching by elaborating to singletons is
-    heavily based on {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
-    Mark Barbone’s implementation sketch in Haskell}, but contains bug fixes,
-    alterations, and extensions. This is similar to approaches devloped for
-    Standard ML that use singleton types to describe type realisation, but it
-    avoids the need to define singletons in terms of extensional equality.
+    Reed Mullanix's presentation from WITS’22, {{: https://www.youtube.com/watch?v=1_ZJIYu2BRk}
+    Setting the Record Straight with Singletons} (slides {{: https://cofree.coffee/~totbwf/slides/WITS-2022.pdf}
+    here}) provides a good description of the approach taken in CoolTT, which
+    continues to be developed and improved.
+
+    Elaborating record patches to singleton types is similar to approaches
+    developed for formalising and implementing type realisation in Standard ML,
+    for example in {{: https://doi.org/10.1145/1183278.1183281} “Extensional
+    equivalence and singleton types”}. Unlike this work, we avoid defining
+    singletons in terms of extensional equality, which makes it far easier to
+    maintain decideable type checking. A common misconception is that singleton
+    types {e require} extensional equality, when this is not the case!
 
     {1 Future work}
 
@@ -124,7 +131,7 @@
     patch elaborates to a copy of the original record type). This could become
     a perfomance issue if patching is used heavily.
 
-    {2 Patching record literals}
+    {2 Use patch syntax for record literal updates}
 
     The same syntax used by patches could be used as a way to update the fields
     of record literals.
