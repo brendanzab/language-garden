@@ -1,13 +1,14 @@
 (** {0 Elaboration with Record Patching and Singleton Types}
 
-    This is a minimal implementation of a dependently typed language with some
-    useful additions for constraining fields that are intended to make it more
-    convenient to use records as first-class modules, like those found in
-    languages like Standard ML and OCaml.
+    This is a small implementation of a dependently typed language with
+    dependent record types, with some additional features intended to make it
+    more convenient to use records as first-class modules. It was originally
+    ported from {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
+    a gist by mb64}.
 
-    The type system is implemented in terms of an elaborator, where a
-    programmer-friendly ‘surface language’ is type checked and translated into a
-    simpler, more minimal ‘core language’.
+    The type system is implemented in terms of an ‘elaborator’, which type
+    checks and tanslates a user-friendly surface language into a simpler and
+    more explicit core language that is more closely connected to type theory.
 
     {1 Record patching}
 
@@ -41,10 +42,10 @@
     above elaborates to a new record type, where the type of the [ T ] field is
     constrained to [ String ] through the use of a singleton type.
 
-    We also pull the definitions of missing fields in record literals from
+    We also derive the definitions of missing fields in record literals from
     singletons in the expected type. This works nicely in combination with
-    record patching. Note, for example how we don't need to mention the field
-    [ T ] in the definition of [ string-monoid ].
+    record patching. Note in the previous example how we don't need to define
+    the field [ T ] in [ string-monoid ].
 
     With that in mind, the definition of [ string-monoid ] is elaborated to:
 
@@ -60,11 +61,11 @@
       };
     ]}
 
-    {1 Related work and Acknowledgements}
+    {1 Related work}
 
     This implementation is heavily based on {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
-    Mark Barbone’s implementation sketch in Haskell}, but contains various bug
-    fixes, alterations, and extensions.
+    mb64’s sketch implementation in Haskell}, but contains various bug fixes,
+    alterations, and extensions.
 
     Record patching was originally proposed and implemented for CoolTT in the
     setting of cubical type theory:
@@ -83,9 +84,8 @@
     developed for formalising and implementing type realisation in Standard ML,
     for example in {{: https://doi.org/10.1145/1183278.1183281} “Extensional
     equivalence and singleton types”}. Unlike this work, we avoid defining
-    singletons in terms of extensional equality, which makes it far easier to
-    maintain decideable type checking. A common misconception is that singleton
-    types {e require} extensional equality, when this is not the case!
+    singletons in terms of extensional equality, which makes it much easier to
+    maintain decideable type checking.
 
     {1 Future work}
 
@@ -93,43 +93,62 @@
 
     Implement a parser for the surface language.
 
-    {2 Opaque ascription }
-
-    Experiment with adding a ‘sealing operator’ [ e :> t ] to the surface
-    language that opaquely ascribes types. This would allows use to prevent the
-    contents of an expression from reducing to their underlying definitions,
-    during conversion checking with the goal of allowing records to be used to
-    define abstract data types.
-
-    This is sometimes done with effects, for example in {{:https://people.mpi-sws.org/~rossberg/1ml/}
-    1ML} and in {{:https://doi.org/10.1145/3474834} “Logical Relations as Types:
-    Proof-Relevant Parametricity for Program Modules”}, but given that we aren’t
-    intending to add mutable references to our language, we might be able
-    implement this feature by hiding expressions behind function parameters.
-    For example, we could elaborate the term [ ... (e :> t) ... ] into something
-    like: [ (fun (x : t) := ... x ...) e ]. Sealed let expressions like
-    [ let x :> t := e; ... ] could be alaborated to [ (fun (x : t) := ...) e ].
-
     {2 Total space conversion}
 
-    Implement ‘total space conversion’, like in CoolTT. This automatically
-    converts [ F : { l : T; ... } -> Type ] to the record type
+    CoolTT implements ‘total space conversion’ which automatically converts
+    functions in the form [ F : { l : T; ... } -> Type ] to the record type
     [ { l : T; ..., fibre : F { l := l; ... } } ] where necessary. Apparently
-    this could further address the ‘bundling problem’, and reduces the need for
-    to implement implicit function parameters und unification.
+    this could help address the ‘bundling problem’, and reduce the need to
+    implement implicit function parameters.
+
+    {2 Opaque ascription}
+
+    Adding a ‘sealing operator’ [ e :> t ] to the surface language would allow
+    us to opaquely ascribe type type [ t ] to an expression [ e ]. This would
+    prevent the contents of the expression from reducing definitionally,
+    allowing us to define abstract data types.
+
+    Opaque ascription is sometimes modelled using effects, as seen in th
+    language {{:https://people.mpi-sws.org/~rossberg/1ml/} 1ML}. The paper
+    {{:https://doi.org/10.1145/3474834} “Logical Relations as Types:
+    Proof-Relevant Parametricity for Program Modules”} describes an effectful
+    approach based on call-by-push-value that could be useful in the context of
+    dependent types. That said, apparently a effects are only needed in the
+    presence of mutable references. If we didn’t need these, we might be able
+    implement sealing by hiding definitions behind function parameters. For
+    example:
+
+    - [ ... (e :> t) ... ] could elaborate into [ (fun (x : t) := ... x ...) e ]
+    - [ let x :> t := e; ... ] could elaborate into [ (fun (x : t) := ...) e ].
+
+    More concretetly, the following:
+
+    {[
+      ({ A := Nat, a := 0 } :>
+        { A : Type, a : T }).a + 1 ...
+                          -- ^ error: expected `Nat` found `(..).A`
+    ]}
+
+    Could be elaborated into:
+
+    {[
+      fun (x : { A : Type, a : T }) :=
+        x.a + 1 ...) { A := Nat, a := 0 }
+       -- ^ error: expected `Nat` found `x.A`
+    ]}
 
     {2 Metavariables and unification}
 
-    Attempt to implementing metavariables, unification, and implicit function
-    types. This could be challenging in the presence subtyping, however. Total
-    space conversion apparently makes implicit parameters less necessary, but
-    I'm still a little skeptical of this!
+    Implicit function types and unification could be convenient. This could be
+    challenging to implement in the presence coercive subtyping, however.
+    Apparently total space conversion addresses some of the same pain points as
+    implicit parameters, but I'm still somewhat skeptical of this!
 
-    {2 Address patch bloat}
+    {2 Reduce patch bloat}
 
-    Figure out ways to avoid the bloat that patches introduce (note how each
-    patch elaborates to a copy of the original record type). This could become
-    a perfomance issue if patching is used heavily.
+    Each patch currently elaborates to a copy of the original record type. This
+    could end up becoming a performance issue when elaborating and compiling
+    larger programs.
 
     {2 Use patch syntax for record literal updates}
 
@@ -146,6 +165,8 @@ let elem_index a =
 
 (** Core language *)
 module Core = struct
+  (** In this module we define a core language that is intended to be simple,
+      explicit and relatively close to well-understood type theories. *)
 
   (** Identifiers that are significant to the equality of terms. Typically used
       in the fields of records, and in record projections. *)
@@ -179,27 +200,21 @@ module Core = struct
       | RecType of label list * tele
       | RecLit of (label * tm) list
       | RecProj of tm * label
-      (* Singleton type former, eg. [ A [= x ] ].
+      | SingType of ty * tm               (** Singleton type former: [ A [= x ] ] *)
+      | SingIntro of tm                   (** Singleton introduction: [ #sing-intro x ] *)
+      | SingElim of tm * tm               (** Singleton elimination: [ #sing-elim x a ] *)
 
-        These types constrain a type [ A ] to be equal to a single value [ x ].
-      *)
-      | SingType of ty * tm
-      (* Introduction form for singletons.
+    (** Each ‘connective’ in the core language follows a similar pattern, with
+        separate variants for:
 
-        This does not appear in user code, but is inserted during elaboration.
-        For example, if [ x : Nat ] and [ x ≡ 7 ], using [ x ] as [ Nat [= 7 ] ]
-        elaborates to [ SingIntro x ].
-      *)
-      | SingIntro of tm
-      (* Elimination form for singletons.
+        - type formation: for contructing types that represent the connective
+        - introduction: for contructing terms of a given connective
+        - elimination: for deconstructing terms of a given connective
 
-        This does not appear in user code, but is inserted during elaboration.
-        For example, if we have a [ x : Nat [= 7 ] ], we can convert [ x ] back
-        to [ Nat ] by elaborating to [ SingElim (x, 7) ]. The [ 7 ] is used during
-        typechecking (note the case in {!Core.Semantics.eval}), but should be
-        erased in compiled code.
-      *)
-      | SingElim of tm * tm
+        In the case of [ #sing-elim x a ], the [ a ] is used for evaluation
+        during type checking, but is intended to be erased in compiled code.
+    *)
+
     (** Telescopes *)
     and tele =
       | Nil
@@ -207,8 +222,29 @@ module Core = struct
 
   end
 
-  (** Semantic domain *)
+  (** Semantics of the core language *)
   module Semantics = struct
+    (** In order to type check our language, it’s important to be able to check
+        if two terms compute to the same thing (eg. when checking if two types
+        are the same), or to perform some computation in order to uncover
+        details about terms (eg. to figure out if a type is a function type).
+        Terms could contain free variables (eg. when computing a variable that
+        is bound to a function parameter) so computation might get stuck at
+        various points. We also want to take a lazy approach, only computing
+        as much as we need.
+
+        To meet these goals, we implement an interpreter using {i normalisation
+        by evaluation}, which involves first evaluating terms from our syntax
+        into partially reduced terms in the {i semantic  domain}, then either
+        those terms back to the original syntax to arrive at normal forms, or
+        comparing them using conversion checking.
+    *)
+
+
+    (** {1 Semantic domain} *)
+
+    (** The following data structures represent the semantic interpretation of
+        the core syntax. *)
 
     (** De-bruijn level *)
     type level = int
@@ -216,35 +252,54 @@ module Core = struct
     (** Types *)
     type ty = tm
 
-    (** Terms *)
+    (** Terms in weak head normal form *)
     and tm =
-      | Neu of neu
+      | Neu of neu                          (** Neutral terms *)
       | Univ
       | FunType of name * ty * (tm -> ty)
       | FunLit of name * (tm -> tm)
       | RecType of label list * tele
       | RecLit of (label * tm) list
       | SingType of ty * tm
-      | SingIntro
+      | SingIntro                           (** Singleton introduction, with term erased *)
+
     (** Telescopes *)
     and tele =
       | Nil
       | Cons of ty * (tm -> tele)
-    (** Neutral terms *)
-    and neu =
-      | Var of level
-      | FunApp of neu * tm
-      | RecProj of neu * label
 
-    (** Environment of bound entries that can be looked up directly using a
+    (** Neutral terms
+
+        These are terms that could not be reduced to a normal form as a result
+        of being stuck on something else that would not reduce further.
+
+        I’m not sure why they are called ‘neutral terms’. Perhaps they are...
+        ambivalent about what they might evaluate to?
+    *)
+    and neu =
+      | Var of level                        (** Variable that could not be reduced further *)
+      | FunApp of neu * tm                  (** Function application *)
+      | RecProj of neu * label              (** Record projection *)
+
+    (** An environment of bound entries that can be looked up directly using a
         {!Syntax.index}, or by inverting a {!level} using [ size - level - 1 ],
         where [ size ] is the number of entries bound in the environment. *)
     type 'a env = 'a list
+
+
+    (** {1 Error handling} *)
 
     (** Internal error encountered in the semantics. These should never occur if
         terms are used in a way that respects the type system of the core
         language. *)
     exception Error of string
+
+
+    (** {1 Eliminators} *)
+
+    (** The following functions trigger computation if the head term is in the
+        appropriate normal form, otherwise they queues up the elimination for
+        later if computation if the term is in a neutral form. *)
 
     (** Compute a function application *)
     let app : tm -> tm -> tm = function
@@ -258,6 +313,9 @@ module Core = struct
       | Neu neu -> fun label -> Neu (RecProj (neu, label))
       | _ -> raise (Error "invalid proj")
 
+
+    (** {1 Finding the types of record projections} *)
+
     (** Returns the type of a record projection *)
     let proj_ty head (labels, tele) label =
       let rec go labels tele =
@@ -268,7 +326,10 @@ module Core = struct
           | _, _ -> None in
       go labels tele
 
-    (** Evaluate a term from the synatax into a term in the semantic domain *)
+
+    (** {1 Evaluation} *)
+
+    (** Evaluate a term from the syntax into its semantic interpretation *)
     let rec eval tms : Syntax.tm -> tm = function
       | Syntax.Let (_, def, body) -> eval (eval tms def :: tms) body
       | Syntax.Var index -> List.nth tms index
@@ -290,10 +351,23 @@ module Core = struct
       | Syntax.Cons (tm, tele) ->
           Cons (eval tms tm, fun x -> eval_tele (x :: tms) tele)
 
-    (** Typed quotation from the sematic domain back into the syntax.
 
-        We only really use the types here as a way to restore the values of
-        singletons that were erased during evaluation.
+    (** {1 Quotation} *)
+
+    (** Quotation allows us to turn the semantic domain back into syntax. This
+        is useful if we want to find the normal form of a term, or if we want to
+        include a semantic term in some other bit of syntax.
+
+        Quotation is type directed, but we only use types as a way to restore
+        the values of singletons that were erased during evaluation.
+
+        The size parameter is the number of bindings in the environment where we
+        want quotation to occur. This allows us to convert variables from
+        de-Bruijn levels back to de-Bruijn indices. We need to be careful to
+        only use the resulting terms at binding depth that they were quoted at.
+        Note that we could alternatively compute this from the length of the
+        typing environment, but this would be an O(n) operation whenever we
+        wanted to convert between variable representations.
     *)
     let rec quote size tys tm ty : Syntax.tm =
       match tm with
@@ -356,10 +430,22 @@ module Core = struct
           let var = Neu (Var size) in
           Syntax.Cons (quote size tys ty Univ, quote_tele (size + 1) (ty :: tys) (tele var))
 
-    (** Typed-directed conversion checking
 
-        A type-directed approach allows us to support full eta for unit types.
-        These show up in our language as empty records and singletons. If we
+    (** {1 Normalisation} *)
+
+    (** By evaluating a term then quoting the result, we can produce a term that
+        is reduced as much as possible in the current environment. *)
+    let normalise size tms tys tm ty : Syntax.tm =
+      quote size tys (eval tms tm) ty
+
+
+    (** {1 Conversion Checking} *)
+
+    (** Conversion checking is checks if two terms of the same type compute to
+        the same term by-definition.
+
+        Type-directed conversion allows us to support full eta for unit types,
+        which show up in our language as empty records and singletons. If we
         wanted to stick to untyped conversion checking, according to Andras
         Korvacs we could alternatively:
 
@@ -407,7 +493,7 @@ module Core = struct
                 let tm1 = proj tm1 label in
                 let tm2 = proj tm2 label in
                 is_convertible size tys tm1 tm2 ty && go labels (tele tm1)
-            | [], Nil -> true (* I think eta for units is hidden in here! *)
+            | [], Nil -> true (* Pretty sure eta for units is hidden in here! *)
             | _, _ -> raise (Error "mismatched telescope length")
           in
           go labels tele
@@ -439,6 +525,9 @@ module Core = struct
             && is_convertible_tele (size + 1) (ty1 :: tys) (tele1 var) (tele2 var)
       | _, _ -> false
 
+
+    (** {1 Pretty printing} *)
+
     (** Rough-and-ready pretty printer *)
     let pretty size names tm =
       let (<<) f g x = f (g x) in
@@ -453,31 +542,30 @@ module Core = struct
         | FunLit (name, body) ->
             parens wrap (str "fun " << str name << str " := " <<
               go false (size + 1) (name :: names) (body (Neu (Var size))))
-        | RecType ([], Nil) | RecLit [] -> str "{}"
-        | RecType (labels, tele) ->
-            str "{ " << go_field_tys size names labels tele << str "}"
-        | RecLit fields ->
+        | RecType Nil | RecLit [] -> str "{}"
+        | RecType decls ->
+            str "{ " << go_decls size names decls << str "}"
+        | RecLit defns ->
             str "{ " <<
               List.fold_right
                 (fun (label, tm) rest ->
                   str label << str " := " << go false size names tm << str "; " << rest)
-                fields (str "}")
+                defns (str "}")
         | SingType (ty, sing_tm) ->
             parens wrap (go false size names ty << str " [= " <<
               go false size names sing_tm << str " ]")
-        | SingIntro -> str "sing-intro"
+        | SingIntro -> str "#sing-intro"
       and go_neu wrap size names = function
         | Var level -> str (List.nth names (size - level - 1))
         | FunApp (head, arg) ->
             parens wrap (go_neu false size names head << str " " <<  go true size names arg)
         | RecProj (head, label) -> go_neu false size names head << str "." << str label
-      and go_field_tys size names labels tys =
-        match labels, tys with
-        | [], Nil -> str ""
-        | label :: labels, Cons (ty, tys) ->
+      and go_decls size names decls =
+        match decls with
+        | Nil -> str ""
+        | Cons (label, ty, decls) ->
             str label << str " : " << go false size names ty << str "; " <<
-              go_field_tys (size + 1) (label :: names) labels (tys (Neu (Var size)))
-        | _, _ -> raise (Error "mismatched telescope length")
+              go_decls (size + 1) (label :: names) (decls (Neu (Var size)))
       in
       go false size names tm ""
     end
@@ -486,6 +574,8 @@ end
 
 (** Surface language *)
 module Surface = struct
+
+  (** {1 Surface Syntax} *)
 
   (** Terms in the surface language *)
   type tm =
@@ -504,30 +594,36 @@ module Surface = struct
     | Proj of tm * string list               (** Projections: [ r.l ] *)
     | Patch of tm * (string * tm) list       (** Record patches: [ R [ B := A; ... ] ] *)
 
-  (** Note that we don’t need to add surface syntax for introducing and
-      eliminating singletons, as these will be added implicitly during
-      elaboration. For example, given [ a : A ] and [x : A [= a ] ]:
+  (** We don’t need to add syntax for introducing and eliminating singletons in
+      the surface language. These are instead added implicitly during
+      elaboration to the core language. For example:
 
-      - introduction: [ x : A [= a ] ] elaborates to [ sing-intro x ]
-      - elimination: [ x : A ] elaborates to [ sing-elim x a ]
+      - If we have [ x : Nat ] and [ x ≡ 7 : Nat ], we can elaborate the term
+        [ x : A [= 7 ] ] into [ #sing-intro x : A [= 7 ] ]
+      - If we have [ x : Nat [= 7 ] ], we can elaborate the term [ x : Nat ]
+        into [ #sing-elim x 7 : Nat ]
   *)
+
+
+  (** {1 Elaboration } *)
 
   module Syntax = Core.Syntax
   module Semantics = Core.Semantics
 
-  (** Elaboration context *)
+
+  (** {2 Elaboration state} *)
+
+  (** The elaboration context records the bindings that are currently bound at
+      the current scope in the program. The environments are unzipped to make it
+      more efficient to call functions from {!Core.Semantics}. *)
   type context = {
     size : Semantics.level;             (** Number of entries bound. *)
     names : Core.name Semantics.env;    (** Name environment *)
     tys : Semantics.ty Semantics.env;   (** Type environment *)
     tms : Semantics.tm Semantics.env;   (** Term environment *)
   }
-  (** We could compute {!size} from the other environments, but because we are
-      using linked lists for these this would be an [ O(n) ] operation. This
-      allows us to access it in [ O(1) ].
-  *)
 
-  (** Empty elaboration context *)
+  (** The initial elaboration context *)
   let initial_context = {
     size = 0;
     names = [];
@@ -535,12 +631,12 @@ module Surface = struct
     tms = [];
   }
 
-  (** Return the next variable that will be bound in the context after calling
+  (** Returns the next variable that will be bound in the context after calling
       {!bind_def} or {!bind_param} *)
   let next_var context =
     Semantics.Neu (Semantics.Var context.size)
 
-  (** Bind a definition in the context *)
+  (** Binds a definition in the context *)
   let bind_def context name ty tm = {
     size = context.size + 1;
     names = name :: context.names;
@@ -548,12 +644,14 @@ module Surface = struct
     tms = tm :: context.tms;
   }
 
-  (** Bind a parameter in the context *)
+  (** Binds a parameter in the context *)
   let bind_param context name ty =
     bind_def context name ty (next_var context)
 
-  (** Elaboration error *)
-  exception Error of string
+  (** {3 Functions related to the core semantics} *)
+
+  (** These wrapper functions make it easier to call functions from the
+      {!Core.Semantics} using state from the elaboration context. *)
 
   let eval context : Syntax.tm -> Semantics.tm =
     Semantics.eval context.tms
@@ -564,11 +662,21 @@ module Surface = struct
   let pretty context : Semantics.tm -> string =
     Semantics.pretty context.size context.names
 
-  (** Coerce a term from one type to another type.
 
-      By performing coercions during elaboration we avoid having to introduce
-      subtyping in the core language.
-  *)
+  (** {2 Elaboration errors} *)
+
+  (** An elaboration error that will be raised if there was a problem in the
+      surface syntax, usually as a result of type errors or a lack of type
+      annotations. This is normal, and should be rendered nicely to the
+      programmer. *)
+  exception Error of string
+
+
+  (** {2 Coercive subtyping} *)
+
+  (** Coerces a term from one type to another type. By performing coercions
+      during elaboration we avoid having to introduce subtyping in the core
+      language. *)
   let rec coerce context tm from_ty to_ty : Syntax.tm =
     match from_ty, to_ty with
     (* No need to coerce the term if both types are already the same! *)
@@ -600,7 +708,7 @@ module Surface = struct
               let to_tm = coerce context (Syntax.RecProj (tm, from_label)) from_ty to_ty in
               (to_label, to_tm) :: go (from_labels, from_tele from_tm) (to_labels, to_tele (eval context to_tm))
           (* When the type of the target field is a singleton we can use it to
-             fill in the definition of a missing field in the source type. This
+             fill in the definition of a missing field in the source term. This
              is similar to how we handle missing fields in {!check}. *)
           | from_labels, from_tele , to_label :: to_labels
           , Semantics.Cons (Semantics.SingType (to_ty, sing_tm), to_tele) ->
@@ -616,6 +724,9 @@ module Surface = struct
         let expected = pretty context to_ty in
         let found = pretty context from_ty in
         raise (Error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`"))
+
+
+  (** {2 Bidirectional type checking} *)
 
   (** Elaborate a term in the surface language into a term in the core language
       in the presence of a type annotation. *)
@@ -653,9 +764,8 @@ module Surface = struct
           | (label, tm) :: fields, label' :: labels, Semantics.Cons (ty, tele) when label = label' ->
               let tm = check context tm ty in
               (label, tm) :: go fields labels (tele (eval context tm))
-          (* The definition of a missing field can be pulled from the record
-             type if the field’s expected type is a singleton. This is a bit
-             like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
+          (* When the expected type of a field is a singleton we can use it to
+             fill in the definition of a missing fields in the record literal. *)
           | fields, label :: labels, Semantics.Cons (Semantics.SingType (ty, sing_tm), tele) ->
               let tm = Syntax.SingIntro (quote context sing_tm ty) in
               (label, tm) :: go fields labels (tele (eval context tm))
@@ -803,10 +913,12 @@ module Surface = struct
           | _ -> raise (Error "can only patch record types")
           end
 
-  (** Eliminate implicit connectives from a term.
+  (** {2 Eliminating implicit connectives} *)
 
-      It's useful to employ this prior to calling {!coerce}, or when elaborating
-      the head of an elimination form. *)
+  (** Connectives that were introduced implicitly during elaboration can
+      sometimes get in the way, for example when calling {!coerce}, or when
+      elaborating the head of an elimination. This removes them by adding
+      appropriate elimination forms. *)
   and elim_implicits context tm = function
     (* Convert the singleton back to its underlying term using {!Syntax.SingElim} *)
     | Semantics.SingType (ty, sing_tm) ->
