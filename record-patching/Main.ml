@@ -838,16 +838,16 @@ module Examples = struct
       f : A -> B;
     };
 
-    let patch-tm-1 := (fun x := x) : F [ B := A ] -> F;
-    let patch-tm-2 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F;
-    let patch-tm-3 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F;
-    let patch-tm-4 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ];
-    let patch-tm-5 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ];
-    let patch-tm-6 := (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ];
+    let record-ty-patch-1 := (fun x := x) : F [ B := A ] -> F;
+    let record-ty-patch-2 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F;
+    let record-ty-patch-3 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F;
+    let record-ty-patch-4 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ];
+    let record-ty-patch-5 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ];
+    let record-ty-patch-6 := (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ];
 
-    let patch-tm-lit-1 := (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
-    let patch-tm-lit-2 := (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ];
-    let patch-tm-lit-3 := (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
+    let record-lit-missing-1 := (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
+    let record-lit-missing-2 := (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ];
+    let record-lit-missing-3 := (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ];
 
     let record-lit-coerce-1 :=
       (fun B r := r) :
@@ -856,8 +856,9 @@ module Examples = struct
     let record-lit-coerce-2 :=
       (fun B b := { A := B; a := b } : { A : Type; a : B }) :
         fun (B : Type) (b : Type) -> { A : Type; a : A };
-    let record-lit-coerce-3 := (fun A B r := r) : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ];
-    let record-lit-coerce-4 := (fun A B r := r) : fun (A : Type) (B : Type) -> { A : Type; f : A -> B } -> F [ B := B ];
+
+    let record-lit-coerce-missing-1 := (fun A B r := r) : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ];
+    let record-lit-coerce-missing-2 := (fun A B r := r) : fun (A : Type) (B : Type) -> { A : Type; f : A -> B } -> F [ B := B ];
 
     let intro-sing := (fun A x := x) : fun (A : Type) (x : A) -> A [= x ];
     let elim-sing := (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A;
@@ -949,23 +950,20 @@ module Examples = struct
       "f", FunArrow (Name "A", Name "B");
     ]
 
-  let patch_tm1 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_ty_patch1 =
     Let ("F", None, fun_record_ty,
       (* (fun x := x) : F [ B := A ] -> F *)
       Ann (FunLit (["x"], Name "x"),
         FunArrow (Patch (Name "F", ["B", Name "A"]), Name "F")))
 
-  let patch_tm2 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_ty_patch2 =
     Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F *)
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]), Name "F"))))
 
-  let patch_tm3 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_ty_patch3 =
     Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F *)
       Ann (FunLit (["A"; "x"], Name "x"),
@@ -973,8 +971,7 @@ module Examples = struct
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"; "f", FunLit (["x"], Name "x")]),
             Name "F"))))
 
-  let patch_tm4 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_ty_patch4 =
     Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ] *)
       Ann (FunLit (["A"; "x"], Name "x"),
@@ -982,8 +979,7 @@ module Examples = struct
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
             Patch (Name "F", ["B", Name "A"])))))
 
-  let patch_tm5 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_ty_patch5 =
     Let ("F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ] *)
       Ann (FunLit (["A"; "x"], Name "x"),
@@ -991,8 +987,7 @@ module Examples = struct
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
             Patch (Name "F", ["A", Name "A"])))))
 
-  let patch_tm6 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_ty_patch6 =
     Let ("F", None, fun_record_ty,
       (* (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ] *)
       Ann (FunLit (["C"; "x"], Name "x"),
@@ -1000,22 +995,19 @@ module Examples = struct
           FunArrow (Patch (Name "F", ["A", Name "C"; "B", Name "C"]),
             Patch (Name "F", ["B", Name "C"])))))
 
-  let patch_tm_lit1 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_lit_missing1 =
     Let ("F", None, fun_record_ty,
       (* (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
       Ann (FunLit (["C"], RecLit ["f", FunLit (["x"], Name "x")]),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
-  let patch_tm_lit2 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_lit_missing2 =
     Let ("F", None, fun_record_ty,
       (* (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ] *)
       Ann (FunLit (["C"], RecLit []),
         FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"; "f", FunLit (["x"], Name "x")]))))
 
-  let patch_tm_lit3 =
-    (* let F := { A : Type; B : Type; f : A -> B }; *)
+  let record_lit_missing3 =
     Let ("F", None, fun_record_ty,
       (* (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
       Ann (FunLit (["C"], RecLit ["B", Name "C"; "f", FunLit (["x"], Name "x")]),
@@ -1044,7 +1036,7 @@ module Examples = struct
   (*
     (fun A B r := r) : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ]
   *)
-  let record_lit_coerce3 =
+  let record_lit_coerce_missing1 =
     (* let F := { A : Type; B : Type; f : A -> B }; *)
     Let ("F", None, fun_record_ty,
       Ann (FunLit (["A"; "B"; "r"], Name "r"),
@@ -1054,7 +1046,7 @@ module Examples = struct
   (*
     (fun B r := r) : fun (B : Type) -> { A : Type; f : A -> B } -> F [ B := B ]
   *)
-  let record_lit_coerce4 =
+  let record_lit_coerce_missing2 =
     (* let F := { A : Type; B : Type; f : A -> B }; *)
     Let ("F", None, fun_record_ty,
       Ann (FunLit (["B"; "r"], Name "r"),
@@ -1233,19 +1225,19 @@ module Examples = struct
 
   let terms = [
     "fun_record_ty", fun_record_ty;
-    "patch_tm1", patch_tm1;
-    "patch_tm2", patch_tm2;
-    "patch_tm3", patch_tm3;
-    "patch_tm4", patch_tm4;
-    "patch_tm5", patch_tm5;
-    "patch_tm6", patch_tm6;
-    "patch_tm_lit1", patch_tm_lit1;
-    "patch_tm_lit2", patch_tm_lit2;
-    "patch_tm_lit3", patch_tm_lit3;
+    "record_ty_patch1", record_ty_patch1;
+    "record_ty_patch2", record_ty_patch2;
+    "record_ty_patch3", record_ty_patch3;
+    "record_ty_patch4", record_ty_patch4;
+    "record_ty_patch5", record_ty_patch5;
+    "record_ty_patch6", record_ty_patch6;
+    "record_lit_missing1", record_lit_missing1;
+    "record_lit_missing2", record_lit_missing2;
+    "record_lit_missing3", record_lit_missing3;
     "record_lit_coerce1", record_lit_coerce1;
     "record_lit_coerce2", record_lit_coerce2;
-    "record_lit_coerce3", record_lit_coerce3;
-    "record_lit_coerce4", record_lit_coerce4;
+    "record_lit_coerce_missing1", record_lit_coerce_missing1;
+    "record_lit_coerce_missing2", record_lit_coerce_missing2;
     "intro_sing", intro_sing;
     "elim_sing", elim_sing;
     "sing_tm1", sing_tm1;
