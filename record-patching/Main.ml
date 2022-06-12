@@ -1297,7 +1297,7 @@ let () =
     {2 Record patching}
 
     - [ R [ B := A; ... ] ]
-    - [ R.{ B := A; ... } ]
+    - [ R.{ B := A; ... } ] (better for postfix chaining)
     - [ R # [ B .= A, ... ] ] (like in CoolTT)
     - [ R # { B := A; ... } ]
     - [ R (B := A, ...) ] (possibly overloaded with function application)
@@ -1307,7 +1307,7 @@ let () =
 
     - [ A [ x ] ] (like in mb64’s original implementation)
     - [ A [= x ] ] (riffing on the idea of using square brackets for ‘refinement’)
-    - [ A [:= x ] ] (another similar idea)
+    - [ A [:= x ] ] (mirrors patching more)
     - [ (= x) ] (like in 1ML)
     - [ (= x : A) ]
     - [ (:= x : A) ]
