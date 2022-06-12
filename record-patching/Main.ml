@@ -1,8 +1,9 @@
 (** {0 Elaboration with Record Patching and Singleton Types}
 
     This is a minimal implementation of a dependently typed language with some
-    useful additions intended to support using records as first-class
-    modules, like those found in languages like Standard ML and OCaml.
+    useful additions for constraining fields that are intended to make it more
+    convenient to use records as first-class modules, like those found in
+    languages like Standard ML and OCaml.
 
     The type system is implemented in terms of an elaborator, where a
     programmer-friendly ‘surface language’ is type checked and translated into a
@@ -27,25 +28,13 @@
       };
     ]}
 
-    This is similar to Standard ML’s [ where type ] syntax for {{: https://smlfamily.github.io/sml97-defn.pdf#page=28}
+    This is like Standard ML’s [ where type ] syntax for {{: https://smlfamily.github.io/sml97-defn.pdf#page=28}
     type realisation}, OCaml’s [ with ] operator for {{: https://v2.ocaml.org/manual/modtypes.html#ss%3Amty-with}
     constraining module types}, and Rust’s [ Iterator<Item = T> ] shorthand
     syntax for {{: https://rust-lang.github.io/rfcs/0195-associated-items.html#constraining-associated-types}
     equality constraints} in type parameter bounds.
 
-    Patches don’t need to be limited to types either. For example:
-
-    {[
-      let nat-mul-monoid : Monoid [ T := Nat ] := {
-        empty := 1;
-        append := fun x y := x * y;
-      };
-
-      let nat-mul-monoid-2 : Monoid [ T := Nat; empty := 1 ] :=
-        nat-mul-monoid;
-    ]}
-
-    {2 Elaboration of patches}
+    {2 Elaboration of patches to singleton types}
 
     Patches only exist as a feature of the surface language and are removed
     during elaboration. The expression [ Monoid [ T := String ] ] in the example
@@ -70,20 +59,25 @@
       };
     ]}
 
-    {1 References}
+    {1 Related work and Acknowledgements}
 
-    - This implementation of record patching by elaborating to singletons is
-      heavily based on {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
-      Mark Barbone’s implementation sketch in Haskell}, but contains some bug
-      fixes, alterations, and extensions.
-    - Record patching was originally proposed and implemented for CoolTT.
-      - {{: https://github.com/RedPRL/cooltt/issues/266} Record patching (like
-        SML [ where type ])}
-      - {{: https://github.com/RedPRL/cooltt/issues/267} Support for auto-
-        converting between fibered and parameterized type families}
-      - Reed Mullanix's {{: https://www.youtube.com/watch?v=1_ZJIYu2BRk}
-        presentation} and {{: https://cofree.coffee/~totbwf/slides/WITS-2022.pdf}
-        slides} from WITS’22.
+    Record patching was originally proposed and implemented for CoolTT in the
+    setting of cubical type theory:
+
+    - {{: https://github.com/RedPRL/cooltt/issues/266} Record patching (like
+      SML [ where type ])}
+    - {{: https://github.com/RedPRL/cooltt/issues/267} Support for auto-
+      converting between fibered and parameterized type families}
+    - Reed Mullanix's {{: https://www.youtube.com/watch?v=1_ZJIYu2BRk}
+      presentation} and {{: https://cofree.coffee/~totbwf/slides/WITS-2022.pdf}
+      slides} from WITS’22.
+
+    This implementation of record patching by elaborating to singletons is
+    heavily based on {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
+    Mark Barbone’s implementation sketch in Haskell}, but contains bug fixes,
+    alterations, and extensions. This is similar to approaches devloped for
+    Standard ML that use singleton types to describe type realisation, but it
+    avoids the need to define singletons in terms of extensional equality.
 
     {1 Future work}
 
@@ -94,20 +88,27 @@
     {2 Opaque ascription }
 
     Experiment with adding a ‘sealing operator’ [ e :> t ] to the surface
-    language. This would allow the contents of an expression to be made opaque,
-    with the goal of allowing records to be used to define abstract data types.
+    language that opaquely ascribes types. This would allows use to prevent the
+    contents of an expression from reducing to their underlying definitions,
+    during conversion checking with the goal of allowing records to be used to
+    define abstract data types.
 
-    We could implement this by elaborating the sealing operator into function
-    literals and applications. For example, we could elaborate the term
-    [ ... (e :> t) ... ] into something like: [ (fun (x : t) := ... x ...) e ].
-    Let expressions [ let x :> t := e; ... ] could be alaborated to
-    [ (fun (x : t) := ...) e ].
+    This is sometimes done with effects, for example in {{:https://people.mpi-sws.org/~rossberg/1ml/}
+    1ML} and in {{:https://doi.org/10.1145/3474834} “Logical Relations as Types:
+    Proof-Relevant Parametricity for Program Modules”}, but given that we aren’t
+    intending to add mutable references to our language, we might be able
+    implement this feature by hiding expressions behind function parameters.
+    For example, we could elaborate the term [ ... (e :> t) ... ] into something
+    like: [ (fun (x : t) := ... x ...) e ]. Sealed let expressions like
+    [ let x :> t := e; ... ] could be alaborated to [ (fun (x : t) := ...) e ].
 
     {2 Total space conversion}
 
-    Figure out how to implement ‘total space conversion’, like in CoolTT. This
-    automatically converts [ F : { l : T; ... } -> Type ] to the record type
-    [ { l : T; ..., fibre : F { l := l; ... } } ] where necessary.
+    Implement ‘total space conversion’, like in CoolTT. This automatically
+    converts [ F : { l : T; ... } -> Type ] to the record type
+    [ { l : T; ..., fibre : F { l := l; ... } } ] where necessary. Apparently
+    this could further address the ‘bundling problem’, and reduces the need for
+    to implement implicit function parameters und unification.
 
     {2 Metavariables and unification}
 
@@ -122,7 +123,7 @@
     patch elaborates to a copy of the original record type). This could become
     a perfomance issue if patching is used heavily.
 
-    {2 Use patches on record literals}
+    {2 Patching record literals}
 
     The same syntax used by patches could be used as a way to update the fields
     of record literals.
