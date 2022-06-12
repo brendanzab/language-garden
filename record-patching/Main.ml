@@ -597,7 +597,7 @@ module Surface = struct
              is similar to how we handle missing fields in {!check}. *)
           | from_labels, from_tele , to_label :: to_labels
           , Semantics.Cons (Semantics.SingType (to_ty, sing_tm), to_tele) ->
-              let to_tm = quote context sing_tm to_ty in
+              let to_tm = Syntax.SingIntro (quote context sing_tm to_ty) in
               (to_label, to_tm) :: go (from_labels, from_tele) (to_labels, to_tele (eval context to_tm))
           | from_label :: _, Semantics.Cons (_, _), to_label :: _, Semantics.Cons (_, _) ->
               raise (Error ("type mismatch: expected field `" ^ to_label ^ "`, found field `" ^ from_label ^ "`"))
@@ -650,7 +650,7 @@ module Surface = struct
              type if the field’s expected type is a singleton. This is a bit
              like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
           | fields, label :: labels, Semantics.Cons (Semantics.SingType (ty, sing_tm), tele) ->
-              let tm = quote context sing_tm ty in
+              let tm = Syntax.SingIntro (quote context sing_tm ty) in
               (label, tm) :: go fields labels (tele (eval context tm))
           | _, label :: _, _ -> raise (Error ("field `" ^ label ^ "` is missing from record literal"))
           | (label, _) :: _, [], Semantics.Nil -> raise (Error ("unexpected field `" ^ label ^ "` in record literal"))
