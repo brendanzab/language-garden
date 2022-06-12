@@ -41,9 +41,10 @@
     above elaborates to a new record type, where the type of the [ T ] field is
     constrained to [ String ] through the use of a singleton type.
 
-    We also infer the definitions of fields from singletons. This works nicely
-    in combination with record patching. Note how we don't need to mention the
-    field [ T ] in the definition of [ string-monoid ].
+    We also pull the definitions of missing fields in record literals from
+    singletons in the expected type. This works nicely in combination with
+    record patching. Note, for example how we don't need to mention the field
+    [ T ] in the definition of [ string-monoid ].
 
     With that in mind, the definition of [ string-monoid ] is elaborated to:
 
@@ -53,7 +54,7 @@
         empty : T;
         append : T -> T -> T;
       } := {
-        T := String; -- definition inferred from the singleton
+        T := String; -- definition taken from the singleton
         empty := "";
         append := string-append;
       };
@@ -581,17 +582,28 @@ module Surface = struct
         let tm = Syntax.SingElim (tm, quote context sing_tm from_ty) in
         coerce context tm from_ty to_ty
     (* Coerce the fields of a record with record eta expansion *)
-    | Semantics.RecType (labels, from_tele), Semantics.RecType (labels', to_tele) when labels = labels' ->
-        let rec go labels from_tele to_tele =
-          match labels, from_tele, to_tele with
-          | [], Semantics.Nil, Semantics.Nil -> []
-          | label :: labels, Semantics.Cons (from_ty, from_tele), Semantics.Cons (to_ty, to_tele) ->
-              let from_tm = eval context (Syntax.RecProj (tm, label)) in
-              let to_tm = coerce context (Syntax.RecProj (tm, label)) from_ty to_ty in
-              (label, to_tm) :: go labels (from_tele from_tm) (to_tele (eval context to_tm))
-          | _, _, _ -> raise (Semantics.Error "mismatched telescope length")
+    | Semantics.RecType (from_labels, from_tele), Semantics.RecType (to_labels, to_tele) ->
+        let rec go (from_labels, from_tele) (to_labels, to_tele) =
+          match from_labels, from_tele, to_labels, to_tele with
+          | [], Semantics.Nil, [], Semantics.Nil -> []
+          (* Use eta-expansion to coerce fields that share the same label *)
+          | from_label :: from_labels, Semantics.Cons (from_ty, from_tele)
+          , to_label :: to_labels, Semantics.Cons (to_ty, to_tele) when from_label = to_label ->
+              let from_tm = eval context (Syntax.RecProj (tm, from_label)) in
+              let to_tm = coerce context (Syntax.RecProj (tm, from_label)) from_ty to_ty in
+              (to_label, to_tm) :: go (from_labels, from_tele from_tm) (to_labels, to_tele (eval context to_tm))
+          (* When the type of the target field is a singleton we can use it to
+             fill in the definition of a missing field in the source type. This
+             is similar to how we handle missing fields in {!check}. *)
+          | from_labels, from_tele , to_label :: to_labels
+          , Semantics.Cons (Semantics.SingType (to_ty, sing_tm), to_tele) ->
+              let to_tm = quote context sing_tm to_ty in
+              (to_label, to_tm) :: go (from_labels, from_tele) (to_labels, to_tele (eval context to_tm))
+          | from_label :: _, Semantics.Cons (_, _), to_label :: _, Semantics.Cons (_, _) ->
+              raise (Error ("type mismatch: expected field `" ^ to_label ^ "`, found field `" ^ from_label ^ "`"))
+          | _, _, _, _ -> raise (Semantics.Error "mismatched telescope length")
         in
-        Syntax.RecLit (go labels from_tele to_tele)
+        Syntax.RecLit (go (from_labels, from_tele) (to_labels, to_tele))
     (* TODO: subtyping for functions! *)
     | from_ty, to_ty  ->
         let expected = pretty context to_ty in
@@ -634,7 +646,7 @@ module Surface = struct
           | (label, tm) :: fields, label' :: labels, Semantics.Cons (ty, tele) when label = label' ->
               let tm = check context tm ty in
               (label, tm) :: go fields labels (tele (eval context tm))
-          (* The definition of a missing field can be inferred from the record
+          (* The definition of a missing field can be pulled from the record
              type if the field’s expected type is a singleton. This is a bit
              like in CoolTT: https://github.com/RedPRL/cooltt/pull/327 *)
           | fields, label :: labels, Semantics.Cons (Semantics.SingType (ty, sing_tm), tele) ->
@@ -837,6 +849,8 @@ module Examples = struct
     let record-lit-coerce-2 :=
       (fun B b := { A := B; a := b } : { A : Type; a : B }) :
         fun (B : Type) (b : Type) -> { A : Type; a : A };
+    let record-lit-coerce-3 := (fun A B r := r) : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ];
+    let record-lit-coerce-4 := (fun A B r := r) : fun (A : Type) (B : Type) -> { A : Type; f : A -> B } -> F [ B := B ];
 
     let intro-sing := (fun A x := x) : fun (A : Type) (x : A) -> A [= x ];
     let elim-sing := (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A;
@@ -1021,6 +1035,26 @@ module Examples = struct
       FunType (["B", Univ; "b", Name "B"], RecType ["A", Univ; "a", Name "A"]))
 
   (*
+    (fun A B r := r) : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ]
+  *)
+  let record_lit_coerce3 =
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
+      Ann (FunLit (["A"; "B"; "r"], Name "r"),
+        FunType (["A", Univ; "B", Univ], FunArrow (RecType ["f", FunArrow (Name "A", Name "B")],
+          Patch (Name "F", ["A", Name "A"; "B", Name "B"])))))
+
+  (*
+    (fun B r := r) : fun (B : Type) -> { A : Type; f : A -> B } -> F [ B := B ]
+  *)
+  let record_lit_coerce4 =
+    (* let F := { A : Type; B : Type; f : A -> B }; *)
+    Let ("F", None, fun_record_ty,
+      Ann (FunLit (["B"; "r"], Name "r"),
+        FunType (["B", Univ], FunArrow (RecType ["A", Univ; "f", FunArrow (Name "A", Name "B")],
+          Patch (Name "F", ["B", Name "B"])))))
+
+  (*
      (fun A x := x) : fun (A : Type) (x : A) -> A [= x ]
   *)
   let intro_sing =
@@ -1203,6 +1237,8 @@ module Examples = struct
     "patch_tm_lit3", patch_tm_lit3;
     "record_lit_coerce1", record_lit_coerce1;
     "record_lit_coerce2", record_lit_coerce2;
+    "record_lit_coerce3", record_lit_coerce3;
+    "record_lit_coerce4", record_lit_coerce4;
     "intro_sing", intro_sing;
     "elim_sing", elim_sing;
     "sing_tm1", sing_tm1;
