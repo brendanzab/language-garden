@@ -168,13 +168,17 @@ module Core = struct
   (** In this module we define a core language that is intended to be simple,
       explicit and relatively close to well-understood type theories. *)
 
-  (** Identifiers that are significant to the equality of terms. Typically used
+
+  (** {1 Names} *)
+
+  (** Labels are significant to the equality of terms. They are typically used
       in the fields of records, and in record projections. *)
   type label = string
 
-  (** Identifiers that serve as hints when pretty printing binders and
-      variables, but should not impact the equality of terms. *)
+  (** Names that serve as hints when pretty printing binders and variables, but
+      should not impact the equality of terms. *)
   type name = string
+
 
   (** Core Syntax *)
   module Syntax = struct
