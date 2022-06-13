@@ -787,7 +787,8 @@ module Surface = struct
           let ty = pretty context ty in
           raise (Error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`"))
     | tm, ty ->
-        let tm, ty' = infer_and_elim_implicits context tm in
+        let tm, ty' = infer context tm in
+        let tm, ty' = elim_implicits context tm ty' in
         coerce context tm ty' ty
 
   (** Elaborate a term in the surface language into a term in the core language,
@@ -927,12 +928,6 @@ module Surface = struct
     (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
       for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
     | ty -> (tm, ty)
-
-  (** Elaborate a surface term, inferring its type and eliminating implicit
-      connectives. *)
-  and infer_and_elim_implicits context tm : Syntax.tm * Semantics.ty =
-    let tm, ty = infer context tm in
-    elim_implicits context tm ty
 
 end
 
