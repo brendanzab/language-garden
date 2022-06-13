@@ -29,7 +29,9 @@ let main () =
         exit 1
   in
 
-  let program = Compiler.TreeToStack.translate term in
+  let program =
+    Compiler.TreeToStack.translate term in
+
   program |> List.iter (function
     | StackLang.Num n -> Printf.fprintf stdout "num %d\n" n
     | StackLang.Add -> Printf.fprintf stdout "add\n"

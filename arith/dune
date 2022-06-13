@@ -7,3 +7,6 @@
   (modules Parser))
 
 (ocamllex Lexer)
+
+(cram
+  (deps %{bin:arith}))
