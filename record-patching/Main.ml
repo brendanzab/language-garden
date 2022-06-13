@@ -103,8 +103,8 @@
 
     {2 Opaque ascription}
 
-    Adding a ‘sealing operator’ [ e :> t ] to the surface language would allow
-    us to opaquely ascribe type type [ t ] to an expression [ e ]. This would
+    Adding a ‘sealing operator’ [ e :> T ] to the surface language would allow
+    us to opaquely ascribe a type [ T ] to an expression [ e ]. This would
     prevent the contents of the expression from reducing definitionally,
     allowing us to define abstract data types.
 
@@ -113,29 +113,14 @@
     {{:https://doi.org/10.1145/3474834} “Logical Relations as Types:
     Proof-Relevant Parametricity for Program Modules”} describes an effectful
     approach based on call-by-push-value that could be useful in the context of
-    dependent types. That said, apparently a effects are only needed in the
-    presence of mutable references. If we didn’t need these, we might be able
-    implement sealing by hiding definitions behind function parameters. For
-    example:
+    dependent types.
 
-    - [ ... (e :> t) ... ] could elaborate into [ (fun (x : t) := ... x ...) e ]
-    - [ let x :> t := e; ... ] could elaborate into [ (fun (x : t) := ...) e ].
+    Apparently effects are only needed in the presence of mutable references,
+    however. If we didn’t need these, we might be able implement sealing by
+    hiding definitions behind function parameters. For example:
 
-    More concretetly, the following:
-
-    {[
-      ({ A := Nat, a := 0 } :>
-        { A : Type, a : T }).a + 1 ...
-                          -- ^ error: expected `Nat` found `(..).A`
-    ]}
-
-    Could be elaborated into:
-
-    {[
-      fun (x : { A : Type, a : T }) :=
-        x.a + 1 ...) { A := Nat, a := 0 }
-       -- ^ error: expected `Nat` found `x.A`
-    ]}
+    - [ ... (e :> T) ... ] elaborates to [ ... (fun (x : T) := x ...) e ]
+    - [ ... let x :> T := e; ... ] elaborates to [ ... ((fun (x : T) := ...) e) ]
 
     {2 Metavariables and unification}
 
