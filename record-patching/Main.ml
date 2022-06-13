@@ -61,32 +61,6 @@
       };
     ]}
 
-    {1 Related work}
-
-    This implementation is heavily based on {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
-    mb64’s sketch implementation in Haskell}, but contains various bug fixes,
-    alterations, and extensions.
-
-    Record patching was originally proposed and implemented for CoolTT in the
-    setting of cubical type theory:
-
-    - {{: https://github.com/RedPRL/cooltt/issues/266} Record patching (like
-      SML [ where type ])}
-    - {{: https://github.com/RedPRL/cooltt/issues/267} Support for auto-
-      converting between fibered and parameterized type families}
-
-    Reed Mullanix's presentation from WITS’22, {{: https://www.youtube.com/watch?v=1_ZJIYu2BRk}
-    Setting the Record Straight with Singletons} (slides {{: https://cofree.coffee/~totbwf/slides/WITS-2022.pdf}
-    here}) provides a good description of the approach taken in CoolTT, which
-    continues to be developed and improved.
-
-    Elaborating record patches to singleton types is similar to approaches
-    developed for formalising and implementing type realisation in Standard ML,
-    for example in {{: https://doi.org/10.1145/1183278.1183281} “Extensional
-    equivalence and singleton types”}. Unlike this work, we avoid defining
-    singletons in terms of extensional equality, which makes it much easier to
-    maintain decideable type checking.
-
     {1 Future work}
 
     {2 Parser}
@@ -139,6 +113,32 @@
 
     The same syntax used by patches could be used as a way to update the fields
     of record literals.
+
+    {1 Related work}
+
+    This implementation is heavily based on {{: https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5}
+    mb64’s sketch implementation in Haskell}, but contains various bug fixes,
+    alterations, and extensions.
+
+    Record patching was originally proposed and implemented for CoolTT in the
+    setting of cubical type theory:
+
+    - {{: https://github.com/RedPRL/cooltt/issues/266} Record patching (like
+      SML [ where type ])}
+    - {{: https://github.com/RedPRL/cooltt/issues/267} Support for auto-
+      converting between fibered and parameterized type families}
+
+    Reed Mullanix's presentation from WITS’22, {{: https://www.youtube.com/watch?v=1_ZJIYu2BRk}
+    Setting the Record Straight with Singletons} (slides {{: https://cofree.coffee/~totbwf/slides/WITS-2022.pdf}
+    here}) provides a good description of the approach taken in CoolTT, which
+    continues to be developed and improved.
+
+    Elaborating record patches to singleton types is similar to approaches
+    developed for formalising and implementing type realisation in Standard ML,
+    for example in {{: https://doi.org/10.1145/1183278.1183281} “Extensional
+    equivalence and singleton types”}. Unlike this work, we avoid defining
+    singletons in terms of extensional equality, which makes it much easier to
+    maintain decideable type checking.
 *)
 
 (** Returns the index of the given element in the list *)
