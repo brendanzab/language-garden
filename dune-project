@@ -4,4 +4,5 @@
 
 (package (name arith))
 (package (name mltt))
+(package (name mltt-small))
 (package (name record-patching))

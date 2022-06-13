@@ -1,0 +1,10 @@
+(executable
+  (name main)
+  (public_name mltt-small)
+  (package mltt-small))
+
+(env
+  (dev
+    ; see `ocamlc -warn-help` for information on warnings
+    (flags (:standard -w -unused-constructor
+                      -w -unused-value-declaration))))
