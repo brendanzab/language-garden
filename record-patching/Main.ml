@@ -197,7 +197,7 @@ module Core = struct
       | FunType of name * ty * (ty binds)
       | FunLit of name * (tm binds)
       | FunApp of tm * tm
-      | RecType of label list * tele
+      | RecType of decls
       | RecLit of (label * tm) list
       | RecProj of tm * label
       | SingType of ty * tm               (** Singleton type former: [ A [= x ] ] *)
@@ -215,10 +215,10 @@ module Core = struct
         during type checking, but is intended to be erased in compiled code.
     *)
 
-    (** Telescopes *)
-    and tele =
+    (** Field declarations *)
+    and decls =
       | Nil
-      | Cons of ty * (tele binds)
+      | Cons of label * ty * (decls binds)
 
   end
 
@@ -258,15 +258,15 @@ module Core = struct
       | Univ
       | FunType of name * ty * (tm -> ty)
       | FunLit of name * (tm -> tm)
-      | RecType of label list * tele
+      | RecType of decls
       | RecLit of (label * tm) list
       | SingType of ty * tm
       | SingIntro                           (** Singleton introduction, with term erased *)
 
-    (** Telescopes *)
-    and tele =
+    (** Field declarations *)
+    and decls =
       | Nil
-      | Cons of ty * (tm -> tele)
+      | Cons of label * ty * (tm -> decls)
 
     (** Neutral terms
 
@@ -309,7 +309,7 @@ module Core = struct
 
     (** Compute a record projection *)
     let proj : tm -> label -> tm = function
-      | RecLit fields -> fun label -> fields |> List.find (fun (l, _) -> l = label) |> snd
+      | RecLit defns -> fun label -> defns |> List.find (fun (l, _) -> l = label) |> snd
       | Neu neu -> fun label -> Neu (RecProj (neu, label))
       | _ -> raise (Error "invalid proj")
 
@@ -317,14 +317,14 @@ module Core = struct
     (** {1 Finding the types of record projections} *)
 
     (** Returns the type of a record projection *)
-    let proj_ty head (labels, tele) label =
-      let rec go labels tele =
-        match labels, tele with
-          | [], Nil -> None
-          | l :: _, Cons (tm, _) when l = label -> Some tm
-          | l :: ls, Cons (_, tms) -> go ls (tms (proj head l))
-          | _, _ -> None in
-      go labels tele
+    let proj_ty head decls label =
+      let rec go decls =
+        match decls with
+          | Nil -> None
+          | Cons (l, ty, _) when l = label -> Some ty
+          | Cons (l, _, decls) -> go (decls (proj head l))
+      in
+      go decls
 
 
     (** {1 Evaluation} *)
@@ -339,17 +339,17 @@ module Core = struct
           FunType (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
       | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: tms) body)
       | Syntax.FunApp (head, arg) -> app (eval tms head) (eval tms arg)
-      | Syntax.RecType (labels, tele) -> RecType (labels, eval_tele tms tele)
-      | Syntax.RecLit fields ->
-          RecLit (List.map (fun (label, expr) -> (label, eval tms expr)) fields)
+      | Syntax.RecType decls -> RecType (eval_decls tms decls)
+      | Syntax.RecLit defns ->
+          RecLit (List.map (fun (label, expr) -> (label, eval tms expr)) defns)
       | Syntax.RecProj (head, label) -> proj (eval tms head) label
       | Syntax.SingType (ty, sing_tm) -> SingType (eval tms ty, eval tms sing_tm)
       | Syntax.SingIntro _ -> SingIntro
       | Syntax.SingElim (_, sing_tm) -> eval tms sing_tm
-    and eval_tele tms : Syntax.tele -> tele = function
+    and eval_decls tms : Syntax.decls -> decls = function
       | Syntax.Nil -> Nil
-      | Syntax.Cons (tm, tele) ->
-          Cons (eval tms tm, fun x -> eval_tele (x :: tms) tele)
+      | Syntax.Cons (label, ty, decls) ->
+          Cons (label, eval tms ty, fun x -> eval_decls (x :: tms) decls)
 
 
     (** {1 Quotation} *)
@@ -385,18 +385,18 @@ module Core = struct
               Syntax.FunLit (name, quote (size + 1) (param_ty :: tys) (body var) (body_ty var))
           | _ -> raise (Error "not a function type")
           end
-      | RecType (labels, tele) -> Syntax.RecType (labels, quote_tele size tys tele)
-      | RecLit fields ->
+      | RecType decls -> Syntax.RecType (quote_decls size tys decls)
+      | RecLit defns ->
           begin match ty with
-          | RecType (_, tele) ->
-              let rec go fields tele =
-                match fields, tele with
+          | RecType decls ->
+              let rec go defns decls =
+                match defns, decls with
                 | [], Nil -> []
-                | (label, tm) :: fields, Cons (ty, tele) ->
-                    (label, quote size tys tm ty) :: go fields (tele tm)
-                | _, _ -> raise (Error "mismatched telescope length")
+                | (label, tm) :: defns, Cons (label', ty, decls) when label = label' ->
+                    (label, quote size tys tm ty) :: go defns (decls tm)
+                | _, _ -> raise (Error "mismatched fields")
               in
-              Syntax.RecLit (go fields tele)
+              Syntax.RecLit (go defns decls)
           | _ -> raise (Error "not a record type")
           end
       | SingType (ty, sing_tm) ->
@@ -419,16 +419,17 @@ module Core = struct
           end
       | RecProj (head, label) ->
           begin match quote_neu size tys head with
-          | head', RecType (labels, tele) ->
-              let ty = proj_ty (Neu head) (labels, tele) label |> Option.get in
+          | head', RecType decls ->
+              let ty = proj_ty (Neu head) decls label |> Option.get in
               (Syntax.RecProj (head', label), ty)
           | _ -> raise (Error "not a record type")
           end
-    and quote_tele size tys : tele -> Syntax.tele = function
+    and quote_decls size tys : decls -> Syntax.decls = function
       | Nil -> Syntax.Nil
-      | Cons (ty, tele) ->
+      | Cons (label, ty, decls) ->
           let var = Neu (Var size) in
-          Syntax.Cons (quote size tys ty Univ, quote_tele (size + 1) (ty :: tys) (tele var))
+          Syntax.Cons (label, quote size tys ty Univ,
+            quote_decls (size + 1) (ty :: tys) (decls var))
 
 
     (** {1 Normalisation} *)
@@ -467,8 +468,8 @@ module Core = struct
               let var = Neu (Var size) in
               is_convertible size tys param_ty1 param_ty2 Univ
                 && is_convertible (size + 1) (param_ty1 :: tys) (body_ty1 var) (body_ty2 var) Univ
-          | RecType (labels1, tele1), RecType (labels2, tele2) when labels1 = labels2 ->
-              is_convertible_tele size tys tele1 tele2
+          | RecType (decls1), RecType (decls2) ->
+              is_convertible_decls size tys decls1 decls2
           | SingType (ty1, sing_tm1), SingType (ty2, sing_tm2) ->
               is_convertible size tys ty1 ty2 Univ
                 && is_convertible size tys sing_tm1 sing_tm2 ty1
@@ -478,7 +479,7 @@ module Core = struct
           (* Eta for functions *)
           let var = Neu (Var size) in
           is_convertible (size + 1) (param_ty :: tys) (app tm1 var) (app tm2 var) (body_ty var)
-      | RecType (labels, tele) ->
+      | RecType decls ->
           (* Eta for records
 
             Record patching introduces subtyping problems that go inside records.
@@ -487,16 +488,15 @@ module Core = struct
             weren't present in the source syntax. This means that for usability
             it helps to include eta for records.
           *)
-          let rec go labels tele =
-            match labels, tele with
-            | label :: labels, Cons (ty, tele) ->
+          let rec go decls =
+            match decls with
+            | Cons (label, ty, decls) ->
                 let tm1 = proj tm1 label in
                 let tm2 = proj tm2 label in
-                is_convertible size tys tm1 tm2 ty && go labels (tele tm1)
-            | [], Nil -> true (* Pretty sure eta for units is hidden in here! *)
-            | _, _ -> raise (Error "mismatched telescope length")
+                is_convertible size tys tm1 tm2 ty && go (decls tm1)
+            | Nil -> true (* Pretty sure eta for units is hidden in here! *)
           in
-          go labels tele
+          go decls
       | SingType (_, _) -> true
       | _ -> raise (Error "not a type")
     and is_convertible_neu size tys neu1 neu2 =
@@ -511,18 +511,18 @@ module Core = struct
           end
       | RecProj (record1, label1), RecProj (record2, label2) when label1 = label2 ->
           begin match is_convertible_neu size tys record1 record2 with
-          | Some (RecType (labels, tele)) -> proj_ty (Neu record1) (labels, tele) label1
+          | Some (RecType decls) -> proj_ty (Neu record1) decls label1
           | Some _ -> raise (Error "not a record type")
           | None -> None
           end
       | _, _ -> None
-    and is_convertible_tele size tys tele1 tele2 =
-      match tele1, tele2 with
+    and is_convertible_decls size tys decls1 decls2 =
+      match decls1, decls2 with
       | Nil, Nil -> true
-      | Cons (ty1, tele1), Cons (ty2, tele2) ->
+      | Cons (label1, ty1, decls1), Cons (label2, ty2, decls2) when label1 = label2 ->
           let var = Neu (Var size) in
           is_convertible size tys ty1 ty2 Univ
-            && is_convertible_tele (size + 1) (ty1 :: tys) (tele1 var) (tele2 var)
+            && is_convertible_decls (size + 1) (ty1 :: tys) (decls1 var) (decls2 var)
       | _, _ -> false
 
 
@@ -697,28 +697,27 @@ module Surface = struct
         let tm = Syntax.SingElim (tm, quote context sing_tm from_ty) in
         coerce context tm from_ty to_ty
     (* Coerce the fields of a record with record eta expansion *)
-    | Semantics.RecType (from_labels, from_tele), Semantics.RecType (to_labels, to_tele) ->
-        let rec go (from_labels, from_tele) (to_labels, to_tele) =
-          match from_labels, from_tele, to_labels, to_tele with
-          | [], Semantics.Nil, [], Semantics.Nil -> []
+    | Semantics.RecType from_decls, Semantics.RecType to_decls ->
+        let rec go from_decls to_decls =
+          match from_decls, to_decls with
+          | Semantics.Nil, Semantics.Nil -> []
           (* Use eta-expansion to coerce fields that share the same label *)
-          | from_label :: from_labels, Semantics.Cons (from_ty, from_tele)
-          , to_label :: to_labels, Semantics.Cons (to_ty, to_tele) when from_label = to_label ->
+          | Semantics.Cons (from_label, from_ty, from_decls)
+          , Semantics.Cons (to_label, to_ty, to_decls) when from_label = to_label ->
               let from_tm = eval context (Syntax.RecProj (tm, from_label)) in
               let to_tm = coerce context (Syntax.RecProj (tm, from_label)) from_ty to_ty in
-              (to_label, to_tm) :: go (from_labels, from_tele from_tm) (to_labels, to_tele (eval context to_tm))
+              (to_label, to_tm) :: go (from_decls from_tm) (to_decls (eval context to_tm))
           (* When the type of the target field is a singleton we can use it to
              fill in the definition of a missing field in the source term. This
              is similar to how we handle missing fields in {!check}. *)
-          | from_labels, from_tele , to_label :: to_labels
-          , Semantics.Cons (Semantics.SingType (to_ty, sing_tm), to_tele) ->
+          | from_decls, Semantics.Cons (to_label, Semantics.SingType (to_ty, sing_tm), to_decls) ->
               let to_tm = Syntax.SingIntro (quote context sing_tm to_ty) in
-              (to_label, to_tm) :: go (from_labels, from_tele) (to_labels, to_tele (eval context to_tm))
-          | from_label :: _, Semantics.Cons (_, _), to_label :: _, Semantics.Cons (_, _) ->
+              (to_label, to_tm) :: go from_decls (to_decls (eval context to_tm))
+          | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
               raise (Error ("type mismatch: expected field `" ^ to_label ^ "`, found field `" ^ from_label ^ "`"))
-          | _, _, _, _ -> raise (Semantics.Error "mismatched telescope length")
+          | _, _ -> raise (Semantics.Error "mismatched declsscope length")
         in
-        Syntax.RecLit (go (from_labels, from_tele) (to_labels, to_tele))
+        Syntax.RecLit (go from_decls to_decls)
     (* TODO: subtyping for functions! *)
     | from_ty, to_ty  ->
         let expected = pretty context to_ty in
@@ -756,27 +755,26 @@ module Surface = struct
           | _, _ -> raise (Error "too many parameters in function literal")
         in
         go context names ty
-    | RecLit fields, Semantics.RecType (labels, tele) ->
+    | RecLit defns, Semantics.RecType decls ->
         (* TODO: elaborate fields out of order? *)
-        let rec go fields labels tele =
-          match fields, labels, tele with
-          | [], [], Semantics.Nil -> []
-          | (label, tm) :: fields, label' :: labels, Semantics.Cons (ty, tele) when label = label' ->
+        let rec go defns decls =
+          match defns, decls with
+          | [], Semantics.Nil -> []
+          | (label, tm) :: defns, Semantics.Cons (label', ty, decls) when label = label' ->
               let tm = check context tm ty in
-              (label, tm) :: go fields labels (tele (eval context tm))
+              (label, tm) :: go defns (decls (eval context tm))
           (* When the expected type of a field is a singleton we can use it to
              fill in the definition of a missing fields in the record literal. *)
-          | fields, label :: labels, Semantics.Cons (Semantics.SingType (ty, sing_tm), tele) ->
+          | defns, Semantics.Cons (label, Semantics.SingType (ty, sing_tm), decls) ->
               let tm = Syntax.SingIntro (quote context sing_tm ty) in
-              (label, tm) :: go fields labels (tele (eval context tm))
-          | _, label :: _, _ -> raise (Error ("field `" ^ label ^ "` is missing from record literal"))
-          | (label, _) :: _, [], Semantics.Nil -> raise (Error ("unexpected field `" ^ label ^ "` in record literal"))
-          | _, _, _ -> raise (Semantics.Error "mismatched telescope length")
+              (label, tm) :: go defns (decls (eval context tm))
+          | _, Semantics.Cons (label, _, _) -> raise (Error ("field `" ^ label ^ "` is missing from record literal"))
+          | (label, _) :: _, Semantics.Nil -> raise (Error ("unexpected field `" ^ label ^ "` in record literal"))
         in
-        Syntax.RecLit (go fields labels tele)
+        Syntax.RecLit (go defns decls)
     | RecUnit, Semantics.Univ ->
-        Syntax.RecType ([], Nil)
-    | RecUnit, Semantics.RecType ([], _) ->
+        Syntax.RecType Syntax.Nil
+    | RecUnit, Semantics.RecType Semantics.Nil ->
         Syntax.RecLit []
     | tm, Semantics.SingType (ty, sing_tm) ->
         let tm = check context tm ty in
@@ -837,19 +835,17 @@ module Surface = struct
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
     | FunLit (_, _) ->
         raise (Error "ambiguous function literal")
-    | RecType field_tys ->
+    | RecType decls ->
         let rec go context seen_labels = function
-          | [] -> ([], Syntax.Nil)
+          | [] -> (Syntax.Nil)
           | (label, _) :: _ when List.mem label seen_labels ->
               raise (Error ("duplicate label `" ^ label ^ "` in record type"))
-          | (label, ty) :: field_tys ->
+          | (label, ty) :: decls ->
               let ty = check context ty Semantics.Univ in
               let context = bind_param context label (eval context ty) in
-              let labels, tele = go context (label :: seen_labels) field_tys in
-              (label :: labels, Syntax.Cons (ty, tele))
+              Syntax.Cons (label, ty, go context (label :: seen_labels) decls)
         in
-        let labels, tele = go context [] field_tys in
-        (Syntax.RecType (labels, tele), Semantics.Univ)
+        (Syntax.RecType (go context [] decls), Semantics.Univ)
     | RecLit _ ->
         raise (Error "ambiguous record literal")
     | RecUnit ->
@@ -872,8 +868,8 @@ module Surface = struct
         List.fold_left
           (fun (head, head_ty) label ->
             match elim_implicits context head head_ty with
-            | head, Semantics.RecType (labels, tys) ->
-                begin match Semantics.proj_ty (eval context head) (labels, tys) label with
+            | head, Semantics.RecType decls ->
+                begin match Semantics.proj_ty (eval context head) decls label with
                 | Some ty -> (Syntax.RecProj (head, label), ty)
                 | None -> raise (Error ("field `" ^ label ^ "` not found in record"))
                 end
@@ -881,12 +877,12 @@ module Surface = struct
           (infer context head)
           labels
     | Patch (head, patches) ->
-        let rec go context labels tys patches =
-          match labels, tys, patches with
-          | [], Semantics.Nil, [] -> Syntax.Nil
-          | [], Semantics.Nil, (label, _) :: _ ->
+        let rec go context decls patches =
+          match decls, patches with
+          | Semantics.Nil, [] -> Syntax.Nil
+          | Semantics.Nil, (label, _) :: _ ->
               raise (Error ("field `" ^ label ^ "` not found in record type"))
-          | label :: labels, Semantics.Cons (ty, tys), patches ->
+          | Semantics.Cons (label, ty, tys), patches ->
               let ty' = quote context ty Univ in
               begin match List.assoc_opt label patches with
               | Some patch_tm ->
@@ -894,13 +890,12 @@ module Surface = struct
                   let tm' = eval context tm in
                   let context = bind_def context label (Semantics.SingType (ty, tm')) tm' in
                   let patches = List.remove_assoc label patches in
-                  Syntax.Cons (Syntax.SingType (ty', tm), go context labels (tys tm') patches)
+                  Syntax.Cons (label, Syntax.SingType (ty', tm), go context (tys tm') patches)
               | None ->
                   let var = next_var context in
                   let context = bind_def context label ty var in
-                  Syntax.Cons (ty', go context labels (tys var) patches)
+                  Syntax.Cons (label, ty', go context (tys var) patches)
               end
-          | _, _, _ -> raise (Semantics.Error "mismatched telescope length")
         in
         let patch_labels = List.map fst patches in
         if List.sort_uniq (String.compare) patch_labels <> patch_labels then
@@ -908,9 +903,9 @@ module Surface = struct
         else
           let head = check context head Semantics.Univ in
           begin match eval context head with
-          | Semantics.RecType (labels, tys) ->
-              let tys = go context labels tys patches in
-              (Syntax.RecType (labels, tys), Semantics.Univ)
+          | Semantics.RecType decls ->
+              let decls = go context decls patches in
+              (Syntax.RecType decls, Semantics.Univ)
           | _ -> raise (Error "can only patch record types")
           end
 
