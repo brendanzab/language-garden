@@ -150,8 +150,9 @@ let elem_index a =
 
 (** Core language *)
 module Core = struct
-  (** The core language is simple and minimal, and is intended to be close to
-      well-understood type theories. *)
+  (** The core language is intended to be minimal, and close to well-understood
+      type theories. The majority of this module is split up into the {!Syntax}
+      and the {!Semantics}. *)
 
 
   (** {1 Names} *)
@@ -160,16 +161,72 @@ module Core = struct
       in the fields of records, and in record projections. *)
   type label = string
 
-  (** Names that serve as hints when pretty printing binders and variables, but
-      should not impact the equality of terms. *)
+  (** These names are used as hints for pretty printing binders and variables,
+      but don’t impact the equality of terms. *)
   type name = string
+
+
+  (** {1 Nameless binding structure} *)
+
+  (** The binding structure of terms is represented in the core language by
+      using numbers that represent the distance to a binder, instead of by the
+      names attached to those binders. *)
+
+  (** {i De Bruijn index} that represents a variable by the number of binders
+      between the variable and the binder it refers to. *)
+  type index = int
+
+  (** {i De Bruijn level} that represents a variable by the number of binders
+      from the top of the environment to the binder that it refers to. These do
+      not change their meaning as new bindings are added to the environment. *)
+  type level = int
+
+  (** To illustrate the relationship between indices and levels, the level and
+      index of the variable [ g ] can be found as follows:
+
+      {[
+                      level = 3      index = 1
+                  │─λ───λ───λ──────▶︎│◀︎─λ──────│
+                  │                 │         │
+        Names     │ λn. λf. λx. n (λg. λh. h (g f)) (λu. x) (λu. u)
+        Indices   │ λ   λ   λ   2 (λ   λ   0 (1 3)) (λ   1) (λ   0)
+        Levels    │ λ   λ   λ   0 (λ   λ   4 (3 1)) (λ   2) (λ   3)
+      ]}
+  *)
+
+  (** Converts a {!level} to an {!index} that is bound in an environment of the
+      supplied size. Assumes that [ size > level ]. *)
+  let level_to_index size level =
+    size - level - 1
+
+  (** Nameless variable representations like {i De Bruijn indices} and {i De
+      Bruijn levels} have a reputation for off-by-one errors and requiring
+      expensive reindexing operations when performing substitutions. Thankfully
+      these issues can be largely avoided by choosing different variable
+      representations for the {!Syntax} and the {!Semantics}:
+
+      - In the {!Syntax} we represent bound variables with {!index}. This allows
+        us to easily compare terms for alpha equivalence and quickly look up
+        bindings based on their position in the environment.
+      - In the {!Semantics} we represent free variables with {!level}. Because
+        their meaning remains the same as new bindings are added to the
+        environment, levels allow us to use terms at greater binding depths
+        without requiring them to be reindexed first.
+
+      The only time we really need to reindex terms is when quoting from the
+      {!Syntax} back to the {!Semantics}, using the {!level_to_index} function,
+      and only requires a single traversal of the term.
+
+      This approach is documented in more detail in Chapter 3 of Andreas Abel’s
+      Thesis, {{: https://www.cse.chalmers.se/~abela/habil.pdf} “Normalization
+      by Evaluation: Dependent Types and Impredicativity”}. Andras Kovacs also
+      explains the approach in {{: https://proofassistants.stackexchange.com/a/910/309}
+      an answer on the Proof Assistants Stack Exchange}.
+  *)
 
 
   (** Syntax of the core language *)
   module Syntax = struct
-
-    (** De-bruijn index *)
-    type index = int
 
     (** For documenting where variables are bound *)
     type 'a binds = 'a
@@ -213,30 +270,11 @@ module Core = struct
 
   (** Semantics of the core language *)
   module Semantics = struct
-    (** In order to type check our language, it’s important to be able to check
-        if two terms compute to the same thing (eg. when checking if two types
-        are the same), or to perform some computation in order to uncover
-        details about terms (eg. to figure out if a type is a function type).
-        Terms could contain free variables (eg. when computing a variable that
-        is bound to a function parameter) so computation might get stuck at
-        various points. We also want to take a lazy approach, only computing
-        as much as we need.
-
-        To meet these goals, we implement an interpreter using {i normalisation
-        by evaluation}, which involves first evaluating terms from our syntax
-        into partially reduced terms in the {i semantic  domain}, then either
-        those terms back to the original syntax to arrive at normal forms, or
-        comparing them using conversion checking.
-    *)
-
 
     (** {1 Semantic domain} *)
 
     (** The following data structures represent the semantic interpretation of
         the core syntax. *)
-
-    (** De-bruijn level *)
-    type level = int
 
     (** Types *)
     type ty = tm
@@ -266,9 +304,8 @@ module Core = struct
       | FunApp of neu * tm                  (** Function application *)
       | RecProj of neu * label              (** Record projection *)
 
-    (** An environment of bound entries that can be looked up directly using a
-        {!Syntax.index}, or by inverting a {!level} using [ size - level - 1 ],
-        where [ size ] is the number of entries bound in the environment. *)
+    (** An environment of bindings that can be looked up directly using a
+        {!Syntax.index}, or by inverting a {!level} using {!level_to_index}. *)
     type 'a env = 'a list
 
 
@@ -339,20 +376,18 @@ module Core = struct
 
     (** {1 Quotation} *)
 
-    (** Quotation allows us to turn the semantic domain back into syntax. This
-        is useful if we want to find the normal form of a term, or if we want to
-        include a semantic term in some other bit of syntax.
+    (** Quotation allows us to convert terms from semantic domain back into
+        syntax. This can be useful to find the normal form of a term, or when
+        including terms from the semantics in the syntax during elaboration.
+
+        The size parameter is the number of bindings present in the environment
+        where we the resulting terms should be bound, allowing us to convert
+        variables in the semantic domain back to an {!index} representation
+        with {!level_to_size}. It’s important to only use the resulting terms
+        at binding depth that they were quoted at.
 
         Quotation is type directed, but we only use types as a way to restore
         the values of singletons that were erased during evaluation.
-
-        The size parameter is the number of bindings in the environment where we
-        want quotation to occur. This allows us to convert variables from
-        de-Bruijn levels back to de-Bruijn indices. We need to be careful to
-        only use the resulting terms at binding depth that they were quoted at.
-        Note that we could alternatively compute this from the length of the
-        typing environment, but this would be an O(n) operation whenever we
-        wanted to convert between variable representations.
     *)
     let rec quote size tys tm ty : Syntax.tm =
       match tm with
@@ -394,7 +429,7 @@ module Core = struct
           end
     and quote_neu size tys : neu -> Syntax.tm * ty = function
       | Var level ->
-          let index = size - level - 1 in
+          let index = level_to_index size level in
           (Syntax.Var index, List.nth tys index)
       | FunApp (head, arg) ->
           begin match quote_neu size tys head with
@@ -486,7 +521,7 @@ module Core = struct
       | _ -> raise (Error "not a type")
     and is_convertible_neu size tys neu1 neu2 =
       match neu1, neu2 with
-      | Var level1, Var level2 when level1 = level2 -> Some (List.nth tys (size - level1 - 1))
+      | Var level1, Var level2 when level1 = level2 -> Some (List.nth tys (level_to_index size level1))
       | FunApp (func1, arg1), FunApp (func2, arg2) ->
           begin match is_convertible_neu size tys func1 func2 with
           | Some (FunType (_, param_ty, body_ty)) ->
@@ -541,7 +576,7 @@ module Core = struct
               go false size names sing_tm << str " ]")
         | SingIntro -> str "#sing-intro"
       and go_neu wrap size names = function
-        | Var level -> str (List.nth names (size - level - 1))
+        | Var level -> str (List.nth names (level_to_index size level))
         | FunApp (head, arg) ->
             parens wrap (go_neu false size names head << str " " <<  go true size names arg)
         | RecProj (head, label) -> go_neu false size names head << str "." << str label
@@ -602,7 +637,7 @@ module Surface = struct
       the current scope in the program. The environments are unzipped to make it
       more efficient to call functions from {!Core.Semantics}. *)
   type context = {
-    size : Semantics.level;             (** Number of entries bound. *)
+    size : Core.level;                  (** Number of entries bound. *)
     names : Core.name Semantics.env;    (** Name environment *)
     tys : Semantics.ty Semantics.env;   (** Type environment *)
     tms : Semantics.tm Semantics.env;   (** Term environment *)
