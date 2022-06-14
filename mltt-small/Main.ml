@@ -66,14 +66,10 @@ module Core = struct
       | FunType of string * ty * (tm -> ty)
       | FunLit of string * (tm -> tm)
 
-    (** Neutral terms
-
-        These are terms that could not be reduced to a normal form as a result
-        of being stuck on something else that would not reduce further.
-
+    (** Neutral terms are terms that could not be reduced to a normal form as a
+        result of being stuck on something else that would not reduce further.
         I’m not sure why they are called ‘neutral terms’. Perhaps they are...
-        ambivalent about what they might evaluate to?
-    *)
+        ambivalent about what they might compute to? *)
     and neu =
       | Var of level          (** Variable that could not be reduced further *)
       | FunApp of neu * tm    (** Function application *)
