@@ -150,8 +150,8 @@ let elem_index a =
 
 (** Core language *)
 module Core = struct
-  (** In this module we define a core language that is intended to be simple,
-      explicit and relatively close to well-understood type theories. *)
+  (** The core language is simple and minimal, and is intended to be close to
+      well-understood type theories. *)
 
 
   (** {1 Names} *)
@@ -165,7 +165,7 @@ module Core = struct
   type name = string
 
 
-  (** Core Syntax *)
+  (** Syntax of the core language *)
   module Syntax = struct
 
     (** De-bruijn index *)
@@ -287,8 +287,8 @@ module Core = struct
     (** {1 Eliminators} *)
 
     (** The following functions trigger computation if the head term is in the
-        appropriate normal form, otherwise they queues up the elimination for
-        later if computation if the term is in a neutral form. *)
+        appropriate normal form, otherwise queuing up the elimination if the
+        term is in a neutral form. *)
 
     (** Compute a function application *)
     let app : tm -> tm -> tm = function
