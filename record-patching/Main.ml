@@ -550,44 +550,42 @@ module Core = struct
 
     (** Rough-and-ready pretty printer *)
     let pretty size names tm =
-      let (<<) f g x = f (g x) in
-      let str s rest = s ^ rest in
-      let parens wrap s rest = if wrap then "(" ^ s (")" ^ rest) else s rest in
+      let concat = String.concat "" in
+      let parens wrap s = if wrap then concat ["("; s; ")"] else s in
       let rec go wrap size names = function
         | Neu neu -> go_neu wrap size names neu
-        | Univ -> str "Type"
+        | Univ -> "Type"
         | FunType (name, param_ty, body_ty) ->
-            parens wrap (str "fun (" << str name << str " : " << go false size names param_ty <<
-              str ") -> " << go false (size + 1) (name :: names) (body_ty (Neu (Var size))))
+            parens wrap (concat ["fun ("; name; " : "; go false size names param_ty; ") -> ";
+              go false (size + 1) (name :: names) (body_ty (Neu (Var size)))])
         | FunLit (name, body) ->
-            parens wrap (str "fun " << str name << str " := " <<
-              go false (size + 1) (name :: names) (body (Neu (Var size))))
-        | RecType Nil | RecLit [] -> str "{}"
-        | RecType decls ->
-            str "{ " << go_decls size names decls << str "}"
+            parens wrap (concat ["fun "; name; " := ";
+              go false (size + 1) (name :: names) (body (Neu (Var size)))])
+        | RecType Nil | RecLit [] -> "{}"
+        | RecType decls -> concat ["{ "; go_decls size names decls; "}" ]
         | RecLit defns ->
-            str "{ " <<
-              List.fold_right
-                (fun (label, tm) rest ->
-                  str label << str " := " << go false size names tm << str "; " << rest)
-                defns (str "}")
+            concat ["{ ";
+              concat (List.map
+                (fun (label, tm) -> concat [label; " := "; go false size names tm; "; "])
+                defns);
+              "}"]
         | SingType (ty, sing_tm) ->
-            parens wrap (go false size names ty << str " [= " <<
-              go false size names sing_tm << str " ]")
-        | SingIntro -> str "#sing-intro"
+            parens wrap (concat [go false size names ty; " [= ";
+              go false size names sing_tm; " ]"])
+        | SingIntro -> "#sing-intro"
       and go_neu wrap size names = function
-        | Var level -> str (List.nth names (level_to_index size level))
+        | Var level -> List.nth names (level_to_index size level)
         | FunApp (head, arg) ->
-            parens wrap (go_neu false size names head << str " " <<  go true size names arg)
-        | RecProj (head, label) -> go_neu false size names head << str "." << str label
+            parens wrap (concat [go_neu false size names head; " ";  go true size names arg])
+        | RecProj (head, label) -> concat [go_neu false size names head; "."; label]
       and go_decls size names decls =
         match decls with
-        | Nil -> str ""
+        | Nil -> ""
         | Cons (label, ty, decls) ->
-            str label << str " : " << go false size names ty << str "; " <<
-              go_decls (size + 1) (label :: names) (decls (Neu (Var size)))
+            concat [label; " : "; go false size names ty; "; ";
+              go_decls (size + 1) (label :: names) (decls (Neu (Var size)))]
       in
-      go false size names tm ""
+      go false size names tm
     end
 
 end

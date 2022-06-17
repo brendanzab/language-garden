@@ -234,24 +234,23 @@ module Core = struct
     (** {1 Pretty printing} *)
 
     let pretty size names tm =
-      let (<<) f g x = f (g x) in
-      let str s rest = s ^ rest in
-      let parens wrap s rest = if wrap then "(" ^ s (")" ^ rest) else s rest in
+      let concat = String.concat "" in
+      let parens wrap s = if wrap then concat ["("; s; ")"] else s in
       let rec go wrap size names = function
         | Neu neu -> go_neu wrap size names neu
-        | Univ -> str "Type"
+        | Univ -> "Type"
         | FunType (name, param_ty, body_ty) ->
-            parens wrap (str "fun (" << str name << str " : " << go false size names param_ty <<
-              str ") -> " << go false (size + 1) (name :: names) (body_ty (Neu (Var size))))
+            parens wrap (concat ["fun ("; name; " : "; go false size names param_ty; ") -> ";
+              go false (size + 1) (name :: names) (body_ty (Neu (Var size)))])
         | FunLit (name, body) ->
-            parens wrap (str "fun " << str name << str " := " <<
-              go false (size + 1) (name :: names) (body (Neu (Var size))))
+            parens wrap (concat ["fun "; name; " := ";
+              go false (size + 1) (name :: names) (body (Neu (Var size)))])
       and go_neu wrap size names = function
-        | Var level -> str (List.nth names (level_to_index size level))
+        | Var level -> List.nth names (level_to_index size level)
         | FunApp (head, arg) ->
-            parens wrap (go_neu false size names head << str " " <<  go true size names arg)
+            parens wrap (concat [go_neu false size names head; " ";  go true size names arg])
       in
-      go false size names tm ""
+      go false size names tm
 
   end
 end
