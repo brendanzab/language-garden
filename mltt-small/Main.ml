@@ -139,8 +139,8 @@ module Core = struct
 
     (** {1 Exceptions} *)
 
-    (** Internal error encountered in the semantics due to malformed terms being
-        supplied to the semantics. *)
+    (** An error that was encountered during computation. This should only ever
+        be raised if ill-typed terms were supplied to the semantics. *)
     exception Error of string
 
 
@@ -322,11 +322,14 @@ module Surface = struct
 
   (** {2 Exceptions} *)
 
-  (** An elaboration error that will be raised if there was a problem in the
-      surface syntax, usually as a result of type errors or a lack of type
-      annotations. This is normal, and should be rendered nicely to the
-      programmer. *)
+  (** An error that will be raised if there was a problem in the surface syntax,
+      usually as a result of type errors or a missing type annotations. This is
+      normal, and should be rendered nicely to the programmer. *)
   exception Error of string
+
+  (** Raises an {!Error} exception *)
+  let error message =
+    raise (Error message)
 
 
   (** {2 Bidirectional type checking} *)
@@ -356,7 +359,7 @@ module Surface = struct
               let var = next_var context in
               let context = bind_def context name param_ty var in
               Syntax.FunLit (name, go context names (body_ty var))
-          | _, _ -> raise (Error "too many parameters in function literal")
+          | _, _ -> error "too many parameters in function literal"
         in
         go context names ty
     | tm, ty ->
@@ -364,7 +367,7 @@ module Surface = struct
         if is_convertible context (ty', ty) then tm else
           let expected = pretty context ty in
           let found = pretty context ty' in
-          raise (Error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`"))
+          error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
@@ -387,7 +390,7 @@ module Surface = struct
     | Name name ->
         begin match elem_index name context.names with
         | Some index -> (Syntax.Var index, List.nth context.tys index)
-        | None -> raise (Error ("`" ^ name ^ "` is not bound in the current scope"))
+        | None -> error ("`" ^ name ^ "` is not bound in the current scope")
         end
     | Ann (tm, ty) ->
         let ty = check context ty Semantics.Univ in
@@ -410,8 +413,7 @@ module Surface = struct
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
-    | FunLit (_, _) ->
-        raise (Error "ambiguous function literal")
+    | FunLit (_, _) -> error "ambiguous function literal"
     | FunApp (head, args) ->
         List.fold_left
           (fun (head, head_ty) arg ->
@@ -419,7 +421,7 @@ module Surface = struct
             | Semantics.FunType (_, param_ty, body_ty) ->
                 let arg = check context arg param_ty in
                 (Syntax.FunApp (head, arg), body_ty (eval context arg))
-            | _ -> raise (Error "not a function"))
+            | _ -> error "not a function")
           (infer context head)
           args
 

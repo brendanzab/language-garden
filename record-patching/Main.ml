@@ -311,10 +311,13 @@ module Core = struct
 
     (** {1 Error handling} *)
 
-    (** Internal error encountered in the semantics. These should never occur if
-        terms are used in a way that respects the type system of the core
-        language. *)
+    (** An error that was encountered during computation. This should only ever
+        be raised if ill-typed terms were supplied to the semantics. *)
     exception Error of string
+
+    (** Raises an {!Error} exception *)
+    let error message =
+      raise (Error message)
 
 
     (** {1 Eliminators} *)
@@ -327,13 +330,13 @@ module Core = struct
     let app : tm -> tm -> tm = function
       | FunLit (_, body) -> body
       | Neu neu -> fun arg -> Neu (FunApp (neu, arg))
-      | _ -> raise (Error "invalid app")
+      | _ -> error "invalid app"
 
     (** Compute a record projection *)
     let proj : tm -> label -> tm = function
       | RecLit defns -> fun label -> defns |> List.find (fun (l, _) -> l = label) |> snd
       | Neu neu -> fun label -> Neu (RecProj (neu, label))
-      | _ -> raise (Error "invalid proj")
+      | _ -> error "invalid proj"
 
 
     (** {1 Finding the types of record projections} *)
@@ -403,7 +406,7 @@ module Core = struct
           | FunType (_, param_ty, body_ty) ->
               let var = Neu (Var size) in
               Syntax.FunLit (name, quote (size + 1) (param_ty :: tys) (body var) (body_ty var))
-          | _ -> raise (Error "not a function type")
+          | _ -> error "not a function type"
           end
       | RecType decls -> Syntax.RecType (quote_decls size tys decls)
       | RecLit defns ->
@@ -414,10 +417,10 @@ module Core = struct
                 | [], Nil -> []
                 | (label, tm) :: defns, Cons (label', ty, decls) when label = label' ->
                     (label, quote size tys tm ty) :: go defns (decls tm)
-                | _, _ -> raise (Error "mismatched fields")
+                | _, _ -> error "mismatched fields"
               in
               Syntax.RecLit (go defns decls)
-          | _ -> raise (Error "not a record type")
+          | _ -> error "not a record type"
           end
       | SingType (ty, sing_tm) ->
           Syntax.SingType (quote size tys ty Univ, quote size tys sing_tm ty)
@@ -425,7 +428,7 @@ module Core = struct
           begin match ty with
           (* Restore the erased term from the singleton type *)
           | SingType (ty, sing_tm) -> Syntax.SingIntro (quote size tys ty sing_tm)
-          | _ -> raise (Error "not a singleton type")
+          | _ -> error "not a singleton type"
           end
     and quote_neu size tys : neu -> Syntax.tm * ty = function
       | Var level ->
@@ -435,14 +438,14 @@ module Core = struct
           begin match quote_neu size tys head with
           | head, FunType (_, param_ty, body_ty) ->
               (Syntax.FunApp (head, (quote size tys arg param_ty)), body_ty arg)
-          | _ -> raise (Error "not a function type")
+          | _ -> error "not a function type"
           end
       | RecProj (head, label) ->
           begin match quote_neu size tys head with
           | head', RecType decls ->
               let ty = proj_ty (Neu head) decls label |> Option.get in
               (Syntax.RecProj (head', label), ty)
-          | _ -> raise (Error "not a record type")
+          | _ -> error "not a record type"
           end
     and quote_decls size tys : decls -> Syntax.decls = function
       | Nil -> Syntax.Nil
@@ -478,7 +481,7 @@ module Core = struct
       | Neu _ ->
           begin match tm1, tm2 with
           | Neu n1, Neu n2 -> Option.is_some (is_convertible_neu size tys n1 n2)
-          | _, _ -> raise (Error "internal error") (* why? *)
+          | _, _ -> error "internal error" (* TODO: why? *)
           end
       | Univ ->
           begin match tm1, tm2 with
@@ -518,7 +521,7 @@ module Core = struct
           in
           go decls
       | SingType (_, _) -> true
-      | _ -> raise (Error "not a type")
+      | _ -> error "not a type"
     and is_convertible_neu size tys neu1 neu2 =
       match neu1, neu2 with
       | Var level1, Var level2 when level1 = level2 -> Some (List.nth tys (level_to_index size level1))
@@ -526,13 +529,13 @@ module Core = struct
           begin match is_convertible_neu size tys func1 func2 with
           | Some (FunType (_, param_ty, body_ty)) ->
               if is_convertible size tys arg1 arg2 param_ty then Some (body_ty arg1) else None
-          | Some _ -> raise (Error "not a function type")
+          | Some _ -> error "not a function type"
           | None -> None
           end
       | RecProj (record1, label1), RecProj (record2, label2) when label1 = label2 ->
           begin match is_convertible_neu size tys record1 record2 with
           | Some (RecType decls) -> proj_ty (Neu record1) decls label1
-          | Some _ -> raise (Error "not a record type")
+          | Some _ -> error "not a record type"
           | None -> None
           end
       | _, _ -> None
@@ -683,11 +686,14 @@ module Surface = struct
 
   (** {2 Elaboration errors} *)
 
-  (** An elaboration error that will be raised if there was a problem in the
-      surface syntax, usually as a result of type errors or a lack of type
-      annotations. This is normal, and should be rendered nicely to the
-      programmer. *)
+  (** An error that will be raised if there was a problem in the surface syntax,
+      usually as a result of type errors or a missing type annotations. This is
+      normal, and should be rendered nicely to the programmer. *)
   exception Error of string
+
+  (** Raises an {!Error} exception *)
+  let error message =
+    raise (Error message)
 
 
   (** {2 Coercive subtyping} *)
@@ -708,7 +714,7 @@ module Surface = struct
           let expected = pretty context sing_tm in
           let found = pretty context tm' in
           let ty = pretty context to_ty in
-          raise (Error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`"))
+          error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
     (* Coerce the singleton back to its underlying term with {!Syntax.SingElim}
       and attempt further coercions from its underlying type *)
     | Semantics.SingType (from_ty, sing_tm), to_ty ->
@@ -732,15 +738,15 @@ module Surface = struct
               let to_tm = Syntax.SingIntro (quote context sing_tm to_ty) in
               (to_label, to_tm) :: go from_decls (to_decls (eval context to_tm))
           | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
-              raise (Error ("type mismatch: expected field `" ^ to_label ^ "`, found field `" ^ from_label ^ "`"))
-          | _, _ -> raise (Semantics.Error "mismatched declsscope length")
+              error ("type mismatch: expected field `" ^ to_label ^ "`, found field `" ^ from_label ^ "`")
+          | _, _ -> Semantics.error "mismatched telescope length"
         in
         Syntax.RecLit (go from_decls to_decls)
     (* TODO: subtyping for functions! *)
     | from_ty, to_ty  ->
         let expected = pretty context to_ty in
         let found = pretty context from_ty in
-        raise (Error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`"))
+        error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
 
 
   (** {2 Bidirectional type checking} *)
@@ -770,7 +776,7 @@ module Surface = struct
               let var = next_var context in
               let context = bind_def context name param_ty var in
               Syntax.FunLit (name, go context names (body_ty var))
-          | _, _ -> raise (Error "too many parameters in function literal")
+          | _, _ -> error "too many parameters in function literal"
         in
         go context names ty
     | RecLit defns, Semantics.RecType decls ->
@@ -786,8 +792,8 @@ module Surface = struct
           | defns, Semantics.Cons (label, Semantics.SingType (ty, sing_tm), decls) ->
               let tm = Syntax.SingIntro (quote context sing_tm ty) in
               (label, tm) :: go defns (decls (eval context tm))
-          | _, Semantics.Cons (label, _, _) -> raise (Error ("field `" ^ label ^ "` is missing from record literal"))
-          | (label, _) :: _, Semantics.Nil -> raise (Error ("unexpected field `" ^ label ^ "` in record literal"))
+          | _, Semantics.Cons (label, _, _) -> error ("field `" ^ label ^ "` is missing from record literal")
+          | (label, _) :: _, Semantics.Nil -> error ("unexpected field `" ^ label ^ "` in record literal")
         in
         Syntax.RecLit (go defns decls)
     | RecUnit, Semantics.Univ ->
@@ -801,7 +807,7 @@ module Surface = struct
           let expected = pretty context sing_tm in
           let found = pretty context tm' in
           let ty = pretty context ty in
-          raise (Error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`"))
+          error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
     | tm, ty ->
         let tm, ty' = infer context tm in
         let tm, ty' = elim_implicits context tm ty' in
@@ -828,7 +834,7 @@ module Surface = struct
     | Name name ->
         begin match elem_index name context.names with
         | Some index -> (Syntax.Var index, List.nth context.tys index)
-        | None -> raise (Error ("`" ^ name ^ "` is not bound in the current scope"))
+        | None -> error ("`" ^ name ^ "` is not bound in the current scope")
         end
     | Ann (tm, ty) ->
         let ty = check context ty Semantics.Univ in
@@ -851,23 +857,20 @@ module Surface = struct
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
-    | FunLit (_, _) ->
-        raise (Error "ambiguous function literal")
+    | FunLit (_, _) -> error "ambiguous function literal"
     | RecType decls ->
         let rec go context seen_labels = function
           | [] -> (Syntax.Nil)
           | (label, _) :: _ when List.mem label seen_labels ->
-              raise (Error ("duplicate label `" ^ label ^ "` in record type"))
+              error ("duplicate label `" ^ label ^ "` in record type")
           | (label, ty) :: decls ->
               let ty = check context ty Semantics.Univ in
               let context = bind_param context label (eval context ty) in
               Syntax.Cons (label, ty, go context (label :: seen_labels) decls)
         in
         (Syntax.RecType (go context [] decls), Semantics.Univ)
-    | RecLit _ ->
-        raise (Error "ambiguous record literal")
-    | RecUnit ->
-        raise (Error "ambiguous unit record")
+    | RecLit _ -> error "ambiguous record literal"
+    | RecUnit -> error "ambiguous unit record"
     | SingType (ty, sing_tm) ->
         let ty = check context ty Semantics.Univ in
         let sing_tm = check context sing_tm (eval context ty) in
@@ -879,7 +882,7 @@ module Surface = struct
             | head, Semantics.FunType (_, param_ty, body_ty) ->
                 let arg = check context arg param_ty in
                 (Syntax.FunApp (head, arg), body_ty (eval context arg))
-            | _ -> raise (Error "not a function"))
+            | _ -> error "not a function")
           (infer context head)
           args
     | Proj (head, labels) ->
@@ -889,9 +892,9 @@ module Surface = struct
             | head, Semantics.RecType decls ->
                 begin match Semantics.proj_ty (eval context head) decls label with
                 | Some ty -> (Syntax.RecProj (head, label), ty)
-                | None -> raise (Error ("field `" ^ label ^ "` not found in record"))
+                | None -> error ("field with label `" ^ label ^ "` not found in record")
                 end
-            | _ -> raise (Error "not a record"))
+            | _ -> error "not a record")
           (infer context head)
           labels
     | Patch (head, patches) ->
@@ -899,7 +902,7 @@ module Surface = struct
           match decls, patches with
           | Semantics.Nil, [] -> Syntax.Nil
           | Semantics.Nil, (label, _) :: _ ->
-              raise (Error ("field `" ^ label ^ "` not found in record type"))
+              error ("field `" ^ label ^ "` not found in record type")
           | Semantics.Cons (label, ty, tys), patches ->
               let ty' = quote context ty Univ in
               begin match List.assoc_opt label patches with
@@ -917,14 +920,14 @@ module Surface = struct
         in
         let patch_labels = List.map fst patches in
         if List.sort_uniq (String.compare) patch_labels <> patch_labels then
-          raise (Error "duplicate field labels in patches")
+          error "duplicate field labels in patches"
         else
           let head = check context head Semantics.Univ in
           begin match eval context head with
           | Semantics.RecType decls ->
               let decls = go context decls patches in
               (Syntax.RecType decls, Semantics.Univ)
-          | _ -> raise (Error "can only patch record types")
+          | _ -> error "can only patch record types"
           end
 
   (** {2 Eliminating implicit connectives} *)
