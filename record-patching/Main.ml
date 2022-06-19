@@ -1412,36 +1412,49 @@ end
 
 let () =
   Printexc.record_backtrace true;
-  let passed, failed = Examples.terms |> List.fold_left
-    (fun (passed, failed) (name, term) ->
-      print_endline ("testing " ^ name ^ ":");
-      print_endline "";
+
+  let results = Examples.terms |> List.map
+    (fun (name, term) ->
+      Format.printf "testing %s:\n" name;
+      Format.printf "\n";
       try
         let context = Surface.initial_context in
         let tm, ty = Surface.infer context term in
-        print_endline ("  inferred type   │ " ^ Surface.pretty context ty);
-        print_endline ("  evaluated term  │ " ^ Surface.pretty context (Surface.eval context tm));
-        print_endline "";
-        print_endline ("  " ^ name ^ ": ok.");
-        print_endline "";
-        (passed + 1, failed)
+        Format.printf "  inferred type   │ %s\n" (Surface.pretty context ty);
+        Format.printf "  evaluated term  │ %s\n" (Surface.pretty context (Surface.eval context tm));
+        Format.printf "\n";
+        Format.printf "  %s ... ok\n" name;
+        Format.printf "\n";
+        (name, `Passed)
       with e ->
         let msg = Printexc.to_string e in
-        let stack = Printexc.get_backtrace () in
-        print_endline "  caught exception:";
-        print_endline "";
-        print_endline ("    " ^ msg);
-        String.split_on_char '\n' stack
-          |> List.iter (fun line -> print_endline ("    " ^ line));
-        print_endline ("  " ^ name ^ ": error.");
-        print_endline "";
-        (passed, failed + 1)
-    )
-    (0, 0) in
-  print_endline
-    ("testing result: " ^ (if failed = 0 then "ok" else "error") ^ ". " ^
-      string_of_int passed ^ " passed; " ^
-      string_of_int failed ^ " failed")
+        let stack = Printexc.get_backtrace () |> String.split_on_char '\n' in
+        Format.printf "  caught exception: \n";
+        Format.printf "\n";
+        List.iter (fun line -> Format.printf "    %s\n" line) (msg :: stack);
+        Format.printf "  %s ... FAILED\n" name;
+        Format.printf "\n";
+        (name, `Failed)
+    ) in
+
+  let passed, failed, name_width = results |> List.fold_left
+    (fun (passed, failed, width) -> function
+      | name, `Passed -> (passed + 1, failed, max (String.length name) width)
+      | name, `Failed -> (passed, failed +1, max (String.length name) width))
+    (0, 0, 0) in
+
+  Format.printf "\n";
+  Format.printf "test summary:\n";
+  Format.printf "\n";
+  results |> List.iter (function
+    | (name, `Passed) -> Format.printf "  %-*s ... ok\n" name_width name
+    | (name, `Failed) -> Format.printf "  %-*s ... FAILED\n" name_width name);
+  Format.printf "\n";
+  Format.printf "test result: %s. %i passed; %i failed\n"
+    (if failed = 0 then "ok" else "FAILED") passed failed;
+
+  exit (if failed = 0 then 0 else 1)
+
 
 (** {1 Syntax bikeshedding}
 
