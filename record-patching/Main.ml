@@ -141,12 +141,37 @@
     maintain decideable type checking.
 *)
 
-(** Returns the index of the given element in the list *)
-let elem_index a =
-  let rec go i = function
-    | [] -> None
-    | x :: xs -> if x = a then Some i else go (i + 1) xs in
-  go 0
+
+(** Extensions to the {!Stdlib.List} module *)
+module List : sig
+
+  include module type of List
+
+  (** Returns the index of the given element in the list *)
+  val elem_index : 'a -> 'a list -> int option
+
+  (** Returns a list of duplicate elements in a list *)
+  val find_dupes : 'a list -> 'a list
+
+end = struct
+
+  include List
+
+  let elem_index a xs =
+    let rec go i = function
+      | [] -> None
+      | x :: xs -> if x = a then Some i else go (i + 1) xs in
+    go 0 xs
+
+  let find_dupes xs =
+    let rec go dupes = function
+      | [] -> List.rev dupes
+      | x :: xs when List.mem x xs && not (List.mem x dupes) -> go (x :: dupes) xs
+      | _ :: xs -> go dupes xs in
+    go [] xs
+
+end
+
 
 (** Core language *)
 module Core = struct
@@ -832,7 +857,7 @@ module Surface = struct
             (Syntax.Let (name, def, body), body_ty)
         end
     | Name name ->
-        begin match elem_index name context.names with
+        begin match List.elem_index name context.names with
         | Some index -> (Syntax.Var index, List.nth context.tys index)
         | None -> error ("`" ^ name ^ "` is not bound in the current scope")
         end
@@ -918,9 +943,10 @@ module Surface = struct
                   Syntax.Cons (label, ty', go context (tys var) patches)
               end
         in
-        let patch_labels = List.map fst patches in
-        if List.sort_uniq (String.compare) patch_labels <> patch_labels then
-          error "duplicate field labels in patches"
+
+        let dupes = List.find_dupes (List.map fst patches) in
+        if List.compare_length_with dupes 0 <> 0 then
+          error ("duplicate labels in patches: `" ^ String.concat "`, `" dupes ^ "`")
         else
           let head = check context head Semantics.Univ in
           begin match eval context head with
@@ -964,6 +990,7 @@ module Examples = struct
     let record-ty-patch-1 := (fun x := x) : F [ B := A ] -> F;
     let record-ty-patch-2 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F;
     let record-ty-patch-3 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F;
+    let record-ty-patch-3b := (fun A x := x) : fun (A : Type) -> F [ B := A; f := fun x := x; A := A; ] -> F;
     let record-ty-patch-4 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ];
     let record-ty-patch-5 := (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ];
     let record-ty-patch-6 := (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ];
@@ -1092,6 +1119,14 @@ module Examples = struct
       Ann (FunLit (["A"; "x"], Name "x"),
         FunType (["A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"; "f", FunLit (["x"], Name "x")]),
+            Name "F"))))
+
+  let record_ty_patch3b =
+    Let ("F", None, fun_record_ty,
+      (* (fun A x := x) : fun (A : Type) -> F [ B := A; f := fun x := x; A := A; ] -> F; *)
+      Ann (FunLit (["A"; "x"], Name "x"),
+        FunType (["A", Univ],
+          FunArrow (Patch (Name "F", ["B", Name "A"; "f", FunLit (["x"], Name "x"); "A", Name "A"]),
             Name "F"))))
 
   let record_ty_patch4 =
@@ -1351,6 +1386,7 @@ module Examples = struct
     "record_ty_patch1", record_ty_patch1;
     "record_ty_patch2", record_ty_patch2;
     "record_ty_patch3", record_ty_patch3;
+    "record_ty_patch3b", record_ty_patch3b;
     "record_ty_patch4", record_ty_patch4;
     "record_ty_patch5", record_ty_patch5;
     "record_ty_patch6", record_ty_patch6;
