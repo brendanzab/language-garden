@@ -121,7 +121,7 @@ module Core = struct
     and tm =
       | Neu of neu                            (** Neutral terms *)
       | Univ
-      | FunType of string * ty * (tm -> ty)
+      | FunType of string * ty Lazy.t * (tm -> ty)
       | FunLit of string * (tm -> tm)
 
     (** Neutral terms are terms that could not be reduced to a normal form as a
@@ -129,8 +129,8 @@ module Core = struct
         I’m not sure why they are called ‘neutral terms’. Perhaps they are...
         ambivalent about what they might compute to? *)
     and neu =
-      | Var of level          (** Variable that could not be reduced further *)
-      | FunApp of neu * tm    (** Function application *)
+      | Var of level                (** Variable that could not be reduced further *)
+      | FunApp of neu * tm Lazy.t   (** Function application *)
 
     (** An environment of bindings that can be looked up directly using a
         {!Syntax.index}, or by inverting a {!level} using {!level_to_index}. *)
@@ -153,7 +153,7 @@ module Core = struct
     (** Compute a function application *)
     let app head arg =
       match head with
-      | Neu neu -> Neu (FunApp (neu, arg))
+      | Neu neu -> Neu (FunApp (neu, lazy arg))
       | FunLit (_, body) -> body arg
       | _ -> raise (Error "invalid application")
 
@@ -167,7 +167,7 @@ module Core = struct
       | Syntax.Var index -> List.nth env index
       | Syntax.Univ ->  Univ
       | Syntax.FunType (name, param_ty, body_ty) ->
-          FunType (name, eval env param_ty, fun x -> eval (x :: env) body_ty)
+          FunType (name, lazy (eval env param_ty), fun x -> eval (x :: env) body_ty)
       | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: env) body)
       | Syntax.FunApp (head, arg) -> app (eval env head) (eval env arg)
 
@@ -188,13 +188,13 @@ module Core = struct
       | Univ -> Syntax.Univ
       | FunType (name, param_ty, body_ty) ->
           let x = Neu (Var size) in
-          Syntax.FunType (name, quote size param_ty, quote (size + 1) (body_ty x))
+          Syntax.FunType (name, quote size (Lazy.force param_ty), quote (size + 1) (body_ty x))
       | FunLit (name, body) ->
           let x = Neu (Var size) in
           Syntax.FunLit (name, quote (size + 1) (body x))
     and quote_neu size = function
       | Var level -> Syntax.Var (level_to_index size level)
-      | FunApp (neu, arg) -> Syntax.FunApp (quote_neu size neu, quote size arg)
+      | FunApp (neu, arg) -> Syntax.FunApp (quote_neu size neu, quote size (Lazy.force arg))
 
 
     (** {1 Normalisation} *)
@@ -214,7 +214,7 @@ module Core = struct
       | Univ, Univ -> true
       | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
           let x = Neu (Var size) in
-          is_convertible size (param_ty1, param_ty2)
+          is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
             && is_convertible (size + 1) (body_ty1 x, body_ty2 x)
       | FunLit (_, body1), FunLit (_, body2) ->
           let x = Neu (Var size) in
@@ -227,7 +227,8 @@ module Core = struct
     and is_convertible_neu size = function
       | Var level1, Var level2 -> level1 = level2
       | FunApp (neu1, arg1), FunApp (neu2, arg2)  ->
-          is_convertible_neu size (neu1, neu2) && is_convertible size (arg1, arg2)
+          is_convertible_neu size (neu1, neu2)
+            && is_convertible size (Lazy.force arg1, Lazy.force arg2)
       | _, _ -> false
 
 
@@ -240,15 +241,16 @@ module Core = struct
         | Neu neu -> go_neu wrap size names neu
         | Univ -> "Type"
         | FunType (name, param_ty, body_ty) ->
-            parens wrap (concat ["fun ("; name; " : "; go false size names param_ty; ") -> ";
-              go false (size + 1) (name :: names) (body_ty (Neu (Var size)))])
+            parens wrap (concat ["fun ("; name; " : "; go false size names (Lazy.force param_ty);
+              ") -> "; go false (size + 1) (name :: names) (body_ty (Neu (Var size)))])
         | FunLit (name, body) ->
             parens wrap (concat ["fun "; name; " := ";
               go false (size + 1) (name :: names) (body (Neu (Var size)))])
       and go_neu wrap size names = function
         | Var level -> List.nth names (level_to_index size level)
         | FunApp (head, arg) ->
-            parens wrap (concat [go_neu false size names head; " ";  go true size names arg])
+            parens wrap (concat [go_neu false size names head; " ";
+              go true size names (Lazy.force arg)])
       in
       go false size names tm
 
@@ -357,7 +359,7 @@ module Surface = struct
           | [], body_ty -> check context body body_ty
           | name :: names, Semantics.FunType (_, param_ty, body_ty) ->
               let var = next_var context in
-              let context = bind_def context name param_ty var in
+              let context = bind_def context name (Lazy.force param_ty) var in
               Syntax.FunLit (name, go context names (body_ty var))
           | _, _ -> error "too many parameters in function literal"
         in
@@ -419,7 +421,7 @@ module Surface = struct
           (fun (head, head_ty) arg ->
             match head_ty with
             | Semantics.FunType (_, param_ty, body_ty) ->
-                let arg = check context arg param_ty in
+                let arg = check context arg (Lazy.force param_ty) in
                 (Syntax.FunApp (head, arg), body_ty (eval context arg))
             | _ -> error "not a function")
           (infer context head)
