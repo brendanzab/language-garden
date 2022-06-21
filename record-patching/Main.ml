@@ -103,11 +103,17 @@
     Apparently total space conversion addresses some of the same pain points as
     implicit parameters, but I'm still somewhat skeptical of this!
 
-    {2 Reduce patch bloat}
+    {2 Patches elaborate to large, unfolded terms}
 
     Each patch currently elaborates to a copy of the original record type. This
-    could end up becoming a performance issue when elaborating and compiling
-    larger programs.
+    a problem for error messages, where the type ends up fully unfolded and to
+    understand, and it could become a performance issue down the line when
+    elaborating and compiling larger programs.
+
+    A distiller could attempt to convert singletons back to patches for better
+    error messages, but to really address the usability and performance issues
+    we might ultimately need to add patches to the core language and control the
+    level of unfolding with glued evaluation.
 
     {2 Use patch syntax for record literal updates}
 
