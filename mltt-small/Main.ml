@@ -75,9 +75,9 @@ module Core = struct
         us to easily compare terms for alpha equivalence and quickly look up
         bindings based on their position in the environment.
       - In the {!Semantics} we represent free variables with {!level}. Because
-        their meaning remains the same as new bindings are added to the
-        environment, levels allow us to use terms at greater binding depths
-        without requiring them to be reindexed first.
+        the meaning of levels remains the same as new bindings are added to the
+        environment, this lets us use terms at greater binding depths without
+        needing to reindex them first.
 
       The only time we really need to reindex terms is when quoting from the
       {!Syntax} back to the {!Semantics}, using the {!level_to_index} function,

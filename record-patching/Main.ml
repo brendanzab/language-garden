@@ -240,9 +240,9 @@ module Core = struct
         us to easily compare terms for alpha equivalence and quickly look up
         bindings based on their position in the environment.
       - In the {!Semantics} we represent free variables with {!level}. Because
-        their meaning remains the same as new bindings are added to the
-        environment, levels allow us to use terms at greater binding depths
-        without requiring them to be reindexed first.
+        the meaning of levels remains the same as new bindings are added to the
+        environment, this lets us use terms at greater binding depths without
+        needing to reindex them first.
 
       The only time we really need to reindex terms is when quoting from the
       {!Syntax} back to the {!Semantics}, using the {!level_to_index} function,
@@ -422,8 +422,11 @@ module Core = struct
         with {!level_to_size}. It’s important to only use the resulting terms
         at binding depth that they were quoted at.
 
-        Quotation is type directed, but we only use types as a way to restore
-        the values of singletons that were erased during evaluation.
+        Quotation is type directed, but we currently only use types as a way to
+        restore the values of singletons that were erased during evaluation. The
+        typing environment is used to recover the types of variables. We could
+        alternatively add type annotations to neutral terms to avoid needing to
+        supply this argument.
     *)
     let rec quote size tys tm ty : Syntax.tm =
       match tm with
@@ -498,8 +501,10 @@ module Core = struct
 
     (** {1 Conversion Checking} *)
 
-    (** Conversion checking is checks if two terms of the same type compute to
-        the same term by-definition.
+    (** Conversion checking tests to see if two terms are are equal by checking
+        if they compute to the same term. This could be implemented by reading
+        back both values and checking for alpha-equivalence, but it’s faster to
+        do this all at once.
 
         Type-directed conversion allows us to support full eta for unit types,
         which show up in our language as empty records and singletons. If we
@@ -509,12 +514,16 @@ module Core = struct
         - perform best-effort eta, where unit elements are the same as anything
         - detect definitionally irrelevant types during elaboration, marking
           irrelevant terms
+
+        As with {!quote}, the typing environment is used to recover the types of
+        variables.
     *)
     let rec is_convertible size tys tm1 tm2 : ty -> bool = function
       | Neu _ ->
           begin match tm1, tm2 with
           | Neu n1, Neu n2 -> Option.is_some (is_convertible_neu size tys n1 n2)
-          | _, _ -> error "internal error" (* TODO: why? *)
+          (* Neutral types are abstract, so their inhabitants should not have reduced *)
+          | _, _ -> error "not a neutral"
           end
       | Univ ->
           begin match tm1, tm2 with
