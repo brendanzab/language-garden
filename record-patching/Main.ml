@@ -358,16 +358,18 @@ module Core = struct
         term is in a neutral form. *)
 
     (** Compute a function application *)
-    let app : tm -> tm -> tm = function
-      | FunLit (_, body) -> body
-      | Neu neu -> fun arg -> Neu (FunApp (neu, arg))
-      | _ -> error "invalid app"
+    let app head arg =
+      match head with
+      | Neu neu -> Neu (FunApp (neu, arg))
+      | FunLit (_, body) -> body arg
+      | _ -> error "invalid application"
 
     (** Compute a record projection *)
-    let proj : tm -> label -> tm = function
-      | RecLit defns -> fun label -> defns |> List.find (fun (l, _) -> l = label) |> snd
-      | Neu neu -> fun label -> Neu (RecProj (neu, label))
-      | _ -> error "invalid proj"
+    let proj head label =
+      match head with
+      | RecLit defns -> defns |> List.find (fun (l, _) -> l = label) |> snd
+      | Neu neu -> Neu (RecProj (neu, label))
+      | _ -> error "invalid projection"
 
 
     (** {1 Finding the types of record projections} *)
