@@ -9,4 +9,5 @@
 (ocamllex Lexer)
 
 (cram
+  (package arith)
   (deps %{bin:arith}))

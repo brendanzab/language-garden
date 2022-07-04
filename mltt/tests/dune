@@ -1,17 +1,19 @@
 (include dune.inc)
 
 (executable
-  (name dune)
+  (name dune_inc)
   (preprocess
-    (pps  ppx_string)))
+    (pps ppx_string)))
 
 (rule
-  (deps (:mltt (glob_files *.mltt)))
+  (deps (:test_names (glob_files *.mltt)))
+  (package mltt)
   (action
     (with-stdout-to dune.inc.gen
-      (run ./dune.exe %{mltt}))))
+      (run ./dune_inc.exe %{test_names}))))
 
 (rule
   (alias all)
+  (package mltt)
   (action
     (diff dune.inc dune.inc.gen)))

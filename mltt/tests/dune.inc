@@ -5,6 +5,7 @@
 
 (rule
   (alias "dependent-record.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from dependent-record.mltt
@@ -13,6 +14,7 @@
 
 (rule
   (alias "dependent-record.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from dependent-record.mltt
@@ -21,12 +23,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias dependent-record.mltt.elab))
   (action
     (diff expected/dependent-record.mltt.elab.stdout dependent-record.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias dependent-record.mltt.norm))
   (action
     (diff expected/dependent-record.mltt.norm.stdout dependent-record.mltt.norm.stdout.exp)))
@@ -36,6 +40,7 @@
 
 (rule
   (alias "identity-fun-lit-check.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-check.mltt
@@ -44,6 +49,7 @@
 
 (rule
   (alias "identity-fun-lit-check.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-check.mltt
@@ -52,12 +58,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias identity-fun-lit-check.mltt.elab))
   (action
     (diff expected/identity-fun-lit-check.mltt.elab.stdout identity-fun-lit-check.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias identity-fun-lit-check.mltt.norm))
   (action
     (diff expected/identity-fun-lit-check.mltt.norm.stdout identity-fun-lit-check.mltt.norm.stdout.exp)))
@@ -67,6 +75,7 @@
 
 (rule
   (alias "identity-fun-lit-synth.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-synth.mltt
@@ -75,6 +84,7 @@
 
 (rule
   (alias "identity-fun-lit-synth.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-synth.mltt
@@ -83,12 +93,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias identity-fun-lit-synth.mltt.elab))
   (action
     (diff expected/identity-fun-lit-synth.mltt.elab.stdout identity-fun-lit-synth.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias identity-fun-lit-synth.mltt.norm))
   (action
     (diff expected/identity-fun-lit-synth.mltt.norm.stdout identity-fun-lit-synth.mltt.norm.stdout.exp)))
@@ -98,6 +110,7 @@
 
 (rule
   (alias "let.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from let.mltt
@@ -106,6 +119,7 @@
 
 (rule
   (alias "let.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from let.mltt
@@ -114,12 +128,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias let.mltt.elab))
   (action
     (diff expected/let.mltt.elab.stdout let.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias let.mltt.norm))
   (action
     (diff expected/let.mltt.norm.stdout let.mltt.norm.stdout.exp)))
@@ -129,6 +145,7 @@
 
 (rule
   (alias "monoid.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from monoid.mltt
@@ -137,6 +154,7 @@
 
 (rule
   (alias "monoid.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from monoid.mltt
@@ -145,12 +163,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias monoid.mltt.elab))
   (action
     (diff expected/monoid.mltt.elab.stdout monoid.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias monoid.mltt.norm))
   (action
     (diff expected/monoid.mltt.norm.stdout monoid.mltt.norm.stdout.exp)))
@@ -160,6 +180,7 @@
 
 (rule
   (alias "prelude.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from prelude.mltt
@@ -168,6 +189,7 @@
 
 (rule
   (alias "prelude.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from prelude.mltt
@@ -176,12 +198,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias prelude.mltt.elab))
   (action
     (diff expected/prelude.mltt.elab.stdout prelude.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias prelude.mltt.norm))
   (action
     (diff expected/prelude.mltt.norm.stdout prelude.mltt.norm.stdout.exp)))
@@ -191,6 +215,7 @@
 
 (rule
   (alias "record-proj-1.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-1.mltt
@@ -199,6 +224,7 @@
 
 (rule
   (alias "record-proj-1.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-1.mltt
@@ -207,12 +233,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias record-proj-1.mltt.elab))
   (action
     (diff expected/record-proj-1.mltt.elab.stdout record-proj-1.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias record-proj-1.mltt.norm))
   (action
     (diff expected/record-proj-1.mltt.norm.stdout record-proj-1.mltt.norm.stdout.exp)))
@@ -222,6 +250,7 @@
 
 (rule
   (alias "record-proj-2.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-2.mltt
@@ -230,6 +259,7 @@
 
 (rule
   (alias "record-proj-2.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-2.mltt
@@ -238,12 +268,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias record-proj-2.mltt.elab))
   (action
     (diff expected/record-proj-2.mltt.elab.stdout record-proj-2.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias record-proj-2.mltt.norm))
   (action
     (diff expected/record-proj-2.mltt.norm.stdout record-proj-2.mltt.norm.stdout.exp)))
@@ -253,6 +285,7 @@
 
 (rule
   (alias "type.mltt.elab")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from type.mltt
@@ -261,6 +294,7 @@
 
 (rule
   (alias "type.mltt.norm")
+  (package mltt)
   (deps ../main.exe)
   (action
     (with-stdin-from type.mltt
@@ -269,12 +303,14 @@
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias type.mltt.elab))
   (action
     (diff expected/type.mltt.elab.stdout type.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
+  (package mltt)
   (deps (alias type.mltt.norm))
   (action
     (diff expected/type.mltt.norm.stdout type.mltt.norm.stdout.exp)))
