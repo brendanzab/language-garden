@@ -297,6 +297,52 @@ module Core = struct
       | Nil
       | Cons of label * ty * (decls binds)
 
+
+    (** {1 Pretty printing} *)
+
+    let pretty names tm =
+      let concat = String.concat "" in
+      let parens wrap s = if wrap then concat ["("; s; ")"] else s in
+      let rec go wrap names = function
+        | Let (name, def, body) ->
+            parens wrap (concat ["let "; name; " := "; go false names def; "; ";
+              go false (name :: names) body])
+        | Var index -> List.nth names index
+        | Ann (tm, ty) -> parens wrap (concat [go true names tm; " : "; go false names ty])
+        | Univ -> "Type"
+        | FunType (name, param_ty, body_ty) ->
+            parens wrap (concat ["fun ("; name; " : "; go false names param_ty; ") -> ";
+              go false (name :: names) body_ty])
+        | FunLit (name, body) ->
+            parens wrap (concat ["fun "; name; " := ";
+              go false (name :: names) body])
+        | FunApp (head, arg) ->
+            parens wrap (concat [go false names head; " ";  go true names arg])
+        | RecType Nil | RecLit [] -> "{}"
+        | RecType decls -> concat ["{ "; go_decls names decls; "}" ]
+        | RecLit defns ->
+            concat ["{ ";
+              concat (List.map
+                (fun (label, tm) -> concat [label; " := "; go false names tm; "; "])
+                defns);
+              "}"]
+        | RecProj (head, label) -> concat [go false names head; "."; label]
+        | SingType (ty, sing_tm) ->
+            parens wrap (concat [go false names ty; " [= ";
+              go false names sing_tm; " ]"])
+        | SingIntro tm -> parens wrap (concat ["#sing-intro "; go true names tm])
+        | SingElim (tm, sing_tm) ->
+            parens wrap (concat ["#sing-elim "; go true names tm; " ";
+              go true names sing_tm])
+      and go_decls names decls =
+        match decls with
+        | Nil -> ""
+        | Cons (label, ty, decls) ->
+            concat [label; " : "; go false names ty; "; ";
+              go_decls (label :: names) decls]
+      in
+      go false names tm
+
   end
 
   (** Semantics of the core language *)
@@ -590,49 +636,7 @@ module Core = struct
             && is_convertible_decls (size + 1) (ty1 :: tys) (decls1 var) (decls2 var)
       | _, _ -> false
 
-
-    (** {1 Pretty printing} *)
-
-    (** Rough-and-ready pretty printer *)
-    let pretty size names tm =
-      let concat = String.concat "" in
-      let parens wrap s = if wrap then concat ["("; s; ")"] else s in
-      let rec go wrap size names = function
-        | Neu neu -> go_neu wrap size names neu
-        | Univ -> "Type"
-        | FunType (name, param_ty, body_ty) ->
-            parens wrap (concat ["fun ("; name; " : "; go false size names param_ty; ") -> ";
-              go false (size + 1) (name :: names) (body_ty (Neu (Var size)))])
-        | FunLit (name, body) ->
-            parens wrap (concat ["fun "; name; " := ";
-              go false (size + 1) (name :: names) (body (Neu (Var size)))])
-        | RecType Nil | RecLit [] -> "{}"
-        | RecType decls -> concat ["{ "; go_decls size names decls; "}" ]
-        | RecLit defns ->
-            concat ["{ ";
-              concat (List.map
-                (fun (label, tm) -> concat [label; " := "; go false size names tm; "; "])
-                defns);
-              "}"]
-        | SingType (ty, sing_tm) ->
-            parens wrap (concat [go false size names ty; " [= ";
-              go false size names sing_tm; " ]"])
-        | SingIntro -> "#sing-intro"
-      and go_neu wrap size names = function
-        | Var level -> List.nth names (level_to_index size level)
-        | FunApp (head, arg) ->
-            parens wrap (concat [go_neu false size names head; " ";  go true size names arg])
-        | RecProj (head, label) -> concat [go_neu false size names head; "."; label]
-      and go_decls size names decls =
-        match decls with
-        | Nil -> ""
-        | Cons (label, ty, decls) ->
-            concat [label; " : "; go false size names ty; "; ";
-              go_decls (size + 1) (label :: names) (decls (Neu (Var size)))]
-      in
-      go false size names tm
-    end
-
+  end
 end
 
 (** Surface language *)
@@ -722,8 +726,10 @@ module Surface = struct
     Semantics.quote context.size context.tys
   let is_convertible context : Semantics.tm -> Semantics.tm -> Semantics.ty -> bool =
     Semantics.is_convertible context.size context.tys
-  let pretty context : Semantics.tm -> string =
-    Semantics.pretty context.size context.names
+  let pretty context : Syntax.tm -> string =
+    Syntax.pretty context.names
+  let quote_pretty context tm ty : string =
+    pretty context (quote context tm ty)
 
 
   (** {2 Elaboration errors} *)
@@ -753,9 +759,9 @@ module Surface = struct
         let tm = coerce context tm from_ty to_ty in
         let tm' = eval context tm in
         if is_convertible context sing_tm tm' to_ty then Syntax.SingIntro tm else
-          let expected = pretty context sing_tm in
-          let found = pretty context tm' in
-          let ty = pretty context to_ty in
+          let expected = quote_pretty context sing_tm to_ty in
+          let found = quote_pretty context tm' from_ty in
+          let ty = quote_pretty context to_ty Semantics.Univ in
           error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
     (* Coerce the singleton back to its underlying term with {!Syntax.SingElim}
       and attempt further coercions from its underlying type *)
@@ -786,8 +792,8 @@ module Surface = struct
         Syntax.RecLit (go from_decls to_decls)
     (* TODO: subtyping for functions! *)
     | from_ty, to_ty  ->
-        let expected = pretty context to_ty in
-        let found = pretty context from_ty in
+        let expected = quote_pretty context to_ty Semantics.Univ in
+        let found = quote_pretty context from_ty Semantics.Univ in
         error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
 
 
@@ -846,9 +852,9 @@ module Surface = struct
         let tm = check context tm ty in
         let tm' = eval context tm in
         if is_convertible context sing_tm tm' ty then Syntax.SingIntro tm else
-          let expected = pretty context sing_tm in
-          let found = pretty context tm' in
-          let ty = pretty context ty in
+          let expected = quote_pretty context sing_tm ty in
+          let found = quote_pretty context tm' ty in
+          let ty = quote_pretty context ty Semantics.Univ in
           error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
     | tm, ty ->
         let tm, ty' = infer context tm in
@@ -1437,8 +1443,8 @@ let () =
       try
         let context = Surface.initial_context in
         let tm, ty = Surface.infer context term in
-        Format.printf "  inferred type   │ %s\n" (Surface.pretty context ty);
-        Format.printf "  evaluated term  │ %s\n" (Surface.pretty context (Surface.eval context tm));
+        Format.printf "  inferred type   │ %s\n" (Surface.quote_pretty context ty Core.Semantics.Univ);
+        Format.printf "  evaluated term  │ %s\n" (Surface.quote_pretty context (Surface.eval context tm) ty);
         Format.printf "\n";
         Format.printf "  %s ... ok\n" name;
         Format.printf "\n";

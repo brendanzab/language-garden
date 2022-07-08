@@ -107,6 +107,31 @@ module Core = struct
       | FunLit of name * tm
       | FunApp of tm * tm
 
+
+    (** {1 Pretty printing} *)
+
+    let pretty names tm =
+      let concat = String.concat "" in
+      let parens wrap s = if wrap then concat ["("; s; ")"] else s in
+      let rec go wrap names = function
+        | Let (name, def, body) ->
+            parens wrap (concat ["let "; name; " := "; go false names def; "; ";
+              go false (name :: names) body])
+        | Ann (tm, ty) -> parens wrap (concat [go true names tm; " : "; go false names ty])
+        | Var index -> List.nth names index
+        | Univ -> "Type"
+        | FunType (name, param_ty, body_ty) ->
+            parens wrap (concat ["fun ("; name; " : "; go false names param_ty;
+              ") -> "; go false (name :: names) body_ty])
+        | FunLit (name, body) ->
+            parens wrap (concat ["fun "; name; " := ";
+              go false (name :: names) body])
+        | FunApp (head, arg) ->
+            parens wrap (concat [go false names head; " ";
+              go true names arg])
+      in
+      go false names tm
+
   end
 
   (** Semantics of the core language *)
@@ -231,29 +256,6 @@ module Core = struct
             && is_convertible size (Lazy.force arg1, Lazy.force arg2)
       | _, _ -> false
 
-
-    (** {1 Pretty printing} *)
-
-    let pretty size names tm =
-      let concat = String.concat "" in
-      let parens wrap s = if wrap then concat ["("; s; ")"] else s in
-      let rec go wrap size names = function
-        | Neu neu -> go_neu wrap size names neu
-        | Univ -> "Type"
-        | FunType (name, param_ty, body_ty) ->
-            parens wrap (concat ["fun ("; name; " : "; go false size names (Lazy.force param_ty);
-              ") -> "; go false (size + 1) (name :: names) (body_ty (Neu (Var size)))])
-        | FunLit (name, body) ->
-            parens wrap (concat ["fun "; name; " := ";
-              go false (size + 1) (name :: names) (body (Neu (Var size)))])
-      and go_neu wrap size names = function
-        | Var level -> List.nth names (level_to_index size level)
-        | FunApp (head, arg) ->
-            parens wrap (concat [go_neu false size names head; " ";
-              go true size names (Lazy.force arg)])
-      in
-      go false size names tm
-
   end
 end
 
@@ -319,8 +321,10 @@ module Surface = struct
     Semantics.quote context.size
   let is_convertible context : Semantics.tm * Semantics.tm -> bool =
     Semantics.is_convertible context.size
-  let pretty context : Semantics.tm -> string =
-    Semantics.pretty context.size context.names
+  let pretty context : Syntax.tm -> string =
+    Syntax.pretty context.names
+  let quote_pretty context tm : string =
+    pretty context (quote context tm)
 
   (** {2 Exceptions} *)
 
@@ -367,8 +371,8 @@ module Surface = struct
     | tm, ty ->
         let tm, ty' = infer context tm in
         if is_convertible context (ty', ty) then tm else
-          let expected = pretty context ty in
-          let found = pretty context ty' in
+          let expected = quote_pretty context ty in
+          let found = quote_pretty context ty' in
           error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
 
   (** Elaborate a term in the surface language into a term in the core language,
@@ -458,6 +462,7 @@ end
 let () =
   let context = Surface.initial_context in
   let tm, ty = Surface.infer context Examples.stuff in
-  print_endline ("  inferred type   │ " ^ Surface.pretty context ty);
-  print_endline ("  evaluated term  │ " ^ Surface.pretty context (Surface.eval context tm));
+  print_endline ("  inferred type    │ " ^ Surface.quote_pretty context ty);
+  print_endline ("  elaborated term  │ " ^ Surface.pretty context tm);
+  print_endline ("  normalised term  │ " ^ Surface.quote_pretty context (Surface.eval context tm));
   print_endline ""
