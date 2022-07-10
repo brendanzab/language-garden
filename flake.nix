@@ -75,7 +75,10 @@
         devShells = {
           default = legacyPackages.mkShell {
             nativeBuildInputs = [
-              # for `dune build --watch ...`
+              # Language formatters
+              legacyPackages.nixpkgs-fmt
+              legacyPackages.ocamlformat
+              # For `dune build --watch ...`
               legacyPackages.fswatch
               # Editor tools
               ocamlPackages.ocaml-lsp
