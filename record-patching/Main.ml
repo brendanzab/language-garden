@@ -298,6 +298,27 @@ module Core = struct
       | Cons of label * ty * (decls binds)
 
 
+    (** Returns [ true ] if the variable is bound anywhere in the term. *)
+    let rec is_bound var = function
+      | Let (_, def, body) -> is_bound var def || is_bound (var + 1) body
+      | Ann (tm, ty) -> is_bound var tm || is_bound var ty
+      | Var index -> index = var
+      | Univ -> false
+      | FunType (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
+      | FunLit (_, body) -> is_bound (var + 1) body
+      | FunApp (head, arg) -> is_bound var head || is_bound var arg
+      | RecType decls -> is_bound_decls var decls
+      | RecLit defns -> List.exists (fun (_, tm) -> is_bound var tm) defns
+      | RecProj (head, _) -> is_bound var head
+      | SingType (ty, sing_tm) -> is_bound var ty || is_bound var sing_tm
+      | SingIntro tm -> is_bound var tm
+      | SingElim (tm, sing_tm) -> is_bound var tm || is_bound var sing_tm
+    and is_bound_decls var = function
+      | Nil -> false
+      | Cons (_, ty, decls) ->
+          is_bound var ty || is_bound_decls (var + 1) decls
+
+
     (** {1 Pretty printing} *)
 
     let pretty names tm =
@@ -311,8 +332,11 @@ module Core = struct
         | Ann (tm, ty) -> parens wrap (concat [go true names tm; " : "; go false names ty])
         | Univ -> "Type"
         | FunType (name, param_ty, body_ty) ->
-            parens wrap (concat ["fun ("; name; " : "; go false names param_ty; ") -> ";
-              go false (name :: names) body_ty])
+            if is_bound 0 body_ty then
+              parens wrap (concat ["fun ("; name; " : "; go false names param_ty;
+                ") -> "; go false (name :: names) body_ty])
+            else
+              parens wrap (concat [go false names param_ty; " -> "; go false ("" :: names) body_ty])
         | FunLit (name, body) ->
             parens wrap (concat ["fun "; name; " := ";
               go false (name :: names) body])
@@ -334,8 +358,7 @@ module Core = struct
         | SingElim (tm, sing_tm) ->
             parens wrap (concat ["#sing-elim "; go true names tm; " ";
               go true names sing_tm])
-      and go_decls names decls =
-        match decls with
+      and go_decls names = function
         | Nil -> ""
         | Cons (label, ty, decls) ->
             concat [label; " : "; go false names ty; "; ";

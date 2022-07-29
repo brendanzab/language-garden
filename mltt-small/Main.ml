@@ -108,6 +108,17 @@ module Core = struct
       | FunApp of tm * tm
 
 
+    (** Returns [ true ] if the variable is bound anywhere in the term *)
+    let rec is_bound var = function
+      | Let (_, def, body) -> is_bound var def || is_bound (var + 1) body
+      | Ann (tm, ty) -> is_bound var tm || is_bound var ty
+      | Var index -> index = var
+      | Univ -> false
+      | FunType (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
+      | FunLit (_, body) -> is_bound (var + 1) body
+      | FunApp (head, arg) -> is_bound var head || is_bound var arg
+
+
     (** {1 Pretty printing} *)
 
     let pretty names tm =
@@ -121,8 +132,11 @@ module Core = struct
         | Var index -> List.nth names index
         | Univ -> "Type"
         | FunType (name, param_ty, body_ty) ->
-            parens wrap (concat ["fun ("; name; " : "; go false names param_ty;
-              ") -> "; go false (name :: names) body_ty])
+            if is_bound 0 body_ty then
+              parens wrap (concat ["fun ("; name; " : "; go false names param_ty;
+                ") -> "; go false (name :: names) body_ty])
+            else
+              parens wrap (concat [go false names param_ty; " -> "; go false ("" :: names) body_ty])
         | FunLit (name, body) ->
             parens wrap (concat ["fun "; name; " := ";
               go false (name :: names) body])
