@@ -265,14 +265,14 @@ module Surface = struct
 
   (** Terms in the surface language *)
   type tm =
-    | Let of string * tm option * tm * tm
-    | Ann of tm * tm
-    | Name of string
-    | Univ
-    | FunType of (string * tm) list * tm
-    | FunArrow of tm * tm
-    | FunLit of string list * tm
-    | FunApp of tm * tm list
+    | Let of string * tm option * tm * tm    (** Let expressions: [ let x : A := t; f x ] *)
+    | Name of string                         (** References to named things: [ x ] *)
+    | Ann of tm * tm                         (** Terms annotated with types: [ x : A ] *)
+    | Univ                                   (** Universe of types: [ Type ] *)
+    | FunType of (string * tm) list * tm     (** Function types: [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                    (** Function arrow types: [ A -> B ] *)
+    | FunLit of string list * tm             (** Function literals: [ fun x := f x ] *)
+    | FunApp of tm * tm list                 (** Function applications: [ f x ] *)
 
 
   (** {1 Elaboration } *)
