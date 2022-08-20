@@ -337,7 +337,7 @@ module Surface = struct
     Semantics.is_convertible context.size
   let pretty context : Syntax.tm -> string =
     Syntax.pretty context.names
-  let quote_pretty context tm : string =
+  let pretty_quoted context tm : string =
     pretty context (quote context tm)
 
   (** {2 Exceptions} *)
@@ -385,8 +385,8 @@ module Surface = struct
     | tm, ty ->
         let tm, ty' = infer context tm in
         if is_convertible context (ty', ty) then tm else
-          let expected = quote_pretty context ty in
-          let found = quote_pretty context ty' in
+          let expected = pretty_quoted context ty in
+          let found = pretty_quoted context ty' in
           error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
 
   (** Elaborate a term in the surface language into a term in the core language,
@@ -476,7 +476,7 @@ end
 let () =
   let context = Surface.initial_context in
   let tm, ty = Surface.infer context Examples.stuff in
-  print_endline ("  inferred type    │ " ^ Surface.quote_pretty context ty);
+  print_endline ("  inferred type    │ " ^ Surface.pretty_quoted context ty);
   print_endline ("  elaborated term  │ " ^ Surface.pretty context tm);
-  print_endline ("  normalised term  │ " ^ Surface.quote_pretty context (Surface.eval context tm));
+  print_endline ("  normalised term  │ " ^ Surface.pretty_quoted context (Surface.eval context tm));
   print_endline ""

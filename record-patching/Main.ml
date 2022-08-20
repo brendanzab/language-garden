@@ -751,7 +751,7 @@ module Surface = struct
     Semantics.is_convertible context.size context.tys
   let pretty context : Syntax.tm -> string =
     Syntax.pretty context.names
-  let quote_pretty context tm ty : string =
+  let pretty_quoted context tm ty : string =
     pretty context (quote context tm ty)
 
 
@@ -782,9 +782,9 @@ module Surface = struct
         let tm = coerce context tm from_ty to_ty in
         let tm' = eval context tm in
         if is_convertible context sing_tm tm' to_ty then Syntax.SingIntro tm else
-          let expected = quote_pretty context sing_tm to_ty in
-          let found = quote_pretty context tm' from_ty in
-          let ty = quote_pretty context to_ty Semantics.Univ in
+          let expected = pretty_quoted context sing_tm to_ty in
+          let found = pretty_quoted context tm' from_ty in
+          let ty = pretty_quoted context to_ty Semantics.Univ in
           error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
     (* Coerce the singleton back to its underlying term with {!Syntax.SingElim}
       and attempt further coercions from its underlying type *)
@@ -815,8 +815,8 @@ module Surface = struct
         Syntax.RecLit (go from_decls to_decls)
     (* TODO: subtyping for functions! *)
     | from_ty, to_ty  ->
-        let expected = quote_pretty context to_ty Semantics.Univ in
-        let found = quote_pretty context from_ty Semantics.Univ in
+        let expected = pretty_quoted context to_ty Semantics.Univ in
+        let found = pretty_quoted context from_ty Semantics.Univ in
         error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
 
 
@@ -875,9 +875,9 @@ module Surface = struct
         let tm = check context tm ty in
         let tm' = eval context tm in
         if is_convertible context sing_tm tm' ty then Syntax.SingIntro tm else
-          let expected = quote_pretty context sing_tm ty in
-          let found = quote_pretty context tm' ty in
-          let ty = quote_pretty context ty Semantics.Univ in
+          let expected = pretty_quoted context sing_tm ty in
+          let found = pretty_quoted context tm' ty in
+          let ty = pretty_quoted context ty Semantics.Univ in
           error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
     | tm, ty ->
         let tm, ty' = infer context tm in
@@ -1466,8 +1466,8 @@ let () =
       try
         let context = Surface.initial_context in
         let tm, ty = Surface.infer context term in
-        Format.printf "  inferred type   │ %s\n" (Surface.quote_pretty context ty Core.Semantics.Univ);
-        Format.printf "  evaluated term  │ %s\n" (Surface.quote_pretty context (Surface.eval context tm) ty);
+        Format.printf "  inferred type   │ %s\n" (Surface.pretty_quoted context ty Core.Semantics.Univ);
+        Format.printf "  evaluated term  │ %s\n" (Surface.pretty_quoted context (Surface.eval context tm) ty);
         Format.printf "\n";
         Format.printf "  %s ... ok\n" name;
         Format.printf "\n";
