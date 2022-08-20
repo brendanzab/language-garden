@@ -1,6 +1,16 @@
 {
   description = "Programming language garden";
 
+  # Flake dependency specification
+  #
+  # To update all flake inputs:
+  #
+  #     $ nix flake update --commit-lockfile
+  #
+  # To update individual flake inputs:
+  #
+  #     $ nix flake lock --update-input <input> ... --commit-lockfile
+  #
   inputs = {
     nixpkgs.url = github:NixOS/nixpkgs/nixpkgs-unstable;
     flake-utils = {
@@ -10,6 +20,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils }:
+    # Construct an output set that supports a number of default systems
     flake-utils.lib.eachDefaultSystem (system:
       let
         legacyPackages = nixpkgs.legacyPackages.${system};
@@ -17,7 +28,12 @@
         lib = legacyPackages.lib;
       in
       {
-        # Executed by `nix build .#<name>`
+        # Exposed packages that can be built or run with `nix build` or
+        # `nix run` respectively:
+        #
+        #     $ nix build .#<name>
+        #     $ nix run .#<name> -- <args?>
+        #
         packages =
           let
             version = "0";
@@ -63,15 +79,17 @@
             };
           };
 
-        # Executed by `nix run .#<name> <args?>`
-        apps = lib.mapAttrs
-          (name: package: {
-            type = "app";
-            program = "${package}/bin/${name}";
-          })
-          self.packages.${system};
-
-        # Used by `nix develop .#<name>`
+        # Development shells
+        #
+        #    $ nix develop .#<name>
+        #    $ nix develop .#<name> --command dune build @test
+        #
+        # [Direnv](https://direnv.net/) is recommended for automatically loading
+        # development environments in your shell. For example:
+        #
+        #    $ echo "use flake" > .envrc && direnv allow
+        #    $ dune build @test
+        #
         devShells = {
           default = legacyPackages.mkShell {
             nativeBuildInputs = [
@@ -92,10 +110,10 @@
           };
         };
 
-        # For backwards compatibility: remove later
-        devShell = self.devShells.${system}.default;
-
-        # Executed by `nix flake check`
+        # Flake checks
+        #
+        #     $ nix flake check
+        #
         checks = {
           # Check Nix formatting
           nixpkgs-fmt = legacyPackages.runCommand "check-nixpkgs-fmt"
@@ -105,6 +123,7 @@
               nixpkgs-fmt --check ${./flake.nix}
             '';
         }
+        # Dune package tests
         // lib.mapAttrs
           (name: package:
             package.overrideAttrs (oldAttrs: {
