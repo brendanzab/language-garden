@@ -664,6 +664,11 @@ end
 
 (** Surface language *)
 module Surface = struct
+  (** The surface language closely mirrors what the programmer originaly wrote,
+      including syntactic sugar, subtyping, and other higher level language
+      features that make programming more convenient (in comparison to the
+      {!Core.Syntax}). *)
+
 
   (** {1 Surface Syntax} *)
 
@@ -697,6 +702,15 @@ module Surface = struct
 
   (** {1 Elaboration } *)
 
+  (** This is where we implement user-facing type checking, in addition to
+      translating the convenient surface language into a simpler, more explicit
+      core language.
+
+      While we {e could} translate syntactic sugar in the parser, by leaving
+      this to elaboration time we make it easier to report higher quality error
+      messages that are more relevant to what the programmer originally wrote.
+  *)
+
   module Syntax = Core.Syntax
   module Semantics = Core.Semantics
 
@@ -713,7 +727,7 @@ module Surface = struct
     tms : Semantics.tm Semantics.env;   (** Term environment *)
   }
 
-  (** The initial elaboration context *)
+  (** The initial elaboration context, without any bindings *)
   let initial_context = {
     size = 0;
     names = [];
@@ -821,6 +835,13 @@ module Surface = struct
 
 
   (** {2 Bidirectional type checking} *)
+
+  (** The algorithm is structured {i bidirectionally}, divided into mutually
+      recursive {i checking} and {i synthesis} modes. By supplying type
+      annotations as early as possible using the checking mode, we can improve
+      the locality of type errors, and provide enough {i control} to the
+      algorithm us to implement elaboration even in the presence of ‘fancy’
+      types. *)
 
   (** Elaborate a term in the surface language into a term in the core language
       in the presence of a type annotation. *)
