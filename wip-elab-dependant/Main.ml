@@ -1,6 +1,6 @@
-(** {0 Martin-Löf Type Theory}
+(** {0 An implementation of a dependently typed lambda calculus}
 
-    An implementation of Martin-Löf Type Theory with dependent record types.
+    An implementation of dependently typed lambda calculus with dependent record types.
 
     {1 Inspiration}
 

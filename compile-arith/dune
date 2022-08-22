@@ -1,7 +1,7 @@
 (executable
   (name main)
-  (public_name arith)
-  (package arith))
+  (public_name compile-arith)
+  (package compile-arith))
 
 (menhir
   (modules Parser))
@@ -9,5 +9,5 @@
 (ocamllex Lexer)
 
 (cram
-  (package arith)
+  (package compile-arith)
   (deps %{bin:arith}))

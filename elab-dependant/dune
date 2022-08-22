@@ -1,7 +1,7 @@
 (executable
   (name main)
-  (public_name record-patching)
-  (package record-patching))
+  (public_name elab-dependant)
+  (package elab-dependant))
 
 (env
   (dev

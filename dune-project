@@ -3,7 +3,9 @@
 (cram enable)
 (using menhir 2.1)
 
-(package (name arith))
-(package (name mltt))
-(package (name mltt-small))
-(package (name record-patching))
+(package (name compile-arith))
+
+(package (name elab-dependant))
+(package (name elab-record-patching))
+
+(package (name wip-elab-dependant))

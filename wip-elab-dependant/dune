@@ -1,7 +1,7 @@
 (executable
   (name main)
-  (public_name mltt)
-  (package mltt)
+  (public_name wip-elab-dependant)
+  (package wip-elab-dependant)
   (libraries pp))
 
 (menhir

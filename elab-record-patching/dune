@@ -1,7 +1,7 @@
 (executable
   (name main)
-  (public_name mltt-small)
-  (package mltt-small))
+  (public_name elab-record-patching)
+  (package elab-record-patching))
 
 (env
   (dev

@@ -41,8 +41,10 @@
             src = ./.;
           in
           {
-            arith = ocamlPackages.buildDunePackage {
-              pname = "arith";
+            # Compilation
+
+            compile-arith = ocamlPackages.buildDunePackage {
+              pname = "compile-arith";
               inherit version duneVersion src;
 
               nativeBuildInputs = [
@@ -54,8 +56,22 @@
               ];
             };
 
-            mltt = ocamlPackages.buildDunePackage {
-              pname = "mltt";
+            # Elaboration
+
+            elab-dependant = ocamlPackages.buildDunePackage {
+              pname = "elab-dependant";
+              inherit version duneVersion src;
+            };
+
+            elab-record-patching = ocamlPackages.buildDunePackage {
+              pname = "elab-record-patching";
+              inherit version duneVersion src;
+            };
+
+            # Experiments
+
+            wip-elab-dependant = ocamlPackages.buildDunePackage {
+              pname = "wip-elab-dependant";
               inherit version duneVersion src;
 
               nativeBuildInputs = [
@@ -66,16 +82,6 @@
               buildInputs = [
                 ocamlPackages.pp
               ];
-            };
-
-            mltt-small = ocamlPackages.buildDunePackage {
-              pname = "mltt-small";
-              inherit version duneVersion src;
-            };
-
-            record-patching = ocamlPackages.buildDunePackage {
-              pname = "record-patching";
-              inherit version duneVersion src;
             };
           };
 
