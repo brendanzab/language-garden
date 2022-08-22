@@ -924,6 +924,9 @@ module Surface = struct
             (Syntax.Let (name, def, body), body_ty)
         end
     | Name name ->
+        (* Find the index of most recent binding in the context identified by
+           [name], starting from the most recent binding. This gives us the
+           corresponding de Bruijn index of the variable. *)
         begin match List.elem_index name context.names with
         | Some index -> (Syntax.Var index, List.nth context.tys index)
         | None -> error ("`" ^ name ^ "` is not bound in the current scope")
@@ -934,6 +937,9 @@ module Surface = struct
         let tm = check context tm ty' in
         (Syntax.Ann (tm, ty), ty')
     | Univ ->
+        (* We use [Type : Type] here for simplicity, which means this type
+           theory is inconsistent. This is okay for a toy type system, but we’d
+           want look into using universe levels in an actual implementation. *)
         (Syntax.Univ, Semantics.Univ)
     | FunType (params, body_ty) ->
         let rec go context = function
@@ -945,6 +951,8 @@ module Surface = struct
         in
         (go context params, Semantics.Univ)
     | FunArrow (param_ty, body_ty) ->
+        (* Arrow types are implemented as syntactic sugar for non-dependent
+           function types. *)
         let param_ty = check context param_ty Semantics.Univ in
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in

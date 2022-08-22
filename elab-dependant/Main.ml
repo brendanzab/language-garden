@@ -402,6 +402,8 @@ module Surface = struct
             Syntax.Let (name, def, check context body ty)
         end
     | FunLit (params, body), ty ->
+        (* Iterate over the parameters of the function literal, constructing a
+           function literal in the core language. *)
         let rec go context params ty =
           match params, ty with
           | [], body_ty -> check context body body_ty
@@ -414,6 +416,8 @@ module Surface = struct
               let param_ty = check context param_ty Semantics.Univ in
               let param_ty' = eval context param_ty in
               let expected_param_ty = Lazy.force expected_param_ty in
+              (* Check that the parameter annotation in the function literal
+                 matches the expected parameter type. *)
               if is_convertible context (param_ty', expected_param_ty) then
                 let context = bind_def context name expected_param_ty var in
                 Syntax.FunLit (name, go context params (body_ty var))
@@ -450,6 +454,9 @@ module Surface = struct
             (Syntax.Let (name, def, body), body_ty)
         end
     | Name name ->
+        (* Find the index of most recent binding in the context identified by
+           [name], starting from the most recent binding. This gives us the
+           corresponding de Bruijn index of the variable. *)
         begin match elem_index name context.names with
         | Some index -> (Syntax.Var index, List.nth context.tys index)
         | None -> error ("`" ^ name ^ "` is not bound in the current scope")
@@ -460,6 +467,9 @@ module Surface = struct
         let tm = check context tm ty' in
         (Syntax.Ann (tm, ty), ty')
     | Univ ->
+        (* We use [Type : Type] here for simplicity, which means this type
+           theory is inconsistent. This is okay for a toy type system, but we’d
+           want look into using universe levels in an actual implementation. *)
         (Syntax.Univ, Semantics.Univ)
     | FunType (params, body_ty) ->
         let rec go context = function
@@ -471,16 +481,21 @@ module Surface = struct
         in
         (go context params, Semantics.Univ)
     | FunArrow (param_ty, body_ty) ->
+        (* Arrow types are implemented as syntactic sugar for non-dependent
+           function types. *)
         let param_ty = check context param_ty Semantics.Univ in
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
     | FunLit (params, body) ->
+        (* Iterate over the parameters of the function literal, constructing a
+           function literal in the core language. *)
         let rec go context params =
           match params with
           | [] ->
               let body, body_ty = infer context body in
               body, quote context body_ty
+          (* We are in synthesis mode, so each parameter requires an annotation. *)
           | (name, None) :: _ ->
               error ("type annotation needed for parameter `" ^ name ^ "`")
           | (name, Some param_ty) :: params ->
@@ -491,8 +506,8 @@ module Surface = struct
               let body, body_ty = go context params in
               (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
         in
-        let tm, ty = go context params in
-        (Syntax.Ann (tm, ty), eval context ty)
+        let fun_tm, fun_ty = go context params in
+        (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
     | FunApp (head, args) ->
         List.fold_left
           (fun (head, head_ty) arg ->
