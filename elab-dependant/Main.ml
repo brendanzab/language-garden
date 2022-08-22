@@ -389,18 +389,17 @@ module Surface = struct
   let rec check context tm ty : Syntax.tm =
     match tm, ty with
     | Let (name, def_ty, def, body), ty ->
-        begin match def_ty with
-        | Some def_ty ->
-            let def_ty = check context def_ty Semantics.Univ in
-            let def_ty' = eval context def_ty in
-            let def = check context def def_ty' in
-            let context = bind_def context name def_ty' (eval context def) in
-            Syntax.Let (name, Ann (def, def_ty), check context body ty)
-        | None ->
-            let def, def_ty = infer context def in
-            let context = bind_def context name def_ty (eval context def) in
-            Syntax.Let (name, def, check context body ty)
-        end
+        let def, def_ty =
+          match def_ty with
+          | None -> infer context def
+          | Some def_ty ->
+              let def_ty = check context def_ty Semantics.Univ in
+              let def_ty' = eval context def_ty in
+              let def = check context def def_ty' in
+              (Syntax.Ann (def, def_ty), def_ty')
+        in
+        let context = bind_def context name def_ty (eval context def) in
+        Syntax.Let (name, def, check context body ty)
     | FunLit (params, body), ty ->
         (* Iterate over the parameters of the function literal, constructing a
            function literal in the core language. *)
@@ -439,20 +438,18 @@ module Surface = struct
       inferring its type. *)
   and infer context : tm -> Syntax.tm * Semantics.ty = function
     | Let (name, def_ty, def, body) ->
-        begin match def_ty with
-        | Some def_ty ->
-            let def_ty = check context def_ty Semantics.Univ in
-            let def_ty' = eval context def_ty in
-            let def = check context def def_ty' in
-            let context = bind_def context name def_ty' (eval context def) in
-            let body, body_ty = infer context body in
-            (Syntax.Let (name, Ann (def, def_ty), body), body_ty)
-        | None ->
-            let def, def_ty = infer context def in
-            let context = bind_def context name def_ty (eval context def) in
-            let body, body_ty = infer context body in
-            (Syntax.Let (name, def, body), body_ty)
-        end
+        let def, def_ty =
+          match def_ty with
+          | None -> infer context def
+          | Some def_ty ->
+              let def_ty = check context def_ty Semantics.Univ in
+              let def_ty' = eval context def_ty in
+              let def = check context def def_ty' in
+              (Syntax.Ann (def, def_ty), def_ty')
+        in
+        let context = bind_def context name def_ty (eval context def) in
+        let body, body_ty = infer context body in
+        (Syntax.Let (name, def, body), body_ty)
     | Name name ->
         (* Find the index of most recent binding in the context identified by
            [name], starting from the most recent binding. This gives us the
