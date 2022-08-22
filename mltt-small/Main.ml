@@ -285,14 +285,14 @@ module Surface = struct
 
   (** Terms in the surface language *)
   type tm =
-    | Let of string * tm option * tm * tm    (** Let expressions: [ let x : A := t; f x ] *)
-    | Name of string                         (** References to named things: [ x ] *)
-    | Ann of tm * tm                         (** Terms annotated with types: [ x : A ] *)
-    | Univ                                   (** Universe of types: [ Type ] *)
-    | FunType of (string * tm) list * tm     (** Function types: [ fun (x : A) -> B x ] *)
-    | FunArrow of tm * tm                    (** Function arrow types: [ A -> B ] *)
-    | FunLit of string list * tm             (** Function literals: [ fun x := f x ] *)
-    | FunApp of tm * tm list                 (** Function applications: [ f x ] *)
+    | Let of string * tm option * tm * tm       (** Let expressions: [ let x : A := t; f x ] *)
+    | Name of string                            (** References to named things: [ x ] *)
+    | Ann of tm * tm                            (** Terms annotated with types: [ x : A ] *)
+    | Univ                                      (** Universe of types: [ Type ] *)
+    | FunType of (string * tm) list * tm        (** Function types: [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                       (** Function arrow types: [ A -> B ] *)
+    | FunLit of (string * tm option) list * tm  (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
+    | FunApp of tm * tm list                    (** Function applications: [ f x ] *)
 
 
   (** {1 Elaboration } *)
@@ -401,17 +401,29 @@ module Surface = struct
             let context = bind_def context name def_ty (eval context def) in
             Syntax.Let (name, def, check context body ty)
         end
-    | FunLit (names, body), ty ->
-        let rec go context names ty =
-          match names, ty with
+    | FunLit (params, body), ty ->
+        let rec go context params ty =
+          match params, ty with
           | [], body_ty -> check context body body_ty
-          | name :: names, Semantics.FunType (_, param_ty, body_ty) ->
+          | (name, None) :: params, Semantics.FunType (_, param_ty, body_ty) ->
               let var = next_var context in
               let context = bind_def context name (Lazy.force param_ty) var in
-              Syntax.FunLit (name, go context names (body_ty var))
+              Syntax.FunLit (name, go context params (body_ty var))
+          | (name, Some param_ty) :: params, Semantics.FunType (_, expected_param_ty, body_ty) ->
+              let var = next_var context in
+              let param_ty = check context param_ty Semantics.Univ in
+              let param_ty' = eval context param_ty in
+              let expected_param_ty = Lazy.force expected_param_ty in
+              if is_convertible context (param_ty', expected_param_ty) then
+                let context = bind_def context name expected_param_ty var in
+                Syntax.FunLit (name, go context params (body_ty var))
+              else
+                let expected = pretty_quoted context expected_param_ty in
+                let found = pretty context param_ty in
+                error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
           | _, _ -> error "too many parameters in function literal"
         in
-        go context names ty
+        go context params ty
     | tm, ty ->
         let tm, ty' = infer context tm in
         if is_convertible context (ty', ty) then tm else
@@ -463,7 +475,24 @@ module Surface = struct
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
-    | FunLit (_, _) -> error "ambiguous function literal"
+    | FunLit (params, body) ->
+        let rec go context params =
+          match params with
+          | [] ->
+              let body, body_ty = infer context body in
+              body, quote context body_ty
+          | (name, None) :: _ ->
+              error ("type annotation needed for parameter `" ^ name ^ "`")
+          | (name, Some param_ty) :: params ->
+              let var = next_var context in
+              let param_ty = check context param_ty Semantics.Univ in
+              let param_ty' = eval context param_ty in
+              let context = bind_def context name param_ty' var in
+              let body, body_ty = go context params in
+              (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
+        in
+        let tm, ty = go context params in
+        (Syntax.Ann (tm, ty), eval context ty)
     | FunApp (head, args) ->
         List.fold_left
           (fun (head, head_ty) arg ->
@@ -487,19 +516,22 @@ module Examples = struct
   open Surface
 
   let stuff =
+    Let ("id", None,
+      FunLit (["A", Some Univ; "a", Some (Name "A")], Name "a"),
+
     Let ("Bool", None, FunType (["Out", Univ; "true", Name "Out"; "false", Name "Out"], Name "Out"),
-    Let ("true", Some (Name "Bool"), FunLit (["Out"; "true"; "false"], Name "true"),
-    Let ("false", Some (Name "Bool"), FunLit (["Out"; "true"; "false"], Name "false"),
+    Let ("true", Some (Name "Bool"), FunLit (["Out", None; "true", None; "false", None], Name "true"),
+    Let ("false", Some (Name "Bool"), FunLit (["Out", None; "true", None; "false", None], Name "false"),
 
     Let ("Option", Some (FunArrow (Univ, Univ)),
-      FunLit (["A"], FunType (["Out", Univ; "some", FunArrow (Name "A", Name "Out"); "none", Name "Out"], Name "Out")),
+      FunLit (["A", None], FunType (["Out", Univ; "some", FunArrow (Name "A", Name "Out"); "none", Name "Out"], Name "Out")),
     Let ("none", Some (FunType (["A", Univ], FunApp (Name "Option", [Name "A"]))),
-      FunLit (["A"], FunLit (["Out"; "some"; "none"], Name "none")),
+      FunLit (["A", None], FunLit (["Out", None; "some", None; "none", None], Name "none")),
     Let ("some", Some (FunType (["A", Univ], FunArrow (Name "A", FunApp (Name "Option", [Name "A"])))),
-      FunLit (["A"; "a"], FunLit (["Out"; "some"; "none"], FunApp (Name "some", [Name "a"]))),
+      FunLit (["A", None; "a", None], FunLit (["Out", None; "some", None; "none", None], FunApp (Name "some", [Name "a"]))),
 
       FunApp (Name "some", [FunApp (Name "Option", [Name "Bool"]);
-        FunApp (Name "some", [Name "Bool"; Name "true"])])))))))
+        FunApp (Name "some", [Name "Bool"; Name "true"])]))))))))
 
 end
 
