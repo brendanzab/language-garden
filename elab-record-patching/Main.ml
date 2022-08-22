@@ -837,7 +837,7 @@ module Surface = struct
   (** {2 Bidirectional type checking} *)
 
   (** The algorithm is structured {i bidirectionally}, divided into mutually
-      recursive {i checking} and {i synthesis} modes. By supplying type
+      recursive {i checking} and {i inference} modes. By supplying type
       annotations as early as possible using the checking mode, we can improve
       the locality of type errors, and provide enough {i control} to the
       algorithm us to implement elaboration even in the presence of ‘fancy’
@@ -1100,7 +1100,7 @@ module Examples = struct
       (let id : fun (A : Type) -> A -> A :=
         fun A a := a; {}) : Type;
 
-    let let-ann-synth :=
+    let let-ann-infer :=
       let id : fun (A : Type) -> A -> A :=
         fun A a := a;
       id {} {};
@@ -1330,7 +1330,7 @@ module Examples = struct
       fun A a := a;
     id {} {}
   *)
-  let let_ann_synth =
+  let let_ann_infer =
     Let ("id", Some (FunType (["A", Univ], FunArrow (Name "A", Name "A"))), FunLit (["A"; "a"], Name "a"),
       App (Name "id", [RecUnit; RecUnit]))
 
@@ -1476,7 +1476,7 @@ module Examples = struct
     "elim_sing", elim_sing;
     "sing_tm1", sing_tm1;
     "let_ann_check", let_ann_check;
-    "let_ann_synth", let_ann_synth;
+    "let_ann_infer", let_ann_infer;
     "map_functor", map_functor;
     (* TODO: requires total space conversion like in CoolTT *)
     (* "category_ty", category_ty; *)

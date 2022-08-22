@@ -378,7 +378,7 @@ module Surface = struct
   (** {2 Bidirectional type checking} *)
 
   (** The algorithm is structured {i bidirectionally}, divided into mutually
-      recursive {i checking} and {i synthesis} modes. By supplying type
+      recursive {i checking} and {i inference} modes. By supplying type
       annotations as early as possible using the checking mode, we can improve
       the locality of type errors, and provide enough {i control} to the
       algorithm us to implement elaboration even in the presence of ‘fancy’
@@ -495,7 +495,8 @@ module Surface = struct
           | [] ->
               let body, body_ty = infer context body in
               body, quote context body_ty
-          (* We are in synthesis mode, so each parameter requires an annotation. *)
+          (* We are in inference mode, so each function parameter requires an
+             annotation. *)
           | (name, None) :: _ ->
               error ("type annotation needed for parameter `" ^ name ^ "`")
           | (name, Some param_ty) :: params ->
