@@ -381,13 +381,14 @@ module Surface = struct
       recursive {i checking} and {i inference} modes. By supplying type
       annotations as early as possible using the checking mode, we can improve
       the locality of type errors, and provide enough {i control} to the
-      algorithm us to implement elaboration even in the presence of ‘fancy’
-      types. *)
+      algorithm to keep type inference deciable even in the presence of ‘fancy’
+      types, for example dependent types, higher rank types, and subtyping. *)
 
   (** Elaborate a term in the surface language into a term in the core language
       in the presence of a type annotation. *)
-  let rec check context tm ty : Syntax.tm =
+  let rec check context tm (ty : Semantics.ty) : Syntax.tm =
     match tm, ty with
+    (* Let expressions *)
     | Let (name, def_ty, def, body), ty ->
         let def, def_ty =
           match def_ty with
@@ -400,6 +401,8 @@ module Surface = struct
         in
         let context = bind_def context name def_ty (eval context def) in
         Syntax.Let (name, def, check context body ty)
+
+    (* Function literals *)
     | FunLit (params, body), ty ->
         (* Iterate over the parameters of the function literal, constructing a
            function literal in the core language. *)
@@ -427,6 +430,13 @@ module Surface = struct
           | _, _ -> error "too many parameters in function literal"
         in
         go context params ty
+
+    (* For anything else, try inferring the type of the term, then checking to
+       see if the inferred type is the same as the expected type.
+
+       Instead of using conversion checking, extensions to this type system
+       could trigger unification or try to coerce the term to the expected
+       type here. *)
     | tm, ty ->
         let tm, ty' = infer context tm in
         if is_convertible context (ty', ty) then tm else
@@ -437,6 +447,7 @@ module Surface = struct
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
   and infer context : tm -> Syntax.tm * Semantics.ty = function
+    (* Let expressions *)
     | Let (name, def_ty, def, body) ->
         let def, def_ty =
           match def_ty with
@@ -450,6 +461,8 @@ module Surface = struct
         let context = bind_def context name def_ty (eval context def) in
         let body, body_ty = infer context body in
         (Syntax.Let (name, def, body), body_ty)
+
+    (* Named terms *)
     | Name name ->
         (* Find the index of most recent binding in the context identified by
            [name], starting from the most recent binding. This gives us the
@@ -458,16 +471,22 @@ module Surface = struct
         | Some index -> (Syntax.Var index, List.nth context.tys index)
         | None -> error ("`" ^ name ^ "` is not bound in the current scope")
         end
+
+    (* Annotated terms *)
     | Ann (tm, ty) ->
         let ty = check context ty Semantics.Univ in
         let ty' = eval context ty in
         let tm = check context tm ty' in
         (Syntax.Ann (tm, ty), ty')
+
+    (* Universes *)
     | Univ ->
         (* We use [Type : Type] here for simplicity, which means this type
            theory is inconsistent. This is okay for a toy type system, but we’d
            want look into using universe levels in an actual implementation. *)
         (Syntax.Univ, Semantics.Univ)
+
+    (* Function types *)
     | FunType (params, body_ty) ->
         let rec go context = function
           | [] -> check context body_ty Semantics.Univ
@@ -477,13 +496,16 @@ module Surface = struct
               Syntax.FunType (name, param_ty, go context params)
         in
         (go context params, Semantics.Univ)
+
+    (* Arrow types. These are implemented as syntactic sugar for non-dependent
+       function types. *)
     | FunArrow (param_ty, body_ty) ->
-        (* Arrow types are implemented as syntactic sugar for non-dependent
-           function types. *)
         let param_ty = check context param_ty Semantics.Univ in
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
+
+    (* Function literals *)
     | FunLit (params, body) ->
         (* Iterate over the parameters of the function literal, constructing a
            function literal in the core language. *)
@@ -492,10 +514,9 @@ module Surface = struct
           | [] ->
               let body, body_ty = infer context body in
               body, quote context body_ty
-          (* We are in inference mode, so each function parameter requires an
-             annotation. *)
+          (* We’re in inference mode, so function parameters need annotations *)
           | (name, None) :: _ ->
-              error ("type annotation needed for parameter `" ^ name ^ "`")
+              error ("ambiguous function parameter `" ^ name ^ "`")
           | (name, Some param_ty) :: params ->
               let var = next_var context in
               let param_ty = check context param_ty Semantics.Univ in
@@ -506,6 +527,8 @@ module Surface = struct
         in
         let fun_tm, fun_ty = go context params in
         (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
+
+    (* Function application *)
     | FunApp (head, args) ->
         List.fold_left
           (fun (head, head_ty) arg ->

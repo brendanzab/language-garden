@@ -840,13 +840,14 @@ module Surface = struct
       recursive {i checking} and {i inference} modes. By supplying type
       annotations as early as possible using the checking mode, we can improve
       the locality of type errors, and provide enough {i control} to the
-      algorithm us to implement elaboration even in the presence of ‘fancy’
-      types. *)
+      algorithm to keep type inference deciable even in the presence of ‘fancy’
+      types, for example dependent types, higher rank types, and subtyping. *)
 
   (** Elaborate a term in the surface language into a term in the core language
       in the presence of a type annotation. *)
   let rec check context tm ty : Syntax.tm =
     match tm, ty with
+    (* Let expressions *)
     | Let (name, def_ty, def, body), ty ->
         let def, def_ty =
           match def_ty with
@@ -859,7 +860,11 @@ module Surface = struct
         in
         let context = bind_def context name def_ty (eval context def) in
         Syntax.Let (name, def, check context body ty)
+
+    (* Function literals *)
     | FunLit (names, body), ty ->
+        (* Iterate over the parameters of the function literal, constructing a
+           function literal in the core language. *)
         let rec go context names ty =
           match names, ty with
           | [], body_ty -> check context body body_ty
@@ -870,6 +875,8 @@ module Surface = struct
           | _, _ -> error "too many parameters in function literal"
         in
         go context names ty
+
+    (* Record literals *)
     | RecLit defns, Semantics.RecType decls ->
         (* TODO: elaborate fields out of order? *)
         let rec go defns decls =
@@ -887,10 +894,16 @@ module Surface = struct
           | (label, _) :: _, Semantics.Nil -> error ("unexpected field `" ^ label ^ "` in record literal")
         in
         Syntax.RecLit (go defns decls)
+
+    (* Records with no entries. These are ambiguous and need to be disambuguated
+       with a type annotation. *)
     | RecUnit, Semantics.Univ ->
         Syntax.RecType Syntax.Nil
     | RecUnit, Semantics.RecType Semantics.Nil ->
         Syntax.RecLit []
+
+    (* Singleton introduction. No need for any syntax in the surface language
+       here, instead we use the type annotation to drive this. *)
     | tm, Semantics.SingType (ty, sing_tm) ->
         let tm = check context tm ty in
         let tm' = eval context tm in
@@ -899,6 +912,9 @@ module Surface = struct
           let found = pretty_quoted context tm' ty in
           let ty = pretty_quoted context ty Semantics.Univ in
           error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
+
+    (* For anything else, try inferring the type of the term, then attempting to
+       coerce the term to the expected type. *)
     | tm, ty ->
         let tm, ty' = infer context tm in
         let tm, ty' = elim_implicits context tm ty' in
@@ -907,6 +923,7 @@ module Surface = struct
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
   and infer context : tm -> Syntax.tm * Semantics.ty = function
+    (* Let expressions *)
     | Let (name, def_ty, def, body) ->
         let def, def_ty =
           match def_ty with
@@ -920,6 +937,8 @@ module Surface = struct
         let context = bind_def context name def_ty (eval context def) in
         let body, body_ty = infer context body in
         (Syntax.Let (name, def, body), body_ty)
+
+    (* Named terms *)
     | Name name ->
         (* Find the index of most recent binding in the context identified by
            [name], starting from the most recent binding. This gives us the
@@ -928,16 +947,22 @@ module Surface = struct
         | Some index -> (Syntax.Var index, List.nth context.tys index)
         | None -> error ("`" ^ name ^ "` is not bound in the current scope")
         end
+
+    (* Annotated terms *)
     | Ann (tm, ty) ->
         let ty = check context ty Semantics.Univ in
         let ty' = eval context ty in
         let tm = check context tm ty' in
         (Syntax.Ann (tm, ty), ty')
+
+      (* Universes *)
     | Univ ->
         (* We use [Type : Type] here for simplicity, which means this type
            theory is inconsistent. This is okay for a toy type system, but we’d
            want look into using universe levels in an actual implementation. *)
         (Syntax.Univ, Semantics.Univ)
+
+    (* Function types *)
     | FunType (params, body_ty) ->
         let rec go context = function
           | [] -> check context body_ty Semantics.Univ
@@ -947,6 +972,9 @@ module Surface = struct
               Syntax.FunType (name, param_ty, go context params)
         in
         (go context params, Semantics.Univ)
+
+    (* Arrow types. These are implemented as syntactic sugar for non-dependent
+       function types. *)
     | FunArrow (param_ty, body_ty) ->
         (* Arrow types are implemented as syntactic sugar for non-dependent
            function types. *)
@@ -954,7 +982,14 @@ module Surface = struct
         let context = bind_param context "_" (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
         (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
+
+    (* Function literals. These do not have type annotations on their arguments
+       and so we don’t know ahead of time what types to use for the arguments
+       when adding them to the context. As a result with coose to throw an
+       ambiguity error here. *)
     | FunLit (_, _) -> error "ambiguous function literal"
+
+    (* Function application *)
     | RecType decls ->
         let rec go context seen_labels = function
           | [] -> (Syntax.Nil)
@@ -966,12 +1001,20 @@ module Surface = struct
               Syntax.Cons (label, ty, go context (label :: seen_labels) decls)
         in
         (Syntax.RecType (go context [] decls), Semantics.Univ)
+
+    (* Unit records. These are ambiguous in inference mode. We could default to
+       one or the other, and perhaps coerce between them, but we choose just to
+       throw an error instead. *)
     | RecLit _ -> error "ambiguous record literal"
     | RecUnit -> error "ambiguous unit record"
+
+    (* Singleton types *)
     | SingType (ty, sing_tm) ->
         let ty = check context ty Semantics.Univ in
         let sing_tm = check context sing_tm (eval context ty) in
         (Syntax.SingType (ty, sing_tm), Semantics.Univ)
+
+    (* Application *)
     | App (head, args) ->
         List.fold_left
           (fun (head, head_ty) arg ->
@@ -982,6 +1025,8 @@ module Surface = struct
             | _ -> error "not a function")
           (infer context head)
           args
+
+    (* Field projection *)
     | Proj (head, labels) ->
         List.fold_left
           (fun (head, head_ty) label ->
@@ -994,6 +1039,9 @@ module Surface = struct
             | _ -> error "not a record")
           (infer context head)
           labels
+
+    (* Patches. Here we add patches to record types by creating a copy of the
+       type with singletons in place of the patched fields  *)
     | Patch (head, patches) ->
         let rec go context decls patches =
           match decls, patches with
