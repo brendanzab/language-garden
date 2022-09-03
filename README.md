@@ -14,3 +14,11 @@ When using [Nix flakes](https://nixos.wiki/wiki/Flakes) and [nix-direnv](https:/
 echo "use flake" > .envrc
 direnv allow
 ```
+
+## Some useful resources
+
+- [AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/): Some excellent,
+  high quality examples of implementing elaborators for dependently typed programming languages,
+  demonstrating bidirectional type checking and normalisation-by-evaluation, and extensions to this.
+- [jozefg/nbe-for-mltt](https://github.com/jozefg/nbe-for-mltt): An implementation of bidirectional
+  typechecking and normalisation-by-evaluation for dependent types.
