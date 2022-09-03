@@ -5,7 +5,7 @@
 
 (package (name compile-arith))
 
-(package (name elab-dependant))
+(package (name elab-dependent))
 (package (name elab-record-patching))
 
-(package (name wip-elab-dependant))
+(package (name wip-elab-dependent))

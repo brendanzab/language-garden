@@ -5,32 +5,32 @@
 
 (rule
   (alias "dependent-record.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from dependent-record.mltt
       (with-stdout-to dependent-record.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "dependent-record.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from dependent-record.mltt
       (with-stdout-to dependent-record.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias dependent-record.mltt.elab))
   (action
     (diff expected/dependent-record.mltt.elab.stdout dependent-record.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias dependent-record.mltt.norm))
   (action
     (diff expected/dependent-record.mltt.norm.stdout dependent-record.mltt.norm.stdout.exp)))
@@ -40,32 +40,32 @@
 
 (rule
   (alias "identity-fun-lit-check.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-check.mltt
       (with-stdout-to identity-fun-lit-check.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "identity-fun-lit-check.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-check.mltt
       (with-stdout-to identity-fun-lit-check.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias identity-fun-lit-check.mltt.elab))
   (action
     (diff expected/identity-fun-lit-check.mltt.elab.stdout identity-fun-lit-check.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias identity-fun-lit-check.mltt.norm))
   (action
     (diff expected/identity-fun-lit-check.mltt.norm.stdout identity-fun-lit-check.mltt.norm.stdout.exp)))
@@ -75,32 +75,32 @@
 
 (rule
   (alias "identity-fun-lit-synth.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-synth.mltt
       (with-stdout-to identity-fun-lit-synth.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "identity-fun-lit-synth.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from identity-fun-lit-synth.mltt
       (with-stdout-to identity-fun-lit-synth.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias identity-fun-lit-synth.mltt.elab))
   (action
     (diff expected/identity-fun-lit-synth.mltt.elab.stdout identity-fun-lit-synth.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias identity-fun-lit-synth.mltt.norm))
   (action
     (diff expected/identity-fun-lit-synth.mltt.norm.stdout identity-fun-lit-synth.mltt.norm.stdout.exp)))
@@ -110,32 +110,32 @@
 
 (rule
   (alias "let.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from let.mltt
       (with-stdout-to let.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "let.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from let.mltt
       (with-stdout-to let.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias let.mltt.elab))
   (action
     (diff expected/let.mltt.elab.stdout let.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias let.mltt.norm))
   (action
     (diff expected/let.mltt.norm.stdout let.mltt.norm.stdout.exp)))
@@ -145,32 +145,32 @@
 
 (rule
   (alias "monoid.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from monoid.mltt
       (with-stdout-to monoid.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "monoid.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from monoid.mltt
       (with-stdout-to monoid.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias monoid.mltt.elab))
   (action
     (diff expected/monoid.mltt.elab.stdout monoid.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias monoid.mltt.norm))
   (action
     (diff expected/monoid.mltt.norm.stdout monoid.mltt.norm.stdout.exp)))
@@ -180,32 +180,32 @@
 
 (rule
   (alias "prelude.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from prelude.mltt
       (with-stdout-to prelude.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "prelude.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from prelude.mltt
       (with-stdout-to prelude.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias prelude.mltt.elab))
   (action
     (diff expected/prelude.mltt.elab.stdout prelude.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias prelude.mltt.norm))
   (action
     (diff expected/prelude.mltt.norm.stdout prelude.mltt.norm.stdout.exp)))
@@ -215,32 +215,32 @@
 
 (rule
   (alias "record-proj-1.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-1.mltt
       (with-stdout-to record-proj-1.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "record-proj-1.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-1.mltt
       (with-stdout-to record-proj-1.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias record-proj-1.mltt.elab))
   (action
     (diff expected/record-proj-1.mltt.elab.stdout record-proj-1.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias record-proj-1.mltt.norm))
   (action
     (diff expected/record-proj-1.mltt.norm.stdout record-proj-1.mltt.norm.stdout.exp)))
@@ -250,32 +250,32 @@
 
 (rule
   (alias "record-proj-2.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-2.mltt
       (with-stdout-to record-proj-2.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "record-proj-2.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from record-proj-2.mltt
       (with-stdout-to record-proj-2.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias record-proj-2.mltt.elab))
   (action
     (diff expected/record-proj-2.mltt.elab.stdout record-proj-2.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias record-proj-2.mltt.norm))
   (action
     (diff expected/record-proj-2.mltt.norm.stdout record-proj-2.mltt.norm.stdout.exp)))
@@ -285,32 +285,32 @@
 
 (rule
   (alias "type.mltt.elab")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from type.mltt
       (with-stdout-to type.mltt.elab.stdout.exp
-        (run wip-elab-dependant elab)))))
+        (run wip-elab-dependent elab)))))
 
 (rule
   (alias "type.mltt.norm")
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps ../main.exe)
   (action
     (with-stdin-from type.mltt
       (with-stdout-to type.mltt.norm.stdout.exp
-        (run wip-elab-dependant norm)))))
+        (run wip-elab-dependent norm)))))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias type.mltt.elab))
   (action
     (diff expected/type.mltt.elab.stdout type.mltt.elab.stdout.exp)))
 
 (rule
   (alias runtest)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (deps (alias type.mltt.norm))
   (action
     (diff expected/type.mltt.norm.stdout type.mltt.norm.stdout.exp)))

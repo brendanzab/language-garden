@@ -7,7 +7,7 @@ An implementation of a dependent type theory with dependent records, in OCaml.
 Run with:
 
 ```
-dune exec wip-elab-dependant/main.exe
+dune exec wip-elab-dependent/main.exe
 ```
 
 When editing run

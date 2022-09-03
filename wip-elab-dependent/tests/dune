@@ -7,13 +7,13 @@
 
 (rule
   (deps (:test_names (glob_files *.mltt)))
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (action
     (with-stdout-to dune.inc.gen
-      (run ./dune_inc.exe wip-elab-dependant %{test_names}))))
+      (run ./dune_inc.exe wip-elab-dependent %{test_names}))))
 
 (rule
   (alias all)
-  (package wip-elab-dependant)
+  (package wip-elab-dependent)
   (action
     (diff dune.inc dune.inc.gen)))

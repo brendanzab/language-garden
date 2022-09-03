@@ -51,8 +51,8 @@
 
           # Elaboration
 
-          elab-dependant = ocamlPackages.buildDunePackage {
-            pname = "elab-dependant";
+          elab-dependent = ocamlPackages.buildDunePackage {
+            pname = "elab-dependent";
             version = "0";
             src = ./.;
 
@@ -68,8 +68,8 @@
 
           # Experiments
 
-          wip-elab-dependant = ocamlPackages.buildDunePackage {
-            pname = "wip-elab-dependant";
+          wip-elab-dependent = ocamlPackages.buildDunePackage {
+            pname = "wip-elab-dependent";
             version = "0";
             src = ./.;
 
