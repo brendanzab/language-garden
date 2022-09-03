@@ -34,56 +34,58 @@
         #     $ nix build .#<name>
         #     $ nix run .#<name> -- <args?>
         #
-        packages =
-          let
+        packages = {
+          # Compilation
+
+          compile-arith = ocamlPackages.buildDunePackage {
+            pname = "compile-arith";
             version = "0";
-            duneVersion = "3";
             src = ./.;
-          in
-          {
-            # Compilation
 
-            compile-arith = ocamlPackages.buildDunePackage {
-              pname = "compile-arith";
-              inherit version duneVersion src;
+            duneVersion = "3";
 
-              nativeBuildInputs = [
-                ocamlPackages.menhir
-              ];
-
-              buildInputs = [
-                ocamlPackages.pp
-              ];
-            };
-
-            # Elaboration
-
-            elab-dependant = ocamlPackages.buildDunePackage {
-              pname = "elab-dependant";
-              inherit version duneVersion src;
-            };
-
-            elab-record-patching = ocamlPackages.buildDunePackage {
-              pname = "elab-record-patching";
-              inherit version duneVersion src;
-            };
-
-            # Experiments
-
-            wip-elab-dependant = ocamlPackages.buildDunePackage {
-              pname = "wip-elab-dependant";
-              inherit version duneVersion src;
-
-              nativeBuildInputs = [
-                ocamlPackages.menhir
-                ocamlPackages.ppx_string # for `mltt/tests/dune_inc.ml`
-              ];
-
-              buildInputs = [
-                ocamlPackages.pp
-              ];
-            };
+            nativeBuildInputs = [
+              ocamlPackages.menhir
+            ];
           };
+
+          # Elaboration
+
+          elab-dependant = ocamlPackages.buildDunePackage {
+            pname = "elab-dependant";
+            version = "0";
+            src = ./.;
+
+            duneVersion = "3";
+          };
+
+          elab-record-patching = ocamlPackages.buildDunePackage {
+            pname = "elab-record-patching";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+          };
+
+          # Experiments
+
+          wip-elab-dependant = ocamlPackages.buildDunePackage {
+            pname = "wip-elab-dependant";
+            version = "0";
+            src = ./.;
+
+            duneVersion = "3";
+
+            nativeBuildInputs = [
+              ocamlPackages.menhir
+              # for `mltt/tests/dune_inc.ml`
+              ocamlPackages.ppx_string
+            ];
+
+            buildInputs = [
+              ocamlPackages.pp
+            ];
+          };
+        };
 
         # Development shells
         #
@@ -133,6 +135,7 @@
         // lib.mapAttrs
           (name: package:
             package.overrideAttrs (oldAttrs: {
+              name = "chack-${oldAttrs.name}";
               doCheck = true;
             }))
           self.packages.${system};
