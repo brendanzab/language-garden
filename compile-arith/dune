@@ -10,4 +10,4 @@
 
 (cram
   (package compile-arith)
-  (deps %{bin:arith}))
+  (deps %{bin:compile-arith}))
