@@ -268,7 +268,7 @@ module Core = struct
     (** Compute a function application *)
     let app head arg =
       match head with
-      | Neu neu -> Neu (FunApp (neu, lazy arg))
+      | Neu neu -> Neu (FunApp (neu, Lazy.from_val arg))
       | FunLit (_, body) -> body arg
       | _ -> raise (Error "invalid application")
 
@@ -282,7 +282,9 @@ module Core = struct
       | Syntax.Var index -> List.nth env index
       | Syntax.Univ ->  Univ
       | Syntax.FunType (name, param_ty, body_ty) ->
-          FunType (name, lazy (eval env param_ty), fun x -> eval (x :: env) body_ty)
+          let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
+          let body_ty = fun x -> eval (x :: env) body_ty in
+          FunType (name, param_ty, body_ty)
       | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: env) body)
       | Syntax.FunApp (head, arg) -> app (eval env head) (eval env arg)
 
