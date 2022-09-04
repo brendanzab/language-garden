@@ -65,6 +65,10 @@ module Core = struct
   let level_to_index size level =
     size - level - 1
 
+  (** An environment of bindings that can be looked up directly using a
+      {!index}, or by inverting a {!level} using {!level_to_index}. *)
+  type 'a env = 'a list
+
   (** Nameless variable representations like {i De Bruijn indices} and {i De
       Bruijn levels} have a reputation for off-by-one errors and requiring
       expensive reindexing operations when performing substitutions. Thankfully
@@ -174,10 +178,6 @@ module Core = struct
     and neu =
       | Var of level                (** Variable that could not be reduced further *)
       | FunApp of neu * tm Lazy.t   (** Function application *)
-
-    (** An environment of bindings that can be looked up directly using a
-        {!Syntax.index}, or by inverting a {!level} using {!level_to_index}. *)
-    type 'a env = 'a list
 
 
     (** {1 Exceptions} *)
@@ -322,10 +322,10 @@ module Surface = struct
       the current scope in the program. The environments are unzipped to make it
       more efficient to call functions from {!Core.Semantics}. *)
   type context = {
-    size : Core.level;
-    names : Core.name Semantics.env;
-    tys : Semantics.tm Semantics.env;
-    tms : Semantics.tm Semantics.env;
+    size : Core.level;              (** Number of entries bound. *)
+    names : Core.name Core.env;     (** Name environment *)
+    tys : Semantics.ty Core.env;    (** Type environment *)
+    tms : Semantics.tm Core.env;    (** Term environment *)
   }
 
   (** The initial elaboration context, without any bindings *)

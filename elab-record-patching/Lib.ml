@@ -217,6 +217,11 @@ module Core = struct
   let level_to_index size level =
     size - level - 1
 
+  (** An environment of bindings that can be looked up directly using a
+      {!index}, or by inverting a {!level} using {!level_to_index}. *)
+  type 'a env = 'a list
+
+
   (** Syntax of the core language *)
   module Syntax = struct
 
@@ -367,10 +372,6 @@ module Core = struct
       | Var of level                        (** Variable that could not be reduced further *)
       | FunApp of neu * tm                  (** Function application *)
       | RecProj of neu * label              (** Record projection *)
-
-    (** An environment of bindings that can be looked up directly using a
-        {!Syntax.index}, or by inverting a {!level} using {!level_to_index}. *)
-    type 'a env = 'a list
 
 
     (** {1 Error handling} *)
@@ -685,10 +686,10 @@ module Surface = struct
       the current scope in the program. The environments are unzipped to make it
       more efficient to call functions from {!Core.Semantics}. *)
   type context = {
-    size : Core.level;                  (** Number of entries bound. *)
-    names : Core.name Semantics.env;    (** Name environment *)
-    tys : Semantics.ty Semantics.env;   (** Type environment *)
-    tms : Semantics.tm Semantics.env;   (** Term environment *)
+    size : Core.level;              (** Number of entries bound. *)
+    names : Core.name Core.env;     (** Name environment *)
+    tys : Semantics.ty Core.env;    (** Type environment *)
+    tms : Semantics.tm Core.env;    (** Term environment *)
   }
 
   (** The initial elaboration context, without any bindings *)
