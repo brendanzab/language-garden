@@ -70,6 +70,42 @@ Name not bound
   error: `foo` is not bound in the current scope
   [1]
 
+Function literal body annotations (checking)
+  $ elab-dependent elab <<< "(fun A (a : A) : A := a) : fun (A : Type) (a : A) -> A"
+  <input> : fun (A : Type) (a : A) -> A :=
+    (fun A a := a) : fun (A : Type) (a : A) -> A
+
+Mismatched function literal parameter (checking)
+  $ elab-dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (B : Type) (a : B) -> A"
+  error: type mismatch
+    expected: B
+    found:    A
+  [1]
+
+Mismatched function iteral body annotation (checking)
+  $ elab-dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (B : Type) (a : A) -> B"
+  error: type mismatch
+    expected: B
+    found:    A
+  [1]
+
+Too many parameters (checking)
+  $ elab-dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (a : A) -> A"
+  error: too many parameters in function literal
+  [1]
+
+Function literal body annotations (inferring)
+  $ elab-dependent elab <<< "fun (A : Type) (a : A) : A := a"
+  <input> : fun (A : Type) (a : A) -> A :=
+    (fun A a := a) : fun (A : Type) (a : A) -> A
+
+Mismatched body annotation (inferring)
+  $ elab-dependent elab <<< "fun (A : Type) (a : A) : A := A"
+  error: type mismatch
+    expected: A
+    found:    Type
+  [1]
+
 An example of a type error
   $ elab-dependent elab <<EOF
   > let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;

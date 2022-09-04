@@ -363,16 +363,17 @@ module Surface = struct
 
   (** Terms in the surface language *)
   type tm =
-    | Let of pattern * param list * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
-    | Name of string                                      (** References to named things: [ x ] *)
-    | Ann of tm * tm                                      (** Terms annotated with types: [ x : A ] *)
-    | Univ                                                (** Universe of types: [ Type ] *)
-    | FunType of param list * tm                          (** Function types: [ fun (x : A) -> B x ] *)
-    | FunArrow of tm * tm                                 (** Function arrow types: [ A -> B ] *)
-    | FunLit of param list * tm                           (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
-    | FunApp of tm * tm list                              (** Function applications: [ f x ] *)
-  and param =
-    pattern * tm option
+    | Let of pattern * params * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
+    | Name of string                                  (** References to named things: [ x ] *)
+    | Ann of tm * tm                                  (** Terms annotated with types: [ x : A ] *)
+    | Univ                                            (** Universe of types: [ Type ] *)
+    | FunType of params * tm                          (** Function types: [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                             (** Function arrow types: [ A -> B ] *)
+    | FunLit of params * tm option * tm               (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
+    | FunApp of tm * tm list                          (** Function applications: [ f x ] *)
+
+  and param = pattern * tm option
+  and params = param list
 
 
   (** {1 Elaboration } *)
@@ -455,6 +456,11 @@ module Surface = struct
   let error message =
     raise (Error message)
 
+  let type_mismatch context ~expected ~found =
+    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]"
+      (pp context) expected
+      (pp context) found
+
 
   (** {2 Bidirectional type checking} *)
 
@@ -476,12 +482,23 @@ module Surface = struct
         Syntax.Let (name, def, check context body ty)
 
     (* Function literals *)
-    | FunLit (params, body), ty ->
+    | FunLit (params, body_ty, body), ty ->
         (* Iterate over the parameters, constructing a function literal in the
            core language. *)
         let rec go context params ty =
           match params, ty with
-          | [], body_ty -> check context body body_ty
+          | [], expected_body_ty ->
+              begin match body_ty with
+              | None -> check context body expected_body_ty
+              | Some body_ty ->
+                  let body_ty = check context body_ty Semantics.Univ in
+                  let body_ty' = eval context body_ty in
+                  if is_convertible context (body_ty', expected_body_ty) then
+                    check context body body_ty'
+                  else error (type_mismatch context
+                    ~expected:(quote context expected_body_ty)
+                    ~found:body_ty)
+              end
           | (name, None) :: params, Semantics.FunType (_, param_ty, body_ty) ->
               let var = next_var context in
               let context = bind_def context name (Lazy.force param_ty) var in
@@ -497,9 +514,9 @@ module Surface = struct
                 let context = bind_def context name expected_param_ty var in
                 Syntax.FunLit (name, go context params (body_ty var))
               else
-                error (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]"
-                  (pp context) (quote context expected_param_ty)
-                  (pp context) param_ty)
+                error (type_mismatch context
+                  ~expected:(quote context expected_param_ty)
+                  ~found:param_ty)
           | _, _ -> error "too many parameters in function literal"
         in
         go context params ty
@@ -513,9 +530,9 @@ module Surface = struct
     | tm, ty ->
         let tm, ty' = infer context tm in
         if is_convertible context (ty', ty) then tm else
-          error (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]"
-            (pp context) (quote context ty)
-            (pp context) (quote context ty'))
+          error (type_mismatch context
+            ~expected:(quote context ty)
+            ~found:(quote context ty'))
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
@@ -575,8 +592,8 @@ module Surface = struct
         (Syntax.FunType (None, param_ty, body_ty), Semantics.Univ)
 
     (* Function literals *)
-    | FunLit (params, body) ->
-        infer_fun_lit context params None body
+    | FunLit (params, body_ty, body) ->
+        infer_fun_lit context params body_ty body
 
     (* Function application *)
     | FunApp (head, args) ->
@@ -604,27 +621,27 @@ module Surface = struct
         let body, body_ty = infer_params context params infer_body in
         (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
 
-  and infer_fun_lit context params def_ty def =
-    match params, def_ty with
-    | [], None -> infer context def
-    | [], Some def_ty ->
-        let def_ty = check context def_ty Semantics.Univ in
-        let def_ty' = eval context def_ty in
-        let def = check context def def_ty' in
-        (Syntax.Ann (def, def_ty), def_ty')
+  and infer_fun_lit context params body_ty body =
+    match params, body_ty with
+    | [], None -> infer context body
+    | [], Some body_ty ->
+        let body_ty = check context body_ty Semantics.Univ in
+        let body_ty' = eval context body_ty in
+        let body = check context body body_ty' in
+        (Syntax.Ann (body, body_ty), body_ty')
     | params, None ->
         let fun_tm, fun_ty =
           infer_params context params (fun context ->
-            let body, body_ty = infer context def in
+            let body, body_ty = infer context body in
             body, quote context body_ty)
         in
         (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
-    | params, Some def_ty ->
+    | params, Some body_ty ->
         let fun_tm, fun_ty =
           infer_params context params (fun context ->
-            let def_ty = check context def_ty Semantics.Univ in
-            let def_ty' = eval context def_ty in
-            check context def def_ty', def_ty)
+            let body_ty = check context body_ty Semantics.Univ in
+            let body_ty' = eval context body_ty in
+            check context body body_ty', body_ty)
         in
         (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
 
