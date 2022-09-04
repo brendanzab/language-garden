@@ -212,49 +212,10 @@ module Core = struct
       not change their meaning as new bindings are added to the environment. *)
   type level = int
 
-  (** To illustrate the relationship between indices and levels, the level and
-      index of the variable [ g ] can be found as follows:
-
-      {[
-                      level = 3      index = 1
-                  │─λ───λ───λ──────▶︎│◀︎─λ──────│
-                  │                 │         │
-        Names     │ λn. λf. λx. n (λg. λh. h (g f)) (λu. x) (λu. u)
-        Indices   │ λ   λ   λ   2 (λ   λ   0 (1 3)) (λ   1) (λ   0)
-        Levels    │ λ   λ   λ   0 (λ   λ   4 (3 1)) (λ   2) (λ   3)
-      ]}
-  *)
-
   (** Converts a {!level} to an {!index} that is bound in an environment of the
       supplied size. Assumes that [ size > level ]. *)
   let level_to_index size level =
     size - level - 1
-
-  (** Nameless variable representations like {i De Bruijn indices} and {i De
-      Bruijn levels} have a reputation for off-by-one errors and requiring
-      expensive reindexing operations when performing substitutions. Thankfully
-      these issues can be largely avoided by choosing different variable
-      representations for the {!Syntax} and the {!Semantics}:
-
-      - In the {!Syntax} we represent bound variables with {!index}. This allows
-        us to easily compare terms for alpha equivalence and quickly look up
-        bindings based on their position in the environment.
-      - In the {!Semantics} we represent free variables with {!level}. Because
-        the meaning of levels remains the same as new bindings are added to the
-        environment, this lets us use terms at greater binding depths without
-        needing to reindex them first.
-
-      The only time we really need to reindex terms is when quoting from the
-      {!Syntax} back to the {!Semantics}, using the {!level_to_index} function,
-      and only requires a single traversal of the term.
-
-      This approach is documented in more detail in Chapter 3 of Andreas Abel’s
-      Thesis, {{: https://www.cse.chalmers.se/~abela/habil.pdf} “Normalization
-      by Evaluation: Dependent Types and Impredicativity”}. Andras Kovacs also
-      explains the approach in {{: https://proofassistants.stackexchange.com/a/910/309}
-      an answer on the Proof Assistants Stack Exchange}.
-  *)
-
 
   (** Syntax of the core language *)
   module Syntax = struct
