@@ -457,9 +457,16 @@ module Surface = struct
     raise (Error message)
 
   let type_mismatch context ~expected ~found =
-    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]"
+    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]@]"
       (pp context) expected
       (pp context) found
+
+  let not_bound name =
+    Format.asprintf "`%s` is not bound in the current scope" name
+
+  let ambiguous_param name =
+      Format.asprintf "ambiguous function parameter `%s`"
+        (Option.value ~default:"_" name)
 
 
   (** {2 Bidirectional type checking} *)
@@ -551,7 +558,7 @@ module Surface = struct
            corresponding de Bruijn index of the variable. *)
         begin match elem_index (Some name) context.names with
         | Some (index) -> (Syntax.Var index, List.nth context.tys index)
-        | None -> error (Format.asprintf "`%s` is not bound in the current scope" name)
+        | None -> error (not_bound name)
         end
 
     (* Annotated terms *)
@@ -573,9 +580,7 @@ module Surface = struct
         let rec go context = function
           | [] -> check context body_ty Semantics.Univ
           (* Function types always require annotations *)
-          | (name, None) :: _ ->
-              error (Format.asprintf "ambiguous function parameter `%s`"
-                (Option.value ~default:"_" name))
+          | (name, None) :: _ -> error (ambiguous_param name)
           | (name, Some param_ty) :: params ->
               let param_ty = check context param_ty Semantics.Univ in
               let context = bind_param context name (eval context param_ty) in
@@ -611,8 +616,7 @@ module Surface = struct
     match params with
     | [] -> infer_body context
     (* We’re in inference mode, so function parameters need annotations *)
-    | (name, None) :: _ ->
-      error (Format.asprintf "ambiguous function parameter `%s`" (Option.value ~default:"_" name))
+    | (name, None) :: _ -> error (ambiguous_param name)
     | (name, Some param_ty) :: params ->
         let var = next_var context in
         let param_ty = check context param_ty Semantics.Univ in
