@@ -363,14 +363,16 @@ module Surface = struct
 
   (** Terms in the surface language *)
   type tm =
-    | Let of pattern * tm option * tm * tm        (** Let expressions: [ let x : A := t; f x ] *)
-    | Name of string                              (** References to named things: [ x ] *)
-    | Ann of tm * tm                              (** Terms annotated with types: [ x : A ] *)
-    | Univ                                        (** Universe of types: [ Type ] *)
-    | FunType of (pattern * tm option) list * tm  (** Function types: [ fun (x : A) -> B x ] *)
-    | FunArrow of tm * tm                         (** Function arrow types: [ A -> B ] *)
-    | FunLit of (pattern * tm option) list * tm   (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
-    | FunApp of tm * tm list                      (** Function applications: [ f x ] *)
+    | Let of pattern * param list * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
+    | Name of string                                      (** References to named things: [ x ] *)
+    | Ann of tm * tm                                      (** Terms annotated with types: [ x : A ] *)
+    | Univ                                                (** Universe of types: [ Type ] *)
+    | FunType of param list * tm                          (** Function types: [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                                 (** Function arrow types: [ A -> B ] *)
+    | FunLit of param list * tm                           (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
+    | FunApp of tm * tm list                              (** Function applications: [ f x ] *)
+  and param =
+    pattern * tm option
 
 
   (** {1 Elaboration } *)
@@ -468,23 +470,15 @@ module Surface = struct
   let rec check context tm (ty : Semantics.ty) : Syntax.tm =
     match tm, ty with
     (* Let expressions *)
-    | Let (name, def_ty, def, body), ty ->
-        let def, def_ty =
-          match def_ty with
-          | None -> infer context def
-          | Some def_ty ->
-              let def_ty = check context def_ty Semantics.Univ in
-              let def_ty' = eval context def_ty in
-              let def = check context def def_ty' in
-              (Syntax.Ann (def, def_ty), def_ty')
-        in
+    | Let (name, params, def_ty, def, body), ty ->
+        let def, def_ty = infer_fun_lit context params def_ty def in
         let context = bind_def context name def_ty (eval context def) in
         Syntax.Let (name, def, check context body ty)
 
     (* Function literals *)
     | FunLit (params, body), ty ->
-        (* Iterate over the parameters of the function literal, constructing a
-           function literal in the core language. *)
+        (* Iterate over the parameters, constructing a function literal in the
+           core language. *)
         let rec go context params ty =
           match params, ty with
           | [], body_ty -> check context body body_ty
@@ -527,16 +521,8 @@ module Surface = struct
       inferring its type. *)
   and infer context : tm -> Syntax.tm * Semantics.ty = function
     (* Let expressions *)
-    | Let (name, def_ty, def, body) ->
-        let def, def_ty =
-          match def_ty with
-          | None -> infer context def
-          | Some def_ty ->
-              let def_ty = check context def_ty Semantics.Univ in
-              let def_ty' = eval context def_ty in
-              let def = check context def def_ty' in
-              (Syntax.Ann (def, def_ty), def_ty')
-        in
+    | Let (name, params, def_ty, def, body) ->
+        let def, def_ty = infer_fun_lit context params def_ty def in
         let context = bind_def context name def_ty (eval context def) in
         let body, body_ty = infer context body in
         (Syntax.Let (name, def, body), body_ty)
@@ -590,27 +576,7 @@ module Surface = struct
 
     (* Function literals *)
     | FunLit (params, body) ->
-        (* Iterate over the parameters of the function literal, constructing a
-           function literal in the core language. *)
-        let rec go context params =
-          match params with
-          | [] ->
-              let body, body_ty = infer context body in
-              body, quote context body_ty
-          (* We’re in inference mode, so function parameters need annotations *)
-          | (name, None) :: _ ->
-            error (Format.asprintf "ambiguous function parameter `%s`"
-              (Option.value ~default:"_" name))
-          | (name, Some param_ty) :: params ->
-              let var = next_var context in
-              let param_ty = check context param_ty Semantics.Univ in
-              let param_ty' = eval context param_ty in
-              let context = bind_def context name param_ty' var in
-              let body, body_ty = go context params in
-              (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
-        in
-        let fun_tm, fun_ty = go context params in
-        (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
+        infer_fun_lit context params None body
 
     (* Function application *)
     | FunApp (head, args) ->
@@ -623,5 +589,43 @@ module Surface = struct
             | _ -> error "not a function")
           (infer context head)
           args
+
+  and infer_params context params infer_body =
+    match params with
+    | [] -> infer_body context
+    (* We’re in inference mode, so function parameters need annotations *)
+    | (name, None) :: _ ->
+      error (Format.asprintf "ambiguous function parameter `%s`" (Option.value ~default:"_" name))
+    | (name, Some param_ty) :: params ->
+        let var = next_var context in
+        let param_ty = check context param_ty Semantics.Univ in
+        let param_ty' = eval context param_ty in
+        let context = bind_def context name param_ty' var in
+        let body, body_ty = infer_params context params infer_body in
+        (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
+
+  and infer_fun_lit context params def_ty def =
+    match params, def_ty with
+    | [], None -> infer context def
+    | [], Some def_ty ->
+        let def_ty = check context def_ty Semantics.Univ in
+        let def_ty' = eval context def_ty in
+        let def = check context def def_ty' in
+        (Syntax.Ann (def, def_ty), def_ty')
+    | params, None ->
+        let fun_tm, fun_ty =
+          infer_params context params (fun context ->
+            let body, body_ty = infer context def in
+            body, quote context body_ty)
+        in
+        (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
+    | params, Some def_ty ->
+        let fun_tm, fun_ty =
+          infer_params context params (fun context ->
+            let def_ty = check context def_ty Semantics.Univ in
+            let def_ty' = eval context def_ty in
+            check context def def_ty', def_ty)
+        in
+        (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
 
 end

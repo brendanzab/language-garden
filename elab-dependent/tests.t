@@ -12,7 +12,7 @@ Church-encoded boolean type
   > let true : Bool := fun Out true false := true;
   > let false : Bool := fun Out true false := false;
   > 
-  > let not := fun (b : Bool) := 
+  > let not (b : Bool) : Bool := 
   >   fun (Out : Type) (true : Out) (false : Out) := b Out false true;
   > 
   > true Bool false
@@ -24,10 +24,8 @@ Church-encoded boolean type
   := let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
     let true : Bool := fun Out true false := true;
     let false : Bool := fun Out true false := false;
-    let not : fun (b : Bool) (Out : Type) (true : Out) (false : Out) -> Out :=
-      fun b :=
-        (fun Out true false := b Out false true) :
-          fun (Out : Type) (true : Out) (false : Out) -> Out;
+    let not : fun (b : Bool) -> Bool :=
+      fun b Out true false := b Out false true;
     true Bool false
   $ cat bools | elab-dependent norm
   <input> :
@@ -37,12 +35,12 @@ Church-encoded boolean type
 
 Church-encoded option type
   $ cat >options <<EOF
-  > let Option : Type -> Type :=
-  >   fun A := fun (Out : Type) (some : A -> Out) (none : Out) -> Out;
-  > let none : fun (A : Type) -> Option A :=
-  >   fun A := fun Out some none := none;
-  > let some : fun (A : Type) -> A -> Option A :=
-  >   fun A a := fun Out some none := some a;
+  > let Option (A : Type) : Type :=
+  >   fun (Out : Type) (some : A -> Out) (none : Out) -> Out;
+  > let none (A : Type) : Option A :=
+  >   fun Out some none := none;
+  > let some (A : Type) (a : A) : Option A :=
+  >   fun Out some none := some a;
   > 
   > some (Option Type) (some Type (Type -> Type))
   > EOF
@@ -53,10 +51,10 @@ Church-encoded option type
           Out)
         (none : Out) -> Out
   :=
-    let Option : Type -> Type :=
+    let Option : fun (A : Type) -> Type :=
       fun A := fun (Out : Type) (some : A -> Out) (none : Out) -> Out;
     let none : fun (A : Type) -> Option A := fun A Out some none := none;
-    let some : fun (A : Type) -> A -> Option A :=
+    let some : fun (A : Type) (a : A) -> Option A :=
       fun A a Out some none := some a;
     some (Option Type) (some Type (Type -> Type))
   $ cat options | elab-dependent norm
