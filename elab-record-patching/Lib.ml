@@ -325,6 +325,9 @@ module Core = struct
       let concat = String.concat "" in
       let parens wrap s = if wrap then concat ["("; s; ")"] else s in
       let rec go wrap names = function
+        | Let (name, Ann (def, def_ty), body) ->
+            parens wrap (concat ["let "; name; " : "; go false names def_ty; " := ";
+              go false names def; "; "; go false (name :: names) body])
         | Let (name, def, body) ->
             parens wrap (concat ["let "; name; " := "; go false names def; "; ";
               go false (name :: names) body])
