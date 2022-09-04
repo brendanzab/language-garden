@@ -97,20 +97,45 @@ module Core = struct
 
   (** Syntax of the core language *)
   module Syntax = struct
+    (** This module contains a simple, typed representation the syntax of
+        the type theory our language is built upon. It’s not intended to be used
+        directly, so lacks many convenience features programmers might wish for
+        in day-to-day programming.
+
+        As mentioned ealier, a higher level {i surface language} that is easier
+        for people to work with directly is defined in another part of this
+        implementation.
+    *)
+
 
     (** Types *)
     type ty = tm
 
     (** Terms *)
     and tm =
-      | Let of name * tm * tm
-      | Ann of tm * ty
-      | Var of index
-      | Univ
-      | FunType of name * ty * ty
-      | FunLit of name * tm
-      | FunApp of tm * tm
+      | Let of name * tm * tm       (** Let bindings (for sharing definitions inside terms) *)
+      | Ann of tm * ty              (** Terms annotated with types *)
+      | Var of index                (** Variables *)
+      | Univ                        (** Universe (i.e. the type of types) *)
+      | FunType of name * ty * ty   (** Dependent function types *)
+      | FunLit of name * tm         (** Function literals (i.e. lambda expressions) *)
+      | FunApp of tm * tm           (** Function application *)
 
+    (** Currently our type theory only support one {i connective}: function
+        types, along with some structural features like variables and let
+        bindings and annotated terms. I {i think} you might be able to think of
+        the universe to be another connective, but that’s a something to tackle
+        another time.
+
+        As more connctives are added to the core language, they should follow
+        the same pattern as function types, with separate variants for:
+
+        - type formation: for contructing types that represent the connective
+        - introduction: for contructing terms of a given connective
+        - elimination: for deconstructing terms of a given connective
+
+        This approach to designing type theories comes from {i natural deduction}.
+    *)
 
     (** Returns [ true ] if the variable is bound anywhere in the term *)
     let rec is_bound var = function
@@ -125,6 +150,11 @@ module Core = struct
 
     (** {1 Pretty printing} *)
 
+    (** This optionally adds back some of the sugar that may have been removed
+        during elaboration to make the terms easier to read. Down the line we
+        could move this dusugaring step into a {i delaborator}/{i distillation}
+        pass that converts core terms back to surface term, and implement a
+        pretty printer for the surface language. *)
     let pp ?(wrap = false) ?(resugar = true) names =
       let pp_name fmt = function
         | Some name -> Format.fprintf fmt "%s" name
@@ -230,8 +260,29 @@ module Core = struct
 
   (** Semantics of the core language *)
   module Semantics = struct
+    (** In this module we implement a ‘semantic model’ of our type theory. This
+        gives our language a computational meaning, and allows us to compare
+        terms based on this. This will become important for implementing type
+        checking and elaboration later on. *)
+
 
     (** {1 Semantic domain} *)
+
+    (** We first define some datatypes that represent our terms in a partially
+        evaluated form. This is a key part of our approach of managing variable
+        bindings during computation, and for aiming to only compute as much as
+        is needed during type checking.
+
+        Binding structures are represented using higher-order functions in our
+        host language (OCaml) that capture environment at the time where they
+        were created. This technique is is often called {i higher-order abstract
+        syntax}. This is convenient, but in an actual implementation we might
+        want to instead use a pair of the environment and a term from the syntax
+        ({i defunctionalising} the closure representation).
+
+        We also make use of OCaml’s {!Lazy.t} type in a number of places to
+        explicitly defer some computation until it is absolutely needed.
+    *)
 
     (** Types *)
     type ty = tm
