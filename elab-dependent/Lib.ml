@@ -125,34 +125,106 @@ module Core = struct
 
     (** {1 Pretty printing} *)
 
-    let pretty names tm =
-      let pretty_name = Option.value ~default:"_" in
-      let concat = String.concat "" in
-      let parens wrap s = if wrap then concat ["("; s; ")"] else s in
-      let rec go wrap names = function
-        | Let (name, Ann (def, def_ty), body) ->
-            parens wrap (concat ["let "; pretty_name name; " : "; go false names def_ty; " := ";
-              go false names def; "; "; go false (name :: names) body])
-        | Let (name, def, body) ->
-            parens wrap (concat ["let "; pretty_name name; " := "; go false names def; "; ";
-              go false (name :: names) body])
-        | Ann (tm, ty) -> parens wrap (concat [go true names tm; " : "; go false names ty])
-        | Var index -> pretty_name (List.nth names index)
-        | Univ -> "Type"
-        | FunType (name, param_ty, body_ty) ->
-            if is_bound 0 body_ty then
-              parens wrap (concat ["fun ("; pretty_name name; " : "; go false names param_ty;
-                ") -> "; go false (name :: names) body_ty])
-            else
-              parens wrap (concat [go false names param_ty; " -> "; go false (None :: names) body_ty])
-        | FunLit (name, body) ->
-            parens wrap (concat ["fun "; pretty_name name; " := ";
-              go false (name :: names) body])
-        | FunApp (head, arg) ->
-            parens wrap (concat [go false names head; " ";
-              go true names arg])
+    let pp ?(wrap = false) ?(resugar = true) names =
+      let pp_name fmt = function
+        | Some name -> Format.fprintf fmt "%s" name
+        | None -> Format.fprintf fmt "_"
       in
-      go false names tm
+
+      let rec pp_tm names fmt = function
+        | Let (name, def, body) ->
+            Format.fprintf fmt "@[<2>%a@]@ %a"
+              (pp_let_name_def names) (name, def)
+              (pp_let_body (name :: names)) body
+        | Ann (tm, ty) ->
+            Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+              (pp_parens ~wrap:true names) tm
+              (pp_tm names) ty
+        | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
+        | Univ -> Format.fprintf fmt "Type"
+        (* | FunType (_, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) -> *)
+        | FunType (None, param_ty, body_ty) when resugar ->
+            Format.fprintf fmt "@[%a@ ->@]@ %a"
+              (pp_tm names) param_ty
+              (pp_tm (None :: names)) body_ty
+        | FunType (name, param_ty, body_ty) ->
+            pp_fun_type names fmt (name, param_ty, body_ty)
+        | FunLit (name, body) ->
+            pp_fun_lit names fmt (name, body)
+        | FunApp _ as tm ->
+            Format.fprintf fmt "@[<2>%a@]" (pp_fun_apps names) tm
+
+      and pp_name_ann names fmt (name, def_ty) =
+        Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+          pp_name name
+          (pp_tm names) def_ty
+      and pp_let_name_def names fmt = function
+        | name, Ann (def, def_ty) when resugar ->
+            Format.fprintf fmt "@[let %a@ :=@]@ @[%a;@]"
+              (pp_name_ann names) (name, def_ty)
+              (pp_tm names) def
+        | name, def ->
+            Format.fprintf fmt "@[let %a@ :=@]@ @[%a;@]"
+              pp_name name
+              (pp_tm names) def
+      and pp_let_body names fmt = function
+        | Let (name, def, body) ->
+            Format.fprintf fmt "@[<2>%a@]@ %a"
+              (pp_let_name_def names) (name, def)
+              (pp_let_body (name :: names)) body
+        | tm ->
+            (* Final term should be grouped in a box *)
+            Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+
+      and pp_fun_type names fmt (name, param_ty, body_ty) =
+        Format.fprintf fmt "@[<4>fun %a@ %a@]"
+          (pp_param names) (name, param_ty)
+          (pp_fun_type_body_ty (name :: names)) body_ty
+      and pp_param names fmt (name, param_ty) =
+        Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]"
+          pp_name name
+          (pp_tm names) param_ty
+      and pp_fun_type_body_ty names fmt = function
+        (* | FunType (name, param_ty, body_ty) when resugar && is_bound 0 body_ty -> *)
+        | FunType (Some name, param_ty, body_ty) when resugar ->
+            Format.fprintf fmt "%a@ %a"
+              (pp_param names) (Some name, param_ty)
+              (pp_fun_type_body_ty (Some name :: names)) body_ty
+        (* | FunType (None, param_ty, body_ty) ->
+            Format.fprintf fmt "@[-> @[%a@]@]@ %a"
+              (pp_tm names) param_ty
+              (pp_fun_type_body_ty (None :: names)) body_ty *)
+        | body_ty ->
+            Format.fprintf fmt "@[->@ @[%a@]@]"
+              (pp_tm names) body_ty;
+
+      and pp_fun_lit names fmt (name, body) =
+        Format.fprintf fmt "@[<2>@[<4>fun %a@ %a"
+          pp_name name
+          (pp_fun_lit_body (name :: names)) body
+      and pp_fun_lit_body names fmt = function
+        | FunLit (name, body) when resugar ->
+            Format.fprintf fmt "%a@ %a"
+              pp_name name
+              (pp_fun_lit_body (name :: names)) body
+        | body_ty ->
+            Format.fprintf fmt ":=@]@ @[%a@]@]"
+              (pp_tm names) body_ty;
+
+      and pp_fun_apps names fmt = function
+        | FunApp (head, arg) ->
+            Format.fprintf fmt "%a@ %a"
+              (pp_tm names) head
+              (pp_parens ~wrap:true names) arg
+        | tm -> pp_tm names fmt tm
+
+      and pp_parens ?(wrap = false) names fmt = function
+        | (Let _ | Ann _ | FunType _ | FunLit _ | FunApp _) as tm when wrap->
+            Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
+        | tm -> pp_tm names fmt tm
+      in
+
+      pp_parens ~wrap names
 
   end
 
@@ -366,10 +438,9 @@ module Surface = struct
     Semantics.normalise context.size context.tms
   let is_convertible context : Semantics.tm * Semantics.tm -> bool =
     Semantics.is_convertible context.size
-  let pretty context : Syntax.tm -> string =
-    Syntax.pretty context.names
-  let pretty_quoted context tm : string =
-    pretty context (quote context tm)
+  let pp ?(wrap = false) ?(resugar = true) context =
+    Syntax.pp context.names ~wrap ~resugar
+
 
   (** {2 Exceptions} *)
 
@@ -432,9 +503,9 @@ module Surface = struct
                 let context = bind_def context name expected_param_ty var in
                 Syntax.FunLit (name, go context params (body_ty var))
               else
-                let expected = pretty_quoted context expected_param_ty in
-                let found = pretty context param_ty in
-                error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
+                error (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]"
+                  (pp context) (quote context expected_param_ty)
+                  (pp context) param_ty)
           | _, _ -> error "too many parameters in function literal"
         in
         go context params ty
@@ -448,9 +519,9 @@ module Surface = struct
     | tm, ty ->
         let tm, ty' = infer context tm in
         if is_convertible context (ty', ty) then tm else
-          let expected = pretty_quoted context ty in
-          let found = pretty_quoted context ty' in
-          error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
+          error (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]"
+            (pp context) (quote context ty)
+            (pp context) (quote context ty'))
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
@@ -477,7 +548,7 @@ module Surface = struct
            corresponding de Bruijn index of the variable. *)
         begin match elem_index (Some name) context.names with
         | Some (index) -> (Syntax.Var index, List.nth context.tys index)
-        | None -> error ("`" ^ name ^ "` is not bound in the current scope")
+        | None -> error (Format.asprintf "`%s` is not bound in the current scope" name)
         end
 
     (* Annotated terms *)
@@ -500,7 +571,8 @@ module Surface = struct
           | [] -> check context body_ty Semantics.Univ
           (* Function types always require annotations *)
           | (name, None) :: _ ->
-              error ("ambiguous function parameter `" ^ Option.value ~default:"_" name ^ "`")
+              error (Format.asprintf "ambiguous function parameter `%s`"
+                (Option.value ~default:"_" name))
           | (name, Some param_ty) :: params ->
               let param_ty = check context param_ty Semantics.Univ in
               let context = bind_param context name (eval context param_ty) in
@@ -527,7 +599,8 @@ module Surface = struct
               body, quote context body_ty
           (* We’re in inference mode, so function parameters need annotations *)
           | (name, None) :: _ ->
-              error ("ambiguous function parameter `" ^ Option.value ~default:"_" name ^ "`")
+            error (Format.asprintf "ambiguous function parameter `%s`"
+              (Option.value ~default:"_" name))
           | (name, Some param_ty) :: params ->
               let var = next_var context in
               let param_ty = check context param_ty Semantics.Univ in
