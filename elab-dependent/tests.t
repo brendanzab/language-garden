@@ -12,6 +12,9 @@ Church-encoded boolean type
   > let true : Bool := fun Out true false := true;
   > let false : Bool := fun Out true false := false;
   > 
+  > let not := fun (b : Bool) := 
+  >   fun (Out : Type) (true : Out) (false : Out) := b Out false true;
+  > 
   > true Bool false
   > EOF
   $ cat bools | elab-dependent elab
@@ -20,7 +23,12 @@ Church-encoded boolean type
         (Out : Type) (true : Out) (false : Out) -> Out
   := let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
     let true : Bool := fun Out true false := true;
-    let false : Bool := fun Out true false := false; true Bool false
+    let false : Bool := fun Out true false := false;
+    let not : fun (b : Bool) (Out : Type) (true : Out) (false : Out) -> Out :=
+      fun b :=
+        (fun Out true false := b Out false true) :
+          fun (Out : Type) (true : Out) (false : Out) -> Out;
+    true Bool false
   $ cat bools | elab-dependent norm
   <input> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
