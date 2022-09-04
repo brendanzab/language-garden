@@ -3,8 +3,18 @@
   (public_name elab-dependent)
   (package elab-dependent))
 
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(ocamllex Lexer)
+
 (env
   (dev
     ; see `ocamlc -warn-help` for information on warnings
     (flags (:standard -w -unused-constructor
                       -w -unused-value-declaration))))
+
+(cram
+  (package elab-dependent)
+  (deps %{bin:elab-dependent}))

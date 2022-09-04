@@ -29,7 +29,7 @@ module Core = struct
 
   (** These names are used as hints for pretty printing binders and variables,
       but don’t impact the equality of terms. *)
-  type name = string
+  type name = string option
 
 
   (** {1 Nameless binding structure} *)
@@ -122,6 +122,7 @@ module Core = struct
     (** {1 Pretty printing} *)
 
     let pretty names tm =
+      let pretty_name = Option.value ~default:"_" in
       let concat = String.concat "" in
       let parens wrap s = if wrap then concat ["("; s; ")"] else s in
       let rec go wrap names = function
@@ -129,19 +130,19 @@ module Core = struct
             parens wrap (concat ["let "; pretty_name name; " : "; go false names def_ty; " := ";
               go false names def; "; "; go false (name :: names) body])
         | Let (name, def, body) ->
-            parens wrap (concat ["let "; name; " := "; go false names def; "; ";
+            parens wrap (concat ["let "; pretty_name name; " := "; go false names def; "; ";
               go false (name :: names) body])
         | Ann (tm, ty) -> parens wrap (concat [go true names tm; " : "; go false names ty])
-        | Var index -> List.nth names index
+        | Var index -> pretty_name (List.nth names index)
         | Univ -> "Type"
         | FunType (name, param_ty, body_ty) ->
             if is_bound 0 body_ty then
-              parens wrap (concat ["fun ("; name; " : "; go false names param_ty;
+              parens wrap (concat ["fun ("; pretty_name name; " : "; go false names param_ty;
                 ") -> "; go false (name :: names) body_ty])
             else
-              parens wrap (concat [go false names param_ty; " -> "; go false ("" :: names) body_ty])
+              parens wrap (concat [go false names param_ty; " -> "; go false (None :: names) body_ty])
         | FunLit (name, body) ->
-            parens wrap (concat ["fun "; name; " := ";
+            parens wrap (concat ["fun "; pretty_name name; " := ";
               go false (name :: names) body])
         | FunApp (head, arg) ->
             parens wrap (concat [go false names head; " ";
@@ -163,8 +164,8 @@ module Core = struct
     and tm =
       | Neu of neu                            (** Neutral terms *)
       | Univ
-      | FunType of string * ty Lazy.t * (tm -> ty)
-      | FunLit of string * (tm -> tm)
+      | FunType of name * ty Lazy.t * (tm -> ty)
+      | FunLit of name * (tm -> tm)
 
     (** Neutral terms are terms that could not be reduced to a normal form as a
         result of being stuck on something else that would not reduce further.
@@ -286,16 +287,18 @@ module Surface = struct
 
   (** {1 Surface Syntax} *)
 
+  type pattern = string option
+
   (** Terms in the surface language *)
   type tm =
-    | Let of string * tm option * tm * tm       (** Let expressions: [ let x : A := t; f x ] *)
-    | Name of string                            (** References to named things: [ x ] *)
-    | Ann of tm * tm                            (** Terms annotated with types: [ x : A ] *)
-    | Univ                                      (** Universe of types: [ Type ] *)
-    | FunType of (string * tm) list * tm        (** Function types: [ fun (x : A) -> B x ] *)
-    | FunArrow of tm * tm                       (** Function arrow types: [ A -> B ] *)
-    | FunLit of (string * tm option) list * tm  (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
-    | FunApp of tm * tm list                    (** Function applications: [ f x ] *)
+    | Let of pattern * tm option * tm * tm        (** Let expressions: [ let x : A := t; f x ] *)
+    | Name of string                              (** References to named things: [ x ] *)
+    | Ann of tm * tm                              (** Terms annotated with types: [ x : A ] *)
+    | Univ                                        (** Universe of types: [ Type ] *)
+    | FunType of (pattern * tm option) list * tm  (** Function types: [ fun (x : A) -> B x ] *)
+    | FunArrow of tm * tm                         (** Function arrow types: [ A -> B ] *)
+    | FunLit of (pattern * tm option) list * tm   (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
+    | FunApp of tm * tm list                      (** Function applications: [ f x ] *)
 
 
   (** {1 Elaboration } *)
@@ -359,6 +362,8 @@ module Surface = struct
     Semantics.eval context.tms
   let quote context : Semantics.tm -> Syntax.tm =
     Semantics.quote context.size
+  let normalise context : Syntax.tm -> Syntax.tm =
+    Semantics.normalise context.size context.tms
   let is_convertible context : Semantics.tm * Semantics.tm -> bool =
     Semantics.is_convertible context.size
   let pretty context : Syntax.tm -> string =
@@ -470,8 +475,8 @@ module Surface = struct
         (* Find the index of most recent binding in the context identified by
            [name], starting from the most recent binding. This gives us the
            corresponding de Bruijn index of the variable. *)
-        begin match elem_index name context.names with
-        | Some index -> (Syntax.Var index, List.nth context.tys index)
+        begin match elem_index (Some name) context.names with
+        | Some (index) -> (Syntax.Var index, List.nth context.tys index)
         | None -> error ("`" ^ name ^ "` is not bound in the current scope")
         end
 
@@ -493,7 +498,10 @@ module Surface = struct
     | FunType (params, body_ty) ->
         let rec go context = function
           | [] -> check context body_ty Semantics.Univ
-          | (name, param_ty) :: params ->
+          (* Function types always require annotations *)
+          | (name, None) :: _ ->
+              error ("ambiguous function parameter `" ^ Option.value ~default:"_" name ^ "`")
+          | (name, Some param_ty) :: params ->
               let param_ty = check context param_ty Semantics.Univ in
               let context = bind_param context name (eval context param_ty) in
               Syntax.FunType (name, param_ty, go context params)
@@ -504,9 +512,9 @@ module Surface = struct
        function types. *)
     | FunArrow (param_ty, body_ty) ->
         let param_ty = check context param_ty Semantics.Univ in
-        let context = bind_param context "_" (eval context param_ty) in
+        let context = bind_param context None (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
-        (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
+        (Syntax.FunType (None, param_ty, body_ty), Semantics.Univ)
 
     (* Function literals *)
     | FunLit (params, body) ->
@@ -519,7 +527,7 @@ module Surface = struct
               body, quote context body_ty
           (* We’re in inference mode, so function parameters need annotations *)
           | (name, None) :: _ ->
-              error ("ambiguous function parameter `" ^ name ^ "`")
+              error ("ambiguous function parameter `" ^ Option.value ~default:"_" name ^ "`")
           | (name, Some param_ty) :: params ->
               let var = next_var context in
               let param_ty = check context param_ty Semantics.Univ in
@@ -542,7 +550,5 @@ module Surface = struct
             | _ -> error "not a function")
           (infer context head)
           args
-
-  (* TODO: parser *)
 
 end

@@ -41,7 +41,6 @@
             pname = "compile-arith";
             version = "0";
             src = ./.;
-
             duneVersion = "3";
 
             nativeBuildInputs = [
@@ -55,8 +54,11 @@
             pname = "elab-dependent";
             version = "0";
             src = ./.;
-
             duneVersion = "3";
+
+            nativeBuildInputs = [
+              ocamlPackages.menhir
+            ];
           };
 
           elab-record-patching = ocamlPackages.buildDunePackage {
@@ -72,7 +74,6 @@
             pname = "wip-elab-dependent";
             version = "0";
             src = ./.;
-
             duneVersion = "3";
 
             nativeBuildInputs = [
