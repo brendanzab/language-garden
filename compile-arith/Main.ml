@@ -1,12 +1,13 @@
-(*
-  Compilation from tree-based arithmetic expressions to stack-based instructions
+(** {0 Arithmetic expression compiler}
 
-  - https://blog.andrepopovitch.com/zinc/
-  - https://www.marigold.dev/post/efficiently-implementing-the-lambda-calculus-with-zinc
+    Compilation from tree-based arithmetic expressions to stack-based instructions
+
+    - https://blog.andrepopovitch.com/zinc/
+    - https://www.marigold.dev/post/efficiently-implementing-the-lambda-calculus-with-zinc
 *)
 
 let print_error (pos : Lexing.position) message =
-  Printf.fprintf stderr "%s:%d:%d: %s\n%!"
+  Printf.eprintf "%s:%d:%d: %s\n%!"
       pos.pos_fname
       pos.pos_lnum
       pos.pos_cnum
@@ -33,8 +34,8 @@ let main () =
     Compiler.TreeToStack.translate term in
 
   program |> List.iter (function
-    | StackLang.Num n -> Printf.fprintf stdout "num %d\n" n
-    | StackLang.Add -> Printf.fprintf stdout "add\n"
-    | StackLang.Sub -> Printf.fprintf stdout "sub\n")
+    | Compiler.StackLang.Num n -> Printf.fprintf stdout "num %d\n" n
+    | Compiler.StackLang.Add -> Printf.fprintf stdout "add\n"
+    | Compiler.StackLang.Sub -> Printf.fprintf stdout "sub\n")
 
 let () = main ()

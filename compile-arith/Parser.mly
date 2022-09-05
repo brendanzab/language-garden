@@ -5,6 +5,8 @@
 %token CLOSE_PAREN ")"
 %token END
 
+%{ open Compiler %}
+
 %start <TreeLang.term> main
 
 %%
