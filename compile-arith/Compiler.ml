@@ -5,6 +5,7 @@ module TreeLang = struct
     | Add of term * term
     | Sub of term * term
 
+
   module Semantics = struct
 
     type value = int
@@ -28,6 +29,13 @@ module StackLang = struct
 
   type program =
     instruction list
+
+  let rec pp fmt = function
+    | Num n :: program -> Format.fprintf fmt "num %d@.%a" n pp program
+    | Add :: program -> Format.fprintf fmt "add@.%a" pp program
+    | Sub :: program -> Format.fprintf fmt "sub@.%a" pp program
+    | [] -> ()
+
 
   module Semantics = struct
 

@@ -33,9 +33,7 @@ let main () =
   let program =
     Compiler.TreeToStack.translate term in
 
-  program |> List.iter (function
-    | Compiler.StackLang.Num n -> Printf.fprintf stdout "num %d\n" n
-    | Compiler.StackLang.Add -> Printf.fprintf stdout "add\n"
-    | Compiler.StackLang.Sub -> Printf.fprintf stdout "sub\n")
+  Format.printf "%a"
+    Compiler.StackLang.pp program
 
 let () = main ()
