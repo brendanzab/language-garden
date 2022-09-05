@@ -54,7 +54,7 @@ module Core = struct
 
   (** These names are used as hints for pretty printing binders and variables,
       but don’t impact the equality of terms. *)
-  type name = string
+  type name = string option
 
 
   (** {1 Nameless binding structure} *)
@@ -148,26 +148,27 @@ module Core = struct
     (** {1 Pretty printing} *)
 
     let pretty names tm =
+      let pretty_name = Option.value ~default:"_" in
       let concat = String.concat "" in
       let parens wrap s = if wrap then concat ["("; s; ")"] else s in
       let rec go wrap names = function
         | Let (name, Ann (def, def_ty), body) ->
-            parens wrap (concat ["let "; name; " : "; go false names def_ty; " := ";
+            parens wrap (concat ["let "; pretty_name name; " : "; go false names def_ty; " := ";
               go false names def; "; "; go false (name :: names) body])
         | Let (name, def, body) ->
-            parens wrap (concat ["let "; name; " := "; go false names def; "; ";
+            parens wrap (concat ["let "; pretty_name name; " := "; go false names def; "; ";
               go false (name :: names) body])
-        | Var index -> List.nth names index
+        | Var index -> pretty_name (List.nth names index)
         | Ann (tm, ty) -> parens wrap (concat [go true names tm; " : "; go false names ty])
         | Univ -> "Type"
         | FunType (name, param_ty, body_ty) ->
             if is_bound 0 body_ty then
-              parens wrap (concat ["fun ("; name; " : "; go false names param_ty;
+              parens wrap (concat ["fun ("; pretty_name name; " : "; go false names param_ty;
                 ") -> "; go false (name :: names) body_ty])
             else
-              parens wrap (concat [go false names param_ty; " -> "; go false ("" :: names) body_ty])
+              parens wrap (concat [go false names param_ty; " -> "; go false (None :: names) body_ty])
         | FunLit (name, body) ->
-            parens wrap (concat ["fun "; name; " := ";
+            parens wrap (concat ["fun "; pretty_name name; " := ";
               go false (name :: names) body])
         | FunApp (head, arg) ->
             parens wrap (concat [go false names head; " ";  go true names arg])
@@ -191,7 +192,7 @@ module Core = struct
         | Nil -> ""
         | Cons (label, ty, decls) ->
             concat [label; " : "; go false names ty; "; ";
-              go_decls (label :: names) decls]
+              go_decls (Some label :: names) decls]
       in
       go false names tm
 
@@ -497,15 +498,17 @@ module Surface = struct
 
   (** {1 Surface Syntax} *)
 
+  type pattern = string option
+
   (** Terms in the surface language *)
   type tm =
-    | Let of string * tm option * tm * tm    (** Let expressions: [ let x : A := t; f x ] *)
+    | Let of pattern * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
     | Name of string                         (** References to named things: [ x ] *)
     | Ann of tm * tm                         (** Terms annotated with types: [ x : A ] *)
     | Univ                                   (** Universe of types: [ Type ] *)
-    | FunType of (string * tm) list * tm     (** Function types: [ fun (x : A) -> B x ] *)
+    | FunType of (pattern * tm) list * tm    (** Function types: [ fun (x : A) -> B x ] *)
     | FunArrow of tm * tm                    (** Function arrow types: [ A -> B ] *)
-    | FunLit of string list * tm             (** Function literals: [ fun x := f x ] *)
+    | FunLit of pattern list * tm            (** Function literals: [ fun x := f x ] *)
     | RecType of (string * tm) list          (** Record types: [ { x : A; ... } ]*)
     | RecLit of (string * tm) list           (** Record literals: [ { x := A; ... } ]*)
     | RecUnit                                (** Unit records: [ {} ] *)
@@ -768,7 +771,7 @@ module Surface = struct
         (* Find the index of most recent binding in the context identified by
            [name], starting from the most recent binding. This gives us the
            corresponding de Bruijn index of the variable. *)
-        begin match List.elem_index name context.names with
+        begin match List.elem_index (Some name) context.names with
         | Some index -> (Syntax.Var index, List.nth context.tys index)
         | None -> error ("`" ^ name ^ "` is not bound in the current scope")
         end
@@ -804,9 +807,9 @@ module Surface = struct
         (* Arrow types are implemented as syntactic sugar for non-dependent
            function types. *)
         let param_ty = check context param_ty Semantics.Univ in
-        let context = bind_param context "_" (eval context param_ty) in
+        let context = bind_param context None (eval context param_ty) in
         let body_ty = check context body_ty Semantics.Univ in
-        (Syntax.FunType ("_", param_ty, body_ty), Semantics.Univ)
+        (Syntax.FunType (None, param_ty, body_ty), Semantics.Univ)
 
     (* Function literals. These do not have type annotations on their arguments
        and so we don’t know ahead of time what types to use for the arguments
@@ -822,7 +825,7 @@ module Surface = struct
               error ("duplicate label `" ^ label ^ "` in record type")
           | (label, ty) :: decls ->
               let ty = check context ty Semantics.Univ in
-              let context = bind_param context label (eval context ty) in
+              let context = bind_param context (Some label) (eval context ty) in
               Syntax.Cons (label, ty, go context (label :: seen_labels) decls)
         in
         (Syntax.RecType (go context [] decls), Semantics.Univ)
@@ -879,12 +882,12 @@ module Surface = struct
               | Some patch_tm ->
                   let tm = check context patch_tm ty in
                   let tm' = eval context tm in
-                  let context = bind_def context label (Semantics.SingType (ty, tm')) tm' in
+                  let context = bind_def context (Some label) (Semantics.SingType (ty, tm')) tm' in
                   let patches = List.remove_assoc label patches in
                   Syntax.Cons (label, Syntax.SingType (ty', tm), go context (tys tm') patches)
               | None ->
                   let var = next_var context in
-                  let context = bind_def context label ty var in
+                  let context = bind_def context (Some label) ty var in
                   Syntax.Cons (label, ty', go context (tys var) patches)
               end
         in

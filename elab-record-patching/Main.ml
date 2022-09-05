@@ -129,75 +129,75 @@ module Examples = struct
     ]
 
   let record_ty_patch1 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun x := x) : F [ B := A ] -> F *)
-      Ann (FunLit (["x"], Name "x"),
+      Ann (FunLit ([Some "x"], Name "x"),
         FunArrow (Patch (Name "F", ["B", Name "A"]), Name "F")))
 
   let record_ty_patch2 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F *)
-      Ann (FunLit (["A"; "x"], Name "x"),
-        FunType (["A", Univ],
+      Ann (FunLit ([Some "A"; Some "x"], Name "x"),
+        FunType ([Some "A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]), Name "F"))))
 
   let record_ty_patch3 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A; f := fun x := x ] -> F *)
-      Ann (FunLit (["A"; "x"], Name "x"),
-        FunType (["A", Univ],
-          FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"; "f", FunLit (["x"], Name "x")]),
+      Ann (FunLit ([Some "A"; Some "x"], Name "x"),
+        FunType ([Some "A", Univ],
+          FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"; "f", FunLit ([Some "x"], Name "x")]),
             Name "F"))))
 
   let record_ty_patch3b =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ B := A; f := fun x := x; A := A; ] -> F; *)
-      Ann (FunLit (["A"; "x"], Name "x"),
-        FunType (["A", Univ],
-          FunArrow (Patch (Name "F", ["B", Name "A"; "f", FunLit (["x"], Name "x"); "A", Name "A"]),
+      Ann (FunLit ([Some "A"; Some "x"], Name "x"),
+        FunType ([Some "A", Univ],
+          FunArrow (Patch (Name "F", ["B", Name "A"; "f", FunLit ([Some "x"], Name "x"); "A", Name "A"]),
             Name "F"))))
 
   let record_ty_patch4 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ] *)
-      Ann (FunLit (["A"; "x"], Name "x"),
-        FunType (["A", Univ],
+      Ann (FunLit ([Some "A"; Some "x"], Name "x"),
+        FunType ([Some "A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
             Patch (Name "F", ["B", Name "A"])))))
 
   let record_ty_patch5 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun A x := x) : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ] *)
-      Ann (FunLit (["A"; "x"], Name "x"),
-        FunType (["A", Univ],
+      Ann (FunLit ([Some "A"; Some "x"], Name "x"),
+        FunType ([Some "A", Univ],
           FunArrow (Patch (Name "F", ["A", Name "A"; "B", Name "A"]),
             Patch (Name "F", ["A", Name "A"])))))
 
   let record_ty_patch6 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun C x := x) : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ] *)
-      Ann (FunLit (["C"; "x"], Name "x"),
-        FunType (["C", Univ],
+      Ann (FunLit ([Some "C"; Some "x"], Name "x"),
+        FunType ([Some "C", Univ],
           FunArrow (Patch (Name "F", ["A", Name "C"; "B", Name "C"]),
             Patch (Name "F", ["B", Name "C"])))))
 
   let record_lit_missing1 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun C := { f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
-      Ann (FunLit (["C"], RecLit ["f", FunLit (["x"], Name "x")]),
-        FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
+      Ann (FunLit ([Some "C"], RecLit ["f", FunLit ([Some "x"], Name "x")]),
+        FunType ([Some "C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
   let record_lit_missing2 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun C := {}) : fun (C : Type) -> F [ A := C; B := C; f := fun x := x ] *)
-      Ann (FunLit (["C"], RecLit []),
-        FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"; "f", FunLit (["x"], Name "x")]))))
+      Ann (FunLit ([Some "C"], RecLit []),
+        FunType ([Some "C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"; "f", FunLit ([Some "x"], Name "x")]))))
 
   let record_lit_missing3 =
-    Let ("F", None, fun_record_ty,
+    Let (Some "F", None, fun_record_ty,
       (* (fun C := { A := C; f := fun x := x }) : fun (C : Type) -> F [ A := C; B := C ] *)
-      Ann (FunLit (["C"], RecLit ["B", Name "C"; "f", FunLit (["x"], Name "x")]),
-        FunType (["C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
+      Ann (FunLit ([Some "C"], RecLit ["B", Name "C"; "f", FunLit ([Some "x"], Name "x")]),
+        FunType ([Some "C", Univ], Patch (Name "F", ["A", Name "C"; "B", Name "C"]))))
 
   (*
     (fun B r := r) :
@@ -205,8 +205,8 @@ module Examples = struct
         -> { A : Type; a : A }
   *)
   let record_lit_coerce1 =
-    Ann (FunLit (["B"; "r"], Name "r"),
-      FunType (["B", Univ; "r", RecType ["A", SingType (Univ, Name "B"); "a", Name "B"]],
+    Ann (FunLit ([Some "B"; Some "r"], Name "r"),
+      FunType ([Some "B", Univ; Some "r", RecType ["A", SingType (Univ, Name "B"); "a", Name "B"]],
         RecType ["A", Univ; "a", Name "A"]))
 
   (*
@@ -214,19 +214,19 @@ module Examples = struct
       fun (B : Type) (b : Type) -> { A : Type; a : A }
   *)
   let record_lit_coerce2 =
-    Ann (FunLit (["B"; "b"],
+    Ann (FunLit ([Some "B"; Some "b"],
         Ann (RecLit ["A", Name "B"; "a", Name "b"],
           RecType ["A", Univ; "a", Name "B"])),
-      FunType (["B", Univ; "b", Name "B"], RecType ["A", Univ; "a", Name "A"]))
+      FunType ([Some "B", Univ; Some "b", Name "B"], RecType ["A", Univ; "a", Name "A"]))
 
   (*
     (fun A B r := r) : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ]
   *)
   let record_lit_coerce_missing1 =
     (* let F := { A : Type; B : Type; f : A -> B }; *)
-    Let ("F", None, fun_record_ty,
-      Ann (FunLit (["A"; "B"; "r"], Name "r"),
-        FunType (["A", Univ; "B", Univ], FunArrow (RecType ["f", FunArrow (Name "A", Name "B")],
+    Let (Some "F", None, fun_record_ty,
+      Ann (FunLit ([Some "A"; Some "B"; Some "r"], Name "r"),
+        FunType ([Some "A", Univ; Some "B", Univ], FunArrow (RecType ["f", FunArrow (Name "A", Name "B")],
           Patch (Name "F", ["A", Name "A"; "B", Name "B"])))))
 
   (*
@@ -234,24 +234,24 @@ module Examples = struct
   *)
   let record_lit_coerce_missing2 =
     (* let F := { A : Type; B : Type; f : A -> B }; *)
-    Let ("F", None, fun_record_ty,
-      Ann (FunLit (["B"; "r"], Name "r"),
-        FunType (["B", Univ], FunArrow (RecType ["A", Univ; "f", FunArrow (Name "A", Name "B")],
+    Let (Some "F", None, fun_record_ty,
+      Ann (FunLit ([Some "B"; Some "r"], Name "r"),
+        FunType ([Some "B", Univ], FunArrow (RecType ["A", Univ; "f", FunArrow (Name "A", Name "B")],
           Patch (Name "F", ["B", Name "B"])))))
 
   (*
      (fun A x := x) : fun (A : Type) (x : A) -> A [= x ]
   *)
   let intro_sing =
-    Ann (FunLit (["A"; "x"], Name "x"),
-      FunType (["A", Univ; "x", Name "A"], SingType (Name "A", Name "x")))
+    Ann (FunLit ([Some "A"; Some "x"], Name "x"),
+      FunType ([Some "A", Univ; Some "x", Name "A"], SingType (Name "A", Name "x")))
 
   (*
      (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A
   *)
   let elim_sing =
-    Ann (FunLit (["A"; "x"; "sing-x"], Name "sing-x"),
-      FunType (["A", Univ; "x", Name "A"; "sing-x", SingType (Name "A", Name "x")], Name "A"))
+    Ann (FunLit ([Some "A"; Some "x"; Some "sing-x"], Name "sing-x"),
+      FunType ([Some "A", Univ; Some "x", Name "A"; Some "sing-x", SingType (Name "A", Name "x")], Name "A"))
 
   (*
     (fun A P f pf := pf) :
@@ -262,12 +262,12 @@ module Examples = struct
       -> P f
   *)
   let sing_tm1 =
-    Ann (FunLit (["A"; "P"; "f"; "prf"], Name "prf"),
+    Ann (FunLit ([Some "A"; Some "P"; Some "f"; Some "prf"], Name "prf"),
       FunType ([
-        "A", Univ;
-        "P", FunType (["_", FunType (["x", Name "A"], SingType (Name "A", Name "x"))], Univ);
-        "f", FunType (["x", Name "A"], SingType (Name "A", Name "x"));
-        "prf", App (Name "P", [FunLit (["x"], Name "x")]);
+        Some "A", Univ;
+        Some "P", FunType ([Some "_", FunType ([Some "x", Name "A"], SingType (Name "A", Name "x"))], Univ);
+        Some "f", FunType ([Some "x", Name "A"], SingType (Name "A", Name "x"));
+        Some "prf", App (Name "P", [FunLit ([Some "x"], Name "x")]);
       ], App (Name "P", [Name "f"])))
 
   (*
@@ -275,7 +275,7 @@ module Examples = struct
       fun A a := a; {}) : Type
   *)
   let let_ann_check =
-    Ann (Let ("id", Some (FunType (["A", Univ], FunArrow (Name "A", Name "A"))), FunLit (["A"; "a"], Name "a"),
+    Ann (Let (Some "id", Some (FunType ([Some "A", Univ], FunArrow (Name "A", Name "A"))), FunLit ([Some "A"; Some "a"], Name "a"),
       RecUnit), Univ)
 
   (*
@@ -284,7 +284,7 @@ module Examples = struct
     id {} {}
   *)
   let let_ann_infer =
-    Let ("id", Some (FunType (["A", Univ], FunArrow (Name "A", Name "A"))), FunLit (["A"; "a"], Name "a"),
+    Let (Some "id", Some (FunType ([Some "A", Univ], FunArrow (Name "A", Name "A"))), FunLit ([Some "A"; Some "a"], Name "a"),
       App (Name "id", [RecUnit; RecUnit]))
 
   (*
@@ -331,45 +331,45 @@ module Examples = struct
     Type
   *)
   let map_functor =
-    Let ("Bool", None, FunType (["Out", Univ; "cases", RecType ["true", Name "Out"; "false", Name "Out"]], Name "Out"),
-    Let ("true", Some (Name "Bool"), FunLit (["Out"; "cases"], Proj (Name "cases", ["true"])),
-    Let ("false", Some (Name "Bool"), FunLit (["Out"; "cases"], Proj (Name "cases", ["false"])),
+    Let (Some "Bool", None, FunType ([Some "Out", Univ; Some "cases", RecType ["true", Name "Out"; "false", Name "Out"]], Name "Out"),
+    Let (Some "true", Some (Name "Bool"), FunLit ([Some "Out"; Some "cases"], Proj (Name "cases", ["true"])),
+    Let (Some "false", Some (Name "Bool"), FunLit ([Some "Out"; Some "cases"], Proj (Name "cases", ["false"])),
 
-    Let ("Option", Some (FunArrow (Univ, Univ)),
-      FunLit (["A"], FunType (["Out", Univ; "cases", RecType ["some", FunArrow (Name "A", Name "Out"); "none", Name "Out"]], Name "Out")),
-    Let ("none", Some (FunType (["A", Univ], App (Name "Option", [Name "A"]))),
-      FunLit (["A"], FunLit (["Out"; "cases"], Proj (Name "cases", ["none"]))),
-    Let ("some", Some (FunType (["A", Univ], FunArrow (Name "A", App (Name "Option", [Name "A"])))),
-      FunLit (["A"; "a"], FunLit (["Out"; "cases"], App (Proj (Name "cases", ["some"]), [Name "a"]))),
+    Let (Some "Option", Some (FunArrow (Univ, Univ)),
+      FunLit ([Some "A"], FunType ([Some "Out", Univ; Some "cases", RecType ["some", FunArrow (Name "A", Name "Out"); "none", Name "Out"]], Name "Out")),
+    Let (Some "none", Some (FunType ([Some "A", Univ], App (Name "Option", [Name "A"]))),
+      FunLit ([Some "A"], FunLit ([Some "Out"; Some "cases"], Proj (Name "cases", ["none"]))),
+    Let (Some "some", Some (FunType ([Some "A", Univ], FunArrow (Name "A", App (Name "Option", [Name "A"])))),
+      FunLit ([Some "A"; Some "a"], FunLit ([Some "Out"; Some "cases"], App (Proj (Name "cases", ["some"]), [Name "a"]))),
 
-    Let ("Eq", None,
+    Let (Some "Eq", None,
       RecType ["T", Univ; "eq", FunArrow (Name "T", FunArrow (Name "T", Name "Bool"))],
-    Let ("Map", None,
+    Let (Some "Map", None,
       RecType [
         "Key", Univ;
         "Map", FunArrow (Univ, Univ);
-        "empty", FunType (["A", Univ], App (Name "Map", [Name "A"]));
-        "add", FunType (["A", Univ],
+        "empty", FunType ([Some "A", Univ], App (Name "Map", [Name "A"]));
+        "add", FunType ([Some "A", Univ],
           FunArrow (Name "Key", FunArrow (Name "A",
             FunArrow (App (Name "Map", [Name "A"]), App (Name "Map", [Name "A"])))));
-        "lookup", FunType (["A", Univ],
+        "lookup", FunType ([Some "A", Univ],
           FunArrow (Name "Key",
             FunArrow (App (Name "Map", [Name "A"]), App (Name "Option", [Name "A"]))));
       ],
-    Let ("eq-map", Some (FunType (["key", Name "Eq"], Patch (Name "Map", ["Key", Proj (Name "key", ["T"])]))),
-      FunLit (["key"],
+    Let (Some "eq-map", Some (FunType ([Some "key", Name "Eq"], Patch (Name "Map", ["Key", Proj (Name "key", ["T"])]))),
+      FunLit ([Some "key"],
         RecLit [
-          "Map", FunLit (["A"], FunArrow (Proj (Name "key", ["T"]), App (Name "Option", [Name "A"])));
-          "empty", FunLit (["A"], FunLit (["k"], App (Name "none", [Name "A"])));
-          "add", FunLit (["A"; "k"; "v"; "map"],
-            FunLit (["x"], App (App (Proj (Name "key", ["eq"]), [Name "x"; Name "k"]), [
+          "Map", FunLit ([Some "A"], FunArrow (Proj (Name "key", ["T"]), App (Name "Option", [Name "A"])));
+          "empty", FunLit ([Some "A"], FunLit ([Some "k"], App (Name "none", [Name "A"])));
+          "add", FunLit ([Some "A"; Some "k"; Some "v"; Some "map"],
+            FunLit ([Some "x"], App (App (Proj (Name "key", ["eq"]), [Name "x"; Name "k"]), [
               App (Name "Option", [Name "A"]);
               RecLit [
                 "true", App (Name "some", [Name "A"; Name "v"]);
                 "false", App (Name "none", [Name "A"]);
               ];
             ])));
-          "lookup", FunLit (["A"; "k"; "map"], App (Name "map", [Name "k"]));
+          "lookup", FunLit ([Some "A"; Some "k"; Some "map"], App (Name "map", [Name "k"]));
         ]),
       Univ)))))))))
 
@@ -385,8 +385,8 @@ module Examples = struct
     RecType [
       "Ob", Univ;
       "Hom", FunArrow (RecType ["s", Name "Ob"; "t", Name "Ob"], Univ);
-      "id", FunType (["x", Name "Ob"], Patch (Name "Hom", ["s", Name "x"; "t", Name "x"]));
-      "seq", FunType (["f", Name "Hom"; "g", Patch (Name "Hom", ["s", Proj (Name "f", ["t"])])],
+      "id", FunType ([Some "x", Name "Ob"], Patch (Name "Hom", ["s", Name "x"; "t", Name "x"]));
+      "seq", FunType ([Some "f", Name "Hom"; Some "g", Patch (Name "Hom", ["s", Proj (Name "f", ["t"])])],
         Patch (Name "Hom", ["s", Proj (Name "f", ["s"]); "t", Proj (Name "g", ["t"])]));
     ]
 
@@ -399,13 +399,13 @@ module Examples = struct
     };
   *)
   let types_tm =
-    Let ("category", None, category_ty,
+    Let (Some "category", None, category_ty,
       Ann (
         RecLit [
           "Ob", Univ;
-          "Hom", FunLit (["params"], FunArrow (Proj (Name "params", ["s"]), Proj (Name "params", ["t"])));
-          "id", FunLit (["A"; "a"], Name "a");
-          "seq", FunLit (["f"; "g"; "a"], App (Name "g", [Name "f"; Name "a"]));
+          "Hom", FunLit ([Some "params"], FunArrow (Proj (Name "params", ["s"]), Proj (Name "params", ["t"])));
+          "id", FunLit ([Some "A"; Some "a"], Name "a");
+          "seq", FunLit ([Some "f"; Some "g"; Some "a"], App (Name "g", [Name "f"; Name "a"]));
         ],
         Name "category"))
 
