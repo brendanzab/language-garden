@@ -93,6 +93,8 @@ let pp_def ~resugar context fmt (name, ty, tm) =
 (** Main entrypoint *)
 
 let main () =
+  Printexc.record_backtrace true;
+
   let options = parse_options (Array.to_list Sys.argv) in
 
   let context = Surface.initial_context in
