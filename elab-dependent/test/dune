@@ -1,0 +1,3 @@
+(cram
+  (package elab-dependent)
+  (deps %{bin:elab-dependent}))
