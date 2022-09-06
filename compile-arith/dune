@@ -1,9 +1,8 @@
-(executable
-  (name main)
-  (public_name compile-arith)
-  (package compile-arith))
+(library
+  (name compiler)
+  (public_name compile-arith))
 
 (menhir
-  (modules Parser))
+  (modules TreeLangParser))
 
-(ocamllex Lexer)
+(ocamllex TreeLangLexer)

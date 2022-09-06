@@ -12,7 +12,7 @@
   #     $ nix flake lock --update-input <input> ... --commit-lockfile
   #
   inputs = {
-    nixpkgs.url = github:NixOS/nixpkgs/nixpkgs-unstable;
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils = {
       url = "github:numtide/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -45,6 +45,13 @@
 
             nativeBuildInputs = [
               ocamlPackages.menhir
+            ];
+
+            # TODO: Make test dependencies optional
+            buildInputs = [
+              ocamlPackages.alcotest
+              ocamlPackages.qcheck
+              ocamlPackages.qcheck-alcotest
             ];
           };
 

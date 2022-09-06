@@ -7,8 +7,6 @@
 %token CLOSE_PAREN ")"
 %token END
 
-%{ open Compiler %}
-
 %start <TreeLang.term> main
 
 %%
@@ -22,22 +20,22 @@ let term :=
 
 let add_term :=
 | t1 = mul_term; "+"; t2 = add_term;
-    { TreeLang.Add (t1, t2) }
+    { TreeLang.add t1 t2 }
 | t1 = mul_term; "-"; t2 = add_term;
-    { TreeLang.Sub (t1, t2) }
+    { TreeLang.sub t1 t2 }
 | mul_term
 
 let mul_term :=
 | t1 = atomic_term; "*"; t2 = mul_term;
-    { TreeLang.Mul (t1, t2) }
+    { TreeLang.mul t1 t2 }
 | t1 = atomic_term; "/"; t2 = mul_term;
-    { TreeLang.Div (t1, t2) }
+    { TreeLang.div t1 t2 }
 | atomic_term
 
 let atomic_term :=
 | "("; t = term; ")";
     { t }
 | n = NUMBER;
-    { TreeLang.Num n }
+    { TreeLang.num n }
 | "-"; t = atomic_term;
-    { TreeLang.Neg t }
+    { TreeLang.neg t }

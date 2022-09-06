@@ -1,3 +1,11 @@
 (cram
   (package compile-arith)
   (deps %{bin:compile-arith}))
+
+(tests
+  (names properties)
+  (package compile-arith)
+  (libraries
+    compile-arith
+    qcheck
+    qcheck-alcotest))

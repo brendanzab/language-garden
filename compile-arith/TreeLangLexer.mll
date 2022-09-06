@@ -1,11 +1,11 @@
 {
-  open Parser
+  open TreeLangParser
 
   exception Error
 }
 
 let whitespace = [' ' '\t' '\n']
-let comment = "--" [^ '\n' ]* '\n'
+let comment = "#" [^ '\n' ]* '\n'
 let digit = ['0'-'9']
 
 rule token = parse
