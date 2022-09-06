@@ -33,7 +33,15 @@ let main () =
   let program =
     Compiler.TreeToStack.translate term in
 
-  Format.printf "%a"
-    Compiler.StackLang.pp_program program
+  Format.printf "@[<v>";
+  Format.printf "@[<v 2>@[program =@]@;%a@]@;"
+    Compiler.StackLang.pp_program program;
+  Format.printf "@[tree  = %d@]@;"
+    (Compiler.TreeLang.Semantics.eval term);
+  Format.printf "@[stack = %s@]@;"
+    (Compiler.StackLang.Semantics.eval program
+      |> List.map string_of_int
+      |> String.concat "_");
+  Format.printf "@]"
 
 let () = main ()

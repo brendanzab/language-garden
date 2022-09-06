@@ -66,7 +66,7 @@ module StackLang = struct
 
   let rec pp_program fmt = function
     | instruction :: program ->
-        Format.fprintf fmt "%a@.%a"
+        Format.fprintf fmt "%a@;%a"
           pp_instruction instruction
           pp_program program
     | [] -> ()
@@ -77,19 +77,20 @@ module StackLang = struct
     type value = int
     type stack = value list
 
-    type state = {
-      program : program;
-      stack : stack;
-    }
+    let step : (program * stack) -> (program * stack) = function
+      | Num n :: program, stack -> program, n :: stack
+      | Neg :: program, n :: stack -> program, -n :: stack
+      | Add :: program, n2 :: n1 :: stack -> program, n1 + n2 :: stack
+      | Sub :: program, n2 :: n1 :: stack -> program, n1 - n2 :: stack
+      | Mul :: program, n2 :: n1 :: stack -> program, n1 * n2 :: stack
+      | Div :: program, n2 :: n1 :: stack -> program, n1 / n2 :: stack
+      | _, _ -> failwith "invalid program"
 
-    let step : state -> state = function
-      | { program = Num n :: program; stack } -> { program; stack = n :: stack }
-      | { program = Neg :: program; stack = n :: stack } -> { program; stack = -n :: stack }
-      | { program = Add :: program; stack = n2 :: n1 :: stack } -> { program; stack = n1 + n2 :: stack }
-      | { program = Sub :: program; stack = n2 :: n1 :: stack } -> { program; stack = n1 - n2 :: stack }
-      | { program = Mul :: program; stack = n2 :: n1 :: stack } -> { program; stack = n1 * n2 :: stack }
-      | { program = Div :: program; stack = n2 :: n1 :: stack } -> { program; stack = n1 / n2 :: stack }
-      | { program = _; stack = _ } -> failwith "invalid program"
+    let rec eval ?(stack = []) = function
+      | [] -> stack
+      | program ->
+          let (program, stack) = step (program, stack) in
+          eval program ~stack
 
   end
 
