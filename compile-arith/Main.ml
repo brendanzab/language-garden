@@ -34,6 +34,6 @@ let main () =
     Compiler.TreeToStack.translate term in
 
   Format.printf "%a"
-    Compiler.StackLang.pp program
+    Compiler.StackLang.pp_program program
 
 let () = main ()

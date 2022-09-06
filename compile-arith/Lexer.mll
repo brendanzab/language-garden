@@ -13,6 +13,8 @@ rule token = parse
 | comment       { token lexbuf }
 | digit+ as n   { NUMBER (int_of_string n) }
 | "+"           { ADD }
+| "*"           { ASTERISK }
+| "/"           { FORWARD_SLASH }
 | "-"           { HYPHEN }
 | "("           { OPEN_PAREN }
 | ")"           { CLOSE_PAREN }

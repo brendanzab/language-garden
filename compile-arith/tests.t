@@ -2,6 +2,11 @@ A number
   $ compile-arith <<< "1"
   num 1
 
+Negating numbers
+  $ compile-arith <<< "-32"
+  num 32
+  neg
+
 Adding numbers
   $ compile-arith <<< "1 + 2"
   num 1
@@ -14,16 +19,31 @@ Subtracting numbers
   num 2
   sub
 
-Complicated stuff
-  $ compile-arith <<< "1 + 2 + (3 + 4) - 2"
+Multiplying numbers
+  $ compile-arith <<< "1 * 2"
   num 1
   num 2
+  mul
+
+Dividing numbers
+  $ compile-arith <<< "1 / 2"
+  num 1
+  num 2
+  div
+
+Complicated stuff
+  $ compile-arith <<< "1 * -2 + (3 + 4) - 8 / 4"
+  num 1
+  num 2
+  neg
+  mul
   num 3
   num 4
   add
-  num 2
+  num 8
+  num 4
+  div
   sub
-  add
   add
 
 Something broken
