@@ -80,7 +80,7 @@ let pp_def ~resugar context fmt (name, ty, tm) =
   let pp_name_ann fmt (name, ty) =
     Format.fprintf fmt "@[<2>@[%s :@]@ @[%a@]@]" name pp_tm ty
   in
-  Format.fprintf fmt "@[<2>@[%a@ :=@]@ %a@]"
+  Format.fprintf fmt "@[<2>@[%a@ :=@]@ @[%a@]@]"
     pp_name_ann (name, ty)
     (Surface.pp ~resugar context) tm
 

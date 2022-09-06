@@ -21,7 +21,8 @@ Church-encoded boolean type
   <input> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
-  := let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
+  :=
+    let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
     let true : Bool := fun Out true false := true;
     let false : Bool := fun Out true false := false;
     let not : fun (b : Bool) -> Bool :=
