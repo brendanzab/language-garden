@@ -13,7 +13,7 @@
 
 %token END
 
-%{ open Lib %}
+%{ open Elab %}
 
 %start <Surface.tm> main
 

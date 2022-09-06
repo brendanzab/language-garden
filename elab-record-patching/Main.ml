@@ -1,5 +1,5 @@
-module Core = Lib.Core
-module Surface = Lib.Surface
+module Core = Elab.Core
+module Surface = Elab.Surface
 
 (** Example terms for testing *)
 module Examples = struct

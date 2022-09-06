@@ -1,4 +1,4 @@
-module Surface = Lib.Surface
+module Surface = Elab.Surface
 
 
 (** CLI options *)
