@@ -51,6 +51,7 @@
             buildInputs = [
               ocamlPackages.alcotest
               ocamlPackages.qcheck
+              ocamlPackages.qcheck-core
               ocamlPackages.qcheck-alcotest
             ];
           };
@@ -69,6 +70,7 @@
             buildInputs = [
               ocamlPackages.alcotest
               ocamlPackages.qcheck
+              ocamlPackages.qcheck-core
               ocamlPackages.qcheck-alcotest
             ];
           };
@@ -161,7 +163,7 @@
         // lib.mapAttrs
           (name: package:
             package.overrideAttrs (oldAttrs: {
-              name = "chack-${oldAttrs.name}";
+              name = "check-${oldAttrs.name}";
               doCheck = true;
             }))
           self.packages.${system};

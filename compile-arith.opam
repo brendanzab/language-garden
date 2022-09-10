@@ -5,6 +5,7 @@ depends: [
   "menhir" {build}
   "alcotest" {>= "1.5.0" & with-test}
   "qcheck" {>= "0.19.1" & with-test}
+  "qcheck-core" {>= "0.19.1" & with-test}
   "qcheck-alcotest" {>= "0.19.1" & with-test}
   "odoc" {with-doc}
 ]

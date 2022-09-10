@@ -7,5 +7,7 @@
   (package compile-arith)
   (libraries
     compile-arith
+    alcotest
     qcheck
+    qcheck-core
     qcheck-alcotest))

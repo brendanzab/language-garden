@@ -1,8 +1,11 @@
 (lang dune 3.0)
 
-(cram enable)
-(using menhir 2.1)
+(name language-garden)
 
+(using menhir 2.1)
+(cram enable)
+
+(implicit_transitive_deps false)
 (generate_opam_files true)
 
 
@@ -12,6 +15,7 @@
     (menhir :build)
     (alcotest (and (>= 1.5.0) :with-test))
     (qcheck (and (>= 0.19.1) :with-test))
+    (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
 
 (package
@@ -20,6 +24,7 @@
     (menhir :build)
     (alcotest (and (>= 1.5.0) :with-test))
     (qcheck (and (>= 0.19.1) :with-test))
+    (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
 
 
