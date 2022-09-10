@@ -28,6 +28,16 @@ direnv allow
 
 You’ll want to locally exclude the `.envrc`, or add it to your global gitignore.
 
+After that, dune can be used to build, test, and run the projects:
+
+```sh
+dune build
+dune test
+dune exec compile-arith <<< "1 + 2 * 27"
+```
+
+Alternatively, opam files are provided (but might be broken).
+
 [Nix]: https://nixos.org
 [Nix flakes]: https://nixos.wiki/wiki/Flakes
 [nix-direnv]: https://github.com/nix-community/nix-direnv

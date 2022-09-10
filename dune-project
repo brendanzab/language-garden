@@ -3,10 +3,38 @@
 (cram enable)
 (using menhir 2.1)
 
-(package (name compile-arith))
-(package (name compile-arithcond))
+(generate_opam_files true)
 
-(package (name elab-dependent))
-(package (name elab-record-patching))
 
-(package (name wip-elab-dependent))
+(package
+  (name compile-arith)
+  (depends
+    (menhir :build)
+    (alcotest (and (>= 1.5.0) :with-test))
+    (qcheck (and (>= 0.19.1) :with-test))
+    (qcheck-alcotest (and (>= 0.19.1) :with-test))))
+
+(package
+  (name compile-arithcond)
+  (depends
+    (menhir :build)
+    (alcotest (and (>= 1.5.0) :with-test))
+    (qcheck (and (>= 0.19.1) :with-test))
+    (qcheck-alcotest (and (>= 0.19.1) :with-test))))
+
+
+(package
+  (name elab-dependent)
+  (depends
+    (menhir :build)))
+
+(package
+  (name elab-record-patching))
+
+
+(package
+  (name wip-elab-dependent)
+  (depends
+    (menhir :build)
+    (pp (and (>= 1.1.2)))
+    (ppx_string (and (>= v0.15.0) :with-test))))
