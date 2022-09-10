@@ -3,13 +3,13 @@
 
 (** Syntax of arithmetic expressions *)
 
-type term =
+type expr =
   | Num of int
-  | Neg of term
-  | Add of term * term
-  | Sub of term * term
-  | Mul of term * term
-  | Div of term * term
+  | Neg of expr
+  | Add of expr * expr
+  | Sub of expr * expr
+  | Mul of expr * expr
+  | Div of expr * expr
 
 
 let num n = Num n
@@ -22,20 +22,20 @@ let div x y = Div (x, y)
 
 (** Pretty printing *)
 
-let rec pp_term fmt term =
-  pp_add_term fmt term
-and pp_add_term fmt = function
-  | Add (t1, t2) -> Format.fprintf fmt "%a@ +@ %a" pp_mul_term t1 pp_add_term t2
-  | Sub (t1, t2) -> Format.fprintf fmt "%a@ -@ %a" pp_mul_term t1 pp_add_term t2
-  | t -> pp_mul_term fmt t
-and pp_mul_term fmt = function
-  | Mul (t1, t2) -> Format.fprintf fmt "%a@ *@ %a" pp_atomic_term t1 pp_mul_term t2
-  | Div (t1, t2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_term t1 pp_mul_term t2
-  | t -> pp_atomic_term fmt t
-and pp_atomic_term fmt = function
+let rec pp_expr fmt expr =
+  pp_add_expr fmt expr
+and pp_add_expr fmt = function
+  | Add (t1, t2) -> Format.fprintf fmt "%a@ +@ %a" pp_mul_expr t1 pp_add_expr t2
+  | Sub (t1, t2) -> Format.fprintf fmt "%a@ -@ %a" pp_mul_expr t1 pp_add_expr t2
+  | t -> pp_mul_expr fmt t
+and pp_mul_expr fmt = function
+  | Mul (t1, t2) -> Format.fprintf fmt "%a@ *@ %a" pp_atomic_expr t1 pp_mul_expr t2
+  | Div (t1, t2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr t1 pp_mul_expr t2
+  | t -> pp_atomic_expr fmt t
+and pp_atomic_expr fmt = function
   | Num n -> Format.fprintf fmt "%d" n
-  | Neg t -> Format.fprintf fmt "-%a" pp_atomic_term t
-  | t -> Format.fprintf fmt "@[<1>(%a)@]" pp_term t
+  | Neg t -> Format.fprintf fmt "-%a" pp_atomic_expr t
+  | t -> Format.fprintf fmt "@[<1>(%a)@]" pp_expr t
 
 
 (** Semantics of arithmetic expressions *)
@@ -43,7 +43,7 @@ module Semantics = struct
 
   type value = int
 
-  let rec eval : term -> value =
+  let rec eval : expr -> value =
     function
     | Num n -> n
     | Neg n -> -(eval n)

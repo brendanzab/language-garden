@@ -14,7 +14,7 @@ let print_error (pos : Lexing.position) message =
       message
 
 let main () = ArithCond.(
-    let term =
+    let expr =
       let lexbuf = Lexing.from_channel stdin in
       Lexing.set_filename lexbuf "<input>";
       try
@@ -31,14 +31,14 @@ let main () = ArithCond.(
     in
 
     let code =
-      TreeToStack.translate term
+      TreeToStack.translate expr
     in
 
     Format.printf "@[<v>";
     Format.printf "@[<2>@[code  =@]@ %a@]@;"
       StackLang.pp_code code;
     Format.printf "@[<2>@[tree  =@]@ %a@]@;"
-      TreeLang.pp_term (TreeLang.Semantics.normalise term);
+      TreeLang.pp_expr (TreeLang.Semantics.normalise expr);
     Format.printf "@[<2>@[stack =@]@ %a@]@;"
       StackLang.pp_code (StackLang.Semantics.normalise code);
     Format.printf "@]"

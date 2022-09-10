@@ -26,15 +26,15 @@ end
 (** Translation pass between the {!TreeLang} and {!StackLang} *)
 module TreeToStack : Translation
 
-  with type source = TreeLang.term
+  with type source = TreeLang.expr
   with type target = StackLang.code
 
 = struct
 
-  type source = TreeLang.term
+  type source = TreeLang.expr
   type target = StackLang.code
 
-  let rec translate : TreeLang.term -> StackLang.code =
+  let rec translate : TreeLang.expr -> StackLang.code =
     function
     | TreeLang.Num n -> [StackLang.Num n]
     | TreeLang.Neg n -> translate n @ [StackLang.Neg]

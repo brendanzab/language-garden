@@ -7,35 +7,35 @@
 %token CLOSE_PAREN ")"
 %token END
 
-%start <TreeLang.term> main
+%start <TreeLang.expr> main
 
 %%
 
 let main :=
-| t = term; END;
+| t = expr; END;
     { t }
 
-let term :=
-| add_term
+let expr :=
+| add_expr
 
-let add_term :=
-| t1 = mul_term; "+"; t2 = add_term;
+let add_expr :=
+| t1 = mul_expr; "+"; t2 = add_expr;
     { TreeLang.add t1 t2 }
-| t1 = mul_term; "-"; t2 = add_term;
+| t1 = mul_expr; "-"; t2 = add_expr;
     { TreeLang.sub t1 t2 }
-| mul_term
+| mul_expr
 
-let mul_term :=
-| t1 = atomic_term; "*"; t2 = mul_term;
+let mul_expr :=
+| t1 = atomic_expr; "*"; t2 = mul_expr;
     { TreeLang.mul t1 t2 }
-| t1 = atomic_term; "/"; t2 = mul_term;
+| t1 = atomic_expr; "/"; t2 = mul_expr;
     { TreeLang.div t1 t2 }
-| atomic_term
+| atomic_expr
 
-let atomic_term :=
-| "("; t = term; ")";
+let atomic_expr :=
+| "("; t = expr; ")";
     { t }
 | n = NUMBER;
     { TreeLang.num n }
-| "-"; t = atomic_term;
+| "-"; t = atomic_expr;
     { TreeLang.neg t }

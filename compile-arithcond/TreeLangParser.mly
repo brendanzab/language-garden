@@ -13,43 +13,43 @@
 %token CLOSE_PAREN ")"
 %token END
 
-%start <TreeLang.term> main
+%start <TreeLang.expr> main
 
 %%
 
 let main :=
-| t = term; END;
+| t = expr; END;
     { t }
 
-let term :=
-| if_term
+let expr :=
+| if_expr
 
-let if_term :=
-| "if"; t1 = eq_term; "then"; t2 = eq_term; "else"; t3 = if_term;
+let if_expr :=
+| "if"; t1 = eq_expr; "then"; t2 = eq_expr; "else"; t3 = if_expr;
     { TreeLang.if_then_else t1 t2 t3 }
-| eq_term
+| eq_expr
 
-let eq_term :=
-| t1 = add_term; "="; t2 = eq_term;
+let eq_expr :=
+| t1 = add_expr; "="; t2 = eq_expr;
     { TreeLang.eq t1 t2 }
-| add_term
+| add_expr
 
-let add_term :=
-| t1 = mul_term; "+"; t2 = add_term;
+let add_expr :=
+| t1 = mul_expr; "+"; t2 = add_expr;
     { TreeLang.add t1 t2 }
-| t1 = mul_term; "-"; t2 = add_term;
+| t1 = mul_expr; "-"; t2 = add_expr;
     { TreeLang.sub t1 t2 }
-| mul_term
+| mul_expr
 
-let mul_term :=
-| t1 = atomic_term; "*"; t2 = mul_term;
+let mul_expr :=
+| t1 = atomic_expr; "*"; t2 = mul_expr;
     { TreeLang.mul t1 t2 }
-| t1 = atomic_term; "/"; t2 = mul_term;
+| t1 = atomic_expr; "/"; t2 = mul_expr;
     { TreeLang.div t1 t2 }
-| atomic_term
+| atomic_expr
 
-let atomic_term :=
-| "("; t = term; ")";
+let atomic_expr :=
+| "("; t = expr; ")";
     { t }
 | n = NUMBER;
     { TreeLang.num n }
@@ -57,5 +57,5 @@ let atomic_term :=
     { TreeLang.bool true }
 | "false";
     { TreeLang.bool false }
-| "-"; t = atomic_term;
+| "-"; t = atomic_expr;
     { TreeLang.neg t }
