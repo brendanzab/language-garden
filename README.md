@@ -1,19 +1,16 @@
 # Language garden 🌱
 
-Some experiments in programming language implementation.
+Some toy programming language implementations, mostly implemented in OCaml.
+
+These projects are mostly my attempt to understand different techniques and
+approaches to implementing programming languages. Perhaps from these seedlings
+something new and interesting might germinate?
 
 - [**compile-arith**](./compile-arith/): A compiler from tree-based arithmetic expressions to a stack machine.
 - [**compile-arithcond**](./compile-arithcond/): A compiler from tree-based arithmetic and conditional expressions to a stack machine.
-- [**elab-dependent**](./elab-dependent/): An tiny elaborator for a small dependently typed language.
-- [**elab-record-patching**](./elab-record-patching/): An elaborator of a dependently typed language with singletons and record patching.
-
-## Some useful resources
-
-- [AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/): Some excellent,
-  high quality examples of implementing elaborators for dependently typed programming languages,
-  demonstrating bidirectional type checking and normalisation-by-evaluation, and extensions to this.
-- [jozefg/nbe-for-mltt](https://github.com/jozefg/nbe-for-mltt): An implementation of bidirectional
-  typechecking and normalisation-by-evaluation for dependent types.
+- [**elab-dependent**](./elab-dependent/): An tiny elaborator for a small dependently typed lambda calculus.
+- [**elab-record-patching**](./elab-record-patching/): An elaborator of a dependently typed lambda calculus with singletons and record patching.
+- [**wip-elab-dependent**](./wip-elab-dependent): An older elaborator for dependent types, will probably be deleted in the future.
 
 ## Development setup
 

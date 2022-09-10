@@ -9,6 +9,9 @@ The type system is implemented in terms of an ‘elaborator’, which type
 checks and tanslates a user-friendly surface language into a simpler and
 more explicit core language that is more closely connected to type theory.
 
+This implementation was originally published as a gist:
+[record-patching.ml](https://gist.github.com/brendanzab/3b27daf123209619e7abad5335ec4480).
+
 ## Record patching
 
 Record patching is a way to constrain the values of fields in a record type.
