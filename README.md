@@ -2,9 +2,10 @@
 
 Some experiments in programming language implementation.
 
-- [**compile-arith**](./compile-arith/): A compiler from tree-based arithmetic expressions to a stack based IR, implemented in OCaml.
-- [**elab-dependent**](./elab-dependent/): An tiny elaborator for a small dependently typed language, implemented in OCaml.
-- [**elab-record-patching**](./elab-record-patching/): An elaborator of a dependently typed language with singletons and record patching, implemented in OCaml.
+- [**compile-arith**](./compile-arith/): A compiler from tree-based arithmetic expressions to a stack based IR.
+- [**compile-arithcond**](./compile-arithcond/): A compiler from tree-based arithmetic and conditional expressions to a stack based IR.
+- [**elab-dependent**](./elab-dependent/): An tiny elaborator for a small dependently typed language.
+- [**elab-record-patching**](./elab-record-patching/): An elaborator of a dependently typed language with singletons and record patching.
 
 ## Development setup
 

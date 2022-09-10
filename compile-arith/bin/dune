@@ -1,5 +1,5 @@
 (executable
-  (name main)
+  (name Main)
   (public_name compile-arith)
   (package compile-arith)
-  (libraries compiler))
+  (libraries compile-arith))

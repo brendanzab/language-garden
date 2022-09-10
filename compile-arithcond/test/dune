@@ -1,0 +1,11 @@
+(cram
+  (package compile-arithcond)
+  (deps %{bin:compile-arithcond}))
+
+(tests
+  (names Properties)
+  (package compile-arithcond)
+  (libraries
+    compile-arithcond
+    qcheck
+    qcheck-alcotest))

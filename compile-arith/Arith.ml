@@ -27,14 +27,14 @@ end
 module TreeToStack : Translation
 
   with type source = TreeLang.term
-  with type target = StackLang.program
+  with type target = StackLang.code
 
 = struct
 
   type source = TreeLang.term
-  type target = StackLang.program
+  type target = StackLang.code
 
-  let rec translate : TreeLang.term -> StackLang.program =
+  let rec translate : TreeLang.term -> StackLang.code =
     function
     | TreeLang.Num n -> [StackLang.Num n]
     | TreeLang.Neg n -> translate n @ [StackLang.Neg]

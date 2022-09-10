@@ -13,7 +13,7 @@ let print_error (pos : Lexing.position) message =
       (pos.pos_cnum - pos.pos_bol)
       message
 
-let main () = Arith.(
+let main () = ArithCond.(
     let term =
       let lexbuf = Lexing.from_channel stdin in
       Lexing.set_filename lexbuf "<input>";
@@ -37,12 +37,10 @@ let main () = Arith.(
     Format.printf "@[<v>";
     Format.printf "@[<2>@[code  =@]@ %a@]@;"
       StackLang.pp_code code;
-    Format.printf "@[<2>@[tree  =@]@ %d@]@;"
-      (TreeLang.Semantics.eval term);
-    Format.printf "@[<2>@[stack =@]@ %s@]@;"
-      (StackLang.Semantics.eval code
-        |> List.map string_of_int
-        |> String.concat "_");
+    Format.printf "@[<2>@[tree  =@]@ %a@]@;"
+      TreeLang.pp_term (TreeLang.Semantics.normalise term);
+    Format.printf "@[<2>@[stack =@]@ %a@]@;"
+      StackLang.pp_code (StackLang.Semantics.normalise code);
     Format.printf "@]"
   )
 

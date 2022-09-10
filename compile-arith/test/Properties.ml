@@ -1,7 +1,7 @@
 (** Test some properties of the compiler *)
 
-module TreeLang = Compiler.TreeLang
-module StackLang = Compiler.StackLang
+module TreeLang = Arith.TreeLang
+module StackLang = Arith.StackLang
 
 
 (** Arbitrary term generation *)
@@ -65,7 +65,7 @@ let compile_correct =
     ~name:"compile_correct"
     arbitrary_term
     (fun term ->
-      eval_stack (Compiler.TreeToStack.translate term) = to_stack (eval_tree term))
+      eval_stack (Arith.TreeToStack.translate term) = to_stack (eval_tree term))
 
 (** Pretty printed term can always be parsed back into the same term. *)
 let pretty_correct =

@@ -1,6 +1,6 @@
 (library
-  (name Arith)
-  (public_name compile-arith))
+  (name ArithCond)
+  (public_name compile-arithcond))
 
 (menhir
   (modules TreeLangParser))

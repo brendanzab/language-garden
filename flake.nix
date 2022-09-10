@@ -55,6 +55,24 @@
             ];
           };
 
+          compile-arithcond = ocamlPackages.buildDunePackage {
+            pname = "compile-arithcond";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+
+            nativeBuildInputs = [
+              ocamlPackages.menhir
+            ];
+
+            # TODO: Make test dependencies optional
+            buildInputs = [
+              ocamlPackages.alcotest
+              ocamlPackages.qcheck
+              ocamlPackages.qcheck-alcotest
+            ];
+          };
+
           # Elaboration
 
           elab-dependent = ocamlPackages.buildDunePackage {
