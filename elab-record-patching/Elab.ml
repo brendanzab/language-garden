@@ -723,8 +723,8 @@ module Surface = struct
         in
         Syntax.RecLit (go defns decls)
 
-    (* Records with no entries. These are ambiguous and need to be disambuguated
-       with a type annotation. *)
+    (* Records with no entries. These need to be disambiguated with a type
+       annotation. *)
     | RecUnit, Semantics.Univ ->
         Syntax.RecType Syntax.Nil
     | RecUnit, Semantics.RecType Semantics.Nil ->

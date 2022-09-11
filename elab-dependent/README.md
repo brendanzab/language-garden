@@ -19,7 +19,7 @@ supplied to them.
 - [A Tutorial Implementation of a Dependently Typed Lambda Calculus](https://www.andres-loeh.de/LambdaPi/)
   by Andres Löh, Conor McBride and Wouter Swierstra:
   A little outdated compared to the above implementations, but the paper is
-  still worth a look, showing how to incrementally add dependent type to a
+  still worth a look, showing how to incrementally add dependent types to a
   simply typed lambda calculus.
 - [nbe-for-mltt](https://github.com/jozefg/nbe-for-mltt): An implementation of
   bidirectional typechecking and normalisation-by-evaluation for dependent
