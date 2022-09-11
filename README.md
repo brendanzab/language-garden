@@ -8,6 +8,7 @@ something new and interesting might germinate?
 
 - [**compile-arith**](./compile-arith/): A compiler from tree-based arithmetic expressions to a stack machine.
 - [**compile-arithcond**](./compile-arithcond/): A compiler from tree-based arithmetic and conditional expressions to a stack machine.
+- [**compile-arith-verified**](./compile-arith-verified/): A formally verified arithmetic expression compiler and decompiler in Lean 4.
 - [**elab-dependent**](./elab-dependent/): An tiny elaborator for a small dependently typed lambda calculus.
 - [**elab-record-patching**](./elab-record-patching/): An elaborator of a dependently typed lambda calculus with singletons and record patching.
 - [**wip-elab-dependent**](./wip-elab-dependent): An older elaborator for dependent types, will probably be deleted in the future.

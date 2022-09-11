@@ -4,8 +4,8 @@ This is an implementation small dependently typed language where types are
 first-class and where the output types of functions may depend on the inputs
 supplied to them.
 
-This implementation was originally published as a gist:
-[tt-hoas-nameless.ml](https://gist.github.com/brendanzab/a8443e9d267ed142e4603fc3cb5fa9c8).
+*This was originally posted at
+[tt-hoas-nameless.ml](https://gist.github.com/brendanzab/a8443e9d267ed142e4603fc3cb5fa9c8).*
 
 ## Some useful resources
 
