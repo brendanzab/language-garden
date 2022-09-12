@@ -39,35 +39,6 @@ and pp_code fmt = function
   | inst :: code -> Format.fprintf fmt "%a@ %a" pp_inst inst pp_code code
 
 
-(* type ty =
-  | Num
-  | Bool
-  | Code of code_ty
-and stack_ty = ty list
-and code_ty = stack_ty * stack_ty
-
-let synth_code : code -> code_ty option =
-  failwith "todo"
-let check_inst inst ty =
-  match inst, ty with
-  | Eq, ([ty1; ty2], [Bool]) -> ty1 = ty2
-  | IfThenElse, ([Code (in1, out1); Code (in2, out2); Bool], out) ->
-      in1 = in2 && out1 = out2 && out1 = out
-  | _, _ -> failwith "todo"
-let synth_inst : inst -> code_ty option =
-  function
-  | Num _ -> Some ([], [Num])
-  | Bool _ -> Some ([], [Bool])
-  | Code c -> Option.map (fun ty -> [], [Code ty]) (synth_code c)
-  | Neg -> Some ([Num], [Num])
-  | Add -> Some ([Num; Num], [Num])
-  | Sub -> Some ([Num; Num], [Num])
-  | Mul -> Some ([Num; Num], [Num])
-  | Div -> Some ([Num; Num], [Num])
-  | Eq -> None
-  | IfThenElse -> None *)
-
-
 (** Semantics of arithmetic expressions *)
 module Semantics = struct
 
