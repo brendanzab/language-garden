@@ -4,7 +4,7 @@
 (** Syntax of arithmetic expressions *)
 
 type expr =
-  | Num of int
+  | Int of int
   | Neg of expr
   | Add of expr * expr
   | Sub of expr * expr
@@ -12,7 +12,7 @@ type expr =
   | Div of expr * expr
 
 
-let num n = Num n
+let int i = Int i
 let neg e = Neg e
 let add e1 e2 = Add (e1, e2)
 let sub e1 e2 = Sub (e1, e2)
@@ -33,7 +33,7 @@ and pp_mul_expr fmt = function
   | Div (e1, e2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr e1 pp_mul_expr e2
   | e -> pp_atomic_expr fmt e
 and pp_atomic_expr fmt = function
-  | Num n -> Format.fprintf fmt "%d" n
+  | Int i -> Format.fprintf fmt "%d" i
   | Neg e -> Format.fprintf fmt "-%a" pp_atomic_expr e
   | e -> Format.fprintf fmt "@[<1>(%a)@]" pp_expr e
 
@@ -45,7 +45,7 @@ module Semantics = struct
 
   let rec eval : expr -> value =
     function
-    | Num n -> n
+    | Int i -> i
     | Neg e -> -(eval e)
     | Add (e1, e2) -> eval e1 + eval e2
     | Sub (e1, e2) -> eval e1 - eval e2

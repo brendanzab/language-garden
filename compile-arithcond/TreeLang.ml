@@ -4,7 +4,7 @@
 (** Syntax of arithmetic expressions *)
 
 type expr =
-  | Num of int
+  | Int of int
   | Bool of bool
   | Neg of expr
   | Add of expr * expr
@@ -15,7 +15,7 @@ type expr =
   | IfThenElse of expr * expr * expr
 
 
-let num n = Num n
+let int n = Int n
 let bool b = Bool b
 let neg e = Neg e
 let add e1 e2 = Add (e1, e2)
@@ -49,7 +49,7 @@ and pp_mul_expr fmt = function
   | Div (e1, e2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr e1 pp_mul_expr e2
   | e -> pp_atomic_expr fmt e
 and pp_atomic_expr fmt = function
-  | Num n -> Format.fprintf fmt "%d" n
+  | Int n -> Format.fprintf fmt "%d" n
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
   | Neg e -> Format.fprintf fmt "-%a" pp_atomic_expr e
@@ -60,24 +60,24 @@ and pp_atomic_expr fmt = function
 module Semantics = struct
 
   type value =
-    | Num of int
+    | Int of int
     | Bool of bool
 
   let rec eval : expr -> value =
     function
-    | Num n -> Num n
+    | Int n -> Int n
     | Bool b -> Bool b
-    | Neg e -> Num (-(eval_num e))
-    | Add (e1, e2) -> Num (eval_num e1 + eval_num e2)
-    | Sub (e1, e2) -> Num (eval_num e1 - eval_num e2)
-    | Mul (e1, e2) -> Num (eval_num e1 * eval_num e2)
-    | Div (e1, e2) -> Num (eval_num e1 / eval_num e2)
+    | Neg e -> Int (-(eval_int e))
+    | Add (e1, e2) -> Int (eval_int e1 + eval_int e2)
+    | Sub (e1, e2) -> Int (eval_int e1 - eval_int e2)
+    | Mul (e1, e2) -> Int (eval_int e1 * eval_int e2)
+    | Div (e1, e2) -> Int (eval_int e1 / eval_int e2)
     | Eq (e1, e2) -> Bool (eval e1 = eval e2)
     | IfThenElse (e1, e2, e3) -> if eval_bool e1 then eval e2 else eval e3
-  and eval_num expr =
+  and eval_int expr =
     match eval expr with
-    | Num n ->  n
-    | _ -> failwith "not a number"
+    | Int n ->  n
+    | _ -> failwith "not an integer"
   and eval_bool expr =
     match eval expr with
     | Bool b ->  b
@@ -86,7 +86,7 @@ module Semantics = struct
 
   let quote : value -> expr =
     function
-    | Num i -> Num i
+    | Int i -> Int i
     | Bool b -> Bool b
 
 

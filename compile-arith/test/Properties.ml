@@ -8,10 +8,10 @@ module StackLang = Arith.StackLang
 
 let expr_gen = QCheck.Gen.(sized @@ fix
   (fun self n -> match n with
-    | 0 -> map TreeLang.num nat
+    | 0 -> map TreeLang.int nat
     | n ->
       frequency [
-        1, map TreeLang.num nat;
+        1, map TreeLang.int nat;
         2, map TreeLang.neg (self (n/2));
         3, map2 TreeLang.add (self (n/2)) (self (n/2));
         3, map2 TreeLang.sub (self (n/2)) (self (n/2));
@@ -25,7 +25,7 @@ let arbitrary_expr =
     Format.asprintf "%a" TreeLang.pp_expr expr
   in
   let rec shrink_expr = QCheck.Iter.(function
-    | TreeLang.Num i -> map TreeLang.num (QCheck.Shrink.int i)
+    | TreeLang.Int i -> map TreeLang.int (QCheck.Shrink.int i)
     | TreeLang.Neg e ->
         QCheck.Iter.of_list [e]
           <+> map TreeLang.neg (shrink_expr e)

@@ -4,14 +4,14 @@
 (** Syntax of arithmetic expressions *)
 
 type inst =
-  | Num of int     (** [         -- n     ] *)
+  | Int of int     (** [         -- i     ] *)
   | Bool of bool   (** [         -- b     ] *)
   | Code of code   (** [         -- c     ] *)
-  | Neg            (** [ n       -- -n    ] *)
-  | Add            (** [ n1 n2   -- n1+n2 ] *)
-  | Sub            (** [ n1 n2   -- n1-n2 ] *)
-  | Mul            (** [ n1 n2   -- n1*n2 ] *)
-  | Div            (** [ n1 n2   -- n1/n2 ] *)
+  | Neg            (** [ i       -- -n    ] *)
+  | Add            (** [ i1 i2   -- i1+i2 ] *)
+  | Sub            (** [ i1 i2   -- i1-i2 ] *)
+  | Mul            (** [ i1 i2   -- i1*i2 ] *)
+  | Div            (** [ i1 i2   -- i1/i2 ] *)
   | Eq             (** [ v1 v2   -- v1=v2 ] *)
   | IfThenElse     (** [ b c1 c2 -- v     ] *)
 and code =
@@ -21,7 +21,7 @@ and code =
 (** Pretty printing *)
 
 let rec pp_inst fmt = function
-  | Num n -> Format.fprintf fmt "%d" n
+  | Int i -> Format.fprintf fmt "%d" i
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
   | Code [] -> Format.fprintf fmt "[]"
@@ -43,7 +43,7 @@ and pp_code fmt = function
 module Semantics = struct
 
   type value =
-    | Num of int
+    | Int of int
     | Bool of bool
     | Code of code
 
@@ -51,14 +51,14 @@ module Semantics = struct
     value list
 
   let step : code * stack -> code * stack = function
-    | Num n       :: code,                                stack -> code, Num n          :: stack
+    | Int i       :: code,                                stack -> code, Int i          :: stack
     | Bool b      :: code,                                stack -> code, Bool b         :: stack
     | Code c      :: code,                                stack -> code, Code c         :: stack
-    | Neg         :: code, Num n ::                       stack -> code, Num (-n)       :: stack
-    | Add         :: code, Num n2 :: Num n1 ::            stack -> code, Num (n1 + n2)  :: stack
-    | Sub         :: code, Num n2 :: Num n1 ::            stack -> code, Num (n1 - n2)  :: stack
-    | Mul         :: code, Num n2 :: Num n1 ::            stack -> code, Num (n1 * n2)  :: stack
-    | Div         :: code, Num n2 :: Num n1 ::            stack -> code, Num (n1 / n2)  :: stack
+    | Neg         :: code, Int i ::                       stack -> code, Int (-i)       :: stack
+    | Add         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 + i2)  :: stack
+    | Sub         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 - i2)  :: stack
+    | Mul         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 * i2)  :: stack
+    | Div         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 / i2)  :: stack
     | Eq          :: code, v2 :: v1 ::                    stack -> code, Bool (v1 = v2) :: stack
     | IfThenElse  :: code, _ :: Code c1 :: Bool true  ::  stack -> c1 @ code,              stack
     | IfThenElse  :: code, Code c2 :: _ :: Bool false ::  stack -> c2 @ code,              stack
@@ -72,7 +72,7 @@ module Semantics = struct
 
   let rec quote : stack -> code = function
     | [] -> []
-    | Num n :: stack -> Num n :: quote stack
+    | Int i :: stack -> Int i :: quote stack
     | Bool b :: stack -> Bool b :: quote stack
     | Code c :: stack -> Code c :: quote stack
 

@@ -51,8 +51,8 @@ let mul_expr :=
 let atomic_expr :=
 | "("; e = expr; ")";
     { e }
-| n = NUMBER;
-    { TreeLang.num n }
+| i = NUMBER;
+    { TreeLang.int i }
 | "true";
     { TreeLang.bool true }
 | "false";

@@ -36,7 +36,7 @@ module TreeToStack : Translation
 
   let rec translate : TreeLang.expr -> StackLang.code =
     function
-    | TreeLang.Num n -> [StackLang.Num n]
+    | TreeLang.Int i -> [StackLang.Int i]
     | TreeLang.Bool b -> [StackLang.Bool b]
     | TreeLang.Neg e -> translate e @ [StackLang.Neg]
     | TreeLang.Add (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Add]

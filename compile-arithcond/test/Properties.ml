@@ -12,10 +12,10 @@ let gen_expr =
   let open QCheck.Gen in
   sized @@ fix
     (fun self -> function
-      | 0 -> oneof [map TreeLang.num big_nat; map TreeLang.bool bool]
+      | 0 -> oneof [map TreeLang.int big_nat; map TreeLang.bool bool]
       | n ->
           frequency [
-            1, map TreeLang.num nat;
+            1, map TreeLang.int nat;
             1, map TreeLang.bool bool;
             2, map TreeLang.neg (self (n/2));
             3, map2 TreeLang.add (self (n/2)) (self (n/2));
@@ -30,26 +30,26 @@ let gen_expr =
 
 (** Term generation (well-typed) *)
 
-type ty = [`Num | `Bool]
+type ty = [`Int | `Bool]
 
 let gen_ty : ty QCheck.Gen.t =
-  QCheck.Gen.oneofl [`Num; `Bool]
+  QCheck.Gen.oneofl [`Int; `Bool]
 
 let gen_expr_well_typed =
   let open QCheck.Gen in
   pair gen_ty nat >>= fix
     (fun self -> function
-      | `Num, 0 -> map TreeLang.num big_nat
+      | `Int, 0 -> map TreeLang.int big_nat
       | `Bool, 0 -> map TreeLang.bool bool
-      | `Num, n ->
+      | `Int, n ->
           frequency [
-            1, map TreeLang.num nat;
-            2, map TreeLang.neg (self (`Num, n/2));
-            3, map2 TreeLang.add (self (`Num, n/2)) (self (`Num, n/2));
-            3, map2 TreeLang.sub (self (`Num, n/2)) (self (`Num, n/2));
-            3, map2 TreeLang.mul (self (`Num, n/2)) (self (`Num, n/2));
-            3, map2 TreeLang.div (self (`Num, n/2)) (self (`Num, n/2));
-            4, map3 TreeLang.if_then_else (self (`Bool, n/2)) (self (`Num, n/2)) (self (`Num, n/2));
+            1, map TreeLang.int nat;
+            2, map TreeLang.neg (self (`Int, n/2));
+            3, map2 TreeLang.add (self (`Int, n/2)) (self (`Int, n/2));
+            3, map2 TreeLang.sub (self (`Int, n/2)) (self (`Int, n/2));
+            3, map2 TreeLang.mul (self (`Int, n/2)) (self (`Int, n/2));
+            3, map2 TreeLang.div (self (`Int, n/2)) (self (`Int, n/2));
+            4, map3 TreeLang.if_then_else (self (`Bool, n/2)) (self (`Int, n/2)) (self (`Int, n/2));
           ]
       | `Bool, n ->
           frequency [
@@ -67,7 +67,7 @@ let rec shrink_expr =
     if b then yield false else ()
   in
   QCheck.Iter.(function
-  | TreeLang.Num i -> map TreeLang.num (QCheck.Shrink.int i)
+  | TreeLang.Int i -> map TreeLang.int (QCheck.Shrink.int i)
   | TreeLang.Bool b -> map TreeLang.bool (shrink_bool b)
   | TreeLang.Neg e ->
       QCheck.Iter.of_list [e]
@@ -122,7 +122,7 @@ let compile_correct =
   let eval_tree expr = catch_div_by_zero (fun () -> TreeLang.Semantics.eval expr) in
   let eval_stack expr = catch_div_by_zero (fun () -> StackLang.Semantics.eval expr) in
   let to_stack = Result.map (function
-    | TreeLang.Semantics.Num n -> [StackLang.Semantics.Num n]
+    | TreeLang.Semantics.Int n -> [StackLang.Semantics.Int n]
     | TreeLang.Semantics.Bool b -> [StackLang.Semantics.Bool b])
   in
 

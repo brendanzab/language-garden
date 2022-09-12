@@ -4,12 +4,12 @@
 (** Syntax of arithmetic expressions *)
 
 type inst =
-  | Num of int    (** [       -- n     ] *)
-  | Neg           (** [ n     -- -n    ] *)
-  | Add           (** [ n1 n2 -- n1+n2 ] *)
-  | Sub           (** [ n1 n2 -- n1-n2 ] *)
-  | Mul           (** [ n1 n2 -- n1*n2 ] *)
-  | Div           (** [ n1 n2 -- n1/n2 ] *)
+  | Int of int    (** [       -- i     ] *)
+  | Neg           (** [ i     -- -n    ] *)
+  | Add           (** [ i1 i2 -- i1+i2 ] *)
+  | Sub           (** [ i1 i2 -- i1-i2 ] *)
+  | Mul           (** [ i1 i2 -- i1*i2 ] *)
+  | Div           (** [ i1 i2 -- i1/i2 ] *)
 
 type code =
   inst list
@@ -18,7 +18,7 @@ type code =
 (** Pretty printing *)
 
 let pp_inst fmt = function
-  | Num n -> Format.fprintf fmt "%d" n
+  | Int i -> Format.fprintf fmt "%d" i
   | Neg -> Format.fprintf fmt "neg"
   | Add -> Format.fprintf fmt "add"
   | Sub -> Format.fprintf fmt "sub"
@@ -37,12 +37,12 @@ module Semantics = struct
   type stack = value list
 
   let step : (code * stack) -> (code * stack) = function
-    | Num n :: code, stack -> code, n :: stack
-    | Neg :: code, n :: stack -> code, -n :: stack
-    | Add :: code, n2 :: n1 :: stack -> code, n1 + n2 :: stack
-    | Sub :: code, n2 :: n1 :: stack -> code, n1 - n2 :: stack
-    | Mul :: code, n2 :: n1 :: stack -> code, n1 * n2 :: stack
-    | Div :: code, n2 :: n1 :: stack -> code, n1 / n2 :: stack
+    | Int i :: code, stack -> code, i :: stack
+    | Neg :: code, i :: stack -> code, -i :: stack
+    | Add :: code, i2 :: i1 :: stack -> code, i1 + i2 :: stack
+    | Sub :: code, i2 :: i1 :: stack -> code, i1 - i2 :: stack
+    | Mul :: code, i2 :: i1 :: stack -> code, i1 * i2 :: stack
+    | Div :: code, i2 :: i1 :: stack -> code, i1 / i2 :: stack
     | _, _ -> failwith "invalid code"
 
   let rec eval ?(stack = []) = function
