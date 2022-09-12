@@ -1,6 +1,6 @@
 (cram
   (package compile-arithcond)
-  (deps %{bin:compile-arithcond}))
+  (deps %{bin:arithcond}))
 
 (tests
   (names Properties)

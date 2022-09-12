@@ -1,5 +1,5 @@
 (executable
   (name Main)
-  (public_name compile-arithcond)
+  (public_name arithcond)
   (package compile-arithcond)
   (libraries compile-arithcond))

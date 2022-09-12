@@ -7,8 +7,11 @@ The correctness of compilation and pretty printing are tested with property-base
 tests implemented using the [qcheck](https://github.com/c-cube/qcheck) library.
 
 ```command
-$ compile-arith <<< "1 * -2 + (3 + 4) - 8 / 4"
-code  = 1 2 neg mul 3 4 add 8 4 div sub add
-tree  = 3
-stack = 3
+$ arith compile <<< "1 * -2 + (3 + 4) - 8 / 4"
+1 2 neg mul 3 4 add 8 4 div sub add
+```
+
+```command
+$ arith eval <<< "1 * -2 + (3 + 4) - 8 / 4"
+3
 ```

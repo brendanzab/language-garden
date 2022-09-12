@@ -1,6 +1,6 @@
 (cram
   (package compile-arith)
-  (deps %{bin:compile-arith}))
+  (deps %{bin:arith}))
 
 (tests
   (names Properties)
