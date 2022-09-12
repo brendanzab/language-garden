@@ -37,10 +37,10 @@ module TreeToStack : Translation
   let rec translate : TreeLang.expr -> StackLang.code =
     function
     | TreeLang.Num n -> [StackLang.Num n]
-    | TreeLang.Neg n -> translate n @ [StackLang.Neg]
-    | TreeLang.Add (n1, n2) -> translate n1 @ translate n2 @ [StackLang.Add]
-    | TreeLang.Sub (n1, n2) -> translate n1 @ translate n2 @ [StackLang.Sub]
-    | TreeLang.Mul (n1, n2) -> translate n1 @ translate n2 @ [StackLang.Mul]
-    | TreeLang.Div (n1, n2) -> translate n1 @ translate n2 @ [StackLang.Div]
+    | TreeLang.Neg e -> translate e @ [StackLang.Neg]
+    | TreeLang.Add (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Add]
+    | TreeLang.Sub (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Sub]
+    | TreeLang.Mul (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Mul]
+    | TreeLang.Div (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Div]
 
 end

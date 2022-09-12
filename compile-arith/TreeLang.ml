@@ -13,11 +13,11 @@ type expr =
 
 
 let num n = Num n
-let neg x = Neg x
-let add x y = Add (x, y)
-let sub x y = Sub (x, y)
-let mul x y = Mul (x, y)
-let div x y = Div (x, y)
+let neg e = Neg e
+let add e1 e2 = Add (e1, e2)
+let sub e1 e2 = Sub (e1, e2)
+let mul e1 e2 = Mul (e1, e2)
+let div e1 e2 = Div (e1, e2)
 
 
 (** Pretty printing *)
@@ -25,17 +25,17 @@ let div x y = Div (x, y)
 let rec pp_expr fmt expr =
   pp_add_expr fmt expr
 and pp_add_expr fmt = function
-  | Add (t1, t2) -> Format.fprintf fmt "%a@ +@ %a" pp_mul_expr t1 pp_add_expr t2
-  | Sub (t1, t2) -> Format.fprintf fmt "%a@ -@ %a" pp_mul_expr t1 pp_add_expr t2
-  | t -> pp_mul_expr fmt t
+  | Add (e1, e2) -> Format.fprintf fmt "%a@ +@ %a" pp_mul_expr e1 pp_add_expr e2
+  | Sub (e1, e2) -> Format.fprintf fmt "%a@ -@ %a" pp_mul_expr e1 pp_add_expr e2
+  | e -> pp_mul_expr fmt e
 and pp_mul_expr fmt = function
-  | Mul (t1, t2) -> Format.fprintf fmt "%a@ *@ %a" pp_atomic_expr t1 pp_mul_expr t2
-  | Div (t1, t2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr t1 pp_mul_expr t2
-  | t -> pp_atomic_expr fmt t
+  | Mul (e1, e2) -> Format.fprintf fmt "%a@ *@ %a" pp_atomic_expr e1 pp_mul_expr e2
+  | Div (e1, e2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr e1 pp_mul_expr e2
+  | e -> pp_atomic_expr fmt e
 and pp_atomic_expr fmt = function
   | Num n -> Format.fprintf fmt "%d" n
-  | Neg t -> Format.fprintf fmt "-%a" pp_atomic_expr t
-  | t -> Format.fprintf fmt "@[<1>(%a)@]" pp_expr t
+  | Neg e -> Format.fprintf fmt "-%a" pp_atomic_expr e
+  | e -> Format.fprintf fmt "@[<1>(%a)@]" pp_expr e
 
 
 (** Semantics of arithmetic expressions *)
@@ -46,10 +46,10 @@ module Semantics = struct
   let rec eval : expr -> value =
     function
     | Num n -> n
-    | Neg n -> -(eval n)
-    | Add (n1, n2) -> eval n1 + eval n2
-    | Sub (n1, n2) -> eval n1 - eval n2
-    | Mul (n1, n2) -> eval n1 * eval n2
-    | Div (n1, n2) -> eval n1 / eval n2
+    | Neg e -> -(eval e)
+    | Add (e1, e2) -> eval e1 + eval e2
+    | Sub (e1, e2) -> eval e1 - eval e2
+    | Mul (e1, e2) -> eval e1 * eval e2
+    | Div (e1, e2) -> eval e1 / eval e2
 
 end

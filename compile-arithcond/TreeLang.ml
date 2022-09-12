@@ -16,14 +16,14 @@ type expr =
 
 
 let num n = Num n
-let bool n = Bool n
-let neg x = Neg x
-let add x y = Add (x, y)
-let sub x y = Sub (x, y)
-let mul x y = Mul (x, y)
-let div x y = Div (x, y)
-let eq x y = Eq (x, y)
-let if_then_else t1 t2 t3 = IfThenElse (t1, t2, t3)
+let bool b = Bool b
+let neg e = Neg e
+let add e1 e2 = Add (e1, e2)
+let sub e1 e2 = Sub (e1, e2)
+let mul e1 e2 = Mul (e1, e2)
+let div e1 e2 = Div (e1, e2)
+let eq e1 e2 = Eq (e1, e2)
+let if_then_else e1 e2 e3 = IfThenElse (e1, e2, e3)
 
 
 (** Pretty printing *)
@@ -31,29 +31,29 @@ let if_then_else t1 t2 t3 = IfThenElse (t1, t2, t3)
 let rec pp_expr fmt expr =
   pp_if_expr fmt expr
 and pp_if_expr fmt = function
-  | IfThenElse (t1, t2, t3) ->
+  | IfThenElse (e1, e2, e3) ->
       Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
-        pp_eq_expr t1
-        pp_eq_expr t2
-        pp_if_expr t3
-  | t -> pp_eq_expr fmt t
+        pp_eq_expr e1
+        pp_eq_expr e2
+        pp_if_expr e3
+  | e -> pp_eq_expr fmt e
 and pp_eq_expr fmt = function
-  | Eq (t1, t2) -> Format.fprintf fmt "%a@ =@ %a" pp_add_expr t1 pp_eq_expr t2
-  | t -> pp_add_expr fmt t
+  | Eq (e1, e2) -> Format.fprintf fmt "%a@ =@ %a" pp_add_expr e1 pp_eq_expr e2
+  | e -> pp_add_expr fmt e
 and pp_add_expr fmt = function
-  | Add (t1, t2) -> Format.fprintf fmt "%a@ +@ %a" pp_mul_expr t1 pp_add_expr t2
-  | Sub (t1, t2) -> Format.fprintf fmt "%a@ -@ %a" pp_mul_expr t1 pp_add_expr t2
-  | t -> pp_mul_expr fmt t
+  | Add (e1, e2) -> Format.fprintf fmt "%a@ +@ %a" pp_mul_expr e1 pp_add_expr e2
+  | Sub (e1, e2) -> Format.fprintf fmt "%a@ -@ %a" pp_mul_expr e1 pp_add_expr e2
+  | e -> pp_mul_expr fmt e
 and pp_mul_expr fmt = function
-  | Mul (t1, t2) -> Format.fprintf fmt "%a@ *@ %a" pp_atomic_expr t1 pp_mul_expr t2
-  | Div (t1, t2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr t1 pp_mul_expr t2
-  | t -> pp_atomic_expr fmt t
+  | Mul (e1, e2) -> Format.fprintf fmt "%a@ *@ %a" pp_atomic_expr e1 pp_mul_expr e2
+  | Div (e1, e2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr e1 pp_mul_expr e2
+  | e -> pp_atomic_expr fmt e
 and pp_atomic_expr fmt = function
   | Num n -> Format.fprintf fmt "%d" n
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
-  | Neg t -> Format.fprintf fmt "-%a" pp_atomic_expr t
-  | t -> Format.fprintf fmt "@[<1>(%a)@]" pp_expr t
+  | Neg e -> Format.fprintf fmt "-%a" pp_atomic_expr e
+  | e -> Format.fprintf fmt "@[<1>(%a)@]" pp_expr e
 
 
 (** Semantics of arithmetic expressions *)
@@ -66,14 +66,14 @@ module Semantics = struct
   let rec eval : expr -> value =
     function
     | Num n -> Num n
-    | Bool n -> Bool n
-    | Neg n -> Num (-(eval_num n))
-    | Add (n1, n2) -> Num (eval_num n1 + eval_num n2)
-    | Sub (n1, n2) -> Num (eval_num n1 - eval_num n2)
-    | Mul (n1, n2) -> Num (eval_num n1 * eval_num n2)
-    | Div (n1, n2) -> Num (eval_num n1 / eval_num n2)
-    | Eq (n1, n2) -> Bool (eval n1 = eval n2)
-    | IfThenElse (n1, n2, n3) -> if eval_bool n1 then eval n2 else eval n3
+    | Bool b -> Bool b
+    | Neg e -> Num (-(eval_num e))
+    | Add (e1, e2) -> Num (eval_num e1 + eval_num e2)
+    | Sub (e1, e2) -> Num (eval_num e1 - eval_num e2)
+    | Mul (e1, e2) -> Num (eval_num e1 * eval_num e2)
+    | Div (e1, e2) -> Num (eval_num e1 / eval_num e2)
+    | Eq (e1, e2) -> Bool (eval e1 = eval e2)
+    | IfThenElse (e1, e2, e3) -> if eval_bool e1 then eval e2 else eval e3
   and eval_num expr =
     match eval expr with
     | Num n ->  n
@@ -87,10 +87,10 @@ module Semantics = struct
   let quote : value -> expr =
     function
     | Num i -> Num i
-    | Bool i -> Bool i
+    | Bool b -> Bool b
 
 
-  let normalise t =
-    quote (eval t)
+  let normalise e =
+    quote (eval e)
 
 end

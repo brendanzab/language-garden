@@ -25,7 +25,7 @@ let rec pp_inst fmt = function
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
   | Code [] -> Format.fprintf fmt "[]"
-  | Code p -> Format.fprintf fmt "@[[@ %a@ ]@]" pp_code p
+  | Code c -> Format.fprintf fmt "@[[@ %a@ ]@]" pp_code c
   | Neg -> Format.fprintf fmt "neg"
   | Add -> Format.fprintf fmt "add"
   | Sub -> Format.fprintf fmt "sub"

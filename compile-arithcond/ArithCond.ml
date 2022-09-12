@@ -38,13 +38,13 @@ module TreeToStack : Translation
     function
     | TreeLang.Num n -> [StackLang.Num n]
     | TreeLang.Bool b -> [StackLang.Bool b]
-    | TreeLang.Neg t -> translate t @ [StackLang.Neg]
-    | TreeLang.Add (t1, t2) -> translate t1 @ translate t2 @ [StackLang.Add]
-    | TreeLang.Sub (t1, t2) -> translate t1 @ translate t2 @ [StackLang.Sub]
-    | TreeLang.Mul (t1, t2) -> translate t1 @ translate t2 @ [StackLang.Mul]
-    | TreeLang.Div (t1, t2) -> translate t1 @ translate t2 @ [StackLang.Div]
-    | TreeLang.Eq (t1, t2) -> translate t1 @ translate t2 @ [StackLang.Eq]
-    | TreeLang.IfThenElse(t1, t2, t3) -> translate t1
-        @ [StackLang.Code (translate t2); StackLang.Code (translate t3); StackLang.IfThenElse]
+    | TreeLang.Neg e -> translate e @ [StackLang.Neg]
+    | TreeLang.Add (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Add]
+    | TreeLang.Sub (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Sub]
+    | TreeLang.Mul (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Mul]
+    | TreeLang.Div (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Div]
+    | TreeLang.Eq (e1, e2) -> translate e1 @ translate e2 @ [StackLang.Eq]
+    | TreeLang.IfThenElse(e1, e2, e3) -> translate e1
+        @ [StackLang.Code (translate e2); StackLang.Code (translate e3); StackLang.IfThenElse]
 
 end

@@ -12,30 +12,30 @@
 %%
 
 let main :=
-| t = expr; END;
-    { t }
+| e = expr; END;
+    { e }
 
 let expr :=
 | add_expr
 
 let add_expr :=
-| t1 = mul_expr; "+"; t2 = add_expr;
-    { TreeLang.add t1 t2 }
-| t1 = mul_expr; "-"; t2 = add_expr;
-    { TreeLang.sub t1 t2 }
+| e1 = mul_expr; "+"; e2 = add_expr;
+    { TreeLang.add e1 e2 }
+| e1 = mul_expr; "-"; e2 = add_expr;
+    { TreeLang.sub e1 e2 }
 | mul_expr
 
 let mul_expr :=
-| t1 = atomic_expr; "*"; t2 = mul_expr;
-    { TreeLang.mul t1 t2 }
-| t1 = atomic_expr; "/"; t2 = mul_expr;
-    { TreeLang.div t1 t2 }
+| e1 = atomic_expr; "*"; e2 = mul_expr;
+    { TreeLang.mul e1 e2 }
+| e1 = atomic_expr; "/"; e2 = mul_expr;
+    { TreeLang.div e1 e2 }
 | atomic_expr
 
 let atomic_expr :=
-| "("; t = expr; ")";
-    { t }
+| "("; e = expr; ")";
+    { e }
 | n = NUMBER;
     { TreeLang.num n }
-| "-"; t = atomic_expr;
-    { TreeLang.neg t }
+| "-"; e = atomic_expr;
+    { TreeLang.neg e }

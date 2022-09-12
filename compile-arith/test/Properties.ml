@@ -26,25 +26,25 @@ let arbitrary_expr =
   in
   let rec shrink_expr = QCheck.Iter.(function
     | TreeLang.Num i -> map TreeLang.num (QCheck.Shrink.int i)
-    | TreeLang.Neg n ->
-        QCheck.Iter.of_list [n]
-          <+> map TreeLang.neg (shrink_expr n)
-    | TreeLang.Add (n1, n2) ->
-        QCheck.Iter.of_list [n1; n2]
-          <+> (let+ n1' = shrink_expr n1 in TreeLang.add n1' n2)
-          <+> (let+ n2' = shrink_expr n2 in TreeLang.add n1 n2')
-    | TreeLang.Sub (n1, n2) ->
-        QCheck.Iter.of_list [n1; n2]
-          <+> (let+ n1' = shrink_expr n1 in TreeLang.sub n1' n2)
-          <+> (let+ n2' = shrink_expr n2 in TreeLang.sub n1 n2')
-    | TreeLang.Mul (n1, n2) ->
-        QCheck.Iter.of_list [n1; n2]
-          <+> (let+ n1' = shrink_expr n1 in TreeLang.mul n1' n2)
-          <+> (let+ n2' = shrink_expr n2 in TreeLang.mul n1 n2')
-    | TreeLang.Div (n1, n2) ->
-        QCheck.Iter.of_list [n1; n2]
-          <+> (let+ n1' = shrink_expr n1 in TreeLang.div n1' n2)
-          <+> (let+ n2' = shrink_expr n2 in TreeLang.div n1 n2'))
+    | TreeLang.Neg e ->
+        QCheck.Iter.of_list [e]
+          <+> map TreeLang.neg (shrink_expr e)
+    | TreeLang.Add (e1, e2) ->
+        QCheck.Iter.of_list [e1; e2]
+          <+> (let+ e1' = shrink_expr e1 in TreeLang.add e1' e2)
+          <+> (let+ e2' = shrink_expr e2 in TreeLang.add e1 e2')
+    | TreeLang.Sub (e1, e2) ->
+        QCheck.Iter.of_list [e1; e2]
+          <+> (let+ e1' = shrink_expr e1 in TreeLang.sub e1' e2)
+          <+> (let+ e2' = shrink_expr e2 in TreeLang.sub e1 e2')
+    | TreeLang.Mul (e1, e2) ->
+        QCheck.Iter.of_list [e1; e2]
+          <+> (let+ e1' = shrink_expr e1 in TreeLang.mul e1' e2)
+          <+> (let+ e2' = shrink_expr e2 in TreeLang.mul e1 e2')
+    | TreeLang.Div (e1, e2) ->
+        QCheck.Iter.of_list [e1; e2]
+          <+> (let+ e1' = shrink_expr e1 in TreeLang.div e1' e2)
+          <+> (let+ e2' = shrink_expr e2 in TreeLang.div e1 e2'))
   in
   QCheck.make expr_gen
     ~print:print_expr
