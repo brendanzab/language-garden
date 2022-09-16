@@ -1,8 +1,8 @@
 # A small dependently typed language
 
-This is an implementation small dependently typed language where types are
-first-class and where the output types of functions may depend on the inputs
-supplied to them.
+This is an implementation of a small dependently typed language where types are
+first-class and where the return type of a function may depend on the arguments
+it is applied to.
 
 *This was originally posted at
 [tt-hoas-nameless.ml](https://gist.github.com/brendanzab/a8443e9d267ed142e4603fc3cb5fa9c8).*
