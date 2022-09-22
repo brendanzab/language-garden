@@ -119,14 +119,16 @@ module MyScene (S : Sdf) = struct
   open S
 
   let f = float
+  let vec2f x y = vec2 (f x) (f y)
+  let vec3f x y z = vec3 (f x) (f y) (f z)
 
   let scene : sdf2 =
-    let* s1 = circle (f 0.1) |> move (vec2 (f 0.2) (f 0.0)) |> mirror_x in
-    let* s2 = square (f 0.15) |> move (vec2 (f 0.1) (f 0.2)) in
-    let shapeColor = vec3 (f 1.0) (f 1.0) (f 1.0) in
+    let* s1 = circle (f 0.1) |> move (vec2f 0.2 0.0) |> mirror_x in
+    let* s2 = square (f 0.15) |> move (vec2f 0.1 0.2) in
+    let shapeColor = vec3f 1.0 1.0 1.0 in
 
     pure (mix ~shape:(union s1 s2)
-      ~bg:(vec3 (f 0.35) (f 0.45) (f 0.50))
+      ~bg:(vec3f 0.35 0.45 0.50)
       ~fg:shapeColor)
 end
 
