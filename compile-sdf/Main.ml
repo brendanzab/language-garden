@@ -1,8 +1,15 @@
+type ('a, 'rest) vec1n = ('a * 'rest)
+type ('a, 'rest) vec2n = ('a * ('a, 'rest) vec1n)
+type ('a, 'rest) vec3n = ('a * ('a, 'rest) vec2n)
+type ('a, 'rest) vec4n = ('a * ('a, 'rest) vec3n)
+
+type vec2 = (float, unit) vec2n
+type vec3 = (float, unit) vec3n
+type vec4 = (float, unit) vec4n
+
+
 module type Sdf = sig
   type 'a repr
-
-  type vec2 = (float * float)
-  type vec3 = (float * float * float)
 
   (** A signed distance function from a 2D point to a distance to the boundary
       of a surface. Points outside the surface return positive values, and
@@ -15,6 +22,12 @@ module type Sdf = sig
   val float : float -> float repr
   val vec2 : float repr -> float repr -> vec2 repr
   val vec3 : float repr -> float repr -> float repr -> vec3 repr
+  val vec4 : float repr -> float repr -> float repr -> float repr -> vec4 repr
+
+  val get_x : (('a, 'rest) vec1n) repr -> 'a repr
+  val get_y : (('a, 'rest) vec2n) repr -> 'a repr
+  val get_z : (('a, 'rest) vec3n) repr -> 'a repr
+  val get_w : (('a, 'rest) vec4n) repr -> 'a repr
 
   val circle : radius:(float repr) -> pos:(vec2 repr) -> sdf2
   val square : radius:(float repr) -> pos:(vec2 repr) -> sdf2
@@ -24,6 +37,7 @@ module type Sdf = sig
   val subtract : float repr -> float repr -> float repr
 
   val mirror_x : sdf2 -> sdf2
+
   val mix : bg:(vec3 repr) -> fg:(vec3 repr) -> shape:(float repr) -> float repr
 end
 
@@ -32,8 +46,6 @@ module Glsl : Sdf
 = struct
   type 'a repr = string
 
-  type vec2 = (float * float)
-  type vec3 = (float * float * float)
   type sdf2 = vec2 repr -> float repr
 
   let (let*) sdf f uv =
@@ -44,6 +56,14 @@ module Glsl : Sdf
   let float = string_of_float
   let vec2 = Format.sprintf "vec2(%s, %s)"
   let vec3 = Format.sprintf "vec3(%s, %s, %s)"
+  let vec4 = Format.sprintf "vec4(%s, %s, %s, %s)"
+
+
+  let get_x = Format.sprintf "%s.x"
+  let get_y = Format.sprintf "%s.y"
+  let get_z = Format.sprintf "%s.z"
+  let get_w = Format.sprintf "%s.w"
+
 
   let circle ~radius ~pos uv =
     Format.sprintf "(length(%s - %s) - %s)" uv pos radius
@@ -73,8 +93,8 @@ module MyScene (S : Sdf) = struct
   let f = float
 
   let scene =
-    let* s1 = mirror_x (circle ~radius:(f 0.3) ~pos:(vec2 (f 0.0) (f 0.0))) in
-    let* s2 = square ~radius:(f 0.2) ~pos:(vec2 (f 0.2) (f 0.0)) in
+    let* s1 = mirror_x (circle ~radius:(f 0.1) ~pos:(vec2 (f 0.2) (f 0.0))) in
+    let* s2 = square ~radius:(f 0.15) ~pos:(vec2 (f 0.1) (f 0.2)) in
     let shapeColor = vec3 (f 1.0) (f 1.0) (f 1.0) in
 
     pure (mix ~shape:(union s1 s2)
