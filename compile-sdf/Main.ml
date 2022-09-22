@@ -8,6 +8,7 @@ type vec3 = (float, unit) vec3n
 type vec4 = (float, unit) vec4n
 
 
+(** A language of signed distance functions *)
 module type Sdf = sig
   type 'a repr
 
@@ -43,6 +44,7 @@ module type Sdf = sig
   val subtract : float repr -> float repr -> float repr
 
   val move : vec2 repr -> 'a read_uv -> 'a read_uv
+  val scale : float repr -> 'a read_uv -> 'a read_uv
   val mirror_x : 'a read_uv -> 'a read_uv
 
   val mix : bg:(vec3 repr) -> fg:(vec3 repr) -> shape:(float repr) -> float repr
@@ -96,6 +98,9 @@ module Glsl : Sdf
 
   let move v sdf uv =
     sdf (Format.sprintf "(%s - %s)" uv v)
+
+  let scale s sdf uv =
+    Format.sprintf "%s * %s" (sdf (Format.sprintf "(%s / %s)" uv s)) s
 
   let mirror_x sdf uv =
     (* FIXME: Improve sharing of uv computation *)
