@@ -11,4 +11,5 @@
   (dev
     ; see `ocamlc -warn-help` for information on warnings
     (flags (:standard -w -unused-constructor
+                      -w -unused-type-declaration
                       -w -unused-value-declaration))))
