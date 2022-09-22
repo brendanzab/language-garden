@@ -11,13 +11,19 @@ type vec4 = (float, unit) vec4n
 module type Sdf = sig
   type 'a repr
 
+  (** A computation with access to a UV coordinate *)
+  type 'a read_uv = vec2 repr -> 'a repr
+
+  (** Get the UV coordinate in the environment *)
+  val get_uv : vec2 read_uv
+
+  val (let*) : 'a read_uv -> ('a repr -> 'b read_uv) -> 'b read_uv
+  val pure : 'a repr -> 'a read_uv
+
   (** A signed distance function from a 2D point to a distance to the boundary
       of a surface. Points outside the surface return positive values, and
       points inside the surface return negative values. *)
-  type sdf2 = vec2 repr -> float repr
-
-  val (let*) : sdf2 -> (float repr -> sdf2) -> sdf2
-  val pure : float repr -> sdf2
+  type sdf2 = float read_uv
 
   val float : float -> float repr
   val vec2 : float repr -> float repr -> vec2 repr
@@ -36,23 +42,29 @@ module type Sdf = sig
   val intersect : float repr -> float repr -> float repr
   val subtract : float repr -> float repr -> float repr
 
-  val move : vec2 repr -> sdf2 -> sdf2
-  val mirror_x : sdf2 -> sdf2
+  val move : vec2 repr -> 'a read_uv -> 'a read_uv
+  val mirror_x : 'a read_uv -> 'a read_uv
 
   val mix : bg:(vec3 repr) -> fg:(vec3 repr) -> shape:(float repr) -> float repr
 end
 
+(** Compile the signed distance functions to GLSL *)
 module Glsl : Sdf
   with type 'a repr = string
 = struct
   type 'a repr = string
 
-  type sdf2 = vec2 repr -> float repr
+  type 'a read_uv = vec2 repr -> 'a repr
+
+  let get_uv uv = uv
 
   let (let*) sdf f uv =
     f (sdf uv) uv
 
-  let pure s _ = s
+  let pure s _uv = s
+
+
+  type sdf2 = float read_uv
 
 
   let float = string_of_float
@@ -103,7 +115,7 @@ module MyScene (S : Sdf) = struct
 
   let f = float
 
-  let scene =
+  let scene : sdf2 =
     let* s1 = circle (f 0.1) |> move (vec2 (f 0.2) (f 0.0)) |> mirror_x in
     let* s2 = square (f 0.15) |> move (vec2 (f 0.1) (f 0.2)) in
     let shapeColor = vec3 (f 1.0) (f 1.0) (f 1.0) in
