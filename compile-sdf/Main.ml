@@ -18,7 +18,7 @@ module type Sdf = sig
   (** Get the UV coordinate in the environment *)
   val get_uv : vec2 read_uv
 
-  val (let*) : 'a read_uv -> ('a repr -> 'b read_uv) -> 'b read_uv
+  val bind : 'a read_uv -> ('a repr -> 'b read_uv) -> 'b read_uv
   val pure : 'a repr -> 'a read_uv
 
   (** A signed distance function from a 2D point to a distance to the boundary
@@ -64,9 +64,7 @@ module Glsl : Sdf
 
   let get_uv uv = uv
 
-  let (let*) sdf f uv =
-    f (sdf uv) uv
-
+  let bind sdf f uv = f (sdf uv) uv
   let pure s _uv = s
 
 
@@ -143,6 +141,7 @@ module MyScene (S : Sdf) = struct
   let f = float
   let vec2f x y = vec2 (f x) (f y)
   let vec3f x y z = vec3 (f x) (f y) (f z)
+  let (let*) = bind
 
   let scene : sdf2 =
     let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
