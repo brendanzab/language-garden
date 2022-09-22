@@ -58,7 +58,7 @@ module Glsl : Sdf
     sdf (Format.sprintf "vec2(abs(%s.x), %s.y)" uv uv)
 
   let mix ~bg ~fg ~shape =
-    Format.sprintf "mix(%s, %s, step(0.0, %s))" bg fg shape
+    Format.sprintf "mix(%s, %s, step(0.0, %s))" fg bg shape
 
 end
 
@@ -74,7 +74,7 @@ module MyScene (S : Sdf) = struct
     let shapeColor = vec3 (f 1.0) (f 1.0) (f 1.0) in
 
     pure (mix ~shape:(union s1 s2)
-      ~bg:(vec3 (f 0.0) (f 0.0) (f 0.0))
+      ~bg:(vec3 (f 0.35) (f 0.45) (f 0.50))
       ~fg:shapeColor)
 end
 
