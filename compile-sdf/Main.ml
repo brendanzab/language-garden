@@ -46,6 +46,10 @@ module type Sdf = sig
   val move : vec2 repr -> 'a read_uv -> 'a read_uv
   val scale : float repr -> 'a read_uv -> 'a read_uv
   val mirror_x : 'a read_uv -> 'a read_uv
+  val mirror_y : 'a read_uv -> 'a read_uv
+  val mirror_xy : 'a read_uv -> 'a read_uv
+  val repeat : spacing:vec2 repr -> 'a read_uv -> 'a read_uv
+  val repeat_limit : spacing:vec2 repr -> limit:vec2 repr -> 'a read_uv -> 'a read_uv
 
   val mix : bg:(vec3 repr) -> fg:(vec3 repr) -> shape:(float repr) -> float repr
 end
@@ -100,13 +104,31 @@ module Glsl : Sdf
     sdf (Format.sprintf "(%s - %s)" uv v)
 
   let scale s sdf uv =
-    Format.sprintf "%s * %s" (sdf (Format.sprintf "(%s / %s)" uv s)) s
+    Format.sprintf "(%s * %s)" (sdf (Format.sprintf "(%s / %s)" uv s)) s
 
   let mirror_x sdf uv =
     (* FIXME: Improve sharing of uv computation *)
     let x = uv |> get_x in
     let y = uv |> get_y in
     sdf (Format.sprintf "vec2(abs(%s), %s)" x y)
+
+  let mirror_y sdf uv =
+    (* FIXME: Improve sharing of uv computation *)
+    let x = uv |> get_x in
+    let y = uv |> get_y in
+    sdf (Format.sprintf "vec2(%s, abs(%s))" x y)
+
+  let mirror_xy sdf uv =
+    sdf (Format.sprintf "vec2(abs(%s))" uv)
+
+  let repeat ~spacing sdf uv =
+    (* FIXME: Improve sharing of spacing computation *)
+    sdf (Format.sprintf "(mod(%s + 0.5 * %s, %s) - 0.5 * %s)" uv spacing spacing spacing)
+
+  let repeat_limit ~spacing ~limit sdf uv =
+    (* FIXME: Improve sharing of UV, spacing, and limit computations *)
+    (* TODO: Upper/lower limits *)
+    sdf (Format.sprintf "(%s - %s * clamp(round(%s / %s), -%s, %s))" uv spacing uv spacing limit limit)
 
 
   let mix ~bg ~fg ~shape =
@@ -123,7 +145,7 @@ module MyScene (S : Sdf) = struct
   let vec3f x y z = vec3 (f x) (f y) (f z)
 
   let scene : sdf2 =
-    let* s1 = circle (f 0.1) |> move (vec2f 0.2 0.0) |> mirror_x in
+    let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
     let* s2 = square (f 0.15) |> move (vec2f 0.1 0.2) in
     let shapeColor = vec3f 1.0 1.0 1.0 in
 
