@@ -29,13 +29,14 @@ module type Sdf = sig
   val get_z : (('a, 'rest) vec3n) repr -> 'a repr
   val get_w : (('a, 'rest) vec4n) repr -> 'a repr
 
-  val circle : radius:(float repr) -> pos:(vec2 repr) -> sdf2
-  val square : radius:(float repr) -> pos:(vec2 repr) -> sdf2
+  val circle : float repr -> sdf2
+  val square : float repr -> sdf2
 
   val union : float repr -> float repr -> float repr
   val intersect : float repr -> float repr -> float repr
   val subtract : float repr -> float repr -> float repr
 
+  val move : vec2 repr -> sdf2 -> sdf2
   val mirror_x : sdf2 -> sdf2
 
   val mix : bg:(vec3 repr) -> fg:(vec3 repr) -> shape:(float repr) -> float repr
@@ -53,6 +54,7 @@ module Glsl : Sdf
 
   let pure s _ = s
 
+
   let float = string_of_float
   let vec2 = Format.sprintf "vec2(%s, %s)"
   let vec3 = Format.sprintf "vec3(%s, %s, %s)"
@@ -65,21 +67,30 @@ module Glsl : Sdf
   let get_w = Format.sprintf "%s.w"
 
 
-  let circle ~radius ~pos uv =
-    Format.sprintf "(length(%s - %s) - %s)" uv pos radius
+  let circle radius uv =
+    Format.sprintf "(length(%s) - %s)" uv radius
 
-  let square ~radius ~pos uv =
-    let x = Format.sprintf "%s.x - %s.x" uv pos in
-    let y = Format.sprintf "%s.y - %s.y" uv pos in
+  let square radius uv =
+    (* FIXME: Improve sharing of uv computation *)
+    let x = uv |> get_x in
+    let y = uv |> get_y in
     Format.sprintf "(max(abs(%s), abs(%s)) - %s)" x y radius
 
-  let union d1 d2 = Format.sprintf "min(%s, %s)" d1 d2
-  let intersect d1 d2 = Format.sprintf "max(%s, %s)" d1 d2
-  let subtract d1 d2 = Format.sprintf "max(%s, -%s)" d1 d2
+
+  let union = Format.sprintf "min(%s, %s)"
+  let intersect = Format.sprintf "max(%s, %s)"
+  let subtract = Format.sprintf "max(%s, -%s)"
+
+
+  let move v sdf uv =
+    sdf (Format.sprintf "(%s - %s)" uv v)
 
   let mirror_x sdf uv =
     (* FIXME: Improve sharing of uv computation *)
-    sdf (Format.sprintf "vec2(abs(%s.x), %s.y)" uv uv)
+    let x = uv |> get_x in
+    let y = uv |> get_y in
+    sdf (Format.sprintf "vec2(abs(%s), %s)" x y)
+
 
   let mix ~bg ~fg ~shape =
     Format.sprintf "mix(%s, %s, step(0.0, %s))" fg bg shape
@@ -93,8 +104,8 @@ module MyScene (S : Sdf) = struct
   let f = float
 
   let scene =
-    let* s1 = mirror_x (circle ~radius:(f 0.1) ~pos:(vec2 (f 0.2) (f 0.0))) in
-    let* s2 = square ~radius:(f 0.15) ~pos:(vec2 (f 0.1) (f 0.2)) in
+    let* s1 = circle (f 0.1) |> move (vec2 (f 0.2) (f 0.0)) |> mirror_x in
+    let* s2 = square (f 0.15) |> move (vec2 (f 0.1) (f 0.2)) in
     let shapeColor = vec3 (f 1.0) (f 1.0) (f 1.0) in
 
     pure (mix ~shape:(union s1 s2)
