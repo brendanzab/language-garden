@@ -29,6 +29,7 @@ related to compiling functional programming languages.
 - [**compile-arith**](./compile-arith/): A compiler from tree-based arithmetic expressions to a stack machine.
 - [**compile-arithcond**](./compile-arithcond/): A compiler from tree-based arithmetic and conditional expressions to a stack machine.
 - [**compile-arith-verified**](./compile-arith-verified/): A formally verified arithmetic expression compiler and decompiler in Lean 4.
+- [**compile-sdf**](./compile-sdf/): An embedded DSL for building signed distance functions, compiling them to GLSL shaders.
 
 ## Development setup
 

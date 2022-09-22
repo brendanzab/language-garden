@@ -75,6 +75,13 @@
             ];
           };
 
+          compile-sdf = ocamlPackages.buildDunePackage {
+            pname = "compile-sdf";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+          };
+
           # Elaboration
 
           elab-dependent = ocamlPackages.buildDunePackage {

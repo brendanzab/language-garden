@@ -27,6 +27,9 @@
     (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
 
+(package
+  (name compile-sdf))
+
 
 (package
   (name elab-dependent)
