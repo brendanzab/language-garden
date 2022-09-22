@@ -10,21 +10,31 @@ type vec4 = (float, unit) vec4n
 
 (** A language of signed distance functions *)
 module type Sdf = sig
+
   type 'a repr
 
-  (** A computation with access to a UV coordinate *)
-  type 'a read_uv = vec2 repr -> 'a repr
 
-  (** Get the UV coordinate in the environment *)
-  val get_uv : vec2 read_uv
+  (** An environment that provides access to a UV coordinate *)
+  module Env : sig
 
-  val bind : 'a read_uv -> ('a repr -> 'b read_uv) -> 'b read_uv
-  val pure : 'a repr -> 'a read_uv
+    (** A computation with access to a UV coordinate *)
+    type 'a t
+
+    (** Get the UV coordinate in the environment *)
+    val get_uv : vec2 t
+    (** Run a computation with an initial UV coordinate *)
+    val run_uv : vec2 repr -> 'a t -> 'a repr
+
+    val bind : 'a t -> ('a repr -> 'b t) -> 'b t
+    val pure : 'a repr -> 'a t
+
+  end
+
 
   (** A signed distance function from a 2D point to a distance to the boundary
       of a surface. Points outside the surface return positive values, and
       points inside the surface return negative values. *)
-  type sdf2 = float read_uv
+  type sdf2 = float Env.t
 
   val float : float -> float repr
   val vec2 : float repr -> float repr -> vec2 repr
@@ -43,32 +53,41 @@ module type Sdf = sig
   val intersect : float repr -> float repr -> float repr
   val subtract : float repr -> float repr -> float repr
 
-  val move : vec2 repr -> 'a read_uv -> 'a read_uv
-  val scale : float repr -> 'a read_uv -> 'a read_uv
-  val mirror_x : 'a read_uv -> 'a read_uv
-  val mirror_y : 'a read_uv -> 'a read_uv
-  val mirror_xy : 'a read_uv -> 'a read_uv
-  val repeat : spacing:vec2 repr -> 'a read_uv -> 'a read_uv
-  val repeat_limit : spacing:vec2 repr -> limit:vec2 repr -> 'a read_uv -> 'a read_uv
+  val move : vec2 repr -> 'a Env.t -> 'a Env.t
+  val scale : float repr -> 'a Env.t -> 'a Env.t
+  val mirror_x : 'a Env.t -> 'a Env.t
+  val mirror_y : 'a Env.t -> 'a Env.t
+  val mirror_xy : 'a Env.t -> 'a Env.t
+  val repeat : spacing:vec2 repr -> 'a Env.t -> 'a Env.t
+  val repeat_limit : spacing:vec2 repr -> limit:vec2 repr -> 'a Env.t -> 'a Env.t
 
   val overlay : bg:(vec3 repr) -> fg:(vec3 repr) -> float repr -> float repr
+
 end
 
 (** Compile the signed distance functions to GLSL *)
 module Glsl : Sdf
+
   with type 'a repr = string
+
 = struct
+
   type 'a repr = string
 
-  type 'a read_uv = vec2 repr -> 'a repr
+  module Env = struct
 
-  let get_uv uv = uv
+    type 'a t = vec2 repr -> 'a repr
 
-  let bind sdf f uv = f (sdf uv) uv
-  let pure s _uv = s
+    let get_uv uv = uv
+    let run_uv (uv : vec2 repr) (sdf : 'a t) : 'a repr = sdf uv
+
+    let bind sdf f uv = f (sdf uv) uv
+    let pure s _uv = s
+
+  end
 
 
-  type sdf2 = float read_uv
+  type sdf2 = float Env.t
 
 
   let float = string_of_float
@@ -141,7 +160,8 @@ module MyScene (S : Sdf) = struct
   let f = float
   let vec2f x y = vec2 (f x) (f y)
   let vec3f x y z = vec3 (f x) (f y) (f z)
-  let (let*) = bind
+  let (let*) = Env.bind
+  let pure = Env.pure
 
   let scene : sdf2 =
     let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
@@ -166,7 +186,7 @@ let module S = MyScene (Glsl) in
   Format.printf "  uv.x *= iResolution.x / iResolution.y;\n";
   Format.printf "\n";
   Format.printf "  // Compute the colour for this UV coordinate.\n";
-  Format.printf "  vec3 col = %s;" (S.scene "uv");
+  Format.printf "  vec3 col = %s;" (Glsl.Env.run_uv "uv" S.scene);
   Format.printf "\n";
   Format.printf "  // Output to screen\n";
   Format.printf "  fragColor = vec4(col,1.0);\n";
