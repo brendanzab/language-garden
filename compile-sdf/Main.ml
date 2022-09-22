@@ -1,34 +1,36 @@
 module type Sdf = sig
-  type scalar
-  type vec2
-  type vec3
-  type sdf2
+  type 'a repr
 
-  val (let*) : sdf2 -> (scalar -> sdf2) -> sdf2
-  val pure : scalar -> sdf2
+  type vec2 = (float * float)
+  type vec3 = (float * float * float)
+  type sdf2 = vec2 repr -> float repr
 
-  val float : float -> scalar
-  val vec2 : scalar -> scalar -> vec2
-  val vec3 : scalar -> scalar -> scalar -> vec3
+  val (let*) : sdf2 -> (float repr -> sdf2) -> sdf2
+  val pure : float repr -> sdf2
 
-  val circle : radius:scalar -> pos:vec2 -> sdf2
-  val square : radius:scalar -> pos:vec2 -> sdf2
+  val float : float -> float repr
+  val vec2 : float repr -> float repr -> vec2 repr
+  val vec3 : float repr -> float repr -> float repr -> vec3 repr
 
-  val union : scalar -> scalar -> scalar
-  val intersect : scalar -> scalar -> scalar
-  val subtract : scalar -> scalar -> scalar
+  val circle : radius:(float repr) -> pos:(vec2 repr) -> sdf2
+  val square : radius:(float repr) -> pos:(vec2 repr) -> sdf2
+
+  val union : float repr -> float repr -> float repr
+  val intersect : float repr -> float repr -> float repr
+  val subtract : float repr -> float repr -> float repr
 
   val mirror_x : sdf2 -> sdf2
-  val mix : bg:vec3 -> fg:vec3 -> shape:scalar -> scalar
+  val mix : bg:(vec3 repr) -> fg:(vec3 repr) -> shape:(float repr) -> float repr
 end
 
 module Glsl : Sdf
-  with type sdf2 = string -> string
+  with type 'a repr = string
 = struct
-  type scalar = string
-  type vec2 = string
-  type vec3 = string
-  type sdf2 = string -> string
+  type 'a repr = string
+
+  type vec2 = (float * float)
+  type vec3 = (float * float * float)
+  type sdf2 = vec2 repr -> float repr
 
   let (let*) sdf f uv =
     f (sdf uv) uv
@@ -52,7 +54,7 @@ module Glsl : Sdf
   let subtract d1 d2 = Format.sprintf "max(%s, -%s)" d1 d2
 
   let mirror_x sdf uv =
-    (* FIXME: Improve sharing of SDF computation *)
+    (* FIXME: Improve sharing of uv computation *)
     sdf (Format.sprintf "vec2(abs(%s.x), %s.y)" uv uv)
 
   let mix ~bg ~fg ~shape =
