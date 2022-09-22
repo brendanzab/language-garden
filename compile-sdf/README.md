@@ -5,14 +5,14 @@ This is an experiemental embedded DSL for building [signed distance functions
 functions are a powerful technique for rendering procedural graphics in parallel
 on the GPU, without the use of mesh geometry.
 
-This DSL was motivated by noticing that some SDFs were higher-order, which
-is not supported in shader languages like GLSL), and that the threading of [UV
-coordinates](https://en.wikipedia.org/wiki/UV_mapping) through the SDFs
-resembled environment passing, which could benefit from some syntactic sugar.
+This DSL was motivated by noticing that some SDFs were higher-order – which
+is not supported in shader languages like GLSL, and that the threading of [UV
+coordinates](https://en.wikipedia.org/wiki/UV_mapping) resembled environment
+passing, which could benefit from some syntactic sugar.
 
-[Tagless-final style](https://okmij.org/ftp/tagless-final/) is used, which made
-it reasonably straightforward to compile the DSL to GLSL fragment shaders that
-can be copied into [Shadertoy](https://www.shadertoy.com).
+[Tagless-final style](https://okmij.org/ftp/tagless-final/) is used, which makes
+it straightforward to compile the DSL to GLSL fragment shaders that can be
+copied into [Shadertoy](https://www.shadertoy.com).
 
 # Resources
 
