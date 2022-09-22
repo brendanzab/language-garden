@@ -3,6 +3,10 @@ module type Sdf = sig
 
   type vec2 = (float * float)
   type vec3 = (float * float * float)
+
+  (** A signed distance function from a 2D point to a distance to the boundary
+      of a surface. Points outside the surface return positive values, and
+      points inside the surface return negative values. *)
   type sdf2 = vec2 repr -> float repr
 
   val (let*) : sdf2 -> (float repr -> sdf2) -> sdf2
