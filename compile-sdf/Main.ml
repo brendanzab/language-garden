@@ -51,7 +51,7 @@ module type Sdf = sig
   val repeat : spacing:vec2 repr -> 'a read_uv -> 'a read_uv
   val repeat_limit : spacing:vec2 repr -> limit:vec2 repr -> 'a read_uv -> 'a read_uv
 
-  val mix : bg:(vec3 repr) -> fg:(vec3 repr) -> shape:(float repr) -> float repr
+  val overlay : bg:(vec3 repr) -> fg:(vec3 repr) -> float repr -> float repr
 end
 
 (** Compile the signed distance functions to GLSL *)
@@ -129,7 +129,7 @@ module Glsl : Sdf
     sdf (Format.sprintf "(%s - %s * clamp(round(%s / %s), -%s, %s))" uv spacing uv spacing limit limit)
 
 
-  let mix ~bg ~fg ~shape =
+  let overlay ~bg ~fg shape =
     Format.sprintf "mix(%s, %s, step(0.0, %s))" fg bg shape
 
 end
@@ -146,11 +146,11 @@ module MyScene (S : Sdf) = struct
   let scene : sdf2 =
     let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
     let* s2 = square (f 0.15) |> move (vec2f 0.1 0.2) in
-    let shapeColor = vec3f 1.0 1.0 1.0 in
 
-    pure (mix ~shape:(union s1 s2)
-      ~bg:(vec3f 0.35 0.45 0.50)
-      ~fg:shapeColor)
+    let shapeColor = vec3f 1.0 1.0 1.0 in
+    let backgroundColor = vec3f 0.35 0.45 0.50 in
+
+    pure (overlay ~bg:backgroundColor ~fg:shapeColor (union s1 s2))
 end
 
 
