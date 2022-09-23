@@ -128,7 +128,7 @@ end
     result of intermediate computations. *)
 module GlslEnv = struct
 
-  type locals = (string * string) list
+  type locals = (string * string * string) list
 
   type 'a m = locals -> 'a * locals
 
@@ -141,10 +141,11 @@ module GlslEnv = struct
     fun locals -> (x, locals)
 
 
-  let add_local ty x : 'a m =
+  let add_local ty def : 'a m =
     (* FIXME: Avoid names properly (including globals) *)
     fun locals ->
-      ("t" ^ string_of_int (List.length locals), (ty, x) :: locals)
+      let name = Format.sprintf "t%i" (List.length locals) in
+      (name, (name, ty, def) :: locals)
 
 end
 
@@ -326,8 +327,8 @@ let () =
   Format.printf "  uv.x *= iResolution.x / iResolution.y;\n";
   Format.printf "\n";
   Format.printf "  // Local bindings\n";
-  locals |> List.rev |> List.iteri (fun i (ty, def) ->
-    Format.printf "  %s t%i = %s;\n" ty i def);
+  locals |> List.rev |> List.iter (fun (name, ty, def) ->
+    Format.printf "  %s %s = %s;\n" ty name def);
   Format.printf "\n";
   Format.printf "  // Compute the colour for this UV coordinate.\n";
   Format.printf "  vec3 color = %s;\n" color;
