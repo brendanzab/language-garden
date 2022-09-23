@@ -12,7 +12,8 @@ passing, which could benefit from some syntactic sugar.
 
 [Tagless-final style](https://okmij.org/ftp/tagless-final/) is used, which makes
 it straightforward to compile the DSL to GLSL fragment shaders that can be
-copied into [Shadertoy](https://www.shadertoy.com).
+copied into [Shadertoy](https://www.shadertoy.com). The resulting GLSL code can
+be currently seen [in the CLI tests](./tests.t).
 
 # Resources
 
@@ -21,3 +22,4 @@ copied into [Shadertoy](https://www.shadertoy.com).
 - [Inigo Quilez: distance functions](https://iquilezles.org/articles/distfunctions/)
 - [Nathan Vaughn’s Shadertoy Tutorial](https://inspirnathan.com/posts/47-shadertoy-tutorial-part-1/)
 - [hg_sdf: A glsl library for building signed distance functions](https://mercury.sexy/hg_sdf/)
+- [Bauble: A toy for composing signed distance functions in Janet](https://bauble.studio/)
