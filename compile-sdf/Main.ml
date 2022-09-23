@@ -236,10 +236,9 @@ module GlslSdf : Sdf with type 'a repr = string GlslEnv.m = struct
 
   let square radius uv =
     let* uv = bind uv (add_local "vec2") in
-    map3 (Format.sprintf "(max(abs(%s), abs(%s)) - %s)")
-      (pure uv |> Math.x)
-      (pure uv |> Math.y)
-      radius
+    let* x = pure uv |> Math.x in
+    let* y = pure uv |> Math.y in
+    map (Format.sprintf "max(abs(%s), abs(%s)) - (%s)" x y) radius
 
 
   let union = map2 (Format.sprintf "min(%s, %s)")
@@ -250,22 +249,23 @@ module GlslSdf : Sdf with type 'a repr = string GlslEnv.m = struct
   let move v sdf uv =
     sdf (map2 (Format.sprintf "%s - %s") uv v)
 
-  let scale s sdf uv =
+  let scale factor sdf uv =
     let* uv = uv in
-    let* s = bind s (add_local "float") in
-    map2 (Format.sprintf "(%s) * %s") (sdf (pure (Format.sprintf "(%s) / %s" uv s))) (pure s)
+    let* factor = bind factor (add_local "float") in
+    let* dist = sdf (pure (Format.sprintf "(%s) / %s" uv factor)) in
+    pure (Format.sprintf "(%s) * %s" dist factor)
 
   let mirror_x sdf uv =
     let* uv = bind uv (add_local "vec2") in
-    sdf (map2 (Format.sprintf "vec2(abs(%s), %s)")
-      (pure uv |> Math.x)
-      (pure uv |> Math.y))
+    let* x = pure uv |> Math.x in
+    let* y = pure uv |> Math.y in
+    sdf (pure (Format.sprintf "vec2(abs(%s), %s)" x y))
 
   let mirror_y sdf uv =
     let* uv = bind uv (add_local "vec2") in
-    sdf (map2 (Format.sprintf "vec2(%s, abs(%s))")
-      (pure uv |> Math.x)
-      (pure uv |> Math.y))
+    let* x = pure uv |> Math.x in
+    let* y = pure uv |> Math.y in
+    sdf (pure (Format.sprintf "vec2(%s, abs(%s))" x y))
 
   let mirror_xy sdf uv =
     sdf (map (Format.sprintf "vec2(abs(%s))") uv)
@@ -273,13 +273,15 @@ module GlslSdf : Sdf with type 'a repr = string GlslEnv.m = struct
   let repeat ~spacing sdf uv =
     let* uv = uv in
     let* spacing = bind spacing (add_local "vec2") in
-    sdf (pure (Format.sprintf "mod((%s) + 0.5 * %s, %s) - 0.5 * %s" uv spacing spacing spacing))
+    sdf (pure (Format.sprintf "mod((%s) + 0.5 * %s, %s) - 0.5 * %s"
+      uv spacing spacing spacing))
 
   let repeat_limit ~spacing ~limit sdf uv =
     let* uv = bind uv (add_local "vec2") in
     let* spacing = bind spacing (add_local "vec2") in
     let* limit = bind limit (add_local "vec2") in
-    sdf (pure (Format.sprintf "%s - %s * clamp(round(%s / %s), -%s, %s)" uv spacing uv spacing limit limit))
+    sdf (pure (Format.sprintf "%s - %s * clamp(round(%s / %s), -%s, %s)"
+      uv spacing uv spacing limit limit))
 
 
   let overlay ~bg ~fg shape =
