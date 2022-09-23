@@ -110,15 +110,15 @@ module type Sdf = sig
   val intersect : float repr -> float repr -> float repr
   val subtract : float repr -> float repr -> float repr
 
-  val move : vec2f repr -> 'a UvEnv.m -> 'a UvEnv.m
-  val scale : float repr -> 'a UvEnv.m -> 'a UvEnv.m
-  val mirror_x : 'a UvEnv.m -> 'a UvEnv.m
-  val mirror_y : 'a UvEnv.m -> 'a UvEnv.m
-  val mirror_xy : 'a UvEnv.m -> 'a UvEnv.m
-  val repeat : spacing:vec2f repr -> 'a UvEnv.m -> 'a UvEnv.m
-  val repeat_limit : spacing:vec2f repr -> limit:vec2f repr -> 'a UvEnv.m -> 'a UvEnv.m
+  val move : vec2f repr -> sdf2 -> sdf2
+  val scale : float repr -> sdf2 -> sdf2
+  val mirror_x : sdf2 -> sdf2
+  val mirror_y : sdf2 -> sdf2
+  val mirror_xy : sdf2 -> sdf2
+  val repeat : spacing:vec2f repr -> sdf2 -> sdf2
+  val repeat_limit : spacing:vec2f repr -> limit:vec2f repr -> sdf2 -> sdf2
 
-  val overlay : bg:(vec3f repr) -> fg:(vec3f repr) -> float repr -> float repr
+  val overlay : bg:vec3f repr -> fg:vec3f repr -> float repr -> vec3f repr
 
 end
 
@@ -301,7 +301,7 @@ module MyScene (S : Sdf) = struct
   let (let*) = UvEnv.bind
   let pure = UvEnv.pure
 
-  let scene : sdf2 =
+  let scene : vec3f UvEnv.m =
     let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
     let* s2 = square (f 0.15) |> move (vec2f 0.1 0.2) in
 
