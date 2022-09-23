@@ -91,7 +91,7 @@ module type Sdf = sig
     val pure : 'a repr -> 'a m
 
     (** Get the UV coordinate in the environment *)
-    val ask : vec2f m
+    val ask : (vec2f repr) m
 
     (** Run a computation with an initial UV coordinate *)
     val run : vec2f repr -> 'a m -> 'a repr
@@ -211,10 +211,10 @@ module GlslSdf : Sdf with type 'a repr = string GlslEnv.m = struct
 
     type 'a m = vec2f repr -> 'a repr
 
-    let bind sdf f uv = f (sdf uv) uv
-    let pure s _uv = s
+    let bind sdf f = fun uv -> f (sdf uv) uv
+    let pure x = fun _ -> x
 
-    let ask uv = uv
+    let ask : (vec2f repr) m = fun uv -> uv
     let run (uv : vec2f repr) (sdf : 'a m) : 'a repr = sdf uv
 
   end
