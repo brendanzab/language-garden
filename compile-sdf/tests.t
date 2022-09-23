@@ -14,7 +14,7 @@ Generate the GLSL for the scene
     vec2 t1 = uv - vec2(0.1, 0.2);
   
     // Compute the colour for this UV coordinate.
-    vec3 color = mix(vec3(1., 1., 1.), vec3(0.35, 0.45, 0.5), step(0.0, min(length(mod((uv) + 0.5 * t0, t0) - 0.5 * t0) - (0.05), max(abs(t1.x), abs(t1.y)) - (0.15))));
+    vec3 color = mix(vec3(1., 1., 1.), vec3(0.35, 0.45, 0.5), step(0.0, min(length(mod((uv) + 0.5 * t0, t0) - 0.5 * t0) - (0.05), max(abs((t1).x), abs((t1).y)) - (0.15))));
   
     // Output to screen
     fragColor = vec4(color,1.0);
