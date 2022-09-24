@@ -1,19 +1,37 @@
-type ('s, 'rest) vec1n = ('s * 'rest)
-type ('s, 'rest) vec2n = ('s * ('s, 'rest) vec1n)
-type ('s, 'rest) vec3n = ('s * ('s, 'rest) vec2n)
-type ('s, 'rest) vec4n = ('s * ('s, 'rest) vec3n)
+type zero = Z
+type 'n succ = Succ of 'n
 
-type 's vec2 = ('s, unit) vec2n
-type 's vec3 = ('s, unit) vec3n
-type 's vec4 = ('s, unit) vec4n
+type n0 = zero
+type n1 = n0 succ
+type n2 = n1 succ
+type n3 = n2 succ
+type n4 = n3 succ
 
+(** Vectors indexed with a statically known size. This is not a very efficient
+    representation, but we don’t actually use these for computation so it
+    doesn’t really matter. *)
+type ('s, 'n) vec =
+  | Nil : ('s, zero) vec
+  | Cons : 's * ('s, 'n) vec -> ('s, 'n succ) vec
+
+type 's vec1 = ('s , n1) vec
+type 's vec2 = ('s , n2) vec
+type 's vec3 = ('s , n3) vec
+type 's vec4 = ('s , n4) vec
+
+type ('s, 'n) vec1n = ('s , 'n succ) vec
+type ('s, 'n) vec2n = ('s , 'n succ) vec1n
+type ('s, 'n) vec3n = ('s , 'n succ) vec2n
+type ('s, 'n) vec4n = ('s , 'n succ) vec3n
+
+type vec1f = float vec1
 type vec2f = float vec2
 type vec3f = float vec3
 type vec4f = float vec4
 
-type 's mat2 = (('s, unit) vec2n, unit) vec2n
-type 's mat3 = (('s, unit) vec3n, unit) vec3n
-type 's mat4 = (('s, unit) vec4n, unit) vec4n
+type 's mat2 = ('s vec2) vec2
+type 's mat3 = ('s vec3) vec3
+type 's mat4 = ('s vec4) vec4
 
 type mat2f = float mat2
 type mat3f = float mat3
@@ -38,6 +56,8 @@ module type Math = sig
   val mat4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr -> (float vec4) repr -> (float mat4) repr
 
   (** Functions *)
+
+  (* TODO: implement custom operators to make these a bit nicer to work with *)
 
   val neg : float repr -> float repr
   val neg2 : (float vec2) repr -> (float vec2) repr
@@ -123,32 +143,32 @@ module type Math = sig
 
   (** Vector projections *)
 
-  val x : ((float, 'rest) vec1n) repr -> float repr
-  val y : ((float, 'rest) vec2n) repr -> float repr
-  val z : ((float, 'rest) vec3n) repr -> float repr
-  val w : ((float, 'rest) vec4n) repr -> float repr
+  val x : ((float, 'n) vec1n) repr -> float repr
+  val y : ((float, 'n) vec2n) repr -> float repr
+  val z : ((float, 'n) vec3n) repr -> float repr
+  val w : ((float, 'n) vec4n) repr -> float repr
 
   (** Vector swizzling *)
 
-  val xx : ((float, 'rest) vec1n) repr -> (float vec2) repr
-  val xy : ((float, 'rest) vec2n) repr -> (float vec2) repr
-  val xz : ((float, 'rest) vec3n) repr -> (float vec2) repr
-  val xw : ((float, 'rest) vec4n) repr -> (float vec2) repr
+  val xx : ((float, 'n) vec1n) repr -> (float vec2) repr
+  val xy : ((float, 'n) vec2n) repr -> (float vec2) repr
+  val xz : ((float, 'n) vec3n) repr -> (float vec2) repr
+  val xw : ((float, 'n) vec4n) repr -> (float vec2) repr
 
-  val yx : ((float, 'rest) vec2n) repr -> (float vec2) repr
-  val yy : ((float, 'rest) vec2n) repr -> (float vec2) repr
-  val yz : ((float, 'rest) vec3n) repr -> (float vec2) repr
-  val yw : ((float, 'rest) vec4n) repr -> (float vec2) repr
+  val yx : ((float, 'n) vec2n) repr -> (float vec2) repr
+  val yy : ((float, 'n) vec2n) repr -> (float vec2) repr
+  val yz : ((float, 'n) vec3n) repr -> (float vec2) repr
+  val yw : ((float, 'n) vec4n) repr -> (float vec2) repr
 
-  val zx : ((float, 'rest) vec3n) repr -> (float vec2) repr
-  val zy : ((float, 'rest) vec3n) repr -> (float vec2) repr
-  val zz : ((float, 'rest) vec3n) repr -> (float vec2) repr
-  val zw : ((float, 'rest) vec4n) repr -> (float vec2) repr
+  val zx : ((float, 'n) vec3n) repr -> (float vec2) repr
+  val zy : ((float, 'n) vec3n) repr -> (float vec2) repr
+  val zz : ((float, 'n) vec3n) repr -> (float vec2) repr
+  val zw : ((float, 'n) vec4n) repr -> (float vec2) repr
 
-  val wx : ((float, 'rest) vec4n) repr -> (float vec2) repr
-  val wy : ((float, 'rest) vec4n) repr -> (float vec2) repr
-  val wz : ((float, 'rest) vec4n) repr -> (float vec2) repr
-  val ww : ((float, 'rest) vec4n) repr -> (float vec2) repr
+  val wx : ((float, 'n) vec4n) repr -> (float vec2) repr
+  val wy : ((float, 'n) vec4n) repr -> (float vec2) repr
+  val wz : ((float, 'n) vec4n) repr -> (float vec2) repr
+  val ww : ((float, 'n) vec4n) repr -> (float vec2) repr
 
 end
 
