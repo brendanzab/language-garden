@@ -228,74 +228,82 @@ module GlslMath : Math with type 'a repr = string GlslEnv.m = struct
 
   type 'a repr = string GlslEnv.m
 
+  let pre op = map (Format.sprintf "%s(%s)" op)
+  let post op = map (fun x -> Format.sprintf "(%s)%s" x op)
+  let binop1 op = map2 (fun x y -> Format.sprintf "(%s) %s (%s)" op x y)
+  let call1 f = map (Format.sprintf "%s(%s)" f)
+  let call2 f = map2 (Format.sprintf "%s(%s, %s)" f)
+  let call3 f = map3 (Format.sprintf "%s(%s, %s, %s)" f)
+  let call4 f = map4 (Format.sprintf "%s(%s, %s, %s, %s)" f)
+
   (* TODO: Handle precedences more systematically *)
 
   let float x = pure (string_of_float x)
 
-  let vec2 = map2 (Format.sprintf "vec2(%s, %s)")
-  let vec3 = map3 (Format.sprintf "vec3(%s, %s, %s)")
-  let vec4 = map4 (Format.sprintf "vec4(%s, %s, %s, %s)")
+  let vec2 = call2 "vec2"
+  let vec3 = call3 "vec3"
+  let vec4 = call4 "vec4"
 
-  let mat2 = map2 (Format.sprintf "mat2(%s, %s)")
-  let mat3 = map3 (Format.sprintf "mat3(%s, %s, %s)")
-  let mat4 = map4 (Format.sprintf "mat4(%s, %s, %s, %s)")
+  let mat2 = call2 "mat2"
+  let mat3 = call3 "mat3"
+  let mat4 = call4 "mat4"
 
-  let neg = map (Format.sprintf "-(%s)")
-  let neg_v = map (Format.sprintf "-(%s)")
-  let add = map2 (Format.sprintf "(%s) + (%s)")
-  let add_v = map2 (Format.sprintf "(%s) + (%s)")
-  let sub = map2 (Format.sprintf "(%s) - (%s)")
-  let sub_v = map2 (Format.sprintf "(%s) - (%s)")
-  let mul = map2 (Format.sprintf "(%s) * (%s)")
-  let mul_v = map2 (Format.sprintf "(%s) * (%s)")
-  let mul_vs = map2 (Format.sprintf "(%s) * (%s)")
-  let div = map2 (Format.sprintf "(%s) / (%s)")
-  let div_v = map2 (Format.sprintf "(%s) / (%s)")
-  let div_vs = map2 (Format.sprintf "(%s) / (%s)")
-  let abs = map (Format.sprintf "abs(%s)")
-  let abs_v = map (Format.sprintf "abs(%s)")
-  let clamp x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp_v x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp_vs x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let length = map (Format.sprintf "length(%s)")
-  let lerp = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp_v = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp_vs = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let max = map2 (Format.sprintf "max(%s, %s)")
-  let min = map2 (Format.sprintf "min(%s, %s)")
-  let mod_ = map2 (Format.sprintf "mod(%s, %s)")
-  let mod_v = map2 (Format.sprintf "mod(%s, %s)")
-  let mod_vs = map2 (Format.sprintf "mod(%s, %s)")
-  let round = map (Format.sprintf "round(%s)")
-  let round_v = map (Format.sprintf "round(%s)")
-  let step = map2 (Format.sprintf "step(%s, %s)")
-  let step_v = map2 (Format.sprintf "step(%s, %s)")
-  let step_vs = map2 (Format.sprintf "step(%s, %s)")
+  let neg = pre "-"
+  let neg_v = pre "-"
+  let add = binop1 "+"
+  let add_v = binop1 "+"
+  let sub = binop1 "-"
+  let sub_v = binop1 "-"
+  let mul = binop1 "*"
+  let mul_v = binop1 "*"
+  let mul_vs = binop1 "*"
+  let div = binop1 "/"
+  let div_v = binop1 "/"
+  let div_vs = binop1 "/"
+  let abs = call1 "abs"
+  let abs_v = call1 "abs"
+  let clamp x ~min ~max = call3 "clamp" x min max
+  let clamp_v x ~min ~max = call3 "clamp" x min max
+  let clamp_vs x ~min ~max = call3 "clamp" x min max
+  let length = call1 "length"
+  let lerp = call3 "mix"
+  let lerp_v = call3 "mix"
+  let lerp_vs = call3 "mix"
+  let max = call2 "max"
+  let min = call2 "min"
+  let mod_ = call2 "mod"
+  let mod_v = call2 "mod"
+  let mod_vs = call2 "mod"
+  let round = call1 "round"
+  let round_v = call1 "round"
+  let step = call2 "step"
+  let step_v = call2 "step"
+  let step_vs = call2 "step"
 
-  let x = map (Format.sprintf "(%s).x")
-  let y = map (Format.sprintf "(%s).y")
-  let z = map (Format.sprintf "(%s).z")
-  let w = map (Format.sprintf "(%s).w")
+  let x = post ".x"
+  let y = post ".y"
+  let z = post ".z"
+  let w = post ".w"
 
-  let xx  = map (Format.sprintf "(%s).xx")
-  let xy  = map (Format.sprintf "(%s).xy")
-  let xz  = map (Format.sprintf "(%s).xz")
-  let xw  = map (Format.sprintf "(%s).xw")
+  let xx  = post ".xx"
+  let xy  = post ".xy"
+  let xz  = post ".xz"
+  let xw  = post ".xw"
 
-  let yx  = map (Format.sprintf "(%s).yx")
-  let yy  = map (Format.sprintf "(%s).yy")
-  let yz  = map (Format.sprintf "(%s).yz")
-  let yw  = map (Format.sprintf "(%s).yw")
+  let yx  = post ".yx"
+  let yy  = post ".yy"
+  let yz  = post ".yz"
+  let yw  = post ".yw"
 
-  let zx  = map (Format.sprintf "(%s).zx")
-  let zy  = map (Format.sprintf "(%s).zy")
-  let zz  = map (Format.sprintf "(%s).zz")
-  let zw  = map (Format.sprintf "(%s).zw")
+  let zx  = post ".zx"
+  let zy  = post ".zy"
+  let zz  = post ".zz"
+  let zw  = post ".zw"
 
-  let wx  = map (Format.sprintf "(%s).wx")
-  let wy  = map (Format.sprintf "(%s).wy")
-  let wz  = map (Format.sprintf "(%s).wz")
-  let ww  = map (Format.sprintf "(%s).ww")
+  let wx  = post ".wx"
+  let wy  = post ".wy"
+  let wz  = post ".wz"
+  let ww  = post ".ww"
 
 end
 
