@@ -24,6 +24,8 @@ type ('s, 'n) vec2n = ('s , 'n succ) vec1n
 type ('s, 'n) vec3n = ('s , 'n succ) vec2n
 type ('s, 'n) vec4n = ('s , 'n succ) vec3n
 
+type 'n vecf = (float, 'n) vec
+
 type vec1f = float vec1
 type vec2f = float vec2
 type vec3f = float vec3
@@ -60,86 +62,50 @@ module type Math = sig
   (* TODO: implement custom operators to make these a bit nicer to work with *)
 
   val neg : float repr -> float repr
-  val neg2 : (float vec2) repr -> (float vec2) repr
-  val neg3 : (float vec3) repr -> (float vec3) repr
-  val neg4 : (float vec4) repr -> (float vec4) repr
+  val neg_v : ('n vecf) repr -> ('n vecf) repr
 
   val add : float repr -> float repr -> float repr
-  val add2 : (float vec2) repr -> (float vec2) repr -> (float vec2) repr
-  val add3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr
-  val add4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr
+  val add_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
   val sub : float repr -> float repr -> float repr
-  val sub2 : (float vec2) repr -> (float vec2) repr -> (float vec2) repr
-  val sub3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr
-  val sub4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr
+  val sub_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
   val mul : float repr -> float repr -> float repr
-  val mul2 : (float vec2) repr -> (float vec2) repr -> (float vec2) repr
-  val mul3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr
-  val mul4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr
-  val mul2f : (float vec2) repr -> float repr -> (float vec2) repr
-  val mul3f : (float vec3) repr -> float repr -> (float vec3) repr
-  val mul4f : (float vec4) repr -> float repr -> (float vec4) repr
+  val mul_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val mul_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val div : float repr -> float repr -> float repr
-  val div2 : (float vec2) repr -> (float vec2) repr -> (float vec2) repr
-  val div3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr
-  val div4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr
-  val div2f : (float vec2) repr -> float repr -> (float vec2) repr
-  val div3f : (float vec3) repr -> float repr -> (float vec3) repr
-  val div4f : (float vec4) repr -> float repr -> (float vec4) repr
+  val div_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val div_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
 
 
   val abs : float repr -> float repr
-  val abs2 : (float vec2) repr -> (float vec2) repr
-  val abs3 : (float vec3) repr -> (float vec3) repr
-  val abs4 : (float vec4) repr -> (float vec4) repr
+  val abs_v : ('n vecf) repr -> ('n vecf) repr
 
   val clamp : float repr -> min:float repr -> max:float repr -> float repr
-  val clamp2 : (float vec2) repr -> min:(float vec2) repr -> max:(float vec2) repr -> (float vec2) repr
-  val clamp3 : (float vec3) repr -> min:(float vec3) repr -> max:(float vec3) repr -> (float vec3) repr
-  val clamp4 : (float vec4) repr -> min:(float vec4) repr -> max:(float vec4) repr -> (float vec4) repr
-  val clamp2f : (float vec2) repr -> min:float repr -> max:float repr -> (float vec2) repr
-  val clamp3f : (float vec3) repr -> min:float repr -> max:float repr -> (float vec3) repr
-  val clamp4f : (float vec4) repr -> min:float repr -> max:float repr -> (float vec4) repr
+  val clamp_v : ('n vecf) repr -> min:('n vecf) repr -> max:('n vecf) repr -> ('n vecf) repr
+  val clamp_vs : ('n vecf) repr -> min:float repr -> max:float repr -> ('n vecf) repr
 
-  val length2 : (float vec2) repr -> float repr
-  val length3 : (float vec3) repr -> float repr
-  val length4 : (float vec4) repr -> float repr
+  val length : ('n vecf) repr -> float repr
 
   val lerp : float repr -> float repr -> float repr -> float repr
-  val lerp2 : (float vec2) repr -> (float vec2) repr -> (float vec2) repr -> (float vec2) repr
-  val lerp3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr -> (float vec3) repr
-  val lerp4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr -> (float vec4) repr
-  val lerp2f : (float vec2) repr -> (float vec2) repr -> float repr -> (float vec2) repr
-  val lerp3f : (float vec3) repr -> (float vec3) repr -> float repr -> (float vec3) repr
-  val lerp4f : (float vec4) repr -> (float vec4) repr -> float repr -> (float vec4) repr
+  val lerp_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val lerp_vs : ('n vecf) repr -> ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val max : float repr -> float repr -> float repr
 
   val min : float repr -> float repr -> float repr
 
   val mod_ : float repr -> float repr -> float repr
-  val mod2 : (float vec2) repr -> (float vec2) repr -> (float vec2) repr
-  val mod3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr
-  val mod4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr
-  val mod2f : (float vec2) repr -> float repr -> (float vec2) repr
-  val mod3f : (float vec3) repr -> float repr -> (float vec3) repr
-  val mod4f : (float vec4) repr -> float repr -> (float vec4) repr
+  val mod_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val mod_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val round : float repr -> float repr
-  val round2 : (float vec2) repr -> (float vec2) repr
-  val round3 : (float vec3) repr -> (float vec3) repr
-  val round4 : (float vec4) repr -> (float vec4) repr
+  val round_v : ('n vecf) repr -> ('n vecf) repr
 
   val step : float repr -> float repr -> float repr
-  val step2 : (float vec2) repr -> (float vec2) repr -> (float vec2) repr
-  val step3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr
-  val step4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr
-  val step2f : float repr -> (float vec2) repr -> (float vec2) repr
-  val step3f : float repr -> (float vec3) repr -> (float vec3) repr
-  val step4f : float repr -> (float vec4) repr -> (float vec4) repr
+  val step_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val step_vs : float repr -> ('n vecf) repr -> ('n vecf) repr
 
   (** Vector projections *)
 
@@ -275,72 +241,36 @@ module GlslMath : Math with type 'a repr = string GlslEnv.m = struct
   let mat4 = map4 (Format.sprintf "mat4(%s, %s, %s, %s)")
 
   let neg = map (Format.sprintf "-(%s)")
-  let neg2 = map (Format.sprintf "-(%s)")
-  let neg3 = map (Format.sprintf "-(%s)")
-  let neg4 = map (Format.sprintf "-(%s)")
+  let neg_v = map (Format.sprintf "-(%s)")
   let add = map2 (Format.sprintf "(%s) + (%s)")
-  let add2 = map2 (Format.sprintf "(%s) + (%s)")
-  let add3 = map2 (Format.sprintf "(%s) + (%s)")
-  let add4 = map2 (Format.sprintf "(%s) + (%s)")
+  let add_v = map2 (Format.sprintf "(%s) + (%s)")
   let sub = map2 (Format.sprintf "(%s) - (%s)")
-  let sub2 = map2 (Format.sprintf "(%s) - (%s)")
-  let sub3 = map2 (Format.sprintf "(%s) - (%s)")
-  let sub4 = map2 (Format.sprintf "(%s) - (%s)")
+  let sub_v = map2 (Format.sprintf "(%s) - (%s)")
   let mul = map2 (Format.sprintf "(%s) * (%s)")
-  let mul2 = map2 (Format.sprintf "(%s) * (%s)")
-  let mul3 = map2 (Format.sprintf "(%s) * (%s)")
-  let mul4 = map2 (Format.sprintf "(%s) * (%s)")
-  let mul2f = map2 (Format.sprintf "(%s) * (%s)")
-  let mul3f = map2 (Format.sprintf "(%s) * (%s)")
-  let mul4f = map2 (Format.sprintf "(%s) * (%s)")
+  let mul_v = map2 (Format.sprintf "(%s) * (%s)")
+  let mul_vs = map2 (Format.sprintf "(%s) * (%s)")
   let div = map2 (Format.sprintf "(%s) / (%s)")
-  let div2 = map2 (Format.sprintf "(%s) / (%s)")
-  let div3 = map2 (Format.sprintf "(%s) / (%s)")
-  let div4 = map2 (Format.sprintf "(%s) / (%s)")
-  let div2f = map2 (Format.sprintf "(%s) / (%s)")
-  let div3f = map2 (Format.sprintf "(%s) / (%s)")
-  let div4f = map2 (Format.sprintf "(%s) / (%s)")
+  let div_v = map2 (Format.sprintf "(%s) / (%s)")
+  let div_vs = map2 (Format.sprintf "(%s) / (%s)")
   let abs = map (Format.sprintf "abs(%s)")
-  let abs2 = map (Format.sprintf "abs(%s)")
-  let abs3 = map (Format.sprintf "abs(%s)")
-  let abs4 = map (Format.sprintf "abs(%s)")
+  let abs_v = map (Format.sprintf "abs(%s)")
   let clamp x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp2 x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp3 x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp4 x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp2f x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp3f x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let clamp4f x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
-  let length2 = map (Format.sprintf "length(%s)")
-  let length3 = map (Format.sprintf "length(%s)")
-  let length4 = map (Format.sprintf "length(%s)")
+  let clamp_v x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
+  let clamp_vs x ~min ~max = map3 (Format.sprintf "clamp(%s, %s, %s)") x min max
+  let length = map (Format.sprintf "length(%s)")
   let lerp = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp2 = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp3 = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp4 = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp2f = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp3f = map3 (Format.sprintf "mix(%s, %s, %s)")
-  let lerp4f = map3 (Format.sprintf "mix(%s, %s, %s)")
+  let lerp_v = map3 (Format.sprintf "mix(%s, %s, %s)")
+  let lerp_vs = map3 (Format.sprintf "mix(%s, %s, %s)")
   let max = map2 (Format.sprintf "max(%s, %s)")
   let min = map2 (Format.sprintf "min(%s, %s)")
   let mod_ = map2 (Format.sprintf "mod(%s, %s)")
-  let mod2 = map2 (Format.sprintf "mod(%s, %s)")
-  let mod3 = map2 (Format.sprintf "mod(%s, %s)")
-  let mod4 = map2 (Format.sprintf "mod(%s, %s)")
-  let mod2f = map2 (Format.sprintf "mod(%s, %s)")
-  let mod3f = map2 (Format.sprintf "mod(%s, %s)")
-  let mod4f = map2 (Format.sprintf "mod(%s, %s)")
+  let mod_v = map2 (Format.sprintf "mod(%s, %s)")
+  let mod_vs = map2 (Format.sprintf "mod(%s, %s)")
   let round = map (Format.sprintf "round(%s)")
-  let round2 = map (Format.sprintf "round(%s)")
-  let round3 = map (Format.sprintf "round(%s)")
-  let round4 = map (Format.sprintf "round(%s)")
+  let round_v = map (Format.sprintf "round(%s)")
   let step = map2 (Format.sprintf "step(%s, %s)")
-  let step2 = map2 (Format.sprintf "step(%s, %s)")
-  let step3 = map2 (Format.sprintf "step(%s, %s)")
-  let step4 = map2 (Format.sprintf "step(%s, %s)")
-  let step2f = map2 (Format.sprintf "step(%s, %s)")
-  let step3f = map2 (Format.sprintf "step(%s, %s)")
-  let step4f = map2 (Format.sprintf "step(%s, %s)")
+  let step_v = map2 (Format.sprintf "step(%s, %s)")
+  let step_vs = map2 (Format.sprintf "step(%s, %s)")
 
   let x = map (Format.sprintf "(%s).x")
   let y = map (Format.sprintf "(%s).y")
