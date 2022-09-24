@@ -10,7 +10,7 @@ type n4 = n3 succ
 (** Vectors indexed with a statically known size. This is not a very efficient
     representation, but we don’t actually use these for computation so it
     doesn’t really matter. *)
-type ('s, 'n) vec =
+type (_, _) vec =
   | Nil : ('s, zero) vec
   | Cons : 's * ('s, 'n) vec -> ('s, 'n succ) vec
 
@@ -40,7 +40,7 @@ type mat3f = float mat3
 type mat4f = float mat4
 
 
-(** A language of linear algebra *)
+(** A language of linear algebra for a GLSL-like shader language *)
 module type Math = sig
 
   type 'a repr
@@ -136,59 +136,199 @@ module type Math = sig
   val wz : ((float, 'n) vec4n) repr -> (float vec2) repr
   val ww : ((float, 'n) vec4n) repr -> (float vec2) repr
 
+  (* TODO: More swizzles *)
+
 end
 
 
-(** A language of signed distance functions *)
+(** A language for declaratively composing signed distance functions. *)
 module type Sdf = sig
 
+  (** The underlying representation of an SDF expression *)
   type 'a repr
 
-  module Math : Math with type 'a repr = 'a repr
+  (** Signed distance to the boundary of a shape.
 
-  (** An environment that provides access to a UV coordinate *)
-  module UvEnv : sig
+      - Negative values are inside the shape
+      - Zero values are on the boundary of the shape
+      - Positive values are outside the shape
+  *)
+  type dist = float repr
 
-    (* TODO: Is this monadic? The signatures look a bit weird with the use of `repr`! *)
+  (** A signed distanced function (SDF) describes a surface as a signed distance
+      coordinate to the a signed distance to boundary of the surface. *)
+  type 'n sdf = ((float, 'n) vec) repr -> dist
 
-    (** A computation with access to a UV coordinate *)
-    type 'a m
+  (** A two-dimensional distance function *)
+  type sdf2 = n2 sdf
 
-    (** Run a computation that depends on the current UV coordinate *)
-    val bind : 'a m -> ('a repr -> 'b m) -> 'b m
+  (** A three-dimensional distance function *)
+  type sdf3 = n3 sdf
 
-    (** Embed a pure value that does not depend on the current UV coordinate *)
-    val pure : 'a repr -> 'a m
 
-    (** Get the UV coordinate in the environment *)
-    val ask : (vec2f repr) m
+  (** {1 Primitive shape functions} *)
 
-    (** Run a computation with an initial UV coordinate *)
-    val run : vec2f repr -> 'a m -> 'a repr
-
-  end
-
-  (** A signed distance function from a 2D point to a distance to the boundary
-      of a surface. Points outside the surface return positive values, and
-      points inside the surface return negative values. *)
-  type sdf2 = float UvEnv.m
-
+  (** Circle of a given radius *)
   val circle : float repr -> sdf2
+
+  (** Square of a given radius *)
   val square : float repr -> sdf2
 
-  val union : float repr -> float repr -> float repr
-  val intersect : float repr -> float repr -> float repr
-  val subtract : float repr -> float repr -> float repr
 
-  val move : vec2f repr -> sdf2 -> sdf2
-  val scale : float repr -> sdf2 -> sdf2
-  val mirror_x : sdf2 -> sdf2
-  val mirror_y : sdf2 -> sdf2
-  val mirror_xy : sdf2 -> sdf2
-  val repeat : spacing:vec2f repr -> sdf2 -> sdf2
-  val repeat_limit : spacing:vec2f repr -> limit:vec2f repr -> sdf2 -> sdf2
+  (** {1 Operators for combining shapes} *)
 
-  val overlay : bg:vec3f repr -> fg:vec3f repr -> float repr -> vec3f repr
+  (** Union of two surfaces *)
+  val union : dist -> dist -> dist
+
+  (** The intersection of two surfaces *)
+  val intersect : dist -> dist -> dist
+
+  (** Substract one surface from another surface *)
+  val subtract : dist -> dist -> dist
+
+
+  (** {1 Operations on the domain of signed distance functions} *)
+
+  (** Move a distance function by the supplied vector *)
+  val move : ('n vecf) repr -> 'n sdf -> 'n sdf
+
+  (** Uniformly scale a distance function by an amount *)
+  val scale : float repr -> 'n sdf -> 'n sdf
+
+  (** Reflect a copy of the distance function in each axis *)
+  val reflect : 'n sdf -> 'n sdf
+
+  (* TODO: Generalise reflect operations over dimension *)
+
+  (** Reflect a copy of the distance function in the x axis *)
+  val reflect2_x : sdf2 -> sdf2
+
+  (** Reflect a copy of the distance function in the y axis *)
+  val reflect2_y : sdf2 -> sdf2
+
+  (** Reflect a copy of the distance function in the x axis *)
+  val reflect3_x : sdf3 -> sdf3
+
+  (** Reflect a copy of the distance function in the y axis *)
+  val reflect3_y : sdf3 -> sdf3
+
+  (** Reflect a copy of the distance function in the z axis *)
+  val reflect3_z : sdf3 -> sdf3
+
+  (** Repeat a distance function with the given spacing vector. The repetition
+      cab be optionally limited to a bounding volume. *)
+  val repeat : spacing:('n vecf) repr -> ?limit:('n vecf) repr -> 'n sdf -> 'n sdf
+
+
+  (** {1 Compositing operations} *)
+
+  (** Overlay a surface on top of a background color, painting it with a
+      foreground color. *)
+  val overlay : bg:vec3f repr -> fg:vec3f repr -> dist -> vec3f repr
+
+end
+
+
+module Sdf (M : Math) : Sdf
+
+  with type 'a repr = 'a M.repr
+
+= struct
+
+  type 'a repr = 'a M.repr
+
+  type dist = float repr
+  type 'n sdf = ((float, 'n) vec) repr -> dist
+  type sdf2 = n2 sdf
+  type sdf3 = n3 sdf
+
+
+  (** Based on the equation:
+
+      [ x^2 + y^2 = r^2 ]
+
+      Where:
+
+      - [x] = x-coordinate
+      - [y] = y-coordinate
+      - [r] = radius
+  *)
+  let circle radius uv =
+    M.sub (M.length uv) radius
+
+  (** Based on the equation:
+
+      [ max(abs(x), abs(y)) = r ]
+
+      Where:
+
+      - [x] = x-coordinate
+      - [y] = y-coordinate
+      - [r] = radius
+  *)
+  let square radius uv =
+    let x_dist = uv |> M.x |> M.abs in
+    let y_dist = uv |> M.y |> M.abs in
+    M.sub (M.max x_dist y_dist) radius
+
+
+  let union = M.min
+  let intersect = M.max
+  let subtract d1 d2 = M.min d1 (M.neg d2)
+
+
+  let move v sdf uv =
+    sdf (M.sub_v uv v)
+
+  let scale factor sdf uv =
+    M.mul (sdf (M.div_vs uv factor)) factor
+
+  let reflect sdf uv =
+    sdf (uv |> M.abs_v)
+
+  let reflect2_x sdf uv =
+    sdf (M.vec2
+      (uv |> M.x |> M.abs)
+      (uv |> M.y))
+
+  let reflect2_y sdf uv =
+    sdf (M.vec2
+      (uv |> M.x)
+      (uv |> M.y |> M.abs))
+
+  let reflect3_x sdf uv =
+    sdf (M.vec3
+      (uv |> M.x |> M.abs)
+      (uv |> M.y)
+      (uv |> M.z))
+
+  let reflect3_y sdf uv =
+    sdf (M.vec3
+      (uv |> M.x)
+      (uv |> M.y |> M.abs)
+      (uv |> M.z))
+
+  let reflect3_z sdf uv =
+    sdf (M.vec3
+      (uv |> M.x)
+      (uv |> M.y)
+      (uv |> M.z |> M.abs))
+
+  let repeat ~spacing ?limit sdf uv =
+    match limit with
+    | None ->
+        let spacing_half = M.mul_vs spacing (M.float 0.5) in
+        sdf (M.sub_v (M.mod_v (M.add_v uv spacing_half) spacing) spacing_half)
+    | Some limit ->
+        sdf (M.sub_v uv (M.mul_v spacing
+          (M.clamp_v
+            (M.round_v (M.div_v uv spacing))
+            ~min:(M.neg_v limit)
+            ~max:limit)))
+
+
+  let overlay ~bg ~fg shape =
+    M.lerp_vs fg bg (M.step (M.float 0.0) shape)
 
 end
 
@@ -198,7 +338,34 @@ end
     result of intermediate computations. *)
 module GlslEnv = struct
 
-  type locals = (string * string * string) list
+  (** GLSL type *)
+  type _ ty =
+    | Float : float ty
+    | Vec2 : vec2f ty
+    | Vec3 : vec3f ty
+    | Vec4 : vec4f ty
+    | Mat2 : mat2f ty
+    | Mat3 : mat3f ty
+    | Mat4 : mat4f ty
+
+  (** Compile a GLSL type to a string *)
+  let string_of_ty : type a. a ty -> string =
+    function
+    | Float -> "float"
+    | Vec2 -> "vec2"
+    | Vec3 -> "vec3"
+    | Vec4 -> "vec4"
+    | Mat2 -> "mat2"
+    | Mat3 -> "mat3"
+    | Mat4 -> "mat4"
+
+  type entry = {
+    name : string;
+    ty : string;
+    def : string;
+  }
+
+  type locals = entry list
 
   type 'a m = locals -> 'a * locals
 
@@ -210,226 +377,186 @@ module GlslEnv = struct
   let pure (x : 'a) : 'a m =
     fun locals -> (x, locals)
 
-
+  (** Add a shared definition to the local environment. *)
   let add_local ty def : 'a m =
+    (* FIXME: Make this more... type-safe? *)
     (* FIXME: Avoid names properly (including globals) *)
+    (* TODO: deduplicate bindings *)
     fun locals ->
       let name = Format.sprintf "t%i" (List.length locals) in
-      (name, (name, ty, def) :: locals)
+      let ty = string_of_ty ty in
+      (name, { name; ty; def } :: locals)
 
 end
 
 
-module GlslMath : Math with type 'a repr = string GlslEnv.m = struct
+module Glsl : sig
+
+  (** A typed GLSL expression *)
+  type 'a expr
+
+  (** Unsafely construct a GLSL expression from a string. *)
+  val unsafe_expr : string -> 'a GlslEnv.ty -> 'a expr
+
+  val string_of_expr : 'a expr -> string
+  val ty_of_expr : 'a expr -> 'a GlslEnv.ty
+
+
+  include Math with type 'a repr = ('a expr) GlslEnv.m
+
+end = struct
 
   open GlslEnv
   open Control.Monad.Notation (GlslEnv)
   open Control.Monad.Util (GlslEnv)
 
-  type 'a repr = string GlslEnv.m
+  type 'a expr = {
+    def : string;
+    ty : 'a ty;
+  }
 
-  let pre op = map (Format.sprintf "%s(%s)" op)
-  let post op = map (fun x -> Format.sprintf "(%s)%s" x op)
-  let binop1 op = map2 (fun x y -> Format.sprintf "(%s) %s (%s)" op x y)
-  let call1 f = map (Format.sprintf "%s(%s)" f)
-  let call2 f = map2 (Format.sprintf "%s(%s, %s)" f)
-  let call3 f = map3 (Format.sprintf "%s(%s, %s, %s)" f)
-  let call4 f = map4 (Format.sprintf "%s(%s, %s, %s, %s)" f)
+  let unsafe_expr def ty = { def; ty }
+
+  let string_of_expr e = e.def
+  let ty_of_expr e = e.ty
+
+  type 'a repr = ('a expr) GlslEnv.m
+
+  let add_local_ann ty def =
+    map (fun e -> { def = e; ty }) (add_local ty def)
+
+  let pre ty op e =
+    let* e = e in
+    add_local_ann ty (Format.sprintf "%s%s" op e.def)
+
+  let post ty op e =
+    let* e = e in
+    add_local_ann ty (Format.sprintf "%s%s" e.def op)
+
+  let binop1 ty op e1 e2 =
+    let* e1 = e1 in
+    let* e2 = e2 in
+    add_local_ann ty (Format.sprintf "%s %s %s" e1.def op e2.def)
+
+  let call1 ty f e =
+    let* e = e in
+    add_local_ann ty (Format.sprintf "%s(%s)" f e.def)
+
+  let call2 ty f e1 e2 =
+    let* e1 = e1 in
+    let* e2 = e2 in
+    add_local_ann ty (Format.sprintf "%s(%s, %s)" f e1.def e2.def)
+
+  let call3 ty f e1 e2 e3 =
+    let* e1 = e1 in
+    let* e2 = e2 in
+    let* e3 = e3 in
+    add_local_ann ty (Format.sprintf "%s(%s, %s, %s)" f e1.def e2.def e3.def)
+
+  let call4 ty f e1 e2 e3 e4 =
+    let* e1 = e1 in
+    let* e2 = e2 in
+    let* e3 = e3 in
+    let* e4 = e4 in
+    add_local_ann ty (Format.sprintf "%s(%s, %s, %s, %s)" f e1.def e2.def e3.def e4.def)
+
 
   (* TODO: Handle precedences more systematically *)
 
-  let float x = pure (string_of_float x)
+  let float x = pure { def = string_of_float x; ty = Float }
 
-  let vec2 = call2 "vec2"
-  let vec3 = call3 "vec3"
-  let vec4 = call4 "vec4"
+  let vec2 = call2 Vec2 "vec2"
+  let vec3 = call3 Vec3 "vec3"
+  let vec4 = call4 Vec4 "vec4"
 
-  let mat2 = call2 "mat2"
-  let mat3 = call3 "mat3"
-  let mat4 = call4 "mat4"
+  let mat2 = call2 Mat2 "mat2"
+  let mat3 = call3 Mat3 "mat3"
+  let mat4 = call4 Mat4 "mat4"
 
-  let neg = pre "-"
-  let neg_v = pre "-"
-  let add = binop1 "+"
-  let add_v = binop1 "+"
-  let sub = binop1 "-"
-  let sub_v = binop1 "-"
-  let mul = binop1 "*"
-  let mul_v = binop1 "*"
-  let mul_vs = binop1 "*"
-  let div = binop1 "/"
-  let div_v = binop1 "/"
-  let div_vs = binop1 "/"
-  let abs = call1 "abs"
-  let abs_v = call1 "abs"
-  let clamp x ~min ~max = call3 "clamp" x min max
-  let clamp_v x ~min ~max = call3 "clamp" x min max
-  let clamp_vs x ~min ~max = call3 "clamp" x min max
-  let length = call1 "length"
-  let lerp = call3 "mix"
-  let lerp_v = call3 "mix"
-  let lerp_vs = call3 "mix"
-  let max = call2 "max"
-  let min = call2 "min"
-  let mod_ = call2 "mod"
-  let mod_v = call2 "mod"
-  let mod_vs = call2 "mod"
-  let round = call1 "round"
-  let round_v = call1 "round"
-  let step = call2 "step"
-  let step_v = call2 "step"
-  let step_vs = call2 "step"
+  let neg = pre Float "-"
+  let neg_v e = let* e = e in pre e.ty "-" (pure e)
+  let add = binop1 Float "+"
+  let add_v e1 e2 = let* e1 = e1 in binop1 e1.ty "+" (pure e1) e2
+  let sub = binop1 Float "-"
+  let sub_v e1 e2 = let* e1 = e1 in binop1 e1.ty "-" (pure e1) e2
+  let mul = binop1 Float "*"
+  let mul_v e1 e2 = let* e1 = e1 in binop1 e1.ty "*" (pure e1) e2
+  let mul_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "*" (pure e1) e2
+  let div = binop1 Float "/"
+  let div_v e1 e2 = let* e1 = e1 in binop1 e1.ty "/" (pure e1) e2
+  let div_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "/" (pure e1) e2
+  let abs = call1 Float "abs"
+  let abs_v e = let* e = e in call1 e.ty "abs" (pure e)
+  let clamp e ~min ~max = call3 Float "clamp" e min max
+  let clamp_v e ~min ~max = let* e = e in call3 e.ty "clamp" (pure e) min max
+  let clamp_vs e ~min ~max = let* e = e in call3 e.ty "clamp" (pure e) min max
+  let length e = call1 Float "length" e
+  let lerp = call3 Float "mix"
+  let lerp_v e1 e2 e3 = let* e1 = e1 in call3 e1.ty "mix" (pure e1) e2 e3
+  let lerp_vs e1 e2 e3 = let* e1 = e1 in call3 e1.ty "mix" (pure e1) e2 e3
+  let max = call2 Float "max"
+  let min = call2 Float "min"
+  let mod_ = call2 Float "mod"
+  let mod_v e1 e2 = let* e1 = e1 in call2 e1.ty "mod" (pure e1) e2
+  let mod_vs e1 e2 = let* e1 = e1 in call2 e1.ty "mod" (pure e1) e2
+  let round = call1 Float "round"
+  let round_v e = let* e = e in call1 e.ty "round" (pure e)
+  let step = call2 Float "step"
+  let step_v e1 e2 = let* e1 = e1 in call2 e1.ty "step" (pure e1) e2
+  let step_vs e1 e2 = let* e2 = e2 in call2 e2.ty "step" e1 (pure e2)
 
-  let x = post ".x"
-  let y = post ".y"
-  let z = post ".z"
-  let w = post ".w"
+  let x e = post Float ".x" e
+  let y e = post Float ".y" e
+  let z e = post Float ".z" e
+  let w e = post Float ".w" e
 
-  let xx  = post ".xx"
-  let xy  = post ".xy"
-  let xz  = post ".xz"
-  let xw  = post ".xw"
+  let xx e = post Vec2 ".xx" e
+  let xy e = post Vec2 ".xy" e
+  let xz e = post Vec2 ".xz" e
+  let xw e = post Vec2 ".xw" e
 
-  let yx  = post ".yx"
-  let yy  = post ".yy"
-  let yz  = post ".yz"
-  let yw  = post ".yw"
+  let yx e = post Vec2 ".yx" e
+  let yy e = post Vec2 ".yy" e
+  let yz e = post Vec2 ".yz" e
+  let yw e = post Vec2 ".yw" e
 
-  let zx  = post ".zx"
-  let zy  = post ".zy"
-  let zz  = post ".zz"
-  let zw  = post ".zw"
+  let zx e = post Vec2 ".zx" e
+  let zy e = post Vec2 ".zy" e
+  let zz e = post Vec2 ".zz" e
+  let zw e = post Vec2 ".zw" e
 
-  let wx  = post ".wx"
-  let wy  = post ".wy"
-  let wz  = post ".wz"
-  let ww  = post ".ww"
+  let wx e = post Vec2 ".wx" e
+  let wy e = post Vec2 ".wy" e
+  let wz e = post Vec2 ".wz" e
+  let ww e = post Vec2 ".ww" e
 
 end
 
 
-(** Compile the signed distance functions to GLSL *)
-module GlslSdf : Sdf with type 'a repr = string GlslEnv.m = struct
-
-  open GlslEnv
-  open Control.Monad.Notation (GlslEnv)
-  open Control.Monad.Util (GlslEnv)
-
-
-  type 'a repr = string GlslEnv.m
-
-  module Math = GlslMath
-
-  module UvEnv = struct
-
-    type 'a m = vec2f repr -> 'a repr
-
-    let bind sdf f = fun uv -> f (sdf uv) uv
-    let pure x = fun _ -> x
-
-    let ask : (vec2f repr) m = fun uv -> uv
-    let run (uv : vec2f repr) (sdf : 'a m) : 'a repr = sdf uv
-
-  end
-
-  type sdf2 = float UvEnv.m
-
-
-  (* NOTE: We try to reduce the number of parentheses in the compiled output by
-     only wrapping expressions when we don’t know if they are atomic or not.
-     For example if an expression is refers to a local binding, then we don’t
-     need parentheses, as variable names are atomic expressions.*)
-
-  (* TODO: Handle precedences more systematically *)
-
-
-  let circle radius uv =
-    map2 (Format.sprintf "length(%s) - (%s)") uv radius
-
-  let square radius uv =
-    let* uv = bind uv (add_local "vec2") in
-    let* x = pure uv |> Math.x in
-    let* y = pure uv |> Math.y in
-    map (Format.sprintf "max(abs(%s), abs(%s)) - (%s)" x y) radius
-
-
-  let union = map2 (Format.sprintf "min(%s, %s)")
-  let intersect = map2 (Format.sprintf "max(%s, %s)")
-  let subtract = map2 (Format.sprintf "max(%s, -%s)")
-
-
-  let move v sdf uv =
-    sdf (map2 (Format.sprintf "%s - %s") uv v)
-
-  let scale factor sdf uv =
-    let* uv = uv in
-    let* factor = bind factor (add_local "float") in
-    let* dist = sdf (pure (Format.sprintf "(%s) / %s" uv factor)) in
-    pure (Format.sprintf "(%s) * %s" dist factor)
-
-  let mirror_x sdf uv =
-    let* uv = bind uv (add_local "vec2") in
-    let* x = pure uv |> Math.x in
-    let* y = pure uv |> Math.y in
-    sdf (pure (Format.sprintf "vec2(abs(%s), %s)" x y))
-
-  let mirror_y sdf uv =
-    let* uv = bind uv (add_local "vec2") in
-    let* x = pure uv |> Math.x in
-    let* y = pure uv |> Math.y in
-    sdf (pure (Format.sprintf "vec2(%s, abs(%s))" x y))
-
-  let mirror_xy sdf uv =
-    sdf (map (Format.sprintf "vec2(abs(%s))") uv)
-
-  let repeat ~spacing sdf uv =
-    let* uv = uv in
-    let* spacing = bind spacing (add_local "vec2") in
-    sdf (pure (Format.sprintf "mod((%s) + 0.5 * %s, %s) - 0.5 * %s"
-      uv spacing spacing spacing))
-
-  let repeat_limit ~spacing ~limit sdf uv =
-    let* uv = bind uv (add_local "vec2") in
-    let* spacing = bind spacing (add_local "vec2") in
-    let* limit = bind limit (add_local "vec2") in
-    sdf (pure (Format.sprintf "%s - %s * clamp(round(%s / %s), -%s, %s)"
-      uv spacing uv spacing limit limit))
-
-
-  let overlay ~bg ~fg shape =
-    map3 (Format.sprintf "mix(%s, %s, step(0.0, %s))") fg bg shape
-
-end
-
-
-module MyScene (S : Sdf) = struct
+module MyScene (M : Math) (S : Sdf with type 'a repr = 'a M.repr) = struct
 
   open S
 
-  let f = Math.float
-  let vec2f x y = Math.vec2 (f x) (f y)
-  let vec3f x y z = Math.vec3 (f x) (f y) (f z)
+  let f = M.float
+  let vec2f x y = M.vec2 (f x) (f y)
+  let vec3f x y z = M.vec3 (f x) (f y) (f z)
 
-  let (let*) = UvEnv.bind
-  let pure = UvEnv.pure
-
-  let scene : vec3f UvEnv.m =
-    let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
-    let* s2 = square (f 0.15) |> move (vec2f 0.1 0.2) in
+  let scene (uv : vec2f repr) : vec3f repr =
+    let s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
+    let s2 = square (f 0.15) |> move (vec2f 0.2 0.2) |> reflect in
 
     let shapeColor = vec3f 1.0 1.0 1.0 in
     let backgroundColor = vec3f 0.35 0.45 0.50 in
 
-    pure (overlay ~bg:backgroundColor ~fg:shapeColor (union s1 s2))
+    overlay ~bg:backgroundColor ~fg:shapeColor (union (s1 uv) (s2 uv))
 
 end
 
 
 let () =
-  let module S = MyScene (GlslSdf) in
+  let module S = MyScene (Glsl) (Sdf (Glsl)) in
 
-  let (color, locals) =
-    GlslSdf.UvEnv.run (GlslEnv.pure "uv") S.scene [] in
+  let (color, locals) = S.scene (GlslEnv.pure (Glsl.unsafe_expr "uv" Vec2 )) [] in
 
   Format.printf "// The main entrypoint of the shader.\n";
   Format.printf "//\n";
@@ -441,11 +568,11 @@ let () =
   Format.printf "  uv.x *= iResolution.x / iResolution.y;\n";
   Format.printf "\n";
   Format.printf "  // Local bindings\n";
-  locals |> List.rev |> List.iter (fun (name, ty, def) ->
+  locals |> List.rev |> List.iter (fun GlslEnv.{ name; ty; def } ->
     Format.printf "  %s %s = %s;\n" ty name def);
   Format.printf "\n";
   Format.printf "  // Compute the colour for this UV coordinate.\n";
-  Format.printf "  vec3 color = %s;\n" color;
+  Format.printf "  vec3 color = %s;\n" (Glsl.string_of_expr color);
   Format.printf "\n";
   Format.printf "  // Output to screen\n";
   Format.printf "  fragColor = vec4(color,1.0);\n";
