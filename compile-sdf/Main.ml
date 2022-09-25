@@ -362,12 +362,11 @@ module GlslEnv = struct
     | Mat4 -> "mat4"
 
   type entry = {
-    name : string;
     ty : string;
     def : string;
   }
 
-  type locals = entry list
+  type locals = (string * entry) list
 
   type 'a m = locals -> 'a * locals
 
@@ -379,15 +378,28 @@ module GlslEnv = struct
   let pure (x : 'a) : 'a m =
     fun locals -> (x, locals)
 
+  (** Return the name of to a bound definition if it exists. *)
+  let name_of_def def =
+    List.find_map (fun (name, entry) -> if entry.def = def then Some name else None)
+
   (** Add a shared definition to the local environment. *)
   let add_local ty def : 'a m =
     (* FIXME: Make this more... type-safe? *)
     (* FIXME: Avoid names properly (including globals) *)
-    (* TODO: deduplicate bindings *)
     fun locals ->
-      let name = Format.sprintf "t%i" (List.length locals) in
-      let ty = string_of_ty ty in
-      (name, { name; ty; def } :: locals)
+      match List.assoc_opt def locals with
+      (* If the definition is the name of a currently bound local, return the
+         local as a name without creating a new binding. *)
+      | Some _ -> def, locals
+      | None ->
+          begin match name_of_def def locals with
+          (* Only define a new definition if it has not already been bound. *)
+          | Some name -> name, locals
+          | None ->
+              let name = Format.sprintf "t%i" (List.length locals) in
+              let ty = string_of_ty ty in
+              (name, (name, { ty; def }) :: locals)
+          end
 
 end
 
@@ -583,7 +595,7 @@ let () =
   Format.printf "  uv.x *= iResolution.x / iResolution.y;\n";
   Format.printf "\n";
   Format.printf "  // Local bindings\n";
-  locals |> List.rev |> List.iter (fun GlslEnv.{ name; ty; def } ->
+  locals |> List.rev |> List.iter (fun (name, GlslEnv.{ ty; def }) ->
     Format.printf "  %s %s = %s;\n" ty name def);
   Format.printf "\n";
   Format.printf "  // Compute the colour for this UV coordinate.\n";
