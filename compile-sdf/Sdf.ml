@@ -6,7 +6,7 @@ open MathTypes
 (** A language for building signed distance functions. *)
 module type S = sig
 
-  (** The underlying representation of an SDF expression *)
+  (** The underlying representation of expressions in the SDF language *)
   type 'a repr
 
   (** Signed distance to the boundary of a shape.
@@ -120,7 +120,7 @@ module Make (M : Math.S) : S
       - [r] = radius
   *)
   let circle radius uv =
-    (M.length uv) - radius
+    M.length uv - radius
 
   (** Based on the equation:
 
@@ -135,7 +135,7 @@ module Make (M : Math.S) : S
   let square radius uv =
     let x_dist = uv |> M.x |> M.abs in
     let y_dist = uv |> M.y |> M.abs in
-    (M.max x_dist y_dist) - radius
+    M.max x_dist y_dist - radius
 
 
   let union = M.min
@@ -147,7 +147,7 @@ module Make (M : Math.S) : S
     sdf (uv |-| v)
 
   let scale factor sdf uv =
-    (sdf (uv |/ factor)) * factor
+    sdf (uv |/ factor) * factor
 
   let reflect sdf uv =
     sdf (uv |> M.abs_v)
@@ -182,15 +182,15 @@ module Make (M : Math.S) : S
 
   let repeat ~spacing ?limit sdf uv =
     match limit with
+    (* Infinite repetitions *)
     | None ->
         let spacing_half = spacing |* (M.float 0.5) in
-        sdf ((M.mod_v (uv |+| spacing_half) spacing) |-| spacing_half)
+        sdf ((uv |+| spacing_half) |%| spacing |-| spacing_half)
+    (* Limited repetitions *)
     | Some limit ->
-        sdf (uv |-| (spacing |*|
-          (M.clamp_v
-            (M.round_v (uv |/| spacing))
-            ~min:(M.neg_v limit)
-            ~max:limit)))
+        let neg_limit = M.neg_v limit in
+        let offset = spacing |*| M.clamp_v (M.round_v (uv |/| spacing)) ~min:neg_limit ~max:limit in
+        sdf (uv |-| offset)
 
 
   let overlay ~bg ~fg shape =

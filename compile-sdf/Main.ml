@@ -29,7 +29,7 @@ module MyScene (M : Math.S) = struct
 
     let bottom_color = vec3f 0.35 0.45 0.50 in
     let top_color = vec3f 0.85 0.85 0.70 in
-    let amount = (uv |> M.y) + ((uv |> M.x) * f 0.2) in
+    let amount = M.y uv + (M.x uv * f 0.2) in
 
     Env.pure (M.lerp_vs bottom_color top_color amount)
 

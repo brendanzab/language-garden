@@ -15,6 +15,10 @@ it straightforward to compile the DSL to GLSL fragment shaders that can be
 copied into [Shadertoy](https://www.shadertoy.com). The resulting GLSL code can
 be currently seen [in the CLI tests](./tests.t).
 
+The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd approach
+to custom operators (which don’t allow for custom precedences), and lack of
+implicit overloading. Still, I think it’s an interesting proof-of-concept!
+
 # Resources
 
 - [The Book of Shaders](https://thebookofshaders.com/)

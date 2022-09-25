@@ -127,6 +127,10 @@ module type Notation = sig
   val (|/|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
   val (|/) : ('n vecf) repr -> float repr -> ('n vecf) repr
 
+  val (%) : float repr -> float repr -> float repr
+  val (|%|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val (|%) : ('n vecf) repr -> float repr -> ('n vecf) repr
+
 end
 
 
@@ -153,5 +157,9 @@ module Notation (M : S) : Notation
   let (/) = M.div
   let (|/|) = M.div_v
   let (|/) = M.div_vs
+
+  let (%) = M.mod_
+  let (|%|) = M.mod_v
+  let (|%) = M.mod_vs
 
 end
