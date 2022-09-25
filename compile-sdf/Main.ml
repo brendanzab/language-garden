@@ -9,9 +9,7 @@ module MyScene (M : Math.S) = struct
   (** An environment with access to a shared 2D coordinate. This gives us access
       to binding operators that make it cleaner to construct functions that
       depend on a UV coordinate. *)
-  module Env = Control.Monad.Reader (struct
-    type t = vec2f repr
-  end)
+  module Env = Control.Monad.Reader (struct type t = vec2f repr end)
 
   (* Bring notations into scope *)
   open Math.Notation (M)
@@ -50,6 +48,26 @@ let () =
 
   (* TODO: Move top-level setup into Glsl module *)
   (* TODO: Render to HTML canvas *)
+
+  (* TODO: Shadertoy environment (see: https://www.shadertoy.com/howto):
+
+      Image shader:
+
+        void mainImage(out vec4 fragColor, in vec2 fragCoord);
+
+      Input uniforms:
+
+        uniform vec3 iResolution;
+        uniform float iTime;
+        uniform float iTimeDelta;
+        uniform float iFrame;
+        uniform float iChannelTime[4];
+        uniform vec4 iMouse;
+        uniform vec4 iDate;
+        uniform float iSampleRate;
+        uniform vec3 iChannelResolution[4];
+        uniform samplerXX iChanneli;
+  *)
 
   let uv = Glsl.unsafe_expr "uv" Vec2 in
   let (color, locals) = Glsl.Env.run Glsl.Env.empty_locals (S.scene (Glsl.Env.pure uv)) in
