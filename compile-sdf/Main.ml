@@ -66,9 +66,11 @@ module type Math = sig
 
   val add : float repr -> float repr -> float repr
   val add_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val add_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val sub : float repr -> float repr -> float repr
   val sub_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val sub_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val mul : float repr -> float repr -> float repr
   val mul_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
@@ -477,8 +479,10 @@ end = struct
   let neg_v e = let* e = e in pre e.ty "-" (pure e)
   let add = binop1 Float "+"
   let add_v e1 e2 = let* e1 = e1 in binop1 e1.ty "+" (pure e1) e2
+  let add_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "+" (pure e1) e2
   let sub = binop1 Float "-"
   let sub_v e1 e2 = let* e1 = e1 in binop1 e1.ty "-" (pure e1) e2
+  let sub_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "-" (pure e1) e2
   let mul = binop1 Float "*"
   let mul_v e1 e2 = let* e1 = e1 in binop1 e1.ty "*" (pure e1) e2
   let mul_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "*" (pure e1) e2
@@ -541,14 +545,25 @@ module MyScene (M : Math) (S : Sdf with type 'a repr = 'a M.repr) = struct
   let vec2f x y = M.vec2 (f x) (f y)
   let vec3f x y z = M.vec3 (f x) (f y) (f z)
 
+  (** Vertical gradient *)
+  let background (uv : vec2f repr) : vec3f repr =
+    (* Remap UV coordinates from (-0.5, 0.5) to (0, 1) *)
+    let uv = M.add_vs uv (f 0.5) in
+
+    let bottom_color = vec3f 0.35 0.45 0.50 in
+    let top_color = vec3f 0.85 0.85 0.70 in
+    let amount = M.add (uv |> M.y) (M.mul (uv |> M.x) (f 0.2)) in
+
+    M.lerp_vs bottom_color top_color amount
+
   let scene (uv : vec2f repr) : vec3f repr =
+    let bg = background uv in
     let s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
     let s2 = square (f 0.15) |> move (vec2f 0.2 0.2) |> reflect in
 
     let shapeColor = vec3f 1.0 1.0 1.0 in
-    let backgroundColor = vec3f 0.35 0.45 0.50 in
 
-    overlay ~bg:backgroundColor ~fg:shapeColor (union (s1 uv) (s2 uv))
+    overlay ~bg ~fg:shapeColor (union (s1 uv) (s2 uv))
 
 end
 

@@ -12,34 +12,42 @@ Generate the GLSL for the scene
     // Local bindings
     vec3 t0 = vec3(1., 1., 1.);
     vec3 t1 = vec3(0.35, 0.45, 0.5);
-    vec2 t2 = vec2(0.2, 0.2);
-    vec2 t3 = t2 * 0.5;
-    vec2 t4 = uv + t3;
-    vec2 t5 = vec2(0.2, 0.2);
-    vec2 t6 = mod(t4, t5);
-    vec2 t7 = vec2(0.2, 0.2);
-    vec2 t8 = t7 * 0.5;
-    vec2 t9 = t6 - t8;
-    float t10 = length(t9);
-    float t11 = t10 - 0.05;
-    vec2 t12 = abs(uv);
+    vec3 t2 = vec3(0.85, 0.85, 0.7);
+    vec2 t3 = uv + 0.5;
+    float t4 = t3.y;
+    vec2 t5 = uv + 0.5;
+    float t6 = t5.x;
+    float t7 = t6 * 0.2;
+    float t8 = t4 + t7;
+    vec3 t9 = mix(t1, t2, t8);
+    vec2 t10 = vec2(0.2, 0.2);
+    vec2 t11 = t10 * 0.5;
+    vec2 t12 = uv + t11;
     vec2 t13 = vec2(0.2, 0.2);
-    vec2 t14 = t12 - t13;
-    float t15 = t14.x;
-    float t16 = abs(t15);
-    vec2 t17 = abs(uv);
-    vec2 t18 = vec2(0.2, 0.2);
-    vec2 t19 = t17 - t18;
-    float t20 = t19.y;
-    float t21 = abs(t20);
-    float t22 = max(t16, t21);
-    float t23 = t22 - 0.15;
-    float t24 = min(t11, t23);
-    float t25 = step(0., t24);
-    vec3 t26 = mix(t0, t1, t25);
+    vec2 t14 = mod(t12, t13);
+    vec2 t15 = vec2(0.2, 0.2);
+    vec2 t16 = t15 * 0.5;
+    vec2 t17 = t14 - t16;
+    float t18 = length(t17);
+    float t19 = t18 - 0.05;
+    vec2 t20 = abs(uv);
+    vec2 t21 = vec2(0.2, 0.2);
+    vec2 t22 = t20 - t21;
+    float t23 = t22.x;
+    float t24 = abs(t23);
+    vec2 t25 = abs(uv);
+    vec2 t26 = vec2(0.2, 0.2);
+    vec2 t27 = t25 - t26;
+    float t28 = t27.y;
+    float t29 = abs(t28);
+    float t30 = max(t24, t29);
+    float t31 = t30 - 0.15;
+    float t32 = min(t19, t31);
+    float t33 = step(0., t32);
+    vec3 t34 = mix(t0, t9, t33);
   
     // Compute the colour for this UV coordinate.
-    vec3 color = t26;
+    vec3 color = t34;
   
     // Output to screen
     fragColor = vec4(color,1.0);
