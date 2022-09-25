@@ -1,3 +1,5 @@
+(** {0 Monadic effects} *)
+
 (** Order-dependent effects *)
 module Monad = struct
 
@@ -25,7 +27,11 @@ module Monad = struct
   end
 
 
-  module Notation (M : S) : Notation with type 'a m = 'a M.m = struct
+  module Notation (M : S) : Notation
+
+    with type 'a m = 'a M.m
+
+  = struct
 
     type 'a m = 'a M.m
 
@@ -71,28 +77,27 @@ module Monad = struct
 
   end
 
-end
+  (** An environment with access to a shared value *)
+  module Reader (E : sig type t end) : sig
 
+    include S with type 'a m = E.t -> 'a
 
-(** An environment with access to a shared value *)
-module Read (E : sig type t end) : sig
+    (** Access the shared value *)
+    val ask : E.t m
 
-  include Monad.S with type 'a m = E.t -> 'a
+    (** Run a computation with the value *)
+    val run : E.t -> 'a m -> 'a
 
-  (** Access the shared value *)
-  val ask : E.t m
+  end = struct
 
-  (** Run a computation with the value *)
-  val run : E.t -> 'a m -> 'a
+    type 'a m = E.t -> 'a
 
-end = struct
+    let bind m f = fun uv -> f (m uv) uv
+    let pure x = fun _ -> x
 
-  type 'a m = E.t -> 'a
+    let ask = fun uv -> uv
+    let run uv m = m uv
 
-  let bind m f = fun uv -> f (m uv) uv
-  let pure x = fun _ -> x
-
-  let ask = fun uv -> uv
-  let run uv m = m uv
+  end
 
 end
