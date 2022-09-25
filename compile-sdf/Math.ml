@@ -23,52 +23,52 @@ module type S = sig
   (** Functions *)
 
   val neg : float repr -> float repr
-  val neg_v : ('n vecf) repr -> ('n vecf) repr
+  val neg_vec : ('n vecf) repr -> ('n vecf) repr
 
   val add : float repr -> float repr -> float repr
-  val add_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val add_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val add_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val add_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val sub : float repr -> float repr -> float repr
-  val sub_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val sub_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val sub_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val sub_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val mul : float repr -> float repr -> float repr
-  val mul_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val mul_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val mul_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val mul_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val div : float repr -> float repr -> float repr
-  val div_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val div_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val div_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val div_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
 
 
   val abs : float repr -> float repr
-  val abs_v : ('n vecf) repr -> ('n vecf) repr
+  val abs_vec : ('n vecf) repr -> ('n vecf) repr
 
   val clamp : float repr -> min:float repr -> max:float repr -> float repr
-  val clamp_v : ('n vecf) repr -> min:('n vecf) repr -> max:('n vecf) repr -> ('n vecf) repr
-  val clamp_vs : ('n vecf) repr -> min:float repr -> max:float repr -> ('n vecf) repr
+  val clamp_vec : ('n vecf) repr -> min:('n vecf) repr -> max:('n vecf) repr -> ('n vecf) repr
+  val clamp_scalar : ('n vecf) repr -> min:float repr -> max:float repr -> ('n vecf) repr
 
   val length : ('n vecf) repr -> float repr
 
   val lerp : float repr -> float repr -> float repr -> float repr
-  val lerp_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val lerp_vs : ('n vecf) repr -> ('n vecf) repr -> float repr -> ('n vecf) repr
+  val lerp_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val lerp_scalar : ('n vecf) repr -> ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val max : float repr -> float repr -> float repr
 
   val min : float repr -> float repr -> float repr
 
   val mod_ : float repr -> float repr -> float repr
-  val mod_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val mod_vs : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val mod_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val mod_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val round : float repr -> float repr
-  val round_v : ('n vecf) repr -> ('n vecf) repr
+  val round_vec : ('n vecf) repr -> ('n vecf) repr
 
   val step : float repr -> float repr -> float repr
-  val step_v : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val step_vs : float repr -> ('n vecf) repr -> ('n vecf) repr
+  val step_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val step_scalar : float repr -> ('n vecf) repr -> ('n vecf) repr
 
   (** Vector projections *)
 
@@ -143,23 +143,23 @@ module Notation (M : S) : Notation
   type 'a repr = 'a M.repr
 
   let (+) = M.add
-  let (|+|) = M.add_v
-  let (|+) = M.add_vs
+  let (|+|) = M.add_vec
+  let (|+) = M.add_scalar
 
   let (-) = M.sub
-  let (|-|) = M.sub_v
-  let (|-) = M.sub_vs
+  let (|-|) = M.sub_vec
+  let (|-) = M.sub_scalar
 
   let ( * ) = M.mul
-  let (|*|) = M.mul_v
-  let (|*) = M.mul_vs
+  let (|*|) = M.mul_vec
+  let (|*) = M.mul_scalar
 
   let (/) = M.div
-  let (|/|) = M.div_v
-  let (|/) = M.div_vs
+  let (|/|) = M.div_vec
+  let (|/) = M.div_scalar
 
   let (%) = M.mod_
-  let (|%|) = M.mod_v
-  let (|%) = M.mod_vs
+  let (|%|) = M.mod_vec
+  let (|%) = M.mod_scalar
 
 end

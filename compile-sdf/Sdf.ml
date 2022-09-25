@@ -150,7 +150,7 @@ module Make (M : Math.S) : S
     sdf (uv |/ factor) * factor
 
   let reflect sdf uv =
-    sdf (uv |> M.abs_v)
+    sdf (uv |> M.abs_vec)
 
   let reflect2_x sdf uv =
     sdf (M.vec2
@@ -188,12 +188,12 @@ module Make (M : Math.S) : S
         sdf ((uv |+| spacing_half) |%| spacing |-| spacing_half)
     (* Limited repetitions *)
     | Some limit ->
-        let neg_limit = M.neg_v limit in
-        let offset = spacing |*| M.clamp_v (M.round_v (uv |/| spacing)) ~min:neg_limit ~max:limit in
+        let neg_limit = M.neg_vec limit in
+        let offset = spacing |*| M.clamp_vec (M.round_vec (uv |/| spacing)) ~min:neg_limit ~max:limit in
         sdf (uv |-| offset)
 
 
   let overlay ~bg ~fg shape =
-    M.lerp_vs fg bg (M.step (M.float 0.0) shape)
+    M.lerp_scalar fg bg (M.step (M.float 0.0) shape)
 
 end

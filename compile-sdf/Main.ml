@@ -31,7 +31,7 @@ module MyScene (M : Math.S) = struct
     let top_color = vec3f 0.85 0.85 0.70 in
     let amount = M.y uv + (M.x uv * f 0.2) in
 
-    Env.pure (M.lerp_vs bottom_color top_color amount)
+    Env.pure (M.lerp_scalar bottom_color top_color amount)
 
   (** The composed scene *)
   let scene : (vec3f repr) Env.m  =
