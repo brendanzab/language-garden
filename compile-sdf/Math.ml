@@ -41,6 +41,10 @@ module type S = sig
   val div_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
   val div_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
 
+  val mod_ : float repr -> float repr -> float repr
+  val mod_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val mod_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
+
 
   val abs : float repr -> float repr
   val abs_vec : ('n vecf) repr -> ('n vecf) repr
@@ -48,6 +52,9 @@ module type S = sig
   val clamp : float repr -> min:float repr -> max:float repr -> float repr
   val clamp_vec : ('n vecf) repr -> min:('n vecf) repr -> max:('n vecf) repr -> ('n vecf) repr
   val clamp_scalar : ('n vecf) repr -> min:float repr -> max:float repr -> ('n vecf) repr
+
+  val cos : float repr -> float repr
+  val cos_vec : ('n vecf) repr -> ('n vecf) repr
 
   val length : ('n vecf) repr -> float repr
 
@@ -61,16 +68,19 @@ module type S = sig
   val min : float repr -> float repr -> float repr
   val min_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
-  val mod_ : float repr -> float repr -> float repr
-  val mod_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val mod_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
-
   val round : float repr -> float repr
   val round_vec : ('n vecf) repr -> ('n vecf) repr
+
+  val sin : float repr -> float repr
+  val sin_vec : ('n vecf) repr -> ('n vecf) repr
 
   val step : float repr -> float repr -> float repr
   val step_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
   val step_scalar : float repr -> ('n vecf) repr -> ('n vecf) repr
+
+  val tan : float repr -> float repr
+  val tan_vec : ('n vecf) repr -> ('n vecf) repr
+
 
   (** Vector projections *)
 
@@ -78,6 +88,7 @@ module type S = sig
   val y : ((float, 'n) vec2n) repr -> float repr
   val z : ((float, 'n) vec3n) repr -> float repr
   val w : ((float, 'n) vec4n) repr -> float repr
+
 
   (** Vector swizzling *)
 
