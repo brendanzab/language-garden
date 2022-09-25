@@ -13,7 +13,13 @@ passing, which could benefit from some syntactic sugar.
 [Tagless-final style](https://okmij.org/ftp/tagless-final/) is used, which makes
 it straightforward to compile the DSL to GLSL fragment shaders that can be
 copied into [Shadertoy](https://www.shadertoy.com). The resulting GLSL code can
-be currently seen [in the CLI tests](./tests.t).
+be currently seen [in the CLI tests](./tests.t). In the future alternate
+interpretations for other target languages like [HLSL], [MSL] and [SPIR-V] could
+be implemented.
+
+[HLSL]: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl
+[MSL]: https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
+[SPIR-V]: https://www.khronos.org/spir/
 
 The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd approach
 to custom operators (which don’t allow for custom precedences), and lack of
