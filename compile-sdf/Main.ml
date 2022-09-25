@@ -439,6 +439,10 @@ end = struct
 
   type 'a repr = ('a expr) GlslEnv.m
 
+
+  (* TODO: Figure out how to make this module cleaner. At the moment juggling
+           expressions is a bit clunky and painful! *)
+
   let add_local_ann ty def =
     map (fun e -> { def = e; ty }) (add_local ty def)
 
@@ -476,9 +480,6 @@ end = struct
     let* e3 = e3 in
     let* e4 = e4 in
     add_local_ann ty (Format.sprintf "%s(%s, %s, %s, %s)" f e1.def e2.def e3.def e4.def)
-
-
-  (* TODO: Handle precedences more systematically *)
 
   let float x = pure { def = string_of_float x; ty = Float }
 
