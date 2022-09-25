@@ -9,15 +9,17 @@ procedural graphics in parallel on the GPU, without the use of mesh geometry.
 For more details see the  [resources](#resources) listed below. This is an
 embedded DSL for composing SDFs in OCaml and compiling them to shader programs.
 
-Internally [tagless-final style] is used to implement the DSL. This means that
-shader expressions are properly type-checked, and compilation to GLSL fragment
-shaders is reasonably straightforward. The resulting GLSL code can currently be
-seen [in the CLI tests](./tests.t). In the future alternate back-ends for
-targets like [HLSL], [MSL] and [SPIR-V] could also be implemented.
-
-The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd approach
-to custom operators (which don’t allow for custom precedences), and lack of
+An example scene can be found in [Main.ml](./Main.ml), and the signature of
+available signed distance functions can be found in [Sdf.ml](./Sdf.ml). The
+resulting DSL is clunkier than I’d like. This is due to OCaml’s odd approach to
+custom operators (which don’t allow for custom precedences), and lack of
 implicit overloading. Still, I think it’s an interesting proof-of-concept!
+
+Internally we use [tagless-final style] to implement the DSL. This means that
+shader expressions are properly type-checked, and compilation to GLSL shaders is
+reasonably straightforward. The resulting GLSL code can currently be seen [in
+the CLI tests](./tests.t). In the future alternate back-ends for targets like
+[HLSL], [MSL] and [SPIR-V] could also be implemented.
 
 [Signed distance functions]: https://en.wikipedia.org/wiki/Signed_distance_function
 [tagless-final style]: https://okmij.org/ftp/tagless-final/
