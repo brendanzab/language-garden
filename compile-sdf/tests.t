@@ -4,7 +4,7 @@ Generate the GLSL for the scene
   //
   // Copy and paste this into https://www.shadertoy.com/new to see the output.
   void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    // Normalise the UV coordinates to <-0.5,0.5>
+    // Normalise the UV coordinates to (-0.5, 0.5)
     vec2 uv = fragCoord / iResolution.xy - 0.5;
     // Fix the aspect ratio of the x axis
     uv.x *= iResolution.x / iResolution.y;

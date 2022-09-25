@@ -549,9 +549,9 @@ end = struct
 end
 
 
-module MyScene (M : Math) (S : Sdf with type 'a repr = 'a M.repr) = struct
+module MyScene (M : Math) = struct
 
-  open S
+  open Sdf (M)
 
   let f = M.float
   let vec2f x y = M.vec2 (f x) (f y)
@@ -581,7 +581,7 @@ end
 
 
 let () =
-  let module S = MyScene (Glsl) (Sdf (Glsl)) in
+  let module S = MyScene (Glsl) in
 
   let (color, locals) = S.scene (GlslEnv.pure (Glsl.unsafe_expr "uv" Vec2 )) [] in
 
@@ -589,7 +589,7 @@ let () =
   Format.printf "//\n";
   Format.printf "// Copy and paste this into %s to see the output.\n" "https://www.shadertoy.com/new";
   Format.printf "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n";
-  Format.printf "  // Normalise the UV coordinates to <-0.5,0.5>\n";
+  Format.printf "  // Normalise the UV coordinates to (-0.5, 0.5)\n";
   Format.printf "  vec2 uv = fragCoord / iResolution.xy - 0.5;\n";
   Format.printf "  // Fix the aspect ratio of the x axis\n";
   Format.printf "  uv.x *= iResolution.x / iResolution.y;\n";
