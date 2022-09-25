@@ -212,3 +212,52 @@ let wx e = post Vec2 ".wx" e
 let wy e = post Vec2 ".wy" e
 let wz e = post Vec2 ".wz" e
 let ww e = post Vec2 ".ww" e
+
+
+module Shadertoy = struct
+
+  type uniforms = {
+    resolution : vec3f repr;
+    time : float repr;
+    time_delta : float repr;
+    frame : float repr;
+    mouse : vec4f repr;
+    date : vec4f repr;
+    sample_rate : float repr;
+  }
+
+  let uniforms = {
+    resolution = Env.pure (unsafe_expr "iResolution" Vec3);
+    time = Env.pure (unsafe_expr "iTime" Float);
+    time_delta = Env.pure (unsafe_expr "iTimeDelta" Float);
+    frame = Env.pure (unsafe_expr "iFrame" Float);
+    mouse = Env.pure (unsafe_expr "mouse" Vec4);
+    date = Env.pure (unsafe_expr "date" Vec4);
+    sample_rate = Env.pure (unsafe_expr "sample_rate" Float);
+  }
+
+  type image_shader = uniforms -> vec2f repr -> vec3f repr
+
+  let compile_image_shader (shader : image_shader) =
+    let frag_coord = Env.pure (unsafe_expr "fragCoord" Vec2) in
+    let (color, locals) = Env.run Env.empty_locals (shader uniforms frag_coord) in
+
+    String.concat "\n" ([
+      "// The main entrypoint of the shader.";
+      "//";
+      "// Copy and paste this into https://www.shadertoy.com/new to see the output.";
+      "void mainImage(out vec4 fragColor, in vec2 fragCoord) {";
+      "  // Local bindings";
+    ] @ (locals |> List.rev |> List.map
+      (fun (name, Env.{ def; ty }) -> Format.sprintf "  %s %s = %s;" ty name def))
+    @ [
+      "";
+      "  // Compute the colour for this UV coordinate.";
+      Format.sprintf "  vec3 color = %s;" (string_of_expr color);
+      "";
+      "  // Output to screen";
+      "  fragColor = vec4(color, 1.0);";
+      "}";
+    ])
+
+end

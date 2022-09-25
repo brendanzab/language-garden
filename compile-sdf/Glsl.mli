@@ -32,21 +32,49 @@ val ty_of_expr : 'a expr -> 'a ty
     result of intermediate computations. *)
 module Env : sig
 
-    include Control.Monad.S
+  include Control.Monad.S
 
-    type entry = {
-      def : string;
-      ty : string;
-    }
+  type entry = {
+    def : string;
+    ty : string;
+  }
 
-    type locals
+  type locals
 
-    val empty_locals : locals
-    val iter_locals : (string * entry -> unit) -> locals -> unit
+  val empty_locals : locals
+  val iter_locals : (string * entry -> unit) -> locals -> unit
 
 
-    val run : locals -> 'a m -> 'a * locals
+  val run : locals -> 'a m -> 'a * locals
 
 end
 
 include Math.S with type 'a repr = ('a expr) Env.m
+
+
+(** Utilities for compiling Shadertoy-compatible shaders *)
+module Shadertoy : sig
+
+  (** Per-frame static information for Shadertoy-compatible shaders *)
+  type uniforms = {
+    resolution : vec3f repr;        (** viewport resolution (in pixels) *)
+    time : float repr;              (** shader playback time (in seconds) *)
+    time_delta : float repr;        (** render time (in seconds) *)
+    frame : float repr;             (** shader playback frame *)
+    mouse : vec4f repr;             (** mouse pixel coords. xy: current (if MLB down), zw: click *)
+    date : vec4f repr;              (** (year, month, day, time in seconds) *)
+    sample_rate : float repr;       (** sound sample rate (i.e., 44100) *)
+    (* TODO: channel_time : ((float, n4) array) repr *)
+    (* TODO: channel_resolution : ((vec3f, n4) array) repr *)
+    (* TODO: channel_i : sampler_xx repr *)
+  }
+
+  (** An image shader that can be run on https://www.shadertoy.com/. The function
+      takes the per-frame uniforms and the pixel (fragment) coordinate as
+      arguments and returns color of the pixel. *)
+  type image_shader = uniforms -> vec2f repr -> vec3f repr
+
+  (** Compile an image shader to GLSL *)
+  val compile_image_shader : image_shader -> string
+
+end

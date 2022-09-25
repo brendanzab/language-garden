@@ -4,43 +4,48 @@ Generate the GLSL for the scene
   //
   // Copy and paste this into https://www.shadertoy.com/new to see the output.
   void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    // Normalise the UV coordinates to (-0.5, 0.5)
-    vec2 uv = fragCoord / iResolution.xy - 0.5;
-    // Fix the aspect ratio of the x axis
-    uv.x *= iResolution.x / iResolution.y;
-  
     // Local bindings
     vec3 t0 = vec3(1., 1., 1.);
     vec3 t1 = vec3(0.35, 0.45, 0.5);
     vec3 t2 = vec3(0.85, 0.85, 0.7);
-    vec2 t3 = uv + 0.5;
-    float t4 = t3.y;
-    float t5 = t3.x;
-    float t6 = t5 * 0.2;
-    float t7 = t4 + t6;
-    vec3 t8 = mix(t1, t2, t7);
-    vec2 t9 = vec2(0.2, 0.2);
-    vec2 t10 = t9 * 0.5;
-    vec2 t11 = uv + t10;
-    vec2 t12 = mod(t11, t9);
-    vec2 t13 = t12 - t10;
-    float t14 = length(t13);
-    float t15 = t14 - 0.05;
-    vec2 t16 = abs(uv);
-    vec2 t17 = t16 - t9;
-    float t18 = t17.x;
-    float t19 = abs(t18);
-    float t20 = t17.y;
-    float t21 = abs(t20);
-    float t22 = max(t19, t21);
-    float t23 = t22 - 0.15;
-    float t24 = min(t15, t23);
-    float t25 = step(0., t24);
-    vec3 t26 = mix(t0, t8, t25);
+    vec2 t3 = iResolution.xy;
+    vec2 t4 = fragCoord / t3;
+    vec2 t5 = t4 - 0.5;
+    float t6 = t5.x;
+    float t7 = iResolution.x;
+    float t8 = iResolution.y;
+    float t9 = t7 / t8;
+    float t10 = t6 * t9;
+    float t11 = t5.y;
+    vec2 t12 = vec2(t10, t11);
+    vec2 t13 = t12 + 0.5;
+    float t14 = t13.y;
+    float t15 = t13.x;
+    float t16 = t15 * 0.2;
+    float t17 = t14 + t16;
+    vec3 t18 = mix(t1, t2, t17);
+    vec2 t19 = vec2(0.2, 0.2);
+    vec2 t20 = t19 * 0.5;
+    vec2 t21 = t12 + t20;
+    vec2 t22 = mod(t21, t19);
+    vec2 t23 = t22 - t20;
+    float t24 = length(t23);
+    float t25 = t24 - 0.05;
+    vec2 t26 = abs(t12);
+    vec2 t27 = t26 - t19;
+    float t28 = t27.x;
+    float t29 = abs(t28);
+    float t30 = t27.y;
+    float t31 = abs(t30);
+    float t32 = max(t29, t31);
+    float t33 = t32 - 0.15;
+    float t34 = min(t25, t33);
+    float t35 = step(0., t34);
+    vec3 t36 = mix(t0, t18, t35);
   
     // Compute the colour for this UV coordinate.
-    vec3 color = t26;
+    vec3 color = t36;
   
     // Output to screen
-    fragColor = vec4(color,1.0);
+    fragColor = vec4(color, 1.0);
   }
