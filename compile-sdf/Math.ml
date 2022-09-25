@@ -22,8 +22,6 @@ module type S = sig
 
   (** Functions *)
 
-  (* TODO: implement custom operators to make these a bit nicer to work with *)
-
   val neg : float repr -> float repr
   val neg_v : ('n vecf) repr -> ('n vecf) repr
 
@@ -102,5 +100,58 @@ module type S = sig
   val ww : ((float, 'n) vec4n) repr -> (float vec2) repr
 
   (* TODO: More swizzles *)
+
+end
+
+
+module type Notation = sig
+
+  type 'a repr
+
+  (* NOTE: These operators are a bit janky... really wish we have modular
+           implicits in OCaml. :'( *)
+
+  val (+) : float repr -> float repr -> float repr
+  val (|+|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val (|+) : ('n vecf) repr -> float repr -> ('n vecf) repr
+
+  val (-) : float repr -> float repr -> float repr
+  val (|-|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val (|-) : ('n vecf) repr -> float repr -> ('n vecf) repr
+
+  val ( * ) : float repr -> float repr -> float repr
+  val (|*|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val (|*) : ('n vecf) repr -> float repr -> ('n vecf) repr
+
+  val (/) : float repr -> float repr -> float repr
+  val (|/|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val (|/) : ('n vecf) repr -> float repr -> ('n vecf) repr
+
+end
+
+
+module Notation (M : S) : Notation
+
+  with type 'a repr = 'a M.repr
+
+= struct
+
+  type 'a repr = 'a M.repr
+
+  let (+) = M.add
+  let (|+|) = M.add_v
+  let (|+) = M.add_vs
+
+  let (-) = M.sub
+  let (|-|) = M.sub_v
+  let (|-) = M.sub_vs
+
+  let ( * ) = M.mul
+  let (|*|) = M.mul_v
+  let (|*) = M.mul_vs
+
+  let (/) = M.div
+  let (|/|) = M.div_v
+  let (|/) = M.div_vs
 
 end

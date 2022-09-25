@@ -13,7 +13,8 @@ module MyScene (M : Math.S) = struct
     type t = vec2f repr
   end)
 
-  (* Bring binding operators into scope for the environment. *)
+  (* Bring notations into scope *)
+  open Math.Notation (M)
   open Control.Monad.Notation (Env)
 
   let f = M.float
@@ -24,11 +25,11 @@ module MyScene (M : Math.S) = struct
   let background : (vec3f repr) Env.m =
     let* uv = Env.ask in
     (* Remap UV coordinates from (-0.5, 0.5) to (0, 1) *)
-    let uv = M.add_vs uv (f 0.5) in
+    let uv = uv |+ f 0.5 in
 
     let bottom_color = vec3f 0.35 0.45 0.50 in
     let top_color = vec3f 0.85 0.85 0.70 in
-    let amount = M.add (uv |> M.y) (M.mul (uv |> M.x) (f 0.2)) in
+    let amount = (uv |> M.y) + ((uv |> M.x) * f 0.2) in
 
     Env.pure (M.lerp_vs bottom_color top_color amount)
 

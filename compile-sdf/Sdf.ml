@@ -98,6 +98,9 @@ module Make (M : Math.S) : S
 
 = struct
 
+  open Math.Notation (M)
+
+
   type 'a repr = 'a M.repr
 
   type dist = float repr
@@ -117,7 +120,7 @@ module Make (M : Math.S) : S
       - [r] = radius
   *)
   let circle radius uv =
-    M.sub (M.length uv) radius
+    (M.length uv) - radius
 
   (** Based on the equation:
 
@@ -132,7 +135,7 @@ module Make (M : Math.S) : S
   let square radius uv =
     let x_dist = uv |> M.x |> M.abs in
     let y_dist = uv |> M.y |> M.abs in
-    M.sub (M.max x_dist y_dist) radius
+    (M.max x_dist y_dist) - radius
 
 
   let union = M.min
@@ -141,10 +144,10 @@ module Make (M : Math.S) : S
 
 
   let move v sdf uv =
-    sdf (M.sub_v uv v)
+    sdf (uv |-| v)
 
   let scale factor sdf uv =
-    M.mul (sdf (M.div_vs uv factor)) factor
+    (sdf (uv |/ factor)) * factor
 
   let reflect sdf uv =
     sdf (uv |> M.abs_v)
@@ -180,12 +183,12 @@ module Make (M : Math.S) : S
   let repeat ~spacing ?limit sdf uv =
     match limit with
     | None ->
-        let spacing_half = M.mul_vs spacing (M.float 0.5) in
-        sdf (M.sub_v (M.mod_v (M.add_v uv spacing_half) spacing) spacing_half)
+        let spacing_half = spacing |* (M.float 0.5) in
+        sdf ((M.mod_v (uv |+| spacing_half) spacing) |-| spacing_half)
     | Some limit ->
-        sdf (M.sub_v uv (M.mul_v spacing
+        sdf (uv |-| (spacing |*|
           (M.clamp_v
-            (M.round_v (M.div_v uv spacing))
+            (M.round_v (uv |/| spacing))
             ~min:(M.neg_v limit)
             ~max:limit)))
 
