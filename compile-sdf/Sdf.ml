@@ -49,7 +49,7 @@ module type S = sig
   val subtract : dist -> dist -> dist
 
 
-  (** {1 Operations on the domain of signed distance functions} *)
+  (** {1 Position operations} *)
 
   (** Move a distance function by the supplied vector *)
   val move : ('n vecf) repr -> 'n sdf -> 'n sdf
@@ -57,10 +57,15 @@ module type S = sig
   (** Uniformly scale a distance function by an amount *)
   val scale : float repr -> 'n sdf -> 'n sdf
 
+  (* TODO: rotate *)
+
+
+  (** {1 Reflection operations} *)
+
   (** Reflect a copy of the distance function in each axis *)
   val reflect : 'n sdf -> 'n sdf
 
-  (* TODO: Generalise reflect operations over dimension *)
+  (* TODO: Generalise axial reflection operations over 'n dimensions *)
 
   (** Reflect a copy of the distance function in the x axis *)
   val reflect2_x : sdf2 -> sdf2
@@ -77,9 +82,18 @@ module type S = sig
   (** Reflect a copy of the distance function in the z axis *)
   val reflect3_z : sdf3 -> sdf3
 
+
+  (** {1 Repetition operations} *)
+
   (** Repeat a distance function with the given spacing vector. The repetition
-      cab be optionally limited to a bounding volume. *)
+      can be optionally limited to a bounding volume. *)
   val repeat : spacing:('n vecf) repr -> ?limit:('n vecf) repr -> 'n sdf -> 'n sdf
+
+
+  (** {1 Deformations and distortions} *)
+
+  (** Displace an SDF with the supplied function *)
+  val displace : (('n vecf) repr -> dist) -> 'n sdf -> 'n sdf
 
 
   (** {1 Compositing operations} *)
@@ -87,6 +101,10 @@ module type S = sig
   (** Overlay a surface on top of a background color, painting it with a
       foreground color. *)
   val overlay : bg:vec3f repr -> fg:vec3f repr -> dist -> vec3f repr
+
+  (* TODO: twist *)
+  (* TODO: bend *)
+
 
 end
 
@@ -149,6 +167,7 @@ module Make (M : Math.S) : S
   let scale factor sdf uv =
     sdf (uv |/ factor) * factor
 
+
   let reflect sdf uv =
     sdf (uv |> M.abs_vec)
 
@@ -180,6 +199,7 @@ module Make (M : Math.S) : S
       (uv |> M.y)
       (uv |> M.z |> M.abs))
 
+
   let repeat ~spacing ?limit sdf uv =
     match limit with
     (* Infinite repetitions *)
@@ -191,6 +211,12 @@ module Make (M : Math.S) : S
         let neg_limit = M.neg_vec limit in
         let offset = spacing |*| M.clamp_vec (M.round_vec (uv |/| spacing)) ~min:neg_limit ~max:limit in
         sdf (uv |-| offset)
+
+
+  let displace f sdf uv =
+    let d1 = sdf uv in
+    let d2 = f uv in
+    d1 + d2
 
 
   let overlay ~bg ~fg shape =
