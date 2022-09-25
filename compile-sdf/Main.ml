@@ -362,8 +362,8 @@ module GlslEnv = struct
     | Mat4 -> "mat4"
 
   type entry = {
-    ty : string;
     def : string;
+    ty : string;
   }
 
   type locals = (string * entry) list
@@ -378,28 +378,31 @@ module GlslEnv = struct
   let pure (x : 'a) : 'a m =
     fun locals -> (x, locals)
 
-  (** Return the name of to a bound definition if it exists. *)
-  let name_of_def def =
-    List.find_map (fun (name, entry) -> if entry.def = def then Some name else None)
-
-  (** Add a shared definition to the local environment. *)
-  let add_local ty def : 'a m =
-    (* FIXME: Make this more... type-safe? *)
+  let fresh_name locals =
     (* FIXME: Avoid names properly (including globals) *)
-    fun locals ->
-      match List.assoc_opt def locals with
+    Format.sprintf "t%i" (List.length locals)
+
+  (** Find the name a pre-existing definition in the environment, if it exists. *)
+  let name_of_entry { def; ty } =
+    List.find_map (fun (name, entry) ->
       (* If the definition is the name of a currently bound local, return the
          local as a name without creating a new binding. *)
-      | Some _ -> def, locals
+      if def = name then Some name
+      (* Only define a new definition if it has not already been bound. *)
+      else if entry.def = def && entry.ty == ty then Some name
+      else None)
+
+  (** Add a shared definition to the local environment, avoiding the
+      introduction of common sub-expressions. *)
+  let add_local ty def =
+    (* FIXME: Make this more... type-safe? *)
+    fun locals ->
+      let ty = string_of_ty ty in
+      match name_of_entry { def; ty } locals with
+      | Some name -> name, locals
       | None ->
-          begin match name_of_def def locals with
-          (* Only define a new definition if it has not already been bound. *)
-          | Some name -> name, locals
-          | None ->
-              let name = Format.sprintf "t%i" (List.length locals) in
-              let ty = string_of_ty ty in
-              (name, (name, { ty; def }) :: locals)
-          end
+          let name = fresh_name locals in
+          (name, (name, { def; ty }) :: locals)
 
 end
 
@@ -595,7 +598,7 @@ let () =
   Format.printf "  uv.x *= iResolution.x / iResolution.y;\n";
   Format.printf "\n";
   Format.printf "  // Local bindings\n";
-  locals |> List.rev |> List.iter (fun (name, GlslEnv.{ ty; def }) ->
+  locals |> List.rev |> List.iter (fun (name, GlslEnv.{ def; ty }) ->
     Format.printf "  %s %s = %s;\n" ty name def);
   Format.printf "\n";
   Format.printf "  // Compute the colour for this UV coordinate.\n";
