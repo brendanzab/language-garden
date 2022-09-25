@@ -17,29 +17,26 @@ module MyScene (M : Math.S) = struct
   open Math.Notation (M)
   open Control.Monad.Notation (Env)
 
-  let f = M.float
-  let vec2f x y = M.vec2 (f x) (f y)
-  let vec3f x y z = M.vec3 (f x) (f y) (f z)
 
   (** Vertical gradient *)
   let background : (vec3f repr) Env.m =
     let* uv = Env.ask in
     (* Remap UV coordinates from (-0.5, 0.5) to (0, 1) *)
-    let uv = uv |+ f 0.5 in
+    let uv = uv |+ !!0.5 in
 
-    let bottom_color = vec3f 0.35 0.45 0.50 in
-    let top_color = vec3f 0.85 0.85 0.70 in
-    let amount = M.y uv + (M.x uv * f 0.2) in
+    let bottom_color = M.vec3 !!0.35 !!0.45 !!0.50 in
+    let top_color = M.vec3 !!0.85 !!0.85 !!0.70 in
+    let amount = M.y uv + (M.x uv * !!0.2) in
 
     Env.pure (M.lerp_scalar bottom_color top_color amount)
 
   (** The composed scene *)
   let scene : (vec3f repr) Env.m  =
     let* bg = background in
-    let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
-    let* s2 = square (f 0.15) |> move (vec2f 0.2 0.2) |> reflect in
+    let* s1 = circle !!0.05 |> repeat ~spacing:(M.vec2 !!0.2 !!0.2) in
+    let* s2 = square !!0.15 |> move (M.vec2 !!0.2 !!0.2) |> reflect in
 
-    let shapeColor = vec3f 1.0 1.0 1.0 in
+    let shapeColor = M.vec3 !!1.0 !!1.0 !!1.0 in
 
     Env.pure (overlay ~bg ~fg:shapeColor (union s1 s2))
 

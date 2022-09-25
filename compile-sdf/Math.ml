@@ -110,8 +110,14 @@ module type Notation = sig
 
   type 'a repr
 
-  (* NOTE: These operators are a bit janky... really wish we have modular
-           implicits in OCaml. :'( *)
+  (* NOTE: These operators are a bit janky... really wish we had modular
+           implicits in OCaml. :'(
+
+    The idea is that the vertical pipes are used when the argument is a vector.
+    This might end up getting weird as we add matrix operations as well!
+  *)
+
+  val (!!) : float -> float repr
 
   val (+) : float repr -> float repr -> float repr
   val (|+|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
@@ -143,6 +149,8 @@ module Notation (M : S) : Notation
 = struct
 
   type 'a repr = 'a M.repr
+
+  let (!!) = M.float
 
   let (+) = M.add
   let (|+|) = M.add_vec

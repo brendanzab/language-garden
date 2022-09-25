@@ -184,7 +184,7 @@ module Make (M : Math.S) : S
     match limit with
     (* Infinite repetitions *)
     | None ->
-        let spacing_half = spacing |* (M.float 0.5) in
+        let spacing_half = spacing |* !!0.5 in
         sdf ((uv |+| spacing_half) |%| spacing |-| spacing_half)
     (* Limited repetitions *)
     | Some limit ->
@@ -194,6 +194,6 @@ module Make (M : Math.S) : S
 
 
   let overlay ~bg ~fg shape =
-    M.lerp_scalar fg bg (M.step (M.float 0.0) shape)
+    M.lerp_scalar fg bg (M.step !!0.0 shape)
 
 end
