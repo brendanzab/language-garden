@@ -51,6 +51,9 @@ let () =
      shader that can be rendered in parallel on the GPU. *)
   let module S = MyScene (Glsl) in
 
+  (* TODO: Move top-level setup into Glsl module *)
+  (* TODO: Render to HTML canvas *)
+
   let uv = Glsl.unsafe_expr "uv" Vec2 in
   let (color, locals) = Glsl.Env.run Glsl.Env.empty_locals (S.scene (Glsl.Env.pure uv)) in
 
