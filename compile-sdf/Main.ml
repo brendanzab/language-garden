@@ -488,38 +488,38 @@ end = struct
   let mat4 = call4 Mat4 "mat4"
 
   let neg = pre Float "-"
-  let neg_v e = let* e = e in pre e.ty "-" (pure e)
+  let neg_v e = bind e (fun e -> pre e.ty "-" (pure e))
   let add = binop1 Float "+"
-  let add_v e1 e2 = let* e1 = e1 in binop1 e1.ty "+" (pure e1) e2
-  let add_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "+" (pure e1) e2
+  let add_v e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "+" (pure e1) e2)
+  let add_vs e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "+" (pure e1) e2)
   let sub = binop1 Float "-"
-  let sub_v e1 e2 = let* e1 = e1 in binop1 e1.ty "-" (pure e1) e2
-  let sub_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "-" (pure e1) e2
+  let sub_v e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "-" (pure e1) e2)
+  let sub_vs e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "-" (pure e1) e2)
   let mul = binop1 Float "*"
-  let mul_v e1 e2 = let* e1 = e1 in binop1 e1.ty "*" (pure e1) e2
-  let mul_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "*" (pure e1) e2
+  let mul_v e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "*" (pure e1) e2)
+  let mul_vs e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "*" (pure e1) e2)
   let div = binop1 Float "/"
-  let div_v e1 e2 = let* e1 = e1 in binop1 e1.ty "/" (pure e1) e2
-  let div_vs e1 e2 = let* e1 = e1 in binop1 e1.ty "/" (pure e1) e2
+  let div_v e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "/" (pure e1) e2)
+  let div_vs e1 e2 = bind e1 (fun e1 -> binop1 e1.ty "/" (pure e1) e2)
   let abs = call1 Float "abs"
-  let abs_v e = let* e = e in call1 e.ty "abs" (pure e)
+  let abs_v e = bind e (fun e -> call1 e.ty "abs" (pure e))
   let clamp e ~min ~max = call3 Float "clamp" e min max
-  let clamp_v e ~min ~max = let* e = e in call3 e.ty "clamp" (pure e) min max
-  let clamp_vs e ~min ~max = let* e = e in call3 e.ty "clamp" (pure e) min max
+  let clamp_v e ~min ~max = bind e (fun e -> call3 e.ty "clamp" (pure e) min max)
+  let clamp_vs e ~min ~max = bind e (fun e -> call3 e.ty "clamp" (pure e) min max)
   let length e = call1 Float "length" e
   let lerp = call3 Float "mix"
-  let lerp_v e1 e2 e3 = let* e1 = e1 in call3 e1.ty "mix" (pure e1) e2 e3
-  let lerp_vs e1 e2 e3 = let* e1 = e1 in call3 e1.ty "mix" (pure e1) e2 e3
+  let lerp_v e1 e2 e3 = bind e1 (fun e1 -> call3 e1.ty "mix" (pure e1) e2 e3)
+  let lerp_vs e1 e2 e3 = bind e1 (fun e1 -> call3 e1.ty "mix" (pure e1) e2 e3)
   let max = call2 Float "max"
   let min = call2 Float "min"
   let mod_ = call2 Float "mod"
-  let mod_v e1 e2 = let* e1 = e1 in call2 e1.ty "mod" (pure e1) e2
-  let mod_vs e1 e2 = let* e1 = e1 in call2 e1.ty "mod" (pure e1) e2
+  let mod_v e1 e2 = bind e1 (fun e1 -> call2 e1.ty "mod" (pure e1) e2)
+  let mod_vs e1 e2 = bind e1 (fun e1 -> call2 e1.ty "mod" (pure e1) e2)
   let round = call1 Float "round"
-  let round_v e = let* e = e in call1 e.ty "round" (pure e)
+  let round_v e = bind e (fun e -> call1 e.ty "round" (pure e))
   let step = call2 Float "step"
-  let step_v e1 e2 = let* e1 = e1 in call2 e1.ty "step" (pure e1) e2
-  let step_vs e1 e2 = let* e2 = e2 in call2 e2.ty "step" e1 (pure e2)
+  let step_v e1 e2 = bind e1 (fun e1 -> call2 e1.ty "step" (pure e1) e2)
+  let step_vs e1 e2 = bind e2 (fun e2 -> call2 e2.ty "step" e1 (pure e2))
 
   let x e = post Float ".x" e
   let y e = post Float ".y" e
