@@ -24,27 +24,31 @@ Generate the GLSL for the scene
     float t16 = t15 * 0.2;
     float t17 = t14 + t16;
     vec3 t18 = mix(t1, t2, t17);
-    vec2 t19 = vec2(0.2, 0.2);
-    vec2 t20 = t19 * 0.5;
-    vec2 t21 = t12 + t20;
-    vec2 t22 = mod(t21, t19);
-    vec2 t23 = t22 - t20;
-    float t24 = length(t23);
-    float t25 = t24 - 0.05;
-    vec2 t26 = abs(t12);
-    vec2 t27 = t26 - t19;
-    float t28 = t27.x;
-    float t29 = abs(t28);
-    float t30 = t27.y;
-    float t31 = abs(t30);
-    float t32 = max(t29, t31);
-    float t33 = t32 - 0.15;
-    float t34 = min(t25, t33);
-    float t35 = step(0., t34);
-    vec3 t36 = mix(t0, t18, t35);
+    vec2 t19 = vec2(0., 0.);
+    vec2 t20 = t12 - t19;
+    float t21 = length(t20);
+    float t22 = t21 - 0.3;
+    vec2 t23 = vec2(0.2, 0.);
+    vec2 t24 = t12 - t23;
+    float t25 = t24.x;
+    float t26 = abs(t25);
+    float t27 = t24.y;
+    float t28 = abs(t27);
+    float t29 = max(t26, t28);
+    float t30 = t29 - 0.2;
+    float t31 = min(t22, t30);
+    float t32 = max(0.05, t31);
+    float t33 = 0.05 - t22;
+    float t34 = 0.05 - t30;
+    vec2 t35 = vec2(t33, t34);
+    vec2 t36 = max(t35, t19);
+    float t37 = length(t36);
+    float t38 = t32 - t37;
+    float t39 = step(0., t38);
+    vec3 t40 = mix(t0, t18, t39);
   
     // Compute the colour for this UV coordinate.
-    vec3 color = t36;
+    vec3 color = t40;
   
     // Output to screen
     fragColor = vec4(color, 1.0);

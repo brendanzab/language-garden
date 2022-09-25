@@ -39,14 +39,39 @@ module type S = sig
 
   (** {1 Operators for combining shapes} *)
 
-  (** Union of two surfaces *)
+  (** The union of two surfaces *)
   val union : dist -> dist -> dist
 
   (** The intersection of two surfaces *)
-  val intersect : dist -> dist -> dist
+  val intersection : dist -> dist -> dist
 
-  (** Substract one surface from another surface *)
-  val subtract : dist -> dist -> dist
+  (** The difference of two surfaces *)
+  val difference : dist -> dist -> dist
+
+  (** {2 Chamfered combining operators} *)
+
+  (** Union of two surfaces, meeting at a chamfered edge.
+      The edge is a diagonal of a square of the specified size. *)
+  val union_chamfer : dist -> dist -> float repr -> dist
+
+  (** Intersection of two surfaces, meeting at a chamfered edge.
+      The edge is a diagonal of a square of the specified size. *)
+  val intersection_chamfer : dist -> dist -> float repr -> dist
+
+  (** Difference of two surfaces, meeting at a chamfered edge.
+      The edge is a diagonal of a square of the specified size. *)
+  val difference_chamfer : dist -> dist -> float repr -> dist
+
+  (** {2 Rounded combining operators} *)
+
+  (** Union of two surfaces, meeting at a quarter-circle. *)
+  val union_round : dist -> dist -> float repr -> dist
+
+  (** Intersection of two surfaces, meeting at a quarter-circle. *)
+  val intersection_round : dist -> dist -> float repr -> dist
+
+  (** Difference of two surfaces, meeting at a quarter-circle. *)
+  val difference_round : dist -> dist -> float repr -> dist
 
 
   (** {1 Position operations} *)
@@ -157,8 +182,31 @@ module Make (M : Math.S) : S
 
 
   let union = M.min
-  let intersect = M.max
-  let subtract d1 d2 = M.min d1 (M.neg d2)
+  let intersection = M.max
+  let difference d1 d2 = intersection d1 (M.neg d2)
+
+  (* Implementations from https://mercury.sexy/hg_sdf/ *)
+  (* Some alternative approaches can be seen at https://iquilezles.org/articles/smin/ *)
+
+  let union_chamfer d1 d2 r =
+    M.min (M.min d1 d2) ((d1 - r + d2) * M.sqrt !!0.5)
+
+  let intersection_chamfer d1 d2 r =
+    M.max (M.max d1 d2) ((d1 + r + d2) * M.sqrt !!0.5)
+
+  let difference_chamfer d1 d2 r =
+    intersection_chamfer d1 (M.neg d2) r
+
+  let union_round d1 d2 r =
+    let u = M.max_vec (M.vec2 (r - d1) (r - d2)) (M.vec2 !!0.0 !!0.0) in
+    M.max r (M.min d1 d2) - M.length u
+
+  let intersection_round d1 d2 r =
+    let u = M.max_vec (M.vec2 (r + d1) (r + d2)) (M.vec2 !!0.0 !!0.0) in
+    M.min (M.neg r) (M.max d1 d2) + M.length u
+
+  let difference_round d1 d2 r =
+    intersection_round d1 (M.neg d2) r
 
 
   let move v sdf uv =

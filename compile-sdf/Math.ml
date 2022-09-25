@@ -74,6 +74,9 @@ module type S = sig
   val sin : float repr -> float repr
   val sin_vec : ('n vecf) repr -> ('n vecf) repr
 
+  val sqrt : float repr -> float repr
+  val sqrt_vec : ('n vecf) repr -> ('n vecf) repr
+
   val step : float repr -> float repr -> float repr
   val step_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
   val step_scalar : float repr -> ('n vecf) repr -> ('n vecf) repr

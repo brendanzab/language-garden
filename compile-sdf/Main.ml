@@ -36,15 +36,18 @@ module MyScene (M : Math.S) = struct
     let* bg = background in
 
     (* Some shapes defined using signed distance functions *)
-    let* s1 = circle !!0.05 |> repeat ~spacing:(M.vec2 !!0.2 !!0.2) in
-    let* s2 = square !!0.15 |> move (M.vec2 !!0.2 !!0.2) |> reflect in
+    let* circle = circle !!0.3 |> move (M.vec2 !!0.0 !!0.0) in
+    let* square = square !!0.2 |> move (M.vec2 !!0.2 !!0.0) in
+
+    (* Combine the two shapes, meeting at a rounded edge *)
+    let shape = union_round circle square !!0.05 in
 
     (* Colour to use in the foreground *)
     let shape_color = M.vec3 !!1.0 !!1.0 !!1.0 in
 
-    (* Composite the distance fields, returning the final output colour for the
-       current UV coordinate. *)
-    Env.pure (overlay ~bg ~fg:shape_color (union s1 s2))
+    (* Composite the shape onto the background gradient, returning the final
+       output colour to render at the current UV coordinate. *)
+    Env.pure (overlay ~bg ~fg:shape_color shape)
 
 end
 
