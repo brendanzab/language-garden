@@ -56,8 +56,10 @@ module type S = sig
   val lerp_scalar : ('n vecf) repr -> ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val max : float repr -> float repr -> float repr
+  val max_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
   val min : float repr -> float repr -> float repr
+  val min_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
   val mod_ : float repr -> float repr -> float repr
   val mod_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
