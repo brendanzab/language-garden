@@ -72,3 +72,27 @@ module Monad = struct
   end
 
 end
+
+
+(** An environment with access to a shared value *)
+module Read (E : sig type t end) : sig
+
+  include Monad.S with type 'a m = E.t -> 'a
+
+  (** Access the shared value *)
+  val ask : E.t m
+
+  (** Run a computation with the value *)
+  val run : E.t -> 'a m -> 'a
+
+end = struct
+
+  type 'a m = E.t -> 'a
+
+  let bind m f = fun uv -> f (m uv) uv
+  let pure x = fun _ -> x
+
+  let ask = fun uv -> uv
+  let run uv m = m uv
+
+end

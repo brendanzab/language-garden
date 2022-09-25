@@ -556,12 +556,20 @@ module MyScene (M : Math) = struct
 
   open Sdf (M)
 
+  (** An environment with access to a shared coordinate. This is useful to make
+      it cleaner to construct signed distance functions and other functions that
+      depend on a UV coordinate. *)
+  module Env = Control.Read (struct type t = vec2f repr end)
+
+  open Control.Monad.Notation (Env)
+
   let f = M.float
   let vec2f x y = M.vec2 (f x) (f y)
   let vec3f x y z = M.vec3 (f x) (f y) (f z)
 
   (** Vertical gradient *)
-  let background (uv : vec2f repr) : vec3f repr =
+  let background : (vec3f repr) Env.m =
+    let* uv = Env.ask in
     (* Remap UV coordinates from (-0.5, 0.5) to (0, 1) *)
     let uv = M.add_vs uv (f 0.5) in
 
@@ -569,16 +577,16 @@ module MyScene (M : Math) = struct
     let top_color = vec3f 0.85 0.85 0.70 in
     let amount = M.add (uv |> M.y) (M.mul (uv |> M.x) (f 0.2)) in
 
-    M.lerp_vs bottom_color top_color amount
+    Env.pure (M.lerp_vs bottom_color top_color amount)
 
-  let scene (uv : vec2f repr) : vec3f repr =
-    let bg = background uv in
-    let s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
-    let s2 = square (f 0.15) |> move (vec2f 0.2 0.2) |> reflect in
+  let scene : (vec3f repr) Env.m  =
+    let* bg = background in
+    let* s1 = circle (f 0.05) |> repeat ~spacing:(vec2f 0.2 0.2) in
+    let* s2 = square (f 0.15) |> move (vec2f 0.2 0.2) |> reflect in
 
     let shapeColor = vec3f 1.0 1.0 1.0 in
 
-    overlay ~bg ~fg:shapeColor (union (s1 uv) (s2 uv))
+    Env.pure (overlay ~bg ~fg:shapeColor (union s1 s2))
 
 end
 
