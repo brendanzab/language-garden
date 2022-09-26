@@ -14,13 +14,13 @@ module type S = sig
 
   val float : float -> float repr
 
-  val vec2 : float repr -> float repr -> (float vec2) repr
-  val vec3 : float repr -> float repr -> float repr -> (float vec3) repr
-  val vec4 : float repr -> float repr -> float repr -> float repr -> (float vec4) repr
+  val vec2 : float repr -> float repr -> vec2f repr
+  val vec3 : float repr -> float repr -> float repr -> vec3f repr
+  val vec4 : float repr -> float repr -> float repr -> float repr -> vec4f repr
 
-  val mat2 : (float vec2) repr -> (float vec2) repr -> (float mat2) repr
-  val mat3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr -> (float mat3) repr
-  val mat4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr -> (float vec4) repr -> (float mat4) repr
+  val mat2 : vec2f repr -> vec2f repr -> mat2f repr
+  val mat3 : vec3f repr -> vec3f repr -> vec3f repr -> mat3f repr
+  val mat4 : vec4f repr -> vec4f repr -> vec4f repr -> vec4f repr -> mat4f repr
 
 
   (** {1 Arithemetic operators} *)
@@ -96,106 +96,106 @@ module type S = sig
 
   (** {2 Component projections} *)
 
-  val x : ((float, 'n) vec1n) repr -> float repr
-  val y : ((float, 'n) vec2n) repr -> float repr
-  val z : ((float, 'n) vec3n) repr -> float repr
+  val x : ('n vec_ge1f) repr -> float repr
+  val y : ('n vec_ge2f) repr -> float repr
+  val z : ('n vec_ge3f) repr -> float repr
 
   (** {2 Component updates} *)
 
-  val set_x : float repr -> ((float, 'n) vec1n) repr -> ((float, 'n) vec1n) repr
-  val set_y : float repr -> ((float, 'n) vec2n) repr -> ((float, 'n) vec2n) repr
-  val set_z : float repr -> ((float, 'n) vec3n) repr -> ((float, 'n) vec3n) repr
-  val set_w : float repr -> ((float, 'n) vec4n) repr -> ((float, 'n) vec4n) repr
+  val set_x : float repr -> ('n vec_ge1f) repr -> ('n vec_ge1f) repr
+  val set_y : float repr -> ('n vec_ge2f) repr -> ('n vec_ge2f) repr
+  val set_z : float repr -> ('n vec_ge3f) repr -> ('n vec_ge3f) repr
+  val set_w : float repr -> ('n vec_ge4f) repr -> ('n vec_ge4f) repr
 
   (** {2 Swizzle operators} *)
 
-  val xx : ((float, 'n) vec1n) repr -> (float vec2) repr
-  val xy : ((float, 'n) vec2n) repr -> (float vec2) repr
-  val xz : ((float, 'n) vec3n) repr -> (float vec2) repr
-  val xw : ((float, 'n) vec4n) repr -> (float vec2) repr
+  val xx : ('n vec_ge1f) repr -> vec2f repr
+  val xy : ('n vec_ge2f) repr -> vec2f repr
+  val xz : ('n vec_ge3f) repr -> vec2f repr
+  val xw : ('n vec_ge4f) repr -> vec2f repr
 
-  val yx : ((float, 'n) vec2n) repr -> (float vec2) repr
-  val yy : ((float, 'n) vec2n) repr -> (float vec2) repr
-  val yz : ((float, 'n) vec3n) repr -> (float vec2) repr
-  val yw : ((float, 'n) vec4n) repr -> (float vec2) repr
+  val yx : ('n vec_ge2f) repr -> vec2f repr
+  val yy : ('n vec_ge2f) repr -> vec2f repr
+  val yz : ('n vec_ge3f) repr -> vec2f repr
+  val yw : ('n vec_ge4f) repr -> vec2f repr
 
-  val zx : ((float, 'n) vec3n) repr -> (float vec2) repr
-  val zy : ((float, 'n) vec3n) repr -> (float vec2) repr
-  val zz : ((float, 'n) vec3n) repr -> (float vec2) repr
-  val zw : ((float, 'n) vec4n) repr -> (float vec2) repr
+  val zx : ('n vec_ge3f) repr -> vec2f repr
+  val zy : ('n vec_ge3f) repr -> vec2f repr
+  val zz : ('n vec_ge3f) repr -> vec2f repr
+  val zw : ('n vec_ge4f) repr -> vec2f repr
 
-  val wx : ((float, 'n) vec4n) repr -> (float vec2) repr
-  val wy : ((float, 'n) vec4n) repr -> (float vec2) repr
-  val wz : ((float, 'n) vec4n) repr -> (float vec2) repr
-  val ww : ((float, 'n) vec4n) repr -> (float vec2) repr
+  val wx : ('n vec_ge4f) repr -> vec2f repr
+  val wy : ('n vec_ge4f) repr -> vec2f repr
+  val wz : ('n vec_ge4f) repr -> vec2f repr
+  val ww : ('n vec_ge4f) repr -> vec2f repr
 
-  val xxx : ((float, 'n) vec1n) repr -> (float vec3) repr
-  val xxy : ((float, 'n) vec2n) repr -> (float vec3) repr
-  val xxz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val xxw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val xyx : ((float, 'n) vec2n) repr -> (float vec3) repr
-  val xyy : ((float, 'n) vec2n) repr -> (float vec3) repr
-  val xyz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val xyw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val xzx : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val xzy : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val xzz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val xzw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val xwx : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val xwy : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val xwz : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val xww : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val xxx : ('n vec_ge1f) repr -> vec3f repr
+  val xxy : ('n vec_ge2f) repr -> vec3f repr
+  val xxz : ('n vec_ge3f) repr -> vec3f repr
+  val xxw : ('n vec_ge4f) repr -> vec3f repr
+  val xyx : ('n vec_ge2f) repr -> vec3f repr
+  val xyy : ('n vec_ge2f) repr -> vec3f repr
+  val xyz : ('n vec_ge3f) repr -> vec3f repr
+  val xyw : ('n vec_ge4f) repr -> vec3f repr
+  val xzx : ('n vec_ge3f) repr -> vec3f repr
+  val xzy : ('n vec_ge3f) repr -> vec3f repr
+  val xzz : ('n vec_ge3f) repr -> vec3f repr
+  val xzw : ('n vec_ge4f) repr -> vec3f repr
+  val xwx : ('n vec_ge4f) repr -> vec3f repr
+  val xwy : ('n vec_ge4f) repr -> vec3f repr
+  val xwz : ('n vec_ge4f) repr -> vec3f repr
+  val xww : ('n vec_ge4f) repr -> vec3f repr
 
-  val yxx : ((float, 'n) vec2n) repr -> (float vec3) repr
-  val yxy : ((float, 'n) vec2n) repr -> (float vec3) repr
-  val yxz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val yxw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val yyx : ((float, 'n) vec2n) repr -> (float vec3) repr
-  val yyy : ((float, 'n) vec2n) repr -> (float vec3) repr
-  val yyz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val yyw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val yzx : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val yzy : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val yzz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val yzw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val ywx : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val ywy : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val ywz : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val yww : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val yxx : ('n vec_ge2f) repr -> vec3f repr
+  val yxy : ('n vec_ge2f) repr -> vec3f repr
+  val yxz : ('n vec_ge3f) repr -> vec3f repr
+  val yxw : ('n vec_ge4f) repr -> vec3f repr
+  val yyx : ('n vec_ge2f) repr -> vec3f repr
+  val yyy : ('n vec_ge2f) repr -> vec3f repr
+  val yyz : ('n vec_ge3f) repr -> vec3f repr
+  val yyw : ('n vec_ge4f) repr -> vec3f repr
+  val yzx : ('n vec_ge3f) repr -> vec3f repr
+  val yzy : ('n vec_ge3f) repr -> vec3f repr
+  val yzz : ('n vec_ge3f) repr -> vec3f repr
+  val yzw : ('n vec_ge4f) repr -> vec3f repr
+  val ywx : ('n vec_ge4f) repr -> vec3f repr
+  val ywy : ('n vec_ge4f) repr -> vec3f repr
+  val ywz : ('n vec_ge4f) repr -> vec3f repr
+  val yww : ('n vec_ge4f) repr -> vec3f repr
 
-  val zxx : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zxy : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zxz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zxw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val zyx : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zyy : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zyz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zyw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val zzx : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zzy : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zzz : ((float, 'n) vec3n) repr -> (float vec3) repr
-  val zzw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val zwx : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val zwy : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val zwz : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val zww : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val zxx : ('n vec_ge3f) repr -> vec3f repr
+  val zxy : ('n vec_ge3f) repr -> vec3f repr
+  val zxz : ('n vec_ge3f) repr -> vec3f repr
+  val zxw : ('n vec_ge4f) repr -> vec3f repr
+  val zyx : ('n vec_ge3f) repr -> vec3f repr
+  val zyy : ('n vec_ge3f) repr -> vec3f repr
+  val zyz : ('n vec_ge3f) repr -> vec3f repr
+  val zyw : ('n vec_ge4f) repr -> vec3f repr
+  val zzx : ('n vec_ge3f) repr -> vec3f repr
+  val zzy : ('n vec_ge3f) repr -> vec3f repr
+  val zzz : ('n vec_ge3f) repr -> vec3f repr
+  val zzw : ('n vec_ge4f) repr -> vec3f repr
+  val zwx : ('n vec_ge4f) repr -> vec3f repr
+  val zwy : ('n vec_ge4f) repr -> vec3f repr
+  val zwz : ('n vec_ge4f) repr -> vec3f repr
+  val zww : ('n vec_ge4f) repr -> vec3f repr
 
-  val wxx : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wxy : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wxz : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wxw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wyx : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wyy : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wyz : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wyw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wzx : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wzy : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wzz : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wzw : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wwx : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wwy : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val wwz : ((float, 'n) vec4n) repr -> (float vec3) repr
-  val www : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wxx : ('n vec_ge4f) repr -> vec3f repr
+  val wxy : ('n vec_ge4f) repr -> vec3f repr
+  val wxz : ('n vec_ge4f) repr -> vec3f repr
+  val wxw : ('n vec_ge4f) repr -> vec3f repr
+  val wyx : ('n vec_ge4f) repr -> vec3f repr
+  val wyy : ('n vec_ge4f) repr -> vec3f repr
+  val wyz : ('n vec_ge4f) repr -> vec3f repr
+  val wyw : ('n vec_ge4f) repr -> vec3f repr
+  val wzx : ('n vec_ge4f) repr -> vec3f repr
+  val wzy : ('n vec_ge4f) repr -> vec3f repr
+  val wzz : ('n vec_ge4f) repr -> vec3f repr
+  val wzw : ('n vec_ge4f) repr -> vec3f repr
+  val wwx : ('n vec_ge4f) repr -> vec3f repr
+  val wwy : ('n vec_ge4f) repr -> vec3f repr
+  val wwz : ('n vec_ge4f) repr -> vec3f repr
+  val www : ('n vec_ge4f) repr -> vec3f repr
 
   (* TODO: More swizzle operators *)
 

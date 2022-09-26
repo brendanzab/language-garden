@@ -207,7 +207,7 @@ let w v = post Float ".w" v
    with explicit type signatures. *)
 
 let set_x s v =
-  let set_x (type n) s : ((float, n) vec1n) expr -> ((float, n) vec1n) repr =
+  let set_x (type n) s : n vec_ge1f expr -> n vec_ge1f repr =
     function
     | { ty = Vec2; _ } as v -> vec2 (pure v |> x) s
     | { ty = Vec3; _ } as v -> vec3 (pure v |> x) s (pure v |> z)
@@ -216,7 +216,7 @@ let set_x s v =
   bind v (set_x s)
 
 let set_y s v =
-  let set_y (type n) s : ((float, n) vec2n) expr -> ((float, n) vec2n) repr =
+  let set_y (type n) s : n vec_ge2f expr -> n vec_ge2f repr =
     function
     | { ty = Vec2; _ } as v -> vec2 (pure v |> x) s
     | { ty = Vec3; _ } as v -> vec3 (pure v |> x) s (pure v |> z)
@@ -225,7 +225,7 @@ let set_y s v =
   bind v (set_y s)
 
 let set_z s v =
-  let set_z (type n) s : ((float, n) vec3n) expr -> ((float, n) vec3n) repr =
+  let set_z (type n) s : n vec_ge3f expr -> n vec_ge3f repr =
     function
     | { ty = Vec3; _ } as v -> vec3 (pure v |> x) (pure v |> y) s
     | { ty = Vec4; _ } as v -> vec4 (pure v |> x) (pure v |> y) s (pure v |> w)
@@ -233,7 +233,7 @@ let set_z s v =
   bind v (set_z s)
 
 let set_w s v =
-  let set_w (type n) s : ((float, n) vec4n) expr -> ((float, n) vec4n) repr =
+  let set_w (type n) s : n vec_ge4f expr -> n vec_ge4f repr =
     function
     | { ty = Vec4; _ } as v -> vec4 (pure v |> x) (pure v |> y) (pure v |> z) s
   in

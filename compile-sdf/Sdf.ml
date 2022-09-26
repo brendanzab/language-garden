@@ -19,7 +19,7 @@ module type S = sig
 
   (** A signed distanced function (SDF) describes a surface as a signed distance
       coordinate to the a signed distance to boundary of the surface. *)
-  type 'n sdf = ((float, 'n) vec) repr -> dist
+  type 'n sdf = ('n vecf) repr -> dist
 
   (** A two-dimensional distance function *)
   type sdf2 = n2 sdf
@@ -103,13 +103,13 @@ module type S = sig
   val reflect : 'n sdf -> 'n sdf
 
   (** Reflect a copy of the distance function in the x axis *)
-  val reflect_x : ('n succ) sdf -> ('n succ) sdf
+  val reflect_x : ('n ge1) sdf -> ('n ge1) sdf
 
   (** Reflect a copy of the distance function in the y axis *)
-  val reflect_y : ('n succ succ) sdf -> ('n succ succ) sdf
+  val reflect_y : ('n ge2) sdf -> ('n ge2) sdf
 
   (** Reflect a copy of the distance function in the z axis *)
-  val reflect_z : ('n succ succ succ) sdf -> ('n succ succ succ) sdf
+  val reflect_z : ('n ge3) sdf -> ('n ge3) sdf
 
 
   (** {1 Repetition operations} *)
