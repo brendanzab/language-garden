@@ -90,22 +90,14 @@ module type S = sig
   (** Reflect a copy of the distance function in each axis *)
   val reflect : 'n sdf -> 'n sdf
 
-  (* TODO: Generalise axial reflection operations over 'n dimensions *)
-
   (** Reflect a copy of the distance function in the x axis *)
-  val reflect2_x : sdf2 -> sdf2
+  val reflect_x : ('n succ) sdf -> ('n succ) sdf
 
   (** Reflect a copy of the distance function in the y axis *)
-  val reflect2_y : sdf2 -> sdf2
-
-  (** Reflect a copy of the distance function in the x axis *)
-  val reflect3_x : sdf3 -> sdf3
-
-  (** Reflect a copy of the distance function in the y axis *)
-  val reflect3_y : sdf3 -> sdf3
+  val reflect_y : ('n succ succ) sdf -> ('n succ succ) sdf
 
   (** Reflect a copy of the distance function in the z axis *)
-  val reflect3_z : sdf3 -> sdf3
+  val reflect_z : ('n succ succ succ) sdf -> ('n succ succ succ) sdf
 
 
   (** {1 Repetition operations} *)
@@ -219,33 +211,14 @@ module Make (M : Math.S) : S
   let reflect sdf uv =
     sdf (uv |> M.abs_vec)
 
-  let reflect2_x sdf uv =
-    sdf (M.vec2
-      (uv |> M.x |> M.abs)
-      (uv |> M.y))
+  let reflect_x sdf uv =
+    sdf (uv |> M.set_x (uv |> M.x |> M.abs))
 
-  let reflect2_y sdf uv =
-    sdf (M.vec2
-      (uv |> M.x)
-      (uv |> M.y |> M.abs))
+  let reflect_y sdf uv =
+    sdf (uv |> M.set_y (uv |> M.y |> M.abs))
 
-  let reflect3_x sdf uv =
-    sdf (M.vec3
-      (uv |> M.x |> M.abs)
-      (uv |> M.y)
-      (uv |> M.z))
-
-  let reflect3_y sdf uv =
-    sdf (M.vec3
-      (uv |> M.x)
-      (uv |> M.y |> M.abs)
-      (uv |> M.z))
-
-  let reflect3_z sdf uv =
-    sdf (M.vec3
-      (uv |> M.x)
-      (uv |> M.y)
-      (uv |> M.z |> M.abs))
+  let reflect_z sdf uv =
+    sdf (uv |> M.set_z (uv |> M.z |> M.abs))
 
 
   let repeat ~spacing ?limit sdf uv =

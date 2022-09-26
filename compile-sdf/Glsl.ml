@@ -190,30 +190,68 @@ let step_scalar e1 e2 = bind e2 (fun e2 -> call2 e2.ty "step" e1 (pure e2))
 let tan = call1 Float "tan"
 let tan_vec e = bind e (fun e -> call1 e.ty "tan" (pure e))
 
-let x e = post Float ".x" e
-let y e = post Float ".y" e
-let z e = post Float ".z" e
-let w e = post Float ".w" e
+let x v = post Float ".x" v
+let y v = post Float ".y" v
+let z v = post Float ".z" v
+let w v = post Float ".w" v
 
-let xx e = post Vec2 ".xx" e
-let xy e = post Vec2 ".xy" e
-let xz e = post Vec2 ".xz" e
-let xw e = post Vec2 ".xw" e
+(* The following dimension-polymorphic setters are challenging to implement
+   because higher-rank anonymous functions are difficult, if not impossible to
+   express in OCaml as far as I can tell. Instead we implement local functions
+   with explicit type signatures. *)
 
-let yx e = post Vec2 ".yx" e
-let yy e = post Vec2 ".yy" e
-let yz e = post Vec2 ".yz" e
-let yw e = post Vec2 ".yw" e
+let set_x s v =
+  let set_x (type n) s : ((float, n) vec1n) expr -> ((float, n) vec1n) repr =
+    function
+    | { ty = Vec2; _ } as v -> vec2 (pure v |> x) s
+    | { ty = Vec3; _ } as v -> vec3 (pure v |> x) s (pure v |> z)
+    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) s (pure v |> z) (pure v |> w)
+  in
+  bind v (set_x s)
 
-let zx e = post Vec2 ".zx" e
-let zy e = post Vec2 ".zy" e
-let zz e = post Vec2 ".zz" e
-let zw e = post Vec2 ".zw" e
+let set_y s v =
+  let set_y (type n) s : ((float, n) vec2n) expr -> ((float, n) vec2n) repr =
+    function
+    | { ty = Vec2; _ } as v -> vec2 (pure v |> x) s
+    | { ty = Vec3; _ } as v -> vec3 (pure v |> x) s (pure v |> z)
+    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) s (pure v |> z) (pure v |> w)
+  in
+  bind v (set_y s)
 
-let wx e = post Vec2 ".wx" e
-let wy e = post Vec2 ".wy" e
-let wz e = post Vec2 ".wz" e
-let ww e = post Vec2 ".ww" e
+let set_z s v =
+  let set_z (type n) s : ((float, n) vec3n) expr -> ((float, n) vec3n) repr =
+    function
+    | { ty = Vec3; _ } as v -> vec3 (pure v |> x) (pure v |> y) s
+    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) (pure v |> y) s (pure v |> w)
+  in
+  bind v (set_z s)
+
+let set_w s v =
+  let set_w (type n) s : ((float, n) vec4n) expr -> ((float, n) vec4n) repr =
+    function
+    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) (pure v |> y) (pure v |> z) s
+  in
+  bind v (set_w s)
+
+let xx v = post Vec2 ".xx" v
+let xy v = post Vec2 ".xy" v
+let xz v = post Vec2 ".xz" v
+let xw v = post Vec2 ".xw" v
+
+let yx v = post Vec2 ".yx" v
+let yy v = post Vec2 ".yy" v
+let yz v = post Vec2 ".yz" v
+let yw v = post Vec2 ".yw" v
+
+let zx v = post Vec2 ".zx" v
+let zy v = post Vec2 ".zy" v
+let zz v = post Vec2 ".zz" v
+let zw v = post Vec2 ".zw" v
+
+let wx v = post Vec2 ".wx" v
+let wy v = post Vec2 ".wy" v
+let wz v = post Vec2 ".wz" v
+let ww v = post Vec2 ".ww" v
 
 
 module Shadertoy = struct

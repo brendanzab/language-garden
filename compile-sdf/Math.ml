@@ -85,15 +85,22 @@ module type S = sig
   val tan_vec : ('n vecf) repr -> ('n vecf) repr
 
 
-  (** Vector projections *)
+  (** {1 Vector component operations} *)
+
+  (** {2 Component projections} *)
 
   val x : ((float, 'n) vec1n) repr -> float repr
   val y : ((float, 'n) vec2n) repr -> float repr
   val z : ((float, 'n) vec3n) repr -> float repr
-  val w : ((float, 'n) vec4n) repr -> float repr
 
+  (** {2 Component updates} *)
 
-  (** Vector swizzling *)
+  val set_x : float repr -> ((float, 'n) vec1n) repr -> ((float, 'n) vec1n) repr
+  val set_y : float repr -> ((float, 'n) vec2n) repr -> ((float, 'n) vec2n) repr
+  val set_z : float repr -> ((float, 'n) vec3n) repr -> ((float, 'n) vec3n) repr
+  val set_w : float repr -> ((float, 'n) vec4n) repr -> ((float, 'n) vec4n) repr
+
+  (** {2 Swizzle operators} *)
 
   val xx : ((float, 'n) vec1n) repr -> (float vec2) repr
   val xy : ((float, 'n) vec2n) repr -> (float vec2) repr
