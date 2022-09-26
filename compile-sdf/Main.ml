@@ -7,7 +7,7 @@ module MyScene (M : Math.S) = struct
   open Sdf.Make (M)
 
   (** An environment with access to a 2D coordinate. *)
-  module Env = Control.Monad.Reader (struct type t = vec2f repr end)
+  module Env = Control.Monad.FunctionReader (struct type t = vec2f repr end)
 
   (* Bring notations into scope *)
   open Math.Notation (M)

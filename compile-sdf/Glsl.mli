@@ -40,19 +40,35 @@ type any_expr =
   | AnyExpr : 'a expr -> any_expr
 
 
-(** An environment that allows for the definition of shared computations. This
-    is useful for compiling GLSL, where it would be preferrable to share the
-    result of intermediate computations. *)
+(** A collection of shared GLSL expressions. This is useful for compiling GLSL,
+    where it would be preferrable to share the result of intermediate
+    computations. *)
+module Locals : sig
+
+  (** The type of the local envitonment *)
+  type t
+
+  (** An empty local environment *)
+  val empty : t
+
+  (** Iterate through the definitions, in the order in which they should be
+      defined in a GLSL shader. *)
+  val iter : (string * any_expr -> unit) -> t -> unit
+
+  (** Add a shared definition, avoiding the introduction of common
+      sub-expressions. *)
+  val define : 'a expr -> t -> 'a expr * t
+
+end
+
+
+(* An environment that allows for the definition of shared GLSL expressions *)
 module Env : sig
 
-  include Control.Monad.S
+  include Control.Monad.State with type t = Locals.t
 
-  type locals
-
-  val empty_locals : locals
-  val iter_locals : (string * any_expr -> unit) -> locals -> unit
-
-  val run : locals -> 'a m -> 'a * locals
+  (** Define a new local definition *)
+  val define_local : 'a expr -> ('a expr) m
 
 end
 

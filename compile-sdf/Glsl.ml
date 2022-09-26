@@ -50,27 +50,14 @@ type any_expr =
   | AnyExpr : 'a expr -> any_expr
 
 
-module Env = struct
+module Locals = struct
 
-  type locals = (string * any_expr) list
+  type t = (string * any_expr) list
 
-  let empty_locals = []
-  let iter_locals f locals = locals |> List.rev |> List.iter f
+  let empty = []
 
-  type 'a m = locals -> 'a * locals
-
-  let bind (state : 'a m) (f : 'a -> 'b m) : 'b m =
-    fun locals ->
-      let (expr', locals') = state locals in
-      f expr' locals'
-
-  let pure (x : 'a) : 'a m =
-    fun locals -> (x, locals)
-
-
-  let run locals m =
-    m locals
-
+  let iter f locals =
+    locals |> List.rev |> List.iter f
 
   let fresh_name locals =
     (* FIXME: Avoid names properly (including globals) *)
@@ -78,7 +65,7 @@ module Env = struct
 
   (** If possible, returns and expression that refers to an existing local the
       matches the supplied expression. *)
-  let lookup_expr expr =
+  let find_expr expr =
     List.find_map (fun (name, AnyExpr expr') ->
       (* If the definition is the name of a currently bound local, return the
           local as a name without creating a new binding. *)
@@ -87,15 +74,22 @@ module Env = struct
       else if equal_expr expr expr' then Some { expr with def = name }
       else None)
 
-  (** Add a shared definition to the local environment, avoiding the
-      introduction of common sub-expressions. *)
-  let define_local (expr : 'a expr) : ('a expr) m =
-    fun locals ->
-      match lookup_expr expr locals with
-      | Some expr -> expr, locals
-      | None ->
-          let name = fresh_name locals in
-          { expr with def = name }, (name, AnyExpr expr) :: locals
+  let define (expr : 'a expr) (locals : t) : 'a expr * t =
+    match find_expr expr locals with
+    | Some expr -> expr, locals
+    | None ->
+        let name = fresh_name locals in
+        { expr with def = name }, (name, AnyExpr expr) :: locals
+
+end
+
+
+module Env = struct
+
+  include Control.Monad.State (Locals)
+
+  let define_local expr =
+    embed (Locals.define expr)
 
 end
 
@@ -364,7 +358,8 @@ module Shadertoy = struct
     Format.sprintf "  %s %s = %s;" (string_of_ty ty) name def
 
   let compile_image_shader (shader : image_shader) =
-    let (color, locals) = Env.run Env.empty_locals (shader uniforms frag_coord) in
+    let (color, locals) =
+      Env.run (shader uniforms frag_coord) Locals.empty in
 
     String.concat "\n" ([
       "// The main entrypoint of the shader.";

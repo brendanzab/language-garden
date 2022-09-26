@@ -13,6 +13,7 @@ module Monad = struct
   end
 
 
+  (** Operators to make working with monads more pleasant *)
   module type Notation = sig
 
     type 'a m
@@ -49,6 +50,7 @@ module Monad = struct
   end
 
 
+  (** Utility functions derived from a monad *)
   module Util (M : S) = struct
 
     open Notation (M)
@@ -77,27 +79,101 @@ module Monad = struct
 
   end
 
-  (** An environment with access to a shared value *)
-  module Reader (E : sig type t end) : sig
 
-    include S with type 'a m = E.t -> 'a
+  (** An environment with access to a shared value *)
+  module type Reader = sig
+
+    type t
+
+    include S
 
     (** Access the shared value *)
-    val ask : E.t m
+    val ask : t m
 
     (** Run a computation with the value *)
-    val run : E.t -> 'a m -> 'a
+    val run : t -> 'a m -> 'a
 
-  end = struct
+  end
+
+
+  (** A reader implemented for functions *)
+  module FunctionReader (E : sig type t end) : Reader
+
+    with type t = E.t
+    with type 'a m = E.t -> 'a
+
+  = struct
+
+    type t = E.t
 
     type 'a m = E.t -> 'a
 
-    let bind m f = fun uv -> f (m uv) uv
+    let bind m f = fun x -> f (m x) x
     let pure x = fun _ -> x
 
-    let ask = fun uv -> uv
-    let run uv m = m uv
+    let ask = fun x -> x
+    let run x m = m x
 
   end
+
+
+  (** A reader with an abstract implementation *)
+  module Reader (E : sig type t end) : Reader with type t = E.t =
+    FunctionReader (E)
+
+
+  (** An environment that can access and update some shared state *)
+  module type State = sig
+
+    type t
+
+    include S
+
+    (** Access the shared state from the environment *)
+    val get : t m
+
+    (** Replace the shared state of the environment *)
+    val put : t -> unit m
+
+    (** Embed a state action in the environment *)
+    val embed : (t -> 'a * t) -> 'a m
+
+    (** Run a stateful computation using an initial state.
+        This is the inverse of the {!state} function. *)
+    val run : 'a m -> t -> 'a * t
+
+  end
+
+
+  (** A state monad implemented for functions *)
+  module FunctionState (E : sig type t end) : State
+
+    with type t = E.t
+    with type 'a m = E.t -> 'a * E.t
+
+  = struct
+
+    type t = E.t
+
+    type 'a m = E.t -> 'a * E.t
+
+    let bind m f = fun x ->
+      let x', s = m x in
+      f x' s
+
+    let pure x = fun s -> x, s
+
+    let get = fun s -> s, s
+    let put s = fun _ -> (), s
+
+    let embed f = fun s -> f s
+    let run m s = m s
+
+  end
+
+
+  (** A state monad with an abstract implementation *)
+  module State (E : sig type t end) : State with type t = E.t =
+    FunctionState (E)
 
 end
