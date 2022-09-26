@@ -1,6 +1,6 @@
 (** {0 Language of signed distance functions} *)
 
-open MathTypes
+open ShaderTypes
 
 
 (** A language for building signed distance functions. *)
@@ -138,17 +138,17 @@ module type S = sig
 end
 
 
-(** Create an implementation of the SDF language using the mathematics module. *)
-module Make (M : Math.S) : S
+(** Create an implementation of SDFs for a given shader language. *)
+module Make (S : Shader.S) : S
 
-  with type 'a repr = 'a M.repr
+  with type 'a repr = 'a S.repr
 
 = struct
 
-  open Math.Notation (M)
+  open Shader.Notation (S)
 
 
-  type 'a repr = 'a M.repr
+  type 'a repr = 'a S.repr
 
   type dist = float repr
   type 'n sdf = ((float, 'n) vec) repr -> dist
@@ -158,15 +158,15 @@ module Make (M : Math.S) : S
 
   (** Clamp to the range \[0, 1\] *)
   let saturate e =
-      M.clamp e ~min:!!0.0 ~max:!!0.1
+      S.clamp e ~min:!!0.0 ~max:!!0.1
 
   (** 2D origin *)
   let zero2 =
-    M.vec2 !!0.0 !!0.0
+    S.vec2 !!0.0 !!0.0
 
   (** Maximum component of a 2D vector *)
   let vmax2 v =
-    M.max (M.x v) (M.y v)
+    S.max (S.x v) (S.y v)
 
 
   (** Based on the equation:
@@ -180,7 +180,7 @@ module Make (M : Math.S) : S
       - [r] = radius
   *)
   let circle radius uv =
-    M.length uv - radius
+    S.length uv - radius
 
   (** Based on the equation:
 
@@ -193,48 +193,48 @@ module Make (M : Math.S) : S
       - [r] = radius
   *)
   let square radius uv =
-    vmax2 (M.abs_vec uv) - radius
+    vmax2 (S.abs_vec uv) - radius
 
   (* Distance functions based on https://iquilezles.org/articles/distfunctions2d/ *)
   (* See also https://mercury.sexy/hg_sdf/ *)
 
   let rectangle extents uv =
-    let d = M.abs_vec uv |-| extents in
-    M.length (M.max_vec d zero2) + M.min (vmax2 d) !!0.0
+    let d = S.abs_vec uv |-| extents in
+    S.length (S.max_vec d zero2) + S.min (vmax2 d) !!0.0
 
   let line_segment p1 p2 uv =
     let uv_p1 = uv |-| p1 in
     let p2_p1 = p2 |-| p1 in
-    let h = saturate (M.dot uv_p1 p2_p1 / M.dot p2_p1 p2_p1) in
-    M.length (uv_p1 |-| (p2_p1 |* h))
+    let h = saturate (S.dot uv_p1 p2_p1 / S.dot p2_p1 p2_p1) in
+    S.length (uv_p1 |-| (p2_p1 |* h))
 
 
-  let union = M.min
-  let intersection = M.max
-  let difference d1 d2 = intersection d1 (M.neg d2)
+  let union = S.min
+  let intersection = S.max
+  let difference d1 d2 = intersection d1 (S.neg d2)
 
   (* Distance functions based on https://mercury.sexy/hg_sdf/ *)
   (* See also https://iquilezles.org/articles/smin/ *)
 
   let union_chamfer d1 d2 r =
-    M.min (M.min d1 d2) ((d1 - r + d2) * M.sqrt !!0.5)
+    S.min (S.min d1 d2) ((d1 - r + d2) * S.sqrt !!0.5)
 
   let intersection_chamfer d1 d2 r =
-    M.max (M.max d1 d2) ((d1 + r + d2) * M.sqrt !!0.5)
+    S.max (S.max d1 d2) ((d1 + r + d2) * S.sqrt !!0.5)
 
   let difference_chamfer d1 d2 r =
-    intersection_chamfer d1 (M.neg d2) r
+    intersection_chamfer d1 (S.neg d2) r
 
   let union_round d1 d2 r =
-    let u = M.max_vec (M.vec2 (r - d1) (r - d2)) zero2 in
-    M.max r (M.min d1 d2) - M.length u
+    let u = S.max_vec (S.vec2 (r - d1) (r - d2)) zero2 in
+    S.max r (S.min d1 d2) - S.length u
 
   let intersection_round d1 d2 r =
-    let u = M.max_vec (M.vec2 (r + d1) (r + d2)) zero2 in
-    M.min (M.neg r) (M.max d1 d2) + M.length u
+    let u = S.max_vec (S.vec2 (r + d1) (r + d2)) zero2 in
+    S.min (S.neg r) (S.max d1 d2) + S.length u
 
   let difference_round d1 d2 r =
-    intersection_round d1 (M.neg d2) r
+    intersection_round d1 (S.neg d2) r
 
 
   let move v sdf uv =
@@ -245,16 +245,16 @@ module Make (M : Math.S) : S
 
 
   let reflect sdf uv =
-    sdf (uv |> M.abs_vec)
+    sdf (uv |> S.abs_vec)
 
   let reflect_x sdf uv =
-    sdf (uv |> M.set_x (uv |> M.x |> M.abs))
+    sdf (uv |> S.set_x (uv |> S.x |> S.abs))
 
   let reflect_y sdf uv =
-    sdf (uv |> M.set_y (uv |> M.y |> M.abs))
+    sdf (uv |> S.set_y (uv |> S.y |> S.abs))
 
   let reflect_z sdf uv =
-    sdf (uv |> M.set_z (uv |> M.z |> M.abs))
+    sdf (uv |> S.set_z (uv |> S.z |> S.abs))
 
 
   let repeat ~spacing ?limit sdf uv =
@@ -265,8 +265,8 @@ module Make (M : Math.S) : S
         sdf ((uv |+| spacing_half) |%| spacing |-| spacing_half)
     (* Limited repetitions *)
     | Some limit ->
-        let neg_limit = M.neg_vec limit in
-        let offset = spacing |*| M.clamp_vec (M.round_vec (uv |/| spacing)) ~min:neg_limit ~max:limit in
+        let neg_limit = S.neg_vec limit in
+        let offset = spacing |*| S.clamp_vec (S.round_vec (uv |/| spacing)) ~min:neg_limit ~max:limit in
         sdf (uv |-| offset)
 
 
@@ -277,6 +277,6 @@ module Make (M : Math.S) : S
 
 
   let overlay ~bg ~fg shape =
-    M.lerp_scalar fg bg (M.step !!0.0 shape)
+    S.lerp_scalar fg bg (S.step !!0.0 shape)
 
 end

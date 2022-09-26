@@ -1,4 +1,4 @@
-(** {0 Common types for linear algebra} *)
+(** {0 Common types used in GPU shader languages} *)
 
 
 (** {1 Type level natural numbers} *)

@@ -1,4 +1,4 @@
-open MathTypes
+open ShaderTypes
 
 (** GLSL type *)
 type _ ty =

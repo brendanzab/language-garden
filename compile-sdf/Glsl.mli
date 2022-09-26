@@ -1,6 +1,6 @@
 (** {0 Expressions in the GLSL shader language} *)
 
-open MathTypes
+open ShaderTypes
 
 
 (** GLSL type *)
@@ -73,7 +73,7 @@ module Env : sig
 end
 
 
-include Math.S with type 'a repr = ('a expr) Env.m
+include Shader.S with type 'a repr = ('a expr) Env.m
 
 
 (** Utilities for compiling Shadertoy-compatible shaders *)

@@ -16,15 +16,15 @@ available signed distance functions can be found in [Sdf.ml](./Sdf.ml):
 (** A scene to render, assuming UV coordinates in (-0.5, 0.5) *)
 let scene : (vec3f repr) Env.m  =
   (* Some shapes defined using signed distance functions *)
-  let* s1 = circle !!0.3 |> move (M.vec2 !!0.0 !!0.0) in
-  let* s2 = square !!0.2 |> move (M.vec2 !!0.2 !!0.0) in
+  let* s1 = circle !!0.3 |> move (S.vec2 !!0.0 !!0.0) in
+  let* s2 = square !!0.2 |> move (S.vec2 !!0.2 !!0.0) in
 
   (* Combine the two shapes, meeting at a rounded edge *)
   let shape = union_round s1 s2 !!0.05 in
 
   (* Colours to use in the background and foreground *)
-  let background_color = M.vec3 !!0.35 !!0.45 !!0.50 in
-  let shape_color = M.vec3 !!1.0 !!1.0 !!1.0 in
+  let background_color = S.vec3 !!0.35 !!0.45 !!0.50 in
+  let shape_color = S.vec3 !!1.0 !!1.0 !!1.0 in
 
   (* The final output colour to render at the current UV coordinate. *)
   Env.pure (overlay ~bg:background_color ~fg:shape_color shape)

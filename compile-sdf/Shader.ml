@@ -1,9 +1,10 @@
-(** Language of linear algebra expressions *)
+(** {1 Typed shader language expressions *)
 
-open MathTypes
+open ShaderTypes
 
 
-(** A language of linear algebra for a GLSL-like shader language *)
+(** A shader language that supports a variety of operators and functions related
+    to linear algebra *)
 module type S = sig
 
   (** Abstract representation of shader expressions *)
@@ -238,34 +239,34 @@ module type Notation = sig
 end
 
 
-module Notation (M : S) : Notation
+module Notation (S: S) : Notation
 
-  with type 'a repr = 'a M.repr
+  with type 'a repr = 'a S.repr
 
 = struct
 
-  type 'a repr = 'a M.repr
+  type 'a repr = 'a S.repr
 
-  let (!!) = M.float
+  let (!!) = S.float
 
-  let (+) = M.add
-  let (|+|) = M.add_vec
-  let (|+) = M.add_scalar
+  let (+) = S.add
+  let (|+|) = S.add_vec
+  let (|+) = S.add_scalar
 
-  let (-) = M.sub
-  let (|-|) = M.sub_vec
-  let (|-) = M.sub_scalar
+  let (-) = S.sub
+  let (|-|) = S.sub_vec
+  let (|-) = S.sub_scalar
 
-  let ( * ) = M.mul
-  let (|*|) = M.mul_vec
-  let (|*) = M.mul_scalar
+  let ( * ) = S.mul
+  let (|*|) = S.mul_vec
+  let (|*) = S.mul_scalar
 
-  let (/) = M.div
-  let (|/|) = M.div_vec
-  let (|/) = M.div_scalar
+  let (/) = S.div
+  let (|/|) = S.div_vec
+  let (|/) = S.div_scalar
 
-  let (%) = M.mod_
-  let (|%|) = M.mod_vec
-  let (|%) = M.mod_scalar
+  let (%) = S.mod_
+  let (|%|) = S.mod_vec
+  let (|%) = S.mod_scalar
 
 end

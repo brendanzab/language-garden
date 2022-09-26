@@ -1,16 +1,16 @@
-open MathTypes
+open ShaderTypes
 
 
 (** A simple scene, implemented using signed distance fields. *)
-module MyScene (M : Math.S) = struct
+module MyScene (S : Shader.S) = struct
 
-  open Sdf.Make (M)
+  open Sdf.Make (S)
 
   (** An environment with access to a 2D coordinate. *)
   module Env = Control.Monad.FunctionReader (struct type t = vec2f repr end)
 
   (* Bring notations into scope *)
-  open Math.Notation (M)
+  open Shader.Notation (S)
   open Control.Monad.Notation (Env)
 
 
@@ -20,14 +20,14 @@ module MyScene (M : Math.S) = struct
     let uv = uv |+ !!0.5 in     (* Remap UV coordinates from [-0.5, 0.5] to [0, 1] *)
 
     (* Some colours to interpolate between *)
-    let bottom_color = M.vec3 !!0.35 !!0.45 !!0.50 in
-    let top_color = M.vec3 !!0.85 !!0.85 !!0.70 in
+    let bottom_color = S.vec3 !!0.35 !!0.45 !!0.50 in
+    let top_color = S.vec3 !!0.85 !!0.85 !!0.70 in
 
     (* Interpolation amount. This is mostly vertical, with a slight tilt to the
        right as a result of mixing in some of the x position. *)
-    let amount = M.y uv + (M.x uv * !!0.2) in
+    let amount = S.y uv + (S.x uv * !!0.2) in
 
-    Env.pure (M.lerp_scalar bottom_color top_color amount)
+    Env.pure (S.lerp_scalar bottom_color top_color amount)
 
 
   (** A scene to render, assuming UV coordinates in \[-0.5, 0.5\] *)
@@ -36,16 +36,16 @@ module MyScene (M : Math.S) = struct
     let* bg = background in
 
     (* Some shapes defined using signed distance functions *)
-    let* s1 = circle !!0.3 |> move (M.vec2 !!0.0 !!0.0) in
-    let* s2 = square !!0.2 |> move (M.vec2 !!0.2 !!0.0) in
+    let* s1 = circle !!0.3 |> move (S.vec2 !!0.0 !!0.0) in
+    let* s2 = square !!0.2 |> move (S.vec2 !!0.2 !!0.0) in
 
     (* Combine the two shapes, meeting at a rounded edge *)
     let shape = union_round s1 s2 !!0.05 in
-    let shape_color = M.vec3 !!1.0 !!1.0 !!1.0 in
+    let shape_color = S.vec3 !!1.0 !!1.0 !!1.0 in
 
     (* A box to draw over the above shape *)
-    let* box = rectangle (M.vec2 !!0.3 !!0.2) |> move (M.vec2 !!(-0.3) !!(-0.2)) in
-    let box_color = M.vec3 !!0.25 !!0.25 !!0.25 in
+    let* box = rectangle (S.vec2 !!0.3 !!0.2) |> move (S.vec2 !!(-0.3) !!(-0.2)) in
+    let box_color = S.vec3 !!0.25 !!0.25 !!0.25 in
 
     (* The final output colour to render at the current UV coordinate. *)
     Env.pure (overlay ~bg:(overlay ~bg ~fg:shape_color shape) ~fg:box_color box)
@@ -57,7 +57,7 @@ let () =
   (* Construct an implementation of our scene that can be compiled to a GLSL
      shader that can be rendered in parallel on the GPU. *)
   let module Scene = MyScene (Glsl) in
-  let open Math.Notation (Glsl) in
+  let open Shader.Notation (Glsl) in
 
   (* TODO: Render to HTML canvas *)
 
