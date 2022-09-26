@@ -5,7 +5,7 @@ open ShaderTypes
 
 (** GLSL type *)
 type _ ty =
-  | Float : float ty
+  | Float : vec1f ty
   | Vec2 : vec2f ty
   | Vec3 : vec3f ty
   | Vec4 : vec4f ty
@@ -82,13 +82,13 @@ module Shadertoy : sig
   (** Per-frame static information for Shadertoy-compatible shaders *)
   type uniforms = {
     resolution : vec3f repr;        (** viewport resolution (in pixels) *)
-    time : float repr;              (** shader playback time (in seconds) *)
-    time_delta : float repr;        (** render time (in seconds) *)
-    frame : float repr;             (** shader playback frame *)
+    time : vec1f repr;              (** shader playback time (in seconds) *)
+    time_delta : vec1f repr;        (** render time (in seconds) *)
+    frame : vec1f repr;             (** shader playback frame *)
     mouse : vec4f repr;             (** mouse pixel coords. xy: current (if MLB down), zw: click *)
     date : vec4f repr;              (** (year, month, day, time in seconds) *)
-    sample_rate : float repr;       (** sound sample rate (i.e., 44100) *)
-    (* TODO: channel_time : ((float, n4) array) repr *)
+    sample_rate : vec1f repr;       (** sound sample rate (i.e., 44100) *)
+    (* TODO: channel_time : ((vec1f, n4) array) repr *)
     (* TODO: channel_resolution : ((vec3f, n4) array) repr *)
     (* TODO: channel_i : sampler_xx repr *)
   }

@@ -15,7 +15,7 @@ module type S = sig
       - Zero values are on the boundary of the shape
       - Positive values are outside the shape
   *)
-  type dist = float repr
+  type dist = vec1f repr
 
   (** A signed distanced function (SDF) describes a surface as a signed distance
       coordinate to the a signed distance to boundary of the surface. *)
@@ -33,10 +33,10 @@ module type S = sig
   (** {2 2D shapes} *)
 
   (** Circle of a given radius *)
-  val circle : float repr -> sdf2
+  val circle : vec1f repr -> sdf2
 
   (** Square of a given radius *)
-  val square : float repr -> sdf2
+  val square : vec1f repr -> sdf2
 
   (* Rectangle with extents measured from the origin *)
   val rectangle : vec2f repr -> sdf2
@@ -64,26 +64,26 @@ module type S = sig
 
   (** Union of two surfaces, meeting at a chamfered edge.
       The edge is a diagonal of a square of the specified size. *)
-  val union_chamfer : dist -> dist -> float repr -> dist
+  val union_chamfer : dist -> dist -> vec1f repr -> dist
 
   (** Intersection of two surfaces, meeting at a chamfered edge.
       The edge is a diagonal of a square of the specified size. *)
-  val intersection_chamfer : dist -> dist -> float repr -> dist
+  val intersection_chamfer : dist -> dist -> vec1f repr -> dist
 
   (** Difference of two surfaces, meeting at a chamfered edge.
       The edge is a diagonal of a square of the specified size. *)
-  val difference_chamfer : dist -> dist -> float repr -> dist
+  val difference_chamfer : dist -> dist -> vec1f repr -> dist
 
   (** {2 Rounded combining operators} *)
 
   (** Union of two surfaces, meeting at a quarter-circle. *)
-  val union_round : dist -> dist -> float repr -> dist
+  val union_round : dist -> dist -> vec1f repr -> dist
 
   (** Intersection of two surfaces, meeting at a quarter-circle. *)
-  val intersection_round : dist -> dist -> float repr -> dist
+  val intersection_round : dist -> dist -> vec1f repr -> dist
 
   (** Difference of two surfaces, meeting at a quarter-circle. *)
-  val difference_round : dist -> dist -> float repr -> dist
+  val difference_round : dist -> dist -> vec1f repr -> dist
 
 
   (** {1 Position operations} *)
@@ -92,7 +92,7 @@ module type S = sig
   val move : ('n vecf) repr -> 'n sdf -> 'n sdf
 
   (** Uniformly scale a distance function by an amount *)
-  val scale : float repr -> 'n sdf -> 'n sdf
+  val scale : vec1f repr -> 'n sdf -> 'n sdf
 
   (* TODO: rotate *)
 
@@ -150,7 +150,7 @@ module Make (S : Shader.S) : S
 
   type 'a repr = 'a S.repr
 
-  type dist = float repr
+  type dist = vec1f repr
   type 'n sdf = ((float, 'n) vec) repr -> dist
   type sdf2 = n2 sdf
   type sdf3 = n3 sdf
@@ -193,20 +193,20 @@ module Make (S : Shader.S) : S
       - [r] = radius
   *)
   let square radius uv =
-    vmax2 (S.abs_vec uv) - radius
+    vmax2 (S.abs uv) - radius
 
   (* Distance functions based on https://iquilezles.org/articles/distfunctions2d/ *)
   (* See also https://mercury.sexy/hg_sdf/ *)
 
   let rectangle extents uv =
-    let d = S.abs_vec uv |-| extents in
-    S.length (S.max_vec d zero2) + S.min (vmax2 d) !!0.0
+    let d = S.abs uv - extents in
+    S.length (S.max d zero2) + S.min (vmax2 d) !!0.0
 
   let line_segment p1 p2 uv =
-    let uv_p1 = uv |-| p1 in
-    let p2_p1 = p2 |-| p1 in
+    let uv_p1 = uv - p1 in
+    let p2_p1 = p2 - p1 in
     let h = saturate (S.dot uv_p1 p2_p1 / S.dot p2_p1 p2_p1) in
-    S.length (uv_p1 |-| (p2_p1 |* h))
+    S.length (uv_p1 - (p2_p1 |* h))
 
 
   let union = S.min
@@ -226,11 +226,11 @@ module Make (S : Shader.S) : S
     intersection_chamfer d1 (S.neg d2) r
 
   let union_round d1 d2 r =
-    let u = S.max_vec (S.vec2 (r - d1) (r - d2)) zero2 in
+    let u = S.max (S.vec2 (r - d1) (r - d2)) zero2 in
     S.max r (S.min d1 d2) - S.length u
 
   let intersection_round d1 d2 r =
-    let u = S.max_vec (S.vec2 (r + d1) (r + d2)) zero2 in
+    let u = S.max (S.vec2 (r + d1) (r + d2)) zero2 in
     S.min (S.neg r) (S.max d1 d2) + S.length u
 
   let difference_round d1 d2 r =
@@ -238,14 +238,14 @@ module Make (S : Shader.S) : S
 
 
   let move v sdf uv =
-    sdf (uv |-| v)
+    sdf (uv - v)
 
   let scale factor sdf uv =
     sdf (uv |/ factor) * factor
 
 
   let reflect sdf uv =
-    sdf (uv |> S.abs_vec)
+    sdf (uv |> S.abs)
 
   let reflect_x sdf uv =
     sdf (uv |> S.set_x (uv |> S.x |> S.abs))
@@ -262,12 +262,12 @@ module Make (S : Shader.S) : S
     (* Infinite repetitions *)
     | None ->
         let spacing_half = spacing |* !!0.5 in
-        sdf ((uv |+| spacing_half) |%| spacing |-| spacing_half)
+        sdf ((uv + spacing_half) % spacing - spacing_half)
     (* Limited repetitions *)
     | Some limit ->
-        let neg_limit = S.neg_vec limit in
-        let offset = spacing |*| S.clamp_vec (S.round_vec (uv |/| spacing)) ~min:neg_limit ~max:limit in
-        sdf (uv |-| offset)
+        let neg_limit = S.neg limit in
+        let offset = spacing * S.clamp (S.round (uv / spacing)) ~min:neg_limit ~max:limit in
+        sdf (uv - offset)
 
 
   let displace f sdf uv =

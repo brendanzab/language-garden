@@ -64,8 +64,8 @@ let () =
   let glsl = Glsl.Shadertoy.compile_image_shader (fun uniforms frag_coord ->
     let resolution = uniforms.resolution in
 
-    let uv = frag_coord |/| Glsl.xy resolution in   (* Normalise UV coordinates to [0, 1] *)
-    let uv = uv |- !!0.5 in                         (* Remap UV coordinates to [-0.5, 0.5] *)
+    let uv = frag_coord / Glsl.xy resolution in   (* Normalise UV coordinates to [0, 1] *)
+    let uv = uv |- !!0.5 in                       (* Remap UV coordinates to [-0.5, 0.5] *)
 
     (* Fix the aspect ratio of the x axis *)
     let aspect = Glsl.x resolution / Glsl.y resolution in

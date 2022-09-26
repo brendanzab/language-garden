@@ -2,7 +2,7 @@ open ShaderTypes
 
 (** GLSL type *)
 type _ ty =
-  | Float : float ty
+  | Float : vec1f ty
   | Vec2 : vec2f ty
   | Vec3 : vec3f ty
   | Vec4 : vec4f ty
@@ -150,51 +150,34 @@ let mat2 = call2 Mat2 "mat2"
 let mat3 = call3 Mat3 "mat3"
 let mat4 = call4 Mat4 "mat4"
 
-let neg = pre Float "-"
-let neg_vec v = bind v (fun v -> pre v.ty "-" (pure v))
-let add = binop1 Float "+"
-let add_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "+" (pure v1) v2)
+let neg v = bind v (fun v -> pre v.ty "-" (pure v))
+let add v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "+" (pure v1) v2)
 let add_scalar v s = bind v (fun v -> binop1 v.ty "+" (pure v) s)
-let sub = binop1 Float "-"
-let sub_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "-" (pure v1) v2)
+let sub v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "-" (pure v1) v2)
 let sub_scalar v s = bind v (fun v -> binop1 v.ty "-" (pure v) s)
-let mul = binop1 Float "*"
-let mul_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "*" (pure v1) v2)
+let mul v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "*" (pure v1) v2)
 let mul_scalar v s = bind v (fun v -> binop1 v.ty "*" (pure v) s)
-let div = binop1 Float "/"
-let div_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "/" (pure v1) v2)
+let div v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "/" (pure v1) v2)
 let div_scalar v s = bind v (fun v -> binop1 v.ty "/" (pure v) s)
-let mod_ = call2 Float "mod"
-let mod_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "mod" (pure v1) v2)
+let mod_ v1 v2 = bind v1 (fun v1 -> call2 v1.ty "mod" (pure v1) v2)
 let mod_scalar v s = bind v (fun v -> call2 v.ty "mod" (pure v) s)
 
-let abs = call1 Float "abs"
-let abs_vec v = bind v (fun v -> call1 v.ty "abs" (pure v))
-let clamp e ~min ~max = call3 Float "clamp" e min max
-let clamp_vec v ~min ~max = bind v (fun v -> call3 v.ty "clamp" (pure v) min max)
+let abs v = bind v (fun v -> call1 v.ty "abs" (pure v))
+let clamp v ~min ~max = bind v (fun v -> call3 v.ty "clamp" (pure v) min max)
 let clamp_scalar v ~min ~max = bind v (fun v -> call3 v.ty "clamp" (pure v) min max)
-let cos = call1 Float "cos"
-let cos_vec v = bind v (fun v -> call1 v.ty "cos" (pure v))
+let cos v = bind v (fun v -> call1 v.ty "cos" (pure v))
 let dot e1 e2 = call2 Float "dot" e1 e2
 let length e = call1 Float "length" e
-let lerp = call3 Float "mix"
-let lerp_vec v1 v2 v3 = bind v1 (fun v1 -> call3 v1.ty "mix" (pure v1) v2 v3)
+let lerp v1 v2 v3 = bind v1 (fun v1 -> call3 v1.ty "mix" (pure v1) v2 v3)
 let lerp_scalar v s1 s2 = bind v (fun v -> call3 v.ty "mix" (pure v) s1 s2)
-let max = call2 Float "max"
-let max_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "max" (pure v1) v2)
-let min = call2 Float "min"
-let min_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "min" (pure v1) v2)
-let round = call1 Float "round"
-let round_vec v = bind v (fun v -> call1 v.ty "round" (pure v))
-let sin = call1 Float "sin"
-let sin_vec v = bind v (fun v -> call1 v.ty "sin" (pure v))
-let sqrt = call1 Float "sqrt"
-let sqrt_vec v = bind v (fun v -> call1 v.ty "sqrt" (pure v))
-let step = call2 Float "step"
-let step_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "step" (pure v1) v2)
+let max v1 v2 = bind v1 (fun v1 -> call2 v1.ty "max" (pure v1) v2)
+let min v1 v2 = bind v1 (fun v1 -> call2 v1.ty "min" (pure v1) v2)
+let round v = bind v (fun v -> call1 v.ty "round" (pure v))
+let sin v = bind v (fun v -> call1 v.ty "sin" (pure v))
+let sqrt v = bind v (fun v -> call1 v.ty "sqrt" (pure v))
+let step v1 v2 = bind v1 (fun v1 -> call2 v1.ty "step" (pure v1) v2)
 let step_scalar s v = bind v (fun v -> call2 v.ty "step" s (pure v))
-let tan = call1 Float "tan"
-let tan_vec v = bind v (fun v -> call1 v.ty "tan" (pure v))
+let tan v = bind v (fun v -> call1 v.ty "tan" (pure v))
 
 let x v = post Float ".x" v
 let y v = post Float ".y" v
@@ -209,6 +192,7 @@ let w v = post Float ".w" v
 let set_x s v =
   let set_x (type n) s : n vec_ge1f expr -> n vec_ge1f repr =
     function
+    | { ty = Float; _ } as v -> pure v
     | { ty = Vec2; _ } as v -> vec2 (pure v |> x) s
     | { ty = Vec3; _ } as v -> vec3 (pure v |> x) s (pure v |> z)
     | { ty = Vec4; _ } as v -> vec4 (pure v |> x) s (pure v |> z) (pure v |> w)
@@ -332,12 +316,12 @@ module Shadertoy = struct
 
   type uniforms = {
     resolution : vec3f repr;
-    time : float repr;
-    time_delta : float repr;
-    frame : float repr;
+    time : vec1f repr;
+    time_delta : vec1f repr;
+    frame : vec1f repr;
     mouse : vec4f repr;
     date : vec4f repr;
-    sample_rate : float repr;
+    sample_rate : vec1f repr;
   }
 
   let uniforms = {
