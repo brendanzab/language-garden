@@ -10,16 +10,43 @@ For more details see the  [resources](#resources) listed below. This is an
 embedded DSL for composing SDFs in OCaml and compiling them to shader programs.
 
 An example scene can be found in [Main.ml](./Main.ml), and the signature of
-available signed distance functions can be found in [Sdf.ml](./Sdf.ml). The
-resulting DSL is clunkier than I’d like. This is due to OCaml’s odd approach to
+available signed distance functions can be found in [Sdf.ml](./Sdf.ml):
+
+```ocaml
+(** A scene to render, assuming UV coordinates in (-0.5, 0.5) *)
+let scene : (vec3f repr) Env.m  =
+  (* Some shapes defined using signed distance functions *)
+  let* s1 = circle !!0.3 |> move (M.vec2 !!0.0 !!0.0) in
+  let* s2 = square !!0.2 |> move (M.vec2 !!0.2 !!0.0) in
+
+  (* Combine the two shapes, meeting at a rounded edge *)
+  let shape = union_round s1 s2 !!0.05 in
+
+  (* Colours to use in the background and foreground *)
+  let background_color = M.vec3 !!0.35 !!0.45 !!0.50 in
+  let shape_color = M.vec3 !!1.0 !!1.0 !!1.0 in
+
+  (* The final output colour to render at the current UV coordinate. *)
+  Env.pure (overlay ~bg:background_color ~fg:shape_color shape)
+```
+
+The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd approach to
 custom operators (which don’t allow for custom precedences), and lack of
 implicit overloading. Still, I think it’s an interesting proof-of-concept!
 
-Internally we use [tagless-final style] to implement the DSL. This means that
+## Implementation details
+
+Internally [tagless-final style] is used to implement the DSL. This means that
 shader expressions are properly type-checked, and compilation to GLSL shaders is
-reasonably straightforward. The resulting GLSL code can currently be seen [in
-the CLI tests](./tests.t). In the future alternate back-ends for targets like
+reasonably straightforward. In the future alternate back-ends for targets like
 [HLSL], [MSL] and [SPIR-V] could also be implemented.
+
+The compiled GLSL code can currently be seen [in the CLI tests](./tests.t). The
+compiler assigns the result of each intermediate computation to a new local
+variable, while attempting to avoid introducing duplicate computations. I’m not
+sure if this is the most efficient approach, or whether attempting to compile to
+higher-level code would work better (this would probably depend on the how GLSL
+code is compiled or interpreted by the GPU driver).
 
 [Signed distance functions]: https://en.wikipedia.org/wiki/Signed_distance_function
 [tagless-final style]: https://okmij.org/ftp/tagless-final/
@@ -34,5 +61,5 @@ the CLI tests](./tests.t). In the future alternate back-ends for targets like
 - [Inigo Quilez: 2D distance functions](https://iquilezles.org/articles/distfunctions2d/)
 - [Inigo Quilez: distance functions](https://iquilezles.org/articles/distfunctions/)
 - [Nathan Vaughn’s Shadertoy Tutorial](https://inspirnathan.com/posts/47-shadertoy-tutorial-part-1/)
-- [hg_sdf: A glsl library for building signed distance functions](https://mercury.sexy/hg_sdf/)
+- [HG_SDF: A glsl library for building signed distance functions](https://mercury.sexy/hg_sdf/)
 - [Bauble: A toy for composing signed distance functions in Janet](https://bauble.studio/)
