@@ -6,9 +6,11 @@ open MathTypes
 (** A language of linear algebra for a GLSL-like shader language *)
 module type S = sig
 
+  (** Abstract representation of shader expressions *)
   type 'a repr
 
-  (** Literals *)
+
+  (** {1 Literals} *)
 
   val float : float -> float repr
 
@@ -20,7 +22,8 @@ module type S = sig
   val mat3 : (float vec3) repr -> (float vec3) repr -> (float vec3) repr -> (float mat3) repr
   val mat4 : (float vec4) repr -> (float vec4) repr -> (float vec4) repr -> (float vec4) repr -> (float mat4) repr
 
-  (** Functions *)
+
+  (** {1 Arithemetic operators} *)
 
   val neg : float repr -> float repr
   val neg_vec : ('n vecf) repr -> ('n vecf) repr
@@ -46,6 +49,8 @@ module type S = sig
   val mod_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
 
 
+  (** {1 Other functions on scalars and vectors} *)
+
   val abs : float repr -> float repr
   val abs_vec : ('n vecf) repr -> ('n vecf) repr
 
@@ -55,6 +60,8 @@ module type S = sig
 
   val cos : float repr -> float repr
   val cos_vec : ('n vecf) repr -> ('n vecf) repr
+
+  val dot : ('n vecf) repr -> ('n vecf) repr -> float repr
 
   val length : ('n vecf) repr -> float repr
 

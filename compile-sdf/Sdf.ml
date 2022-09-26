@@ -30,11 +30,23 @@ module type S = sig
 
   (** {1 Primitive shape functions} *)
 
+  (** {2 2D shapes} *)
+
   (** Circle of a given radius *)
   val circle : float repr -> sdf2
 
   (** Square of a given radius *)
   val square : float repr -> sdf2
+
+  (* Rectangle with extents measured from the origin *)
+  val rectangle : vec2f repr -> sdf2
+
+  (* Line segment between two points *)
+  val line_segment : vec2f repr -> vec2f repr -> sdf2
+
+  (** {2 3D shapes} *)
+
+  (* TODO: 3D shape functions *)
 
 
   (** {1 Operators for combining shapes} *)
@@ -144,6 +156,19 @@ module Make (M : Math.S) : S
   type sdf3 = n3 sdf
 
 
+  (** Clamp to the range \[0, 1\] *)
+  let saturate e =
+      M.clamp e ~min:!!0.0 ~max:!!0.1
+
+  (** 2D origin *)
+  let zero2 =
+    M.vec2 !!0.0 !!0.0
+
+  (** Maximum component of a 2D vector *)
+  let vmax2 v =
+    M.max (M.x v) (M.y v)
+
+
   (** Based on the equation:
 
       [ x^2 + y^2 = r^2 ]
@@ -168,17 +193,28 @@ module Make (M : Math.S) : S
       - [r] = radius
   *)
   let square radius uv =
-    let x_dist = uv |> M.x |> M.abs in
-    let y_dist = uv |> M.y |> M.abs in
-    M.max x_dist y_dist - radius
+    vmax2 (M.abs_vec uv) - radius
+
+  (* Distance functions based on https://iquilezles.org/articles/distfunctions2d/ *)
+  (* See also https://mercury.sexy/hg_sdf/ *)
+
+  let rectangle extents uv =
+    let d = M.abs_vec uv |-| extents in
+    M.length (M.max_vec d zero2) + M.min (vmax2 d) !!0.0
+
+  let line_segment p1 p2 uv =
+    let uv_p1 = uv |-| p1 in
+    let p2_p1 = p2 |-| p1 in
+    let h = saturate (M.dot uv_p1 p2_p1 / M.dot p2_p1 p2_p1) in
+    M.length (uv_p1 |-| (p2_p1 |* h))
 
 
   let union = M.min
   let intersection = M.max
   let difference d1 d2 = intersection d1 (M.neg d2)
 
-  (* Implementations from https://mercury.sexy/hg_sdf/ *)
-  (* Some alternative approaches can be seen at https://iquilezles.org/articles/smin/ *)
+  (* Distance functions based on https://mercury.sexy/hg_sdf/ *)
+  (* See also https://iquilezles.org/articles/smin/ *)
 
   let union_chamfer d1 d2 r =
     M.min (M.min d1 d2) ((d1 - r + d2) * M.sqrt !!0.5)
@@ -190,11 +226,11 @@ module Make (M : Math.S) : S
     intersection_chamfer d1 (M.neg d2) r
 
   let union_round d1 d2 r =
-    let u = M.max_vec (M.vec2 (r - d1) (r - d2)) (M.vec2 !!0.0 !!0.0) in
+    let u = M.max_vec (M.vec2 (r - d1) (r - d2)) zero2 in
     M.max r (M.min d1 d2) - M.length u
 
   let intersection_round d1 d2 r =
-    let u = M.max_vec (M.vec2 (r + d1) (r + d2)) (M.vec2 !!0.0 !!0.0) in
+    let u = M.max_vec (M.vec2 (r + d1) (r + d2)) zero2 in
     M.min (M.neg r) (M.max d1 d2) + M.length u
 
   let difference_round d1 d2 r =

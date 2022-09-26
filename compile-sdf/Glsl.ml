@@ -170,6 +170,7 @@ let clamp_vec e ~min ~max = bind e (fun e -> call3 e.ty "clamp" (pure e) min max
 let clamp_scalar e ~min ~max = bind e (fun e -> call3 e.ty "clamp" (pure e) min max)
 let cos = call1 Float "cos"
 let cos_vec e = bind e (fun e -> call1 e.ty "cos" (pure e))
+let dot e1 e2 = call2 Float "dot" e1 e2
 let length e = call1 Float "length" e
 let lerp = call3 Float "mix"
 let lerp_vec e1 e2 e3 = bind e1 (fun e1 -> call3 e1.ty "mix" (pure e1) e2 e3)
