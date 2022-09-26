@@ -354,23 +354,19 @@ module Shadertoy = struct
 
   let frag_coord = Env.pure (unsafe_expr "fragCoord" Vec2)
 
-  let compile_local (name, AnyExpr { def; ty }) =
-    Format.sprintf "  %s %s = %s;" (string_of_ty ty) name def
-
   let compile_image_shader (shader : image_shader) =
     let (color, locals) =
       Env.run (shader uniforms frag_coord) Locals.empty in
 
-    String.concat "\n" ([
-      "// The main entrypoint of the shader.";
-      "//";
-      "// Copy and paste this into https://www.shadertoy.com/new to see the output.";
-      "void mainImage(out vec4 fragColor, in vec2 fragCoord) {";
-    ] @ List.map compile_local (List.rev locals) @ [
-      "";
-      "  // Set the color of the current pixel";
-      Format.sprintf "  fragColor = vec4(%s, 1.0);" (string_of_expr color);
-      "}";
-    ])
+    Format.printf "// The main entrypoint of the shader.\n";
+    Format.printf "//\n";
+    Format.printf "// Copy and paste this into https://www.shadertoy.com/new to see the output.\n";
+    Format.printf "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n";
+    locals |> Locals.iter (fun (name, AnyExpr expr) ->
+      Format.printf "  %s %s = %s;\n" (string_of_ty expr.ty) name expr.def);
+    Format.printf "\n";
+    Format.printf "  // Set the color of the current pixel\n";
+    Format.printf "  fragColor = vec4(%s, 1.0);\n" (string_of_expr color);
+    Format.printf "}\n"
 
 end

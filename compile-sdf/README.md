@@ -37,9 +37,10 @@ implicit overloading. Still, I think it’s an interesting proof-of-concept!
 ## Implementation details
 
 Internally [tagless-final style] is used to implement the DSL. This means that
-shader expressions are properly type-checked, and compilation to GLSL shaders is
-reasonably straightforward. In the future alternate back-ends for targets like
-[HLSL], [MSL] and [SPIR-V] could also be implemented.
+shader expressions are properly type-checked, and supporting either compilation
+to GLSL shaders or direct rendering on the CPU is reasonably straightforward. In
+the future alternate back-ends for targets like [HLSL], [MSL] and [SPIR-V] could
+also be implemented.
 
 The compiled GLSL code can currently be seen [in the CLI tests](./tests.t). The
 compiler assigns the result of each intermediate computation to a new local

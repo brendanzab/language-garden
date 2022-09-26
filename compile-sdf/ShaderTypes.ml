@@ -64,6 +64,31 @@ type 'n vec_ge3f = ('n ge3) vecf
 type 'n vec_ge4f = ('n ge4) vecf
 
 
+let rec map_vec : type n. ('a -> 'b) -> ('a, n) vec -> ('b, n) vec =
+  fun f -> function
+    | Nil -> Nil
+    | Cons (s, v) -> Cons (f s, map_vec f v)
+
+let rec fold_left_vec : type n. ('a -> 'b -> 'a) -> 'a -> ('b, n) vec -> 'a =
+  fun f acc -> function
+    | Nil -> acc
+    | Cons (s, v) -> fold_left_vec f (f acc s) v
+
+let rec zip_with_vec : type n. ('a -> 'b -> 'c) -> ('a, n) vec -> ('b, n) vec -> ('c, n) vec =
+  fun f v1 v2 ->
+    match v1, v2 with
+    | Nil, Nil -> Nil
+    | Cons (s1, v1), Cons (s2, v2) ->
+        Cons (f s1 s2, zip_with_vec f v1 v2)
+
+let rec zip_with3_vec : type n. ('a -> 'b -> 'c -> 'd) -> ('a, n) vec -> ('b, n) vec -> ('c, n) vec -> ('d, n) vec =
+  fun f v1 v2 v3 ->
+    match v1, v2, v3 with
+    | Nil, Nil, Nil -> Nil
+    | Cons (s1, v1), Cons (s2, v2), Cons (s3, v3) ->
+        Cons (f s1 s2 s3, zip_with3_vec f v1 v2 v3)
+
+
 (** {1 Fixed-size matrices} *)
 
 type 's mat2 = ('s vec2) vec2

@@ -99,6 +99,6 @@ module Shadertoy : sig
   type image_shader = uniforms -> vec2f repr -> vec3f repr
 
   (** Compile an image shader to GLSL *)
-  val compile_image_shader : image_shader -> string
+  val compile_image_shader : image_shader -> unit
 
 end

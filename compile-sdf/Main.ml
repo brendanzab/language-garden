@@ -50,28 +50,43 @@ module MyScene (S : Shader.S) = struct
     (* The final output colour to render at the current UV coordinate. *)
     Env.pure (overlay ~bg:(overlay ~bg ~fg:shape_color shape) ~fg:box_color box)
 
+
+  (** The scene, rendered as a function from pixel positions to colours. *)
+  let image resolution frag_coord =
+    let uv = frag_coord |/| S.xy resolution in   (* Normalise UV coordinates to [0, 1] *)
+    let uv = uv |- !!0.5 in                      (* Remap UV coordinates to [-0.5, 0.5] *)
+
+    (* Fix the aspect ratio of the x axis to remove warping *)
+    let aspect = S.x resolution / S.y resolution in
+    let uv = S.vec2 (S.x uv * aspect) (S.y uv) in
+
+    scene uv
+
 end
 
 
 let () =
-  (* Construct an implementation of our scene that can be compiled to a GLSL
-     shader that can be rendered in parallel on the GPU. *)
-  let module Scene = MyScene (Glsl) in
-  let open Shader.Notation (Glsl) in
+  match Array.to_list Sys.argv with
+  (* Compile our scene to a GLSL shader program that can be rendered in parallel
+     on the GPU. *)
+  | [_; "--glsl"] | [_] ->
+      let module Scene = MyScene (Glsl) in
+      let open Shader.Notation (Glsl) in
 
-  (* TODO: Render to HTML canvas *)
+      (* TODO: Render to HTML canvas *)
 
-  let glsl = Glsl.Shadertoy.compile_image_shader (fun uniforms frag_coord ->
-    let resolution = uniforms.resolution in
+      Glsl.Shadertoy.compile_image_shader
+        (fun uniforms frag_coord ->
+          Scene.image uniforms.resolution frag_coord)
 
-    let uv = frag_coord |/| Glsl.xy resolution in   (* Normalise UV coordinates to [0, 1] *)
-    let uv = uv |- !!0.5 in                         (* Remap UV coordinates to [-0.5, 0.5] *)
+  (* Render our scene (slowly!) on the CPU to a PPM image file. *)
+  | [_; "--ppm"] ->
+      let module Scene = MyScene (Cpu) in
+      let open Shader.Notation (Cpu) in
 
-    (* Fix the aspect ratio of the x axis *)
-    let aspect = Glsl.x resolution / Glsl.y resolution in
-    let uv = Glsl.vec2 (Glsl.x uv * aspect) (Glsl.y uv) in
+      Cpu.render_ppm ~width:600 ~height:400
+        (Scene.image (Cpu.vec2 600.0 400.0))
 
-    Scene.scene uv)
-  in
-
-  Format.printf "%s\n" glsl
+  | _ ->
+    Format.eprintf "invalid CLI arguments";
+    exit 1
