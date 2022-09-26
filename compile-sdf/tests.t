@@ -4,7 +4,6 @@ Generate the GLSL for the scene
   //
   // Copy and paste this into https://www.shadertoy.com/new to see the output.
   void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    // Local bindings
     vec3 t0 = vec3(0.25, 0.25, 0.25);
     vec3 t1 = vec3(1., 1., 1.);
     vec3 t2 = vec3(0.35, 0.45, 0.5);
@@ -61,9 +60,6 @@ Generate the GLSL for the scene
     float t53 = step(0., t52);
     vec3 t54 = mix(t0, t40, t53);
   
-    // Compute the colour for this UV coordinate.
-    vec3 color = t54;
-  
-    // Output to screen
-    fragColor = vec4(color, 1.0);
+    // Set the color of the current pixel
+    fragColor = vec4(t54, 1.0);
   }

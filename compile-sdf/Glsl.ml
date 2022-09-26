@@ -10,7 +10,17 @@ type _ ty =
   | Mat3 : mat3f ty
   | Mat4 : mat4f ty
 
-(** Compile a GLSL type to a string *)
+let equal_ty (type a b) (t1 : a ty) (t2 : b ty) : bool =
+  match t1, t2 with
+  | Float, Float -> true
+  | Vec2, Vec2 -> true
+  | Vec3, Vec3 -> true
+  | Vec4, Vec4 -> true
+  | Mat2, Mat2 -> true
+  | Mat3, Mat3 -> true
+  | Mat4, Mat4 -> true
+  | _, _ -> false
+
 let string_of_ty : type a. a ty -> string =
   function
   | Float -> "float"
@@ -22,14 +32,27 @@ let string_of_ty : type a. a ty -> string =
   | Mat4 -> "mat4"
 
 
+type 'a expr = {
+  def : string;
+  ty : 'a ty;
+}
+
+let unsafe_expr def ty = { def; ty }
+
+let equal_expr e1 e2 =
+  e1.def = e2.def && equal_ty e1.ty e2.ty
+
+let string_of_expr e = e.def
+
+let ty_of_expr e = e.ty
+
+type any_expr =
+  | AnyExpr : 'a expr -> any_expr
+
+
 module Env = struct
 
-  type entry = {
-    def : string;
-    ty : string;
-  }
-
-  type locals = (string * entry) list
+  type locals = (string * any_expr) list
 
   let empty_locals = []
   let iter_locals f locals = locals |> List.rev |> List.iter f
@@ -48,31 +71,31 @@ module Env = struct
   let run locals m =
     m locals
 
+
   let fresh_name locals =
     (* FIXME: Avoid names properly (including globals) *)
     Format.sprintf "t%i" (List.length locals)
 
-  (** Find the name a pre-existing definition in the environment, if it exists. *)
-  let name_of_entry { def; ty } =
-    List.find_map (fun (name, entry) ->
+  (** If possible, returns and expression that refers to an existing local the
+      matches the supplied expression. *)
+  let lookup_expr expr =
+    List.find_map (fun (name, AnyExpr expr') ->
       (* If the definition is the name of a currently bound local, return the
           local as a name without creating a new binding. *)
-      if def = name then Some name
+      if expr.def = name then Some { expr with def = name }
       (* Only define a new definition if it has not already been bound. *)
-      else if entry.def = def && entry.ty == ty then Some name
+      else if equal_expr expr expr' then Some { expr with def = name }
       else None)
 
   (** Add a shared definition to the local environment, avoiding the
       introduction of common sub-expressions. *)
-  let add_local ty def =
-    (* FIXME: Make this more... type-safe? *)
+  let define_local (expr : 'a expr) : ('a expr) m =
     fun locals ->
-      let ty = string_of_ty ty in
-      match name_of_entry { def; ty } locals with
-      | Some name -> name, locals
+      match lookup_expr expr locals with
+      | Some expr -> expr, locals
       | None ->
           let name = fresh_name locals in
-          (name, (name, { def; ty }) :: locals)
+          { expr with def = name }, (name, AnyExpr expr) :: locals
 
 end
 
@@ -81,59 +104,47 @@ open Env
 open Control.Monad.Notation (Env)
 open Control.Monad.Util (Env)
 
-type 'a expr = {
-  def : string;
-  ty : 'a ty;
-}
-
-let unsafe_expr def ty = { def; ty }
-
-let string_of_expr e = e.def
-let ty_of_expr e = e.ty
 
 type 'a repr = ('a expr) Env.m
 
 
 (* TODO: Figure out how to make this module cleaner. At the moment juggling
-          expressions is a bit clunky and painful! *)
-
-let add_local_ann ty def =
-  map (fun e -> { def = e; ty }) (add_local ty def)
+         expressions is a bit clunky and painful! *)
 
 let pre ty op e =
   let* e = e in
-  add_local_ann ty (Format.sprintf "%s%s" op e.def)
+  define_local { ty; def = Format.sprintf "%s%s" op e.def }
 
 let post ty op e =
   let* e = e in
-  add_local_ann ty (Format.sprintf "%s%s" e.def op)
+  define_local { ty; def = Format.sprintf "%s%s" e.def op }
 
 let binop1 ty op e1 e2 =
   let* e1 = e1 in
   let* e2 = e2 in
-  add_local_ann ty (Format.sprintf "%s %s %s" e1.def op e2.def)
+  define_local { ty; def = Format.sprintf "%s %s %s" e1.def op e2.def }
 
 let call1 ty f e =
   let* e = e in
-  add_local_ann ty (Format.sprintf "%s(%s)" f e.def)
+  define_local { ty; def = Format.sprintf "%s(%s)" f e.def }
 
 let call2 ty f e1 e2 =
   let* e1 = e1 in
   let* e2 = e2 in
-  add_local_ann ty (Format.sprintf "%s(%s, %s)" f e1.def e2.def)
+  define_local { ty; def = Format.sprintf "%s(%s, %s)" f e1.def e2.def }
 
 let call3 ty f e1 e2 e3 =
   let* e1 = e1 in
   let* e2 = e2 in
   let* e3 = e3 in
-  add_local_ann ty (Format.sprintf "%s(%s, %s, %s)" f e1.def e2.def e3.def)
+  define_local { ty; def = Format.sprintf "%s(%s, %s, %s)" f e1.def e2.def e3.def }
 
 let call4 ty f e1 e2 e3 e4 =
   let* e1 = e1 in
   let* e2 = e2 in
   let* e3 = e3 in
   let* e4 = e4 in
-  add_local_ann ty (Format.sprintf "%s(%s, %s, %s, %s)" f e1.def e2.def e3.def e4.def)
+  define_local { ty; def = Format.sprintf "%s(%s, %s, %s, %s)" f e1.def e2.def e3.def e4.def }
 
 let float x = pure { def = string_of_float x; ty = Float }
 
@@ -279,8 +290,12 @@ module Shadertoy = struct
 
   type image_shader = uniforms -> vec2f repr -> vec3f repr
 
+  let frag_coord = Env.pure (unsafe_expr "fragCoord" Vec2)
+
+  let compile_local (name, AnyExpr { def; ty }) =
+    Format.sprintf "  %s %s = %s;" (string_of_ty ty) name def
+
   let compile_image_shader (shader : image_shader) =
-    let frag_coord = Env.pure (unsafe_expr "fragCoord" Vec2) in
     let (color, locals) = Env.run Env.empty_locals (shader uniforms frag_coord) in
 
     String.concat "\n" ([
@@ -288,16 +303,10 @@ module Shadertoy = struct
       "//";
       "// Copy and paste this into https://www.shadertoy.com/new to see the output.";
       "void mainImage(out vec4 fragColor, in vec2 fragCoord) {";
-      "  // Local bindings";
-    ] @ (locals |> List.rev |> List.map
-      (fun (name, Env.{ def; ty }) -> Format.sprintf "  %s %s = %s;" ty name def))
-    @ [
+    ] @ List.map compile_local (List.rev locals) @ [
       "";
-      "  // Compute the colour for this UV coordinate.";
-      Format.sprintf "  vec3 color = %s;" (string_of_expr color);
-      "";
-      "  // Output to screen";
-      "  fragColor = vec4(color, 1.0);";
+      "  // Set the color of the current pixel";
+      Format.sprintf "  fragColor = vec4(%s, 1.0);" (string_of_expr color);
       "}";
     ])
 

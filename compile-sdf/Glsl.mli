@@ -13,6 +13,12 @@ type _ ty =
   | Mat3 : mat3f ty
   | Mat4 : mat4f ty
 
+(** Compare two GLSL types for equality *)
+val equal_ty : 'a ty -> 'b ty -> bool
+
+(** Compile a GLSL type to a string *)
+val string_of_ty : 'a ty -> string
+
 
 (** A typed GLSL expression *)
 type 'a expr
@@ -20,11 +26,18 @@ type 'a expr
 (** Unsafely construct a GLSL expression from a string. *)
 val unsafe_expr : string -> 'a ty -> 'a expr
 
-(** Return a GLSL expression, as a string *)
+(** Compare two GLSL expressions for equality *)
+val equal_expr : 'a expr -> 'b expr -> bool
+
+(** Compile a GLSL expression to a string *)
 val string_of_expr : 'a expr -> string
 
 (** Return the type of a GLSL expression *)
 val ty_of_expr : 'a expr -> 'a ty
+
+(** A GLSL expression of any type *)
+type any_expr =
+  | AnyExpr : 'a expr -> any_expr
 
 
 (** An environment that allows for the definition of shared computations. This
@@ -34,20 +47,15 @@ module Env : sig
 
   include Control.Monad.S
 
-  type entry = {
-    def : string;
-    ty : string;
-  }
-
   type locals
 
   val empty_locals : locals
-  val iter_locals : (string * entry -> unit) -> locals -> unit
-
+  val iter_locals : (string * any_expr -> unit) -> locals -> unit
 
   val run : locals -> 'a m -> 'a * locals
 
 end
+
 
 include Math.S with type 'a repr = ('a expr) Env.m
 
