@@ -129,7 +129,75 @@ module type S = sig
   val wz : ((float, 'n) vec4n) repr -> (float vec2) repr
   val ww : ((float, 'n) vec4n) repr -> (float vec2) repr
 
-  (* TODO: More swizzles *)
+  val xxx : ((float, 'n) vec1n) repr -> (float vec3) repr
+  val xxy : ((float, 'n) vec2n) repr -> (float vec3) repr
+  val xxz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val xxw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val xyx : ((float, 'n) vec2n) repr -> (float vec3) repr
+  val xyy : ((float, 'n) vec2n) repr -> (float vec3) repr
+  val xyz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val xyw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val xzx : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val xzy : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val xzz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val xzw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val xwx : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val xwy : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val xwz : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val xww : ((float, 'n) vec4n) repr -> (float vec3) repr
+
+  val yxx : ((float, 'n) vec2n) repr -> (float vec3) repr
+  val yxy : ((float, 'n) vec2n) repr -> (float vec3) repr
+  val yxz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val yxw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val yyx : ((float, 'n) vec2n) repr -> (float vec3) repr
+  val yyy : ((float, 'n) vec2n) repr -> (float vec3) repr
+  val yyz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val yyw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val yzx : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val yzy : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val yzz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val yzw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val ywx : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val ywy : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val ywz : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val yww : ((float, 'n) vec4n) repr -> (float vec3) repr
+
+  val zxx : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zxy : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zxz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zxw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val zyx : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zyy : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zyz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zyw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val zzx : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zzy : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zzz : ((float, 'n) vec3n) repr -> (float vec3) repr
+  val zzw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val zwx : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val zwy : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val zwz : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val zww : ((float, 'n) vec4n) repr -> (float vec3) repr
+
+  val wxx : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wxy : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wxz : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wxw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wyx : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wyy : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wyz : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wyw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wzx : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wzy : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wzz : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wzw : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wwx : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wwy : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val wwz : ((float, 'n) vec4n) repr -> (float vec3) repr
+  val www : ((float, 'n) vec4n) repr -> (float vec3) repr
+
+  (* TODO: More swizzle operators *)
 
 end
 

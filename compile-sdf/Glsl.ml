@@ -265,6 +265,74 @@ let wy v = post Vec2 ".wy" v
 let wz v = post Vec2 ".wz" v
 let ww v = post Vec2 ".ww" v
 
+let xxx v = post Vec3 ".xxx" v
+let xxy v = post Vec3 ".xxy" v
+let xxz v = post Vec3 ".xxz" v
+let xxw v = post Vec3 ".xxw" v
+let xyx v = post Vec3 ".xyx" v
+let xyy v = post Vec3 ".xyy" v
+let xyz v = post Vec3 ".xyz" v
+let xyw v = post Vec3 ".xyw" v
+let xzx v = post Vec3 ".xzx" v
+let xzy v = post Vec3 ".xzy" v
+let xzz v = post Vec3 ".xzz" v
+let xzw v = post Vec3 ".xzw" v
+let xwx v = post Vec3 ".xwx" v
+let xwy v = post Vec3 ".xwy" v
+let xwz v = post Vec3 ".xwz" v
+let xww v = post Vec3 ".xww" v
+
+let yxx v = post Vec3 ".yxx" v
+let yxy v = post Vec3 ".yxy" v
+let yxz v = post Vec3 ".yxz" v
+let yxw v = post Vec3 ".yxw" v
+let yyx v = post Vec3 ".yyx" v
+let yyy v = post Vec3 ".yyy" v
+let yyz v = post Vec3 ".yyz" v
+let yyw v = post Vec3 ".yyw" v
+let yzx v = post Vec3 ".yzx" v
+let yzy v = post Vec3 ".yzy" v
+let yzz v = post Vec3 ".yzz" v
+let yzw v = post Vec3 ".yzw" v
+let ywx v = post Vec3 ".ywx" v
+let ywy v = post Vec3 ".ywy" v
+let ywz v = post Vec3 ".ywz" v
+let yww v = post Vec3 ".yww" v
+
+let zxx v = post Vec3 ".zxx" v
+let zxy v = post Vec3 ".zxy" v
+let zxz v = post Vec3 ".zxz" v
+let zxw v = post Vec3 ".zxw" v
+let zyx v = post Vec3 ".zyx" v
+let zyy v = post Vec3 ".zyy" v
+let zyz v = post Vec3 ".zyz" v
+let zyw v = post Vec3 ".zyw" v
+let zzx v = post Vec3 ".zzx" v
+let zzy v = post Vec3 ".zzy" v
+let zzz v = post Vec3 ".zzz" v
+let zzw v = post Vec3 ".zzw" v
+let zwx v = post Vec3 ".zwx" v
+let zwy v = post Vec3 ".zwy" v
+let zwz v = post Vec3 ".zwz" v
+let zww v = post Vec3 ".zww" v
+
+let wxx v = post Vec3 ".wxx" v
+let wxy v = post Vec3 ".wxy" v
+let wxz v = post Vec3 ".wxz" v
+let wxw v = post Vec3 ".wxw" v
+let wyx v = post Vec3 ".wyx" v
+let wyy v = post Vec3 ".wyy" v
+let wyz v = post Vec3 ".wyz" v
+let wyw v = post Vec3 ".wyw" v
+let wzx v = post Vec3 ".wzx" v
+let wzy v = post Vec3 ".wzy" v
+let wzz v = post Vec3 ".wzz" v
+let wzw v = post Vec3 ".wzw" v
+let wwx v = post Vec3 ".wwx" v
+let wwy v = post Vec3 ".wwy" v
+let wwz v = post Vec3 ".wwz" v
+let www v = post Vec3 ".www" v
+
 
 module Shadertoy = struct
 
