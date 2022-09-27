@@ -3,10 +3,6 @@
   (public_name compile-sdf)
   (package compile-sdf))
 
-(cram
-  (package compile-sdf)
-  (deps %{bin:compile-sdf}))
-
 (env
   (dev
     ; see `ocamlc -warn-help` for information on warnings

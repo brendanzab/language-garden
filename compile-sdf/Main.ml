@@ -48,6 +48,7 @@ module MyScene (S : Shader.S) = struct
     let box_color = S.vec3 !!0.25 !!0.25 !!0.25 in
 
     (* The final output colour to render at the current UV coordinate. *)
+    (* TODO: rework the API of [overlay] to sequencing less cumbersome. *)
     Env.pure (overlay ~bg:(overlay ~bg ~fg:shape_color shape) ~fg:box_color box)
 
 
@@ -65,11 +66,24 @@ module MyScene (S : Shader.S) = struct
 end
 
 
+let usage out_channel program =
+  let program_name = Filename.basename program in
+  Printf.fprintf out_channel "USAGE:\n";
+  Printf.fprintf out_channel "    %s compile\n" program_name;
+  Printf.fprintf out_channel "    %s render\n" program_name;
+  Printf.fprintf out_channel "    %s --help | -h\n" program_name
+
+let usage_error program =
+  Printf.eprintf "error: unexpected CLI arguments\n";
+  usage stderr program;
+  exit 1
+
+
 let () =
   match Array.to_list Sys.argv with
   (* Compile our scene to a GLSL shader program that can be rendered in parallel
      on the GPU. *)
-  | [_; "--glsl"] | [_] ->
+  | [_; "compile"] ->
       let module Scene = MyScene (Glsl) in
       let open Shader.Notation (Glsl) in
 
@@ -80,13 +94,13 @@ let () =
           Scene.image uniforms.resolution frag_coord)
 
   (* Render our scene (slowly!) on the CPU to a PPM image file. *)
-  | [_; "--ppm"] ->
+  | [_; "render"] ->
       let module Scene = MyScene (Cpu) in
       let open Shader.Notation (Cpu) in
 
       Cpu.render_ppm ~width:600 ~height:400
         (Scene.image (Cpu.vec2 600.0 400.0))
 
-  | _ ->
-    Format.eprintf "invalid CLI arguments";
-    exit 1
+  | [program; "--help" | "-h"] -> usage stdout program
+  | program :: _ -> usage_error program
+  | [] -> usage_error "main"

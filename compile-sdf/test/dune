@@ -1,0 +1,20 @@
+(rule
+  (action (with-stdout-to scene.glsl.out (run %{bin:compile-sdf} compile)))
+  (package compile-sdf))
+
+(rule
+  (alias runtest)
+  (action (diff scene.glsl scene.glsl.out))
+  (package compile-sdf))
+
+(rule
+  (action (with-stdout-to ./scene.png.out
+    (pipe-stdout
+      (run %{bin:compile-sdf} render)
+      (run pnmtopng))))
+  (package compile-sdf))
+
+(rule
+  (alias runtest)
+  (action (cmp scene.png scene.png.out))
+  (package compile-sdf))

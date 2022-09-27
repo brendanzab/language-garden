@@ -189,10 +189,16 @@ let render_ppm ~width ~height (shader : image_shader) =
 
      https://registry.khronos.org/OpenGL-Refpages/gl4/html/gl_FragCoord.xhtml
   *)
-  let x_coords = Seq.iterate (fun x -> x +. 1.0) 0.0 |> Seq.take width in
-  let y_coords = Seq.iterate (fun y -> y -. 1.0) (float_of_int height) |> Seq.take height in
 
-  (* This is probably incredibly slow! *)
+  let x_coords = Seq.iterate (fun x -> x -. 1.0) (float_of_int width) |> Seq.take width in
+  let y_coords = Seq.iterate (fun y -> y +. 1.0) 0.0 |> Seq.take height in
+
+  (* To be honest, I'm not sure why the above sequences of coordinates work. I
+     would have assumed that we should increment the x coordinates starting from
+     zero, and decrement the y coordinates starting from the height, but this
+     results in an image that is flipped in both axes compared to the image
+     rendered in Shadertoy. *)
+
   y_coords |> Seq.iter (fun fy ->
     x_coords |> Seq.iter (fun fx ->
       let color = shader (vec2 fx fy) in (* sloooowwww... *)

@@ -203,10 +203,16 @@ module Make (S : Shader.S) : S
     S.length (S.max_vec d zero2) + S.min (vmax2 d) !!0.0
 
   let line_segment p1 p2 uv =
-    let uv_p1 = uv |-| p1 in
+    (* let uv_p1 = uv |-| p1 in
     let p2_p1 = p2 |-| p1 in
     let h = saturate (S.dot uv_p1 p2_p1 / S.dot p2_p1 p2_p1) in
-    S.length (uv_p1 |-| (p2_p1 |* h))
+    S.length (uv_p1 |-| (p2_p1 |* h)) *)
+	(* vec3 ab = b - a;
+	float t = saturate(dot(p - a, ab) / dot(ab, ab));
+	return length((ab*t + a) - p); *)
+    let p2_p1 = p2 |-| p1 in
+    let h = saturate (S.dot (uv |-| p1) p2_p1 / S.dot p2_p1 p2_p1) in
+    S.length (((p2_p1 |* h) |+| p1) |-| uv)
 
 
   let union = S.min

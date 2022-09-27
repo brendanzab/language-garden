@@ -80,6 +80,12 @@
             version = "0";
             src = ./.;
             duneVersion = "3";
+
+            # TODO: Make test dependencies optional
+            nativeBuildInputs = [
+              # For `compile-sdf/test/dune`
+              legacyPackages.netpbm
+            ];
           };
 
           # Elaboration
