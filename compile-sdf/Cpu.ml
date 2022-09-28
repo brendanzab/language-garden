@@ -42,30 +42,58 @@ let abs_vec v = map_vec abs v
 
 let max = Float.max
 let max_vec v1 v2 = zip_with_vec max v1 v2
+
 let min = Float.min
 let min_vec v1 v2 = zip_with_vec min v1 v2
+
+let pow = Float.pow
+let pow_vec v1 v2 = zip_with_vec pow v1 v2
+
 (* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/clamp.xhtml *)
 let clamp s ~min:smin ~max:smax = min (max s smin) smax
-let clamp_vec v ~min ~max = zip_with3_vec (fun s min max -> clamp s ~min ~max) v min max
+
+let clamp_vec v ~min ~max =
+   zip_with3_vec (fun s min max -> clamp s ~min ~max) v min max
+
 let clamp_scalar v ~min ~max = map_vec (clamp ~min ~max) v
+
 let cos = Float.cos
 let cos_vec v = map_vec cos v
+
 let dot v1 v2 = fold_left_vec (+.) 0.0 (zip_with_vec ( *.) v1 v2)
+
 let length2 v = dot v v
 let length v = sqrt (length2 v)
+
 let lerp s1 s2 a = s1 *. (1.0 -. a) +. s2 *. a
 let lerp_vec v1 v2 a = zip_with3_vec lerp v1 v2 a
 let lerp_scalar v1 v2 a = zip_with_vec (fun s1 s2 -> lerp s1 s2 a) v1 v2
+
 let round = Float.round
 let round_vec v = map_vec round v
+
 let sin = Float.sin
 let sin_vec v = map_vec sin v
+
+(* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml *)
+let smooth_step ~lower ~upper s =
+   let t = clamp ((s -. lower) /. (upper -. lower)) ~min:0.0 ~max:1.0 in
+   t *. t *. (3.0 -. 2.0 *. t) *. t
+
+let smooth_step_vec ~lower ~upper v =
+   zip_with3_vec (fun lower upper v -> smooth_step ~lower ~upper v) lower upper v
+
+let smooth_step_scalar ~lower ~upper v =
+   map_vec (fun v -> smooth_step ~lower ~upper v) v
+
 let sqrt = Float.sqrt
 let sqrt_vec v = map_vec sqrt v
+
 (* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/step.xhtml *)
-let step edge s = if s < edge then 0.0 else 1.0
-let step_vec edge v = zip_with_vec step edge v
-let step_scalar edge v = map_vec (step edge) v
+let step ~edge s = if s < edge then 0.0 else 1.0
+let step_vec ~edge v = zip_with_vec (fun edge v -> step ~edge v) edge v
+let step_scalar ~edge v = map_vec (fun v -> step ~edge v) v
+
 let tan = Float.tan
 let tan_vec v = map_vec tan v
 

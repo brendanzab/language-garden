@@ -283,6 +283,6 @@ module Make (S : Shader.S) : S
 
 
   let overlay ~bg ~fg shape =
-    S.lerp_scalar fg bg (S.step !!0.0 shape)
+    S.lerp_scalar fg bg (S.step ~edge:!!0.0 shape)
 
 end

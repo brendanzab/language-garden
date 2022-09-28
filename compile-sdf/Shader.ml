@@ -76,18 +76,25 @@ module type S = sig
   val min : float repr -> float repr -> float repr
   val min_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
+  val pow : float repr -> float repr -> float repr
+  val pow_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+
   val round : float repr -> float repr
   val round_vec : ('n vecf) repr -> ('n vecf) repr
 
   val sin : float repr -> float repr
   val sin_vec : ('n vecf) repr -> ('n vecf) repr
 
+  val smooth_step : lower:float repr -> upper:float repr -> float repr -> float repr
+  val smooth_step_vec : lower:('n vecf) repr -> upper:('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val smooth_step_scalar : lower:float repr -> upper:float repr -> ('n vecf) repr -> ('n vecf) repr
+
   val sqrt : float repr -> float repr
   val sqrt_vec : ('n vecf) repr -> ('n vecf) repr
 
-  val step : float repr -> float repr -> float repr
-  val step_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val step_scalar : float repr -> ('n vecf) repr -> ('n vecf) repr
+  val step : edge:float repr -> float repr -> float repr
+  val step_vec : edge:('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val step_scalar : edge:float repr -> ('n vecf) repr -> ('n vecf) repr
 
   val tan : float repr -> float repr
   val tan_vec : ('n vecf) repr -> ('n vecf) repr
@@ -239,7 +246,7 @@ module type Notation = sig
 end
 
 
-module Notation (S: S) : Notation
+module Notation (S : S) : Notation
 
   with type 'a repr = 'a S.repr
 
