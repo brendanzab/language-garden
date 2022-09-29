@@ -104,108 +104,17 @@ module type S = sig
 
   (** {2 Component projections} *)
 
-  val x : ('n vec_ge1f) repr -> float repr
-  val y : ('n vec_ge2f) repr -> float repr
-  val z : ('n vec_ge3f) repr -> float repr
-
-  (** {2 Component updates} *)
-
-  val set_x : float repr -> ('n vec_ge1f) repr -> ('n vec_ge1f) repr
-  val set_y : float repr -> ('n vec_ge2f) repr -> ('n vec_ge2f) repr
-  val set_z : float repr -> ('n vec_ge3f) repr -> ('n vec_ge3f) repr
-  val set_w : float repr -> ('n vec_ge4f) repr -> ('n vec_ge4f) repr
+  val get : 'n component -> ('n vecf) repr -> float repr
 
   (** {2 Swizzle operators} *)
 
-  val xx : ('n vec_ge1f) repr -> vec2f repr
-  val xy : ('n vec_ge2f) repr -> vec2f repr
-  val xz : ('n vec_ge3f) repr -> vec2f repr
-  val xw : ('n vec_ge4f) repr -> vec2f repr
+  val get2 : 'n component * 'n component -> ('n vecf) repr -> vec2f repr
+  val get3 : 'n component * 'n component * 'n component -> ('n vecf) repr -> vec3f repr
+  val get4 : 'n component * 'n component * 'n component * 'n component -> ('n vecf) repr -> vec4f repr
 
-  val yx : ('n vec_ge2f) repr -> vec2f repr
-  val yy : ('n vec_ge2f) repr -> vec2f repr
-  val yz : ('n vec_ge3f) repr -> vec2f repr
-  val yw : ('n vec_ge4f) repr -> vec2f repr
+  (** {2 Component updates} *)
 
-  val zx : ('n vec_ge3f) repr -> vec2f repr
-  val zy : ('n vec_ge3f) repr -> vec2f repr
-  val zz : ('n vec_ge3f) repr -> vec2f repr
-  val zw : ('n vec_ge4f) repr -> vec2f repr
-
-  val wx : ('n vec_ge4f) repr -> vec2f repr
-  val wy : ('n vec_ge4f) repr -> vec2f repr
-  val wz : ('n vec_ge4f) repr -> vec2f repr
-  val ww : ('n vec_ge4f) repr -> vec2f repr
-
-  val xxx : ('n vec_ge1f) repr -> vec3f repr
-  val xxy : ('n vec_ge2f) repr -> vec3f repr
-  val xxz : ('n vec_ge3f) repr -> vec3f repr
-  val xxw : ('n vec_ge4f) repr -> vec3f repr
-  val xyx : ('n vec_ge2f) repr -> vec3f repr
-  val xyy : ('n vec_ge2f) repr -> vec3f repr
-  val xyz : ('n vec_ge3f) repr -> vec3f repr
-  val xyw : ('n vec_ge4f) repr -> vec3f repr
-  val xzx : ('n vec_ge3f) repr -> vec3f repr
-  val xzy : ('n vec_ge3f) repr -> vec3f repr
-  val xzz : ('n vec_ge3f) repr -> vec3f repr
-  val xzw : ('n vec_ge4f) repr -> vec3f repr
-  val xwx : ('n vec_ge4f) repr -> vec3f repr
-  val xwy : ('n vec_ge4f) repr -> vec3f repr
-  val xwz : ('n vec_ge4f) repr -> vec3f repr
-  val xww : ('n vec_ge4f) repr -> vec3f repr
-
-  val yxx : ('n vec_ge2f) repr -> vec3f repr
-  val yxy : ('n vec_ge2f) repr -> vec3f repr
-  val yxz : ('n vec_ge3f) repr -> vec3f repr
-  val yxw : ('n vec_ge4f) repr -> vec3f repr
-  val yyx : ('n vec_ge2f) repr -> vec3f repr
-  val yyy : ('n vec_ge2f) repr -> vec3f repr
-  val yyz : ('n vec_ge3f) repr -> vec3f repr
-  val yyw : ('n vec_ge4f) repr -> vec3f repr
-  val yzx : ('n vec_ge3f) repr -> vec3f repr
-  val yzy : ('n vec_ge3f) repr -> vec3f repr
-  val yzz : ('n vec_ge3f) repr -> vec3f repr
-  val yzw : ('n vec_ge4f) repr -> vec3f repr
-  val ywx : ('n vec_ge4f) repr -> vec3f repr
-  val ywy : ('n vec_ge4f) repr -> vec3f repr
-  val ywz : ('n vec_ge4f) repr -> vec3f repr
-  val yww : ('n vec_ge4f) repr -> vec3f repr
-
-  val zxx : ('n vec_ge3f) repr -> vec3f repr
-  val zxy : ('n vec_ge3f) repr -> vec3f repr
-  val zxz : ('n vec_ge3f) repr -> vec3f repr
-  val zxw : ('n vec_ge4f) repr -> vec3f repr
-  val zyx : ('n vec_ge3f) repr -> vec3f repr
-  val zyy : ('n vec_ge3f) repr -> vec3f repr
-  val zyz : ('n vec_ge3f) repr -> vec3f repr
-  val zyw : ('n vec_ge4f) repr -> vec3f repr
-  val zzx : ('n vec_ge3f) repr -> vec3f repr
-  val zzy : ('n vec_ge3f) repr -> vec3f repr
-  val zzz : ('n vec_ge3f) repr -> vec3f repr
-  val zzw : ('n vec_ge4f) repr -> vec3f repr
-  val zwx : ('n vec_ge4f) repr -> vec3f repr
-  val zwy : ('n vec_ge4f) repr -> vec3f repr
-  val zwz : ('n vec_ge4f) repr -> vec3f repr
-  val zww : ('n vec_ge4f) repr -> vec3f repr
-
-  val wxx : ('n vec_ge4f) repr -> vec3f repr
-  val wxy : ('n vec_ge4f) repr -> vec3f repr
-  val wxz : ('n vec_ge4f) repr -> vec3f repr
-  val wxw : ('n vec_ge4f) repr -> vec3f repr
-  val wyx : ('n vec_ge4f) repr -> vec3f repr
-  val wyy : ('n vec_ge4f) repr -> vec3f repr
-  val wyz : ('n vec_ge4f) repr -> vec3f repr
-  val wyw : ('n vec_ge4f) repr -> vec3f repr
-  val wzx : ('n vec_ge4f) repr -> vec3f repr
-  val wzy : ('n vec_ge4f) repr -> vec3f repr
-  val wzz : ('n vec_ge4f) repr -> vec3f repr
-  val wzw : ('n vec_ge4f) repr -> vec3f repr
-  val wwx : ('n vec_ge4f) repr -> vec3f repr
-  val wwy : ('n vec_ge4f) repr -> vec3f repr
-  val wwz : ('n vec_ge4f) repr -> vec3f repr
-  val www : ('n vec_ge4f) repr -> vec3f repr
-
-  (* TODO: More swizzle operators *)
+  val set : 'n component ->  float repr -> ('n vecf) repr -> ('n vecf) repr
 
 end
 
@@ -243,6 +152,9 @@ module type Notation = sig
   val (|%|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
   val (|%) : ('n vecf) repr -> float repr -> ('n vecf) repr
 
+  val (.%{ }) : ('n vecf) repr -> 'n component -> float repr
+  val (.%{ }<-) : ('n vecf) repr -> 'n component ->  float repr -> ('n vecf) repr
+
 end
 
 
@@ -275,5 +187,117 @@ module Notation (S : S) : Notation
   let (%) = S.mod_
   let (|%|) = S.mod_vec
   let (|%) = S.mod_scalar
+
+  let (.%{ }) v c = S.get c v
+  let (.%{ }<-) v c s = S.set c s v
+
+end
+
+
+(** Creates a module of named vector component accessors for a shader language *)
+module Component (S : S) = struct
+
+  (* TODO: Use a PPX instead?
+
+     Eg. https://github.com/Octachron/tensority/blob/master/ppx/ppx_tensority.ml
+  *)
+
+  let x v = S.get X v
+  let y v = S.get Y v
+  let z v = S.get Z v
+  let w v = S.get W v
+
+  let set_x sx v = S.set X sx v
+  let set_y sy v = S.set Y sy v
+  let set_z sz v = S.set Z sz v
+  let set_w sw v = S.set W sw v
+
+  let xx v = S.get2 (X, X) v
+  let xy v = S.get2 (X, Y) v
+  let xz v = S.get2 (X, Z) v
+  let xw v = S.get2 (X, W) v
+
+  let yx v = S.get2 (Y, X) v
+  let yy v = S.get2 (Y, Y) v
+  let yz v = S.get2 (Y, Z) v
+  let yw v = S.get2 (Y, W) v
+
+  let zx v = S.get2 (Z, X) v
+  let zy v = S.get2 (Z, Y) v
+  let zz v = S.get2 (Z, Z) v
+  let zw v = S.get2 (Z, W) v
+
+  let wx v = S.get2 (W, X) v
+  let wy v = S.get2 (W, Y) v
+  let wz v = S.get2 (W, Z) v
+  let ww v = S.get2 (W, W) v
+
+  let xxx v = S.get3 (X, X, X) v
+  let xxy v = S.get3 (X, X, Y) v
+  let xxz v = S.get3 (X, X, Z) v
+  let xxw v = S.get3 (X, X, W) v
+  let xyx v = S.get3 (X, Y, X) v
+  let xyy v = S.get3 (X, Y, Y) v
+  let xyz v = S.get3 (X, Y, Z) v
+  let xyw v = S.get3 (X, Y, W) v
+  let xzx v = S.get3 (X, Z, X) v
+  let xzy v = S.get3 (X, Z, Y) v
+  let xzz v = S.get3 (X, Z, Z) v
+  let xzw v = S.get3 (X, Z, W) v
+  let xwx v = S.get3 (X, W, X) v
+  let xwy v = S.get3 (X, W, Y) v
+  let xwz v = S.get3 (X, W, Z) v
+  let xww v = S.get3 (X, W, W) v
+
+  let yxx v = S.get3 (Y, X, X) v
+  let yxy v = S.get3 (Y, X, Y) v
+  let yxz v = S.get3 (Y, X, Z) v
+  let yxw v = S.get3 (Y, X, W) v
+  let yyx v = S.get3 (Y, Y, X) v
+  let yyy v = S.get3 (Y, Y, Y) v
+  let yyz v = S.get3 (Y, Y, Z) v
+  let yyw v = S.get3 (Y, Y, W) v
+  let yzx v = S.get3 (Y, Z, X) v
+  let yzy v = S.get3 (Y, Z, Y) v
+  let yzz v = S.get3 (Y, Z, Z) v
+  let yzw v = S.get3 (Y, Z, W) v
+  let ywx v = S.get3 (Y, W, X) v
+  let ywy v = S.get3 (Y, W, Y) v
+  let ywz v = S.get3 (Y, W, Z) v
+  let yww v = S.get3 (Y, W, W) v
+
+  let zxx v = S.get3 (Z, X, X) v
+  let zxy v = S.get3 (Z, X, Y) v
+  let zxz v = S.get3 (Z, X, Z) v
+  let zxw v = S.get3 (Z, X, W) v
+  let zyx v = S.get3 (Z, Y, X) v
+  let zyy v = S.get3 (Z, Y, Y) v
+  let zyz v = S.get3 (Z, Y, Z) v
+  let zyw v = S.get3 (Z, Y, W) v
+  let zzx v = S.get3 (Z, Z, X) v
+  let zzy v = S.get3 (Z, Z, Y) v
+  let zzz v = S.get3 (Z, Z, Z) v
+  let zzw v = S.get3 (Z, Z, W) v
+  let zwx v = S.get3 (Z, W, X) v
+  let zwy v = S.get3 (Z, W, Y) v
+  let zwz v = S.get3 (Z, W, Z) v
+  let zww v = S.get3 (Z, W, W) v
+
+  let wxx v = S.get3 (W, X, X) v
+  let wxy v = S.get3 (W, X, Y) v
+  let wxz v = S.get3 (W, X, Z) v
+  let wxw v = S.get3 (W, X, W) v
+  let wyx v = S.get3 (W, Y, X) v
+  let wyy v = S.get3 (W, Y, Y) v
+  let wyz v = S.get3 (W, Y, Z) v
+  let wyw v = S.get3 (W, Y, W) v
+  let wzx v = S.get3 (W, Z, X) v
+  let wzy v = S.get3 (W, Z, Y) v
+  let wzz v = S.get3 (W, Z, Z) v
+  let wzw v = S.get3 (W, Z, W) v
+  let wwx v = S.get3 (W, W, X) v
+  let wwy v = S.get3 (W, W, Y) v
+  let wwz v = S.get3 (W, W, Z) v
+  let www v = S.get3 (W, W, W) v
 
 end

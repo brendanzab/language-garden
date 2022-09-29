@@ -201,136 +201,40 @@ let step_scalar ~edge v = bind v (fun v -> call2 v.ty "step" edge (pure v))
 let tan a = call1 Float "tan" a
 let tan_vec v = bind v (fun v -> call1 v.ty "tan" (pure v))
 
-let x v = post Float ".x" v
-let y v = post Float ".y" v
-let z v = post Float ".z" v
-let w v = post Float ".w" v
+(** The name of a vector component *)
+let field_name (type n) : n component -> string =
+  function
+  | X -> "x"
+  | Y -> "y"
+  | Z -> "z"
+  | W -> "w"
 
-(* The following dimension-polymorphic setters are challenging to implement
-   because higher-rank anonymous functions are difficult, if not impossible to
-   express in OCaml as far as I can tell. Instead we implement local functions
-   with explicit type signatures. *)
+let get (c : 'n component) (v : ('n vecf) repr) : float repr =
+  post Float (Format.sprintf ".%s" (field_name c)) v
 
-let set_x s v =
-  let set_x (type n) s : n vec_ge1f expr -> n vec_ge1f repr =
-    function
-    | { ty = Vec2; _ } as v -> vec2 (pure v |> x) s
-    | { ty = Vec3; _ } as v -> vec3 (pure v |> x) s (pure v |> z)
-    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) s (pure v |> z) (pure v |> w)
+let get2 (c1, c2 : 'n component * 'n component) (v : ('n vecf) repr) : vec2f repr =
+  post Vec2 (Format.sprintf ".%s%s" (field_name c1) (field_name c2)) v
+
+let get3 (c1, c2, c3 : 'n component * 'n component * 'n component) (v : ('n vecf) repr) : vec3f repr =
+  post Vec3 (Format.sprintf ".%s%s%s" (field_name c1) (field_name c2) (field_name c3)) v
+
+let get4 (c1, c2, c3, c4 : 'n component * 'n component * 'n component * 'n component) (v : ('n vecf) repr) : vec4f repr =
+  post Vec4 (Format.sprintf ".%s%s%s%s" (field_name c1) (field_name c2) (field_name c3) (field_name c4)) v
+
+let set (c : 'n component) (s : float repr) (v : ('n vecf) repr) : ('n vecf) repr =
+  let set (type n) (c : n component) s (v : (n vecf) expr) : (n vecf) repr =
+    match c, v with
+    | X, { ty = Vec2; _ } -> vec2 s (pure v |> get Y)
+    | X, { ty = Vec3; _ } -> vec3 s (pure v |> get Y) (pure v |> get Z)
+    | X, { ty = Vec4; _ } -> vec4 s (pure v |> get Y) (pure v |> get Z) (pure v |> get W)
+    | Y, { ty = Vec2; _ } -> vec2 (pure v |> get X) s
+    | Y, { ty = Vec3; _ } -> vec3 (pure v |> get X) s (pure v |> get Z)
+    | Y, { ty = Vec4; _ } -> vec4 (pure v |> get X) s (pure v |> get Z) (pure v |> get W)
+    | Z, { ty = Vec3; _ } -> vec3 (pure v |> get X) (pure v |> get Y) s
+    | Z, { ty = Vec4; _ } -> vec4 (pure v |> get X) (pure v |> get Y) s (pure v |> get W)
+    | W, { ty = Vec4; _ } -> vec4 (pure v |> get X) (pure v |> get Y) (pure v |> get Z) s
   in
-  bind v (set_x s)
-
-let set_y s v =
-  let set_y (type n) s : n vec_ge2f expr -> n vec_ge2f repr =
-    function
-    | { ty = Vec2; _ } as v -> vec2 (pure v |> x) s
-    | { ty = Vec3; _ } as v -> vec3 (pure v |> x) s (pure v |> z)
-    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) s (pure v |> z) (pure v |> w)
-  in
-  bind v (set_y s)
-
-let set_z s v =
-  let set_z (type n) s : n vec_ge3f expr -> n vec_ge3f repr =
-    function
-    | { ty = Vec3; _ } as v -> vec3 (pure v |> x) (pure v |> y) s
-    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) (pure v |> y) s (pure v |> w)
-  in
-  bind v (set_z s)
-
-let set_w s v =
-  let set_w (type n) s : n vec_ge4f expr -> n vec_ge4f repr =
-    function
-    | { ty = Vec4; _ } as v -> vec4 (pure v |> x) (pure v |> y) (pure v |> z) s
-  in
-  bind v (set_w s)
-
-let xx v = post Vec2 ".xx" v
-let xy v = post Vec2 ".xy" v
-let xz v = post Vec2 ".xz" v
-let xw v = post Vec2 ".xw" v
-
-let yx v = post Vec2 ".yx" v
-let yy v = post Vec2 ".yy" v
-let yz v = post Vec2 ".yz" v
-let yw v = post Vec2 ".yw" v
-
-let zx v = post Vec2 ".zx" v
-let zy v = post Vec2 ".zy" v
-let zz v = post Vec2 ".zz" v
-let zw v = post Vec2 ".zw" v
-
-let wx v = post Vec2 ".wx" v
-let wy v = post Vec2 ".wy" v
-let wz v = post Vec2 ".wz" v
-let ww v = post Vec2 ".ww" v
-
-let xxx v = post Vec3 ".xxx" v
-let xxy v = post Vec3 ".xxy" v
-let xxz v = post Vec3 ".xxz" v
-let xxw v = post Vec3 ".xxw" v
-let xyx v = post Vec3 ".xyx" v
-let xyy v = post Vec3 ".xyy" v
-let xyz v = post Vec3 ".xyz" v
-let xyw v = post Vec3 ".xyw" v
-let xzx v = post Vec3 ".xzx" v
-let xzy v = post Vec3 ".xzy" v
-let xzz v = post Vec3 ".xzz" v
-let xzw v = post Vec3 ".xzw" v
-let xwx v = post Vec3 ".xwx" v
-let xwy v = post Vec3 ".xwy" v
-let xwz v = post Vec3 ".xwz" v
-let xww v = post Vec3 ".xww" v
-
-let yxx v = post Vec3 ".yxx" v
-let yxy v = post Vec3 ".yxy" v
-let yxz v = post Vec3 ".yxz" v
-let yxw v = post Vec3 ".yxw" v
-let yyx v = post Vec3 ".yyx" v
-let yyy v = post Vec3 ".yyy" v
-let yyz v = post Vec3 ".yyz" v
-let yyw v = post Vec3 ".yyw" v
-let yzx v = post Vec3 ".yzx" v
-let yzy v = post Vec3 ".yzy" v
-let yzz v = post Vec3 ".yzz" v
-let yzw v = post Vec3 ".yzw" v
-let ywx v = post Vec3 ".ywx" v
-let ywy v = post Vec3 ".ywy" v
-let ywz v = post Vec3 ".ywz" v
-let yww v = post Vec3 ".yww" v
-
-let zxx v = post Vec3 ".zxx" v
-let zxy v = post Vec3 ".zxy" v
-let zxz v = post Vec3 ".zxz" v
-let zxw v = post Vec3 ".zxw" v
-let zyx v = post Vec3 ".zyx" v
-let zyy v = post Vec3 ".zyy" v
-let zyz v = post Vec3 ".zyz" v
-let zyw v = post Vec3 ".zyw" v
-let zzx v = post Vec3 ".zzx" v
-let zzy v = post Vec3 ".zzy" v
-let zzz v = post Vec3 ".zzz" v
-let zzw v = post Vec3 ".zzw" v
-let zwx v = post Vec3 ".zwx" v
-let zwy v = post Vec3 ".zwy" v
-let zwz v = post Vec3 ".zwz" v
-let zww v = post Vec3 ".zww" v
-
-let wxx v = post Vec3 ".wxx" v
-let wxy v = post Vec3 ".wxy" v
-let wxz v = post Vec3 ".wxz" v
-let wxw v = post Vec3 ".wxw" v
-let wyx v = post Vec3 ".wyx" v
-let wyy v = post Vec3 ".wyy" v
-let wyz v = post Vec3 ".wyz" v
-let wyw v = post Vec3 ".wyw" v
-let wzx v = post Vec3 ".wzx" v
-let wzy v = post Vec3 ".wzy" v
-let wzz v = post Vec3 ".wzz" v
-let wzw v = post Vec3 ".wzw" v
-let wwx v = post Vec3 ".wwx" v
-let wwy v = post Vec3 ".wwy" v
-let wwz v = post Vec3 ".wwz" v
-let www v = post Vec3 ".www" v
+  bind v (set c s)
 
 
 module Shadertoy = struct

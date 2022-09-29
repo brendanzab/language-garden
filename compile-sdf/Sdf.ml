@@ -166,7 +166,7 @@ module Make (S : Shader.S) : S
 
   (** Maximum component of a 2D vector *)
   let vmax2 v =
-    S.max (S.x v) (S.y v)
+    S.max v.%{X} v.%{Y}
 
 
   (** Based on the equation:
@@ -254,13 +254,13 @@ module Make (S : Shader.S) : S
     sdf (uv |> S.abs_vec)
 
   let reflect_x sdf uv =
-    sdf (uv |> S.set_x (uv |> S.x |> S.abs))
+    sdf (uv.%{X} <- (uv.%{X} |> S.abs))
 
   let reflect_y sdf uv =
-    sdf (uv |> S.set_y (uv |> S.y |> S.abs))
+    sdf (uv.%{Y} <- (uv.%{Y} |> S.abs))
 
   let reflect_z sdf uv =
-    sdf (uv |> S.set_z (uv |> S.z |> S.abs))
+    sdf (uv.%{Z} <- (uv.%{Z} |> S.abs))
 
 
   let repeat ~spacing ?limit sdf uv =

@@ -25,7 +25,7 @@ module MyScene (S : Shader.S) = struct
 
     (* Interpolation amount. This is mostly vertical, with a slight tilt to the
        right as a result of mixing in some of the x position. *)
-    let amount = S.y uv + (S.x uv * !!0.2) in
+    let amount = uv.%{Y} + (uv.%{X} * !!0.2) in
 
     Env.pure (S.lerp_scalar bottom_color top_color amount)
 
@@ -53,13 +53,13 @@ module MyScene (S : Shader.S) = struct
 
 
   (** The scene, rendered as a function from pixel positions to colours. *)
-  let image resolution frag_coord =
-    let uv = frag_coord |/| S.xy resolution in   (* Normalise UV coordinates to [0, 1] *)
-    let uv = uv |- !!0.5 in                      (* Remap UV coordinates to [-0.5, 0.5] *)
+  let image resolution frag_coord : vec3f repr =
+    let uv = frag_coord |/| (resolution |> S.get2 (X, Y)) in  (* Normalise UV coordinates to [0, 1] *)
+    let uv = uv |- !!0.5 in                                   (* Remap UV coordinates to [-0.5, 0.5] *)
 
     (* Fix the aspect ratio of the x axis to remove warping *)
-    let aspect = S.x resolution / S.y resolution in
-    let uv = S.vec2 (S.x uv * aspect) (S.y uv) in
+    let aspect = resolution.%{X} / resolution.%{Y} in
+    let uv = S.vec2 (uv.%{X} * aspect) uv.%{Y} in
 
     scene uv
 
