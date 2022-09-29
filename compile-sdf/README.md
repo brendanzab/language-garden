@@ -24,7 +24,7 @@ let scene : (vec3f repr) Env.m  =
   let shape_color = S.vec3 !!1.0 !!1.0 !!1.0 in
 
   (* The final output colour to render at the current UV coordinate. *)
-  Env.pure (overlay ~bg:background_color ~fg:shape_color shape)
+  Env.pure (background_color |> overlay ~shape:shape ~color:shape_color)
 ```
 
 The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd approach

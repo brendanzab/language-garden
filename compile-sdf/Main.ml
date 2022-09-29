@@ -15,7 +15,7 @@ module MyScene (S : Shader.S) = struct
 
 
   (** Gradient background *)
-  let background : (vec3f repr) Env.m =
+  let gradient_background : (vec3f repr) Env.m =
     let* uv = Env.ask in        (* Get the current UV coordinate *)
     let uv = uv |+ !!0.5 in     (* Remap UV coordinates from [-0.5, 0.5] to [0, 1] *)
 
@@ -33,7 +33,7 @@ module MyScene (S : Shader.S) = struct
   (** A scene to render, assuming UV coordinates in \[-0.5, 0.5\] *)
   let scene : (vec3f repr) Env.m  =
     (* Colour to use in the background *)
-    let* bg = background in
+    let* background = gradient_background in
 
     (* Some shapes defined using signed distance functions *)
     let* s1 = circle !!0.3 |> move (S.vec2 !!0.0 !!0.0) in
@@ -48,8 +48,9 @@ module MyScene (S : Shader.S) = struct
     let box_color = S.vec3 !!0.25 !!0.25 !!0.25 in
 
     (* The final output colour to render at the current UV coordinate. *)
-    (* TODO: rework the API of [overlay] to sequencing less cumbersome. *)
-    Env.pure (overlay ~bg:(overlay ~bg ~fg:shape_color shape) ~fg:box_color box)
+    Env.pure (background
+      |> overlay ~shape:shape ~color:shape_color
+      |> overlay ~shape:box ~color:box_color)
 
 
   (** The scene, rendered as a function from pixel positions to colours. *)

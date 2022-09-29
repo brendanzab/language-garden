@@ -127,9 +127,9 @@ module type S = sig
 
   (** {1 Compositing operations} *)
 
-  (** Overlay a surface on top of a background color, painting it with a
+  (** Overlay a shape on top of a background color, painting it with a
       foreground color. *)
-  val overlay : bg:vec3f repr -> fg:vec3f repr -> dist -> vec3f repr
+  val overlay : shape:dist -> color:vec3f repr -> ?smoothing:float repr -> vec3f repr -> vec3f repr
 
   (* TODO: twist *)
   (* TODO: bend *)
@@ -277,12 +277,15 @@ module Make (S : Shader.S) : S
 
 
   let displace f sdf uv =
-    let d1 = sdf uv in
-    let d2 = f uv in
-    d1 + d2
+    sdf uv + f uv
 
 
-  let overlay ~bg ~fg shape =
-    S.lerp_scalar fg bg (S.step ~edge:!!0.0 shape)
+  let overlay ~shape ~color ?smoothing background =
+    let boundary =
+      match smoothing with
+      | None -> S.step ~edge:!!0.0 shape
+      | Some smoothing -> S.smooth_step ~lower:!!0.0 ~upper:smoothing shape
+    in
+    S.lerp_scalar color background boundary
 
 end
