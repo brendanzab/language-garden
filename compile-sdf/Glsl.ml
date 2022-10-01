@@ -170,13 +170,13 @@ let mod_scalar v s = bind v (fun v -> call2 v.ty "mod" (pure v) s)
 
 let abs s = call1 Float "abs" s
 let abs_vec v = bind v (fun v -> call1 v.ty "abs" (pure v))
-let clamp e ~min ~max = call3 Float "clamp" e min max
+let clamp s ~min ~max = call3 Float "clamp" s min max
 let clamp_vec v ~min ~max = bind v (fun v -> call3 v.ty "clamp" (pure v) min max)
 let clamp_scalar v ~min ~max = bind v (fun v -> call3 v.ty "clamp" (pure v) min max)
 let cos a = call1 Float "cos" a
 let cos_vec v = bind v (fun v -> call1 v.ty "cos" (pure v))
-let dot e1 e2 = call2 Float "dot" e1 e2
-let length e = call1 Float "length" e
+let dot v1 v2 = call2 Float "dot" v1 v2
+let length v = call1 Float "length" v
 let lerp s1 s2 s3 = call3 Float "mix" s1 s2 s3
 let lerp_vec v1 v2 v3 = bind v1 (fun v1 -> call3 v1.ty "mix" (pure v1) v2 v3)
 let lerp_scalar v s1 s2 = bind v (fun v -> call3 v.ty "mix" (pure v) s1 s2)

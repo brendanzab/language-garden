@@ -45,17 +45,21 @@ module MyScene (S : Shader.S) = struct
     let* s2 = square !!0.2 |> move (S.vec2 !!0.2 !!0.0) in
 
     (* Combine the two shapes, meeting at a rounded edge *)
-    let shape = union_round s1 s2 !!0.05 in
-    let shape_color = S.vec3 !!1.0 !!1.0 !!1.0 in
+    let shape1 = union_round s1 s2 !!0.05 in
+    let shape1_color = S.vec3 !!1.0 !!1.0 !!1.0 in
 
     (* A box to draw over the above shape *)
     let* box = rectangle (S.vec2 !!0.3 !!0.2) |> move (S.vec2 !!(-0.3) !!(-0.2)) in
-    let box_color = S.vec3 !!0.25 !!0.25 !!0.25 in
+    let* line1 = segment (S.vec2 !!(-0.1) !!0.1) (S.vec2 !!0.25 !!0.25) ~radius:!!0.005 in
+    let* line2 = segment_y !!0.4 ~radius:!!0.005 |> move (S.vec2 !!0.2 !!(-0.3)) in
+
+    let shape2 = union box (union line1 line2) in
+    let shape2_color = S.vec3 !!0.25 !!0.25 !!0.25 in
 
     (* The final output colour to render at the current UV coordinate. *)
     Env.pure (background
-      |> overlay ~shape:shape ~color:shape_color
-      |> overlay ~shape:box ~color:box_color)
+      |> overlay ~shape:shape1 ~color:shape1_color
+      |> overlay ~shape:shape2 ~color:shape2_color)
 
 
   (** The scene, rendered as a function from pixel positions to colours. *)

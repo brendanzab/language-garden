@@ -41,8 +41,11 @@ module type S = sig
   (* Rectangle with extents measured from the origin *)
   val rectangle : vec2f repr -> sdf2
 
-  (* Line segment between two points *)
-  val line_segment : vec2f repr -> vec2f repr -> sdf2
+  (* Line segments between two points *)
+  val segment : ?radius:float repr -> ('n vecf) repr -> ('n vecf) repr -> 'n sdf
+
+  (* Line from the origin, up to a length in the y axis *)
+  val segment_y : ?radius:float repr -> float repr -> ('n ge2) sdf
 
   (** {2 3D shapes} *)
 
@@ -194,18 +197,21 @@ module Make (S : Shader.S) : S
     let d = S.abs_vec uv |-| extents in
     S.length (S.max_vec d S.zero2) + S.min (S.max_component2 d) !!0.0
 
-  let line_segment p1 p2 uv =
-    (* let uv_p1 = uv |-| p1 in
+  (** See: {{:https://www.youtube.com/watch?v=PMltMdi1Wzg} The SDF of a Line Segment} *)
+  let segment ?radius p1 p2 uv =
+    let uv_p1 = uv |-| p1 in
     let p2_p1 = p2 |-| p1 in
-    let h = saturate (S.dot uv_p1 p2_p1 / S.dot p2_p1 p2_p1) in
-    S.length (uv_p1 |-| (p2_p1 |* h)) *)
-	(* vec3 ab = b - a;
-	float t = saturate(dot(p - a, ab) / dot(ab, ab));
-	return length((ab*t + a) - p); *)
-    let p2_p1 = p2 |-| p1 in
-    let h = S.saturate (S.dot (uv |-| p1) p2_p1 / S.dot p2_p1 p2_p1) in
-    S.length (((p2_p1 |* h) |+| p1) |-| uv)
+    let h = S.saturate (S.dot uv_p1 p2_p1 / S.dot p2_p1 p2_p1) in
+    match radius with
+    | None ->S.length (uv_p1 |-| (p2_p1 |* h))
+    | Some r -> S.length (uv_p1 |-| (p2_p1 |* h)) - r
 
+  (** See: {{:https://www.youtube.com/watch?v=PMltMdi1Wzg} The SDF of a Line Segment} *)
+  let segment_y ?radius len uv =
+    let uv = uv.%{Y} <- uv.%{Y} - S.clamp uv.%{Y} ~min:!!0.0 ~max:len in
+    match radius with
+    | None -> S.length uv
+    | Some r -> S.length uv - r
 
   let union = S.min
   let intersection = S.max

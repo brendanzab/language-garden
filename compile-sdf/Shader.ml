@@ -245,8 +245,8 @@ end = struct
   open Notation (S)
 
 
-  let saturate s = S.clamp s ~min:!!0.0 ~max:!!0.1
-  let saturate_vec v = S.clamp_scalar v ~min:!!0.0 ~max:!!0.1
+  let saturate s = S.clamp s ~min:!!0.0 ~max:!!1.0
+  let saturate_vec v = S.clamp_scalar v ~min:!!0.0 ~max:!!1.0
 
   let zero2 = S.vec2 !!0.0 !!0.0
   let zero3 = S.vec3 !!0.0 !!0.0 !!0.0

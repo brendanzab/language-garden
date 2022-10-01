@@ -55,9 +55,32 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   float t50 = max(t48, t49);
   float t51 = min(t50, 0.);
   float t52 = t47 + t51;
-  float t53 = step(0., t52);
-  vec3 t54 = mix(t0, t40, t53);
+  vec2 t53 = vec2(-0.1, 0.1);
+  vec2 t54 = t13 - t53;
+  vec2 t55 = vec2(0.25, 0.25);
+  vec2 t56 = t55 - t53;
+  float t57 = dot(t54, t56);
+  float t58 = dot(t56, t56);
+  float t59 = t57 / t58;
+  float t60 = clamp(t59, 0., 1.);
+  vec2 t61 = t56 * t60;
+  vec2 t62 = t54 - t61;
+  float t63 = length(t62);
+  float t64 = t63 - 0.005;
+  vec2 t65 = vec2(0.2, -0.3);
+  vec2 t66 = t13 - t65;
+  float t67 = t66.x;
+  float t68 = t66.y;
+  float t69 = clamp(t68, 0., 0.4);
+  float t70 = t68 - t69;
+  vec2 t71 = vec2(t67, t70);
+  float t72 = length(t71);
+  float t73 = t72 - 0.005;
+  float t74 = min(t64, t73);
+  float t75 = min(t52, t74);
+  float t76 = step(0., t75);
+  vec3 t77 = mix(t0, t40, t76);
 
   // Set the color of the current pixel
-  fragColor = vec4(t54, 1.0);
+  fragColor = vec4(t77, 1.0);
 }
