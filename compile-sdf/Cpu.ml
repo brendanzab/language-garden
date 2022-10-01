@@ -97,6 +97,11 @@ let step_scalar ~edge v = map_vec (fun v -> step ~edge v) v
 let tan = Float.tan
 let tan_vec v = map_vec tan v
 
+
+let map_vec  = map_vec
+let fold_left_vec  = fold_left_vec
+
+
 let get = get
 let get2 = get2
 let get3 = get3
@@ -135,9 +140,12 @@ let render_ppm ~width ~height (shader : image_shader) =
      results in an image that is flipped in both axes compared to the image
      rendered in Shadertoy. *)
 
+  (* TODO: In Rust a library like Rayon could be used to run this computation in
+     parallel. Does an equivalent library exist for OCaml? This might require
+     the parallelism support added in OCaml 5. *)
   y_coords |> Seq.iter (fun fy ->
     x_coords |> Seq.iter (fun fx ->
-      let color = shader (vec2 fx fy) in (* sloooowwww... *)
+      let color = shader (vec2 fx fy) in
       let color = mul_scalar color 255.0 |> clamp_scalar ~min:0.0 ~max:255.0 in
 
       Printf.printf "%.0f %.0f %.0f\n"

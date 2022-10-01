@@ -100,6 +100,13 @@ module type S = sig
   val tan_vec : ('n vecf) repr -> ('n vecf) repr
 
 
+  (** {1 Vector combinators} *)
+
+  val map_vec : (float repr -> float repr) -> ('n vecf) repr -> ('n vecf) repr
+
+  val fold_left_vec : ('a repr -> float repr -> 'a repr) -> 'a repr -> ('n vecf) repr -> 'a repr
+
+
   (** {1 Vector component operations} *)
 
   (** {2 Component projections} *)
@@ -190,6 +197,79 @@ module Notation (S : S) : Notation
 
   let (.%{ }) v c = S.get c v
   let (.%{ }<-) v c s = S.set c s v
+
+end
+
+
+(** Utilitiy functions derived from a shader module *)
+module Util (S : S) : sig
+
+  val zero2 : vec2f S.repr
+  val zero3 : vec3f S.repr
+  val zero4 : vec4f S.repr
+
+  val max_component2 : vec2f S.repr -> float S.repr
+  val max_component3 : vec3f S.repr -> float S.repr
+  val max_component4 : vec4f S.repr -> float S.repr
+
+  val min_component2 : vec2f S.repr -> float S.repr
+  val min_component3 : vec3f S.repr -> float S.repr
+  val min_component4 : vec4f S.repr -> float S.repr
+
+  (** Clamp a scalar to the range [[0.0, 1.0]] *)
+  val saturate : float S.repr -> float S.repr
+
+  (** Clamp a vector to the range [[0.0, 1.0]] *)
+  val saturate_vec : ('n vecf) S.repr -> ('n vecf) S.repr
+
+
+  (** {1 Coordinate systems} **)
+
+  (* TODO: Support typed coordinate systems? *)
+
+  (** Given some screen dimensions and a position within that screen, normalise
+      to UV coordinates in the range [[-0.5, 0.5]], ensuring that the proportions
+      remain square by scaling the x axis based on the aspect ratio. *)
+  val normalise_coords : dimensions:vec2f S.repr -> position:vec2f S.repr -> vec2f S.repr
+
+  (** Remap UV coordinates from normalised corner coordintes [[0.0, 1.0]] to
+      centered cordinates [[-0.5, 0.5]] *)
+  val center_coords : ('n vecf) S.repr -> ('n vecf) S.repr
+
+  (** Remap UV coordinates from centered coordinates to [[-0.5, 0.5]] to corner
+      coordinates [[0.0, 1.0]] *)
+  val corner_coords : ('n vecf) S.repr -> ('n vecf) S.repr
+
+end = struct
+
+  open Notation (S)
+
+
+  let saturate s = S.clamp s ~min:!!0.0 ~max:!!0.1
+  let saturate_vec v = S.clamp_scalar v ~min:!!0.0 ~max:!!0.1
+
+  let zero2 = S.vec2 !!0.0 !!0.0
+  let zero3 = S.vec3 !!0.0 !!0.0 !!0.0
+  let zero4 = S.vec4 !!0.0 !!0.0 !!0.0 !!0.0
+
+  let max_component2 v = S.max v.%{X} v.%{Y}
+  let max_component3 v = S.max (max_component2 v) v.%{Z}
+  let max_component4 v = S.max (max_component2 v) v.%{W}
+
+  let min_component2 v = S.min v.%{X} v.%{Y}
+  let min_component3 v = S.min (min_component2 v) v.%{Z}
+  let min_component4 v = S.min (min_component2 v) v.%{W}
+
+
+  let center_coords uv = uv |- !!0.5
+
+  let corner_coords uv = uv |+ !!0.5
+
+  let normalise_coords ~dimensions ~position =
+    let uv = center_coords (position |/| dimensions) in
+    (* Fix the aspect ratio of the x axis to remove warping *)
+    let aspect = dimensions.%{X} / dimensions.%{Y} in
+    uv.%{X} <- uv.%{X} * aspect
 
 end
 

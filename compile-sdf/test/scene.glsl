@@ -10,8 +10,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   vec2 t5 = fragCoord / t4;
   vec2 t6 = t5 - 0.5;
   float t7 = t6.x;
-  float t8 = iResolution.x;
-  float t9 = iResolution.y;
+  float t8 = t4.x;
+  float t9 = t4.y;
   float t10 = t8 / t9;
   float t11 = t7 * t10;
   float t12 = t6.y;

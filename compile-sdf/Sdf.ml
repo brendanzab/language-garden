@@ -145,28 +145,20 @@ module Make (S : Shader.S) : S
 
 = struct
 
+  module S = struct
+    include S
+    include Shader.Util (S)
+  end
+
   open Shader.Notation (S)
 
 
   type 'a repr = 'a S.repr
 
   type dist = float repr
-  type 'n sdf = ((float, 'n) vec) repr -> dist
+  type 'n sdf = ('n vecf) repr -> dist
   type sdf2 = n2 sdf
   type sdf3 = n3 sdf
-
-
-  (** Clamp to the range \[0, 1\] *)
-  let saturate e =
-      S.clamp e ~min:!!0.0 ~max:!!0.1
-
-  (** 2D origin *)
-  let zero2 =
-    S.vec2 !!0.0 !!0.0
-
-  (** Maximum component of a 2D vector *)
-  let vmax2 v =
-    S.max v.%{X} v.%{Y}
 
 
   (** Based on the equation:
@@ -193,14 +185,14 @@ module Make (S : Shader.S) : S
       - [r] = radius
   *)
   let square radius uv =
-    vmax2 (S.abs_vec uv) - radius
+    S.max_component2 (S.abs_vec uv) - radius
 
   (* Distance functions based on https://iquilezles.org/articles/distfunctions2d/ *)
   (* See also https://mercury.sexy/hg_sdf/ *)
 
   let rectangle extents uv =
     let d = S.abs_vec uv |-| extents in
-    S.length (S.max_vec d zero2) + S.min (vmax2 d) !!0.0
+    S.length (S.max_vec d S.zero2) + S.min (S.max_component2 d) !!0.0
 
   let line_segment p1 p2 uv =
     (* let uv_p1 = uv |-| p1 in
@@ -211,7 +203,7 @@ module Make (S : Shader.S) : S
 	float t = saturate(dot(p - a, ab) / dot(ab, ab));
 	return length((ab*t + a) - p); *)
     let p2_p1 = p2 |-| p1 in
-    let h = saturate (S.dot (uv |-| p1) p2_p1 / S.dot p2_p1 p2_p1) in
+    let h = S.saturate (S.dot (uv |-| p1) p2_p1 / S.dot p2_p1 p2_p1) in
     S.length (((p2_p1 |* h) |+| p1) |-| uv)
 
 
@@ -232,11 +224,11 @@ module Make (S : Shader.S) : S
     intersection_chamfer d1 (S.neg d2) r
 
   let union_round d1 d2 r =
-    let u = S.max_vec (S.vec2 (r - d1) (r - d2)) zero2 in
+    let u = S.max_vec (S.vec2 (r - d1) (r - d2)) S.zero2 in
     S.max r (S.min d1 d2) - S.length u
 
   let intersection_round d1 d2 r =
-    let u = S.max_vec (S.vec2 (r + d1) (r + d2)) zero2 in
+    let u = S.max_vec (S.vec2 (r + d1) (r + d2)) S.zero2 in
     S.min (S.neg r) (S.max d1 d2) + S.length u
 
   let difference_round d1 d2 r =

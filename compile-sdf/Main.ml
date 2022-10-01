@@ -6,6 +6,12 @@ module MyScene (S : Shader.S) = struct
 
   open Sdf.Make (S)
 
+  (** Shader module extended with utility functions *)
+  module S = struct
+    include S
+    include Shader.Util (S)
+  end
+
   (** An environment with access to a 2D coordinate. *)
   module Env = Control.Monad.FunctionReader (struct type t = vec2f repr end)
 
@@ -14,10 +20,9 @@ module MyScene (S : Shader.S) = struct
   open Control.Monad.Notation (Env)
 
 
-  (** Gradient background *)
+  (** Gradient background, assuming UV coordinates in [[0.0, 1.0]] *)
   let gradient_background : (vec3f repr) Env.m =
-    let* uv = Env.ask in        (* Get the current UV coordinate *)
-    let uv = uv |+ !!0.5 in     (* Remap UV coordinates from [-0.5, 0.5] to [0, 1] *)
+    let* uv = Env.read in       (* Get the current UV coordinate *)
 
     (* Some colours to interpolate between *)
     let bottom_color = S.vec3 !!0.35 !!0.45 !!0.50 in
@@ -30,10 +35,10 @@ module MyScene (S : Shader.S) = struct
     Env.pure (S.lerp_scalar bottom_color top_color amount)
 
 
-  (** A scene to render, assuming UV coordinates in \[-0.5, 0.5\] *)
+  (** A scene to render, assuming UV coordinates in [[-0.5, 0.5]] *)
   let scene : (vec3f repr) Env.m  =
     (* Colour to use in the background *)
-    let* background = gradient_background in
+    let* background = Env.scope S.corner_coords gradient_background in
 
     (* Some shapes defined using signed distance functions *)
     let* s1 = circle !!0.3 |> move (S.vec2 !!0.0 !!0.0) in
@@ -54,15 +59,8 @@ module MyScene (S : Shader.S) = struct
 
 
   (** The scene, rendered as a function from pixel positions to colours. *)
-  let image resolution frag_coord : vec3f repr =
-    let uv = frag_coord |/| (resolution |> S.get2 (X, Y)) in  (* Normalise UV coordinates to [0, 1] *)
-    let uv = uv |- !!0.5 in                                   (* Remap UV coordinates to [-0.5, 0.5] *)
-
-    (* Fix the aspect ratio of the x axis to remove warping *)
-    let aspect = resolution.%{X} / resolution.%{Y} in
-    let uv = S.vec2 (uv.%{X} * aspect) uv.%{Y} in
-
-    scene uv
+  let image ~dimensions ~position : vec3f repr =
+    scene (S.normalise_coords ~dimensions ~position)
 
 end
 
@@ -82,8 +80,7 @@ let usage_error program =
 
 let () =
   match Array.to_list Sys.argv with
-  (* Compile our scene to a GLSL shader program that can be rendered in parallel
-     on the GPU. *)
+  (* Compile the scene to a GLSL shader that can be rendered in parallel on the GPU. *)
   | [_; "compile"] ->
       let module Scene = MyScene (Glsl) in
       let open Shader.Notation (Glsl) in
@@ -92,15 +89,20 @@ let () =
 
       Glsl.Shadertoy.compile_image_shader
         (fun uniforms frag_coord ->
-          Scene.image uniforms.resolution frag_coord)
+          Scene.image
+            ~dimensions:(uniforms.resolution |> Glsl.get2 (X, Y))
+            ~position:frag_coord)
 
-  (* Render our scene (slowly!) on the CPU to a PPM image file. *)
+  (* Render the scene sequentially on the CPU to a PPM image file. *)
   | [_; "render"] ->
       let module Scene = MyScene (Cpu) in
       let open Shader.Notation (Cpu) in
 
       Cpu.render_ppm ~width:600 ~height:400
-        (Scene.image (Cpu.vec2 600.0 400.0))
+        (fun position ->
+          Scene.image
+            ~dimensions:(vec2 600.0 400.0)
+            ~position)
 
   | [program; "--help" | "-h"] -> usage stdout program
   | program :: _ -> usage_error program

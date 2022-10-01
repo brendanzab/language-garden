@@ -201,6 +201,7 @@ let step_scalar ~edge v = bind v (fun v -> call2 v.ty "step" edge (pure v))
 let tan a = call1 Float "tan" a
 let tan_vec v = bind v (fun v -> call1 v.ty "tan" (pure v))
 
+
 (** The name of a vector component *)
 let field_name (type n) : n component -> string =
   function
@@ -222,7 +223,7 @@ let get4 (c1, c2, c3, c4 : 'n component * 'n component * 'n component * 'n compo
   post Vec4 (Format.sprintf ".%s%s%s%s" (field_name c1) (field_name c2) (field_name c3) (field_name c4)) v
 
 let set (c : 'n component) (s : float repr) (v : ('n vecf) repr) : ('n vecf) repr =
-  let set (type n) (c : n component) s (v : (n vecf) expr) : (n vecf) repr =
+  let go (type n) (c : n component) s (v : (n vecf) expr) : (n vecf) repr =
     match c, v with
     | X, { ty = Vec2; _ } -> vec2 s (pure v |> get Y)
     | X, { ty = Vec3; _ } -> vec3 s (pure v |> get Y) (pure v |> get Z)
@@ -234,7 +235,38 @@ let set (c : 'n component) (s : float repr) (v : ('n vecf) repr) : ('n vecf) rep
     | Z, { ty = Vec4; _ } -> vec4 (pure v |> get X) (pure v |> get Y) s (pure v |> get W)
     | W, { ty = Vec4; _ } -> vec4 (pure v |> get X) (pure v |> get Y) (pure v |> get Z) s
   in
-  bind v (set c s)
+  bind v (go c s)
+
+
+let map_vec f v =
+  let go (type n) f (v : (n vecf) expr) : (n vecf) repr =
+    match v with
+    | { ty = Vec2; _ } -> vec2 (pure v |> get X |> f) (pure v |> get Y |> f)
+    | { ty = Vec3; _ } -> vec3 (pure v |> get X |> f) (pure v |> get Y |> f) (pure v |> get Z |> f)
+    | { ty = Vec4; _ } -> vec4 (pure v |> get X |> f) (pure v |> get Y |> f) (pure v |> get Z |> f) (pure v |> get W |> f)
+  in
+  bind v (go f)
+
+let fold_left_vec f acc v =
+  let go (type n) f (acc : 'a repr) (v : (n vecf) expr) : 'a repr =
+    match v with
+    | { ty = Vec2; _ } ->
+        let acc = pure v |> get Y |> f acc in
+        let acc = pure v |> get X |> f acc in
+        acc
+    | { ty = Vec3; _ } ->
+        let acc = pure v |> get Z |> f acc in
+        let acc = pure v |> get Y |> f acc in
+        let acc = pure v |> get X |> f acc in
+        acc
+    | { ty = Vec4; _ } ->
+        let acc = pure v |> get W |> f acc in
+        let acc = pure v |> get Z |> f acc in
+        let acc = pure v |> get Y |> f acc in
+        let acc = pure v |> get X |> f acc in
+        acc
+  in
+  bind v (go f acc)
 
 
 module Shadertoy = struct

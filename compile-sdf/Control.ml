@@ -1,6 +1,3 @@
-(** {0 Monadic effects} *)
-
-(** Order-dependent effects *)
 module Monad = struct
 
   module type S = sig
@@ -88,7 +85,10 @@ module Monad = struct
     include S
 
     (** Access the shared value *)
-    val ask : t m
+    val read : t m
+
+    (** Execute a computation in an environment that has been altered by a function *)
+    val scope : (t -> t) -> 'a m -> 'a m
 
     (** Run a computation with the value *)
     val run : t -> 'a m -> 'a
@@ -111,7 +111,9 @@ module Monad = struct
     let bind m f = fun x -> f (m x) x
     let pure x = fun _ -> x
 
-    let ask = fun x -> x
+    let read = fun x -> x
+    let scope f m = fun x -> m (f x)
+
     let run x m = m x
 
   end
@@ -133,7 +135,7 @@ module Monad = struct
     val get : t m
 
     (** Replace the shared state of the environment *)
-    val put : t -> unit m
+    val set : t -> unit m
 
     (** Embed a state action in the environment *)
     val embed : (t -> 'a * t) -> 'a m
@@ -164,7 +166,7 @@ module Monad = struct
     let pure x = fun s -> x, s
 
     let get = fun s -> s, s
-    let put s = fun _ -> (), s
+    let set s = fun _ -> (), s
 
     let embed f = fun s -> f s
     let run m s = m s
