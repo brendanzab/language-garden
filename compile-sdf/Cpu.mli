@@ -1,6 +1,9 @@
-(** {0 CPU based shader language (very slow!)} *)
+(** {0 CPU based shader language} *)
 
-(** This implements a shader language natively in OCaml. *)
+(** This implements a shader language natively in OCaml. This is useful for
+    testing the shader language and SDFs without needing to interface with
+    graphics APIs. It could also be useful for implementing constant folding
+    optimisations in the future. *)
 
 open ShaderTypes
 

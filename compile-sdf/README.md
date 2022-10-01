@@ -57,6 +57,20 @@ the how GLSL code is compiled or interpreted by the GPU driver).
 [MSL]: https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
 [SPIR-V]: https://www.khronos.org/spir/
 
+## Ideas for future work
+
+- [ ] Conditionals
+- [ ] 3D SDFs
+- [ ] Examples of raymarching
+- [ ] Typed coordinate systems
+- [ ] PPX to improve ergonomics of embedded DSL
+- [ ] Replace monads with algebraic effects
+- [ ] Optimise compiled shaders (eg. constant folding)
+- [ ] SPIR-V Backend
+- [ ] Browser-based shader previews
+- [ ] Extenal DSL with improved ergonomics
+- [ ] Browser-based shader playground
+
 ## Resources
 
 - [The Book of Shaders](https://thebookofshaders.com/)
