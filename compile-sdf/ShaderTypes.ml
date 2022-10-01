@@ -87,14 +87,20 @@ let get (type n) (c : n component) (v : ('a, n) vec) : 'a =
   | Z, Cons (_, Cons (_, Cons (s, _))) -> s
   | W, Cons (_, Cons (_, Cons (_, Cons (s, _)))) -> s
 
+let rec swizzle : type n m. (n component, m) vec -> ('a, n) vec -> ('a, m) vec =
+  fun cv v ->
+    match cv with
+    | Nil -> Nil
+    | Cons (c, cv) -> Cons (get c v, swizzle cv v)
+
 let get2 (c1, c2 : 'n component * 'n component) (v : ('a, 'n) vec) : 'a vec2 =
-  vec2 (get c1 v) (get c2 v)
+  swizzle (vec2 c1 c2) v
 
 let get3 (c1, c2, c3 : 'n component * 'n component * 'n component) (v : ('a, 'n) vec) : 'a vec3 =
-  vec3 (get c1 v) (get c2 v) (get c3 v)
+  swizzle (vec3 c1 c2 c3) v
 
 let get4 (c1, c2, c3, c4 : 'n component * 'n component * 'n component * 'n component) (v : ('a, 'n) vec) : 'a vec4 =
-  vec4 (get c1 v) (get c2 v) (get c3 v) (get c4 v)
+  swizzle (vec4 c1 c2 c3 c4) v
 
 let set (type n) (c : n component) (s : float) (v : n vecf) : n vecf =
   match c, v with
