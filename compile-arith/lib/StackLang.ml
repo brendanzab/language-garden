@@ -1,4 +1,7 @@
-(** A stack based language of arithmetic expressions *)
+(** {0 A stack machine for arithmetic expressions} *)
+
+(** This represents arithmetic expressions as a
+    {{:https://en.wikipedia.org/wiki/Stack_machine} stack machine}. *)
 
 
 (** Syntax of arithmetic expressions *)
@@ -18,7 +21,7 @@ type code =
 (** Pretty printing *)
 
 let pp_inst fmt = function
-  | Int i -> Format.fprintf fmt "%d" i
+  | Int i -> Format.fprintf fmt "int %d" i
   | Neg -> Format.fprintf fmt "neg"
   | Add -> Format.fprintf fmt "add"
   | Sub -> Format.fprintf fmt "sub"
@@ -26,8 +29,8 @@ let pp_inst fmt = function
   | Div -> Format.fprintf fmt "div"
 let rec pp_code fmt = function
   | [] -> ()
-  | inst :: [] -> Format.fprintf fmt "%a" pp_inst inst
-  | inst :: code -> Format.fprintf fmt "%a@ %a" pp_inst inst pp_code code
+  | inst :: [] -> Format.fprintf fmt "%a;" pp_inst inst
+  | inst :: code -> Format.fprintf fmt "%a;@ %a" pp_inst inst pp_code code
 
 
 (** Semantics of arithmetic expressions *)
@@ -50,5 +53,12 @@ module Semantics = struct
     | code ->
         let (code, stack) = step (code, stack) in
         eval code ~stack
+
+  let rec quote : stack -> code = function
+    | [] -> []
+    | i :: stack -> Int i :: quote stack
+
+  let normalise t =
+    quote (eval t)
 
 end

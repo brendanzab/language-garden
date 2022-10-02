@@ -2,6 +2,7 @@
 
 module TreeLang = Arith.TreeLang
 module StackLang = Arith.StackLang
+module AnfLang = Arith.AnfLang
 
 
 (** Arbitrary expr generation *)
@@ -53,37 +54,53 @@ let arbitrary_expr =
 
 (** Properties *)
 
-(** The compiler preserves the semantics of the arithmetic expressions *)
-let compile_correct =
-  (* TODO: improve handling of divide-by-zero *)
-  let catch_div_by_zero f = try Ok (f ()) with Division_by_zero as e -> Error e in
-  let eval_tree expr = catch_div_by_zero (fun () -> TreeLang.Semantics.eval expr) in
-  let eval_stack expr = catch_div_by_zero (fun () -> StackLang.Semantics.eval expr) in
+(* TODO: improve handling of divide-by-zero in evaluators? *)
+let catch_div_by_zero f =
+  try Ok (f ()) with Division_by_zero as e -> Error e
+
+(** Compilation preserves the semantics of the arithmetic expressions *)
+let compile_stack_correct =
+  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval e) in
+  let eval_stack e = catch_div_by_zero (fun () -> StackLang.Semantics.eval e) in
   let to_stack = Result.map (fun value -> [value]) in
 
   QCheck.Test.make ~count:1000
-    ~name:"compile_correct"
+    ~name:"compile_stack_correct"
     arbitrary_expr
-    (fun expr ->
-      eval_stack (Arith.TreeToStack.translate expr) = to_stack (eval_tree expr))
+    (fun e ->
+      eval_stack (Arith.TreeToStack.translate e) = to_stack (eval_tree e))
+
+(** Compilation preserves the semantics of the arithmetic expressions *)
+let compile_anf_correct =
+  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval e) in
+  let eval_anf e = catch_div_by_zero (fun () -> AnfLang.Semantics.eval e) in
+
+  QCheck.Test.make ~count:1000
+    ~name:"compile_anf_correct"
+    arbitrary_expr
+    (fun e ->
+      eval_anf (Arith.TreeToAnf.translate e) = eval_tree e)
 
 (** Pretty printed expr can always be parsed back into the same expr. *)
 let pretty_correct =
-  let pretty expr = Format.asprintf "%a" TreeLang.pp_expr expr in
+  let pretty e = Format.asprintf "%a" TreeLang.pp_expr e in
   let parse source = TreeLang.(Parser.main Lexer.token (Lexing.from_string source)) in
 
   QCheck.Test.make ~count:1000
     ~name:"pretty_correct"
     arbitrary_expr
-    (fun expr -> parse (pretty expr) = expr)
+    (fun e -> parse (pretty e) = e)
 
 
 (** Entrypoint for the tests *)
 
 let () =
   let suite =
-    List.map QCheck_alcotest.to_alcotest
-      [compile_correct; pretty_correct]
+    List.map QCheck_alcotest.to_alcotest [
+      compile_stack_correct;
+      compile_anf_correct;
+      pretty_correct;
+    ]
   in
   Alcotest.run "compile-arith" [
     "properties", suite

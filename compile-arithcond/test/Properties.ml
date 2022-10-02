@@ -2,6 +2,7 @@
 
 module TreeLang = ArithCond.TreeLang
 module StackLang = ArithCond.StackLang
+module AnfLang = ArithCond.AnfLang
 
 
 (** {1 Generators} *)
@@ -123,10 +124,13 @@ let arbitrary_expr gen_ty =
 
 (** {1 Properties} *)
 
+(* TODO: improve handling of divide-by-zero in evaluators? *)
+let catch_div_by_zero f =
+  try Ok (f ()) with Division_by_zero as e -> Error e
+
 (** The compiler preserves the semantics of the arithmetic expressions *)
-let compile_correct =
+let compile_stack_correct =
   (* TODO: improve handling of divide-by-zero *)
-  let catch_div_by_zero f = try Ok (f ()) with Division_by_zero as e -> Error e in
   let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval e) in
   let eval_stack e = catch_div_by_zero (fun () -> StackLang.Semantics.eval e) in
   let to_stack = Result.map (function
@@ -135,10 +139,25 @@ let compile_correct =
   in
 
   QCheck.Test.make ~count:1000
-    ~name:"compile_correct"
+    ~name:"compile_stack_correct"
     (arbitrary_expr gen_ty)
     (fun (e, _) ->
       eval_stack (ArithCond.TreeToStack.translate e) = to_stack (eval_tree e))
+
+(** Compilation preserves the semantics of the arithmetic expressions *)
+let compile_anf_correct =
+  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval e) in
+  let eval_anf e = catch_div_by_zero (fun () -> AnfLang.Semantics.eval e) in
+  let to_anf = Result.map (function
+    | TreeLang.Semantics.Int n -> AnfLang.Semantics.Int n
+    | TreeLang.Semantics.Bool b -> AnfLang.Semantics.Bool b)
+  in
+
+  QCheck.Test.make ~count:1000
+    ~name:"compile_anf_correct"
+    (arbitrary_expr gen_ty)
+    (fun (e, _) ->
+      eval_anf (ArithCond.TreeToAnf.translate e) = to_anf (eval_tree e))
 
 (** All well-typed expressions should pass the type checker *)
 let check_correct =
@@ -166,7 +185,8 @@ let pretty_correct =
 let () =
   let suite =
     List.map QCheck_alcotest.to_alcotest [
-      compile_correct;
+      compile_stack_correct;
+      compile_anf_correct;
       check_correct;
       pretty_correct;
     ]

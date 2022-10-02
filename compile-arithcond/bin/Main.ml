@@ -1,14 +1,16 @@
 module TreeLang = ArithCond.TreeLang
 module StackLang = ArithCond.StackLang
+module AnfLang = ArithCond.AnfLang
 module TreeToStack = ArithCond.TreeToStack
+module TreeToAnf = ArithCond.TreeToAnf
 
 
 (** CLI options *)
 
 let usage out_channel program =
   Printf.fprintf out_channel "USAGE:\n";
-  Printf.fprintf out_channel "    %s compile\n" program;
-  Printf.fprintf out_channel "    %s exec [--tree | --stack]\n" program;
+  Printf.fprintf out_channel "    %s compile [--stack | --anf]\n" program;
+  Printf.fprintf out_channel "    %s exec [--tree | --stack | --anf]\n" program;
   Printf.fprintf out_channel "    %s --help | -h\n" program
 
 let exit_usage_error program =
@@ -23,21 +25,23 @@ let exit_usage_help program =
 
 (** CLI option parsing *)
 
-type lang =
-  | Tree
-  | Stack
-
 type command =
-  | Compile
-  | Exec of lang
+  | Compile of [`Stack | `Anf]
+  | Exec of [`Tree | `Stack | `Anf]
+
+let parse_compile_flags program = function
+  | ["--stack"] -> `Stack
+  | ["--anf"] -> `Anf
+  | _ -> exit_usage_error program
 
 let parse_exec_flags program = function
-  | ["--tree"] -> Tree
-  | ["--stack"] | [] -> Stack
+  | ["--tree"] -> `Tree
+  | ["--stack"] | [] -> `Stack
+  | ["--anf"] -> `Anf
   | _ -> exit_usage_error program
 
 let parse_command program = function
-  | ["compile"] -> Compile
+  | "compile" :: args -> Compile (parse_compile_flags program args)
   | "exec" :: args -> Exec (parse_exec_flags program args)
   | ["--help" | "-h"] -> exit_usage_help program
   | _ -> exit_usage_error program
@@ -92,20 +96,25 @@ let main () =
   let t = synth_expr e in
 
   match args with
-    | Compile ->
+    | Compile `Stack ->
         let c = TreeToStack.translate e in
-        Format.printf "@[%a@]" StackLang.pp_code c;
-        exit 0
-    | Exec Tree ->
-        Format.printf "@[@[@[%a@]@ :@]@ %a@]"
+        Format.printf "@[<v>%a@]" StackLang.pp_code c
+    | Compile `Anf ->
+        let e = TreeToAnf.translate e in
+        Format.printf "@[<v>%a@]" AnfLang.pp_expr e
+    | Exec `Tree ->
+        Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
           TreeLang.pp_expr (TreeLang.Semantics.normalise e)
-          TreeLang.pp_ty t;
-        exit 0
-    | Exec Stack ->
+          TreeLang.pp_ty t
+    | Exec `Stack ->
         let c = TreeToStack.translate e in
         Format.printf "@[%a@]"
-          StackLang.pp_code (StackLang.Semantics.normalise c);
-        exit 0
+          StackLang.pp_code (StackLang.Semantics.normalise c)
+    | Exec `Anf ->
+        let e = TreeToAnf.translate e in
+        Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
+          AnfLang.pp_expr (AnfLang.Semantics.normalise e)
+          TreeLang.pp_ty t
 
 
 let () = main ()

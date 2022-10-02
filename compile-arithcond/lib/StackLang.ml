@@ -21,11 +21,11 @@ and code =
 (** Pretty printing *)
 
 let rec pp_inst fmt = function
-  | Int i -> Format.fprintf fmt "%d" i
+  | Int i -> Format.fprintf fmt "int %d" i
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
   | Code [] -> Format.fprintf fmt "[]"
-  | Code c -> Format.fprintf fmt "@[[@ %a@ ]@]" pp_code c
+  | Code c -> Format.fprintf fmt "code @[[@ %a@ ]@]" pp_code c
   | Neg -> Format.fprintf fmt "neg"
   | Add -> Format.fprintf fmt "add"
   | Sub -> Format.fprintf fmt "sub"
@@ -35,8 +35,8 @@ let rec pp_inst fmt = function
   | IfThenElse -> Format.fprintf fmt "if"
 and pp_code fmt = function
   | [] -> ()
-  | inst :: [] -> Format.fprintf fmt "%a" pp_inst inst
-  | inst :: code -> Format.fprintf fmt "%a@ %a" pp_inst inst pp_code code
+  | inst :: [] -> Format.fprintf fmt "%a;" pp_inst inst
+  | inst :: code -> Format.fprintf fmt "%a;@ %a" pp_inst inst pp_code code
 
 
 (** Semantics of arithmetic expressions *)

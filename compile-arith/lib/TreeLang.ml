@@ -1,7 +1,9 @@
-(** A tree based language of arithmetic expressions *)
+(** {0 Arithmetic expressions} *)
+
+(** Arithmetic expressions as a tree of nested subexpressions. *)
 
 
-(** Syntax of arithmetic expressions *)
+(** {1 Syntax of arithmetic expressions} *)
 
 type expr =
   | Int of int
@@ -20,7 +22,7 @@ let mul e1 e2 = Mul (e1, e2)
 let div e1 e2 = Div (e1, e2)
 
 
-(** Pretty printing *)
+(** {1 Pretty printing} *)
 
 let rec pp_expr fmt expr =
   pp_add_expr fmt expr

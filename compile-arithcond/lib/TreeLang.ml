@@ -54,7 +54,7 @@ and pp_mul_expr fmt = function
   | Div (e1, e2) -> Format.fprintf fmt "%a@ /@ %a" pp_atomic_expr e1 pp_mul_expr e2
   | e -> pp_atomic_expr fmt e
 and pp_atomic_expr fmt = function
-  | Int n -> Format.fprintf fmt "%d" n
+  | Int i -> Format.fprintf fmt "%d" i
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
   | Neg e -> Format.fprintf fmt "-%a" pp_atomic_expr e
@@ -74,7 +74,7 @@ module Semantics = struct
 
   let rec eval : expr -> value =
     function
-    | Int n -> Int n
+    | Int i -> Int i
     | Bool b -> Bool b
     | Neg e -> Int (-(eval_int e))
     | Add (e1, e2) -> Int (eval_int e1 + eval_int e2)
