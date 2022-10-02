@@ -1,3 +1,8 @@
+module TreeLang = Arith.TreeLang
+module StackLang = Arith.StackLang
+module TreeToStack = Arith.TreeToStack
+
+
 (** CLI options *)
 
 let usage out_channel program =
@@ -28,8 +33,7 @@ type command =
 
 let parse_exec_flags program = function
   | ["--tree"] -> Tree
-  | ["--stack"] -> Stack
-  | [] -> Stack
+  | ["--stack"] | [] -> Stack
   | _ -> exit_usage_error program
 
 let parse_command program = function
@@ -53,8 +57,6 @@ let print_error (pos : Lexing.position) message =
       message
 
 let parse_expr filename in_channel =
-  let open Arith in
-
   let lexbuf = Lexing.from_channel in_channel in
   Lexing.set_filename lexbuf filename;
 
@@ -74,8 +76,6 @@ let parse_expr filename in_channel =
 (** Main entrypoint *)
 
 let main () =
-  let open Arith in
-
   Printexc.record_backtrace true;
 
   let args = parse_args (Array.to_list Sys.argv) in
