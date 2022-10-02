@@ -8,7 +8,7 @@ module StackLang = ArithCond.StackLang
 
 (** Term generation (probably ill-typed) *)
 
-let gen_expr =
+let gen_expr_untyped : TreeLang.expr QCheck.Gen.t =
   let open QCheck.Gen in
   sized @@ fix
     (fun self -> function
@@ -30,32 +30,39 @@ let gen_expr =
 
 (** Term generation (well-typed) *)
 
-type ty = [`Int | `Bool]
+let gen_ty : TreeLang.ty QCheck.Gen.t =
+  QCheck.Gen.oneofl [
+    TreeLang.TyInt;
+    TreeLang.TyBool;
+  ]
 
-let gen_ty : ty QCheck.Gen.t =
-  QCheck.Gen.oneofl [`Int; `Bool]
-
-let gen_expr_well_typed =
+let gen_expr gen_ty : TreeLang.expr QCheck.Gen.t =
   let open QCheck.Gen in
   pair gen_ty nat >>= fix
     (fun self -> function
-      | `Int, 0 -> map TreeLang.int big_nat
-      | `Bool, 0 -> map TreeLang.bool bool
-      | `Int, n ->
+      | TreeLang.TyInt, 0 -> map TreeLang.int big_nat
+      | TreeLang.TyBool, 0 -> map TreeLang.bool bool
+      | TreeLang.TyInt, n ->
           frequency [
             1, map TreeLang.int nat;
-            2, map TreeLang.neg (self (`Int, n/2));
-            3, map2 TreeLang.add (self (`Int, n/2)) (self (`Int, n/2));
-            3, map2 TreeLang.sub (self (`Int, n/2)) (self (`Int, n/2));
-            3, map2 TreeLang.mul (self (`Int, n/2)) (self (`Int, n/2));
-            3, map2 TreeLang.div (self (`Int, n/2)) (self (`Int, n/2));
-            4, map3 TreeLang.if_then_else (self (`Bool, n/2)) (self (`Int, n/2)) (self (`Int, n/2));
+            2, map TreeLang.neg (self (TreeLang.TyInt, n/2));
+            3, map2 TreeLang.add (self (TreeLang.TyInt, n/2)) (self (TreeLang.TyInt, n/2));
+            3, map2 TreeLang.sub (self (TreeLang.TyInt, n/2)) (self (TreeLang.TyInt, n/2));
+            3, map2 TreeLang.mul (self (TreeLang.TyInt, n/2)) (self (TreeLang.TyInt, n/2));
+            3, map2 TreeLang.div (self (TreeLang.TyInt, n/2)) (self (TreeLang.TyInt, n/2));
+            4, map3 TreeLang.if_then_else
+              (self (TreeLang.TyBool, n/2))
+              (self (TreeLang.TyInt, n/2))
+              (self (TreeLang.TyInt, n/2));
           ]
-      | `Bool, n ->
+      | TreeLang.TyBool, n ->
           frequency [
             1, map TreeLang.bool bool;
             3, (let* ty = gen_ty in map2 TreeLang.eq (self (ty, n/2)) (self (ty, n/2)));
-            4, map3 TreeLang.if_then_else (self (`Bool, n/2)) (self (`Bool, n/2)) (self (`Bool, n/2));
+            4, map3 TreeLang.if_then_else
+              (self (TreeLang.TyBool, n/2))
+              (self (TreeLang.TyBool, n/2))
+              (self (TreeLang.TyBool, n/2));
           ]
       )
 
@@ -102,15 +109,16 @@ let rec shrink_expr =
 
 (** {1 Arbitrary generators + shrinkers + printers} *)
 
-let arbitrary_expr =
-  QCheck.make gen_expr
+let arbitrary_expr_untyped =
+  QCheck.make gen_expr_untyped
     ~print:(Format.asprintf "%a" TreeLang.pp_expr)
     ~shrink:shrink_expr
 
-let arbitrary_expr_well_typed =
-  QCheck.make gen_expr_well_typed
-    ~print:(Format.asprintf "%a" TreeLang.pp_expr)
-    ~shrink:shrink_expr
+let arbitrary_expr gen_ty =
+  let gen = QCheck.Gen.(let* t = gen_ty in pair (gen_expr (pure t)) (pure t)) in
+  let print (e, t) = Format.asprintf "@[@[@[%a@]@ :@]@ %a@]" TreeLang.pp_expr e TreeLang.pp_ty t in
+  let shrink (e, t) = QCheck.Iter.(let+ e' = shrink_expr e in e', t) in
+  QCheck.make gen ~print ~shrink
 
 
 (** {1 Properties} *)
@@ -119,8 +127,8 @@ let arbitrary_expr_well_typed =
 let compile_correct =
   (* TODO: improve handling of divide-by-zero *)
   let catch_div_by_zero f = try Ok (f ()) with Division_by_zero as e -> Error e in
-  let eval_tree expr = catch_div_by_zero (fun () -> TreeLang.Semantics.eval expr) in
-  let eval_stack expr = catch_div_by_zero (fun () -> StackLang.Semantics.eval expr) in
+  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval e) in
+  let eval_stack e = catch_div_by_zero (fun () -> StackLang.Semantics.eval e) in
   let to_stack = Result.map (function
     | TreeLang.Semantics.Int n -> [StackLang.Semantics.Int n]
     | TreeLang.Semantics.Bool b -> [StackLang.Semantics.Bool b])
@@ -128,28 +136,41 @@ let compile_correct =
 
   QCheck.Test.make ~count:1000
     ~name:"compile_correct"
-    arbitrary_expr_well_typed
-    (fun expr ->
-      eval_stack (ArithCond.TreeToStack.translate expr) = to_stack (eval_tree expr))
+    (arbitrary_expr gen_ty)
+    (fun (e, _) ->
+      eval_stack (ArithCond.TreeToStack.translate e) = to_stack (eval_tree e))
 
-(** Pretty printed expr can always be parsed back into the same expr. *)
+(** All well-typed expressions should pass the type checker *)
+let check_correct =
+  QCheck.Test.make ~count:1000
+    ~name:"check_correct"
+    (arbitrary_expr gen_ty)
+    (fun (e, t) -> TreeLang.Validation.check e t; true)
+
+(* TODO: Test progress and preservation *)
+(* TODO: Test errors *)
+
+(** Pretty printed expression can always be parsed back into the same expression. *)
 let pretty_correct =
-  let pretty expr = Format.asprintf "%a" TreeLang.pp_expr expr in
+  let pretty e = Format.asprintf "%a" TreeLang.pp_expr e in
   let parse source = TreeLang.(Parser.main Lexer.token (Lexing.from_string source)) in
 
   QCheck.Test.make ~count:1000
     ~name:"pretty_correct"
-    arbitrary_expr
-    (fun expr -> parse (pretty expr) = expr)
+    arbitrary_expr_untyped
+    (fun e -> parse (pretty e) = e)
 
 
 (** {1 Entrypoint of test harness} *)
 
 let () =
   let suite =
-    List.map QCheck_alcotest.to_alcotest
-      [compile_correct; pretty_correct]
+    List.map QCheck_alcotest.to_alcotest [
+      compile_correct;
+      check_correct;
+      pretty_correct;
+    ]
   in
   Alcotest.run "compile-arithcond" [
-    "properties", suite
+    "properties", suite;
   ]

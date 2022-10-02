@@ -1,3 +1,8 @@
+module TreeLang = ArithCond.TreeLang
+module StackLang = ArithCond.StackLang
+module TreeToStack = ArithCond.TreeToStack
+
+
 (** CLI options *)
 
 let usage out_channel program =
@@ -28,8 +33,7 @@ type command =
 
 let parse_exec_flags program = function
   | ["--tree"] -> Tree
-  | ["--stack"] -> Stack
-  | [] -> Stack
+  | ["--stack"] | [] -> Stack
   | _ -> exit_usage_error program
 
 let parse_command program = function
@@ -53,8 +57,6 @@ let print_error (pos : Lexing.position) message =
       message
 
 let parse_expr filename in_channel =
-  let open ArithCond in
-
   let lexbuf = Lexing.from_channel in_channel in
   Lexing.set_filename lexbuf filename;
 
@@ -70,30 +72,39 @@ let parse_expr filename in_channel =
       print_error pos "syntax error";
       exit 1
 
+let synth_expr e =
+  try
+    TreeLang.Validation.synth e
+  with
+  | TreeLang.Validation.Error message ->
+      Printf.eprintf "error: %s" message;
+      exit 1
+
+
 
 (** Main entrypoint *)
 
 let main () =
-  let open ArithCond in
-
   Printexc.record_backtrace true;
 
   let args = parse_args (Array.to_list Sys.argv) in
-  let expr = parse_expr "<input>" stdin in
-  let code = TreeToStack.translate expr in
+  let e = parse_expr "<input>" stdin in
+  let t = synth_expr e in
 
   match args with
     | Compile ->
-        let code = TreeToStack.translate expr in
-        Format.printf "@[%a@]" StackLang.pp_code code;
+        let c = TreeToStack.translate e in
+        Format.printf "@[%a@]" StackLang.pp_code c;
         exit 0
     | Exec Tree ->
-        Format.printf "@[%a@]"
-          TreeLang.pp_expr (TreeLang.Semantics.normalise expr);
+        Format.printf "@[@[@[%a@]@ :@]@ %a@]"
+          TreeLang.pp_expr (TreeLang.Semantics.normalise e)
+          TreeLang.pp_ty t;
         exit 0
     | Exec Stack ->
+        let c = TreeToStack.translate e in
         Format.printf "@[%a@]"
-          StackLang.pp_code (StackLang.Semantics.normalise code);
+          StackLang.pp_code (StackLang.Semantics.normalise c);
         exit 0
 
 

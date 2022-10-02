@@ -15,6 +15,11 @@ type expr =
   | IfThenElse of expr * expr * expr
 
 
+type ty =
+  | TyInt
+  | TyBool
+
+
 let int n = Int n
 let bool b = Bool b
 let neg e = Neg e
@@ -55,6 +60,10 @@ and pp_atomic_expr fmt = function
   | Neg e -> Format.fprintf fmt "-%a" pp_atomic_expr e
   | e -> Format.fprintf fmt "@[<1>(%a)@]" pp_expr e
 
+let pp_ty fmt = function
+  | TyInt -> Format.fprintf fmt "Int"
+  | TyBool -> Format.fprintf fmt "Bool"
+
 
 (** Semantics of arithmetic expressions *)
 module Semantics = struct
@@ -92,5 +101,43 @@ module Semantics = struct
 
   let normalise e =
     quote (eval e)
+
+end
+
+
+(** Type checking of arithmetic expressions *)
+module Validation = struct
+
+  (** An error raised if a type error was encountered *)
+  exception Error of string
+
+
+  (** Check that an expression is of a given type *)
+  let rec check (e : expr) (t : ty) : unit =
+    match e, t with
+    | IfThenElse (e1, e2, e3), t ->
+        check e1 TyBool; check e2 t; check e3 t
+    | e, t ->
+      let t' = synth e in
+      if t != t' then
+        let message = Format.asprintf "mismatched types: expected %a, found %a" pp_ty t pp_ty t' in
+        raise (Error message)
+
+  (** Synthesise the type of an expression *)
+  and synth : expr -> ty =
+    function
+    | Int _ -> TyInt
+    | Bool _ -> TyBool
+    | Neg e -> check e TyInt; TyInt
+    | Add (e1, e2) -> check e1 TyInt; check e2 TyInt; TyInt
+    | Sub (e1, e2) -> check e1 TyInt; check e2 TyInt; TyInt
+    | Mul (e1, e2) -> check e1 TyInt; check e2 TyInt; TyInt
+    | Div (e1, e2) -> check e1 TyInt; check e2 TyInt; TyInt
+    | Eq (e1, e2) ->
+        (* TODO: Unify e1 and e2 *)
+        let t1 = synth e1; in check e2 t1; TyBool
+    | IfThenElse (e1, e2, e3) ->
+        (* TODO: Unify e2 and e3 *)
+        check e1 TyBool; let t2 = synth e2; in check e3 t2; t2
 
 end
