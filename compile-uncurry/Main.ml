@@ -27,22 +27,56 @@ module Curried = struct
     | FunLit (_, body) -> 1 + arity body
     | _ -> 0
 
-  (** Return the list of parameters that an expression expects, along with the
-      body of that expression. *)
-  let rec uncurry : expr -> string list * expr =
+  (** Return the list of parameters of a series of nested function literals,
+      along with the body of that expression. *)
+  let rec fun_lits : expr -> string list * expr =
     function
-    | FunLit (x, body) ->
-        let params, body = uncurry body in
-        x :: params, body
+    | FunLit (name, body) ->
+        let params, body = fun_lits body in
+        name :: params, body
     | body -> [], body
 
-  (** Return the arguments that and expression has been applied to. *)
-  let rec args : expr -> expr * expr list =
+  (** Return the head of a series of function applications and a list of the
+      arguments that it was applied to. *)
+  let rec fun_apps : expr -> expr * expr list =
     function
     | FunApp (head, arg) ->
-        let head, args = args head in
+        let head, args = fun_apps head in
         head, args @ [arg]
     | head -> head, []
+
+
+  (** Pretty print an expression *)
+  let rec pp_expr names fmt =
+    let pp_parens ?(wrap = false) names fmt = function
+      | (Let _ | FunLit _ | FunApp _) as expr when wrap ->
+          Format.fprintf fmt "@[(%a)@]" (pp_expr names) expr
+      | expr -> pp_expr names fmt expr
+    in
+    function
+    | Var x -> Format.pp_print_string fmt (List.nth names x)
+    | Let (name, def, body) ->
+        let pp_name_def names fmt (name, def) =
+          Format.fprintf fmt "@[let@ %s@ :=@]@ %a;" name (pp_expr names) def
+        and pp_lets names fmt = function
+          | Let (_, _, _) as expr -> pp_expr names fmt expr
+          | expr -> Format.fprintf fmt "@[%a@]" (pp_expr names) expr
+        in
+        Format.fprintf fmt "@[<2>%a@]@ %a"
+          (pp_name_def names) (name, def)
+          (pp_lets (name :: names)) body
+    | FunLit (_, _) as expr ->
+        let pp_sep fmt () = Format.fprintf fmt "@ " in
+        let params, body = fun_lits expr in
+        Format.fprintf fmt "@[<2>@[<4>fun@ %a@ :=@]@ @[%a@]@]"
+          (Format.pp_print_list ~pp_sep Format.pp_print_string) params
+          (pp_expr (List.rev params @ names)) body
+    | FunApp (_, _) as expr ->
+        let pp_sep fmt () = Format.fprintf fmt "@ " in
+        let head, args = fun_apps expr in
+        Format.fprintf fmt "@[<2>%a@ %a@]"
+          (pp_parens ~wrap:true names) head
+          (Format.pp_print_list ~pp_sep (pp_parens ~wrap:true names)) args
 
 end
 
@@ -68,10 +102,37 @@ module Uncurried = struct
 
      fun (a, b, c) :=
         let foo := c;
-                   ^ 1, 2
+                   ^ 0, 2
         foo
         ^^^ 0, 0
   *)
+
+
+  (** Pretty print an expression *)
+  let rec pp_expr names fmt = function
+    | Var (scope, param) ->
+        let param_names = List.nth names scope in
+        Format.pp_print_string fmt (List.nth param_names param)
+    | Let (name, def, body) ->
+        let pp_name_def names fmt (name, def) =
+          Format.fprintf fmt "@[let@ %s@ :=@]@ %a;" name (pp_expr names) def
+        and pp_lets names fmt = function
+          | Let (_, _, _) as expr -> pp_expr names fmt expr
+          | expr -> Format.fprintf fmt "@[%a@]" (pp_expr names) expr
+        in
+        Format.fprintf fmt "@[<2>%a@]@ %a"
+          (pp_name_def names) (name, def)
+          (pp_lets ([name] :: names)) body
+    | FunLit (params, body) ->
+        let pp_sep fmt () = Format.fprintf fmt ",@ " in
+        Format.fprintf fmt "@[<2>@[fun@ @[(%a)@]@ :=@]@ %a@]"
+          (Format.pp_print_list ~pp_sep Format.pp_print_string) params
+          (pp_expr (params :: names)) body
+    | FunApp (head, args) ->
+        let pp_sep fmt () = Format.fprintf fmt ",@ " in
+        Format.fprintf fmt "%a(%a)"
+          (pp_expr names) head
+          (Format.pp_print_list ~pp_sep (pp_expr names)) args
 
 end
 
@@ -138,11 +199,11 @@ module CurriedToUncurried = struct
         let body = translate (bind_def env def_arity) body in
         Let (x, def, body)
     | FunLit (_, _) as expr ->
-        let params, body = Curried.uncurry expr in
+        let params, body = Curried.fun_lits expr in
         let env = bind_params env params in
         FunLit (params, translate env body)
     | FunApp _ as expr ->
-        let head, args = Curried.args expr in
+        let head, args = Curried.fun_apps expr in
         let num_args = List.length args in
         let arity = lookup_arity env head in
         (* TODO: A list of arities would allow us to translate more
