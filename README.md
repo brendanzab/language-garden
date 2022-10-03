@@ -25,10 +25,10 @@ These are related to compilation. Mainly to stack-machines, but I’m interested
 in exploring more approaches in the future, and other compilation passes
 related to compiling functional programming languages.
 
-- [**compile-arith**](./compile-arith/): A compiler from tree-based arithmetic expressions to a stack machine.
-- [**compile-arithcond**](./compile-arithcond/): A compiler from tree-based arithmetic and conditional expressions to a stack machine.
+- [**compile-arith**](./compile-arith/): Compiling arithmetic expressions to stack machine instructions.
+- [**compile-arithcond**](./compile-arithcond/): Compiling arithmetic and conditional expressions to stack machine instructions.
 - [**compile-arith-verified**](./compile-arith-verified/): A formally verified arithmetic expression compiler and decompiler in Lean 4.
-- [**compile-uncurry**](./compile-uncurry/): Compiling curried functions to multiparameter functions.
+- [**compile-uncurry**](./compile-uncurry/): Compiling single-parameter functions to multiparameter functions.
 - [**compile-sdf**](./compile-sdf/): An embedded DSL for building signed distance functions, compiling them to GLSL shaders.
 
 ## Development setup
