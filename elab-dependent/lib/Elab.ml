@@ -157,8 +157,8 @@ module Core = struct
         pretty printer for the surface language. *)
     let pp ?(wrap = false) ?(resugar = true) names =
       let pp_name fmt = function
-        | Some name -> Format.fprintf fmt "%s" name
-        | None -> Format.fprintf fmt "_"
+        | Some name -> Format.pp_print_string fmt name
+        | None -> Format.pp_print_string fmt "_"
       in
 
       let rec pp_parens ?(wrap = false) names fmt = function
@@ -237,9 +237,9 @@ module Core = struct
               Format.fprintf fmt "%a@ %a"
                 pp_name name
                 (pp_fun_lits (name :: names)) body
-          | body_ty ->
+          | body ->
               Format.fprintf fmt ":=@]@ @[%a@]@]"
-                (pp_tm names) body_ty;
+                (pp_tm names) body;
           in
           (* The layout boxes will be closed in `pp_fun_lits` *)
           Format.fprintf fmt "@[<2>@[<4>fun %a@ %a"
