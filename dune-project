@@ -28,6 +28,9 @@
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
 
 (package
+  (name compile-uncurry))
+
+(package
   (name compile-sdf))
 
 
