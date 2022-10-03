@@ -110,8 +110,8 @@
 
           # Experiments
 
-          wip-elab-dependent = ocamlPackages.buildDunePackage {
-            pname = "wip-elab-dependent";
+          old-elab-dependent = ocamlPackages.buildDunePackage {
+            pname = "old-elab-dependent";
             version = "0";
             src = ./.;
             duneVersion = "3";

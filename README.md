@@ -18,7 +18,6 @@ widely applicable as well.
 
 - [**elab-dependent**](./elab-dependent/): An elaborator for a small dependently typed lambda calculus.
 - [**elab-record-patching**](./elab-record-patching/): An elaborator of a dependently typed lambda calculus with singletons and record patching.
-- [**wip-elab-dependent**](./wip-elab-dependent): An older elaborator for dependent types, will probably be deleted in the future.
 
 ### Compilation
 

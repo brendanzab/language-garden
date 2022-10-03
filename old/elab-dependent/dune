@@ -1,7 +1,7 @@
 (executable
   (name main)
-  (public_name wip-elab-dependent)
-  (package wip-elab-dependent)
+  (public_name old-elab-dependent)
+  (package old-elab-dependent)
   (libraries pp))
 
 (menhir

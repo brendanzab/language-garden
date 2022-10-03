@@ -41,7 +41,7 @@
 
 
 (package
-  (name wip-elab-dependent)
+  (name old-elab-dependent)
   (depends
     (menhir :build)
     (pp (and (>= 1.1.2)))
