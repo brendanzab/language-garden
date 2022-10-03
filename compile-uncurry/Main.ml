@@ -1,3 +1,16 @@
+(** Split the list at a given index  *)
+let split_at (n : int) (xs : 'a list) : ('a list * 'a list) option =
+  if n < 0 then invalid_arg "split_at" else
+  let rec go n xs =
+    match n, xs with
+    | 0, xs -> Some ([], xs)
+    | n, x :: xs ->
+        go (n - 1) xs |> Option.map (fun (xs, ys) -> x :: xs, ys)
+    | _, [] -> None
+  in
+  go n xs
+
+
 (** De Bruijn index, counting variables from the most recently bound to the
     least recently bound *)
 type index = int
@@ -21,11 +34,6 @@ module Curried = struct
     | FunLit of string * expr
     | FunApp of expr * expr
 
-  (** Return the number of parameters of an expression *)
-  let rec arity : expr -> int =
-    function
-    | FunLit (_, body) -> 1 + arity body
-    | _ -> 0
 
   (** Return the list of parameters of a series of nested function literals,
       along with the body of that expression. *)
@@ -54,7 +62,8 @@ module Curried = struct
       | expr -> pp_expr names fmt expr
     in
     function
-    | Var x -> Format.pp_print_string fmt (List.nth names x)
+    | Var index ->
+        Format.pp_print_string fmt (List.nth names index)
     | Let (name, def, body) ->
         let pp_name_def names fmt (name, def) =
           Format.fprintf fmt "@[let@ %s@ :=@]@ %a;" name (pp_expr names) def
@@ -140,9 +149,8 @@ end
 module CurriedToUncurried = struct
 
   type binding = {
-    var : level * int;  (** The scope level and parameter index of this binding *)
-    arity : int;        (** Number of known parameters that this binding accepts *)
-                        (* TODO: list of arities *)
+    var : level * int;    (** The scope level and parameter index of this binding *)
+    arities : int list;   (** A list of arities this binding accepts *)
   }
 
   (** An environment maps variables in the core language to bindings in the
@@ -152,69 +160,106 @@ module CurriedToUncurried = struct
     bindings : binding list;
   }
 
-  let lookup_var env x : index * int =
-    let { var = scope, param; _ } = (List.nth env.bindings x) in
-    (* Convert the scope level to a scope index *)
-    let scope = level_to_index env.scopes scope in
-    scope, param
-
-  let lookup_arity env : Curried.expr -> int = (* TODO: list of arities *)
-    function
-    | Var x -> (List.nth env.bindings x).arity
-    | FunLit (_, _) as expr -> Curried.arity expr
-    | _ -> 0
+  (** An empty environment with no bindings *)
+  let empty_env = {
+    scopes = 0;
+    bindings = [];
+  }
 
   (** Add a new scope that binds a single definition with a given arity *)
-  let bind_def env arity = {
+  let bind_def env arities = {
     scopes = env.scopes + 1;
-    bindings = { var = env.scopes, 0; arity } :: env.bindings;
+    bindings = { var = env.scopes, 0; arities } :: env.bindings;
   }
 
   (** Add a new scope that binds a sequence of parameters *)
   let bind_params env params =
-    let rec go param = function
-      | [] -> env.bindings
-      | _ :: bindings ->
-          let bindings = go (param + 1) bindings in
+    let rec go param bindings = function
+      | [] -> bindings
+      | _ :: params ->
           let var = env.scopes, param in
-          { var; arity = 0 } :: bindings
-          (*             ^ We might be able to pull the arity from the type
-                           of the parameter, if we had types? This would
-                           fail in the case of polymorphic types, however.
+          go (param + 1) ({ var; arities = [] } :: bindings) params
+          (*                               ^^ We might be able to pull the arity from the type
+                                              of the parameter, if we had types? This would
+                                              fail in the case of polymorphic types, however.
           *)
     in
     {
       scopes = env.scopes + 1;
-      bindings = go 0 params;
+      bindings = go 0 env.bindings params;
     }
+
+  (** Collect a list of expected arities, based on what can be seen from
+      function literals, and the arities of variables in the environment. *)
+  let rec lookup_arities env : Curried.expr -> int list =
+    function
+    | Curried.Var index -> (List.nth env.bindings index).arities
+    | Curried.FunLit (_, _) as expr ->
+        let (params, body) = Curried.fun_lits expr in
+        lookup_arities (bind_params env params) body @ [List.length params]
+    | _ -> []
 
   let rec translate env : Curried.expr -> Uncurried.expr =
     function
-    | Var x ->
-        let scope, param = lookup_var env x in
+    | Curried.Var index ->
+        let { var = scope, param; _ } = List.nth env.bindings index in
+        let scope = level_to_index env.scopes scope in
         Var (scope, param)
-    | Let (x, def, body) ->
-        let def_arity = lookup_arity env def in
+
+    | Curried.Let (name, def, body) ->
+        let def_arity = lookup_arities env def in
         let def = translate env def in
         let body = translate (bind_def env def_arity) body in
-        Let (x, def, body)
-    | FunLit (_, _) as expr ->
+        Let (name, def, body)
+
+    | Curried.FunLit (_, _) as expr ->
         let params, body = Curried.fun_lits expr in
         let env = bind_params env params in
         FunLit (params, translate env body)
-    | FunApp _ as expr ->
+
+    | Curried.FunApp _ as expr ->
+        (* Translate function applications to multiple argument lists,
+           eg. [f a b c d e] to [f(a, b)(c)(d, e)] *)
+        let rec go head arities args =
+          match arities with
+          | arity :: arities ->
+              begin match split_at arity args with
+              | Some ([], args) -> go head arities args
+              | Some (args, args') ->
+                  let args = List.map (translate env) args in
+                  go (Uncurried.FunApp (head, args)) arities args'
+              (* Could we wrap with a function literal here? *)
+              | None -> failwith "error: under-application"
+              end
+          | [] ->
+              begin match args with
+              | _ :: _ -> failwith "error: over-application"
+              | [] -> head
+              end
+        in
         let head, args = Curried.fun_apps expr in
-        let num_args = List.length args in
-        let arity = lookup_arity env head in
-        (* TODO: A list of arities would allow us to translate more
-           applications, eg: foo(a, b)(c, d, e) *)
-        if arity = num_args then
-          FunApp (translate env head, List.map (translate env) args)
-        else
-          failwith (Printf.sprintf "arity mismatch: expected %i arguments, found %i" arity num_args)
+        go (translate env head) (lookup_arities env head) args
 
 end
 
 
 let () =
+  Printexc.record_backtrace true;
+
+  (* TODO: Parser and proper tests *)
+
+  let term = Curried.(
+    FunLit ("a", FunLit ("b", FunLit ("c",
+      Let ("a'", Var 2,
+      Let ("b'", Var 2,
+      Let ("c'", Var 2,
+      Let ("foo", Var 3,
+        Var 3)))))))) in
+
+  Format.printf "@[%a@]\n" (Curried.pp_expr []) term;
+
+  let term = CurriedToUncurried.(translate empty_env term) in
+
+  Format.printf "@[%a@]\n" (Uncurried.pp_expr []) term;
+
   ()
