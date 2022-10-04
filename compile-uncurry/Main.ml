@@ -90,6 +90,54 @@ module Curried = struct
           (pp_parens ~wrap:true names) head
           (Format.pp_print_list ~pp_sep (pp_parens ~wrap:true names)) args
 
+
+  (** Tree-walking interpreter, implemented using normalisation-by-evaluation *)
+  module Semantics = struct
+
+    (** Partially evaluated expressions *)
+    type value =
+      | Neu of neu
+      | FunLit of name * (value -> value)
+    and neu =
+      | Var of level
+      | FunApp of neu * value
+
+    type env = value list
+
+
+    (** Compute a function application *)
+    let app head arg =
+      match head with
+      | Neu neu -> Neu (FunApp (neu, arg))
+      | FunLit (_, body) -> body arg
+
+    (** Evaluate a expression from the syntax into its semantic interpretation *)
+    let rec eval env = function
+      | Let (_, def, body) -> eval (eval env def :: env) body
+      | Var index -> List.nth env index
+      | FunLit (name, body) -> FunLit (name, fun x -> eval (x :: env) body)
+      | FunApp (head, arg) -> app (eval env head) (eval env arg)
+
+
+    (** Quote a value back to the syntax, evaluating under binders. *)
+    let rec quote size : value -> expr =
+      function
+      | Neu neu -> quote_neu size neu
+      | FunLit (name, body) ->
+          let var = Neu (Var size) in
+          FunLit (name, quote (size + 1) (body var))
+    and quote_neu size : neu -> expr =
+      function
+      | Var level -> Var (level_to_index size level)
+      | FunApp (neu, arg) -> FunApp (quote_neu size neu, quote size arg)
+
+
+    (** Reduce an expression as much as possible in the current environment. *)
+    let normalise size env expr : expr =
+      quote size (eval env expr)
+
+  end
+
 end
 
 
@@ -122,8 +170,8 @@ module Uncurried = struct
 
   (** Pretty print an expression *)
   let rec pp_expr names fmt = function
-    | Var (scope, param) ->
-        Format.pp_print_string fmt (List.nth (List.nth names scope) param)
+    | Var (index, param) ->
+        Format.pp_print_string fmt (List.nth (List.nth names index) param)
     | Let (name, def, body) ->
         let pp_name_def names fmt (name, def) =
           Format.fprintf fmt "@[let@ %s@ :=@]@ %a;" name (pp_expr names) def
@@ -144,6 +192,55 @@ module Uncurried = struct
         Format.fprintf fmt "%a(%a)"
           (pp_expr names) head
           (Format.pp_print_list ~pp_sep (pp_expr names)) args
+
+
+  (** Tree-walking interpreter, implemented using normalisation-by-evaluation *)
+  module Semantics = struct
+
+    (** Partially evaluated expressions *)
+    type value =
+      | Neu of neu
+      | FunLit of name list * (value list -> value)
+    and neu =
+      | Var of level * int
+      | FunApp of neu * value list
+
+    type env = (value list) list
+
+
+    (** Compute a function application *)
+    let app head args =
+      match head with
+      | Neu neu -> Neu (FunApp (neu, args))
+      | FunLit (_, body) -> body args
+
+    (** Evaluate a expression from the syntax into its semantic interpretation *)
+    let rec eval env : expr -> value =
+      function
+      | Let (_, def, body) -> eval ([eval env def] :: env) body
+      | Var (index, param) -> List.nth (List.nth env index) param
+      | FunLit (names, body) -> FunLit (names, fun params -> eval (params :: env) body)
+      | FunApp (head, args) -> app (eval env head) (List.map (eval env) args)
+
+
+    (** Quote a value back to the syntax, evaluating under binders. *)
+    let rec quote size : value -> expr =
+      function
+      | Neu neu -> quote_neu size neu
+      | FunLit (names, body) ->
+          let vars = List.mapi (fun param _ -> Neu (Var (size, param))) names in
+          FunLit (names, quote (size + 1) (body vars))
+    and quote_neu size : neu -> expr =
+      function
+      | Var (level, param) -> Var (level_to_index size level, param)
+      | FunApp (neu, args) -> FunApp (quote_neu size neu, List.map (quote size) args)
+
+
+    (** Reduce an expression as much as possible in the current environment. *)
+    let normalise size env expr : expr =
+      quote size (eval env expr)
+
+  end
 
 end
 
