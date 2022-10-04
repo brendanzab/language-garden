@@ -15,7 +15,7 @@ let split_at (n : int) (xs : 'a list) : ('a list * 'a list) option =
 type name = string
 
 (** De Bruijn index, counting variables from the most recently bound to the
-    least recently bound *)
+    least recently bound. *)
 type index = int
 
 (** De Bruijn level, counting variables from the least recently bound to the
@@ -28,7 +28,7 @@ let level_to_index size level =
   size - level - 1
 
 
-(** A core language where all functions take a single argument *)
+(** A language where all functions take a single argument *)
 module Curried = struct
 
   type expr =
@@ -93,7 +93,7 @@ module Curried = struct
 end
 
 
-(** A language that supports parameter lists *)
+(** A language with multi-parameter functions *)
 module Uncurried = struct
 
   type expr =
@@ -155,31 +155,41 @@ module CurriedToUncurried = struct
     arities : int list;   (** A list of arities this binding accepts *)
   }
 
-  (** An environment maps variables in the core language to bindings in the
-      uncurried language, recording known arities. *)
+  (** An environment that maps variable indexes in the core language to
+      variables in the uncurried language. *)
   type env = {
-    scopes : level;
+    size : level;               (** The number of scopes that have been bound *)
     bindings : binding list;
   }
 
+  (** The size field lets us convert the scope levels to scope indicies when
+      translating variables.
+
+      Note that the size of the environment does not neccessarily match the
+      number of bindings in the envrionment, as multiple bindings can be
+      introduced per scope in the uncurried language.
+  *)
+
   (** An empty environment with no bindings *)
   let empty_env = {
-    scopes = 0;
+    size = 0;
     bindings = [];
   }
 
   (** Add a new scope that binds a single definition with a given arity *)
   let bind_def env arities = {
-    scopes = env.scopes + 1;
-    bindings = { var = env.scopes, 0; arities } :: env.bindings;
+    size = env.size + 1;
+    bindings = { var = env.size, 0; arities } :: env.bindings;
   }
 
   (** Add a new scope that binds a sequence of parameters *)
   let bind_params env params =
+    (* Add the bindings the environment, mapping each parameter to positions in
+       a single parameter list. *)
     let rec go param bindings = function
       | [] -> bindings
       | _ :: params ->
-          let var = env.scopes, param in
+          let var = env.size, param in
           go (param + 1) ({ var; arities = [] } :: bindings) params
           (*                               ^^ We might be able to pull the arity from the type
                                               of the parameter, if we had types? This would
@@ -187,7 +197,9 @@ module CurriedToUncurried = struct
           *)
     in
     {
-      scopes = env.scopes + 1;
+      (* We’re only adding a single scope, so we only need to increment the size
+         of the environment once. *)
+      size = env.size + 1;
       bindings = go 0 env.bindings params;
     }
 
@@ -204,9 +216,9 @@ module CurriedToUncurried = struct
   let rec translate env : Curried.expr -> Uncurried.expr =
     function
     | Curried.Var index ->
-        let { var = scope, param; _ } = List.nth env.bindings index in
-        let scope = level_to_index env.scopes scope in
-        Var (scope, param)
+        let { var = level, param; _ } = List.nth env.bindings index in
+        let index = level_to_index env.size level in
+        Var (index, param)
 
     | Curried.Let (name, def, body) ->
         let def_arity = lookup_arities env def in
@@ -219,9 +231,9 @@ module CurriedToUncurried = struct
         let env = bind_params env params in
         FunLit (params, translate env body)
 
+    (* Translate function applications to multiple argument lists,
+        eg. [f a b c d e] to [f(a, b)(c)(d, e)] *)
     | Curried.FunApp _ as expr ->
-        (* Translate function applications to multiple argument lists,
-           eg. [f a b c d e] to [f(a, b)(c)(d, e)] *)
         let rec go head arities args =
           match arities with
           | arity :: arities ->
