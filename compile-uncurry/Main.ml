@@ -11,6 +11,9 @@ let split_at (n : int) (xs : 'a list) : ('a list * 'a list) option =
   go n xs
 
 
+(** These names are used as hints for pretty printing binders and variables. *)
+type name = string
+
 (** De Bruijn index, counting variables from the most recently bound to the
     least recently bound *)
 type index = int
@@ -30,14 +33,14 @@ module Curried = struct
 
   type expr =
     | Var of index
-    | Let of string * expr * expr
-    | FunLit of string * expr
+    | Let of name * expr * expr
+    | FunLit of name * expr
     | FunApp of expr * expr
 
 
   (** Return the list of parameters of a series of nested function literals,
       along with the body of that expression. *)
-  let rec fun_lits : expr -> string list * expr =
+  let rec fun_lits : expr -> name list * expr =
     function
     | FunLit (name, body) ->
         let params, body = fun_lits body in
@@ -101,8 +104,8 @@ module Uncurried = struct
              |
              scope index
     *)
-    | Let of string * expr * expr
-    | FunLit of string list * expr
+    | Let of name * expr * expr
+    | FunLit of name list * expr
     | FunApp of expr * expr list
 
   (* Variables are representated with a De Bruijn index pointing to the scope
@@ -120,8 +123,7 @@ module Uncurried = struct
   (** Pretty print an expression *)
   let rec pp_expr names fmt = function
     | Var (scope, param) ->
-        let param_names = List.nth names scope in
-        Format.pp_print_string fmt (List.nth param_names param)
+        Format.pp_print_string fmt (List.nth (List.nth names scope) param)
     | Let (name, def, body) ->
         let pp_name_def names fmt (name, def) =
           Format.fprintf fmt "@[let@ %s@ :=@]@ %a;" name (pp_expr names) def
