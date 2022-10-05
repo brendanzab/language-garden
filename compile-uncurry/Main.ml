@@ -69,7 +69,7 @@ module Curried = struct
         Format.pp_print_string fmt (List.nth names index)
     | Let (name, def, body) ->
         let pp_name_def names fmt (name, def) =
-          Format.fprintf fmt "@[let@ %s@ :=@]@ %a;" name (pp_expr names) def
+          Format.fprintf fmt "@[let@ %s@ :=@]@ @[%a@];" name (pp_expr names) def
         and pp_lets names fmt = function
           | Let (_, _, _) as expr -> pp_expr names fmt expr
           | expr -> Format.fprintf fmt "@[%a@]" (pp_expr names) expr
@@ -174,7 +174,7 @@ module Uncurried = struct
         Format.pp_print_string fmt (List.nth (List.nth names index) param)
     | Let (name, def, body) ->
         let pp_name_def names fmt (name, def) =
-          Format.fprintf fmt "@[let@ %s@ :=@]@ %a;" name (pp_expr names) def
+          Format.fprintf fmt "@[let@ %s@ :=@]@ @[%a@];" name (pp_expr names) def
         and pp_lets names fmt = function
           | Let (_, _, _) as expr -> pp_expr names fmt expr
           | expr -> Format.fprintf fmt "@[%a@]" (pp_expr names) expr
@@ -184,7 +184,7 @@ module Uncurried = struct
           (pp_lets ([name] :: names)) body
     | FunLit (params, body) ->
         let pp_sep fmt () = Format.fprintf fmt ",@ " in
-        Format.fprintf fmt "@[<2>@[fun@ @[(%a)@]@ :=@]@ %a@]"
+        Format.fprintf fmt "@[<2>@[fun@ @[(%a)@]@ :=@]@ @[%a@]@]"
           (Format.pp_print_list ~pp_sep Format.pp_print_string) params
           (pp_expr (params :: names)) body
     | FunApp (head, args) ->
@@ -252,6 +252,9 @@ module CurriedToUncurried = struct
     arities : int list;   (** A list of arities this binding accepts *)
   }
 
+  (* NOTE: We might be able to replace the lists of arities with uncurried
+     types, which might end up being more precise. *)
+
   (** An environment that maps variable indexes in the core language to
       variables in the uncurried language. *)
   type env = {
@@ -300,56 +303,52 @@ module CurriedToUncurried = struct
       bindings = go 0 env.bindings params;
     }
 
-  (** Collect a list of expected arities, based on what can be seen from
-      function literals, and the arities of variables in the environment. *)
-  let rec lookup_arities env : Curried.expr -> int list =
-    function
-    | Curried.Var index -> (List.nth env.bindings index).arities
-    | Curried.FunLit (_, _) as expr ->
-        let (params, body) = Curried.fun_lits expr in
-        lookup_arities (bind_params env params) body @ [List.length params]
-    | _ -> []
-
-  let rec translate env : Curried.expr -> Uncurried.expr =
+  (** Translate a curried expression into an uncurried expression *)
+  let rec translate env : Curried.expr -> Uncurried.expr * int list =
     function
     | Curried.Var index ->
-        let { var = level, param; _ } = List.nth env.bindings index in
+        let { var = level, param; arities } = List.nth env.bindings index in
         let index = level_to_index env.size level in
-        Var (index, param)
+        Uncurried.Var (index, param), arities
 
     | Curried.Let (name, def, body) ->
-        let def_arity = lookup_arities env def in
-        let def = translate env def in
-        let body = translate (bind_def env def_arity) body in
-        Let (name, def, body)
+        let def, def_arities = translate env def in
+        let body, body_arities = translate (bind_def env def_arities) body in
+        Uncurried.Let (name, def, body), body_arities
 
     | Curried.FunLit (_, _) as expr ->
         let params, body = Curried.fun_lits expr in
-        let env = bind_params env params in
-        FunLit (params, translate env body)
+        let body, body_arities = translate (bind_params env params) body in
+        Uncurried.FunLit (params, body), List.length params :: body_arities
 
     (* Translate function applications to multiple argument lists,
-        eg. [f a b c d e] to [f(a, b)(c)(d, e)] *)
+        eg. [f a b c d e] to [f(a, b)(c)(d, e)]. *)
     | Curried.FunApp _ as expr ->
-        let rec go head arities args =
-          match arities with
-          | arity :: arities ->
+        let rec go (head, arities) args =
+          match arities, args with
+          | arities, [] ->
+              (* FIXME: we can lose track of arities here, eg. [(id always) id]
+                 fails as an over-application because [id always] ‘forgets’ the
+                 arity of [always]. Types could possibly help here? *)
+              head, arities
+          | [], _ ->
+              (* I think eval/apply would introduce a call to [apply_n] here? *)
+              (* See: https://www.cse.chalmers.se/edu/year/2011/course/CompFun/lecture2.pdf#page=29 *)
+              failwith "error: over-application"
+          | arity :: arities, args ->
               begin match split_at arity args with
-              | Some ([], args) -> go head arities args
+              | Some ([], args) -> go (head, arities) args
               | Some (args, args') ->
-                  let args = List.map (translate env) args in
-                  go (Uncurried.FunApp (head, args)) arities args'
+                  (* NOTE: throwing out the arities of the arguments here! *)
+                  let args = List.map (fun arg -> fst (translate env arg)) args in
+                  go (Uncurried.FunApp (head, args), arities) args'
               (* Could we wrap with a function literal here? *)
+              (* I think eval/apply would introduce a closure here? *)
               | None -> failwith "error: under-application"
-              end
-          | [] ->
-              begin match args with
-              | _ :: _ -> failwith "error: over-application"
-              | [] -> head
               end
         in
         let head, args = Curried.fun_apps expr in
-        go (translate env head) (lookup_arities env head) args
+        go (translate env head) args
 
 end
 
@@ -365,11 +364,30 @@ let () =
       Let ("b'", Var 2,
       Let ("c'", Var 2,
       Let ("foo", Var 3,
-        Var 3)))))))) in
+      Var 3)))))))
+  ) in
 
   Format.printf "@[%a@]\n" (Curried.pp_expr []) term;
 
-  let term = CurriedToUncurried.(translate empty_env term) in
+  let term, _ = CurriedToUncurried.(translate empty_env term) in
+
+  Format.printf "@[%a@]\n" (Uncurried.pp_expr []) term;
+  Format.printf "\n";
+
+  let term = Curried.(
+    Let ("id", FunLit ("a", Var 0),
+    Let ("always", FunLit ("a", FunLit ("b", Var 1)),
+    (* FunApp (FunApp (FunApp (FunApp (Var 1, Var 0), Var 1), Var 0), Var 1))) *)
+    (* FunApp (FunApp (FunApp (Var 1, Var 0), Var 1), Var 0))) *)
+    FunApp (FunApp (Var 0, Var 1), Var 0)))
+    (* FunApp (FunApp (FunApp (Var 0, Var 1), Var 0), Var 1))) *)
+    (* FunApp (Var 1, Var 0))) *)
+
+  ) in
+
+  Format.printf "@[%a@]\n" (Curried.pp_expr []) term;
+
+  let term, _ = CurriedToUncurried.(translate empty_env term) in
 
   Format.printf "@[%a@]\n" (Uncurried.pp_expr []) term;
 
