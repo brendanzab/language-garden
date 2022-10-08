@@ -1,6 +1,7 @@
-(** {0 Arithmetic expressions} *)
+(** {0 Arithmetic expressions}
 
-(** Arithmetic expressions as a tree of nested subexpressions. *)
+    Arithmetic expressions as a tree of nested subexpressions.
+*)
 
 
 (** {1 Syntax of arithmetic expressions} *)

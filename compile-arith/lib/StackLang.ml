@@ -1,11 +1,13 @@
-(** {0 A stack machine for arithmetic expressions} *)
+(** {0 A stack machine for arithmetic expressions}
 
-(** This represents arithmetic expressions as a
-    {{:https://en.wikipedia.org/wiki/Stack_machine} stack machine}. *)
+    This represents arithmetic expressions as a
+    {{:https://en.wikipedia.org/wiki/Stack_machine} stack machine}.
+*)
 
 
-(** Syntax of arithmetic expressions *)
+(** {1 Stack machine syntax} *)
 
+(** Stack machine instructions *)
 type inst =
   | Int of int    (** [       -- i     ] *)
   | Neg           (** [ i     -- -n    ] *)
@@ -18,7 +20,7 @@ type code =
   inst list
 
 
-(** Pretty printing *)
+  (** {1 Pretty printing} *)
 
 let pp_inst fmt = function
   | Int i -> Format.fprintf fmt "int %d" i

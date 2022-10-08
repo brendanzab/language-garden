@@ -1,7 +1,10 @@
-(** A tree based language of arithmetic expressions *)
+(** {0 Arithmetic expressions}
+
+    Arithmetic expressions as a tree of nested subexpressions.
+*)
 
 
-(** Syntax of arithmetic expressions *)
+(** {1 Syntax of arithmetic expressions} *)
 
 type expr =
   | Int of int
@@ -31,7 +34,7 @@ let eq e1 e2 = Eq (e1, e2)
 let if_then_else e1 e2 e3 = IfThenElse (e1, e2, e3)
 
 
-(** Pretty printing *)
+(** {1 Pretty printing} *)
 
 let rec pp_expr fmt expr =
   pp_if_expr fmt expr

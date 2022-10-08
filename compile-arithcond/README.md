@@ -29,13 +29,13 @@ A compiler from a language of arithmetic and conditional expressions to:
   let e3 := eq e1 e2;
   let e8 :=
     if e3 then
-      let e5 := add 3 4;
-      let e6 := div 8 4;
-      let e7 := sub e5 e6;
-      e7
+      let e4 := add 3 4;
+      let e5 := div 8 4;
+      let e6 := sub e4 e5;
+      e6
     else
-      let e4 := add 7 8;
-      e4;
+      let e7 := add 7 8;
+      e7;
   e8
   ```
 

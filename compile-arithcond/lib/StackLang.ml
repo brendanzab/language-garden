@@ -1,8 +1,13 @@
-(** A stack based language of arithmetic expressions *)
+(** {0 A stack machine for arithmetic expressions}
+
+    This represents arithmetic expressions as a
+    {{:https://en.wikipedia.org/wiki/Stack_machine} stack machine}.
+*)
 
 
-(** Syntax of arithmetic expressions *)
+(** {1 Stack machine syntax} *)
 
+(** Stack machine instructions *)
 type inst =
   | Int of int     (** [         -- i     ] *)
   | Bool of bool   (** [         -- b     ] *)
@@ -14,11 +19,12 @@ type inst =
   | Div            (** [ i1 i2   -- i1/i2 ] *)
   | Eq             (** [ v1 v2   -- v1=v2 ] *)
   | IfThenElse     (** [ b c1 c2 -- v     ] *)
+
 and code =
   inst list
 
 
-(** Pretty printing *)
+  (** {1 Pretty printing} *)
 
 let rec pp_inst fmt = function
   | Int i -> Format.fprintf fmt "int %d" i
