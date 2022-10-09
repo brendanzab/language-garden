@@ -24,7 +24,7 @@ and code =
   inst list
 
 
-  (** {1 Pretty printing} *)
+(** {1 Pretty printing} *)
 
 let rec pp_inst fmt = function
   | Int i -> Format.fprintf fmt "int %d" i
@@ -73,7 +73,7 @@ module Semantics = struct
   let rec eval ?(stack = []) = function
     | [] -> stack
     | code ->
-        let (code, stack) = step (code, stack) in
+        let code, stack = step (code, stack) in
         eval code ~stack
 
   let rec quote : stack -> code = function

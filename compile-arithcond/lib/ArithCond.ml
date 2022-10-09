@@ -8,5 +8,8 @@ end
 module StackLang = StackLang
 module AnfLang = AnfLang
 
+
+module Translation = Translation
+
 module TreeToStack = TreeToStack
 module TreeToAnf = TreeToAnf
