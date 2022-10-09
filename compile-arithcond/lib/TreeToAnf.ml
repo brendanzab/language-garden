@@ -8,7 +8,9 @@ module Env = struct
 
   (* TODO: Add fresh variable state to environment *)
 
-  type 'a t = ('a -> AnfLang.expr) -> AnfLang.expr
+  type 'a cont = 'a -> AnfLang.expr
+
+  type 'a t = 'a cont cont
 
   let pure x = fun cont -> cont x
   let bind x f = fun cont -> x (fun x -> f x cont)

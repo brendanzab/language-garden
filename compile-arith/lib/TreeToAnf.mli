@@ -20,12 +20,15 @@ module Env : sig
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 
 
+  (** The type of the continuation *)
+  type 'a cont = 'a -> AnfLang.expr
+
   (** Construct a continuation-passing computation from a function *)
-  val embed : (('a -> AnfLang.expr) -> AnfLang.expr) -> 'a t
+  val embed : 'a cont cont -> 'a t
 
   (** Run a continuation-passing computation with a final continuation,
       returning the result. This is the inverse of {!embed}. *)
-  val run : 'a t -> ('a -> AnfLang.expr) -> AnfLang.expr
+  val run : 'a t -> 'a cont cont
 
 
   (** Translate from an arithmetic expression to a computation that constructs
