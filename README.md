@@ -30,7 +30,7 @@ related to compiling functional programming languages.
 - [**compile-arith**](./compile-arith/):
   Compiling arithmetic expressions to stack machine instructions and A-Normal Form.
 - [**compile-arithcond**](./compile-arithcond/):
-  Compiling arithmetic and conditional expressions to stack machine instructions.
+  Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
 - [**compile-arith-verified**](./compile-arith-verified/):
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
 - [**compile-uncurry**](./compile-uncurry/):
