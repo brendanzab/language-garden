@@ -32,7 +32,7 @@ module Env : sig
 
 
   (** Translate from an arithmetic expression to a computation that constructs
-      an ANF expression in an environment. *)
+      an ANF expression with a continuation.  *)
   include Translation.S
     with type source = TreeLang.expr
     with type target = AnfLang.comp t

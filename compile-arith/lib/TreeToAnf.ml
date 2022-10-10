@@ -59,14 +59,17 @@ module Env = struct
         let* e2 = translate_name e2 in
         pure (AnfLang.Div (e1, e2))
 
+  (** Translate an expression to ANF, binding the resulting computation to an
+      intermediate definition (so long as it’s not an atomic computation). *)
   and translate_name (e : TreeLang.expr) : AnfLang.atom t =
     let* e = translate e in
     match e with
+    (* Don't bother binding definitions for atomic computations *)
     | AnfLang.Atom a -> pure a
-    | e ->
+    (* Bind definitions for non-atomic computations *)
+    | e -> fun cont ->
         let n = fresh_id () in
-        fun cont ->
-          AnfLang.Let (n, e, cont (AnfLang.Var n))
+        AnfLang.Let (n, e, cont (AnfLang.Var n))
 
 end
 
