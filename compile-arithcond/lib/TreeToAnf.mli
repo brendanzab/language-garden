@@ -35,6 +35,6 @@ module Env : sig
       an ANF expression in an environment. *)
   include Translation.S
     with type source = TreeLang.expr
-    with type target = AnfLang.atom t
+    with type target = AnfLang.comp t
 
 end

@@ -15,10 +15,10 @@ type id = int
 type expr =
   | Let of id * comp * expr
   | Comp of comp
-  | Atom of atom
 
 (** Computation expressions *)
 and comp =
+  | Atom of atom
   | Neg of atom
   | Add of atom * atom
   | Sub of atom * atom
@@ -39,9 +39,9 @@ let rec pp_expr fmt = function
       Format.fprintf fmt "@[<2>@[let@ %s@ :=@]@ %a;@]@ %a" name
         pp_comp c
         pp_expr e
-  | Comp c -> pp_comp fmt c
-  | Atom a -> pp_atom fmt a
+  | Comp c -> Format.fprintf fmt "@[%a@]" pp_comp c
 and pp_comp fmt = function
+  | Atom a -> pp_atom fmt a
   | Neg a -> Format.fprintf fmt "neg %a" pp_atom a
   | Add (a1, a2) -> Format.fprintf fmt "add@ %a@ %a" pp_atom a1 pp_atom a2
   | Sub (a1, a2) -> Format.fprintf fmt "sub@ %a@ %a" pp_atom a1 pp_atom a2
@@ -66,6 +66,7 @@ module Semantics = struct
 
   let eval_comp ?(env = Env.empty) : comp -> value =
     function
+    | Atom a -> eval_atom ~env a
     | Neg a -> -(eval_atom ~env a)
     | Add (a1, a2) -> eval_atom ~env a1 + eval_atom ~env a2
     | Sub (a1, a2) -> eval_atom ~env a1 - eval_atom ~env a2
@@ -76,6 +77,5 @@ module Semantics = struct
     function
     | Let (id, c, e) -> eval ~env:(Env.add id (eval_comp ~env c) env) e
     | Comp c -> eval_comp ~env c
-    | Atom a -> eval_atom ~env a
 
 end

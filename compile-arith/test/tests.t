@@ -19,8 +19,7 @@ Negating numbers
   int 32;
   neg;
   $ cat test-neg | arith compile --anf
-  let e0 := neg 32;
-  e0
+  neg 32
   $ cat test-neg | arith exec --anf
   -32
   $ cat test-neg | arith exec --tree
@@ -37,8 +36,7 @@ Adding numbers
   int 2;
   add;
   $ cat test-add | arith compile --anf
-  let e0 := add 1 2;
-  e0
+  add 1 2
   $ cat test-add | arith exec --anf
   3
   $ cat test-add | arith exec --tree
@@ -55,8 +53,7 @@ Subtracting numbers
   int 2;
   sub;
   $ cat test-sub | arith compile --anf
-  let e0 := sub 1 2;
-  e0
+  sub 1 2
   $ cat test-sub | arith exec --anf
   -1
   $ cat test-sub | arith exec --tree
@@ -73,8 +70,7 @@ Multiplying numbers
   int 2;
   mul;
   $ cat test-mul | arith compile --anf
-  let e0 := mul 1 2;
-  e0
+  mul 1 2
   $ cat test-mul | arith exec --anf
   2
   $ cat test-mul | arith exec --tree
@@ -91,8 +87,7 @@ Dividing numbers
   int 2;
   div;
   $ cat test-div | arith compile --anf
-  let e0 := div 1 2;
-  e0
+  div 1 2
   $ cat test-div | arith exec --anf
   0
   $ cat test-div | arith exec --tree
@@ -114,8 +109,7 @@ Multiple operators
   $ cat test-multiple-ops | arith compile --anf
   let e0 := neg 2;
   let e1 := mul e0 7;
-  let e2 := add 1 e1;
-  e2
+  add 1 e1
   $ cat test-multiple-ops | arith exec --tree
   -13
   $ cat test-multiple-ops | arith exec --stack
@@ -144,8 +138,7 @@ Complicated stuff
   let e2 := add 3 4;
   let e3 := div 8 4;
   let e4 := sub e2 e3;
-  let e5 := add e1 e4;
-  e5
+  add e1 e4
   $ cat test-complicated | arith exec --tree
   3
   $ cat test-complicated | arith exec --stack

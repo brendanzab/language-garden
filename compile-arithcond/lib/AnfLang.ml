@@ -14,10 +14,10 @@ type id = int
 type expr =
   | Let of id * comp * expr
   | Comp of comp
-  | Atom of atom
 
 (** Computation expressions *)
 and comp =
+  | Atom of atom
   | Neg of atom
   | Add of atom * atom
   | Sub of atom * atom
@@ -48,9 +48,13 @@ let rec pp_expr fmt = function
             pp_comp c
             pp_expr e
       end
-  | Comp c -> pp_comp fmt c
-  | Atom a -> pp_atom fmt a
+  | Comp c ->
+      begin match c with
+      | IfThenElse _ -> Format.fprintf fmt "@[<v>%a@]" pp_comp c
+      | _ -> Format.fprintf fmt "@[%a@]" pp_comp c
+      end
 and pp_comp fmt = function
+  | Atom a -> pp_atom fmt a
   | Neg a -> Format.fprintf fmt "neg %a" pp_atom a
   | Add (a1, a2) -> Format.fprintf fmt "add@ %a@ %a" pp_atom a1 pp_atom a2
   | Sub (a1, a2) -> Format.fprintf fmt "sub@ %a@ %a" pp_atom a1 pp_atom a2
@@ -98,9 +102,9 @@ module Semantics = struct
     function
     | Let (id, c, e) -> eval ~env:(Env.add id (eval_comp ~env c) env) e
     | Comp c -> eval_comp ~env c
-    | Atom a -> eval_atom ~env a
   and eval_comp ?(env = Env.empty) : comp -> value =
     function
+    | Atom a -> eval_atom ~env a
     | Neg a -> Int (-(eval_int ~env a))
     | Add (a1, a2) -> Int (eval_int ~env a1 + eval_int ~env a2)
     | Sub (a1, a2) -> Int (eval_int ~env a1 - eval_int ~env a2)
@@ -112,8 +116,8 @@ module Semantics = struct
 
   let quote : value -> expr =
     function
-    | Int i -> Atom (Int i)
-    | Bool b -> Atom (Bool b)
+    | Int i -> Comp (Atom (Int i))
+    | Bool b -> Comp (Atom (Bool b))
 
   let normalise e =
     quote (eval e)

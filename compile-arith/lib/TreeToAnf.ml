@@ -22,7 +22,7 @@ module Env = struct
   (* ANF Translation *)
 
   type source = TreeLang.expr
-  type target = AnfLang.atom t
+  type target = AnfLang.comp t
 
   (** Generate a fresh variable id *)
   let fresh_id : unit -> AnfLang.id =
@@ -33,40 +33,43 @@ module Env = struct
       incr next_id;
       id
 
-  (** Bind the result of a computation to a shared definition. *)
-  let let_comp (c : AnfLang.comp) : AnfLang.atom t =
-    fun cont ->
-      let id = fresh_id () in
-      AnfLang.Let (id, c, cont (AnfLang.Var id))
-
   let (let*) = bind
 
-  let rec translate (e : TreeLang.expr) : AnfLang.atom t =
+  let rec translate (e : TreeLang.expr) : AnfLang.comp t =
     match e with
     | TreeLang.Int i ->
-        pure (AnfLang.Int i)
+        pure (AnfLang.Atom (AnfLang.Int i))
     | TreeLang.Neg e ->
-        let* e = translate e in
-        let_comp (AnfLang.Neg e)
+        let* e = translate_name e in
+        pure (AnfLang.Neg e)
     | TreeLang.Add (e1, e2) ->
-        let* e1 = translate e1 in
-        let* e2 = translate e2 in
-        let_comp (AnfLang.Add (e1, e2))
+        let* e1 = translate_name e1 in
+        let* e2 = translate_name e2 in
+        pure (AnfLang.Add (e1, e2))
     | TreeLang.Sub (e1, e2) ->
-        let* e1 = translate e1 in
-        let* e2 = translate e2 in
-        let_comp (AnfLang.Sub (e1, e2))
+        let* e1 = translate_name e1 in
+        let* e2 = translate_name e2 in
+        pure (AnfLang.Sub (e1, e2))
     | TreeLang.Mul (e1, e2) ->
-        let* e1 = translate e1 in
-        let* e2 = translate e2 in
-        let_comp (AnfLang.Mul (e1, e2))
+        let* e1 = translate_name e1 in
+        let* e2 = translate_name e2 in
+        pure (AnfLang.Mul (e1, e2))
     | TreeLang.Div (e1, e2) ->
-        let* e1 = translate e1 in
-        let* e2 = translate e2 in
-        let_comp (AnfLang.Div (e1, e2))
+        let* e1 = translate_name e1 in
+        let* e2 = translate_name e2 in
+        pure (AnfLang.Div (e1, e2))
+
+  and translate_name (e : TreeLang.expr) : AnfLang.atom t =
+    let* e = translate e in
+    match e with
+    | AnfLang.Atom a -> pure a
+    | e ->
+        let n = fresh_id () in
+        fun cont ->
+          AnfLang.Let (n, e, cont (AnfLang.Var n))
 
 end
 
 
 let translate (e : TreeLang.expr) : AnfLang.expr =
-  Env.run (Env.translate e) (fun a -> AnfLang.Atom a)
+  Env.run (Env.translate e) (fun c -> AnfLang.Comp c)

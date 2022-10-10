@@ -20,8 +20,7 @@ A compiler from a language of arithmetic expressions to:
   $ arith compile --anf <<< "1 + -2 * 7"
   let e0 := neg 2;
   let e1 := mul e0 7;
-  let e2 := add 1 e1;
-  e2
+  add 1 e1
   ```
 
 The correctness of compilation and pretty printing are tested with property-based

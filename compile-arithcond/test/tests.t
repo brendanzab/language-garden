@@ -91,8 +91,7 @@ Complicated stuff
   let e2 := add 3 4;
   let e3 := div 8 4;
   let e4 := sub e2 e3;
-  let e5 := add e1 e4;
-  e5
+  add e1 e4
   $ cat test-complicated | arithcond exec --tree
   3 : Int
   $ cat test-complicated | arithcond exec --stack
@@ -106,8 +105,7 @@ If expressions
       3
     else
       7;
-  let e2 := add e1 1;
-  e2
+  add e1 1
   $ arithcond exec --anf <<< "(if false then 0 else 0) + 1"
   1 : Int
 
@@ -130,16 +128,12 @@ If expressions
   let e1 := mul 1 e0;
   let e2 := mul 3 4;
   let e3 := eq e1 e2;
-  let e8 :=
-    if e3 then
-      let e4 := add 3 4;
-      let e5 := div 8 4;
-      let e6 := sub e4 e5;
-      e6
-    else
-      let e7 := add 7 8;
-      e7;
-  e8
+  if e3 then
+    let e4 := add 3 4;
+    let e5 := div 8 4;
+    sub e4 e5
+  else
+    add 7 8
   $ cat test-if | arithcond exec --tree
   15 : Int
   $ cat test-if | arithcond exec --stack
