@@ -1,3 +1,8 @@
+(** {0 A compiler for arithmetic expressions} *)
+
+(** {1 Intermediate languages} *)
+
+(** Nested arithmetic expressions *)
 module TreeLang = struct
   include TreeLang
 
@@ -5,9 +10,14 @@ module TreeLang = struct
   module Parser = TreeLangParser
 end
 
+(** Stack machine language *)
 module StackLang = StackLang
+
+(** A-Normal form *)
 module AnfLang = AnfLang
 
+
+(** {1 Compilation} *)
 
 module Translation = Translation
 
