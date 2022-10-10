@@ -39,8 +39,8 @@ let atom a = Atom a
 (** {1 Pretty printing} *)
 
 let rec pp_expr fmt = function
-  | Let (id, c, e) ->
-      let name = Format.sprintf "e%i" id in
+  | Let (n, c, e) ->
+      let name = Format.sprintf "e%i" n in
       Format.fprintf fmt "@[<2>@[let@ %s@ :=@]@ %a;@]@ %a" name
         pp_comp c
         pp_expr e
@@ -53,7 +53,7 @@ and pp_comp fmt = function
   | Mul (a1, a2) -> Format.fprintf fmt "mul@ %a@ %a" pp_atom a1 pp_atom a2
   | Div (a1, a2) -> Format.fprintf fmt "div@ %a@ %a" pp_atom a1 pp_atom a2
 and pp_atom fmt = function
-  | Var id -> Format.fprintf fmt "e%i" id
+  | Var n -> Format.fprintf fmt "e%i" n
   | Int i -> Format.fprintf fmt "%d" i
 
 
@@ -80,7 +80,7 @@ module Semantics = struct
 
   let rec eval ?(env = Env.empty) : expr -> value =
     function
-    | Let (id, c, e) -> eval ~env:(Env.add id (eval_comp ~env c) env) e
+    | Let (n, c, e) -> eval ~env:(Env.add n (eval_comp ~env c) env) e
     | Comp c -> eval_comp ~env c
 
 end

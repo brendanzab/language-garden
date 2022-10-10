@@ -1,49 +1,77 @@
 # Arithmetic expression compiler
 
-A compiler from a language of arithmetic and conditional expressions to:
+An interpreter and compiler for a language of arithmetic expressions, extended
+with booleans, let bindings and conditional expressions.
+
+The correctness of type checking, compilation and pretty printing are tested
+with [property-based tests](./test/Properties.ml) implemented using the [qcheck]
+library.
+
+The compiler targets the following languages:
 
 - Stack machine instructions
 
+  This is similar to what can be found in stack based languages like [Forth] and
+  [Java bytecode]:
+
   ```command
-  $ arithcond compile --stack <<< "if 1 * -2 = 3 * 4 then (3 + 4) - 8 / 4 else 7 + 8"
-  int 1;
-  int 2;
-  neg;
-  mul;
+  $ arithcond compile --stack <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
   int 3;
   int 4;
   mul;
+  begin-let;
+  access 0;
+  int 5;
   eq;
-  code [ int 3; int 4; add; int 8; int 4; div; sub; ];
-  code [ int 7; int 8; add; ];
+  code [ int 3; access 0; add; begin-let; int 8; access 0; int 4; div; sub;
+       end-let; ];
+  code [ access 0; int 8; add; ];
   if;
+  end-let;
   ```
 
 - A-Normal Form
 
+  This defines an intermediate binding for each computation. This is close to
+  the [three-address code] found in many optimising compilers.
+
   ```command
-  $ arith compile --anf <<< "if 1 * -2 = 3 * 4 then (3 + 4) - 8 / 4 else 7 + 8"
-  let e0 := neg 2;
-  let e1 := mul 1 e0;
-  let e2 := mul 3 4;
-  let e3 := eq e1 e2;
-  if e3 then
-    let e4 := add 3 4;
-    let e5 := div 8 4;
-    sub e4 e5
+  $ arithcond compile --anf <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
+  let e0 := mul 3 4;
+  let e1 := eq e0 5;
+  if e1 then
+    let e2 := add 3 e0;
+    let e3 := div e2 4;
+    sub 8 e3
   else
-    add 7 8
+    add e0 8
   ```
 
-The correctness of type checking, compilation and pretty printing are tested
-with property-based tests implemented using the [qcheck] library.
-
+[Forth]: https://en.wikipedia.org/wiki/Forth_(programming_language)
+[Java bytecode]: https://en.wikipedia.org/wiki/Java_bytecode
+[three-address code]: https://en.wikipedia.org/wiki/Three-address_code
 [qcheck]: https://github.com/c-cube/qcheck
 
 ## Resources
 
+### Stack Machines
+
+- “Efficiently Implementing the Lambda Calculus With Zinc”, Andre Popovitch 2021
+  [[URL](https://blog.andrepopovitch.com/zinc/)]
+- “Functional programming languages, Part II: abstract machines”, Xavier Leroy 2015
+  [[Slides](https://xavierleroy.org/mpri/2-4/machines.pdf)]
+- “From Krivine’s machine to the Caml implementations”, Xavier Leroy 2005
+  [[Slides](https://xavierleroy.org/talks/zam-kazam05.pdf)]
+
 ### A-Normal Form
 
-- [A-Normalization: Why and How](https://matt.might.net/articles/a-normalization/)
-- [The essence of compiling with continuations](https://doi.org/10.1145/173262.155113)
-- [ANF Conversion](https://compiler.club/anf-conversion/)
+- “A-Normalization: Why and How”, Matt Might
+  [[URL](https://matt.might.net/articles/a-normalization/)]
+- “The essence of compiling with continuations”, Flanagan et al. 1993
+  [[DOI](https://doi.org/10.1145/173262.155113)]
+
+### Property based testing for compilers
+
+- “Effect-Driven QuickChecking of Compilers“, Midtgaard et al. 2017
+  [[DOI](https://doi.org/10.1145/3110259)]
+  [[Github](https://github.com/jmid/efftester/)]

@@ -6,22 +6,27 @@
 
 let whitespace = [' ' '\t' '\n']
 let comment = "#" [^ '\n' ]* '\n'
-let digit = ['0'-'9']
+let digits = ['0'-'9']+
+let name = ['a'-'z' 'A'-'Z']['-' '_' 'a'-'z' 'A'-'Z' '0'-'9']*
 
 rule token = parse
 | whitespace    { token lexbuf }
 | comment       { token lexbuf }
-| digit+ as n   { NUMBER (int_of_string n) }
+| digits as n   { NUMBER (int_of_string n) }
 | "else"        { KEYWORD_ELSE }
 | "false"       { KEYWORD_FALSE }
 | "if"          { KEYWORD_IF }
+| "let"         { KEYWORD_LET }
 | "then"        { KEYWORD_THEN }
 | "true"        { KEYWORD_TRUE }
+| name as n     { NAME n }
 | "+"           { ADD }
 | "*"           { ASTERISK }
+| ":="          { COLON_EQUALS }
 | "="           { EQUALS }
 | "/"           { FORWARD_SLASH }
 | "-"           { HYPHEN }
+| ";"           { SEMICOLON }
 | "("           { OPEN_PAREN }
 | ")"           { CLOSE_PAREN }
 | eof           { END }

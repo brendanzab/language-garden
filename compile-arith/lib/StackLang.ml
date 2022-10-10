@@ -16,6 +16,7 @@ type inst =
   | Mul           (** [ i1 i2 -- i1*i2 ] *)
   | Div           (** [ i1 i2 -- i1/i2 ] *)
 
+(** Instruction sequences *)
 type code =
   inst list
 

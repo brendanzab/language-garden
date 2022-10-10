@@ -9,9 +9,18 @@
 
 (** Stack machine instructions *)
 type inst =
+  (* Environment related instructions from the SECD machine. For additional
+     details see: https://xavierleroy.org/mpri/2-4/machines.pdf. *)
+  | Access of int  (** Push the nth value in the environment onto the stack *)
+  | BeginLet       (** Pop a value off the stack and push it onto the environment *)
+  | EndLet         (** Discard the first entry of the environment *)
+
+  (* Literals *)
   | Int of int     (** [         -- i     ] *)
   | Bool of bool   (** [         -- b     ] *)
   | Code of code   (** [         -- c     ] *)
+
+  (* Operators *)
   | Neg            (** [ i       -- -n    ] *)
   | Add            (** [ i1 i2   -- i1+i2 ] *)
   | Sub            (** [ i1 i2   -- i1-i2 ] *)
@@ -20,6 +29,7 @@ type inst =
   | Eq             (** [ v1 v2   -- v1=v2 ] *)
   | IfThenElse     (** [ b c1 c2 -- v     ] *)
 
+(** Instruction sequences *)
 and code =
   inst list
 
@@ -27,7 +37,7 @@ and code =
 (** {1 Pretty printing} *)
 
 let rec pp_inst fmt = function
-  | Int i -> Format.fprintf fmt "int %d" i
+  | Int i -> Format.fprintf fmt "int %i" i
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
   | Code [] -> Format.fprintf fmt "[]"
@@ -39,6 +49,9 @@ let rec pp_inst fmt = function
   | Div -> Format.fprintf fmt "div"
   | Eq -> Format.fprintf fmt "eq"
   | IfThenElse -> Format.fprintf fmt "if"
+  | Access n -> Format.fprintf fmt "access %i" n
+  | BeginLet -> Format.fprintf fmt "begin-let"
+  | EndLet -> Format.fprintf fmt "end-let"
 and pp_code fmt = function
   | [] -> ()
   | inst :: [] -> Format.fprintf fmt "%a;" pp_inst inst
@@ -53,28 +66,34 @@ module Semantics = struct
     | Bool of bool
     | Code of code
 
-  type stack =
-    value list
+  type env = value list
+  type stack = value list
 
-  let step : code * stack -> code * stack = function
-    | Int i       :: code,                                stack -> code, Int i          :: stack
-    | Bool b      :: code,                                stack -> code, Bool b         :: stack
-    | Code c      :: code,                                stack -> code, Code c         :: stack
-    | Neg         :: code, Int i ::                       stack -> code, Int (-i)       :: stack
-    | Add         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 + i2)  :: stack
-    | Sub         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 - i2)  :: stack
-    | Mul         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 * i2)  :: stack
-    | Div         :: code, Int i2 :: Int i1 ::            stack -> code, Int (i1 / i2)  :: stack
-    | Eq          :: code, v2 :: v1 ::                    stack -> code, Bool (v1 = v2) :: stack
-    | IfThenElse  :: code, _ :: Code c1 :: Bool true  ::  stack -> c1 @ code,              stack
-    | IfThenElse  :: code, Code c2 :: _ :: Bool false ::  stack -> c2 @ code,              stack
-    | _, _ -> failwith "invalid code"
+  let step : code * env * stack -> code * env * stack = function
+    | Access n :: code,   env,      stack                                -> code,       env,      List.nth env n :: stack
+    | BeginLet :: code,   env,      v :: stack                           -> code,       v :: env, stack
+    | EndLet :: code,     _ :: env, stack                                -> code,       env,      stack
 
-  let rec eval ?(stack = []) = function
+    | Int i :: code,      env,      stack                                -> code,       env,      Int i :: stack
+    | Bool b :: code,     env,      stack                                -> code,       env,      Bool b :: stack
+    | Code c :: code,     env,      stack                                -> code,       env,      Code c :: stack
+
+    | Neg :: code,        env,      Int i :: stack                       -> code,       env,      Int (-i) :: stack
+    | Add :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 + i2) :: stack
+    | Sub :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 - i2) :: stack
+    | Mul :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 * i2) :: stack
+    | Div :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 / i2) :: stack
+    | Eq :: code,         env,      v2 :: v1 :: stack                    -> code,       env,      Bool (v1 = v2) :: stack
+    | IfThenElse :: code, env,      _ :: Code c1 :: Bool true  ::  stack -> c1 @ code,  env,      stack
+    | IfThenElse :: code, env,      Code c2 :: _ :: Bool false ::  stack -> c2 @ code,  env,      stack
+
+    | _, _, _ -> failwith "invalid code"
+
+  let rec eval ?(env = []) ?(stack = []) = function
     | [] -> stack
     | code ->
-        let code, stack = step (code, stack) in
-        eval code ~stack
+        let code, env, stack = step (code, env, stack) in
+        eval code ~env ~stack
 
   let rec quote : stack -> code = function
     | [] -> []

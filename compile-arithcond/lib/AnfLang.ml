@@ -41,15 +41,15 @@ let atom a = Atom a
 (** {1 Pretty printing} *)
 
 let rec pp_expr fmt = function
-  | Let (id, c, e) ->
-      let name = Format.sprintf "e%i" id in
+  | Let (n, c, e) ->
+      let n = Format.sprintf "e%i" n in
       begin match c with
       | IfThenElse _ ->
-          Format.fprintf fmt "@[<v 2>@[let@ %s@ :=@]@ @[<v>%a@];@]@ %a" name
+          Format.fprintf fmt "@[<v 2>@[let@ %s@ :=@]@ @[<v>%a@];@]@ %a" n
             pp_comp c
             pp_expr e
       | c ->
-          Format.fprintf fmt "@[<2>@[let@ %s@ :=@]@ @[%a@];@]@ %a" name
+          Format.fprintf fmt "@[<2>@[let@ %s@ :=@]@ %a;@]@ %a" n
             pp_comp c
             pp_expr e
       end
@@ -72,8 +72,8 @@ and pp_comp fmt = function
         pp_expr e1
         pp_expr e2
 and pp_atom fmt = function
-  | Var id -> Format.fprintf fmt "e%i" id
-  | Int i -> Format.fprintf fmt "%d" i
+  | Var n -> Format.fprintf fmt "e%i" n
+  | Int i -> Format.pp_print_int fmt i
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
 
@@ -105,7 +105,7 @@ module Semantics = struct
 
   let rec eval ?(env = Env.empty) : expr -> value =
     function
-    | Let (id, c, e) -> eval ~env:(Env.add id (eval_comp ~env c) env) e
+    | Let (n, c, e) -> eval ~env:(Env.add n (eval_comp ~env c) env) e
     | Comp c -> eval_comp ~env c
   and eval_comp ?(env = Env.empty) : comp -> value =
     function

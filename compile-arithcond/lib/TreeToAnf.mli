@@ -20,8 +20,12 @@ module Env : sig
   val bind : 'a t -> ('a -> 'b t) -> 'b t
 
 
+  (** An environment for mapping bindings in the tree language to atomic
+      expressions in the ANF language. *)
+  type env = AnfLang.atom list
+
   (** The type of the continuation *)
-  type 'a cont = 'a -> AnfLang.expr
+  type 'a cont = env -> 'a -> AnfLang.expr
 
   (** Construct a continuation-passing computation from a function *)
   val embed : 'a cont cont -> 'a t
@@ -29,6 +33,12 @@ module Env : sig
   (** Run a continuation-passing computation with a final continuation,
       returning the result. This is the inverse of {!embed}. *)
   val run : 'a t -> 'a cont cont
+
+  (** Access the current environment *)
+  val get_env : env t
+
+  (** Get the atom bound for the given variable in the tree language *)
+  val get_var : TreeLang.index -> AnfLang.atom t
 
 
   (** Translate from an arithmetic expression to a computation that constructs

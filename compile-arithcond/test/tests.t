@@ -141,6 +141,102 @@ If expressions
   $ cat test-if | arithcond exec --anf
   15 : Int
 
+Simple let expressions
+  $ cat >test-let-simple <<< "let x := 3; x * 4"
+  $ cat test-let-simple | arithcond compile --stack
+  int 3;
+  begin-let;
+  access 0;
+  int 4;
+  mul;
+  end-let;
+  $ cat test-let-simple | arithcond compile --anf
+  mul 3 4
+  $ cat test-let-simple | arithcond exec --tree
+  12 : Int
+  $ cat test-let-simple | arithcond exec --stack
+  int 12;
+  $ cat test-let-simple | arithcond exec --anf
+  12 : Int
+
+Let expressions
+  $ cat >test-let <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
+  $ cat test-let | arithcond compile --stack
+  int 3;
+  int 4;
+  mul;
+  begin-let;
+  access 0;
+  int 5;
+  eq;
+  code [ int 3; access 0; add; begin-let; int 8; access 0; int 4; div; sub;
+       end-let; ];
+  code [ access 0; int 8; add; ];
+  if;
+  end-let;
+  $ cat test-let | arithcond compile --anf
+  let e0 := mul 3 4;
+  let e1 := eq e0 5;
+  if e1 then
+    let e2 := add 3 e0;
+    let e3 := div e2 4;
+    sub 8 e3
+  else
+    add e0 8
+  $ cat test-let | arithcond exec --tree
+  20 : Int
+  $ cat test-let | arithcond exec --stack
+  int 20;
+  $ cat test-let | arithcond exec --anf
+  20 : Int
+
+Wierd binding
+  $ cat >test-weird-let-if <<< "let q := true; if (let d := false; false) then q else q"
+  $ cat test-weird-let-if | arithcond compile --stack
+  true;
+  begin-let;
+  false;
+  begin-let;
+  false;
+  end-let;
+  code [ access 0; ];
+  code [ access 0; ];
+  if;
+  end-let;
+  $ cat test-weird-let-if | arithcond compile --anf
+  if false then
+    true
+  else
+    true
+  $ cat test-weird-let-if | arithcond exec --tree
+  true : Bool
+  $ cat test-weird-let-if | arithcond exec --stack
+  true;
+  $ cat test-weird-let-if | arithcond exec --anf
+  true : Bool
+
+Weird arithmetic bindings
+  $ cat >test-weird-let-arith <<< "let j := 0; (let b := 1; b) - j"
+  $ cat test-weird-let-arith | arithcond compile --stack
+  int 0;
+  begin-let;
+  int 1;
+  begin-let;
+  access 0;
+  end-let;
+  access 0;
+  sub;
+  end-let;
+  $ cat test-weird-let-arith | arithcond compile --anf
+  sub 1 0
+  $ cat test-weird-let-arith | arithcond exec --tree
+  1 : Int
+  $ cat test-weird-let-arith | arithcond exec --stack
+  int 1;
+  $ cat test-weird-let-arith | arithcond exec --anf
+  1 : Int
+
+
 Something broken
   $ arithcond compile --stack <<< "1 + 2 + (3 +"
   <input>:1:13: syntax error
@@ -198,5 +294,15 @@ Mismatched if condition
 
 Mismatched if branches
   $ arithcond exec <<< "if 3 = 4 then true else 4"
+  error: mismatched types: expected Bool, found Int
+  [1]
+
+Unbound variable
+  $ arithcond exec <<< "x"
+  <input>:1:2: unbound name `x`
+  [1]
+
+Mismatched let definition
+  $ arithcond exec <<< "let x := 3; true = x"
   error: mismatched types: expected Bool, found Int
   [1]

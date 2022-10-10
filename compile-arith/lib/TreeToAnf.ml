@@ -12,8 +12,11 @@ module Env = struct
 
   type 'a t = 'a cont cont
 
-  let pure x = fun cont -> cont x
-  let bind x f = fun cont -> x (fun x -> f x cont)
+  let pure (x : 'a) : 'a t =
+    fun cont -> cont x
+
+  let bind (x : 'a t) (f : 'a -> 'b t) : 'b t =
+    fun cont -> x (fun x -> f x cont)
 
   let embed = fun cont -> cont
   let run x = fun cont -> x cont
@@ -24,14 +27,15 @@ module Env = struct
   type source = TreeLang.expr
   type target = AnfLang.comp t
 
+  (* TODO: Move fresh variable generation into monad *)
+
   (** Generate a fresh variable id *)
   let fresh_id : unit -> AnfLang.id =
-    (* TODO: Add this to the monad *)
     let next_id = ref 0 in
     fun () ->
-      let id = !next_id in
+      let n = !next_id in
       incr next_id;
-      id
+      n
 
   let (let*) = bind
 

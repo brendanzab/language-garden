@@ -4,19 +4,35 @@ type target = AnfLang.expr
 
 module Env = struct
 
-  (* Continuation monad *)
+  (* Reader + Continuation monad *)
 
   (* TODO: Add fresh variable state to environment *)
 
-  type 'a cont = 'a -> AnfLang.expr
+  type env = AnfLang.atom list
+
+  type 'a cont = env -> 'a -> AnfLang.expr
 
   type 'a t = 'a cont cont
 
-  let pure x = fun cont -> cont x
-  let bind x f = fun cont -> x (fun x -> f x cont)
+  let pure (x : 'a) : 'a t =
+    fun env cont -> cont env x
 
-  let embed = fun cont -> cont
-  let run x = fun cont -> x cont
+  let bind (x : 'a t) (f : 'a -> 'b t) : 'b t =
+    fun env cont ->
+      x env (fun _ x -> f x env cont)
+
+
+  let embed : 'a cont cont -> 'a t = Fun.id
+  let run : 'a t -> 'a cont cont = Fun.id
+
+  let scope_env (f : env -> env) (x : 'a t) : 'a t=
+    fun env cont -> x (f env) cont
+
+  let get_env : env t =
+    fun env cont -> cont env env
+
+  let get_var (n : TreeLang.index) : AnfLang.atom t =
+    fun env cont -> cont env (List.nth env n)
 
 
   (* ANF Translation *)
@@ -24,19 +40,26 @@ module Env = struct
   type source = TreeLang.expr
   type target = AnfLang.comp t
 
+  (* TODO: Move fresh variable generation into monad *)
+
   (** Generate a fresh variable id *)
   let fresh_id : unit -> AnfLang.id =
-    (* TODO: Add this to the monad *)
     let next_id = ref 0 in
     fun () ->
-      let id = !next_id in
+      let n = !next_id in
       incr next_id;
-      id
+      n
 
   let (let*) = bind
 
   let rec translate (e : TreeLang.expr) : AnfLang.comp t =
     match e with
+    | TreeLang.Var n ->
+        let* e = get_var n in
+        pure (AnfLang.Atom e)
+    | TreeLang.Let (_, e1, e2) ->
+        let* e1 = translate_name e1 in
+        scope_env (fun env -> e1 :: env) (translate e2)
     | TreeLang.Int i ->
         pure (AnfLang.Atom (AnfLang.Int i))
     | TreeLang.Bool i ->
@@ -65,11 +88,12 @@ module Env = struct
         let* e2 = translate_name e2 in
         pure (AnfLang.Eq (e1, e2))
     | TreeLang.IfThenElse (e1, e2, e3) ->
-        let* a = translate_name e1 in
+        let* e1 = translate_name e1 in
+        let* env = get_env in
         (* TODO: Join points? *)
-        let e2 = translate e2 AnfLang.comp in
-        let e3 = translate e3 AnfLang.comp in
-        pure (AnfLang.IfThenElse (a, e2, e3))
+        let e2 = translate e2 env (Fun.const AnfLang.comp) in
+        let e3 = translate e3 env (Fun.const AnfLang.comp) in
+        pure (AnfLang.IfThenElse (e1, e2, e3))
 
   (** Translate an expression to ANF, binding the resulting computation to an
       intermediate definition (so long as it’s not an atomic computation). *)
@@ -79,12 +103,12 @@ module Env = struct
     (* Don't bother binding definitions for atomic computations *)
     | AnfLang.Atom a -> pure a
     (* Bind definitions for non-atomic computations *)
-    | e -> fun cont ->
+    | e -> fun env cont ->
         let n = fresh_id () in
-        AnfLang.Let (n, e, cont (AnfLang.Var n))
+        AnfLang.Let (n, e, cont env (AnfLang.Var n))
 
 end
 
 
 let translate (e : TreeLang.expr) : AnfLang.expr =
-  Env.run (Env.translate e) AnfLang.comp
+  Env.run (Env.translate e) [] (Fun.const AnfLang.comp)

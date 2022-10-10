@@ -71,14 +71,19 @@ let parse_expr filename in_channel =
       let pos = Lexing.lexeme_start_p lexbuf in
       print_error pos "unexpected character";
       exit 1
+  | TreeLang.UnboundName n ->
+      (* FIXME: Incorrect position *)
+      let pos = Lexing.lexeme_start_p lexbuf in
+      print_error pos (Format.sprintf "unbound name `%s`" n);
+      exit 1
   | TreeLang.Parser.Error ->
       let pos = Lexing.lexeme_start_p lexbuf in
       print_error pos "syntax error";
       exit 1
 
-let synth_expr e =
+let synth_expr ctx e =
   try
-    TreeLang.Validation.synth e
+    TreeLang.Validation.synth ctx e
   with
   | TreeLang.Validation.Error message ->
       Printf.eprintf "error: %s" message;
@@ -93,7 +98,7 @@ let main () =
 
   let args = parse_args (Array.to_list Sys.argv) in
   let e = parse_expr "<input>" stdin in
-  let t = synth_expr e in
+  let t = synth_expr [] e in
 
   match args with
     | Compile `Stack ->
@@ -104,7 +109,7 @@ let main () =
         Format.printf "@[<v>%a@]" AnfLang.pp_expr e
     | Exec `Tree ->
         Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-          TreeLang.pp_expr (TreeLang.Semantics.normalise e)
+          (TreeLang.pp_expr []) (TreeLang.Semantics.normalise [] e)
           TreeLang.pp_ty t
     | Exec `Stack ->
         let c = TreeToStack.translate e in
