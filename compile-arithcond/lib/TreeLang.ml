@@ -6,6 +6,7 @@
 
 (** {1 Syntax of arithmetic expressions} *)
 
+(** Expressions *)
 type expr =
   | Int of int
   | Bool of bool
@@ -17,11 +18,12 @@ type expr =
   | Eq of expr * expr
   | IfThenElse of expr * expr * expr
 
-
+(** Types *)
 type ty =
   | TyInt
   | TyBool
 
+(** {2 Constructor functions} *)
 
 let int n = Int n
 let bool b = Bool b

@@ -67,8 +67,8 @@ module Env = struct
     | TreeLang.IfThenElse (e1, e2, e3) ->
         let* a = translate_name e1 in
         (* TODO: Join points? *)
-        let e2 = translate e2 (fun c -> AnfLang.Comp c) in
-        let e3 = translate e3 (fun c -> AnfLang.Comp c) in
+        let e2 = translate e2 AnfLang.comp in
+        let e3 = translate e3 AnfLang.comp in
         pure (AnfLang.IfThenElse (a, e2, e3))
 
   (** Translate an expression to ANF, binding the resulting computation to an
@@ -87,4 +87,4 @@ end
 
 
 let translate (e : TreeLang.expr) : AnfLang.expr =
-  Env.run (Env.translate e) (fun c -> AnfLang.Comp c)
+  Env.run (Env.translate e) AnfLang.comp

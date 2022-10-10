@@ -32,6 +32,11 @@ and atom =
   | Int of int
   | Bool of bool
 
+(** {2 Constructor functions} *)
+
+let comp c = Comp c
+let atom a = Atom a
+
 
 (** {1 Pretty printing} *)
 

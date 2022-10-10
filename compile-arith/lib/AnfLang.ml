@@ -30,6 +30,11 @@ and atom =
   | Var of id
   | Int of int
 
+(** {2 Constructor functions} *)
+
+let comp c = Comp c
+let atom a = Atom a
+
 
 (** {1 Pretty printing} *)
 

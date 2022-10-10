@@ -75,4 +75,4 @@ end
 
 
 let translate (e : TreeLang.expr) : AnfLang.expr =
-  Env.run (Env.translate e) (fun c -> AnfLang.Comp c)
+  Env.run (Env.translate e) AnfLang.comp

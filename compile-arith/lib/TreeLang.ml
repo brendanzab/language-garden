@@ -6,6 +6,7 @@
 
 (** {1 Syntax of arithmetic expressions} *)
 
+(** Expressions *)
 type expr =
   | Int of int
   | Neg of expr
@@ -14,6 +15,7 @@ type expr =
   | Mul of expr * expr
   | Div of expr * expr
 
+(** {2 Constructor functions} *)
 
 let int i = Int i
 let neg e = Neg e
