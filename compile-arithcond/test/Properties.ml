@@ -26,8 +26,7 @@ let gen_name : string QCheck.Gen.t =
     char_range 'A' 'Z';
   ] in
   let continue = oneof [
-    pure '-';
-    pure '_';
+    oneofl ['-'; '_'];
     char_range 'a' 'z';
     char_range 'A' 'Z';
     char_range '0' '9';
@@ -48,9 +47,9 @@ let gen_ty : TreeLang.ty QCheck.Gen.t =
 let gen_expr_untyped : TreeLang.expr QCheck.Gen.t =
   let open QCheck.Gen in
 
-  let var_freqs = function
-    | size when size <= 0 -> []
-    | size -> [1, map TreeLang.var (int_range 0 (size - 1))]
+  let var_freqs size =
+    if size <= 0 then [] else
+      [1, map TreeLang.var (int_range 0 (size - 1))]
   in
   let gen_lit = oneof [
     map TreeLang.int big_nat;
@@ -78,45 +77,45 @@ let gen_expr_untyped : TreeLang.expr QCheck.Gen.t =
 (** An environment for generating well-typed terms *)
 module Env = struct
 
-  module StringMap = Map.Make (String)
-  module StringSet = Set.Make (String)
+  module NameMap = Map.Make (String)
+  module NameSet = Set.Make (String)
+  module TypeMap = Map.Make (struct
+    type t = TreeLang.ty
+    let compare = compare
+  end)
 
   type t = {
     size : int;                     (** Total number of bindings in scope *)
-
-    (* NOTE: These will need to be changed if the types become more complicated *)
-    int_names : StringSet.t;        (** Integers currently in scope *)
-    int_levels : int StringMap.t;   (** The levels of integers in scope *)
-    bool_names : StringSet.t;       (** Booleans currently in scope *)
-    bool_levels : int StringMap.t;  (** The levels of booleans in scope *)
+    name_levels : int NameMap.t;    (** Mappings from names to levels *)
+    ty_names : NameSet.t TypeMap.t; (** Mappings from types to name sets *)
   }
 
+  (** Empty environment *)
   let empty = {
     size = 0;
-    int_names = StringSet.empty;
-    int_levels = StringMap.empty;
-    bool_names = StringSet.empty;
-    bool_levels = StringMap.empty;
+    name_levels = NameMap.empty;
+    ty_names = TypeMap.empty;
   }
 
   (** Add a new binding to the environment *)
-  let add env name = function
-    | TreeLang.TyInt ->
-        {
-          size = env.size + 1;
-          int_names = StringSet.add name env.int_names;
-          int_levels = StringMap.add name env.size env.int_levels;
-          bool_names = StringSet.remove name env.bool_names;
-          bool_levels = StringMap.remove name env.bool_levels;
-        }
-    | TreeLang.TyBool ->
-        {
-          size = env.size + 1;
-          int_names = StringSet.remove name env.int_names;
-          int_levels = StringMap.remove name env.int_levels;
-          bool_names = StringSet.add name env.bool_names;
-          bool_levels = StringMap.add name env.size env.bool_levels;
-        }
+  let add env n t = {
+    size = env.size + 1;
+    name_levels = NameMap.add n env.size env.name_levels;
+    ty_names =
+      let ty_names =
+        (* Remove shadowed bindings *)
+        if NameMap.mem n env.name_levels then
+          env.ty_names |> TypeMap.filter_map (fun _ names ->
+            let names = NameSet.remove n names in
+            if NameSet.is_empty names then None else Some names)
+        else
+          (* Fast path, if the name was not bound *)
+          env.ty_names
+      in
+      ty_names |> TypeMap.update t (function
+        | Some names -> Some (NameSet.add n names)
+        | None -> Some (NameSet.singleton n));
+  }
 
   (** Create a variable at the given scope *)
   let var env level =
@@ -126,14 +125,10 @@ module Env = struct
       variable of that type is bound in the environment. *)
   let gen_var env t =
     let open QCheck.Gen in
-    match t with
-    | TreeLang.TyInt when StringSet.cardinal env.int_names > 0 ->
-        Some (let+ n = oneofl (StringSet.elements env.int_names) in
-          var env (StringMap.find n env.int_levels))
-    | TreeLang.TyBool when StringSet.cardinal env.bool_names > 0 ->
-        Some (let+ n = oneofl (StringSet.elements env.bool_names) in
-          var env (StringMap.find n env.bool_levels))
-    | _ -> None
+    TypeMap.find_opt t env.ty_names
+      |> Option.map (fun names ->
+        let+ n = delay (fun () -> oneofl (NameSet.elements names)) in
+        var env (NameMap.find n env.name_levels))
 
 end
 
@@ -151,7 +146,7 @@ let gen_expr gen_ty : TreeLang.expr QCheck.Gen.t =
     let* def_ty = gen_ty in
     TreeLang.let_ def_name
       <$> self (env, def_ty, n/2)
-      <*> self (Env.add env def_name def_ty, ty, n/2)
+      <*> delay (fun () -> self (Env.add env def_name def_ty, ty, n/2))
   in
   let gen_if self (env, ty, n) =
     TreeLang.if_then_else
@@ -203,13 +198,14 @@ let shrink_name n =
       String.length n > 0 && not (is_keyword n))
 
 let rec shrink_expr =
-  (* TODO: type-directed shrinking *)
+  (* TODO: bidirectional, type-directed shrinking *)
   QCheck.Iter.(function
   | TreeLang.Var _ -> QCheck.Iter.empty
   | TreeLang.Let (n, e1, e2) ->
       (* don't shrink to the body - it depends on the definition *)
       (* FIXME: shrinking can result in ill-typed expressions because the
          definition might not have the same type as the body *)
+      (* TODO: shrink to the body if the var is not bound in the term *)
       (* TODO: shrink the body by substituting the definition into the body *)
       QCheck.Iter.of_list [e1]
         <+> (let+ n' = shrink_name n in TreeLang.let_ n' e1 e2)
