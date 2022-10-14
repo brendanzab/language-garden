@@ -1,3 +1,5 @@
+(** {0 Compiler CLI} *)
+
 module TreeLang = ArithCond.TreeLang
 module StackLang = ArithCond.StackLang
 module AnfLang = ArithCond.AnfLang
@@ -5,53 +7,7 @@ module TreeToStack = ArithCond.TreeToStack
 module TreeToAnf = ArithCond.TreeToAnf
 
 
-(** CLI options *)
-
-let usage out_channel program =
-  Printf.fprintf out_channel "USAGE:\n";
-  Printf.fprintf out_channel "    %s compile [--stack | --anf]\n" program;
-  Printf.fprintf out_channel "    %s exec [--tree | --stack | --anf]\n" program;
-  Printf.fprintf out_channel "    %s --help | -h\n" program
-
-let exit_usage_error program =
-  Printf.eprintf "error: unexpected CLI arguments\n";
-  usage stderr program;
-  exit 1
-
-let exit_usage_help program =
-  usage stdout program;
-  exit 0
-
-
-(** CLI option parsing *)
-
-type command =
-  | Compile of [`Stack | `Anf]
-  | Exec of [`Tree | `Stack | `Anf]
-
-let parse_compile_flags program = function
-  | ["--stack"] -> `Stack
-  | ["--anf"] -> `Anf
-  | _ -> exit_usage_error program
-
-let parse_exec_flags program = function
-  | ["--tree"] -> `Tree
-  | ["--stack"] | [] -> `Stack
-  | ["--anf"] -> `Anf
-  | _ -> exit_usage_error program
-
-let parse_command program = function
-  | "compile" :: args -> Compile (parse_compile_flags program args)
-  | "exec" :: args -> Exec (parse_exec_flags program args)
-  | ["--help" | "-h"] -> exit_usage_help program
-  | _ -> exit_usage_error program
-
-let parse_args = function
-  | program :: args -> parse_command (Filename.basename program) args
-  | [] -> exit_usage_error "main"
-
-
-(** Helper functions *)
+(** {1 Helper functions} *)
 
 let print_error (pos : Lexing.position) message =
   Printf.eprintf "%s:%d:%d: %s\n"
@@ -91,35 +47,78 @@ let synth_expr ctx e =
 
 
 
-(** Main entrypoint *)
+(** {1 Subcommands} *)
 
-let main () =
+type compile_target = [`Stack | `Anf]
+
+type exec_target = [`Tree | `Stack | `Anf]
+
+let compile : compile_target -> unit =
+  function
+  | `Stack ->
+      let e = parse_expr "<input>" stdin in
+      let _ = synth_expr [] e in
+      let c = TreeToStack.translate e in
+      Format.printf "@[<v>%a@]" StackLang.pp_code c
+  | `Anf ->
+      let e = parse_expr "<input>" stdin in
+      let _ = synth_expr [] e in
+      let e = TreeToAnf.translate e in
+      Format.printf "@[<v>%a@]" AnfLang.pp_expr e
+
+let exec : exec_target -> unit =
+  function
+  | `Tree ->
+      let e = parse_expr "<input>" stdin in
+      let t = synth_expr [] e in
+      Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
+        (TreeLang.pp_expr []) TreeLang.Semantics.(normalise [] e)
+        TreeLang.pp_ty t
+  | `Stack ->
+      let e = parse_expr "<input>" stdin in
+      let _ = synth_expr [] e in
+      let c = TreeToStack.translate e in
+      Format.printf "@[%a@]"
+        StackLang.pp_code StackLang.Semantics.(normalise (c, [], []))
+  | `Anf ->
+      let e = parse_expr "<input>" stdin in
+      let t = synth_expr [] e in
+      let e = TreeToAnf.translate e in
+      Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
+        AnfLang.pp_expr AnfLang.Semantics.(normalise Env.empty e)
+        TreeLang.pp_ty t
+
+
+(** {1 CLI options} *)
+
+let cmd =
+  let open Cmdliner in
+
+  let compile_target : compile_target Term.t =
+    Arg.(required
+      & opt (some & enum ["stack", `Stack; "anf", `Anf]) None
+      & info ["target"] ~docv:"TARGET"
+          ~doc:"The target language to compile to. The value of $(docv) must \
+                be one of $(b,stack) or $(b,anf).")
+
+  and exec_target : exec_target Term.t =
+    Arg.(value
+      & opt (enum ["tree", `Tree; "stack", `Stack; "anf", `Anf]) `Stack
+      & info ["target"] ~docv:"TARGET"
+          ~doc:"The language to use when interpreting expressions. The value \
+                of $(docv) must be one of $(b,tree), $(b,stack) or $(b,anf).")
+  in
+
+  Cmd.group (Cmd.info "arithcond") [
+    Cmd.v (Cmd.info "compile" ~doc:"compile an arithmetic expression")
+      Term.(const compile $ compile_target);
+    Cmd.v (Cmd.info "exec" ~doc:"run an arithmetic expression")
+      Term.(const exec $ exec_target);
+  ]
+
+
+(** {1 Main entrypoint} *)
+
+let () =
   Printexc.record_backtrace true;
-
-  let args = parse_args (Array.to_list Sys.argv) in
-  let e = parse_expr "<input>" stdin in
-  let t = synth_expr [] e in
-
-  match args with
-    | Compile `Stack ->
-        let c = TreeToStack.translate e in
-        Format.printf "@[<v>%a@]" StackLang.pp_code c
-    | Compile `Anf ->
-        let e = TreeToAnf.translate e in
-        Format.printf "@[<v>%a@]" AnfLang.pp_expr e
-    | Exec `Tree ->
-        Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-          (TreeLang.pp_expr []) TreeLang.Semantics.(normalise [] e)
-          TreeLang.pp_ty t
-    | Exec `Stack ->
-        let c = TreeToStack.translate e in
-        Format.printf "@[%a@]"
-          StackLang.pp_code StackLang.Semantics.(normalise (c, [], []))
-    | Exec `Anf ->
-        let e = TreeToAnf.translate e in
-        Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-          AnfLang.pp_expr AnfLang.Semantics.(normalise Env.empty e)
-          TreeLang.pp_ty t
-
-
-let () = main ()
+  exit (Cmdliner.Cmd.eval cmd)

@@ -19,6 +19,7 @@
   (depends
     (menhir :build)
     (alcotest (and (>= 1.5.0) :with-test))
+    (cmdliner (and (>= v1.1.1) :with-test))
     (qcheck (and (>= 0.19.1) :with-test))
     (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
@@ -28,6 +29,7 @@
   (depends
     (menhir :build)
     (alcotest (and (>= 1.5.0) :with-test))
+    (cmdliner (and (>= v1.1.1) :with-test))
     (qcheck (and (>= 0.19.1) :with-test))
     (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))

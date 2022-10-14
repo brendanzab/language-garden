@@ -15,7 +15,7 @@ The compiler targets the following languages:
   [Java bytecode]:
 
   ```command
-  $ arithcond compile --stack <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
+  $ arithcond compile --target=stack <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
   int 3;
   int 4;
   mul;
@@ -36,7 +36,7 @@ The compiler targets the following languages:
   the [three-address code] found in many optimising compilers.
 
   ```command
-  $ arithcond compile --anf <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
+  $ arithcond compile --target=anf <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
   let e0 := mul 3 4;
   let e1 := eq e0 5;
   if e1 then

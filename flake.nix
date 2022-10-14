@@ -50,6 +50,7 @@
             # TODO: Make test dependencies optional
             buildInputs = [
               ocamlPackages.alcotest
+              ocamlPackages.cmdliner
               ocamlPackages.qcheck
               ocamlPackages.qcheck-core
               ocamlPackages.qcheck-alcotest
@@ -69,6 +70,7 @@
             # TODO: Make test dependencies optional
             buildInputs = [
               ocamlPackages.alcotest
+              ocamlPackages.cmdliner
               ocamlPackages.qcheck
               ocamlPackages.qcheck-core
               ocamlPackages.qcheck-alcotest

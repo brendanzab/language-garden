@@ -2,4 +2,6 @@
   (name Main)
   (public_name arith)
   (package compile-arith)
-  (libraries compile-arith))
+  (libraries
+    cmdliner
+    compile-arith))

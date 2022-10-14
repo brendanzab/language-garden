@@ -14,7 +14,7 @@ The compiler targets the following languages:
   [Java bytecode]:
 
   ```command
-  $ arith compile --stack <<< "1 + -2 * 7"
+  $ arith compile --target=stack <<< "1 + -2 * 7"
   int 1;
   int 2;
   neg;
@@ -29,7 +29,7 @@ The compiler targets the following languages:
   the [three-address code] found in many optimising compilers.
 
   ```command
-  $ arith compile --anf <<< "1 + -2 * 7"
+  $ arith compile --target=anf <<< "1 + -2 * 7"
   let e0 := neg 2;
   let e1 := mul e0 7;
   add 1 e1

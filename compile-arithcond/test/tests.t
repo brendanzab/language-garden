@@ -1,78 +1,90 @@
+Usage
+  $ arithcond
+  arithcond: required COMMAND name is missing, must be either 'compile' or 'exec'.
+  Usage: arithcond COMMAND …
+  Try 'arithcond --help' for more information.
+  [124]
+  $ arithcond compile
+  arithcond: required option --target is missing
+  Usage: arithcond compile [--target=TARGET] [OPTION]…
+  Try 'arithcond compile --help' or 'arithcond --help' for more information.
+  [124]
+
 A number
   $ cat >test-int <<< "1"
-  $ cat test-int | arithcond compile --stack
+  $ cat test-int | arithcond compile --target=stack
   int 1;
-  $ cat test-int | arithcond exec --tree
+  $ cat test-int | arithcond exec --target=tree
   1 : Int
-  $ cat test-int | arithcond exec --stack
+  $ cat test-int | arithcond exec --target=stack
   int 1;
 
 A boolean
   $ cat >test-int <<< "true"
-  $ cat test-int | arithcond compile --stack
+  $ cat test-int | arithcond compile --target=stack
   true;
-  $ cat test-int | arithcond exec --tree
+  $ cat test-int | arithcond exec --target=tree
   true : Bool
-  $ cat test-int | arithcond exec --stack
+  $ cat test-int | arithcond exec --target=stack
   true;
 
 Negating numbers
   $ cat >test-neg <<< "-32"
-  $ cat test-neg | arithcond compile --stack
+  $ cat test-neg | arithcond compile --target=stack
   int 32;
   neg;
-  $ cat test-neg | arithcond exec --tree
+  $ cat test-neg | arithcond exec --target=tree
   -32 : Int
-  $ cat test-neg | arithcond exec --stack
+  $ cat test-neg | arithcond exec --target=stack
   int -32;
 
 Adding numbers
   $ cat >test-add <<< "1 + 2"
-  $ cat test-add | arithcond compile --stack
+  $ cat test-add | arithcond compile --target=stack
   int 1;
   int 2;
   add;
-  $ cat test-add | arithcond exec --tree
+  $ cat test-add | arithcond exec --target=tree
   3 : Int
-  $ cat test-add | arithcond exec --stack
+  $ cat test-add | arithcond exec --target=stack
   int 3;
 
 Subtracting numbers
   $ cat >test-sub <<< "1 - 2"
-  $ cat test-sub | arithcond compile --stack
+  $ cat test-sub | arithcond compile --target=stack
   int 1;
   int 2;
   sub;
-  $ cat test-sub | arithcond exec --tree
+  $ cat test-sub | arithcond exec --target=tree
   -1 : Int
-  $ cat test-sub | arithcond exec --stack
+  $ cat test-sub | arithcond exec --target=stack
   int -1;
 
 Multiplying numbers
   $ cat >test-mul <<< "1 * 2"
-  $ cat test-mul | arithcond compile --stack
+  $ cat test-mul | arithcond compile --target=stack
   int 1;
   int 2;
   mul;
-  $ cat test-mul | arithcond exec --tree
+  $ cat test-mul | arithcond exec --target=tree
   2 : Int
-  $ cat test-mul | arithcond exec --stack
+  $ cat test-mul | arithcond exec --target=stack
   int 2;
 
 Dividing numbers
   $ cat >test-div <<< "1 / 2"
-  $ cat test-div | arithcond compile --stack
+  $ cat test-div | arithcond compile --target=stack
   int 1;
   int 2;
   div;
-  $ cat test-div | arithcond exec --tree
+  $ cat test-div | arithcond exec --target=tree
   0 : Int
-  $ cat test-div | arithcond exec --stack
+  $ cat test-div | arithcond exec --target=stack
   int 0;
 
 Complicated stuff
   $ cat >test-complicated <<< "1 * -2 + (3 + 4) - 8 / 4"
-  $ cat test-complicated | arithcond compile --stack
+  $ cat test-complicated | arithcond compile --target=stack
   int 1;
   int 2;
   neg;
@@ -85,20 +97,20 @@ Complicated stuff
   div;
   sub;
   add;
-  $ cat test-complicated | arithcond compile --anf
+  $ cat test-complicated | arithcond compile --target=anf
   let e0 := neg 2;
   let e1 := mul 1 e0;
   let e2 := add 3 4;
   let e3 := div 8 4;
   let e4 := sub e2 e3;
   add e1 e4
-  $ cat test-complicated | arithcond exec --tree
+  $ cat test-complicated | arithcond exec --target=tree
   3 : Int
-  $ cat test-complicated | arithcond exec --stack
+  $ cat test-complicated | arithcond exec --target=stack
   int 3;
 
 If expressions
-  $ arithcond compile --anf <<< "(if 3 = 4 then 3 else 7) + 1"
+  $ arithcond compile --target=anf <<< "(if 3 = 4 then 3 else 7) + 1"
   let e0 := eq 3 4;
   let e1 :=
     if e0 then
@@ -106,12 +118,12 @@ If expressions
     else
       7;
   add e1 1
-  $ arithcond exec --anf <<< "(if false then 0 else 0) + 1"
+  $ arithcond exec --target=anf <<< "(if false then 0 else 0) + 1"
   1 : Int
 
 If expressions
   $ cat >test-if <<< "if 1 * -2 = 3 * 4 then (3 + 4) - 8 / 4 else 7 + 8"
-  $ cat test-if | arithcond compile --stack
+  $ cat test-if | arithcond compile --target=stack
   int 1;
   int 2;
   neg;
@@ -123,7 +135,7 @@ If expressions
   code [ int 3; int 4; add; int 8; int 4; div; sub; ];
   code [ int 7; int 8; add; ];
   if;
-  $ cat test-if | arithcond compile --anf
+  $ cat test-if | arithcond compile --target=anf
   let e0 := neg 2;
   let e1 := mul 1 e0;
   let e2 := mul 3 4;
@@ -134,34 +146,34 @@ If expressions
     sub e4 e5
   else
     add 7 8
-  $ cat test-if | arithcond exec --tree
+  $ cat test-if | arithcond exec --target=tree
   15 : Int
-  $ cat test-if | arithcond exec --stack
+  $ cat test-if | arithcond exec --target=stack
   int 15;
-  $ cat test-if | arithcond exec --anf
+  $ cat test-if | arithcond exec --target=anf
   15 : Int
 
 Simple let expressions
   $ cat >test-let-simple <<< "let x := 3; x * 4"
-  $ cat test-let-simple | arithcond compile --stack
+  $ cat test-let-simple | arithcond compile --target=stack
   int 3;
   begin-let;
   access 0;
   int 4;
   mul;
   end-let;
-  $ cat test-let-simple | arithcond compile --anf
+  $ cat test-let-simple | arithcond compile --target=anf
   mul 3 4
-  $ cat test-let-simple | arithcond exec --tree
+  $ cat test-let-simple | arithcond exec --target=tree
   12 : Int
-  $ cat test-let-simple | arithcond exec --stack
+  $ cat test-let-simple | arithcond exec --target=stack
   int 12;
-  $ cat test-let-simple | arithcond exec --anf
+  $ cat test-let-simple | arithcond exec --target=anf
   12 : Int
 
 Let expressions
   $ cat >test-let <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
-  $ cat test-let | arithcond compile --stack
+  $ cat test-let | arithcond compile --target=stack
   int 3;
   int 4;
   mul;
@@ -174,7 +186,7 @@ Let expressions
   code [ access 0; int 8; add; ];
   if;
   end-let;
-  $ cat test-let | arithcond compile --anf
+  $ cat test-let | arithcond compile --target=anf
   let e0 := mul 3 4;
   let e1 := eq e0 5;
   if e1 then
@@ -183,16 +195,16 @@ Let expressions
     sub 8 e3
   else
     add e0 8
-  $ cat test-let | arithcond exec --tree
+  $ cat test-let | arithcond exec --target=tree
   20 : Int
-  $ cat test-let | arithcond exec --stack
+  $ cat test-let | arithcond exec --target=stack
   int 20;
-  $ cat test-let | arithcond exec --anf
+  $ cat test-let | arithcond exec --target=anf
   20 : Int
 
 Wierd binding
   $ cat >test-weird-let-if <<< "let q := true; if (let d := false; false) then q else q"
-  $ cat test-weird-let-if | arithcond compile --stack
+  $ cat test-weird-let-if | arithcond compile --target=stack
   true;
   begin-let;
   false;
@@ -203,21 +215,21 @@ Wierd binding
   code [ access 0; ];
   if;
   end-let;
-  $ cat test-weird-let-if | arithcond compile --anf
+  $ cat test-weird-let-if | arithcond compile --target=anf
   if false then
     true
   else
     true
-  $ cat test-weird-let-if | arithcond exec --tree
+  $ cat test-weird-let-if | arithcond exec --target=tree
   true : Bool
-  $ cat test-weird-let-if | arithcond exec --stack
+  $ cat test-weird-let-if | arithcond exec --target=stack
   true;
-  $ cat test-weird-let-if | arithcond exec --anf
+  $ cat test-weird-let-if | arithcond exec --target=anf
   true : Bool
 
 Weird arithmetic bindings
   $ cat >test-weird-let-arith <<< "let j := 0; (let b := 1; b) - j"
-  $ cat test-weird-let-arith | arithcond compile --stack
+  $ cat test-weird-let-arith | arithcond compile --target=stack
   int 0;
   begin-let;
   int 1;
@@ -227,18 +239,18 @@ Weird arithmetic bindings
   access 0;
   sub;
   end-let;
-  $ cat test-weird-let-arith | arithcond compile --anf
+  $ cat test-weird-let-arith | arithcond compile --target=anf
   sub 1 0
-  $ cat test-weird-let-arith | arithcond exec --tree
+  $ cat test-weird-let-arith | arithcond exec --target=tree
   1 : Int
-  $ cat test-weird-let-arith | arithcond exec --stack
+  $ cat test-weird-let-arith | arithcond exec --target=stack
   int 1;
-  $ cat test-weird-let-arith | arithcond exec --anf
+  $ cat test-weird-let-arith | arithcond exec --target=anf
   1 : Int
 
 
 Something broken
-  $ arithcond compile --stack <<< "1 + 2 + (3 +"
+  $ arithcond compile --target=stack <<< "1 + 2 + (3 +"
   <input>:1:13: syntax error
   [1]
 
