@@ -60,8 +60,8 @@ let catch_div_by_zero f =
 
 (** Compilation preserves the semantics of the arithmetic expressions *)
 let compile_stack_correct =
-  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval e) in
-  let eval_stack e = catch_div_by_zero (fun () -> StackLang.Semantics.eval e) in
+  let eval_tree e = catch_div_by_zero TreeLang.Semantics.(fun () -> eval e) in
+  let eval_stack e = catch_div_by_zero StackLang.Semantics.(fun () -> eval (e, [])) in
   let to_stack = Result.map (fun value -> [value]) in
 
   QCheck.Test.make ~count:1000
@@ -72,8 +72,8 @@ let compile_stack_correct =
 
 (** Compilation preserves the semantics of the arithmetic expressions *)
 let compile_anf_correct =
-  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval e) in
-  let eval_anf e = catch_div_by_zero (fun () -> AnfLang.Semantics.eval e) in
+  let eval_tree e = catch_div_by_zero TreeLang.Semantics.(fun () -> eval e) in
+  let eval_anf e = catch_div_by_zero AnfLang.Semantics.(fun () -> eval Env.empty e) in
 
   QCheck.Test.make ~count:1000
     ~name:"compile_anf_correct"

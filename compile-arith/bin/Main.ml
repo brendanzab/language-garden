@@ -93,14 +93,14 @@ let main () =
         let e = TreeToAnf.translate e in
         Format.printf "@[<v>%a@]" AnfLang.pp_expr e
     | Exec `Tree ->
-        Format.printf "%d" (TreeLang.Semantics.eval e)
+        Format.printf "%d" TreeLang.Semantics.(eval e)
     | Exec `Stack ->
         let c = TreeToStack.translate e in
         Format.printf "@[%a@]"
-          StackLang.pp_code (StackLang.Semantics.normalise c)
+          StackLang.pp_code StackLang.Semantics.(normalise (c, []))
     | Exec `Anf ->
         let e = TreeToAnf.translate e in
-        Format.printf "%d" (AnfLang.Semantics.eval e)
+        Format.printf "%d" AnfLang.Semantics.(eval Env.empty e)
 
 
 let () = main ()

@@ -87,43 +87,43 @@ module Semantics = struct
     | Int of int
     | Bool of bool
 
-  let eval_atom ?(env = Env.empty) : atom -> value =
+  let eval_atom env : atom -> value =
     function
     | Var id -> Env.find id env
     | Int i -> Int i
     | Bool b -> Bool b
 
-  let eval_int ?(env = Env.empty) expr =
-    match eval_atom ~env expr with
+  let eval_int env expr =
+    match eval_atom env expr with
     | Int i ->  i
     | _ -> failwith "not an integer"
 
-  let eval_bool ?(env = Env.empty) expr =
-    match eval_atom ~env expr with
+  let eval_bool env expr =
+    match eval_atom env expr with
     | Bool b ->  b
     | _ -> failwith "not a boolean"
 
-  let rec eval ?(env = Env.empty) : expr -> value =
+  let rec eval env : expr -> value =
     function
-    | Let (n, c, e) -> eval ~env:(Env.add n (eval_comp ~env c) env) e
-    | Comp c -> eval_comp ~env c
-  and eval_comp ?(env = Env.empty) : comp -> value =
+    | Let (n, c, e) -> eval (Env.add n (eval_comp env c) env) e
+    | Comp c -> eval_comp env c
+  and eval_comp env : comp -> value =
     function
-    | Atom a -> eval_atom ~env a
-    | Neg a -> Int (-(eval_int ~env a))
-    | Add (a1, a2) -> Int (eval_int ~env a1 + eval_int ~env a2)
-    | Sub (a1, a2) -> Int (eval_int ~env a1 - eval_int ~env a2)
-    | Mul (a1, a2) -> Int (eval_int ~env a1 * eval_int ~env a2)
-    | Div (a1, a2) -> Int (eval_int ~env a1 / eval_int ~env a2)
-    | Eq (a1, a2) -> Bool (eval_atom ~env a1 = eval_atom ~env a2)
+    | Atom a -> eval_atom env a
+    | Neg a -> Int (-(eval_int env a))
+    | Add (a1, a2) -> Int (eval_int env a1 + eval_int env a2)
+    | Sub (a1, a2) -> Int (eval_int env a1 - eval_int env a2)
+    | Mul (a1, a2) -> Int (eval_int env a1 * eval_int env a2)
+    | Div (a1, a2) -> Int (eval_int env a1 / eval_int env a2)
+    | Eq (a1, a2) -> Bool (eval_atom env a1 = eval_atom env a2)
     | IfThenElse (a, e1, e2) ->
-        if eval_bool ~env a then eval ~env e1 else eval ~env e2
+        if eval_bool env a then eval env e1 else eval env e2
 
   let quote : value -> expr =
     function
     | Int i -> Comp (Atom (Int i))
     | Bool b -> Comp (Atom (Bool b))
 
-  let normalise e =
-    quote (eval e)
+  let normalise env e =
+    quote (eval env e)
 end

@@ -64,23 +64,23 @@ module Semantics = struct
 
   type value = int
 
-  let eval_atom ?(env = Env.empty) : atom -> value =
+  let eval_atom env : atom -> value =
     function
     | Var x -> Env.find x env
     | Int i -> i
 
-  let eval_comp ?(env = Env.empty) : comp -> value =
+  let eval_comp env : comp -> value =
     function
-    | Atom a -> eval_atom ~env a
-    | Neg a -> -(eval_atom ~env a)
-    | Add (a1, a2) -> eval_atom ~env a1 + eval_atom ~env a2
-    | Sub (a1, a2) -> eval_atom ~env a1 - eval_atom ~env a2
-    | Mul (a1, a2) -> eval_atom ~env a1 * eval_atom ~env a2
-    | Div (a1, a2) -> eval_atom ~env a1 / eval_atom ~env a2
+    | Atom a -> eval_atom env a
+    | Neg a -> -(eval_atom env a)
+    | Add (a1, a2) -> eval_atom env a1 + eval_atom env a2
+    | Sub (a1, a2) -> eval_atom env a1 - eval_atom env a2
+    | Mul (a1, a2) -> eval_atom env a1 * eval_atom env a2
+    | Div (a1, a2) -> eval_atom env a1 / eval_atom env a2
 
-  let rec eval ?(env = Env.empty) : expr -> value =
+  let rec eval env : expr -> value =
     function
-    | Let (n, c, e) -> eval ~env:(Env.add n (eval_comp ~env c) env) e
-    | Comp c -> eval_comp ~env c
+    | Let (n, c, e) -> eval (Env.add n (eval_comp env c) env) e
+    | Comp c -> eval_comp env c
 
 end

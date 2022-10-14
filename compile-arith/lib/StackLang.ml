@@ -40,9 +40,14 @@ let rec pp_code fmt = function
 module Semantics = struct
 
   type value = int
+
+  (** A stack of values *)
   type stack = value list
 
-  let step : (code * stack) -> (code * stack) = function
+  (* The state of the stack machine *)
+  type state = code * stack
+
+  let step : state -> state = function
     | Int i :: code, stack -> code, i :: stack
     | Neg :: code, i :: stack -> code, -i :: stack
     | Add :: code, i2 :: i1 :: stack -> code, i1 + i2 :: stack
@@ -51,13 +56,11 @@ module Semantics = struct
     | Div :: code, i2 :: i1 :: stack -> code, i1 / i2 :: stack
     | _, _ -> failwith "invalid code"
 
-  let rec eval ?(stack = []) = function
-    | [] -> stack
-    | code ->
-        let code, stack = step (code, stack) in
-        eval code ~stack
+  let rec eval : state -> stack = function
+    | [], stack -> stack
+    | code, stack -> (eval [@tailcall]) (step (code, stack))
 
-  let rec quote : stack -> code = function
+  let [@tail_mod_cons] rec quote : stack -> code = function
     | [] -> []
     | i :: stack -> Int i :: quote stack
 

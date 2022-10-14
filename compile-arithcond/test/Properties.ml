@@ -267,8 +267,8 @@ let catch_div_by_zero f =
 (** The compiler preserves the semantics of the arithmetic expressions *)
 let compile_stack_correct =
   (* TODO: improve handling of divide-by-zero *)
-  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval [] e) in
-  let eval_stack e = catch_div_by_zero (fun () -> StackLang.Semantics.eval e) in
+  let eval_tree e = catch_div_by_zero TreeLang.Semantics.(fun () -> eval [] e) in
+  let eval_stack e = catch_div_by_zero StackLang.Semantics.(fun () -> eval (e, [], [])) in
   let to_stack = Result.map (function
     | TreeLang.Semantics.Int n -> [StackLang.Semantics.Int n]
     | TreeLang.Semantics.Bool b -> [StackLang.Semantics.Bool b])
@@ -282,8 +282,8 @@ let compile_stack_correct =
 
 (** Compilation preserves the semantics of the arithmetic expressions *)
 let compile_anf_correct =
-  let eval_tree e = catch_div_by_zero (fun () -> TreeLang.Semantics.eval [] e) in
-  let eval_anf e = catch_div_by_zero (fun () -> AnfLang.Semantics.eval e) in
+  let eval_tree e = catch_div_by_zero TreeLang.Semantics.(fun () -> eval [] e) in
+  let eval_anf e = catch_div_by_zero AnfLang.Semantics.(fun () -> eval Env.empty e) in
   let to_anf = Result.map (function
     | TreeLang.Semantics.Int n -> AnfLang.Semantics.Int n
     | TreeLang.Semantics.Bool b -> AnfLang.Semantics.Bool b)

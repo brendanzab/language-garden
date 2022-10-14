@@ -109,16 +109,16 @@ let main () =
         Format.printf "@[<v>%a@]" AnfLang.pp_expr e
     | Exec `Tree ->
         Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-          (TreeLang.pp_expr []) (TreeLang.Semantics.normalise [] e)
+          (TreeLang.pp_expr []) TreeLang.Semantics.(normalise [] e)
           TreeLang.pp_ty t
     | Exec `Stack ->
         let c = TreeToStack.translate e in
         Format.printf "@[%a@]"
-          StackLang.pp_code (StackLang.Semantics.normalise c)
+          StackLang.pp_code StackLang.Semantics.(normalise (c, [], []))
     | Exec `Anf ->
         let e = TreeToAnf.translate e in
         Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-          AnfLang.pp_expr (AnfLang.Semantics.normalise e)
+          AnfLang.pp_expr AnfLang.Semantics.(normalise Env.empty e)
           TreeLang.pp_ty t
 
 

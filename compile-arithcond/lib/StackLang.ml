@@ -66,10 +66,16 @@ module Semantics = struct
     | Bool of bool
     | Code of code
 
+  (** Environment of variable bindings *)
   type env = value list
+
+  (** A stack of values *)
   type stack = value list
 
-  let step : code * env * stack -> code * env * stack = function
+  (* The state of the stack machine *)
+  type state = code * env * stack
+
+  let step : state -> state = function
     | Access n :: code,   env,      stack                                -> code,       env,      List.nth env n :: stack
     | BeginLet :: code,   env,      v :: stack                           -> code,       v :: env, stack
     | EndLet :: code,     _ :: env, stack                                -> code,       env,      stack
@@ -89,13 +95,12 @@ module Semantics = struct
 
     | _, _, _ -> failwith "invalid code"
 
-  let rec eval ?(env = []) ?(stack = []) = function
-    | [] -> stack
-    | code ->
-        let code, env, stack = step (code, env, stack) in
-        eval code ~env ~stack
+  let rec eval : state -> stack = function
+    | [], _, stack -> stack
+    | code, env, stack ->
+        (eval [@tailcall]) (step (code, env, stack))
 
-  let rec quote : stack -> code = function
+  let [@tail_mod_cons] rec quote : stack -> code = function
     | [] -> []
     | Int i :: stack -> Int i :: quote stack
     | Bool b :: stack -> Bool b :: quote stack
