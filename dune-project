@@ -37,9 +37,6 @@
 (package
   (name compile-uncurry))
 
-(package
-  (name compile-sdf))
-
 
 (package
   (name elab-dependent)
@@ -48,6 +45,10 @@
 
 (package
   (name elab-record-patching))
+
+
+(package
+  (name lang-shader-graphics))
 
 
 (package

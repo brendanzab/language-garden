@@ -1,4 +1,8 @@
-open ShaderTypes
+open ShaderGraphics.ShaderTypes
+
+module Monad = ShaderGraphics.Control.Monad
+module Sdf = ShaderGraphics.Sdf
+module Shader = ShaderGraphics.Shader
 
 
 (** A simple scene, implemented using signed distance fields. *)
@@ -13,11 +17,11 @@ module MyScene (S : Shader.S) = struct
   end
 
   (** An environment with access to a 2D coordinate. *)
-  module Env = Control.Monad.FunctionReader (struct type t = vec2f repr end)
+  module Env = Monad.FunctionReader (struct type t = vec2f repr end)
 
   (* Bring notations into scope *)
   open Shader.Notation (S)
-  open Control.Monad.Notation (Env)
+  open Monad.Notation (Env)
 
 
   (** Gradient background, assuming UV coordinates in [[0.0, 1.0]] *)
@@ -83,6 +87,9 @@ let usage_error program =
 
 
 let () =
+  let module Cpu = ShaderGraphics.Cpu in
+  let module Glsl = ShaderGraphics.Glsl in
+
   match Array.to_list Sys.argv with
   (* Compile the scene to a GLSL shader that can be rendered in parallel on the GPU. *)
   | [_; "compile"] ->

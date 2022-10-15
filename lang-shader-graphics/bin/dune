@@ -1,7 +1,8 @@
 (executable
   (name Main)
-  (public_name compile-sdf)
-  (package compile-sdf))
+  (public_name shader-graphics)
+  (package lang-shader-graphics)
+  (libraries lang-shader-graphics))
 
 (env
   (dev

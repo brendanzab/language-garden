@@ -35,8 +35,14 @@ related to compiling functional programming languages.
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
 - [**compile-uncurry**](./compile-uncurry/):
   Compiling single-parameter functions to multiparameter functions.
-- [**compile-sdf**](./compile-sdf/):
-  An embedded DSL for building signed distance functions, compiling them to GLSL shaders.
+
+### Languages
+
+Miscellaneous programming language experiments.
+
+- [**lang-shader-graphics**](./lang-shader-graphics/):
+  An embedded DSL for describing procedural graphics, based on signed distance
+  functions. These can be rendered on the CPU or compiled to GLSL shaders.
 
 ## Development setup
 

@@ -31,7 +31,7 @@ The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd appr
 to custom operators (which don’t allow for custom precedences), and lack of
 implicit overloading. Still, I think it’s an interesting proof-of-concept!
 
-A full example can be found in [Main.ml](./Main.ml), which renders the
+A full example can be found in [bin/Main.ml](./bin/Main.ml), which renders the
 following image using the sequential, CPU-based back-end:
 
 ![The rendered output of Main.ml](./test/scene.png)

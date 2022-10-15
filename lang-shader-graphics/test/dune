@@ -1,9 +1,9 @@
 (cram
-  (deps %{bin:compile-sdf}))
+  (deps %{bin:shader-graphics}))
 
 (rule
   (action (with-stdout-to scene.glsl.out
-    (run %{bin:compile-sdf} compile))))
+    (run %{bin:shader-graphics} compile))))
 
 (rule (alias runtest)
   (action (diff scene.glsl scene.glsl.out)))
@@ -11,7 +11,7 @@
 (rule
   (action (with-stdout-to scene.png.out
     (pipe-stdout
-      (run %{bin:compile-sdf} render)
+      (run %{bin:shader-graphics} render)
       (run pnmtopng)))))
 
 (rule (alias runtest)
