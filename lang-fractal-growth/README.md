@@ -2,6 +2,28 @@
 
 Experiments with using production systems to describe fractal growth.
 
+```command
+$ fractal-growth generations --system=algae | head
+b
+a
+ab
+aba
+abaab
+abaababa
+abaababaabaab
+abaababaabaababaababa
+abaababaabaababaababaabaababaabaab
+abaababaabaababaababaabaababaabaababaababaabaababaababa
+
+$ fractal-growth generations --system=filament | head --lines=6
+(-->)
+(<--)(->)
+(<-)(-->)(-->)
+(<--)(<--)(->)(<--)(->)
+(<-)(-->)(<-)(-->)(-->)(<-)(-->)(-->)
+(<--)(<--)(->)(<--)(<--)(->)(<--)(->)(<--)(<--)(->)(<--)(->)
+```
+
 ## Resources
 
 - [Algorithmic Botany](http://algorithmicbotany.org/): Homepage of the Biological

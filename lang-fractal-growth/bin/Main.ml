@@ -10,7 +10,7 @@ module Runner (System : LSystem.S) = struct
   let print_generations () =
     generate System.axiom
       |> Seq.map string_of_word
-      |> Seq.iter (Printf.printf "  %s\n");
+      |> Seq.iter print_endline
 
 end
 
