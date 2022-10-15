@@ -10,7 +10,10 @@ module Env = struct
 
   type env = AnfLang.atom list
 
+  let empty = []
+
   type 'a cont = env -> 'a -> AnfLang.expr
+
 
   type 'a t = 'a cont cont
 
@@ -111,4 +114,4 @@ end
 
 
 let translate (e : TreeLang.expr) : AnfLang.expr =
-  Env.run (Env.translate e) [] (Fun.const AnfLang.comp)
+  Env.run (Env.translate e) Env.empty (Fun.const AnfLang.comp)

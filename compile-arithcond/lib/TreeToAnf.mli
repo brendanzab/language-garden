@@ -22,7 +22,10 @@ module Env : sig
 
   (** An environment for mapping bindings in the tree language to atomic
       expressions in the ANF language. *)
-  type env = AnfLang.atom list
+  type env
+
+  (** Any empty environment with no bindings. *)
+  val empty : env
 
   (** The type of the continuation *)
   type 'a cont = env -> 'a -> AnfLang.expr
