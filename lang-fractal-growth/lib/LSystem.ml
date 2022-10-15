@@ -11,7 +11,7 @@ end
 
 
 (** Signature of a deterministic, context-free L-System *)
-module type S = sig
+module type Grammar = sig
 
   (** Alphabet of symbols for this system *)
   module Symbol : Symbol
@@ -26,9 +26,9 @@ end
 
 
 (** Derived utility functions for working with L-systems *)
-module Util (System : S) : sig
+module Util (G : Grammar) : sig
 
-  open System
+  open G
 
   (** Apply the rewrite rules in parallel *)
   val step : Symbol.t list -> Symbol.t list
@@ -42,13 +42,13 @@ module Util (System : S) : sig
 end = struct
 
   let step =
-    List.concat_map System.rules
+    List.concat_map G.rules
 
   let generate w =
     Seq.unfold (fun w -> Some (w, step w)) w
 
   let string_of_word w =
-    List.map System.Symbol.to_string w
+    List.map G.Symbol.to_string w
       |> String.concat ""
 
 end

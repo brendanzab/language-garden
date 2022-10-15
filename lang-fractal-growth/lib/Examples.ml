@@ -1,5 +1,5 @@
 (** Based on Figure 1.3 in “The Algorithmic Beauty of Plants” *)
-module Algae : LSystem.S = struct
+module Algae : LSystem.Grammar = struct
 
   module Symbol = struct
 
@@ -26,7 +26,7 @@ end
 
 
 (** Based on Equation 1.1 in “The Algorithmic Beauty of Plants” *)
-module Filament : LSystem.S = struct
+module Filament : LSystem.Grammar = struct
 
   (** A cell in a filament of Anabaena catenula *)
   module Symbol = struct
@@ -67,32 +67,26 @@ module Filament : LSystem.S = struct
 end
 
 
-(** A turtle graphics command *)
-module TurtleCommand = struct
-
-  type t = [
-    | `Left   (** Turn left by an angle {i δ} *)
-    | `Right  (** Turn right by an angle {i δ} *)
-    | `Line   (** Move forward a distance {i d}, drawing a line *)
-    | `Space  (** Move forward a distance {i d}, leaving a space *)
-  ]
-
-  let to_string =
-    function
-    | `Left -> "+"
-    | `Right -> "-"
-    | `Line -> "F"
-    | `Space -> "f"
-
-  (* TODO: Graphical interpretation? *)
-
-end
-
-
 (** Based on Figure 1.6 in “The Algorithmic Beauty of Plants” *)
-module KochIsland : LSystem.S = struct
+module KochIsland : LSystem.Grammar = struct
 
-  module Symbol = TurtleCommand
+  module Symbol = struct
+
+    type t = [
+      | `Left   (** Turn left by an angle {i δ} *)
+      | `Right  (** Turn right by an angle {i δ} *)
+      | `Line   (** Move forward a distance {i d}, drawing a line *)
+    ]
+
+    let to_string =
+      function
+      | `Left -> "+"
+      | `Right -> "-"
+      | `Line -> "F"
+
+    (* TODO: Graphical interpretation? *)
+
+  end
 
   (** Start with a square *)
   let axiom = [
@@ -115,7 +109,7 @@ module KochIsland : LSystem.S = struct
 end
 
 (** Based on Equation 1.7 in “The Algorithmic Beauty of Plants” *)
-module Parametric : LSystem.S = struct
+module Parametric : LSystem.Grammar = struct
 
   (* Note that parametric L-Systems fall out of OCaml’s algebraic datatypes and
      pattern guards. No additional features are required! *)
@@ -153,7 +147,7 @@ end
 
 (** From the {{:https://en.wikipedia.org/wiki/L-system#Example_2:_Fractal_(binary)_tree}
     L-system page} on Wikipedia. *)
-module BinaryTree : LSystem.S = struct
+module BinaryTree : LSystem.Grammar = struct
 
   module Symbol = struct
 
@@ -186,7 +180,7 @@ end
 
 (** From the {{:https://en.wikipedia.org/wiki/L-system#Example_2:_Fractal_(binary)_tree}
     L-system page} on Wikipedia. *)
-module CantorSet : LSystem.S = struct
+module CantorSet : LSystem.Grammar = struct
 
   module Symbol = struct
 

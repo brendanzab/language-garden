@@ -8,13 +8,13 @@ module Examples : sig
 
 end = struct
 
-  module Make (System : LSystem.S) = struct
+  module Make (G : LSystem.Grammar) = struct
 
-    module Util = LSystem.Util (System)
+    module Util = LSystem.Util (G)
 
     (** Print an infinite series of generations for the system *)
     let print_generations () =
-      Util.generate System.axiom
+      Util.generate G.axiom
         |> Seq.map Util.string_of_word
         |> Seq.iter print_endline
 
