@@ -77,20 +77,6 @@
             ];
           };
 
-          compile-sdf = ocamlPackages.buildDunePackage {
-            pname = "compile-sdf";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            # TODO: Make test dependencies optional
-            nativeBuildInputs = [
-              ocamlPackages.cmdliner
-              # For `compile-sdf/test/dune`
-              legacyPackages.netpbm
-            ];
-          };
-
           # Elaboration
 
           elab-dependent = ocamlPackages.buildDunePackage {
@@ -109,6 +95,34 @@
             version = "0";
             src = ./.;
             duneVersion = "3";
+          };
+
+          # Languages
+
+          lang-fractal-growth = ocamlPackages.buildDunePackage {
+            pname = "lang-fractal-growth";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+
+            # TODO: Make test dependencies optional
+            nativeBuildInputs = [
+              ocamlPackages.cmdliner
+            ];
+          };
+
+          lang-shader-graphics = ocamlPackages.buildDunePackage {
+            pname = "lang-shader-graphics";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+
+            # TODO: Make test dependencies optional
+            nativeBuildInputs = [
+              ocamlPackages.cmdliner
+              # For `lang-shader-graphics/test/dune`
+              legacyPackages.netpbm
+            ];
           };
 
           # Experiments
