@@ -41,10 +41,10 @@ In the future is would be nice to produce graphical output for these systems.
 
 L-System variations:
 
-- Stochastic grammars
-- Context sensitive grammars
-- Parametric grammars
-- Shape grammars
+- [ ] Stochastic grammars
+- [ ] Context sensitive grammars
+- [x] Parametric grammars
+- [ ] Shape grammars
 
 For more details see the section on [Wikipedia](https://en.wikipedia.org/wiki/L-system#Variations).
 

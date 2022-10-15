@@ -25,6 +25,7 @@ end = struct
   module Algae = Make (Examples.Algae)
   module Filament = Make (Examples.Filament)
   module KochIsland = Make (Examples.KochIsland)
+  module Parametric = Make (Examples.Parametric)
   module BinaryTree = Make (Examples.BinaryTree)
   module CantorSet = Make (Examples.CantorSet)
 
@@ -32,6 +33,7 @@ end = struct
     "algae", Algae.print_generations;
     "filament", Filament.print_generations;
     "koch-island", KochIsland.print_generations;
+    "parametric", Parametric.print_generations;
     "binary-tree", BinaryTree.print_generations;
     "cantor-set", CantorSet.print_generations;
   ]
