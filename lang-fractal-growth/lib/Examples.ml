@@ -3,7 +3,11 @@ module Algae : LSystem.S = struct
 
   module Symbol = struct
 
-    type t = [`A | `B]
+    (** Cytological state of a cell *)
+    type t = [
+      | `A  (** Large cell, ready to divide *)
+      | `B  (** Small cell *)
+    ]
 
     let to_string = function
       | `A -> "a"
@@ -15,8 +19,8 @@ module Algae : LSystem.S = struct
 
   let rules =
     function
-    | `A -> [`A; `B]
-    | `B -> [`A]
+    | `A -> [`A; `B]  (* Divide *)
+    | `B -> [`A]      (* Grow *)
 
 end
 
@@ -29,8 +33,8 @@ module Filament : LSystem.S = struct
 
     (** Cytological state of a cell *)
     type size = [
-      | `A (** Long, ready to divide *)
-      | `B (** Short, not yet ready to divide *)
+      | `A  (** Long cell, ready to divide *)
+      | `B  (** Short sell *)
     ]
 
     (** Where new cells will be produced *)
@@ -55,10 +59,10 @@ module Filament : LSystem.S = struct
 
   let rules =
     function
-    | `A, `R -> [`A, `L; `B, `R]
-    | `A, `L -> [`B, `L; `A, `R]
-    | `B, `R -> [`A, `R]
-    | `B, `L -> [`A, `L]
+    | `A, `R -> [`A, `L; `B, `R]  (* Divide right *)
+    | `A, `L -> [`B, `L; `A, `R]  (* Divide left *)
+    | `B, `R -> [`A, `R]          (* Grow right *)
+    | `B, `L -> [`A, `L]          (* Grow left *)
 
 end
 
@@ -118,27 +122,27 @@ module BinaryTree : LSystem.S = struct
   module Symbol = struct
 
     type t = [
-      | `B
-      | `L
+      | `Bud
+      | `Branch
       | `Push
       | `Pop
     ]
 
     let to_string =
       function
-      | `B -> "0"
-      | `L -> "1"
+      | `Bud -> "0"
+      | `Branch -> "1"
       | `Push -> "["
       | `Pop -> "]"
 
   end
 
-  let axiom = [`B]
+  let axiom = [`Bud]
 
   let rules =
     function
-    | `L -> [`L; `L]
-    | `B -> [`L; `Push; `B; `Pop; `B]
+    | `Branch -> [`Branch; `Branch]              (* Grow the branch *)
+    | `Bud -> [`Branch; `Push; `Bud; `Pop; `Bud] (* Split a bud into a branch and two buds *)
     | s -> [s]
 
 end
