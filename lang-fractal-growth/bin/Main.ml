@@ -1,4 +1,5 @@
-module LSystem = LSystem
+module LSystem = FractalGrowth.LSystem
+module Examples = FractalGrowth.Examples
 
 
 module Runner (System : LSystem.S) = struct
@@ -45,8 +46,7 @@ let cmd =
   let system : string Term.t =
     Arg.(required
       & opt (some & string) None
-      & info ["system"] ~docv:"SYSTEM"
-          ~doc:"The system to run.")
+      & info ["system"] ~docv:"SYSTEM" ~doc:"The system to run.")
   in
 
   Cmd.group (Cmd.info "fractal-growth") [

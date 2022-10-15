@@ -1,0 +1,7 @@
+(executable
+  (name Main)
+  (public_name fractal-growth)
+  (package lang-fractal-growth)
+  (libraries
+    lang-fractal-growth
+    cmdliner))
