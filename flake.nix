@@ -85,6 +85,7 @@
 
             # TODO: Make test dependencies optional
             nativeBuildInputs = [
+              ocamlPackages.cmdliner
               # For `compile-sdf/test/dune`
               legacyPackages.netpbm
             ];

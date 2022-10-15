@@ -1,6 +1,9 @@
 open ShaderGraphics.ShaderTypes
 
 module Monad = ShaderGraphics.Control.Monad
+
+module Cpu = ShaderGraphics.Cpu
+module Glsl = ShaderGraphics.Glsl
 module Sdf = ShaderGraphics.Sdf
 module Shader = ShaderGraphics.Shader
 
@@ -73,48 +76,46 @@ module MyScene (S : Shader.S) = struct
 end
 
 
-let usage out_channel program =
-  let program_name = Filename.basename program in
-  Printf.fprintf out_channel "USAGE:\n";
-  Printf.fprintf out_channel "    %s compile\n" program_name;
-  Printf.fprintf out_channel "    %s render\n" program_name;
-  Printf.fprintf out_channel "    %s --help | -h\n" program_name
+(** {1 Subcommands} *)
 
-let usage_error program =
-  Printf.eprintf "error: unexpected CLI arguments\n";
-  usage stderr program;
-  exit 1
+let compile_cmd () =
+  let module Scene = MyScene (Glsl) in
+  let open Shader.Notation (Glsl) in
 
+  (* TODO: Render to HTML canvas *)
+
+  Glsl.Shadertoy.compile_image_shader
+    (fun uniforms frag_coord ->
+      Scene.image
+        ~dimensions:(uniforms.resolution |> Glsl.get2 (X, Y))
+        ~position:frag_coord)
+
+let render_cmd () =
+  let module Scene = MyScene (Cpu) in
+  let open Shader.Notation (Cpu) in
+
+  Cpu.render_ppm ~width:600 ~height:400
+    (fun position ->
+      Scene.image
+        ~dimensions:(vec2 600.0 400.0)
+        ~position)
+
+
+(** {1 CLI options} *)
+
+let cmd =
+  let open Cmdliner in
+
+  Cmd.group (Cmd.info "shader-graphics") [
+    Cmd.v (Cmd.info "compile" ~doc:"Compile the scene to a GLSL shader that can be rendered in parallel on the GPU.")
+      Term.(const compile_cmd $ const ());
+    Cmd.v (Cmd.info "render" ~doc:"Render the scene sequentially on the CPU to a PPM image file.")
+      Term.(const render_cmd $ const ());
+  ]
+
+
+(** {1 Main entrypoint} *)
 
 let () =
-  let module Cpu = ShaderGraphics.Cpu in
-  let module Glsl = ShaderGraphics.Glsl in
-
-  match Array.to_list Sys.argv with
-  (* Compile the scene to a GLSL shader that can be rendered in parallel on the GPU. *)
-  | [_; "compile"] ->
-      let module Scene = MyScene (Glsl) in
-      let open Shader.Notation (Glsl) in
-
-      (* TODO: Render to HTML canvas *)
-
-      Glsl.Shadertoy.compile_image_shader
-        (fun uniforms frag_coord ->
-          Scene.image
-            ~dimensions:(uniforms.resolution |> Glsl.get2 (X, Y))
-            ~position:frag_coord)
-
-  (* Render the scene sequentially on the CPU to a PPM image file. *)
-  | [_; "render"] ->
-      let module Scene = MyScene (Cpu) in
-      let open Shader.Notation (Cpu) in
-
-      Cpu.render_ppm ~width:600 ~height:400
-        (fun position ->
-          Scene.image
-            ~dimensions:(vec2 600.0 400.0)
-            ~position)
-
-  | [program; "--help" | "-h"] -> usage stdout program
-  | program :: _ -> usage_error program
-  | [] -> usage_error "main"
+  Printexc.record_backtrace true;
+  exit (Cmdliner.Cmd.eval cmd)

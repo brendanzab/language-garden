@@ -3,5 +3,5 @@
   (public_name arithcond)
   (package compile-arithcond)
   (libraries
-    cmdliner
-    compile-arithcond))
+    compile-arithcond
+    cmdliner))

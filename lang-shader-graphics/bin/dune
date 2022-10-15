@@ -2,7 +2,9 @@
   (name Main)
   (public_name shader-graphics)
   (package lang-shader-graphics)
-  (libraries lang-shader-graphics))
+  (libraries
+    lang-shader-graphics
+    cmdliner))
 
 (env
   (dev

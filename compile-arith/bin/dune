@@ -3,5 +3,5 @@
   (public_name arith)
   (package compile-arith)
   (libraries
-    cmdliner
-    compile-arith))
+    compile-arith
+    cmdliner))
