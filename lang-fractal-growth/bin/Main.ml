@@ -1,43 +1,53 @@
 module LSystem = FractalGrowth.LSystem
-module Examples = FractalGrowth.Examples
 
 
-module Runner (System : LSystem.S) = struct
+(** Example L-Systems that can be run via the CLI *)
+module Examples : sig
 
-  open LSystem.Util (System)
+  val list : (string * (unit -> unit)) list
 
-  (** Print an infinite series of generations for the system *)
-  let print_generations () =
-    generate System.axiom
-      |> Seq.map string_of_word
-      |> Seq.iter print_endline
+end = struct
+
+  module Make (System : LSystem.S) = struct
+
+    module Util = LSystem.Util (System)
+
+    (** Print an infinite series of generations for the system *)
+    let print_generations () =
+      Util.generate System.axiom
+        |> Seq.map Util.string_of_word
+        |> Seq.iter print_endline
+
+  end
+
+  module Examples = FractalGrowth.Examples
+
+  module Algae = Make (Examples.Algae)
+  module Filament = Make (Examples.Filament)
+  module KochIsland = Make (Examples.KochIsland)
+  module BinaryTree = Make (Examples.BinaryTree)
+  module CantorSet = Make (Examples.CantorSet)
+
+  let list = [
+    "algae", Algae.print_generations;
+    "filament", Filament.print_generations;
+    "koch-island", KochIsland.print_generations;
+    "binary-tree", BinaryTree.print_generations;
+    "cantor-set", CantorSet.print_generations;
+  ]
 
 end
-
-module Algae = Runner (Examples.Algae)
-module Filament = Runner (Examples.Filament)
-module KochIsland = Runner (Examples.KochIsland)
-module BinaryTree = Runner (Examples.BinaryTree)
-module CantorSet = Runner (Examples.CantorSet)
-
-let systems = [
-  "algae", Algae.print_generations;
-  "filament", Filament.print_generations;
-  "koch-island", KochIsland.print_generations;
-  "binary-tree", BinaryTree.print_generations;
-  "cantor-set", CantorSet.print_generations;
-]
 
 
 (** {1 Subcommands} *)
 
 let generations_cmd name =
-  match systems |> List.assoc_opt name with
+  match Examples.list |> List.assoc_opt name with
   | None -> Printf.eprintf "unkown system"
   | Some run -> run ()
 
 let list_cmd () =
-  systems |> List.iter (fun (name, _) ->
+  Examples.list |> List.iter (fun (name, _) ->
     print_endline name)
 
 
