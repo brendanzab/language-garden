@@ -16,10 +16,12 @@ end
 let systems =
   let module Algae = Runner (Examples.Algae) in
   let module Filament = Runner (Examples.Filament) in
+  let module KochIsland = Runner (Examples.KochIsland) in
 
   [
     "algae", Algae.print_generations;
     "filament", Filament.print_generations;
+    "koch-island", KochIsland.print_generations;
   ]
 
 

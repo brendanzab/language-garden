@@ -59,3 +59,50 @@ module Filament : LSystem.S = struct
     | `B, `L -> [`A, `L]
 
 end
+
+
+(** A turtle graphics command *)
+module TurtleCommand = struct
+
+  type t = [
+    | `Left   (** Turn left by an angle {i δ} *)
+    | `Right  (** Turn right by an angle {i δ} *)
+    | `Line   (** Move forward a distance {i d}, drawing a line *)
+    | `Space  (** Move forward a distance {i d}, leaving a space *)
+  ]
+
+  let to_string =
+    function
+    | `Left -> "+"
+    | `Right -> "-"
+    | `Line -> "F"
+    | `Space -> "f"
+
+  (* TODO: Graphical interpretation? *)
+
+end
+
+
+(** Based on Figure 1.6 in “The Algorithmic Beauty of Plants” *)
+module KochIsland : LSystem.S = struct
+
+  module Symbol = TurtleCommand
+
+  (** Start with a square *)
+  let axiom = [
+    `Line; `Right;
+    `Line; `Right;
+    `Line; `Right;
+    `Line;
+  ]
+
+  (** Grow a branch for each line on the predecessor *)
+  let rules = function
+    | `Line ->
+        [
+          `Line; `Right; `Line; `Left; `Line; `Left; `Line;
+          `Line; `Right; `Line; `Right; `Line; `Left; `Line;
+        ]
+    | s -> [s]
+
+end

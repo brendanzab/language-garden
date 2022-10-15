@@ -9,6 +9,7 @@ List of systems
   $ fractal-growth list
   algae
   filament
+  koch-island
 
 Algae generations
   $ fractal-growth generations --system=algae | head
@@ -31,3 +32,8 @@ Filament generations
     (<--)(<--)(->)(<--)(->)
     (<-)(-->)(<-)(-->)(-->)(<-)(-->)(-->)
     (<--)(<--)(->)(<--)(<--)(->)(<--)(->)(<--)(<--)(->)(<--)(->)
+
+Koch Island
+  $ fractal-growth generations --system=koch-island | head --lines=2
+    F-F-F-F
+    F-F+F+FF-F-F+F-F-F+F+FF-F-F+F-F-F+F+FF-F-F+F-F-F+F+FF-F-F+F

@@ -7,3 +7,6 @@ module Algae : LSystem.S
 (** Development of a multicelluar filament in the blue-green bactieria,
     {{: https://en.wikipedia.org/wiki/Anabaena} Anabaena catenula}. *)
 module Filament : LSystem.S
+
+(** Quadratic {{:https://en.wikipedia.org/wiki/Koch_snowflake} Koch island} *)
+module KochIsland : LSystem.S
