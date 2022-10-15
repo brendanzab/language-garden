@@ -48,6 +48,11 @@
 
 
 (package
+  (name lang-fractal-growth)
+  (depends
+    (cmdliner (and (>= v1.1.1) :with-test))))
+
+(package
   (name lang-shader-graphics))
 
 

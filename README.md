@@ -40,6 +40,8 @@ related to compiling functional programming languages.
 
 Miscellaneous programming language experiments.
 
+- [**lang-fractal-growth**](./lang-fractal-growth/):
+  Experiments with using production systems to model fractal growth.
 - [**lang-shader-graphics**](./lang-shader-graphics/):
   An embedded DSL for describing procedural graphics, based on signed distance
   functions. These can be rendered on the CPU or compiled to GLSL shaders.
