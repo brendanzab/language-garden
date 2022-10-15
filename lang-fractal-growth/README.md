@@ -1,6 +1,12 @@
 # Fractal Growth
 
-Experiments with using production systems to describe fractal growth.
+This project aims to experiment with using grammars and rewriting systems (for
+example [L-systems]) to describe fractal growth.
+
+I’ve long been curious about grammars and rewriting systems for procedural
+generation for a long time, but have found the resources related to L-systems
+and production systems a challenge for me to understand. This project is an
+attempt to express these ideas in a way that makes more sense to me.
 
 ```text
 $ fractal-growth generations --system=algae | head
@@ -28,6 +34,8 @@ $ fractal-growth generations --system=filament | head --lines=6
 
 The output of various systems can be found in the [CLI tests](./test/cli.t).
 In the future is would be nice to produce graphical output for these systems.
+
+[L-systems]: https://en.wikipedia.org/wiki/L-system
 
 ## Ideas for future work
 
