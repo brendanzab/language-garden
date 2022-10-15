@@ -13,7 +13,8 @@ module Algae : LSystem.S = struct
 
   let axiom = [`B]
 
-  let rules = function
+  let rules =
+    function
     | `A -> [`A; `B]
     | `B -> [`A]
 
@@ -52,7 +53,8 @@ module Filament : LSystem.S = struct
 
   let axiom = [`A, `R]
 
-  let rules = function
+  let rules =
+    function
     | `A, `R -> [`A, `L; `B, `R]
     | `A, `L -> [`B, `L; `A, `R]
     | `B, `R -> [`A, `R]
@@ -97,12 +99,74 @@ module KochIsland : LSystem.S = struct
   ]
 
   (** Grow a branch for each line on the predecessor *)
-  let rules = function
+  let rules =
+    function
     | `Line ->
         [
           `Line; `Right; `Line; `Left; `Line; `Left; `Line;
           `Line; `Right; `Line; `Right; `Line; `Left; `Line;
         ]
     | s -> [s]
+
+end
+
+
+(** From the {{:https://en.wikipedia.org/wiki/L-system#Example_2:_Fractal_(binary)_tree}
+    L-system page} on Wikipedia. *)
+module BinaryTree : LSystem.S = struct
+
+  module Symbol = struct
+
+    type t = [
+      | `B
+      | `L
+      | `Push
+      | `Pop
+    ]
+
+    let to_string =
+      function
+      | `B -> "0"
+      | `L -> "1"
+      | `Push -> "["
+      | `Pop -> "]"
+
+  end
+
+  let axiom = [`B]
+
+  let rules =
+    function
+    | `L -> [`L; `L]
+    | `B -> [`L; `Push; `B; `Pop; `B]
+    | s -> [s]
+
+end
+
+
+(** From the {{:https://en.wikipedia.org/wiki/L-system#Example_2:_Fractal_(binary)_tree}
+    L-system page} on Wikipedia. *)
+module CantorSet : LSystem.S = struct
+
+  module Symbol = struct
+
+    type t = [
+      | `A  (** Draw forward *)
+      | `B  (** Move forward *)
+    ]
+
+    let to_string =
+      function
+      | `A -> "A"
+      | `B -> "B"
+
+  end
+
+  let axiom = [`A]
+
+  let rules =
+    function
+    | `A -> [`A; `B; `A]
+    | `B -> [`B; `B; `B]
 
 end

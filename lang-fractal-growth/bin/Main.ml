@@ -14,16 +14,19 @@ module Runner (System : LSystem.S) = struct
 
 end
 
-let systems =
-  let module Algae = Runner (Examples.Algae) in
-  let module Filament = Runner (Examples.Filament) in
-  let module KochIsland = Runner (Examples.KochIsland) in
+module Algae = Runner (Examples.Algae)
+module Filament = Runner (Examples.Filament)
+module KochIsland = Runner (Examples.KochIsland)
+module BinaryTree = Runner (Examples.BinaryTree)
+module CantorSet = Runner (Examples.CantorSet)
 
-  [
-    "algae", Algae.print_generations;
-    "filament", Filament.print_generations;
-    "koch-island", KochIsland.print_generations;
-  ]
+let systems = [
+  "algae", Algae.print_generations;
+  "filament", Filament.print_generations;
+  "koch-island", KochIsland.print_generations;
+  "binary-tree", BinaryTree.print_generations;
+  "cantor-set", CantorSet.print_generations;
+]
 
 
 (** {1 Subcommands} *)
