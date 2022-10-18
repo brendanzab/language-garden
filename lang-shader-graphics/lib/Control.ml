@@ -1,8 +1,46 @@
+module Functor = struct
+
+  module type S = sig
+
+    type 'a t
+
+    val map : ('a -> 'b) -> 'a t -> 'b t
+
+  end
+
+
+  (** Operators to make working with functors more pleasant *)
+  module type Notation = sig
+
+    type 'a t
+
+    val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t
+
+  end
+
+
+  module Notation (F : S) : Notation
+
+    with type 'a t = 'a F.t
+
+  = struct
+
+    type 'a t = 'a F.t
+
+    let ( let+ ) t f = F.map f t
+
+  end
+
+end
+
+
 module Monad = struct
 
   module type S = sig
 
     type 'a t
+
+    include Functor.S with type 'a t := 'a t
 
     val pure : 'a -> 'a t
     val bind : 'a t -> ('a -> 'b t) -> 'b t
@@ -15,12 +53,11 @@ module Monad = struct
 
     type 'a t
 
-    (** Binding operators *)
+    include Functor.Notation with type 'a t := 'a t
 
-    val (let*) : 'a t -> ('a -> 'b t) -> 'b t
-    val (and*) : 'a t -> 'b t -> ('a * 'b) t
-    val (let+) : 'a t -> ('a -> 'b) -> 'b t
-    val (and+) : 'a t -> 'b t -> ('a * 'b) t
+    val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t
+    val ( and* ) : 'a t -> 'b t -> ('a * 'b) t
+    val ( and+ ) : 'a t -> 'b t -> ('a * 'b) t
 
   end
 
@@ -31,18 +68,16 @@ module Monad = struct
 
   = struct
 
-    type 'a t = 'a M.t
+    include Functor.Notation (M)
 
-    let (let*) = M.bind
+    let ( let* ) = M.bind
 
-    let (and*) t n =
+    let ( and* ) t n =
       let* x = t in
       let* y = n in
       M.pure (x, y)
 
-    let (let+) t f = M.bind t (fun x -> M.pure (f x))
-
-    let (and+) t n = (and*) t n
+    let ( and+ ) t n = ( and* ) t n
 
   end
 
@@ -51,10 +86,6 @@ module Monad = struct
   module Util (M : S) = struct
 
     open Notation (M)
-
-    let map f x =
-      let* x = x in
-      M.pure (f x)
 
     let map2 f x1 x2 =
       let* x1 = x1 in
@@ -108,13 +139,14 @@ module Monad = struct
 
     type 'a t = value -> 'a
 
-    let bind t f = fun x -> f (t x) x
-    let pure x = fun _ -> x
+    let map f x = fun v ->  f (x v)
+    let bind t f = fun v -> f (t v) v
+    let pure v = fun _ -> v
 
-    let read = fun x -> x
-    let scope f t = fun x -> t (f x)
+    let read = fun v -> v
+    let scope f t = fun v -> t (f v)
 
-    let run x t = t x
+    let run v t = t v
 
   end
 
@@ -159,8 +191,12 @@ module Monad = struct
 
     type 'a t = state -> 'a * state
 
-    let bind t f = fun x ->
-      let x', s = t x in
+    let map f x = fun s ->
+      let x, s = x s in
+      f x, s
+
+    let bind x f = fun s ->
+      let x', s = x s in
       f x' s
 
     let pure x = fun s -> x, s
@@ -169,7 +205,7 @@ module Monad = struct
     let put s = fun _ -> (), s
 
     let embed f = fun s -> f s
-    let run t s = t s
+    let run x s = x s
 
   end
 
