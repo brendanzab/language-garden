@@ -44,9 +44,7 @@
     (menhir :build)))
 
 (package
-  (name elab-record-patching)
-  (depends
-    (cmdliner (and (>= v1.1.1) :with-test))))
+  (name elab-record-patching))
 
 
 (package
@@ -55,7 +53,9 @@
     (cmdliner (and (>= v1.1.1) :with-test))))
 
 (package
-  (name lang-shader-graphics))
+  (name lang-shader-graphics)
+  (depends
+    (cmdliner (and (>= v1.1.1) :with-test))))
 
 
 (package
