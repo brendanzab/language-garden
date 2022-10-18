@@ -149,7 +149,7 @@ type mat4f = float mat4
 
 module Notation = struct
 
-  let (.%{ }) v c = get c v
-  let (.%{ }<-) v c s = set c s v
+  let ( .%{ } ) v c = get c v
+  let ( .%{ }<- ) v c s = set c s v
 
 end

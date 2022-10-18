@@ -29,7 +29,7 @@ let bind_param context name ty =
   bind_def context name ty (next_var context)
 
 let lookup context name =
-  let (let*) = Option.bind in
+  let ( let* ) = Option.bind in
   let* index = List.elem_index (Some name) context.names in
   let* ty = List.nth_opt context.types index in
   Some (index, ty)
@@ -45,8 +45,8 @@ let quote context =
 let is_convertible context =
   Core.Semantics.is_convertible (List.length context.exprs)
 
-let (let*) = Result.bind
-(* let (let+) f x = Result.map x f *)
+let ( let* ) = Result.bind
+(* let ( let+ ) f x = Result.map x f *)
 
 let rec check_ty context ty =
   check_term context ty Core.Semantics.UnivType

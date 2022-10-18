@@ -137,30 +137,30 @@ module type Notation = sig
     This might end up getting weird as we add matrix operations as well!
   *)
 
-  val (!!) : float -> float repr
+  val ( !! ) : float -> float repr
 
-  val (+) : float repr -> float repr -> float repr
-  val (|+|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val (|+) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( + ) : float repr -> float repr -> float repr
+  val ( |+| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |+ ) : ('n vecf) repr -> float repr -> ('n vecf) repr
 
-  val (-) : float repr -> float repr -> float repr
-  val (|-|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val (|-) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( - ) : float repr -> float repr -> float repr
+  val ( |-| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |- ) : ('n vecf) repr -> float repr -> ('n vecf) repr
 
-  val ( * ) : float repr -> float repr -> float repr
-  val (|*|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val (|*) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val (  *  ) : float repr -> float repr -> float repr
+  val ( |*| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |* ) : ('n vecf) repr -> float repr -> ('n vecf) repr
 
-  val (/) : float repr -> float repr -> float repr
-  val (|/|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val (|/) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( / ) : float repr -> float repr -> float repr
+  val ( |/| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |/ ) : ('n vecf) repr -> float repr -> ('n vecf) repr
 
-  val (%) : float repr -> float repr -> float repr
-  val (|%|) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val (|%) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( % ) : float repr -> float repr -> float repr
+  val ( |%| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |% ) : ('n vecf) repr -> float repr -> ('n vecf) repr
 
-  val (.%{ }) : ('n vecf) repr -> 'n component -> float repr
-  val (.%{ }<-) : ('n vecf) repr -> 'n component ->  float repr -> ('n vecf) repr
+  val ( .%{ } ) : ('n vecf) repr -> 'n component -> float repr
+  val ( .%{ }<- ) : ('n vecf) repr -> 'n component ->  float repr -> ('n vecf) repr
 
 end
 
@@ -173,30 +173,30 @@ module Notation (S : S) : Notation
 
   type 'a repr = 'a S.repr
 
-  let (!!) = S.float
+  let ( !! ) = S.float
 
-  let (+) = S.add
-  let (|+|) = S.add_vec
-  let (|+) = S.add_scalar
+  let ( + ) = S.add
+  let ( |+| ) = S.add_vec
+  let ( |+ ) = S.add_scalar
 
-  let (-) = S.sub
-  let (|-|) = S.sub_vec
-  let (|-) = S.sub_scalar
+  let ( - ) = S.sub
+  let ( |-| ) = S.sub_vec
+  let ( |- ) = S.sub_scalar
 
-  let ( * ) = S.mul
-  let (|*|) = S.mul_vec
-  let (|*) = S.mul_scalar
+  let (  *  ) = S.mul
+  let ( |*| ) = S.mul_vec
+  let ( |* ) = S.mul_scalar
 
-  let (/) = S.div
-  let (|/|) = S.div_vec
-  let (|/) = S.div_scalar
+  let ( / ) = S.div
+  let ( |/| ) = S.div_vec
+  let ( |/ ) = S.div_scalar
 
-  let (%) = S.mod_
-  let (|%|) = S.mod_vec
-  let (|%) = S.mod_scalar
+  let ( % ) = S.mod_
+  let ( |%| ) = S.mod_vec
+  let ( |% ) = S.mod_scalar
 
-  let (.%{ }) v c = S.get c v
-  let (.%{ }<-) v c s = S.set c s v
+  let ( .%{ } ) v c = S.get c v
+  let ( .%{ }<- ) v c s = S.set c s v
 
 end
 

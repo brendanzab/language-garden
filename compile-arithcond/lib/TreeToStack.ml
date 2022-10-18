@@ -3,7 +3,7 @@ type target = StackLang.code
 
 
 (** Function composition *)
-let (<<) f g x = f (g x)
+let ( << ) f g x = f (g x)
 
 (** Translate an expression, adding it to the continuation of the expression.
     The continuation allows us to avoid using list concatenation, which could

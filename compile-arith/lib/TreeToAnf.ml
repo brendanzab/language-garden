@@ -37,7 +37,7 @@ module Env = struct
       incr next_id;
       n
 
-  let (let*) = bind
+  let ( let* ) = bind
 
   let rec translate (e : TreeLang.expr) : AnfLang.comp t =
     match e with

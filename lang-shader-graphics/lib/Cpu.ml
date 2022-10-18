@@ -16,11 +16,11 @@ let mat4 v1 v2 v3 v4 = vec4 v1 v2 v3 v4
 let neg s = -.s
 let neg_vec v = map_vec neg v
 
-let add = (+.)
+let add = ( +. )
 let add_vec v1 v2 = zip_with_vec add v1 v2
 let add_scalar v s = map_vec (add s) v
 
-let sub = (-.)
+let sub = ( -. )
 let sub_vec v1 v2 = zip_with_vec sub v1 v2
 let sub_scalar v s = map_vec (sub s) v
 
@@ -28,7 +28,7 @@ let mul = ( *. )
 let mul_vec v1 v2 = zip_with_vec mul v1 v2
 let mul_scalar v s = map_vec (mul s) v
 
-let div = (/.)
+let div = ( /. )
 let div_vec v1 v2 = zip_with_vec div v1 v2
 let div_scalar v s = map_vec (div s) v
 
@@ -60,7 +60,7 @@ let clamp_scalar v ~min ~max = map_vec (clamp ~min ~max) v
 let cos = Float.cos
 let cos_vec v = map_vec cos v
 
-let dot v1 v2 = fold_left_vec (+.) 0.0 (zip_with_vec ( *.) v1 v2)
+let dot v1 v2 = fold_left_vec ( +. ) 0.0 (zip_with_vec ( *. ) v1 v2)
 
 let length2 v = dot v v
 let length v = sqrt (length2 v)
