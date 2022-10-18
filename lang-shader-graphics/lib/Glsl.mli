@@ -65,15 +65,15 @@ end
 (* An environment that allows for the definition of shared GLSL expressions *)
 module Env : sig
 
-  include Control.Monad.State with type t = Locals.t
+  include Control.Monad.State with type state = Locals.t
 
   (** Define a new local definition *)
-  val define_local : 'a expr -> ('a expr) m
+  val define_local : 'a expr -> ('a expr) t
 
 end
 
 
-include Shader.S with type 'a repr = ('a expr) Env.m
+include Shader.S with type 'a repr = ('a expr) Env.t
 
 
 (** Utilities for compiling Shadertoy-compatible shaders *)

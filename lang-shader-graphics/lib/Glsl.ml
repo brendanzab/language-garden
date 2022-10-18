@@ -99,7 +99,7 @@ open Control.Monad.Notation (Env)
 open Control.Monad.Util (Env)
 
 
-type 'a repr = ('a expr) Env.m
+type 'a repr = ('a expr) Env.t
 
 
 (* TODO: Figure out how to make this module cleaner. At the moment juggling

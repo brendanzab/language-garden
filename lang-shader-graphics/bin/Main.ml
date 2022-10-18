@@ -28,7 +28,7 @@ module MyScene (S : Shader.S) = struct
 
 
   (** Gradient background, assuming UV coordinates in [[0.0, 1.0]] *)
-  let gradient_background : (vec3f repr) Env.m =
+  let gradient_background : (vec3f repr) Env.t =
     let* uv = Env.read in       (* Get the current UV coordinate *)
 
     (* Some colours to interpolate between *)
@@ -43,7 +43,7 @@ module MyScene (S : Shader.S) = struct
 
 
   (** A scene to render, assuming UV coordinates in [[-0.5, 0.5]] *)
-  let scene : (vec3f repr) Env.m  =
+  let scene : (vec3f repr) Env.t  =
     (* Colour to use in the background *)
     let* background = Env.scope S.corner_coords gradient_background in
 
