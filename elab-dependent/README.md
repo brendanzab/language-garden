@@ -7,6 +7,28 @@ it is applied to.
 *This was originally posted at
 [tt-hoas-nameless.ml](https://gist.github.com/brendanzab/a8443e9d267ed142e4603fc3cb5fa9c8).*
 
+## Example
+
+<!-- $MDX file=test/readme/bools.txt -->
+```
+let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
+let true : Bool := fun Out true false := true;
+let false : Bool := fun Out true false := false;
+
+let not (b : Bool) : Bool :=
+  fun (Out : Type) (true : Out) (false : Out) := b Out false true;
+
+true Bool false
+```
+
+```sh
+$ cat ./test/readme/bools.txt | elab-dependent norm
+<input> :
+  fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
+      (Out : Type) (true : Out) (false : Out) -> Out
+:= fun false Out true false := false
+```
+
 ## Some useful resources
 
 - [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/):

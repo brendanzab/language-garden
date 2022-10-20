@@ -2,6 +2,7 @@
 
 (name language-garden)
 
+(using mdx 0.2)
 (using menhir 2.1)
 (cram enable)
 

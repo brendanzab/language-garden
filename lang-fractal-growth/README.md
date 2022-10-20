@@ -8,7 +8,7 @@ generation for a long time, but have found the resources related to L-systems
 and production systems a challenge for me to understand. This project is an
 attempt to express these ideas in a way that makes more sense to me.
 
-```text
+```sh
 $ fractal-growth generations --system=algae | head
 b
 a
@@ -22,7 +22,7 @@ abaababaabaababaababaabaababaabaab
 abaababaabaababaababaabaababaabaababaababaabaababaababa
 ```
 
-```text
+```sh
 $ fractal-growth generations --system=filament | head --lines=6
 (-->)
 (<--)(->)

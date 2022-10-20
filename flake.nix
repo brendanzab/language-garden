@@ -51,6 +51,7 @@
             buildInputs = [
               ocamlPackages.alcotest
               ocamlPackages.cmdliner
+              ocamlPackages.mdx
               ocamlPackages.qcheck
               ocamlPackages.qcheck-core
               ocamlPackages.qcheck-alcotest
@@ -71,6 +72,7 @@
             buildInputs = [
               ocamlPackages.alcotest
               ocamlPackages.cmdliner
+              ocamlPackages.mdx
               ocamlPackages.qcheck
               ocamlPackages.qcheck-core
               ocamlPackages.qcheck-alcotest
@@ -86,6 +88,7 @@
             duneVersion = "3";
 
             nativeBuildInputs = [
+              ocamlPackages.mdx
               ocamlPackages.menhir
             ];
           };
@@ -108,6 +111,7 @@
             # TODO: Make test dependencies optional
             nativeBuildInputs = [
               ocamlPackages.cmdliner
+              ocamlPackages.mdx
             ];
           };
 

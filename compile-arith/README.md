@@ -6,34 +6,36 @@ The correctness of compilation and pretty printing are tested with
 [property-based tests](./test/Properties.ml) implemented using the [qcheck]
 library.
 
-The compiler targets the following languages:
+## Compilation Targets
 
-- Stack machine instructions
+The compiler currently targets the following intermediate languages:
 
-  This is similar to what can be found in stack based languages like [Forth] and
-  [Java bytecode]:
+### Stack machine instructions
 
-  ```command
-  $ arith compile --target=stack <<< "1 + -2 * 7"
-  int 1;
-  int 2;
-  neg;
-  int 7;
-  mul;
-  add;
-  ```
+This is similar to what can be found in stack based languages like [Forth] and
+[Java bytecode]:
 
-- A-Normal Form
+```sh
+$ arith compile --target=stack <<< "1 + -2 * 7"
+int 1;
+int 2;
+neg;
+int 7;
+mul;
+add;
+```
 
-  This defines an intermediate binding for each computation. This is close to
-  the [three-address code] found in many optimising compilers.
+### A-Normal Form
 
-  ```command
-  $ arith compile --target=anf <<< "1 + -2 * 7"
-  let e0 := neg 2;
-  let e1 := mul e0 7;
-  add 1 e1
-  ```
+This defines an intermediate binding for each computation. This is close to
+the [three-address code] found in many optimising compilers.
+
+```sh
+$ arith compile --target=anf <<< "1 + -2 * 7"
+let e0 := neg 2;
+let e1 := mul e0 7;
+add 1 e1
+```
 
 This implementation is extended with conditionals and let expressions in the
 [compile-arithcond](../compile-arithcond) project.
