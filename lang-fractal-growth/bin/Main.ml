@@ -20,7 +20,7 @@ end = struct
 
   end
 
-  module Examples = FractalGrowth.Examples
+  module Examples = FractalGrowthExamples
 
   module Algae = Make (Examples.Algae)
   module Filament = Make (Examples.Filament)

@@ -1,0 +1,4 @@
+(library
+  (name FractalGrowthExamples)
+  (public_name lang-fractal-growth.examples)
+  (libraries lang-fractal-growth))
