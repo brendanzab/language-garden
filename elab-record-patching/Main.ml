@@ -1,6 +1,3 @@
-module Core = Elab.Core
-module Surface = Elab.Surface
-
 (** Example terms for testing *)
 module Examples = struct
 
