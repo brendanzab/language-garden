@@ -13,8 +13,6 @@
 
 %token END
 
-%{ open Elab %}
-
 %start <Surface.tm> main
 
 %%

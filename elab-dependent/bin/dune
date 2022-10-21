@@ -1,12 +1,8 @@
-(library
-  (name ElabDependent)
-  (public_name elab-dependent))
-
-(menhir
-  (modules Parser)
-  (flags --explain --strict))
-
-(ocamllex Lexer)
+(executable
+  (name main)
+  (public_name elab-dependent)
+  (package elab-dependent)
+  (libraries elab-dependent))
 
 (env
   (dev

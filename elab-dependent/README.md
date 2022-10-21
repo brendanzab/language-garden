@@ -4,6 +4,12 @@ This is an implementation of a small dependently typed language where types are
 first-class and where the return type of a function may depend on the arguments
 it is applied to.
 
+Type checking is is implemented in terms of an _elaborator_, which checks and
+tanslates a user-friendly _surface language_ into a simpler and more explicit
+_core language_ that is more closely connected to type theory. Because we need
+to simplify types during elaboration we also implement an interpreter for the
+core language.
+
 *This was originally posted at
 [tt-hoas-nameless.ml](https://gist.github.com/brendanzab/a8443e9d267ed142e4603fc3cb5fa9c8).*
 

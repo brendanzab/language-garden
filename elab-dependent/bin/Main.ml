@@ -1,4 +1,8 @@
-module Surface = Elab.Surface
+(** {0 Compiler CLI} *)
+
+module Surface = ElabDependent.Surface
+module Lexer = ElabDependent.Lexer
+module Parser = ElabDependent.Parser
 
 
 (** CLI options *)
