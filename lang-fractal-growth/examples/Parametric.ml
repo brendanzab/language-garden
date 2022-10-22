@@ -20,15 +20,13 @@ let rules =
   | C                       -> [C]
 
 
-module Symbol = struct
+let string_of_symbol =
+  (* FIXME: could do with some spaces and/or punctuation between symbols *)
+  function
+  | A (x, y) -> Format.sprintf "A(%i, %i)" x y
+  | B x -> Format.sprintf "B(%i)" x
+  | C -> "C"
 
-  type t = symbol
-
-  let to_string =
-    (* FIXME: could do with some spaces and/or punctuation between symbols *)
-    function
-    | A (x, y) -> Format.sprintf "A(%i, %i)" x y
-    | B x -> Format.sprintf "B(%i)" x
-    | C -> "C"
-
-end
+let string_of_word w =
+  List.map string_of_symbol w
+    |> String.concat " "

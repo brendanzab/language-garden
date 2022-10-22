@@ -43,22 +43,22 @@ Koch Island
 
 Parametric L-System
   $ fractal-growth generations --system=parametric | head --lines=16
-  B(2)A(4, 4)
-  B(1)B(4)A(1, 0)
-  B(0)B(3)A(2, 1)
-  CB(2)A(4, 3)
-  CB(1)A(8, 7)
-  CB(0)B(8)A(1, 0)
-  CCB(7)A(2, 1)
-  CCB(6)A(4, 3)
-  CCB(5)A(8, 7)
-  CCB(4)B(8)A(1, 0)
-  CCB(3)B(7)A(2, 1)
-  CCB(2)B(6)A(4, 3)
-  CCB(1)B(5)A(8, 7)
-  CCB(0)B(4)B(8)A(1, 0)
-  CCCB(3)B(7)A(2, 1)
-  CCCB(2)B(6)A(4, 3)
+  B(2) A(4, 4)
+  B(1) B(4) A(1, 0)
+  B(0) B(3) A(2, 1)
+  C B(2) A(4, 3)
+  C B(1) A(8, 7)
+  C B(0) B(8) A(1, 0)
+  C C B(7) A(2, 1)
+  C C B(6) A(4, 3)
+  C C B(5) A(8, 7)
+  C C B(4) B(8) A(1, 0)
+  C C B(3) B(7) A(2, 1)
+  C C B(2) B(6) A(4, 3)
+  C C B(1) B(5) A(8, 7)
+  C C B(0) B(4) B(8) A(1, 0)
+  C C C B(3) B(7) A(2, 1)
+  C C C B(2) B(6) A(4, 3)
 
 Binary tree
   $ fractal-growth generations --system=binary-tree | head --lines=5

@@ -2,7 +2,7 @@
 
 
 (** Turtle command *)
-type command =
+type symbol =
   | Left    (** Turn left by an angle {i δ} *)
   | Right   (** Turn right by an angle {i δ} *)
   | Line    (** Move forward a distance {i d}, drawing a line *)
@@ -26,16 +26,14 @@ let rules =
   | s -> [s]
 
 
-module Symbol = struct
+let string_of_symbol =
+  function
+  | Left -> "+"
+  | Right -> "-"
+  | Line -> "F"
 
-  type t = command
+let string_of_word w =
+  List.map string_of_symbol w
+    |> String.concat ""
 
-  let to_string =
-    function
-    | Left -> "+"
-    | Right -> "-"
-    | Line -> "F"
-
-  (* TODO: Graphical interpretation? *)
-
-end
+(* TODO: Graphical interpretation? *)

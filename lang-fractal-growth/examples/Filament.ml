@@ -11,8 +11,8 @@ type polarity =
   | L   (** Divide to the left *)
   | R   (** Divide to the right *)
 
-(** The state of a cell in a multicellular filament *)
-type cell = size * polarity
+(** The state of a cell in a filament of Anabaena catenula *)
+type symbol = size * polarity
 
 let axiom = [A, R]
 
@@ -24,17 +24,13 @@ let rules =
   | B, L -> [A, L]          (* Grow left *)
 
 
-(** A cell in a filament of Anabaena catenula *)
-module Symbol = struct
+let string_of_symbol =
+  function
+  | A, R -> "(-->)"
+  | B, R -> "(->)"
+  | A, L -> "(<--)"
+  | B, L -> "(<-)"
 
-  (** The state of a cell in a multicellular filament *)
-  type t = cell
-
-  let to_string =
-    function
-    | A, R -> "(-->)"
-    | B, R -> "(->)"
-    | A, L -> "(<--)"
-    | B, L -> "(<-)"
-
-end
+let string_of_word w =
+  List.map string_of_symbol w
+    |> String.concat ""

@@ -17,15 +17,13 @@ let rules =
   | s -> [s]
 
 
-module Symbol = struct
+let string_of_symbol =
+  function
+  | Bud -> "0"
+  | Branch -> "1"
+  | Push -> "["
+  | Pop -> "]"
 
-  type t = symbol
-
-  let to_string =
-    function
-    | Bud -> "0"
-    | Branch -> "1"
-    | Push -> "["
-    | Pop -> "]"
-
-end
+let string_of_word w =
+  List.map string_of_symbol w
+    |> String.concat ""

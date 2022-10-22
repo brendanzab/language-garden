@@ -2,7 +2,7 @@
 
 
 (** Cytological state of a cell *)
-type cell =
+type symbol =
   | A             (** Large cell, ready to divide *)
   | B             (** Small cell *)
 
@@ -15,12 +15,13 @@ let rules =
   | B -> [A]      (* Grow *)
 
 
-module Symbol = struct
+(** {1 String interpretation} *)
 
-  type t = cell
+let string_of_symbol =
+  function
+  | A -> "a"
+  | B -> "b"
 
-  let to_string = function
-    | A -> "a"
-    | B -> "b"
-
-end
+let string_of_word w =
+  List.map string_of_symbol w
+    |> String.concat ""

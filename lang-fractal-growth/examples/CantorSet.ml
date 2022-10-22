@@ -2,7 +2,8 @@
     L-system page} on Wikipedia. *)
 
 
-type command =
+(** Drawing command *)
+type symbol =
   | Draw   (** Draw forward *)
   | Move   (** Move forward *)
 
@@ -14,13 +15,11 @@ let rules =
   | Move -> [Move; Move; Move]
 
 
-module Symbol = struct
+let string_of_symbol =
+  function
+  | Draw -> "A"
+  | Move -> "B"
 
-  type t = command
-
-  let to_string =
-    function
-    | Draw -> "A"
-    | Move -> "B"
-
-end
+let string_of_word w =
+  List.map string_of_symbol w
+    |> String.concat ""

@@ -1,26 +1,14 @@
-(** A symbol in an alphabet *)
-module type Symbol = sig
-
-  (** The type of a symbol *)
-  type t
-
-  (** Convert the symbol to a string *)
-  val to_string : t -> string
-
-end
-
-
 (** Signature of a deterministic, context-free L-System *)
 module type Grammar = sig
 
   (** Alphabet of symbols for this system *)
-  module Symbol : Symbol
+  type symbol
 
   (** The initial state of the system *)
-  val axiom : Symbol.t list
+  val axiom : symbol list
 
   (** Production rules defining how symbols will be replaced *)
-  val rules : Symbol.t -> Symbol.t list
+  val rules : symbol -> symbol list
 
 end
 
@@ -28,16 +16,11 @@ end
 (** Derived utility functions for working with L-systems *)
 module Util (G : Grammar) : sig
 
-  open G
-
   (** Apply the rewrite rules in parallel *)
-  val step : Symbol.t list -> Symbol.t list
+  val step : G.symbol list -> G.symbol list
 
   (** Unfold a list of productions *)
-  val generate : Symbol.t list -> Symbol.t list Seq.t
-
-  (** Render a word as a string *)
-  val string_of_word : Symbol.t list -> string
+  val generate : G.symbol list -> G.symbol list Seq.t
 
 end = struct
 
@@ -46,9 +29,5 @@ end = struct
 
   let generate w =
     Seq.unfold (fun w -> Some (w, step w)) w
-
-  let string_of_word w =
-    List.map G.Symbol.to_string w
-      |> String.concat ""
 
 end
