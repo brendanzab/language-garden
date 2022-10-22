@@ -1,6 +1,7 @@
 (** Based on Figure 1.3 in “The Algorithmic Beauty of Plants” *)
 
 
+(* $MDX part-begin=grammar *)
 (** Cytological state of a cell *)
 type symbol =
   | A             (** Large cell, ready to divide *)
@@ -13,6 +14,7 @@ let rules =
   function
   | A -> [A; B]   (* Divide *)
   | B -> [A]      (* Grow *)
+(* $MDX part-end *)
 
 
 (** {1 String interpretation} *)

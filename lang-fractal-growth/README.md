@@ -8,6 +8,31 @@ generation for a long time, but have found the resources related to L-systems
 and production systems a challenge for me to understand. This project is an
 attempt to express these ideas in a way that makes more sense to me.
 
+The output of various systems can be found in the [CLI tests](./test/cli.t).
+In the future is would be nice to produce graphical output for these systems.
+
+[L-systems]: https://en.wikipedia.org/wiki/L-system
+
+## Examples
+
+[examples/Algae.ml](./examples/Algae.ml):
+
+<!-- $MDX file=examples/Algae.ml,part=grammar -->
+```ocaml
+(** Cytological state of a cell *)
+type symbol =
+  | A             (** Large cell, ready to divide *)
+  | B             (** Small cell *)
+
+let axiom =
+  [B]             (* Seed with a small cell *)
+
+let rules =
+  function
+  | A -> [A; B]   (* Divide *)
+  | B -> [A]      (* Grow *)
+```
+
 ```sh
 $ fractal-growth generations --system=algae | head
 b
@@ -22,6 +47,33 @@ abaababaabaababaababaabaababaabaab
 abaababaabaababaababaabaababaabaababaababaabaababaababa
 ```
 
+[examples/Filament.ml](./examples/Filament.ml):
+
+<!-- $MDX file=examples/Filament.ml,part=grammar -->
+```ocaml
+(** Cytological state of a cell *)
+type size =
+  | A   (** Long cell, ready to divide *)
+  | B   (** Short sell *)
+
+(** Where new cells will be produced *)
+type polarity =
+  | L   (** Divide to the left *)
+  | R   (** Divide to the right *)
+
+(** The state of a cell in a filament of Anabaena catenula *)
+type symbol = size * polarity
+
+let axiom = [A, R]
+
+let rules =
+  function
+  | A, R -> [A, L; B, R]    (* Divide right *)
+  | A, L -> [B, L; A, R]    (* Divide left *)
+  | B, R -> [A, R]          (* Grow right *)
+  | B, L -> [A, L]          (* Grow left *)
+```
+
 ```sh
 $ fractal-growth generations --system=filament | head --lines=6
 (-->)
@@ -31,11 +83,6 @@ $ fractal-growth generations --system=filament | head --lines=6
 (<-)(-->)(<-)(-->)(-->)(<-)(-->)(-->)
 (<--)(<--)(->)(<--)(<--)(->)(<--)(->)(<--)(<--)(->)(<--)(->)
 ```
-
-The output of various systems can be found in the [CLI tests](./test/cli.t).
-In the future is would be nice to produce graphical output for these systems.
-
-[L-systems]: https://en.wikipedia.org/wiki/L-system
 
 ## Ideas for future work
 

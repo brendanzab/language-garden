@@ -1,6 +1,7 @@
 (** Based on Equation 1.1 in “The Algorithmic Beauty of Plants” *)
 
 
+(* $MDX part-begin=grammar *)
 (** Cytological state of a cell *)
 type size =
   | A   (** Long cell, ready to divide *)
@@ -22,6 +23,7 @@ let rules =
   | A, L -> [B, L; A, R]    (* Divide left *)
   | B, R -> [A, R]          (* Grow right *)
   | B, L -> [A, L]          (* Grow left *)
+(* $MDX part-end *)
 
 
 let string_of_symbol =
