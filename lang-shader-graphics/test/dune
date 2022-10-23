@@ -2,17 +2,34 @@
   (deps %{bin:shader-graphics}))
 
 (rule
-  (action (with-stdout-to scene.glsl.out
-    (run %{bin:shader-graphics} compile))))
+  (action (with-stdout-to basic.glsl.out
+    (run %{bin:shader-graphics} compile --scene=basic))))
 
 (rule (alias runtest)
-  (action (diff scene.glsl scene.glsl.out)))
+  (action (diff basic.glsl basic.glsl.out)))
 
 (rule
-  (action (with-stdout-to scene.png.out
+  (action (with-stdout-to basic.png.out
     (pipe-stdout
-      (run %{bin:shader-graphics} render)
+      (run %{bin:shader-graphics} render --scene=basic)
       (run pnmtopng)))))
 
 (rule (alias runtest)
-  (action (cmp scene.png scene.png.out)))
+  (action (cmp basic.png basic.png.out)))
+
+
+(rule
+  (action (with-stdout-to readme.glsl.out
+    (run %{bin:shader-graphics} compile --scene=readme))))
+
+(rule (alias runtest)
+  (action (diff readme.glsl readme.glsl.out)))
+
+(rule
+  (action (with-stdout-to readme.png.out
+    (pipe-stdout
+      (run %{bin:shader-graphics} render --scene=readme)
+      (run pnmtopng)))))
+
+(rule (alias runtest)
+  (action (cmp readme.png readme.png.out)))

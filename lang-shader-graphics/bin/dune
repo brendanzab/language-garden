@@ -4,11 +4,6 @@
   (package lang-shader-graphics)
   (libraries
     lang-shader-graphics
-    cmdliner))
+    lang-shader-graphics.examples
 
-(env
-  (dev
-    ; see `ocamlc -warn-help` for information on warnings
-    (flags (:standard -w -unused-constructor
-                      -w -unused-type-declaration
-                      -w -unused-value-declaration))))
+    cmdliner))

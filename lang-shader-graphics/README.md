@@ -9,9 +9,10 @@ procedural graphics in parallel on the GPU, without the use of mesh geometry.
 For more details see the  [resources](#resources) listed below. This is an
 embedded DSL for composing SDFs in OCaml and compiling them to shader programs.
 
+<!-- $MDX file=examples/Readme.ml,part=scene -->
 ```ocaml
 (** A scene to render, assuming UV coordinates in (-0.5, 0.5) *)
-let scene : (vec3f repr) Env.m  =
+let scene : (vec3f repr) Env.t  =
   (* Some shapes defined using signed distance functions *)
   let* s1 = circle !!0.3 |> move (S.vec2 !!0.0 !!0.0) in
   let* s2 = square !!0.2 |> move (S.vec2 !!0.2 !!0.0) in
@@ -31,10 +32,10 @@ The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd appr
 to custom operators (which don’t allow for custom precedences), and lack of
 implicit overloading. Still, I think it’s an interesting proof-of-concept!
 
-A full example can be found in [bin/Main.ml](./bin/Main.ml), which renders the
-following image using the sequential, CPU-based back-end:
+A full example can be found in [examples/Basic.ml](./examples/Basic.ml), which
+renders the following image using the sequential, CPU-based back-end:
 
-![The rendered output of Main.ml](./test/scene.png)
+![The rendered output of Main.ml](./test/readme.png)
 
 ## Implementation details
 
@@ -43,7 +44,7 @@ This helps make supporting either compilation to GLSL shaders or rendering
 directly on the CPU reasonably straightforward. In the future alternate
 back-ends for targets like [HLSL], [MSL] and [SPIR-V] could also be implemented.
 
-The compiled GLSL code can be seen at [test/scene.glsl](./test/scene.glsl).
+The compiled GLSL code can be seen at [test/basic.glsl](./test/basic.glsl).
 For now the compiler assigns the result of each intermediate computation to a
 new local variable, attempting to avoid introducing duplicate computations.
 I’m not sure if this is the most efficient approach, or whether attempting to

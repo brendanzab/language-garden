@@ -51,7 +51,7 @@ end
 
 let generations_cmd name =
   match Examples.list |> List.assoc_opt name with
-  | None -> Printf.eprintf "unkown system"
+  | None -> Printf.eprintf "unkown system '%s'" name; exit 1
   | Some run -> run ()
 
 let list_cmd () =
