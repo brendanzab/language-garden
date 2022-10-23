@@ -1,8 +1,10 @@
 (executable
   (name main)
-  (public_name elab-dependent)
+  (public_name dependent)
   (package elab-dependent)
-  (libraries elab-dependent))
+  (libraries
+    elab-dependent
+    cmdliner))
 
 (env
   (dev

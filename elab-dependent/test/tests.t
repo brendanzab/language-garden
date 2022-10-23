@@ -1,9 +1,16 @@
+Usage
+  $ dependent
+  dependent: required COMMAND name is missing, must be either 'elab' or 'norm'.
+  Usage: dependent COMMAND …
+  Try 'dependent --help' for more information.
+  [124]
+
 The identity function
   $ cat >id <<< "fun (A : Type) (a : A) := a"
-  $ cat id | elab-dependent elab
+  $ cat id | dependent elab
   <input> : fun (A : Type) (a : A) -> A :=
     (fun A a := a) : fun (A : Type) (a : A) -> A
-  $ cat id | elab-dependent norm
+  $ cat id | dependent norm
   <input> : fun (A : Type) (a : A) -> A := fun A a := a
 
 Church-encoded boolean type
@@ -17,7 +24,7 @@ Church-encoded boolean type
   > 
   > true Bool false
   > EOF
-  $ cat bools | elab-dependent elab
+  $ cat bools | dependent elab
   <input> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
@@ -28,7 +35,7 @@ Church-encoded boolean type
     let not : fun (b : Bool) -> Bool :=
       fun b Out true false := b Out false true;
     true Bool false
-  $ cat bools | elab-dependent norm
+  $ cat bools | dependent norm
   <input> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
@@ -45,7 +52,7 @@ Church-encoded option type
   > 
   > some (Option Type) (some Type (Type -> Type))
   > EOF
-  $ cat options | elab-dependent elab
+  $ cat options | dependent elab
   <input> :
     fun (Out : Type)
         (some : fun (Out : Type) (some : Type -> Out) (none : Out) -> Out ->
@@ -58,7 +65,7 @@ Church-encoded option type
     let some : fun (A : Type) (a : A) -> Option A :=
       fun A a Out some none := some a;
     some (Option Type) (some Type (Type -> Type))
-  $ cat options | elab-dependent norm
+  $ cat options | dependent norm
   <input> :
     fun (Out : Type)
         (some : fun (Out : Type) (some : Type -> Out) (none : Out) -> Out ->
@@ -67,48 +74,48 @@ Church-encoded option type
   := fun Out some none := some (fun Out some none := some (Type -> Type))
 
 Name not bound
-  $ elab-dependent elab <<< "fun (A : Type) (a : A) := foo"
+  $ dependent elab <<< "fun (A : Type) (a : A) := foo"
   error: `foo` is not bound in the current scope
   [1]
 
 Function literal body annotations (checking)
-  $ elab-dependent elab <<< "(fun A (a : A) : A := a) : fun (A : Type) (a : A) -> A"
+  $ dependent elab <<< "(fun A (a : A) : A := a) : fun (A : Type) (a : A) -> A"
   <input> : fun (A : Type) (a : A) -> A :=
     (fun A a := a) : fun (A : Type) (a : A) -> A
 
 Mismatched function literal parameter (checking)
-  $ elab-dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (B : Type) (a : B) -> A"
+  $ dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (B : Type) (a : B) -> A"
   error: type mismatch
     expected: B
     found:    A
   [1]
 
 Mismatched function iteral body annotation (checking)
-  $ elab-dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (B : Type) (a : A) -> B"
+  $ dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (B : Type) (a : A) -> B"
   error: type mismatch
     expected: B
     found:    A
   [1]
 
 Too many parameters (checking)
-  $ elab-dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (a : A) -> A"
+  $ dependent elab <<< "(fun A B (a : A) : A := a) : fun (A : Type) (a : A) -> A"
   error: too many parameters in function literal
   [1]
 
 Function literal body annotations (inferring)
-  $ elab-dependent elab <<< "fun (A : Type) (a : A) : A := a"
+  $ dependent elab <<< "fun (A : Type) (a : A) : A := a"
   <input> : fun (A : Type) (a : A) -> A :=
     (fun A a := a) : fun (A : Type) (a : A) -> A
 
 Mismatched body annotation (inferring)
-  $ elab-dependent elab <<< "fun (A : Type) (a : A) : A := A"
+  $ dependent elab <<< "fun (A : Type) (a : A) : A := A"
   error: type mismatch
     expected: A
     found:    Type
   [1]
 
 An example of a type error
-  $ elab-dependent elab <<EOF
+  $ dependent elab <<EOF
   > let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
   > let true : Bool := fun Out true false := true;
   > let false : Bool := fun Out true false := false;

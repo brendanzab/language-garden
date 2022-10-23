@@ -5,50 +5,6 @@ module Lexer = ElabDependent.Lexer
 module Parser = ElabDependent.Parser
 
 
-(** CLI options *)
-
-let usage out_channel program =
-  Printf.fprintf out_channel "USAGE:\n";
-  Printf.fprintf out_channel "    %s elab [--no-resugar]...\n" program;
-  Printf.fprintf out_channel "    %s norm [--no-resugar]...\n" program;
-  Printf.fprintf out_channel "    %s --help | -h\n" program
-
-let exit_usage_error program =
-  Printf.eprintf "error: unexpected CLI arguments\n";
-  usage stderr program;
-  exit 1
-
-let exit_usage_help program =
-  usage stdout program;
-  exit 0
-
-
-(** CLI option parsing *)
-
-type flags = {
-  resugar : bool;
-}
-
-type command =
-  | Elab of flags
-  | Norm of flags
-
-let rec parse_flags program flags = function
-  | "--no-resugar" :: args -> parse_flags program { resugar = true } args
-  | _ :: _ -> exit_usage_error program
-  | [] -> flags
-
-let parse_command program = function
-  | "elab" :: args -> Elab (parse_flags program { resugar = true } args)
-  | "norm" :: args -> Norm (parse_flags program { resugar = true } args)
-  | ["--help" | "-h"] -> exit_usage_help program
-  | _ -> exit_usage_error program
-
-let parse_args = function
-  | program :: args -> parse_command (Filename.basename program) args
-  | [] -> exit_usage_error "main"
-
-
 (** Helper functions *)
 
 let print_error (pos : Lexing.position) message =
@@ -89,21 +45,42 @@ let pp_def ~resugar context fmt (name, ty, tm) =
     (Surface.pp ~resugar context) tm
 
 
-(** Main entrypoint *)
+(** {1 Subcommands} *)
 
-let main () =
-  Printexc.record_backtrace true;
-
-  let args = parse_args (Array.to_list Sys.argv) in
+let elab_cmd (no_resugar : bool) : unit =
   let context = Surface.initial_context in
   let (tm, ty) = infer context (parse_tm "<input>" stdin) in
+  Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
+    ("<input>", Surface.quote context ty, tm)
 
-  match args with
-  | Elab { resugar } ->
-      Format.printf "%a@\n" (pp_def ~resugar context)
-        ("<input>", Surface.quote context ty, tm)
-  | Norm { resugar } ->
-      Format.printf "%a@\n" (pp_def ~resugar context)
-        ("<input>", Surface.quote context ty, Surface.normalise context tm)
+let norm_cmd (no_resugar : bool) : unit =
+  let context = Surface.initial_context in
+  let (tm, ty) = infer context (parse_tm "<input>" stdin) in
+  Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
+    ("<input>", Surface.quote context ty, Surface.normalise context tm)
 
-let () = main ()
+
+(** {1 CLI options} *)
+
+let cmd =
+  let open Cmdliner in
+
+  let no_resugar : bool Term.t =
+    Arg.(value & flag
+      & info ["no-resugar"]
+          ~doc:"disable resugaring in pretty printed terms")
+  in
+
+  Cmd.group (Cmd.info "dependent") [
+    Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
+      Term.(const elab_cmd $ no_resugar);
+    Cmd.v (Cmd.info "norm" ~doc:"elaborate a term from standard input")
+      Term.(const norm_cmd $ no_resugar);
+  ]
+
+
+(** {1 Main entrypoint} *)
+
+let () =
+  Printexc.record_backtrace true;
+  exit (Cmdliner.Cmd.eval cmd)

@@ -42,6 +42,7 @@
 (package
   (name elab-dependent)
   (depends
+    (cmdliner (>= v1.1.1))
     (menhir :build)))
 
 (package

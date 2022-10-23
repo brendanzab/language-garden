@@ -88,6 +88,7 @@
             duneVersion = "3";
 
             nativeBuildInputs = [
+              ocamlPackages.cmdliner
               ocamlPackages.mdx
               ocamlPackages.menhir
             ];
