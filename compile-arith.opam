@@ -6,9 +6,9 @@ homepage: "https://github.com/brendanzab/language-garden"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.0"}
-  "menhir" {build}
   "alcotest" {>= "1.5.0" & with-test}
-  "cmdliner" {>= "v1.1.1" & with-test}
+  "cmdliner" {>= "v1.1.1"}
+  "menhir" {build}
   "qcheck" {>= "0.19.1" & with-test}
   "qcheck-core" {>= "0.19.1" & with-test}
   "qcheck-alcotest" {>= "0.19.1" & with-test}

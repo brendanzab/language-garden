@@ -18,9 +18,9 @@
 (package
   (name compile-arith)
   (depends
-    (menhir :build)
     (alcotest (and (>= 1.5.0) :with-test))
-    (cmdliner (and (>= v1.1.1) :with-test))
+    (cmdliner (>= v1.1.1))
+    (menhir :build)
     (qcheck (and (>= 0.19.1) :with-test))
     (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
@@ -28,9 +28,9 @@
 (package
   (name compile-arithcond)
   (depends
-    (menhir :build)
     (alcotest (and (>= 1.5.0) :with-test))
-    (cmdliner (and (>= v1.1.1) :with-test))
+    (cmdliner (>= v1.1.1))
+    (menhir :build)
     (qcheck (and (>= 0.19.1) :with-test))
     (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
@@ -51,17 +51,17 @@
 (package
   (name lang-fractal-growth)
   (depends
-    (cmdliner (and (>= v1.1.1) :with-test))))
+    (cmdliner (>= v1.1.1))))
 
 (package
   (name lang-shader-graphics)
   (depends
-    (cmdliner (and (>= v1.1.1) :with-test))))
+    (cmdliner (>= v1.1.1))))
 
 
 (package
   (name old-elab-dependent)
   (depends
     (menhir :build)
-    (pp (and (>= 1.1.2)))
+    (pp (>= 1.1.2))
     (ppx_string (and (>= v0.15.0) :with-test))))
