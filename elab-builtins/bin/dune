@@ -1,0 +1,7 @@
+(executable
+  (name main)
+  (public_name builtins)
+  (package elab-builtins)
+  (libraries
+    elab-builtins
+    cmdliner))

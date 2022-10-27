@@ -94,6 +94,19 @@
             ];
           };
 
+          elab-builtins = ocamlPackages.buildDunePackage {
+            pname = "elab-builtins";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+
+            nativeBuildInputs = [
+              ocamlPackages.cmdliner
+              ocamlPackages.mdx
+              ocamlPackages.menhir
+            ];
+          };
+
           elab-record-patching = ocamlPackages.buildDunePackage {
             pname = "elab-record-patching";
             version = "0";

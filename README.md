@@ -20,6 +20,8 @@ widely applicable as well.
   An elaborator for a small dependently typed lambda calculus.
 - [**elab-record-patching**](./elab-record-patching/):
   An elaborator of a dependently typed lambda calculus with singletons and record patching.
+- [**elab-builtins**](./elab-builtins/):
+  An elaborator that supports built-in types and operations.
 
 ### Compilation
 
