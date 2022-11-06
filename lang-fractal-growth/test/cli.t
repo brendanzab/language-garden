@@ -13,6 +13,7 @@ List of systems
   parametric
   binary-tree
   cantor-set
+  monopodial-inflorence
 
 Algae generations
   $ fractal-growth generations --system=algae | head
@@ -75,3 +76,14 @@ Cantor set
   ABABBBABA
   ABABBBABABBBBBBBBBABABBBABA
   ABABBBABABBBBBBBBBABABBBABABBBBBBBBBBBBBBBBBBBBBBBBBBBABABBBABABBBBBBBBBABABBBABA
+
+Monopodial inflorence
+  $ fractal-growth generations --system=monopodial-inflorence | head --lines=8
+  A
+  I[A]A
+  I[B]I[A]A
+  I[C]I[B]I[A]A
+  I[C]I[C]I[B]I[A]A
+  I[C]I[C]I[C]I[B]I[A]A
+  I[C]I[C]I[C]I[C]I[B]I[A]A
+  I[C]I[C]I[C]I[C]I[C]I[B]I[A]A

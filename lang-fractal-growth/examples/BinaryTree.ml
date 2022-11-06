@@ -14,6 +14,7 @@ let rules =
   function
   | Branch -> [Branch; Branch]            (* Grow the branch *)
   | Bud -> [Branch; Push; Bud; Pop; Bud]  (* Split a bud into a branch and two buds *)
+  (* TODO: Terminal symbols *)
   | s -> [s]
 
 

@@ -34,6 +34,7 @@ end = struct
   module Parametric = Make (Examples.Parametric)
   module BinaryTree = Make (Examples.BinaryTree)
   module CantorSet = Make (Examples.CantorSet)
+  module MonopodialInflorence = Make (Examples.MonopodialInflorence)
 
   let list = [
     "algae", Algae.print_generations;
@@ -42,6 +43,7 @@ end = struct
     "parametric", Parametric.print_generations;
     "binary-tree", BinaryTree.print_generations;
     "cantor-set", CantorSet.print_generations;
+    "monopodial-inflorence", MonopodialInflorence.print_generations;
   ]
 
 end

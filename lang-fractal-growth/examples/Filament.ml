@@ -5,7 +5,7 @@
 (** Cytological state of a cell *)
 type size =
   | A   (** Long cell, ready to divide *)
-  | B   (** Short sell *)
+  | B   (** Short cell *)
 
 (** Where new cells will be produced *)
 type polarity =

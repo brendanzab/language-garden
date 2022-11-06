@@ -23,6 +23,7 @@ let rules =
         Line; Right; Line; Left; Line; Left; Line;
         Line; Right; Line; Right; Line; Left; Line;
       ]
+  (* TODO: Terminal symbols *)
   | s -> [s]
 
 
