@@ -17,7 +17,8 @@ system, along with the `Πk:u.κ` production.
 - [ ] surface language
   - [ ] parser
   - [ ] elaborator
-- [ ] connectives
+- [ ] stratify connectives
   - [x] dependent function types
   - [ ] dependent record types
   - [ ] primitive numbers
+- [ ] phase separation translation
