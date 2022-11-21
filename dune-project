@@ -72,6 +72,9 @@
     (menhir :build)))
 
 (package
+  (name wip-stratify))
+
+(package
   (name wip-uncurry))
 
 
