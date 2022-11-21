@@ -8,19 +8,19 @@ but don’t impact the equality of terms. *)
 type name = string option
 
 
-(** Namespaces *)
+(** Variable namespaces *)
 module Ns = struct
 
-  (** Namespace of Level 1 terms *)
+  (** Level 1 term bindings *)
   type tm1
 
-  (** Namespace of Level 0 terms *)
+  (** Level 0 term bindings *)
   type tm0
 
 end
 
 
-(** Syntax of the core language *)
+(** Syntax of the stratified language *)
 module Syntax = struct
 
   (** {1 Types} *)
@@ -134,17 +134,7 @@ module Semantics = struct
 
   (** {1 Evaluation} *)
 
-  let rec eval env : Syntax.tm -> vtm =
-    function
-    | Tm1 t -> Tm1 (eval1 env t)
-    | Tm0 t -> Tm0 (eval0 env t)
-
-  and eval_ty env : Syntax.ty -> vty =
-    function
-    | Ty1 t -> Ty1 (eval2 env t)
-    | Ty0 t -> Ty0 (eval1 env t)
-
-  and eval2 env : Syntax.tm2 -> vtm2 =
+  let rec eval2 env : Syntax.tm2 -> vtm2 =
     function
     | Univ -> Univ
     | FunType1 (name, param_ty, body_ty) ->
@@ -155,14 +145,14 @@ module Semantics = struct
   and eval1 env : Syntax.tm1 -> vtm1 =
     function
     | Let1 (_, def, body) ->
-        eval1 (bind (eval env def) env) body
+        eval1 (bind (eval_tm env def) env) body
     | Var1 x -> Env.get_index x env.tm1s
     | FunLit1 (name, param_ty, body) ->
         let param_ty = eval_ty env param_ty in
         let body x = eval1 (bind x env) body in
         FunLit1 (name, param_ty, body)
     | FunApp1 (head, arg) ->
-        app1 (eval1 env head) (eval env arg)
+        app1 (eval1 env head) (eval_tm env arg)
     | FunType0 (name, param_ty, body_ty) ->
         let param_ty = eval1 env param_ty in
         let body_ty x = eval1 (bind x env) body_ty in
@@ -171,13 +161,23 @@ module Semantics = struct
   and eval0 env : Syntax.tm0 -> vtm0 =
     function
     | Let0 (_, def, body) ->
-        eval0 (bind (eval env def) env) body
+        eval0 (bind (eval_tm env def) env) body
     | Var0 x -> Env.get_index x env.tm0s
     | FunLit0 (name, param_ty, body) ->
         let param_ty = eval_ty env param_ty in
         let body x = eval0 (bind x env) body in
         FunLit0 (name, param_ty, body)
     | FunApp0 (head, arg) ->
-        app0 (eval0 env head) (eval env arg)
+        app0 (eval0 env head) (eval_tm env arg)
+
+  and eval_tm env : Syntax.tm -> vtm =
+    function
+    | Tm1 t -> Tm1 (eval1 env t)
+    | Tm0 t -> Tm0 (eval0 env t)
+
+  and eval_ty env : Syntax.ty -> vty =
+    function
+    | Ty1 t -> Ty1 (eval2 env t)
+    | Ty0 t -> Ty0 (eval1 env t)
 
 end

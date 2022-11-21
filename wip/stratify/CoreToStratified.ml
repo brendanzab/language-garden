@@ -27,10 +27,16 @@ type env = {
   (* Current size of the stratified environments *)
   size1 : Stratified.Ns.tm1 Env.size;
   size0 : Stratified.Ns.tm0 Env.size;
-
-  (* Mappings from the core language variables to stratified variables *)
+  (* Mappings from the core language bindings to stratified bindings *)
   names : (Core.Ns.tm, Core.name) Env.t;
   levels : (Core.Ns.tm, level) Env.t;
+}
+
+let empty_env = {
+  size1 = Env.empty_size;
+  size0 = Env.empty_size;
+  names = Env.empty;
+  levels = Env.empty;
 }
 
 (** Add a level 1 binding to the environment *)

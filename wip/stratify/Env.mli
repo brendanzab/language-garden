@@ -21,6 +21,9 @@ type 'ns level
     {!index}, or by inverting a {!level} using {!level_to_index}. *)
 type ('ns, 'a) t
 
+(** Initial, empty environment *)
+val empty : ('ns, 'a) t
+
 (** Bind a new entry in the environment *)
 val bind_entry : 'a -> ('ns, 'a) t -> ('ns, 'a) t
 
@@ -33,12 +36,15 @@ val get_index : 'ns index -> ('ns, 'a) t -> 'a
 (** The size of an environment *)
 type 'ns size
 
-(** Converts a {!level} to an {!index} that is bound in an environment of the
-    supplied size. Assumes that [ size > level ]. *)
-val level_to_index : 'ns size -> 'ns level -> 'ns index
+(** The size of an initial, empty environment *)
+val empty_size : 'ns size
 
 (** Bind a new level *)
 val bind_level : 'ns size -> 'ns size
 
 (** Return a level that will point to the entry bound in the environment *)
 val next_level : 'ns size -> 'ns level
+
+(** Converts a {!level} to an {!index} that is bound in an environment of the
+    supplied size. Assumes that [ size > level ]. *)
+val level_to_index : 'ns size -> 'ns level -> 'ns index
