@@ -15,6 +15,8 @@
 (authors "Brendan Zabarauskas")
 
 
+; Compilation
+
 (package
   (name compile-arith)
   (depends
@@ -35,9 +37,8 @@
     (qcheck-core (and (>= 0.19.1) :with-test))
     (qcheck-alcotest (and (>= 0.19.1) :with-test))))
 
-(package
-  (name compile-uncurry))
 
+; Elaboration
 
 (package
   (name elab-dependent)
@@ -46,14 +47,10 @@
     (menhir :build)))
 
 (package
-  (name elab-builtins)
-  (depends
-    (cmdliner (>= v1.1.1))
-    (menhir :build)))
-
-(package
   (name elab-record-patching))
 
+
+; Languages
 
 (package
   (name lang-fractal-growth)
@@ -65,6 +62,20 @@
   (depends
     (cmdliner (>= v1.1.1))))
 
+
+; WIP projects
+
+(package
+  (name wip-builtins)
+  (depends
+    (cmdliner (>= v1.1.1))
+    (menhir :build)))
+
+(package
+  (name wip-uncurry))
+
+
+; Old projects
 
 (package
   (name old-elab-dependent)

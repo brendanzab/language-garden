@@ -1,6 +1,6 @@
 (library
   (name ElabBuiltins)
-  (public_name elab-builtins))
+  (public_name wip-builtins))
 
 (menhir
   (modules SurfaceParser)

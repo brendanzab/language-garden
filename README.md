@@ -20,8 +20,6 @@ widely applicable as well.
   An elaborator for a small dependently typed lambda calculus.
 - [**elab-record-patching**](./elab-record-patching/):
   An elaborator of a dependently typed lambda calculus with singletons and record patching.
-- [**elab-builtins**](./elab-builtins/):
-  An elaborator that supports built-in types and operations.
 
 ### Compilation
 
@@ -35,8 +33,6 @@ related to compiling functional programming languages.
   Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
 - [**compile-arith-verified**](./compile-arith-verified/):
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
-- [**compile-uncurry**](./compile-uncurry/):
-  Compiling single-parameter functions to multiparameter functions.
 
 ### Languages
 

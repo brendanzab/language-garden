@@ -91,19 +91,6 @@
             ];
           };
 
-          elab-builtins = ocamlPackages.buildDunePackage {
-            pname = "elab-builtins";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.cmdliner
-              ocamlPackages.mdx
-              ocamlPackages.menhir
-            ];
-          };
-
           elab-record-patching = ocamlPackages.buildDunePackage {
             pname = "elab-record-patching";
             version = "0";
@@ -140,7 +127,29 @@
             ];
           };
 
-          # Experiments
+          # WIP projects
+
+          wip-builtins = ocamlPackages.buildDunePackage {
+            pname = "wip-builtins";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+
+            nativeBuildInputs = [
+              ocamlPackages.cmdliner
+              ocamlPackages.mdx
+              ocamlPackages.menhir
+            ];
+          };
+
+          wip-uncurry = ocamlPackages.buildDunePackage {
+            pname = "wip-uncurry";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+          };
+
+          # Old projects
 
           old-elab-dependent = ocamlPackages.buildDunePackage {
             pname = "old-elab-dependent";

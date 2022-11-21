@@ -1,7 +1,7 @@
 (executable
   (name main)
   (public_name builtins)
-  (package elab-builtins)
+  (package wip-builtins)
   (libraries
-    elab-builtins
+    wip-builtins
     cmdliner))

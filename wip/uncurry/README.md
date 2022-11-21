@@ -1,7 +1,5 @@
 # Uncurrying lambda expressions
 
-> NOTE: A work in progress!
-
 This is an attempt to compile a language where all functions take a single
 argument to a language where functions take multiple arguments. The intention is
 to explore ways of supporting uncurrying for DSLs that compile to high-level
