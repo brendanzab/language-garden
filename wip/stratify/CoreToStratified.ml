@@ -1,16 +1,9 @@
-
-module Core = Core
-module Stratified = Stratified
-
-
-(** A compiled term *)
 type tm =
   | Tm2 of Stratified.Syntax.tm2
   | Tm1 of Stratified.Syntax.tm1
   | Tm0 of Stratified.Syntax.tm0
 
 
-(** The level of a variable in the stratified syntax *)
 type level =
   | Level1 of Stratified.Ns.tm1 Env.level
   | Level0 of Stratified.Ns.tm0 Env.level
