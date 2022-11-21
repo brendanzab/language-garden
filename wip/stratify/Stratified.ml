@@ -43,7 +43,7 @@ module Syntax = struct
     | Var1 of Ns.tm1 Env.index
     | FunLit1 of name * ty * tm1
     | FunApp1 of tm1 * tm
-    | FunType0 of name * ty * ty0
+    | FunType0 of name * ty0 * ty0
   and tm0 =
     | Let0 of name * tm * tm0
     | Var0 of Ns.tm0 Env.index
@@ -79,7 +79,7 @@ module Semantics = struct
   and vtm1 =
     | Neu1 of neu1
     | FunLit1 of name * vty * (vtm -> vtm1)
-    | FunType0 of name * vty * (vtm -> vty0)
+    | FunType0 of name * vty0 * (vtm -> vty0)
   and vtm0 =
     | Neu0 of neu0
     | FunLit0 of name * vty * (vtm -> vtm0)
@@ -164,7 +164,7 @@ module Semantics = struct
     | FunApp1 (head, arg) ->
         app1 (eval1 env head) (eval env arg)
     | FunType0 (name, param_ty, body_ty) ->
-        let param_ty = eval_ty env param_ty in
+        let param_ty = eval1 env param_ty in
         let body_ty x = eval1 (bind x env) body_ty in
         FunType0 (name, param_ty, body_ty)
 

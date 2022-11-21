@@ -81,9 +81,10 @@ let rec translate env : Core.Syntax.tm -> tm =
         | Ty1 _ -> translate_ty (bind_entry1 name env) body_ty
         | Ty0 _ -> translate_ty (bind_entry0 name env) body_ty
       in
-      begin match body_ty with
-      | Ty1 body_ty -> Tm2 (FunType1 (name, param_ty, body_ty))
-      | Ty0 body_ty -> Tm1 (FunType0 (name, param_ty, body_ty))
+      begin match param_ty, body_ty with
+      | param_ty, Ty1 body_ty -> Tm2 (FunType1 (name, param_ty, body_ty))
+      | Ty0 param_ty, Ty0 body_ty -> Tm1 (FunType0 (name, param_ty, body_ty))
+      | Ty1 _, Ty0 _ -> failwith "level 1 parameter type found in a level 0 function type"
       end
   | FunLit (name, param_ty, body) ->
       let param_ty = translate_ty env param_ty in

@@ -9,7 +9,8 @@ language that lacks dependent types.
 
 The stratified language is pretty close to the _CC_ language used in [“Singleton
 types here, singleton types there, singleton types everywhere”](https://doi.org/10.1145/1707790.1707792)
-by Monnier and Haguenauer.
+by Monnier and Haguenauer, but omitting the `(Kscm, Kind)` rule from the pure type
+system, along with the `Πk:u.κ` production.
 
 ## Todo list
 
