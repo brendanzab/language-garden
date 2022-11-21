@@ -129,8 +129,22 @@
 
           # WIP projects
 
-          wip-builtins = ocamlPackages.buildDunePackage {
-            pname = "wip-builtins";
+          wip-compile-stratify = ocamlPackages.buildDunePackage {
+            pname = "wip-compile-stratify";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+          };
+
+          wip-compile-uncurry = ocamlPackages.buildDunePackage {
+            pname = "wip-compile-uncurry";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+          };
+
+          wip-elab-builtins = ocamlPackages.buildDunePackage {
+            pname = "wip-elab-builtins";
             version = "0";
             src = ./.;
             duneVersion = "3";
@@ -140,13 +154,6 @@
               ocamlPackages.mdx
               ocamlPackages.menhir
             ];
-          };
-
-          wip-uncurry = ocamlPackages.buildDunePackage {
-            pname = "wip-uncurry";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
           };
 
           # Old projects

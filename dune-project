@@ -66,16 +66,16 @@
 ; WIP projects
 
 (package
-  (name wip-builtins)
+  (name wip-compile-stratify))
+
+(package
+  (name wip-compile-uncurry))
+
+(package
+  (name wip-elab-builtins)
   (depends
     (cmdliner (>= v1.1.1))
     (menhir :build)))
-
-(package
-  (name wip-stratify))
-
-(package
-  (name wip-uncurry))
 
 
 ; Old projects

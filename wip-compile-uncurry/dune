@@ -1,7 +1,7 @@
 (executable
   (name Main)
   (public_name uncurry)
-  (package wip-uncurry))
+  (package wip-compile-uncurry))
 
 (env
   (dev
