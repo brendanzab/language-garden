@@ -65,8 +65,10 @@ let rec translate env : Core.Syntax.tm -> tm =
       | Tm0 body -> Tm0 (Let0 (name, def, body))
       end
   | Ann (expr, ty) ->
-      let _ty = translate_ty env ty in
-      translate env expr
+      begin match translate_ty env ty with
+      | Ty1 ty -> Tm1 (Ann1 (translate1 env expr, ty))
+      | Ty0 ty -> Tm0 (Ann0 (translate0 env expr, ty))
+      end
   | Var x ->
       begin match Env.get_index x env.levels with
       | Level1 level -> Tm1 (Var1 (Env.level_to_index env.size1 level))

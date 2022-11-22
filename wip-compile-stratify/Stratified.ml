@@ -40,12 +40,14 @@ module Syntax = struct
     | FunType1 of name * ty * ty1
   and tm1 =
     | Let1 of name * tm * tm1
+    | Ann1 of tm1 * ty1
     | Var1 of Ns.tm1 Env.index
     | FunLit1 of name * ty * tm1
     | FunApp1 of tm1 * tm
     | FunType0 of name * ty0 * ty0
   and tm0 =
     | Let0 of name * tm * tm0
+    | Ann0 of tm0 * ty0
     | Var0 of Ns.tm0 Env.index
     | FunLit0 of name * ty * tm0
     | FunApp0 of tm0 * tm
@@ -146,6 +148,7 @@ module Semantics = struct
     function
     | Let1 (_, def, body) ->
         eval1 (bind (eval_tm env def) env) body
+    | Ann1 (t, _) -> eval1 env t
     | Var1 x -> Env.get_index x env.tm1s
     | FunLit1 (name, param_ty, body) ->
         let param_ty = eval_ty env param_ty in
@@ -162,6 +165,7 @@ module Semantics = struct
     function
     | Let0 (_, def, body) ->
         eval0 (bind (eval_tm env def) env) body
+    | Ann0 (t, _) -> eval0 env t
     | Var0 x -> Env.get_index x env.tm0s
     | FunLit0 (name, param_ty, body) ->
         let param_ty = eval_ty env param_ty in
