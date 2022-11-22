@@ -54,20 +54,21 @@ let bind_entry0 name env = {
 let rec translate env : Core.Syntax.tm -> tm =
   function
   | Let (name, def, body) ->
-      let def = translate_tm env def in
-      let body =
-        match def with
-        | Tm1 _ -> translate_tm (bind_entry1 name env) body
-        | Tm0 _ -> translate_tm (bind_entry0 name env) body
+      let def, body =
+        match translate_tm env def with
+        | Tm1 _ as def -> def, translate_tm (bind_entry1 name env) body
+        | Tm0 _ as def -> def, translate_tm (bind_entry0 name env) body
       in
       begin match body with
       | Tm1 body -> Tm1 (Let1 (name, def, body))
       | Tm0 body -> Tm0 (Let0 (name, def, body))
       end
   | Ann (expr, ty) ->
-      begin match translate_ty env ty with
-      | Ty1 ty -> Tm1 (Ann1 (translate1 env expr, ty))
-      | Ty0 ty -> Tm0 (Ann0 (translate0 env expr, ty))
+      begin match translate_tm env expr, translate_ty env ty with
+      | Tm1 expr, Ty1 ty -> Tm1 (Ann1 (expr, ty))
+      | Tm0 expr, Ty0 ty -> Tm0 (Ann0 (expr, ty))
+      | Tm1 _, Ty0 _ -> failwith "bug: annotating a level 1 term with a level 0 type"
+      | Tm0 _, Ty1 _ -> failwith "bug: annotating a level 0 term with a level 1 type"
       end
   | Var x ->
       begin match Env.get_index x env.levels with
@@ -76,53 +77,46 @@ let rec translate env : Core.Syntax.tm -> tm =
       end
   | Univ -> Tm2 Univ
   | FunType (name, param_ty, body_ty) ->
-      let param_ty = translate_ty env param_ty in
-      let body_ty =
-        match param_ty with
-        | Ty1 _ -> translate_ty (bind_entry1 name env) body_ty
-        | Ty0 _ -> translate_ty (bind_entry0 name env) body_ty
-      in
-      begin match param_ty, body_ty with
-      | param_ty, Ty1 body_ty -> Tm2 (FunType1 (name, param_ty, body_ty))
-      | Ty0 param_ty, Ty0 body_ty -> Tm1 (FunType0 (name, param_ty, body_ty))
-      | Ty1 _, Ty0 _ -> failwith "level 1 parameter type found in a level 0 function type"
+      begin match translate_ty env param_ty with
+      | Ty1 param_ty ->
+          begin match translate_ty (bind_entry1 name env) body_ty with
+          | Ty1 body_ty -> Tm2 (FunType1 (name, Ty1 param_ty, body_ty))
+          | Ty0 _ -> failwith "bug: level 1 parameter type found in a level 0 function type"
+          end
+      | Ty0 param_ty ->
+          begin match translate_ty (bind_entry0 name env) body_ty with
+          | Ty1 body_ty -> Tm2 (FunType1 (name, Ty0 param_ty, body_ty))
+          | Ty0 body_ty -> Tm1 (FunType0 (name, param_ty, body_ty))
+          end
       end
   | FunLit (name, param_ty, body) ->
-      let param_ty = translate_ty env param_ty in
-      let body =
-        match param_ty with
-        | Ty1 _ -> translate_tm (bind_entry1 name env) body
-        | Ty0 _ -> translate_tm (bind_entry0 name env) body
-      in
-      begin match param_ty, body with
-      | param_ty, Tm1 body -> Tm1 (FunLit1 (name, param_ty, body))
-      | Ty0 param_ty, Tm0 body -> Tm0 (FunLit0 (name, param_ty, body))
-      | Ty1 _, Tm0 _ -> failwith "level 1 parameter type found in a level 0 function literal"
+      begin match translate_ty env param_ty with
+      | Ty1 param_ty ->
+          begin match translate_tm (bind_entry1 name env) body with
+          | Tm1 body -> Tm1 (FunLit1 (name, Ty1 param_ty, body))
+          | Tm0 _ -> failwith "bug: level 1 parameter type found in a level 0 function literal"
+          end
+      | Ty0 param_ty ->
+          begin match translate_tm (bind_entry0 name env) body with
+          | Tm1 body -> Tm1 (FunLit1 (name, Ty0 param_ty, body))
+          | Tm0 body -> Tm0 (FunLit0 (name, param_ty, body))
+          end
       end
   | FunApp (head, arg) ->
-      begin match translate_tm env head with
-      | Tm1 head -> Tm1 (FunApp1 (head, translate_tm env arg))
-      | Tm0 head -> Tm0 (FunApp0 (head, translate0 env arg))
+      begin match translate_tm env head, translate_tm env arg with
+      | Tm1 head, arg -> Tm1 (FunApp1 (head, arg))
+      | Tm0 head, Tm0 arg -> Tm0 (FunApp0 (head, arg))
+      | Tm0 _, Tm1 _ -> failwith "bug: level 1 argument applied to level 0 term"
       end
-
-and translate1 env (tm : Core.Syntax.tm) : Stratified.Syntax.tm1 =
-  match translate env tm with
-  | Tm1 tm -> tm
-  | Tm2 _ | Tm0 _ -> failwith "expected a level 1 term"
-
-and translate0 env (tm : Core.Syntax.tm) : Stratified.Syntax.tm0 =
-  match translate env tm with
-  | Tm0 tm -> tm
-  | Tm2 _ | Tm1 _ -> failwith "expected a level 0 term"
 
 and translate_ty env (tm : Core.Syntax.tm) : Stratified.Syntax.ty =
   match translate env tm with
   | Tm2 ty -> Ty1 ty
   | Tm1 ty -> Ty0 ty
-  | _ -> failwith "level 0 terms should not contain types"
+  | _ -> failwith "bug: level 0 terms should not contain types"
 
 and translate_tm env (tm : Core.Syntax.tm) : Stratified.Syntax.tm =
   match translate env tm with
-  | Tm2 _ -> failwith "expected a level 0 or 1 term"
+  | Tm2 _ -> failwith "bug: expected a level 0 or 1 term"
   | Tm1 tm -> Tm1 tm
   | Tm0 tm -> Tm0 tm
