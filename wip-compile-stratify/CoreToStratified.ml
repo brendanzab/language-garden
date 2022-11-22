@@ -94,26 +94,35 @@ let rec translate env : Core.Syntax.tm -> tm =
         | Ty1 _ -> translate_tm (bind_entry1 name env) body
         | Ty0 _ -> translate_tm (bind_entry0 name env) body
       in
-      begin match body with
-      | Tm1 body -> Tm1 (FunLit1 (name, param_ty, body))
-      | Tm0 body -> Tm0 (FunLit0 (name, param_ty, body))
+      begin match param_ty, body with
+      | param_ty, Tm1 body -> Tm1 (FunLit1 (name, param_ty, body))
+      | Ty0 param_ty, Tm0 body -> Tm0 (FunLit0 (name, param_ty, body))
+      | Ty1 _, Tm0 _ -> failwith "level 1 parameter type found in a level 0 function literal"
       end
   | FunApp (head, arg) ->
       begin match translate_tm env head with
       | Tm1 head -> Tm1 (FunApp1 (head, translate_tm env arg))
-      | Tm0 head -> Tm0 (FunApp0 (head, translate_tm env arg))
+      | Tm0 head -> Tm0 (FunApp0 (head, translate0 env arg))
       end
 
-and translate_ty env tm : Stratified.Syntax.ty =
-  begin match translate env tm with
+and translate1 env (tm : Core.Syntax.tm) : Stratified.Syntax.tm1 =
+  match translate env tm with
+  | Tm1 tm -> tm
+  | Tm2 _ | Tm0 _ -> failwith "expected a level 1 term"
+
+and translate0 env (tm : Core.Syntax.tm) : Stratified.Syntax.tm0 =
+  match translate env tm with
+  | Tm0 tm -> tm
+  | Tm2 _ | Tm1 _ -> failwith "expected a level 0 term"
+
+and translate_ty env (tm : Core.Syntax.tm) : Stratified.Syntax.ty =
+  match translate env tm with
   | Tm2 ty -> Ty1 ty
   | Tm1 ty -> Ty0 ty
   | _ -> failwith "level 0 terms should not contain types"
-  end
 
-and translate_tm env tm : Stratified.Syntax.tm =
-  begin match translate env tm with
+and translate_tm env (tm : Core.Syntax.tm) : Stratified.Syntax.tm =
+  match translate env tm with
   | Tm2 _ -> failwith "expected a level 0 or 1 term"
   | Tm1 tm -> Tm1 tm
   | Tm0 tm -> Tm0 tm
-  end
