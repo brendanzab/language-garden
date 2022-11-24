@@ -1,6 +1,6 @@
 (** {0 Translation from the core language to the stratified language} *)
 
-(** Translation environments *)
+(** Translation environment *)
 type env
 
 (** The initial, empty environment *)
