@@ -42,14 +42,14 @@ module Syntax = struct
     | Let1 of name * tm * tm1
     | Ann1 of tm1 * ty1
     | Var1 of Ns.tm1 Env.index
-    | FunLit1 of name * ty * tm1      (** The type of level 0 functions *)
-    | FunApp1 of tm1 * tm             (** Level 0 function application *)
+    | FunLit1 of name * ty * tm1      (** Level 1 function literals *)
+    | FunApp1 of tm1 * tm             (** Level 1 function application *)
     | FunType0 of name * ty0 * ty0    (** The type of level 0 functions *)
   and tm0 =
     | Let0 of name * tm * tm0
     | Ann0 of tm0 * ty0
     | Var0 of Ns.tm0 Env.index
-    | FunLit0 of name * ty0 * tm0     (** The type of level 0 functions *)
+    | FunLit0 of name * ty0 * tm0     (** Level 0 function literals *)
     | FunApp0 of tm0 * tm0            (** Level 0 function application *)
 
   and tm =
