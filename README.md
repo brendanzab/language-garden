@@ -49,12 +49,12 @@ Miscellaneous programming language experiments.
 While most of the above projects need more work put into them, the following
 projects need more work put into them and a more incomplete in comparison.
 
-- [**wip-builtins**](./wip-builtins/):
+- [**wip-elab-builtins**](./wip-elab-builtins/):
   An elaborator that supports built-in types and operations.
-- [**wip-stratify**](./wip-stratify/):
+- [**wip-compile-stratify**](./wip-compile-stratify/):
   Compiling a dependently typed lambda calculus into a stratified intermediate
   language.
-- [**wip-uncurry**](./wip-uncurry/):
+- [**wip-compile-uncurry**](./wip-compile-uncurry/):
   Compiling single-parameter functions to multiparameter functions.
 
 ## Development setup
