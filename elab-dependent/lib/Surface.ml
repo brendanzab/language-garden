@@ -55,8 +55,8 @@ module Semantics = Core.Semantics
 type context = {
   size : Core.level;              (** Number of entries bound. *)
   names : Core.name Core.env;     (** Name environment *)
-  tys : Semantics.ty Core.env;    (** Type environment *)
-  tms : Semantics.tm Core.env;    (** Term environment *)
+  tys : Semantics.vty Core.env;   (** Type environment *)
+  tms : Semantics.vtm Core.env;   (** Term environment *)
 }
 
 (** The initial elaboration context, without any bindings *)
@@ -89,13 +89,13 @@ let bind_param context name ty =
 (** These wrapper functions make it easier to call functions from the
     {!Core.Semantics} using state from the elaboration context. *)
 
-let eval context : Syntax.tm -> Semantics.tm =
+let eval context : Syntax.tm -> Semantics.vtm =
   Semantics.eval context.tms
-let quote context : Semantics.tm -> Syntax.tm =
+let quote context : Semantics.vtm -> Syntax.tm =
   Semantics.quote context.size
 let normalise context : Syntax.tm -> Syntax.tm =
   Semantics.normalise context.size context.tms
-let is_convertible context : Semantics.tm * Semantics.tm -> bool =
+let is_convertible context : Semantics.vtm * Semantics.vtm -> bool =
   Semantics.is_convertible context.size
 let pp ?(wrap = false) ?(resugar = true) context =
   Syntax.pp context.names ~wrap ~resugar
@@ -136,7 +136,7 @@ let ambiguous_param name =
 
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
-let rec check context tm (ty : Semantics.ty) : Syntax.tm =
+let rec check context tm (ty : Semantics.vty) : Syntax.tm =
   match tm, ty with
   (* Let expressions *)
   | Let (name, params, def_ty, def, body), ty ->
@@ -199,7 +199,7 @@ let rec check context tm (ty : Semantics.ty) : Syntax.tm =
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
-and infer context : tm -> Syntax.tm * Semantics.ty = function
+and infer context : tm -> Syntax.tm * Semantics.vty = function
   (* Let expressions *)
   | Let (name, params, def_ty, def, body) ->
       let def, def_ty = infer_fun_lit context params def_ty def in

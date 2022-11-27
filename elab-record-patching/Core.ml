@@ -166,23 +166,23 @@ module Semantics = struct
       the core syntax. *)
 
   (** Types *)
-  type ty = tm
+  type vty = vtm
 
   (** Terms in weak head normal form *)
-  and tm =
+  and vtm =
     | Neu of neu                          (** Neutral terms *)
     | Univ
-    | FunType of name * ty * (tm -> ty)
-    | FunLit of name * (tm -> tm)
+    | FunType of name * vty * (vtm -> vty)
+    | FunLit of name * (vtm -> vtm)
     | RecType of decls
-    | RecLit of (label * tm) list
-    | SingType of ty * tm
+    | RecLit of (label * vtm) list
+    | SingType of vty * vtm
     | SingIntro                           (** Singleton introduction, with term erased *)
 
   (** Field declarations *)
   and decls =
     | Nil
-    | Cons of label * ty * (tm -> decls)
+    | Cons of label * vty * (vtm -> decls)
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
       result of being stuck on something else that would not reduce further.
@@ -190,7 +190,7 @@ module Semantics = struct
       ambivalent about what they might compute to? *)
   and neu =
     | Var of level                        (** Variable that could not be reduced further *)
-    | FunApp of neu * tm                  (** Function application *)
+    | FunApp of neu * vtm                 (** Function application *)
     | RecProj of neu * label              (** Record projection *)
 
 
@@ -242,7 +242,7 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval tms : Syntax.tm -> tm = function
+  let rec eval tms : Syntax.tm -> vtm = function
     | Syntax.Let (_, def, body) -> eval (eval tms def :: tms) body
     | Syntax.Var index -> List.nth tms index
     | Syntax.Ann (tm, _) -> eval tms tm
@@ -320,7 +320,7 @@ module Semantics = struct
         | SingType (ty, sing_tm) -> Syntax.SingIntro (quote size tys ty sing_tm)
         | _ -> error "not a singleton type"
         end
-  and quote_neu size tys : neu -> Syntax.tm * ty = function
+  and quote_neu size tys : neu -> Syntax.tm * vty = function
     | Var level ->
         let index = level_to_index size level in
         (Syntax.Var index, List.nth tys index)
@@ -372,7 +372,7 @@ module Semantics = struct
       As with {!quote}, the typing environment is used to recover the types of
       variables.
   *)
-  let rec is_convertible size tys tm1 tm2 : ty -> bool = function
+  let rec is_convertible size tys tm1 tm2 : vty -> bool = function
     | Neu _ ->
         begin match tm1, tm2 with
         | Neu n1, Neu n2 -> Option.is_some (is_convertible_neu size tys n1 n2)

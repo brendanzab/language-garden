@@ -270,14 +270,14 @@ module Semantics = struct
   *)
 
   (** Types *)
-  type ty = tm
+  type vty = vtm
 
   (** Terms in weak head normal form *)
-  and tm =
+  and vtm =
     | Neu of neu                            (** Neutral terms *)
     | Univ
-    | FunType of name * ty Lazy.t * (tm -> ty)
-    | FunLit of name * (tm -> tm)
+    | FunType of name * vty Lazy.t * (vtm -> vty)
+    | FunLit of name * (vtm -> vtm)
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
       result of being stuck on something else that would not reduce further.
@@ -285,7 +285,7 @@ module Semantics = struct
       ambivalent about what they might compute to? *)
   and neu =
     | Var of level                (** Variable that could not be reduced further *)
-    | FunApp of neu * tm Lazy.t   (** Function application *)
+    | FunApp of neu * vtm Lazy.t  (** Function application *)
 
 
   (** {1 Exceptions} *)
