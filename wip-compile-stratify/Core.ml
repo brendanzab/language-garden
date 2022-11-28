@@ -28,7 +28,7 @@ module Syntax = struct
     | Let of name * tm * tm       (** Let bindings (for sharing definitions inside terms) *)
     | Ann of tm * ty              (** Terms annotated with types *)
     | Var of Ns.tm Env.index      (** Variables *)
-    | Univ                        (** Universe (i.e. the type of types) *)
+    | Univ                        (** The universe of ‘small’ types (i.e. the type of types) *)
     | FunType of name * ty * ty   (** Dependent function types *)
     | FunLit of name * ty * tm    (** Function literals (i.e. lambda expressions) *)
     | FunApp of tm * tm           (** Function application *)
@@ -167,11 +167,15 @@ module Validation = struct
     ctx |> bind_def ty (next_var ctx)
 
 
+  (* Type errors raised when validating the core language *)
+  exception Error of string
+
+
   (** Check that a term conforms to a given type. *)
   let rec check ctx (tm : Syntax.tm) (expected_ty : Semantics.vty) =
     let ty = synth ctx tm in
     if Semantics.is_convertible ctx.size (ty, expected_ty) then () else
-      failwith "mismatched types"
+      raise (Error "mismatched types")
 
   (** Synthesize the type of a term *)
   and synth ctx : Syntax.tm -> Semantics.vty =
@@ -186,37 +190,47 @@ module Validation = struct
         check ctx expr ty';
         ty'
     | Var x -> Env.get_index x ctx.tys
-    | Univ -> failwith "cannot synthesize the type of types"
+
+    (* There’s no type large enough to contain large universes in the core
+       language, so raise an error here *)
+    | Univ -> raise (Error "cannot synthesize the type of types")
+    (* Introduction rule for small function universes. Larger functions are
+       handled in the [is_type] function, but there are restrictions on where
+       these can appear. *)
     | FunType (_, param_ty, body_ty) ->
         check ctx param_ty Univ;
         let param_ty' = Semantics.eval ctx.tms param_ty in
         check (ctx |> bind_param param_ty') body_ty Univ;
         Univ
+    (* Introduction rule for functions *)
     | FunLit (name, param_ty, body) ->
         is_ty ctx param_ty;
         let param_ty' = Semantics.eval ctx.tms param_ty in
         let body_ty = synth (ctx |> bind_param param_ty') body in
         let fun_ty = Syntax.FunType (name, param_ty, Semantics.quote ctx.size body_ty) in
         Semantics.eval ctx.tms fun_ty
+    (* Elimination rule for functions *)
     | FunApp (head, arg) ->
         match synth ctx head with
         | FunType (_, param_ty, body_ty) ->
             check ctx arg (Lazy.force param_ty);
             body_ty (Semantics.eval ctx.tms arg)
-        | _ -> failwith "not a function type"
+        | _ -> raise (Error "expected a function type")
 
-  (** Check if the term is a type *)
+  (** Check if the term is a small or a large type. Terms that are typable with
+      this function, but not [check] or [synth] are usually restricted to only
+      appear in type annotations. *)
   and is_ty ctx : Syntax.tm -> unit =
     function
     (* The type of universes is a type *)
     | Univ -> ()
-    (* Implicitly coerce universe constructors to types *)
+    (* Function type formation for small and large function types. *)
     | FunType (_, param_ty, body_ty) ->
         is_ty ctx param_ty;
         let param_ty' = Semantics.eval ctx.tms param_ty in
         is_ty (ctx |> bind_param param_ty') body_ty
-    (* Terms that inhabit the universe can be treated as types as well. This
-       allows universes to be implicitly coerced to types. *)
+    (* Terms that inhabit the universe of small types can be treated a types,
+       effectively ‘coercing’ them to types. *)
     | tm -> check ctx tm Univ
 
 end
