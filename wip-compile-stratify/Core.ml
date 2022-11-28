@@ -143,3 +143,80 @@ module Semantics = struct
     | _, _ -> false
 
 end
+
+
+(** Validation (type checking) of core terms *)
+module Validation = struct
+
+  type ctx = {
+    size : Ns.tm Env.size;
+    tys : (Ns.tm, Semantics.vty) Env.t;
+    tms : (Ns.tm, Semantics.vty) Env.t;
+  }
+
+  let next_var ctx =
+    Semantics.Neu (Var (Env.next_level ctx.size))
+
+  let bind_def ty tm ctx = {
+    size = ctx.size |> Env.bind_level;
+    tys = ctx.tys |> Env.bind_entry ty;
+    tms = ctx.tms |> Env.bind_entry tm;
+  }
+
+  let bind_param ty ctx =
+    ctx |> bind_def ty (next_var ctx)
+
+
+  (** Check that a term conforms to a given type. *)
+  let rec check ctx (tm : Syntax.tm) (expected_ty : Semantics.vty) =
+    let ty = synth ctx tm in
+    if Semantics.is_convertible ctx.size (ty, expected_ty) then () else
+      failwith "mismatched types"
+
+  (** Synthesize the type of a term *)
+  and synth ctx : Syntax.tm -> Semantics.vty =
+    function
+    | Let (_, def, body) ->
+        let def_ty = synth ctx def in
+        let def' = Semantics.eval ctx.tms def in
+        synth (ctx |> bind_def def_ty def') body
+    | Ann (expr, ty) ->
+        is_ty ctx ty;
+        let ty' = Semantics.eval ctx.tms ty in
+        check ctx expr ty';
+        ty'
+    | Var x -> Env.get_index x ctx.tys
+    | Univ -> failwith "cannot synthesize the type of types"
+    | FunType (_, param_ty, body_ty) ->
+        check ctx param_ty Univ;
+        let param_ty' = Semantics.eval ctx.tms param_ty in
+        check (ctx |> bind_param param_ty') body_ty Univ;
+        Univ
+    | FunLit (name, param_ty, body) ->
+        is_ty ctx param_ty;
+        let param_ty' = Semantics.eval ctx.tms param_ty in
+        let body_ty = synth (ctx |> bind_param param_ty') body in
+        let fun_ty = Syntax.FunType (name, param_ty, Semantics.quote ctx.size body_ty) in
+        Semantics.eval ctx.tms fun_ty
+    | FunApp (head, arg) ->
+        match synth ctx head with
+        | FunType (_, param_ty, body_ty) ->
+            check ctx arg (Lazy.force param_ty);
+            body_ty (Semantics.eval ctx.tms arg)
+        | _ -> failwith "not a function type"
+
+  (** Check if the term is a type *)
+  and is_ty ctx : Syntax.tm -> unit =
+    function
+    (* The type of universes is a type *)
+    | Univ -> ()
+    (* Implicitly coerce universe constructors to types *)
+    | FunType (_, param_ty, body_ty) ->
+        is_ty ctx param_ty;
+        let param_ty' = Semantics.eval ctx.tms param_ty in
+        is_ty (ctx |> bind_param param_ty') body_ty
+    (* Terms that inhabit the universe can be treated as types as well. This
+       allows universes to be implicitly coerced to types. *)
+    | tm -> check ctx tm Univ
+
+end
