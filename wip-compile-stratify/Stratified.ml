@@ -25,36 +25,39 @@ module Syntax = struct
 
   (** {1 Types} *)
 
+  (** Level 1 types, inhabiting the [Type 1] universe. *)
   type ty1 = tm2
-  and ty0 = tm1
 
-  and ty =
-    | Ty1 of ty1
-    | Ty0 of ty0
+  (** Level 0 types, inhabiting the [Type 0] universe. *)
+  and ty0 = tm1
 
 
   (** {1 Terms} *)
 
+  (** These are numbered by the level of the universe that is needed to contain
+      the types that they inhabit. *)
+
   and tm2 =
-    | Univ                            (** Universes (ie. the type of types) *)
-    | FunType1 of name * ty * ty1     (** The type of level 1 functions *)
+    | Univ                            (** Universe of small types (ie. [Type 0]) *)
+    | FunType11 of name * ty1 * ty1   (** [Type 1] to [Type 1] function types *)
+    | FunType01 of name * ty0 * ty1   (** [Type 0] to [Type 1] function types *)
   and tm1 =
-    | Let1 of name * tm * tm1
+    | Let11 of name * tm1 * tm1       (** [Type 1] let binding *)
+    | Let01 of name * tm0 * tm1       (** [Type 0] let binding *)
     | Ann1 of tm1 * ty1
     | Var1 of Ns.tm1 Env.index
-    | FunLit1 of name * ty * tm1      (** Level 1 function literals *)
-    | FunApp1 of tm1 * tm             (** Level 1 function application *)
-    | FunType0 of name * ty0 * ty0    (** The type of level 0 functions *)
+    | FunLit11 of name * ty1 * tm1    (** [Type 1] to [Type 1] function literals *)
+    | FunLit01 of name * ty0 * tm1    (** [Type 0] to [Type 1] function literals *)
+    | FunApp11 of tm1 * tm1           (** [Type 1] to [Type 1] function application *)
+    | FunApp01 of tm1 * tm0           (** [Type 0] to [Type 1] function application *)
+    | FunType00 of name * ty0 * ty0   (** [Type 0] to [Type 0] function types *)
   and tm0 =
-    | Let0 of name * tm * tm0
+    | Let10 of name * tm1 * tm0       (** [Type 1] let binding *)
+    | Let00 of name * tm0 * tm0       (** [Type 0] let binding *)
     | Ann0 of tm0 * ty0
     | Var0 of Ns.tm0 Env.index
-    | FunLit0 of name * ty0 * tm0     (** Level 0 function literals *)
-    | FunApp0 of tm0 * tm0            (** Level 0 function application *)
-
-  and tm =
-    | Tm1 of tm1
-    | Tm0 of tm0
+    | FunLit00 of name * ty0 * tm0    (** [Type 0] to [Type 0] function literals *)
+    | FunApp00 of tm0 * tm0           (** [Type 0] to [Type 0] function application *)
 
 end
 
@@ -69,35 +72,30 @@ module Semantics = struct
   type vty1 = vtm2
   and vty0 = vtm1
 
-  and vty =
-    | Ty1 of vty1
-    | Ty0 of vty0
-
   (** {2 Values} *)
 
   and vtm2 =
     | Univ
-    | FunType1 of name * vty * (vtm -> vty1)
+    | FunType11 of name * vty1 * (vtm1 -> vty1)
+    | FunType01 of name * vty0 * (vtm0 -> vty1)
   and vtm1 =
     | Neu1 of neu1
-    | FunLit1 of name * vty * (vtm -> vtm1)
-    | FunType0 of name * vty0 * (vtm0 -> vty0)
+    | FunLit11 of name * vty1 * (vtm1 -> vtm1)
+    | FunLit01 of name * vty0 * (vtm0 -> vtm1)
+    | FunType00 of name * vty0 * (vtm0 -> vty0)
   and vtm0 =
     | Neu0 of neu0
-    | FunLit0 of name * vty0 * (vtm0 -> vtm0)
-
-  and vtm =
-    | Tm1 of vtm1
-    | Tm0 of vtm0
+    | FunLit00 of name * vty0 * (vtm0 -> vtm0)
 
   (** {2 Neutral terms} *)
 
   and neu1 =
     | Var1 of Ns.tm1 Env.level
-    | FunApp1 of neu1 * vtm
+    | FunApp11 of neu1 * vtm1
+    | FunApp01 of neu1 * vtm0
   and neu0 =
     | Var0 of Ns.tm0 Env.level
-    | FunApp0 of neu0 * vtm0
+    | FunApp00 of neu0 * vtm0
 
 
   (** {1 Exceptions} *)
@@ -114,24 +112,31 @@ module Semantics = struct
     tm0s : (Ns.tm0, vtm0) Env.t;   (** Level 0 bindings *)
   }
 
-  let bind vtm env =
-    match vtm with
-    | Tm1 t -> { env with tm1s = Env.bind_entry t env.tm1s }
-    | Tm0 t -> { env with tm0s = Env.bind_entry t env.tm0s }
+  let bind1 t env =
+    { env with tm1s = Env.bind_entry t env.tm1s }
+
+  let bind0 t env =
+    { env with tm0s = Env.bind_entry t env.tm0s }
 
 
   (** {1 Eliminators} *)
 
-  let app1 head arg =
+  let app11 head arg =
     match head with
-    | Neu1 neu -> Neu1 (FunApp1 (neu, arg))
-    | FunLit1 (_, _, body) -> body arg
+    | Neu1 neu -> Neu1 (FunApp11 (neu, arg))
+    | FunLit11 (_, _, body) -> body arg
     | _ -> raise (Error "invalid application")
 
-  let app0 head arg =
+  let app01 head arg =
     match head with
-    | Neu0 neu -> Neu0 (FunApp0 (neu, arg))
-    | FunLit0 (_, _, body) -> body arg
+    | Neu1 neu -> Neu1 (FunApp01 (neu, arg))
+    | FunLit01 (_, _, body) -> body arg
+    | _ -> raise (Error "invalid application")
+
+  let app00 head arg =
+    match head with
+    | Neu0 neu -> Neu0 (FunApp00 (neu, arg))
+    | FunLit00 (_, _, body) -> body arg
 
 
   (** {1 Evaluation} *)
@@ -139,49 +144,49 @@ module Semantics = struct
   let rec eval2 env : Syntax.tm2 -> vtm2 =
     function
     | Univ -> Univ
-    | FunType1 (name, param_ty, body_ty) ->
-        let param_ty = eval_ty env param_ty in
-        let body_ty x = eval2 (bind x env) body_ty in
-        FunType1 (name, param_ty, body_ty)
+    | FunType11 (name, param_ty, body_ty) ->
+        let param_ty = eval2 env param_ty in
+        let body_ty x = eval2 (bind1 x env) body_ty in
+        FunType11 (name, param_ty, body_ty)
+    | FunType01 (name, param_ty, body_ty) ->
+        let param_ty = eval1 env param_ty in
+        let body_ty x = eval2 (bind0 x env) body_ty in
+        FunType01 (name, param_ty, body_ty)
 
   and eval1 env : Syntax.tm1 -> vtm1 =
     function
-    | Let1 (_, def, body) ->
-        eval1 (bind (eval_tm env def) env) body
+    | Let11 (_, def, body) -> eval1 (bind1 (eval1 env def) env) body
+    | Let01 (_, def, body) -> eval1 (bind0 (eval0 env def) env) body
     | Ann1 (t, _) -> eval1 env t
     | Var1 x -> Env.get_index x env.tm1s
-    | FunLit1 (name, param_ty, body) ->
-        let param_ty = eval_ty env param_ty in
-        let body x = eval1 (bind x env) body in
-        FunLit1 (name, param_ty, body)
-    | FunApp1 (head, arg) ->
-        app1 (eval1 env head) (eval_tm env arg)
-    | FunType0 (name, param_ty, body_ty) ->
+    | FunLit11 (name, param_ty, body) ->
+        let param_ty = eval2 env param_ty in
+        let body x = eval1 (bind1 x env) body in
+        FunLit11 (name, param_ty, body)
+    | FunLit01 (name, param_ty, body) ->
         let param_ty = eval1 env param_ty in
-        let body_ty x = eval1 (bind (Tm0 x) env) body_ty in
-        FunType0 (name, param_ty, body_ty)
+        let body x = eval1 (bind0 x env) body in
+        FunLit01 (name, param_ty, body)
+    | FunApp11 (head, arg) ->
+        app11 (eval1 env head) (eval1 env arg)
+    | FunApp01 (head, arg) ->
+        app01 (eval1 env head) (eval0 env arg)
+    | FunType00 (name, param_ty, body_ty) ->
+        let param_ty = eval1 env param_ty in
+        let body_ty x = eval1 (bind0 x env) body_ty in
+        FunType00 (name, param_ty, body_ty)
 
   and eval0 env : Syntax.tm0 -> vtm0 =
     function
-    | Let0 (_, def, body) ->
-        eval0 (bind (eval_tm env def) env) body
+    | Let10 (_, def, body) -> eval0 (bind1 (eval1 env def) env) body
+    | Let00 (_, def, body) -> eval0 (bind0 (eval0 env def) env) body
     | Ann0 (t, _) -> eval0 env t
     | Var0 x -> Env.get_index x env.tm0s
-    | FunLit0 (name, param_ty, body) ->
+    | FunLit00 (name, param_ty, body) ->
         let param_ty = eval1 env param_ty in
-        let body x = eval0 (bind (Tm0 x) env) body in
-        FunLit0 (name, param_ty, body)
-    | FunApp0 (head, arg) ->
-        app0 (eval0 env head) (eval0 env arg)
-
-  and eval_tm env : Syntax.tm -> vtm =
-    function
-    | Tm1 t -> Tm1 (eval1 env t)
-    | Tm0 t -> Tm0 (eval0 env t)
-
-  and eval_ty env : Syntax.ty -> vty =
-    function
-    | Ty1 t -> Ty1 (eval2 env t)
-    | Ty0 t -> Ty0 (eval1 env t)
+        let body x = eval0 (bind0 x env) body in
+        FunLit00 (name, param_ty, body)
+    | FunApp00 (head, arg) ->
+        app00 (eval0 env head) (eval0 env arg)
 
 end

@@ -50,21 +50,26 @@ let bind_entry0 env = {
 let rec translate env : Core.Syntax.tm -> tm =
   function
   | Let (name, def, body) ->
-      let def, body =
-        match translate_tm env def with
-        | Tm1 _ as def -> def, translate_tm (bind_entry1 env) body
-        | Tm0 _ as def -> def, translate_tm (bind_entry0 env) body
-      in
-      begin match body with
-      | Tm1 body -> Tm1 (Let1 (name, def, body))
-      | Tm0 body -> Tm0 (Let0 (name, def, body))
+      begin match translate env def with
+      | Tm2 _ -> failwith "bug: term is too large for definition"
+      | Tm1 def ->
+          begin match translate (bind_entry1 env) body with
+          | Tm2 _ -> failwith "bug: term is too large for body of let expression"
+          | Tm1 body -> Tm1 (Let11 (name, def, body))
+          | Tm0 body -> Tm0 (Let10 (name, def, body))
+          end
+      | Tm0 def ->
+          begin match translate (bind_entry0 env) body with
+          | Tm2 _ -> failwith "bug: term is too large for body of let expression"
+          | Tm1 body -> Tm1 (Let01 (name, def, body))
+          | Tm0 body -> Tm0 (Let00 (name, def, body))
+          end
       end
   | Ann (expr, ty) ->
-      begin match translate_tm env expr, translate_ty env ty with
-      | Tm1 expr, Ty1 ty -> Tm1 (Ann1 (expr, ty))
-      | Tm0 expr, Ty0 ty -> Tm0 (Ann0 (expr, ty))
-      | Tm1 _, Ty0 _ -> failwith "bug: annotating a level 1 term with a level 0 type"
-      | Tm0 _, Ty1 _ -> failwith "bug: annotating a level 0 term with a level 1 type"
+      begin match translate env expr, translate env ty with
+      | Tm1 expr, Tm2 ty -> Tm1 (Ann1 (expr, ty))
+      | Tm0 expr, Tm1 ty -> Tm0 (Ann0 (expr, ty))
+      | _ -> failwith "bug: mismatched annotation universe"
       end
   | Var x ->
       begin match Env.get_index x env.levels with
@@ -73,46 +78,41 @@ let rec translate env : Core.Syntax.tm -> tm =
       end
   | Univ -> Tm2 Univ
   | FunType (name, param_ty, body_ty) ->
-      begin match translate_ty env param_ty with
-      | Ty1 param_ty ->
-          begin match translate_ty (bind_entry1 env) body_ty with
-          | Ty1 body_ty -> Tm2 (FunType1 (name, Ty1 param_ty, body_ty))
-          | Ty0 _ -> failwith "bug: level 1 parameter type found in a level 0 function type"
+      begin match translate env param_ty with
+      | Tm2 param_ty ->
+          begin match translate (bind_entry1 env) body_ty with
+          | Tm2 body_ty -> Tm2 (FunType11 (name, param_ty, body_ty))
+          | Tm1 _ -> failwith "bug: level 1 parameter type found in a level 0 function type"
+          | Tm0 _ -> failwith "bug: level 0 terms are too small to contain types"
           end
-      | Ty0 param_ty ->
-          begin match translate_ty (bind_entry0 env) body_ty with
-          | Ty1 body_ty -> Tm2 (FunType1 (name, Ty0 param_ty, body_ty))
-          | Ty0 body_ty -> Tm1 (FunType0 (name, param_ty, body_ty))
+      | Tm1 param_ty ->
+          begin match translate (bind_entry0 env) body_ty with
+          | Tm2 body_ty -> Tm2 (FunType01 (name, param_ty, body_ty))
+          | Tm1 body_ty -> Tm1 (FunType00 (name, param_ty, body_ty))
+          | Tm0 _ -> failwith "bug: level 0 terms are too small to contain types"
           end
+      | Tm0 _ -> failwith "bug: level 0 terms are too small to contain types"
       end
   | FunLit (name, param_ty, body) ->
-      begin match translate_ty env param_ty with
-      | Ty1 param_ty ->
-          begin match translate_tm (bind_entry1 env) body with
-          | Tm1 body -> Tm1 (FunLit1 (name, Ty1 param_ty, body))
+      begin match translate env param_ty with
+      | Tm2 param_ty ->
+          begin match translate (bind_entry1 env) body with
+          | Tm2 _ -> failwith "bug: body of function literal is too large"
+          | Tm1 body -> Tm1 (FunLit11 (name, param_ty, body))
           | Tm0 _ -> failwith "bug: level 1 parameter type found in a level 0 function literal"
           end
-      | Ty0 param_ty ->
-          begin match translate_tm (bind_entry0 env) body with
-          | Tm1 body -> Tm1 (FunLit1 (name, Ty0 param_ty, body))
-          | Tm0 body -> Tm0 (FunLit0 (name, param_ty, body))
+      | Tm1 param_ty ->
+          begin match translate (bind_entry0 env) body with
+          | Tm2 _ -> failwith "bug: body of function literal is too large"
+          | Tm1 body -> Tm1 (FunLit01 (name, param_ty, body))
+          | Tm0 body -> Tm0 (FunLit00 (name, param_ty, body))
           end
+      | Tm0 _ -> failwith "bug: level 0 terms are too small to contain types"
       end
   | FunApp (head, arg) ->
-      begin match translate_tm env head, translate_tm env arg with
-      | Tm1 head, arg -> Tm1 (FunApp1 (head, arg))
-      | Tm0 head, Tm0 arg -> Tm0 (FunApp0 (head, arg))
-      | Tm0 _, Tm1 _ -> failwith "bug: level 1 argument applied to level 0 term"
+      begin match translate env head, translate env arg with
+      | Tm1 head, Tm1 arg -> Tm1 (FunApp11 (head, arg))
+      | Tm1 head, Tm0 arg -> Tm1 (FunApp01 (head, arg))
+      | Tm0 head, Tm0 arg -> Tm0 (FunApp00 (head, arg))
+      | _ -> failwith "bug: mismatched argument universe"
       end
-
-and translate_ty env (tm : Core.Syntax.tm) : Stratified.Syntax.ty =
-  match translate env tm with
-  | Tm2 ty -> Ty1 ty
-  | Tm1 ty -> Ty0 ty
-  | _ -> failwith "bug: level 0 terms should not contain types"
-
-and translate_tm env (tm : Core.Syntax.tm) : Stratified.Syntax.tm =
-  match translate env tm with
-  | Tm2 _ -> failwith "bug: expected a level 0 or 1 term"
-  | Tm1 tm -> Tm1 tm
-  | Tm0 tm -> Tm0 tm
