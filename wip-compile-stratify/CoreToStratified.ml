@@ -21,30 +21,26 @@ type env = {
   size1 : Stratified.Ns.tm1 Env.size;
   size0 : Stratified.Ns.tm0 Env.size;
   (* Mappings from the core language bindings to stratified bindings *)
-  names : (Core.Ns.tm, Core.name) Env.t;
   levels : (Core.Ns.tm, level) Env.t;
 }
 
 let empty_env = {
   size1 = Env.empty_size;
   size0 = Env.empty_size;
-  names = Env.empty;
   levels = Env.empty;
 }
 
 (** Add a level 1 binding to the environment *)
-let bind_entry1 name env = {
+let bind_entry1 env = {
   env with
   size1 = env.size1 |> Env.bind_level;
-  names = env.names |> Env.bind_entry name;
   levels = env.levels |> Env.bind_entry (Level1 (Env.next_level env.size1));
 }
 
 (** Add a level 0 binding to the environment *)
-let bind_entry0 name env = {
+let bind_entry0 env = {
   env with
   size0 = env.size0 |> Env.bind_level;
-  names = env.names |> Env.bind_entry name;
   levels = env.levels |> Env.bind_entry (Level0 (Env.next_level env.size0));
 }
 
@@ -56,8 +52,8 @@ let rec translate env : Core.Syntax.tm -> tm =
   | Let (name, def, body) ->
       let def, body =
         match translate_tm env def with
-        | Tm1 _ as def -> def, translate_tm (bind_entry1 name env) body
-        | Tm0 _ as def -> def, translate_tm (bind_entry0 name env) body
+        | Tm1 _ as def -> def, translate_tm (bind_entry1 env) body
+        | Tm0 _ as def -> def, translate_tm (bind_entry0 env) body
       in
       begin match body with
       | Tm1 body -> Tm1 (Let1 (name, def, body))
@@ -79,12 +75,12 @@ let rec translate env : Core.Syntax.tm -> tm =
   | FunType (name, param_ty, body_ty) ->
       begin match translate_ty env param_ty with
       | Ty1 param_ty ->
-          begin match translate_ty (bind_entry1 name env) body_ty with
+          begin match translate_ty (bind_entry1 env) body_ty with
           | Ty1 body_ty -> Tm2 (FunType1 (name, Ty1 param_ty, body_ty))
           | Ty0 _ -> failwith "bug: level 1 parameter type found in a level 0 function type"
           end
       | Ty0 param_ty ->
-          begin match translate_ty (bind_entry0 name env) body_ty with
+          begin match translate_ty (bind_entry0 env) body_ty with
           | Ty1 body_ty -> Tm2 (FunType1 (name, Ty0 param_ty, body_ty))
           | Ty0 body_ty -> Tm1 (FunType0 (name, param_ty, body_ty))
           end
@@ -92,12 +88,12 @@ let rec translate env : Core.Syntax.tm -> tm =
   | FunLit (name, param_ty, body) ->
       begin match translate_ty env param_ty with
       | Ty1 param_ty ->
-          begin match translate_tm (bind_entry1 name env) body with
+          begin match translate_tm (bind_entry1 env) body with
           | Tm1 body -> Tm1 (FunLit1 (name, Ty1 param_ty, body))
           | Tm0 _ -> failwith "bug: level 1 parameter type found in a level 0 function literal"
           end
       | Ty0 param_ty ->
-          begin match translate_tm (bind_entry0 name env) body with
+          begin match translate_tm (bind_entry0 env) body with
           | Tm1 body -> Tm1 (FunLit1 (name, Ty0 param_ty, body))
           | Tm0 body -> Tm0 (FunLit0 (name, param_ty, body))
           end
