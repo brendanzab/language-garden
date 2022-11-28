@@ -76,7 +76,8 @@ let rec translate env : Core.Syntax.tm -> tm =
       | Level1 level -> Tm1 (Var1 (Env.level_to_index env.size1 level))
       | Level0 level -> Tm0 (Var0 (Env.level_to_index env.size0 level))
       end
-  | Univ -> Tm2 Univ
+  | Univ L0 -> Tm2 Univ0
+  | Univ L1 -> failwith "bug: universe exceeds size of target language"
   | FunType (name, param_ty, body_ty) ->
       begin match translate env param_ty with
       | Tm2 param_ty ->

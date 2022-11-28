@@ -8,6 +8,22 @@
 type name = string option
 
 
+(** Universe levels *)
+module Level = struct
+
+  (** Universe levels *)
+  type t =
+    | L0  (** Small types *)
+    | L1  (** Large types *)
+
+  let max l1 l2 =
+    match l1, l2 with
+    | L0, L0 -> L0
+    | L1, _ | _, L1 -> L1
+
+end
+
+
 (** Variable namespaces *)
 module Ns = struct
 
@@ -19,6 +35,20 @@ end
 
 (** Syntax of the core language *)
 module Syntax = struct
+  (** The core language corresponds to a pure type system instantiated with the
+      following sorts, axioms, and rules:
+
+      {v
+        Level := { 0, 1 }
+
+        S := { Type l | l ∈ Level }
+        A := { (Type 0 : Type 1) }
+        R := { (Type l₁, Type l₂, Type (max l₁ l₂)) | l₁, l₂ ∈ Level }
+      v}
+
+      This gives us a dependently typed lambda calculus with two predicative
+      universes.
+  *)
 
   (** Types *)
   type ty = tm
@@ -28,7 +58,7 @@ module Syntax = struct
     | Let of name * tm * tm       (** Let bindings (for sharing definitions inside terms) *)
     | Ann of tm * ty              (** Terms annotated with types *)
     | Var of Ns.tm Env.index      (** Variables *)
-    | Univ                        (** The universe of ‘small’ types (i.e. the type of types) *)
+    | Univ of Level.t             (** Universe (i.e. the type of types) *)
     | FunType of name * ty * ty   (** Dependent function types *)
     | FunLit of name * ty * tm    (** Function literals (i.e. lambda expressions) *)
     | FunApp of tm * tm           (** Function application *)
@@ -47,7 +77,7 @@ module Semantics = struct
   (** Terms in weak head normal form *)
   and vtm =
     | Neu of neu
-    | Univ
+    | Univ of Level.t
     | FunType of name * vty Lazy.t * (vtm -> vty)
     | FunLit of name * vty Lazy.t * (vtm -> vtm)
 
@@ -79,7 +109,7 @@ module Semantics = struct
     | Syntax.Let (_, def, body) -> eval (Env.bind_entry (eval env def) env) body
     | Syntax.Ann (tm, _) -> eval env tm
     | Syntax.Var x -> Env.get_index x env
-    | Syntax.Univ ->  Univ
+    | Syntax.Univ l ->  Univ l
     | Syntax.FunType (name, param_ty, body_ty) ->
         let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
         let body_ty x = eval (Env.bind_entry x env) body_ty in
@@ -95,7 +125,7 @@ module Semantics = struct
 
   let rec quote size = function
     | Neu neu -> quote_neu size neu
-    | Univ -> Syntax.Univ
+    | Univ l -> Syntax.Univ l
     | FunType (name, param_ty, body_ty) ->
         let x = Neu (Var (Env.next_level size)) in
         let param_ty = quote size (Lazy.force param_ty) in
@@ -121,7 +151,7 @@ module Semantics = struct
 
   let rec is_convertible size = function
     | Neu neu1, Neu neu2 -> is_convertible_neu size (neu1, neu2)
-    | Univ, Univ -> true
+    | Univ l1, Univ l2 -> l1 = l2
     | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
         let x = Neu (Var (Env.next_level size)) in
         is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
@@ -177,7 +207,6 @@ module Validation = struct
     if Semantics.is_convertible ctx.size (ty, expected_ty) then () else
       raise (Error "mismatched types")
 
-  (** Synthesize the type of a term *)
   and synth ctx : Syntax.tm -> Semantics.vty =
     function
     | Let (_, def, body) ->
@@ -185,26 +214,22 @@ module Validation = struct
         let def' = Semantics.eval ctx.tms def in
         synth (ctx |> bind_def def_ty def') body
     | Ann (expr, ty) ->
-        is_ty ctx ty;
+        let _ = is_ty ctx ty in
         let ty' = Semantics.eval ctx.tms ty in
         check ctx expr ty';
         ty'
     | Var x -> Env.get_index x ctx.tys
-
+    | Univ L0 -> Univ L1
     (* There’s no type large enough to contain large universes in the core
        language, so raise an error here *)
-    | Univ -> raise (Error "cannot synthesize the type of types")
-    (* Introduction rule for small function universes. Larger functions are
-       handled in the [is_type] function, but there are restrictions on where
-       these can appear. *)
+    | Univ L1 -> failwith "cannot synthesize the type of large universes"
     | FunType (_, param_ty, body_ty) ->
-        check ctx param_ty Univ;
+        let l1 = is_ty ctx param_ty in
         let param_ty' = Semantics.eval ctx.tms param_ty in
-        check (ctx |> bind_param param_ty') body_ty Univ;
-        Univ
-    (* Introduction rule for functions *)
+        let l2 = is_ty (ctx |> bind_param param_ty') body_ty in
+        Univ (Level.max l1 l2)
     | FunLit (name, param_ty, body) ->
-        is_ty ctx param_ty;
+        let _ = is_ty ctx param_ty in
         let param_ty' = Semantics.eval ctx.tms param_ty in
         let body_ty = synth (ctx |> bind_param param_ty') body in
         let fun_ty = Syntax.FunType (name, param_ty, Semantics.quote ctx.size body_ty) in
@@ -217,20 +242,11 @@ module Validation = struct
             body_ty (Semantics.eval ctx.tms arg)
         | _ -> raise (Error "expected a function type")
 
-  (** Check if the term is a small or a large type. Terms that are typable with
-      this function, but not [check] or [synth] are usually restricted to only
-      appear in type annotations. *)
-  and is_ty ctx : Syntax.tm -> unit =
-    function
-    (* The type of universes is a type *)
-    | Univ -> ()
-    (* Function type formation for small and large function types. *)
-    | FunType (_, param_ty, body_ty) ->
-        is_ty ctx param_ty;
-        let param_ty' = Semantics.eval ctx.tms param_ty in
-        is_ty (ctx |> bind_param param_ty') body_ty
-    (* Terms that inhabit the universe of small types can be treated a types,
-       effectively ‘coercing’ them to types. *)
-    | tm -> check ctx tm Univ
+  (** Check if the term is a type in a small or a large universe, and return the
+      level of that universe. *)
+  and is_ty ctx (tm : Syntax.tm) : Level.t =
+    match synth ctx tm with
+    | Univ l -> l
+    | _ -> failwith "could not synthesise level: not a type"
 
 end

@@ -38,7 +38,7 @@ module Syntax = struct
       the types that they inhabit. *)
 
   and tm2 =
-    | Univ                            (** Universe of small types (ie. [Type 0]) *)
+    | Univ0                           (** Universe of small types (ie. [Type 0]) *)
     | FunType11 of name * ty1 * ty1   (** [Type 1] to [Type 1] function types *)
     | FunType01 of name * ty0 * ty1   (** [Type 0] to [Type 1] function types *)
   and tm1 =
@@ -75,7 +75,7 @@ module Semantics = struct
   (** {2 Values} *)
 
   and vtm2 =
-    | Univ
+    | Univ0
     | FunType11 of name * vty1 * (vtm1 -> vty1)
     | FunType01 of name * vty0 * (vtm0 -> vty1)
   and vtm1 =
@@ -143,7 +143,7 @@ module Semantics = struct
 
   let rec eval2 env : Syntax.tm2 -> vtm2 =
     function
-    | Univ -> Univ
+    | Univ0 -> Univ0
     | FunType11 (name, param_ty, body_ty) ->
         let param_ty = eval2 env param_ty in
         let body_ty x = eval2 (bind1 x env) body_ty in
