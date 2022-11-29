@@ -19,16 +19,19 @@ type 'ns level
 
 (** An environment of bindings that can be looked up directly using a
     {!index}, or by inverting a {!level} using {!level_to_index}. *)
-type ('ns, 'a) t
+type ('ns, 'entry) t
 
 (** Initial, empty environment *)
-val empty : ('ns, 'a) t
+val empty : ('ns, 'entry) t
 
 (** Bind a new entry in the environment *)
-val bind_entry : 'a -> ('ns, 'a) t -> ('ns, 'a) t
+val bind_entry : 'entry -> ('ns, 'entry) t -> ('ns, 'entry) t
 
 (** Get an entry in the environment using an index *)
-val lookup : 'ns index -> ('ns, 'a) t -> 'a
+val lookup : 'ns index -> ('ns, 'entry) t -> 'entry
+
+(** Return the index of an entry in the environment *)
+val entry_index : 'entry -> ('ns, 'entry) t -> 'ns index option
 
 
 (** {1 Erased environments } *)
@@ -37,7 +40,7 @@ val lookup : 'ns index -> ('ns, 'a) t -> 'a
 type 'ns size
 
 (** Return the size of an environment *)
-val size : ('ns, 'a) t -> 'ns size
+val size : ('ns, 'entry) t -> 'ns size
 
 (** The size of an initial, empty environment *)
 val empty_size : 'ns size

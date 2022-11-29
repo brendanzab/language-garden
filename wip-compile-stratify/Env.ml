@@ -15,6 +15,12 @@ let lookup x env =
 let size env =
   List.length env
 
+let entry_index a env =
+  let rec go i = function
+    | [] -> None
+    | x :: env -> if x = a then Some i else go (i + 1) env in
+  go 0 env
+
 let empty_size = 0
 
 let bind_level size =

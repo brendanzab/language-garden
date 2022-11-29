@@ -242,9 +242,12 @@ module Validation = struct
     | FunLit (name, param_ty, body) ->
         let _ = is_ty ctx param_ty in
         let param_ty' = Semantics.eval ctx.tms param_ty in
-        let body_ty = synth (ctx |> Context.assume param_ty') body in
-        let fun_ty = Syntax.FunType (name, param_ty, Semantics.quote ctx.size body_ty) in
-        Semantics.eval ctx.tms fun_ty
+        let body_ty =
+          let ctx = ctx |> Context.assume param_ty' in
+          let body_ty = synth ctx body in
+          Semantics.quote ctx.size body_ty
+        in
+        Semantics.eval ctx.tms (Syntax.FunType (name, param_ty, body_ty))
     (* Elimination rule for functions *)
     | FunApp (head, arg) ->
         match synth ctx head with
