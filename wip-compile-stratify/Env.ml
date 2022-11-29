@@ -6,16 +6,22 @@ type (_, 'a) t = 'a list
 
 let empty = []
 
+let bind_entry x env =
+  x :: env
+
 let get_index x env =
   List.nth env x
 
-let size =
-  List.length
+let size env =
+  List.length env
+
+let empty_size = 0
+
+let bind_level size =
+  size + 1
+
+let next_level size =
+  size
 
 let level_to_index size level =
   size - level - 1
-
-let empty_size = 0
-let bind_entry x env = x :: env
-let bind_level size = size + 1
-let next_level size = size
