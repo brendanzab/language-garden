@@ -46,6 +46,8 @@ type tm = [
   | `Tm0 of Stratified.Syntax.tm0
 ]
 
+exception Error of string
+
 let rec translate env : Core.Syntax.tm -> tm =
   function
   | Let (name, def, body) ->
@@ -72,7 +74,7 @@ let rec translate env : Core.Syntax.tm -> tm =
       | Level0 level -> `Tm0 (Var0 (Env.level_to_index env.size0 level))
       end
   | Univ L0 -> `Tm2 Univ0
-  | Univ L1 -> failwith "bug: universe exceeds size of target language"
+  | Univ L1 -> raise (Error "bug: universe exceeds size of target language")
   | FunType (name, param_ty, body_ty) ->
       begin match translate_ty env param_ty with
       | `Tm2 param_ty ->
@@ -110,7 +112,7 @@ let rec translate env : Core.Syntax.tm -> tm =
               in the [Core.Validation] functions. Perhaps a type-directed
               translation could help make this feel less ad-hoc? Not sure.
           *)
-          failwith "bug: ambiguous function application"
+          raise (Error "bug: ambiguous function application")
       | `Tm0 head -> `Tm0 (FunApp00 (head, translate0 env arg))
       end
 
@@ -125,14 +127,14 @@ let rec translate env : Core.Syntax.tm -> tm =
 and translate_tm env tm =
   match translate (bind_entry0 env) tm with
   | `Tm1  _ | `Tm0 _ as tm -> tm
-  | `Tm2 _ -> failwith "bug: level 2 terms are too large to be typable"
+  | `Tm2 _ -> raise (Error "bug: level 2 terms are too large to be typable")
 
 (** Translate a term that can be used as a type in the target language (i.e.
     that can appear on the right of the typing operator). *)
 and translate_ty env tm =
   match translate (bind_entry0 env) tm with
   | `Tm2  _ | `Tm1 _ as tm -> tm
-  | `Tm0 _ -> failwith "bug: level 0 terms are too small to contain types"
+  | `Tm0 _ -> raise (Error "bug: level 0 terms are too small to contain types")
 
 
 (** {1 Translation functions specialised to known term levels} *)
@@ -158,7 +160,7 @@ and translate2 env : Core.Syntax.tm -> Stratified.Syntax.tm2 =
       | `Tm1 param_ty ->
           FunType01 (name, param_ty, translate2 (bind_entry0 env) body_ty)
       end
-  | _ -> failwith "bug: expected a level 2 term"
+  | _ -> raise (Error "bug: expected a level 2 term")
 
 and translate1 env : Core.Syntax.tm -> Stratified.Syntax.tm1 =
   function
@@ -172,7 +174,7 @@ and translate1 env : Core.Syntax.tm -> Stratified.Syntax.tm1 =
   | Var x ->
       begin match Env.get_index x env.levels with
       | Level1 level -> Var1 (Env.level_to_index env.size1 level)
-      | Level0 _ -> failwith "bug: expected a level 1 term"
+      | Level0 _ -> raise (Error "bug: expected a level 1 term")
       end
   | FunType (name, param_ty, body_ty) ->
       let param_ty = translate1 env param_ty in
@@ -193,7 +195,7 @@ and translate1 env : Core.Syntax.tm -> Stratified.Syntax.tm1 =
       | `Tm1 arg -> FunApp11 (translate1 env head, arg)
       | `Tm0 arg -> FunApp01 (translate1 env head, arg)
       end
-  | _ -> failwith "bug: expected a level 1 term"
+  | _ -> raise (Error "bug: expected a level 1 term")
 
 and translate0 env : Core.Syntax.tm -> Stratified.Syntax.tm0 =
   function
@@ -204,7 +206,7 @@ and translate0 env : Core.Syntax.tm -> Stratified.Syntax.tm0 =
       end
   | Var x ->
       begin match Env.get_index x env.levels with
-      | Level1 _ -> failwith "bug: expected a level 0 term"
+      | Level1 _ -> raise (Error "bug: expected a level 0 term")
       | Level0 level -> Var0 (Env.level_to_index env.size0 level)
       end
   | Ann (expr, ty) ->
@@ -218,4 +220,4 @@ and translate0 env : Core.Syntax.tm -> Stratified.Syntax.tm0 =
       | `Tm1 head -> FunApp10 (head, translate1 env arg)
       | `Tm0 head -> FunApp00 (head, translate0 env arg)
       end
-  | _ -> failwith "bug: expected a level 0 term"
+  | _ -> raise (Error "bug: expected a level 0 term")
