@@ -36,6 +36,9 @@ val get_index : 'ns index -> ('ns, 'a) t -> 'a
 (** The size of an environment *)
 type 'ns size
 
+(** Return the size of an environment *)
+val size : ('ns, 'a) t -> 'ns size
+
 (** The size of an initial, empty environment *)
 val empty_size : 'ns size
 

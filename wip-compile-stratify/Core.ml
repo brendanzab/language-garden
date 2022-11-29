@@ -96,7 +96,7 @@ module Semantics = struct
 
   (** {1 Eliminators} *)
 
-  let app head arg =
+  let app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu neu -> Neu (FunApp (neu, Lazy.from_val arg))
     | FunLit (_, _, body) -> body arg
@@ -105,7 +105,7 @@ module Semantics = struct
 
   (** {1 Evaluation} *)
 
-  let rec eval env = function
+  let rec eval env : Syntax.tm -> vtm = function
     | Syntax.Let (_, def, body) -> eval (Env.bind_entry (eval env def) env) body
     | Syntax.Ann (tm, _) -> eval env tm
     | Syntax.Var x -> Env.get_index x env
@@ -123,7 +123,7 @@ module Semantics = struct
 
   (** {1 Quotation} *)
 
-  let rec quote size = function
+  let rec quote size : vtm -> Syntax.tm = function
     | Neu neu -> quote_neu size neu
     | Univ l -> Syntax.Univ l
     | FunType (name, param_ty, body_ty) ->
@@ -136,20 +136,20 @@ module Semantics = struct
         let param_ty = quote size (Lazy.force param_ty) in
         let body = quote (Env.bind_level size) (body x) in
         Syntax.FunLit (name, param_ty, body)
-  and quote_neu size = function
+  and quote_neu size : neu -> Syntax.tm = function
     | Var level -> Syntax.Var (Env.level_to_index size level)
     | FunApp (neu, arg) -> Syntax.FunApp (quote_neu size neu, quote size (Lazy.force arg))
 
 
   (** {1 Normalisation} *)
 
-  let normalise size tms tm : Syntax.tm =
-    quote size (eval tms tm)
+  let normalise env (tm : Syntax.tm) : Syntax.tm =
+    quote (Env.size env) (eval env tm)
 
 
   (** {1 Conversion Checking} *)
 
-  let rec is_convertible size = function
+  let rec is_convertible size : vty * vty -> bool = function
     | Neu neu1, Neu neu2 -> is_convertible_neu size (neu1, neu2)
     | Univ l1, Univ l2 -> l1 = l2
     | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
@@ -165,7 +165,7 @@ module Semantics = struct
         let x = Neu (Var (Env.next_level size)) in
         is_convertible size (body x, app fun_tm x)
     | _, _ -> false
-  and is_convertible_neu size = function
+  and is_convertible_neu size : neu * neu -> bool = function
     | Var level1, Var level2 -> level1 = level2
     | FunApp (neu1, arg1), FunApp (neu2, arg2)  ->
         is_convertible_neu size (neu1, neu2)

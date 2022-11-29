@@ -136,34 +136,34 @@ module Semantics = struct
     tm0s : (Ns.tm0, vtm0) Env.t;   (** Level 0 bindings *)
   }
 
-  let bind1 t env =
+  let bind1 (t : vtm1) env =
     { env with tm1s = Env.bind_entry t env.tm1s }
 
-  let bind0 t env =
+  let bind0 (t : vtm0) env =
     { env with tm0s = Env.bind_entry t env.tm0s }
 
 
   (** {1 Eliminators} *)
 
-  let app11 head arg =
+  let app11 (head : vtm1) (arg : vtm1) : vtm1 =
     match head with
     | Neu1 neu -> Neu1 (FunApp11 (neu, arg))
     | FunLit11 (_, _, body) -> body arg
     | _ -> raise (Error "invalid application")
 
-  let app01 head arg =
+  let app01 (head : vtm1) (arg : vtm0) : vtm1 =
     match head with
     | Neu1 neu -> Neu1 (FunApp01 (neu, arg))
     | FunLit01 (_, _, body) -> body arg
     | _ -> raise (Error "invalid application")
 
-  let app10 head arg =
+  let app10 (head : vtm1) (arg : vtm1) : vtm0 =
     match head with
     | Neu1 neu -> Neu0 (FunApp10 (neu, arg))
     | FunLit10 (_, _, body) -> body arg
     | _ -> raise (Error "invalid application")
 
-  let app00 head arg =
+  let app00 (head : vtm0) (arg : vtm0) : vtm0 =
     match head with
     | Neu0 neu -> Neu0 (FunApp00 (neu, arg))
     | FunLit00 (_, _, body) -> body arg
