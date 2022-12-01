@@ -16,13 +16,19 @@
 exception Error of string
 
 
-(** {1 Bidirectional rule types} *)
+(** {1 Rule types} *)
 
 type is_ty
 type synth
 type check
 
-(** {2 Conversions between type of rule} *)
+(** {2 Running rules} *)
+
+val run_is_ty : is_ty -> Core.Level.t * Core.Syntax.tm
+val run_check : Core.Semantics.vtm -> check -> Core.Syntax.tm
+val run_synth : synth -> Core.Semantics.vtm * Core.Syntax.tm
+
+(** {2 Converting between types of rule} *)
 
 (** Turn a check rule into a synth rule using a type annotation. *)
 val ann : ty:is_ty -> check -> synth
@@ -33,12 +39,6 @@ val is_ty : synth -> is_ty
 (** Turn a synth rule into a check rule by checking that the synthesised type
     matches the expected type. *)
 val check : synth -> check
-
-(** {2 Running rules} *)
-
-val run_is_ty : is_ty -> Core.Level.t * Core.Syntax.tm
-val run_check : Core.Semantics.vtm -> check -> Core.Syntax.tm
-val run_synth : synth -> Core.Semantics.vtm * Core.Syntax.tm
 
 
 (** {1 Inference rules for the core language} *)

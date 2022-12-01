@@ -26,11 +26,11 @@ module Context = struct
     tms = Env.empty;
   }
 
-  let extend (ctx : t) (name : Core.name) (vty : Semantics.vty) (vtm : Semantics.vtm) = {
+  let extend (ctx : t) (name : Core.name) (ty : Semantics.vty) (tm : Semantics.vtm) = {
     size = ctx.size |> Env.bind_level;
     names = ctx.names |> Env.bind_entry name;
-    tys = ctx.tys |> Env.bind_entry vty;
-    tms = ctx.tms |> Env.bind_entry vtm;
+    tys = ctx.tys |> Env.bind_entry ty;
+    tms = ctx.tms |> Env.bind_entry tm;
   }
 
   let lookup (ctx : t) (name : Core.name) : (Semantics.vty * Ns.tm Env.index) option =
@@ -91,8 +91,8 @@ let var (x : var) : synth =
 let ann ~(ty : is_ty) (tm : check) : synth =
   fun ctx ->
     let _, ty = ty ctx in
-    let vty = Context.eval ctx ty in
-    (vty, tm ctx vty)
+    let ty = Context.eval ctx ty in
+    ty, tm ctx ty
 
 let is_ty (tm : synth) : is_ty =
   fun ctx ->
@@ -117,16 +117,16 @@ module Structure = struct
 
   let let_synth ?name (def : synth) (body : synth -> synth) : synth =
     fun ctx ->
-      let def_vty, def = def ctx in
-      Context.define ctx name def_vty (Context.eval ctx def)
+      let def_ty, def = def ctx in
+      Context.define ctx name def_ty (Context.eval ctx def)
         (fun ctx x ->
           let body_ty, body = body (var x) ctx in
           body_ty, Syntax.Let (name, def, body))
 
   let let_check ?name (def : synth) (body : synth -> check) : check =
     fun ctx body_ty ->
-      let def_vty, def = def ctx in
-      Context.define ctx name def_vty (Context.eval ctx def)
+      let def_ty, def = def ctx in
+      Context.define ctx name def_ty (Context.eval ctx def)
         (fun ctx x ->
           Syntax.Let (name, def, body (var x) ctx body_ty))
 
@@ -147,19 +147,22 @@ module Fun = struct
       Context.eval ctx (Syntax.FunType (name, param_ty, body_ty)),
       Syntax.FunLit (name, param_ty, body)
 
+  let check_param_ty (ty : is_ty option) : check =
+    fun ctx expected_ty ->
+      match ty with
+      | Some ty ->
+          let _, ty = ty ctx in
+          if Context.(is_convertible ctx (eval ctx ty) expected_ty) then ty else
+            raise (Error "mismatched parameter type")
+      | None -> Context.quote ctx expected_ty
+
   let intro_check ?name ?ty:param_ty (body : synth -> check) : check =
     fun ctx expected_ty ->
       match expected_ty with
-      | Semantics.FunType (_, param_vty, body_ty) ->
-          let param_ty =
-            match param_ty with
-            | Some param_ty ->
-                let _, param_ty = param_ty ctx in
-                if Context.(is_convertible ctx (eval ctx param_ty) (Lazy.force param_vty)) then param_ty else
-                  raise (Error "mismatched parameter type")
-            | None -> Context.quote ctx (Lazy.force param_vty)
-          in
-          Context.assume ctx name (Lazy.force param_vty)
+      | Semantics.FunType (_, expected_param_ty, body_ty) ->
+          let expected_param_ty = Lazy.force expected_param_ty in
+          let param_ty = check_param_ty param_ty ctx expected_param_ty in
+          Context.assume ctx name expected_param_ty
             (fun ctx x ->
               let x = var x in
               let body_ty = body_ty (Context.eval ctx (x ctx |> snd)) in
