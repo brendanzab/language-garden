@@ -61,10 +61,10 @@ end
 module Fun : sig
 
   (** Function introduction *)
-  val intro_synth : ?name:string -> is_ty -> (synth -> synth) -> synth
+  val intro_synth : ?name:string -> ty:is_ty -> (synth -> synth) -> synth
 
   (** Function introduction *)
-  val intro_check : ?name:string -> (synth -> check) -> check
+  val intro_check : ?name:string -> ?ty:is_ty -> (synth -> check) -> check
 
   (** Function elimination *)
   val app : synth -> check -> synth

@@ -135,8 +135,7 @@ end
 
 module Fun = struct
 
-  (* TODO: optional paramter type *)
-  let intro_synth ?name (param_ty : is_ty) (body : synth -> synth) : synth =
+  let intro_synth ?name ~ty:param_ty (body : synth -> synth) : synth =
     fun ctx ->
       let _, param_ty = param_ty ctx in
       let body_ty, body =
@@ -148,13 +147,18 @@ module Fun = struct
       Context.eval ctx (Syntax.FunType (name, param_ty, body_ty)),
       Syntax.FunLit (name, param_ty, body)
 
-  (* TODO: optional paramter type *)
-  let intro_check ?name (body : synth -> check) : check =
-    fun ctx ->
-      function
-      (* TODO: Check param type matches *)
+  let intro_check ?name ?ty:param_ty (body : synth -> check) : check =
+    fun ctx expected_ty ->
+      match expected_ty with
       | Semantics.FunType (_, param_vty, body_ty) ->
-          let param_ty = Context.quote ctx (Lazy.force param_vty) in
+          let param_ty =
+            match param_ty with
+            | Some param_ty ->
+                let _, param_ty = param_ty ctx in
+                if Context.(is_convertible ctx (eval ctx param_ty) (Lazy.force param_vty)) then param_ty else
+                  raise (Error "mismatched parameter type")
+            | None -> Context.quote ctx (Lazy.force param_vty)
+          in
           Context.assume ctx name (Lazy.force param_vty)
             (fun ctx x ->
               let x = var x in

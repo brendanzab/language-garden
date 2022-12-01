@@ -27,8 +27,8 @@ let () =
   (* Identity function (synthesis) *)
 
   let id =
-    R.Fun.intro_synth ~name:"A" (R.is_ty @@ R.Univ.univ L0) @@ fun a ->
-    R.Fun.intro_synth ~name:"x" (R.is_ty a) @@ fun x -> x
+    R.Fun.intro_synth ~name:"A" ~ty:(R.is_ty @@ R.Univ.univ L0) @@ fun a ->
+    R.Fun.intro_synth ~name:"x" ~ty:(R.is_ty a) @@ fun x -> x
   in
 
   let _, tm = R.run_synth id in
@@ -38,7 +38,7 @@ let () =
 
   let app =
     R.Structure.let_synth ~name:"id" id @@ fun id ->
-    R.Fun.intro_synth ~name:"B" (R.is_ty @@ R.Univ.univ L0) @@ fun b ->
+    R.Fun.intro_synth ~name:"B" ~ty:(R.is_ty @@ R.Univ.univ L0) @@ fun b ->
       R.Fun.app id (R.check b)
   in
 
@@ -56,9 +56,9 @@ let () =
   in
   let id =
     R.ann ~ty:(R.is_ty id_ty) @@
-      R.Fun.intro_check ~name:"A" @@ fun _ ->
-      R.Fun.intro_check ~name:"x" @@ fun x ->
-        R.check x
+    R.Fun.intro_check ~name:"A" @@ fun _ ->
+    R.Fun.intro_check ~name:"x" @@ fun x ->
+      R.check x
   in
 
   let _, tm = R.run_synth id in
@@ -73,8 +73,8 @@ let () =
   in
   let app =
     R.ann ~ty:(R.is_ty app_ty) @@
-      R.Fun.intro_check ~name:"B" @@ fun b ->
-        R.check (R.Fun.app id (R.check b))
+    R.Fun.intro_check ~name:"B" @@ fun b ->
+      R.check (R.Fun.app id (R.check b))
   in
 
   let _, tm = R.run_synth app in
