@@ -40,6 +40,18 @@ type synth
 (** A ‘checkable’ rule that yeilds a term when a type annotation is supplied *)
 type check
 
+(** {2 Converting between types of rule} *)
+
+(** Turn a synthesis rule into a type rule. *)
+val is_ty : synth -> is_ty
+
+(** Turn a synthesis rule into a checkable rule by checking that the synthesised
+    type matches the expected type. *)
+val check : synth -> check
+
+(** Turn a check rule into a synth rule using a type annotation. *)
+val ann : ty:is_ty -> check -> synth
+
 (** {2 Running rules} *)
 
 val run_is_ty : is_ty -> Core.Level.t * Core.Syntax.tm
@@ -51,18 +63,6 @@ val run_synth : synth -> Core.Semantics.vtm * Core.Syntax.tm
 val eval : Core.Syntax.tm -> Core.Semantics.vtm
 val quote : Core.Semantics.vtm -> Core.Syntax.tm
 val is_convertible : Core.Semantics.vtm -> Core.Semantics.vtm -> bool
-
-(** {2 Converting between types of rule} *)
-
-(** Turn a check rule into a synth rule using a type annotation. *)
-val ann : ty:is_ty -> check -> synth
-
-(** Turn a synthesis rule into a type rule. *)
-val is_ty : synth -> is_ty
-
-(** Turn a synthesis rule into a checkable rule by checking that the synthesised
-    type matches the expected type. *)
-val check : synth -> check
 
 
 (** {1 Inference rules for the core language} *)

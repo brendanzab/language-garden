@@ -84,25 +84,9 @@ let run_synth (tm : synth) : Semantics.vty * Syntax.tm =
   tm Context.empty
 
 
-let eval (tm : Syntax.tm) : Semantics.vtm =
-  Semantics.eval Env.empty tm
-
-let quote (vtm : Semantics.vtm) : Syntax.tm =
-  Semantics.quote Env.empty_size vtm
-
-let is_convertible (v0 : Semantics.vtm) (v1 : Semantics.vtm) : bool =
-  Semantics.is_convertible Env.empty_size (v0, v1)
-
-
 let var (x : var) : synth =
   fun ctx ->
     x.ty, Var (Env.level_to_index ctx.size x.level)
-
-let ann ~(ty : is_ty) (tm : check) : synth =
-  fun ctx ->
-    let _, ty = ty ctx in
-    let ty = Context.eval ctx ty in
-    ty, tm ctx ty
 
 let is_ty (tm : synth) : is_ty =
   fun ctx ->
@@ -115,6 +99,22 @@ let check (tm : synth) : check =
     let (ty, tm) = tm ctx in
     if Context.is_convertible ctx ty expected_ty then tm else
       raise (Error "type mismatch")
+
+let ann ~(ty : is_ty) (tm : check) : synth =
+  fun ctx ->
+    let _, ty = ty ctx in
+    let ty = Context.eval ctx ty in
+    ty, tm ctx ty
+
+
+let eval (tm : Syntax.tm) : Semantics.vtm =
+  Semantics.eval Env.empty tm
+
+let quote (vtm : Semantics.vtm) : Syntax.tm =
+  Semantics.quote Env.empty_size vtm
+
+let is_convertible (v0 : Semantics.vtm) (v1 : Semantics.vtm) : bool =
+  Semantics.is_convertible Env.empty_size (v0, v1)
 
 
 module Structure = struct
