@@ -1,18 +1,27 @@
+(* TODO: Proper test suite *)
+(* TODO: Pretty printing *)
+
 let () =
   let module R = CoreRules in
 
   Printexc.record_backtrace true;
 
-  (* TODO: Pretty printing *)
+
+  (* Basic tests *)
 
   let _, tm = R.run_synth @@ R.Univ.univ L0 in
   let _ = Core.Validation.(synth Context.empty tm) in
+  let _ = CoreToStratified.(translate Context.empty tm) in
 
   let _, tm = R.run_synth @@ R.Univ.fun_ (R.Univ.univ L0) @@ fun u -> u in
   let _ = Core.Validation.(synth Context.empty tm) in
+  (* FIXME: bug: level 0 terms are too small to contain types *)
+  (* let _ = CoreToStratified.(translate Context.empty tm) in *)
 
   let _, tm = R.run_synth @@ R.Structure.let_synth (R.Univ.univ L0) @@ fun u -> u in
   let _ = Core.Validation.(synth Context.empty tm) in
+  (* FIXME: bug: level 2 terms are too large to be typable *)
+  (* let _ = CoreToStratified.(translate Context.empty tm) in *)
 
 
   (* Identity function (synthesis) *)
@@ -24,6 +33,8 @@ let () =
 
   let _, tm = R.run_synth id in
   let _ = Core.Validation.(synth Context.empty tm) in
+  (* FIXME: bug: level 0 terms are too small to contain types *)
+  (* let _ = CoreToStratified.(translate Context.empty tm) in *)
 
   let app =
     R.Structure.let_synth ~name:"id" id @@ fun id ->
@@ -33,6 +44,8 @@ let () =
 
   let _, tm = R.run_synth app in
   let _ = Core.Validation.(synth Context.empty tm) in
+  (* FIXME: bug: level 0 terms are too small to contain types *)
+  (* let _ = CoreToStratified.(translate Context.empty tm) in *)
 
 
   (* Identity function (checking) *)
@@ -50,6 +63,8 @@ let () =
 
   let _, tm = R.run_synth id in
   let _ = Core.Validation.(synth Context.empty tm) in
+  (* FIXME: bug: level 0 terms are too small to contain types *)
+  (* let _ = CoreToStratified.(translate Context.empty tm) in *)
 
 
   let app_ty =
@@ -64,5 +79,7 @@ let () =
 
   let _, tm = R.run_synth app in
   let _ = Core.Validation.(synth Context.empty tm) in
+  (* FIXME: bug: level 0 terms are too small to contain types *)
+  (* let _ = CoreToStratified.(translate Context.empty tm) in *)
 
   ()
