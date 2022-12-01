@@ -12,7 +12,8 @@
 
 (** {1 Exceptions} *)
 
-(** A type error raised if a rule was used incorrectly *)
+(** An error raised if a rule was used incorrectly, for example if a type error
+    was encountered *)
 exception Error of string
 
 
@@ -27,6 +28,12 @@ type check
 val run_is_ty : is_ty -> Core.Level.t * Core.Syntax.tm
 val run_check : Core.Semantics.vtm -> check -> Core.Syntax.tm
 val run_synth : synth -> Core.Semantics.vtm * Core.Syntax.tm
+
+(** {2 Semantics of closed terms} *)
+
+val eval : Core.Syntax.tm -> Core.Semantics.vtm
+val quote : Core.Semantics.vtm -> Core.Syntax.tm
+val is_convertible : Core.Semantics.vtm -> Core.Semantics.vtm -> bool
 
 (** {2 Converting between types of rule} *)
 

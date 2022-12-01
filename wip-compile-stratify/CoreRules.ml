@@ -3,6 +3,9 @@ module Syntax = Core.Syntax
 module Semantics = Core.Semantics
 
 
+exception Error of string
+
+
 type var = {
   ty : Semantics.vty;
   level : Ns.tm Env.level;
@@ -81,7 +84,14 @@ let run_synth (tm : synth) : Semantics.vty * Syntax.tm =
   tm Context.empty
 
 
-exception Error of string
+let eval (tm : Syntax.tm) : Semantics.vtm =
+  Semantics.eval Env.empty tm
+
+let quote (vtm : Semantics.vtm) : Syntax.tm =
+  Semantics.quote Env.empty_size vtm
+
+let is_convertible (v0 : Semantics.vtm) (v1 : Semantics.vtm) : bool =
+  Semantics.is_convertible Env.empty_size (v0, v1)
 
 
 let var (x : var) : synth =
