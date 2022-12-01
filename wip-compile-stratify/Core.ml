@@ -108,7 +108,7 @@ module Semantics = struct
   let rec eval env : Syntax.tm -> vtm = function
     | Syntax.Let (_, def, body) -> eval (Env.bind_entry (eval env def) env) body
     | Syntax.Ann (tm, _) -> eval env tm
-    | Syntax.Var x -> Env.get_index x env
+    | Syntax.Var x -> Env.lookup x env
     | Syntax.Univ l ->  Univ l
     | Syntax.FunType (name, param_ty, body_ty) ->
         let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
@@ -178,23 +178,34 @@ end
 (** Validation (type checking) of core terms *)
 module Validation = struct
 
-  type ctx = {
-    size : Ns.tm Env.size;
-    tys : (Ns.tm, Semantics.vty) Env.t;
-    tms : (Ns.tm, Semantics.vty) Env.t;
-  }
+  (** Validation context *)
+  module Context = struct
 
-  let next_var ctx =
-    Semantics.Neu (Var (Env.next_level ctx.size))
+    type t = {
+      size : Ns.tm Env.size;
+      tys : (Ns.tm, Semantics.vty) Env.t;
+      tms : (Ns.tm, Semantics.vty) Env.t;
+    }
 
-  let bind_def ty tm ctx = {
-    size = ctx.size |> Env.bind_level;
-    tys = ctx.tys |> Env.bind_entry ty;
-    tms = ctx.tms |> Env.bind_entry tm;
-  }
+    let empty = {
+      size = Env.empty_size;
+      tys = Env.empty;
+      tms = Env.empty;
+    }
 
-  let bind_param ty ctx =
-    ctx |> bind_def ty (next_var ctx)
+    let next_level ctx =
+      Semantics.Neu (Var (Env.next_level ctx.size))
+
+    let define ty tm ctx = {
+      size = ctx.size |> Env.bind_level;
+      tys = ctx.tys |> Env.bind_entry ty;
+      tms = ctx.tms |> Env.bind_entry tm;
+    }
+
+    let assume ty ctx =
+      ctx |> define ty (next_level ctx)
+
+  end
 
 
   (* Type errors raised when validating the core language *)
@@ -202,23 +213,23 @@ module Validation = struct
 
 
   (** Check that a term conforms to a given type. *)
-  let rec check ctx (tm : Syntax.tm) (expected_ty : Semantics.vty) =
+  let rec check (ctx : Context.t) (tm : Syntax.tm) (expected_ty : Semantics.vty) =
     let ty = synth ctx tm in
     if Semantics.is_convertible ctx.size (ty, expected_ty) then () else
       raise (Error "mismatched types")
 
-  and synth ctx : Syntax.tm -> Semantics.vty =
+  and synth (ctx : Context.t) : Syntax.tm -> Semantics.vty =
     function
     | Let (_, def, body) ->
         let def_ty = synth ctx def in
         let def' = Semantics.eval ctx.tms def in
-        synth (ctx |> bind_def def_ty def') body
+        synth (ctx |> Context.define def_ty def') body
     | Ann (expr, ty) ->
         let _ = is_ty ctx ty in
         let ty' = Semantics.eval ctx.tms ty in
         check ctx expr ty';
         ty'
-    | Var x -> Env.get_index x ctx.tys
+    | Var x -> Env.lookup x ctx.tys
     | Univ L0 -> Univ L1
     (* There’s no type large enough to contain large universes in the core
        language, so raise an error here *)
@@ -226,12 +237,12 @@ module Validation = struct
     | FunType (_, param_ty, body_ty) ->
         let l1 = is_ty ctx param_ty in
         let param_ty' = Semantics.eval ctx.tms param_ty in
-        let l2 = is_ty (ctx |> bind_param param_ty') body_ty in
+        let l2 = is_ty (ctx |> Context.assume param_ty') body_ty in
         Univ (Level.max l1 l2)
     | FunLit (name, param_ty, body) ->
         let _ = is_ty ctx param_ty in
         let param_ty' = Semantics.eval ctx.tms param_ty in
-        let body_ty = synth (ctx |> bind_param param_ty') body in
+        let body_ty = synth (ctx |> Context.assume param_ty') body in
         let fun_ty = Syntax.FunType (name, param_ty, Semantics.quote ctx.size body_ty) in
         Semantics.eval ctx.tms fun_ty
     (* Elimination rule for functions *)
@@ -244,7 +255,7 @@ module Validation = struct
 
   (** Check if the term is a type in a small or a large universe, and return the
       level of that universe. *)
-  and is_ty ctx (tm : Syntax.tm) : Level.t =
+  and is_ty (ctx : Context.t) (tm : Syntax.tm) : Level.t =
     match synth ctx tm with
     | Univ l -> l
     | _ -> failwith "could not synthesise level: not a type"

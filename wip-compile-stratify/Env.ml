@@ -9,7 +9,7 @@ let empty = []
 let bind_entry x env =
   x :: env
 
-let get_index x env =
+let lookup x env =
   List.nth env x
 
 let size env =

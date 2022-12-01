@@ -28,7 +28,7 @@ val empty : ('ns, 'a) t
 val bind_entry : 'a -> ('ns, 'a) t -> ('ns, 'a) t
 
 (** Get an entry in the environment using an index *)
-val get_index : 'ns index -> ('ns, 'a) t -> 'a
+val lookup : 'ns index -> ('ns, 'a) t -> 'a
 
 
 (** {1 Erased environments } *)

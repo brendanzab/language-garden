@@ -1,10 +1,12 @@
 (** {0 Translation from the core language to the stratified language} *)
 
-(** Translation environment *)
-type env
+(** Translation context *)
+module Context : sig
 
-(** The initial, empty environment *)
-val empty_env : env
+  type t
+  val empty : t
+
+end
 
 (** A translated term *)
 type tm = [
@@ -18,4 +20,4 @@ type tm = [
 exception Error of string
 
 (** Translate a term from the core language to a term in the stratified language *)
-val translate : env -> Core.Syntax.tm -> tm
+val translate : Context.t -> Core.Syntax.tm -> tm

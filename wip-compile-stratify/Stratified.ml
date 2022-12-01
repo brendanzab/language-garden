@@ -129,18 +129,27 @@ module Semantics = struct
   exception Error of string
 
 
-  (** {1 Environments} *)
+  (** Evaluation environment *)
+  module Env = struct
 
-  type env = {
-    tm1s : (Ns.tm1, vtm1) Env.t;   (** Level 1 bindings *)
-    tm0s : (Ns.tm0, vtm0) Env.t;   (** Level 0 bindings *)
-  }
+    type t = {
+      tm1s : (Ns.tm1, vtm1) Env.t;   (** Level 1 bindings *)
+      tm0s : (Ns.tm0, vtm0) Env.t;   (** Level 0 bindings *)
+    }
 
-  let bind1 (t : vtm1) env =
-    { env with tm1s = Env.bind_entry t env.tm1s }
+    let define1 (t : vtm1) env =
+      { env with tm1s = Env.bind_entry t env.tm1s }
 
-  let bind0 (t : vtm0) env =
-    { env with tm0s = Env.bind_entry t env.tm0s }
+    let define0 (t : vtm0) env =
+      { env with tm0s = Env.bind_entry t env.tm0s }
+
+    let lookup1 x env =
+      Env.lookup x env.tm1s
+
+    let lookup0 x env =
+      Env.lookup x env.tm0s
+
+  end
 
 
   (** {1 Eliminators} *)
@@ -175,38 +184,38 @@ module Semantics = struct
     function
     | Univ0 -> Univ0
     | FunType11 (x, param_ty, body_ty) ->
-        FunType11 (x, eval2 env param_ty, fun x -> eval2 (bind1 x env) body_ty)
+        FunType11 (x, eval2 env param_ty, fun x -> eval2 (Env.define1 x env) body_ty)
     | FunType01 (x, param_ty, body_ty) ->
-        FunType01 (x, eval1 env param_ty, fun x -> eval2 (bind0 x env) body_ty)
+        FunType01 (x, eval1 env param_ty, fun x -> eval2 (Env.define0 x env) body_ty)
     | FunType10 (x, param_ty, body_ty) ->
-        FunType10 (x, eval2 env param_ty, fun x -> eval1 (bind1 x env) body_ty)
+        FunType10 (x, eval2 env param_ty, fun x -> eval1 (Env.define1 x env) body_ty)
 
   and eval1 env : Syntax.tm1 -> vtm1 =
     function
-    | Let11 (_, def, body) -> eval1 (bind1 (eval1 env def) env) body
-    | Let01 (_, def, body) -> eval1 (bind0 (eval0 env def) env) body
+    | Let11 (_, def, body) -> eval1 (Env.define1 (eval1 env def) env) body
+    | Let01 (_, def, body) -> eval1 (Env.define0 (eval0 env def) env) body
     | Ann1 (t, _) -> eval1 env t
-    | Var1 x -> Env.get_index x env.tm1s
+    | Var1 x -> Env.lookup1 x env
     | FunLit11 (x, param_ty, body) ->
-        FunLit11 (x, eval2 env param_ty, fun x -> eval1 (bind1 x env) body)
+        FunLit11 (x, eval2 env param_ty, fun x -> eval1 (Env.define1 x env) body)
     | FunApp11 (head, arg) -> app11 (eval1 env head) (eval1 env arg)
     | FunLit01 (x, param_ty, body) ->
-        FunLit01 (x, eval1 env param_ty, fun x -> eval1 (bind0 x env) body)
+        FunLit01 (x, eval1 env param_ty, fun x -> eval1 (Env.define0 x env) body)
     | FunApp01 (head, arg) -> app01 (eval1 env head) (eval0 env arg)
     | FunLit10 (x, param_ty, body) ->
-        FunLit10 (x, eval2 env param_ty, fun x -> eval0 (bind1 x env) body)
+        FunLit10 (x, eval2 env param_ty, fun x -> eval0 (Env.define1 x env) body)
     | FunType00 (x, param_ty, body_ty) ->
-        FunType00 (x, eval1 env param_ty, fun x -> eval1 (bind0 x env) body_ty)
+        FunType00 (x, eval1 env param_ty, fun x -> eval1 (Env.define0 x env) body_ty)
 
   and eval0 env : Syntax.tm0 -> vtm0 =
     function
-    | Let10 (_, def, body) -> eval0 (bind1 (eval1 env def) env) body
-    | Let00 (_, def, body) -> eval0 (bind0 (eval0 env def) env) body
+    | Let10 (_, def, body) -> eval0 (Env.define1 (eval1 env def) env) body
+    | Let00 (_, def, body) -> eval0 (Env.define0 (eval0 env def) env) body
     | Ann0 (t, _) -> eval0 env t
-    | Var0 x -> Env.get_index x env.tm0s
+    | Var0 x -> Env.lookup0 x env
     | FunApp10 (head, arg) -> app10 (eval1 env head) (eval1 env arg)
     | FunLit00 (x, param_ty, body) ->
-        FunLit00 (x, eval1 env param_ty, fun x -> eval0 (bind0 x env) body)
+        FunLit00 (x, eval1 env param_ty, fun x -> eval0 (Env.define0 x env) body)
     | FunApp00 (head, arg) -> app00 (eval0 env head) (eval0 env arg)
 
 end
