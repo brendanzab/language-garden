@@ -18,7 +18,7 @@ let () =
   (* Identity function (synthesis) *)
 
   let id =
-    Fun.intro_synth ~name:"A" (Univ.form L0) @@ fun a ->
+    Fun.intro_synth ~name:"A" (is_ty @@ Univ.univ L0) @@ fun a ->
     Fun.intro_synth ~name:"x" (is_ty a) @@ fun x -> x
   in
 
@@ -27,7 +27,7 @@ let () =
 
   let app =
     Structure.let_synth ~name:"id" id @@ fun id ->
-    Fun.intro_synth ~name:"B" (Univ.form L0) @@ fun b ->
+    Fun.intro_synth ~name:"B" (is_ty @@ Univ.univ L0) @@ fun b ->
       Fun.app id (check b)
   in
 
@@ -38,12 +38,11 @@ let () =
   (* Identity function (checking) *)
 
   let id_ty =
-    Fun.form (Univ.form L0) @@ fun a ->
-    Fun.form (is_ty a) @@ fun _ ->
-      is_ty a
+    Univ.fun_ (Univ.univ L0) @@ fun a ->
+    Univ.fun_ a @@ fun _ -> a
   in
   let id =
-    ann ~ty:id_ty @@
+    ann ~ty:(is_ty id_ty) @@
       Fun.intro_check ~name:"A" @@ fun _ ->
       Fun.intro_check ~name:"x" @@ fun x ->
         check x
@@ -54,11 +53,11 @@ let () =
 
 
   let app_ty =
-    Fun.form (Univ.form L0) @@ fun b ->
-    Fun.form (is_ty b) @@ fun _ -> is_ty b
+    Univ.fun_ (Univ.univ L0) @@ fun b ->
+    Univ.fun_ b @@ fun _ -> b
   in
   let app =
-    ann ~ty:app_ty @@
+    ann ~ty:(is_ty app_ty) @@
       Fun.intro_check ~name:"B" @@ fun b ->
         check (Fun.app id (check b))
   in

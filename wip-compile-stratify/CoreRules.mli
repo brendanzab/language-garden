@@ -36,8 +36,6 @@ val check : synth -> check
 
 (** {2 Running rules} *)
 
-(** Functions for running rules in empty environments *)
-
 val run_is_ty : is_ty -> Core.Level.t * Core.Syntax.tm
 val run_check : Core.Semantics.vtm -> check -> Core.Syntax.tm
 val run_synth : synth -> Core.Semantics.vtm * Core.Syntax.tm
@@ -62,9 +60,6 @@ end
 (** Rules related to functions *)
 module Fun : sig
 
-  (** Function formation *)
-  val form : ?name:string -> is_ty -> (synth -> is_ty) -> is_ty
-
   (** Function introduction *)
   val intro_synth : ?name:string -> is_ty -> (synth -> synth) -> synth
 
@@ -78,9 +73,6 @@ end
 
 (** Rules related to universes *)
 module Univ : sig
-
-  (** Universe formation *)
-  val form : Core.Level.t -> is_ty
 
   (** Universe introduction *)
   val univ : Core.Level.t -> synth

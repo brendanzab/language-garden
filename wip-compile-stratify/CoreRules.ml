@@ -135,14 +135,6 @@ end
 
 module Fun = struct
 
-  let form ?name (param_ty : is_ty) (body_ty : synth -> is_ty) : is_ty =
-    fun ctx ->
-      let l1, param_ty = param_ty ctx in
-      Context.assume ctx name (Context.eval ctx param_ty)
-        (fun ctx x ->
-          let l2, body_ty = body_ty (var x) ctx in
-          Core.Level.max l1 l2, Syntax.FunType (name, param_ty, body_ty))
-
   (* TODO: optional paramter type *)
   let intro_synth ?name (param_ty : is_ty) (body : synth -> synth) : synth =
     fun ctx ->
@@ -183,12 +175,6 @@ end
 
 
 module Univ = struct
-
-  let form (l : Core.Level.t) : is_ty =
-    fun _ ->
-      match l with
-      | L0 -> L1, Univ L0
-      | L1 -> raise (Error "Type 1 has no type")
 
   let univ (l : Core.Level.t) : synth =
     fun _ ->
