@@ -6,16 +6,16 @@ module Flower = struct
 
   (** The state of a flower *)
   type symbol =
-    | Apex
+    | Bud
     | Blossom
     | Fruit
 
   let axiom =
-    [Apex; Blossom; Fruit]
+    [Bud; Blossom; Fruit]
 
   let rules =
     function
-    | Apex -> [Blossom]
+    | Bud -> [Blossom]
     | Blossom -> [Fruit]
     (* TODO: Terminal symbols *)
     | s -> [s]
@@ -23,7 +23,7 @@ module Flower = struct
 
   let string_of_symbol =
     function
-    | Apex -> "A"
+    | Bud -> "A"
     | Blossom -> "B"
     | Fruit -> "C"
 
@@ -38,8 +38,8 @@ end
 
 (** The state of a stem *)
 type symbol =
-  | Apex                      (** The apex, or terminal bud *)
-  | Internode                 (** A stem in the inflorence *)
+  | Bud                       (** The apex, or terminal bud *)
+  | Stem                      (** An internode/stem in the inflorence *)
   (* TODO: Sub-L-systems *)
   | Flower of Flower.symbol
 
@@ -48,11 +48,11 @@ let symbol_of_flower s =
 
 
 let axiom =
-  [Apex]
+  [Bud]
 
 let rules =
   function
-  | Apex -> [Internode; Flower Apex; Apex]
+  | Bud -> [Stem; Flower Bud; Bud]
   (* TODO: Sub-L-systems *)
   | Flower s -> List.map symbol_of_flower (Flower.rules s)
   (* TODO: Terminal symbols *)
@@ -61,8 +61,8 @@ let rules =
 
 let string_of_symbol =
   function
-  | Apex -> "A"
-  | Internode -> "I"
+  | Bud -> "A"
+  | Stem -> "I"
   | Flower s -> String.concat "" ["["; Flower.string_of_symbol s; "]"]
 
 let string_of_word w =
