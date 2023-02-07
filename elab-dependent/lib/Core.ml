@@ -127,6 +127,19 @@ module Syntax = struct
     | FunLit (_, body) -> is_bound (var + 1) body
     | FunApp (head, arg) -> is_bound var head || is_bound var arg
 
+  let rec fun_lits = function
+    | FunLit (name, body) ->
+        let names, body = fun_lits body
+        in name :: names, body
+    | body -> [], body
+
+  let fun_apps tm =
+    let rec go args = function
+      | FunApp (head, arg) -> go (arg :: args) head
+      | head -> (head, args)
+    in
+    go [] tm
+
 
   (** {1 Pretty printing} *)
 
@@ -162,8 +175,16 @@ module Syntax = struct
             (pp_tm (None :: names)) body_ty
       | FunType (name, param_ty, body_ty) ->
           pp_fun_type names fmt (name, param_ty, body_ty)
-      | FunLit (name, body) -> pp_fun_lit names fmt (name, body)
-      | FunApp (head, arg) -> pp_fun_app names fmt (head, arg)
+      | FunLit (_, _) as tm ->
+          let params, body = fun_lits tm in
+          Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
+            (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
+            (pp_tm (List.rev_append params names)) body
+      | FunApp (_, _) as tm ->
+          let head, args = fun_apps tm in
+          Format.fprintf fmt "@[<2>%a@ %a@]"
+            (pp_tm names) head
+            (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_parens ~wrap:true names)) args
 
     and pp_let names fmt (name, def, body) =
       let rec pp_name_ann names fmt (name, def_ty) =
@@ -210,33 +231,6 @@ module Syntax = struct
       Format.fprintf fmt "@[<4>fun %a@ %a@]"
         (pp_param names) (name, param_ty)
         (pp_fun_types (name :: names)) body_ty
-
-    and pp_fun_lit names fmt (name, body) =
-      let rec pp_fun_lits names fmt = function
-        | FunLit (name, body) when resugar ->
-            Format.fprintf fmt "%a@ %a"
-              pp_name name
-              (pp_fun_lits (name :: names)) body
-        | body ->
-            Format.fprintf fmt ":=@]@ @[%a@]@]"
-              (pp_tm names) body;
-        in
-        (* The layout boxes will be closed in `pp_fun_lits` *)
-        Format.fprintf fmt "@[<2>@[<4>fun %a@ %a"
-          pp_name name
-          (pp_fun_lits (name :: names)) body
-
-    and pp_fun_app names fmt (head, arg) =
-      let rec pp_fun_apps names fmt = function
-        | FunApp (head, arg) ->
-            Format.fprintf fmt "%a@ %a"
-              (pp_fun_apps names) head
-              (pp_parens ~wrap:true names) arg
-        | tm -> pp_tm names fmt tm
-      in
-      Format.fprintf fmt "@[<2>%a@ %a@]"
-        (pp_fun_apps names) head
-        (pp_parens ~wrap:true names) arg
     in
 
     pp_parens ~wrap names
