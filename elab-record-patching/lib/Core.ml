@@ -103,57 +103,167 @@ module Syntax = struct
     | Cons (_, ty, decls) ->
         is_bound var ty || is_bound_decls (var + 1) decls
 
+  let rec fun_lits = function
+    | FunLit (name, body) ->
+        let names, body = fun_lits body
+        in name :: names, body
+    | body -> [], body
+
+  let fun_apps tm =
+    let rec go args = function
+      | FunApp (head, arg) -> go (arg :: args) head
+      | head -> (head, args)
+    in
+    go [] tm
+
+  let rec_projs tm =
+    let rec go labels = function
+      | RecProj (head, label) -> go (label :: labels) head
+      | head -> (head, labels)
+    in
+    go [] tm
+
 
   (** {1 Pretty printing} *)
 
-  let pretty names tm =
-    let pretty_name = Option.value ~default:"_" in
-    let concat = String.concat "" in
-    let parens wrap s = if wrap then concat ["("; s; ")"] else s in
-    let rec go wrap names = function
-      | Let (name, Ann (def, def_ty), body) ->
-          parens wrap (concat ["let "; pretty_name name; " : "; go false names def_ty; " := ";
-            go false names def; "; "; go false (name :: names) body])
-      | Let (name, def, body) ->
-          parens wrap (concat ["let "; pretty_name name; " := "; go false names def; "; ";
-            go false (name :: names) body])
-      | Var index -> pretty_name (List.nth names index)
-      | Ann (tm, ty) -> parens wrap (concat [go true names tm; " : "; go false names ty])
-      | Univ -> "Type"
-      | FunType (name, param_ty, body_ty) ->
-          if is_bound 0 body_ty then
-            parens wrap (concat ["fun ("; pretty_name name; " : "; go false names param_ty;
-              ") -> "; go false (name :: names) body_ty])
-          else
-            parens wrap (concat [go false names param_ty; " -> "; go false (None :: names) body_ty])
-      | FunLit (name, body) ->
-          parens wrap (concat ["fun "; pretty_name name; " := ";
-            go false (name :: names) body])
-      | FunApp (head, arg) ->
-          parens wrap (concat [go false names head; " ";  go true names arg])
-      | RecType Nil | RecLit [] -> "{}"
-      | RecType decls -> concat ["{ "; go_decls names decls; "}" ]
-      | RecLit defns ->
-          concat ["{ ";
-            concat (List.map
-              (fun (label, tm) -> concat [label; " := "; go false names tm; "; "])
-              defns);
-            "}"]
-      | RecProj (head, label) -> concat [go false names head; "."; label]
-      | SingType (ty, sing_tm) ->
-          parens wrap (concat [go false names ty; " [= ";
-            go false names sing_tm; " ]"])
-      | SingIntro tm -> parens wrap (concat ["#sing-intro "; go true names tm])
-      | SingElim (tm, sing_tm) ->
-          parens wrap (concat ["#sing-elim "; go true names tm; " ";
-            go true names sing_tm])
-    and go_decls names = function
-      | Nil -> ""
-      | Cons (label, ty, decls) ->
-          concat [label; " : "; go false names ty; "; ";
-            go_decls (Some label :: names) decls]
+  (** This optionally adds back some of the sugar that may have been removed
+      during elaboration to make the terms easier to read. Down the line we
+      could move this dusugaring step into a {i delaborator}/{i distillation}
+      pass that converts core terms back to surface term, and implement a
+      pretty printer for the surface language. *)
+  let pp ?(resugar = true) names =
+    let pp_name fmt = function
+      | Some name -> Format.pp_print_string fmt name
+      | None -> Format.pp_print_string fmt "_"
     in
-    go false names tm
+
+    let rec pp_tm names fmt = function
+      | Let (_, _, _) as tm ->
+          let rec go names fmt = function
+            | Let (name, Ann (def, def_ty), body) when resugar ->
+                Format.fprintf fmt "@[<2>@[let @[<2>%a@]@ :=@]@ @[%a;@]@]@ %a"
+                  (pp_decl names) (name, def_ty)
+                  (pp_tm names) def
+                  (go (name :: names)) body
+            | Let (name, def, body) ->
+                Format.fprintf fmt "@[<2>@[let %a :=@]@ @[%a;@]@]@ %a"
+                  pp_name name
+                  (pp_tm names) def
+                  (go (name :: names)) body
+            (* Final term should be grouped in a box *)
+            | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+          in
+          go names fmt tm
+      | Ann (tm, ty) ->
+          Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+            (pp_app_tm names) tm
+            (pp_tm names) ty
+      | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
+          Format.fprintf fmt "@[%a@ ->@]@ %a"
+            (pp_app_tm names) param_ty
+            (pp_tm (None :: names)) body_ty
+      | FunType (_, _, _) as tm ->
+          let rec go names fmt = function
+            | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
+                Format.fprintf fmt "@[%a@ ->@]@ %a"
+                  (pp_tm names) param_ty
+                  (pp_tm (None :: names)) body_ty
+            | FunType (name, param_ty, body_ty) ->
+                Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]@ %a"
+                  pp_name name
+                  (pp_tm names) param_ty
+                  (go (name :: names)) body_ty
+            | body_ty ->
+                Format.fprintf fmt "@[->@ @[%a@]@]"
+                  (pp_tm names) body_ty
+          in
+          Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
+      | FunLit (_, _) as tm ->
+          let params, body = fun_lits tm in
+          Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
+            (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
+            (pp_tm (List.rev_append params names)) body
+      | tm ->
+          pp_app_tm names fmt tm
+
+    and pp_app_tm names fmt = function
+      | FunApp (_, _) as tm ->
+          let head, args = fun_apps tm in
+          Format.fprintf fmt "@[<2>%a@ %a@]"
+            (pp_proj_tm names) head
+            (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_proj_tm names)) args
+      | SingType (ty, sing_tm) ->
+          Format.fprintf fmt "@[<2>%a@ @[[=@ %a]@]@]"
+            (pp_proj_tm names) ty
+            (pp_tm names) sing_tm
+      | SingIntro tm ->
+          Format.fprintf fmt "@[<2>#sing-intro@ %a@]"
+            (pp_proj_tm names) tm
+      | SingElim (tm, sing_tm) ->
+          Format.fprintf fmt "@[<2>#sing-elim@ %a@ %a@]"
+          (pp_proj_tm names) tm
+          (pp_proj_tm names) sing_tm
+      | tm ->
+          pp_proj_tm names fmt tm
+
+    and pp_proj_tm names fmt = function
+      | RecProj (_, _) as tm ->
+          let head, labels = rec_projs tm in
+          Format.fprintf fmt "@[<2>%a@ %a@]"
+            (pp_proj_tm names) head
+            (Format.pp_print_list
+              ~pp_sep:Format.pp_print_space
+              (fun fmt label -> Format.fprintf fmt ".%s" label))
+            labels
+      | tm ->
+          pp_atomic_tm names fmt tm
+
+    and pp_atomic_tm names fmt = function
+      | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
+      | Univ -> Format.fprintf fmt "Type"
+      | RecType Nil | RecLit [] -> Format.fprintf fmt "{}"
+      | RecType decls ->
+          (* TODO: Improve multiline formatting *)
+          let rec go_decls names fmt = function
+            | Nil -> Format.fprintf fmt ""
+            | Cons (label, ty, Nil) ->
+                Format.fprintf fmt "@[<2>%a@]"
+                  (pp_decl names) (Some label, ty)
+            | Cons (label, ty, decls) ->
+                Format.fprintf fmt "@[<2>%a;@]@ %a"
+                  (pp_decl names) (Some label, ty)
+                  (go_decls (Some label :: names)) decls
+          in
+          Format.fprintf fmt "@[<2>{@ %a@ }@]"
+            (go_decls names) decls
+      | RecLit defns ->
+          (* TODO: Improve multiline formatting *)
+          let rec go_defns fmt = function
+            | [] -> Format.fprintf fmt ""
+            | (label, ty) :: [] ->
+                Format.fprintf fmt "@[<2>%a@]"
+                  (pp_defn names) (Some label, ty)
+            | (label, ty) :: decls ->
+                Format.fprintf fmt "@[<2>%a;@]@ %a"
+                  (pp_defn names) (Some label, ty)
+                  go_defns decls
+          in
+          Format.fprintf fmt "@[<2>{@ %a@ }@]"
+            go_defns defns
+      | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
+
+    and pp_decl names fmt (name, ty) =
+      Format.fprintf fmt "@[%a@ :@]@ %a"
+        pp_name name
+        (pp_tm names) ty
+
+    and pp_defn names fmt (name, ty) =
+      Format.fprintf fmt "@[%a@ :=@]@ %a"
+        pp_name name
+        (pp_tm names) ty
+    in
+
+    pp_tm names
 
 end
 

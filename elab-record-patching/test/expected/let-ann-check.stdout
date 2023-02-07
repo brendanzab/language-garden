@@ -1,0 +1,1 @@
+<input> : {} := let id : fun (A : Type) A -> A := fun A a := a; id {} {}

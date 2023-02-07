@@ -1,0 +1,17 @@
+-- TODO: requires total space conversion like in CoolTT
+
+-- let category := {
+--   Ob : Type;
+--   Hom : { s : Ob; t : Ob } -> Type;
+--   id : fun (x : Ob) -> Hom [ s := x; t := x ];
+--   seq : fun (f : Hom) (g : Hom [ s := f.t ]) -> Hom [ s := f.s; t := g.t ];
+-- };
+
+-- let types : category := {
+--   Ob := Type;
+--   Hom := fun params := params.s -> params.t;
+--   id := fun A a := a;
+--   seq := fun f g a := g (f a);
+-- };
+
+Type

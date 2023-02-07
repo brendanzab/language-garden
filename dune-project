@@ -47,7 +47,10 @@
     (menhir :build)))
 
 (package
-  (name elab-record-patching))
+  (name elab-record-patching)
+  (depends
+    (cmdliner (>= v1.1.1))
+    (menhir :build)))
 
 
 ; Languages

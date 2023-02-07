@@ -1,0 +1,59 @@
+(rule
+  (alias "categories.txt.elab")
+  (action (with-stdin-from categories.txt
+            (with-stdout-to categories.stdout.exp
+              (run %{bin:record-patching} elab)))))
+
+(rule (alias runtest)
+  (action (diff expected/categories.stdout
+                categories.stdout.exp)))
+
+(rule
+  (alias "let-ann-check.txt.elab")
+  (action (with-stdin-from let-ann-check.txt
+            (with-stdout-to let-ann-check.stdout.exp
+              (run %{bin:record-patching} elab)))))
+
+(rule (alias runtest)
+  (action (diff expected/let-ann-check.stdout
+                let-ann-check.stdout.exp)))
+
+(rule
+  (alias "let-ann-infer.txt.elab")
+  (action (with-stdin-from let-ann-infer.txt
+            (with-stdout-to let-ann-infer.stdout.exp
+              (run %{bin:record-patching} elab)))))
+
+(rule (alias runtest)
+  (action (diff expected/let-ann-infer.stdout
+                let-ann-infer.stdout.exp)))
+
+(rule
+  (alias "map.txt.elab")
+  (action (with-stdin-from map.txt
+            (with-stdout-to map.stdout.exp
+              (run %{bin:record-patching} elab)))))
+
+(rule (alias runtest)
+  (action (diff expected/map.stdout
+                map.stdout.exp)))
+
+(rule
+  (alias "records.txt.elab")
+  (action (with-stdin-from records.txt
+            (with-stdout-to records.stdout.exp
+              (run %{bin:record-patching} elab)))))
+
+(rule (alias runtest)
+  (action (diff expected/records.stdout
+                records.stdout.exp)))
+
+(rule
+  (alias "singletons.txt.elab")
+  (action (with-stdin-from singletons.txt
+            (with-stdout-to singletons.stdout.exp
+              (run %{bin:record-patching} elab)))))
+
+(rule (alias runtest)
+  (action (diff expected/singletons.stdout
+                singletons.stdout.exp)))

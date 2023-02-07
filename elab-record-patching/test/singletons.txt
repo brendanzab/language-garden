@@ -1,0 +1,12 @@
+let intro-sing := (fun A x := x) : fun (A : Type) (x : A) -> A [= x ];
+let elim-sing := (fun A x sing-x := sing-x) : fun (A : Type) (x : A) (sing-x : A [= x ]) -> A;
+
+let sing-tm-1 :=
+  (fun A P f prf := prf) :
+    fun (A : Type)
+        (P : (fun (x : A) -> A [= x ]) -> Type)
+        (f : fun (x : A) -> A [= x ])
+        (prf : P (fun x := x))
+    -> P f;
+
+Type

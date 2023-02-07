@@ -1,7 +1,10 @@
 (executable
   (name main)
-  (public_name elab-record-patching)
-  (package elab-record-patching))
+  (public_name record-patching)
+  (package elab-record-patching)
+  (libraries
+    elab-record-patching
+    cmdliner))
 
 (env
   (dev

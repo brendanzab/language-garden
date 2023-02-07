@@ -102,12 +102,12 @@ let eval context : Syntax.tm -> Semantics.vtm =
   Semantics.eval context.tms
 let quote context : Semantics.vtm -> Semantics.vty -> Syntax.tm =
   Semantics.quote context.size context.tys
+let normalise context : Syntax.tm -> Semantics.vtm -> Syntax.tm =
+  Semantics.normalise context.size context.tms context.tys
 let is_convertible context : Semantics.vtm -> Semantics.vtm -> Semantics.vty -> bool =
   Semantics.is_convertible context.size context.tys
-let pretty context : Syntax.tm -> string =
-  Syntax.pretty context.names
-let pretty_quoted context tm ty : string =
-  pretty context (quote context tm ty)
+let pp ?(resugar = true) context : Format.formatter -> Syntax.tm -> unit =
+  Syntax.pp ~resugar context.names
 
 
 (** {2 Elaboration errors} *)
@@ -120,6 +120,24 @@ exception Error of string
 (** Raises an {!Error} exception *)
 let error message =
   raise (Error message)
+
+let type_mismatch context ~expected ~found =
+  Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]@]"
+    (pp context) expected
+    (pp context) found
+
+let singleton_mismatch context ~expected ~found ~ty =
+  Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %a@]@ @[found:    %a@]@ @[type:     %a@]@]"
+    (pp context) expected
+    (pp context) found
+    (pp context) ty
+
+let not_bound name =
+  Format.asprintf "`%s` is not bound in the current scope" name
+
+let ambiguous_param name =
+    Format.asprintf "ambiguous function parameter `%s`"
+      (Option.value ~default:"_" name)
 
 
 (** {2 Coercive subtyping} *)
@@ -137,10 +155,10 @@ let rec coerce context tm from_ty to_ty : Syntax.tm =
       let tm = coerce context tm from_ty to_ty in
       let tm' = eval context tm in
       if is_convertible context sing_tm tm' to_ty then Syntax.SingIntro tm else
-        let expected = pretty_quoted context sing_tm to_ty in
-        let found = pretty_quoted context tm' from_ty in
-        let ty = pretty_quoted context to_ty Semantics.Univ in
-        error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
+        error (singleton_mismatch context
+          ~expected:(quote context sing_tm to_ty)
+          ~found:(quote context tm' from_ty)
+          ~ty:(quote context to_ty Semantics.Univ))
   (* Coerce the singleton back to its underlying term with {!Syntax.SingElim}
     and attempt further coercions from its underlying type *)
   | Semantics.SingType (from_ty, sing_tm), to_ty ->
@@ -170,9 +188,9 @@ let rec coerce context tm from_ty to_ty : Syntax.tm =
       Syntax.RecLit (go from_decls to_decls)
   (* TODO: subtyping for functions! *)
   | from_ty, to_ty  ->
-      let expected = pretty_quoted context to_ty Semantics.Univ in
-      let found = pretty_quoted context from_ty Semantics.Univ in
-      error ("type mismatch: expected `" ^ expected ^ "`, found `" ^ found ^ "`")
+      error (type_mismatch context
+        ~expected:(quote context to_ty Semantics.Univ)
+        ~found:(quote context from_ty Semantics.Univ))
 
 
 (** {2 Bidirectional type checking} *)
@@ -249,10 +267,10 @@ let rec check context tm ty : Syntax.tm =
       let tm = check context tm ty in
       let tm' = eval context tm in
       if is_convertible context sing_tm tm' ty then Syntax.SingIntro tm else
-        let expected = pretty_quoted context sing_tm ty in
-        let found = pretty_quoted context tm' ty in
-        let ty = pretty_quoted context ty Semantics.Univ in
-        error ("mismatched singleton: expected `" ^ expected ^ "`, found `" ^ found ^ "` of type `" ^ ty ^ "`")
+        error (singleton_mismatch context
+          ~expected:(quote context sing_tm ty)
+          ~found:(quote context tm' ty)
+          ~ty:(quote context ty Semantics.Univ))
 
   (* For anything else, try inferring the type of the term, then attempting to
       coerce the term to the expected type. *)
@@ -286,7 +304,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
           corresponding de Bruijn index of the variable. *)
       begin match List.elem_index (Some name) context.names with
       | Some index -> (Syntax.Var index, List.nth context.tys index)
-      | None -> error ("`" ^ name ^ "` is not bound in the current scope")
+      | None -> error (not_bound name)
       end
 
   (* Annotated terms *)

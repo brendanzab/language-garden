@@ -96,6 +96,11 @@
             version = "0";
             src = ./.;
             duneVersion = "3";
+
+            nativeBuildInputs = [
+              ocamlPackages.cmdliner
+              ocamlPackages.menhir
+            ];
           };
 
           # Languages

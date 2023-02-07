@@ -1,0 +1,15 @@
+(library
+  (name ElabRecordPatching)
+  (public_name elab-record-patching))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(ocamllex Lexer)
+
+(env
+  (dev
+    ; see `ocamlc -warn-help` for information on warnings
+    (flags (:standard -w -unused-constructor
+                      -w -unused-value-declaration))))
