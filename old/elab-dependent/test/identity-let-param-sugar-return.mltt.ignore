@@ -1,4 +1,0 @@
--- Identity function, defined using a parameterised let binding
-let id (A : Type) (a : A) : A := a;
-
-id { A : Type } { A := {} }

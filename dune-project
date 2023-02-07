@@ -79,13 +79,3 @@
   (depends
     (cmdliner (>= v1.1.1))
     (menhir :build)))
-
-
-; Old projects
-
-(package
-  (name old-elab-dependent)
-  (depends
-    (menhir :build)
-    (pp (>= 1.1.2))
-    (ppx_string (and (>= v0.15.0) :with-test))))

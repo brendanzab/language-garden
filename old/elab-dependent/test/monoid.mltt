@@ -1,5 +1,0 @@
-{
-    Carrier : Type;
-    append : Carrier -> Carrier -> Carrier;
-    empty : Carrier;
-}

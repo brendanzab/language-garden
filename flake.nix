@@ -160,25 +160,6 @@
               ocamlPackages.menhir
             ];
           };
-
-          # Old projects
-
-          old-elab-dependent = ocamlPackages.buildDunePackage {
-            pname = "old-elab-dependent";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-              # for `mltt/tests/dune_inc.ml`
-              ocamlPackages.ppx_string
-            ];
-
-            buildInputs = [
-              ocamlPackages.pp
-            ];
-          };
         };
 
         # Development shells

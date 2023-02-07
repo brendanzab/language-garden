@@ -1,1 +1,0 @@
-<input> : { A : Type; a : @0; } := { A := Type; a := { A : Type; a : @0; }; }
