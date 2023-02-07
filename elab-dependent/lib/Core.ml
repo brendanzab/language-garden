@@ -154,27 +154,59 @@ module Syntax = struct
       | None -> Format.pp_print_string fmt "_"
     in
 
-    let rec pp_parens ?(wrap = false) names fmt = function
+    let rec pp_parens ~wrap names fmt = function
       | (Let _ | Ann _ | FunType _ | FunLit _ | FunApp _) as tm when wrap->
           Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
       | tm -> pp_tm names fmt tm
 
+    and pp_name_ann names fmt (name, def_ty) =
+      Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+        pp_name name
+        (pp_tm names) def_ty
+
     and pp_tm names fmt = function
-      | Let (name, def, body) ->
-          pp_let names fmt (name, def, body)
+      | Let (_, _, _) as tm ->
+          let rec go names fmt = function
+            | Let (name, Ann (def, def_ty), body) when resugar ->
+                Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+                  (pp_name_ann names) (name, def_ty)
+                  (pp_tm names) def
+                  (go (name :: names)) body
+            | Let (name, def, body) ->
+                Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+                  pp_name name
+                  (pp_tm names) def
+                  (go (name :: names)) body
+            (* Final term should be grouped in a box *)
+            | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+          in
+          go names fmt tm
       | Ann (tm, ty) ->
           Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
             (pp_parens ~wrap:true names) tm
             (pp_tm names) ty
       | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
       | Univ -> Format.fprintf fmt "Type"
-      (* | FunType (_, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) -> *)
-      | FunType (None, param_ty, body_ty) when resugar ->
+      | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
           Format.fprintf fmt "@[%a@ ->@]@ %a"
             (pp_tm names) param_ty
             (pp_tm (None :: names)) body_ty
-      | FunType (name, param_ty, body_ty) ->
-          pp_fun_type names fmt (name, param_ty, body_ty)
+      | FunType (_, _, _) as tm ->
+          let rec go names fmt = function
+            | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
+                Format.fprintf fmt "@[%a@ ->@]@ %a"
+                  (pp_tm names) param_ty
+                  (pp_tm (None :: names)) body_ty
+            | FunType (name, param_ty, body_ty) ->
+                Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]@ %a"
+                  pp_name name
+                  (pp_tm names) param_ty
+                  (go (name :: names)) body_ty
+            | body_ty ->
+                Format.fprintf fmt "@[->@ @[%a@]@]"
+                  (pp_tm names) body_ty;
+          in
+          Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
       | FunLit (_, _) as tm ->
           let params, body = fun_lits tm in
           Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
@@ -183,54 +215,8 @@ module Syntax = struct
       | FunApp (_, _) as tm ->
           let head, args = fun_apps tm in
           Format.fprintf fmt "@[<2>%a@ %a@]"
-            (pp_tm names) head
+            (pp_parens ~wrap:true names) head
             (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_parens ~wrap:true names)) args
-
-    and pp_let names fmt (name, def, body) =
-      let rec pp_name_ann names fmt (name, def_ty) =
-        Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
-          pp_name name
-          (pp_tm names) def_ty
-      and pp_let_name_def names fmt = function
-        | name, Ann (def, def_ty) when resugar ->
-            Format.fprintf fmt "@[let %a@ :=@]@ @[%a;@]"
-              (pp_name_ann names) (name, def_ty)
-              (pp_tm names) def
-        | name, def ->
-            Format.fprintf fmt "@[let %a@ :=@]@ @[%a;@]"
-              pp_name name
-              (pp_tm names) def
-      and pp_lets names fmt = function
-        | Let (name, def, body) -> pp_let names fmt (name, def, body)
-        (* Final term should be grouped in a box *)
-        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
-      in
-      Format.fprintf fmt "@[<2>%a@]@ %a"
-        (pp_let_name_def names) (name, def)
-        (pp_lets (name :: names)) body
-
-    and pp_fun_type names fmt (name, param_ty, body_ty) =
-      let rec pp_param names fmt (name, param_ty) =
-        Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]"
-          pp_name name
-          (pp_tm names) param_ty
-      and pp_fun_types names fmt = function
-        (* | FunType (name, param_ty, body_ty) when resugar && is_bound 0 body_ty -> *)
-        | FunType (Some name, param_ty, body_ty) when resugar ->
-            Format.fprintf fmt "%a@ %a"
-              (pp_param names) (Some name, param_ty)
-              (pp_fun_types (Some name :: names)) body_ty
-        (* | FunType (None, param_ty, body_ty) ->
-            Format.fprintf fmt "@[-> @[%a@]@]@ %a"
-              (pp_tm names) param_ty
-              (pp_fun_types (None :: names)) body_ty *)
-        | body_ty ->
-            Format.fprintf fmt "@[->@ @[%a@]@]"
-              (pp_tm names) body_ty;
-      in
-      Format.fprintf fmt "@[<4>fun %a@ %a@]"
-        (pp_param names) (name, param_ty)
-        (pp_fun_types (name :: names)) body_ty
     in
 
     pp_parens ~wrap names
