@@ -55,7 +55,7 @@ Church-encoded option type
   $ cat options | dependent elab
   <input> :
     fun (Out : Type)
-        (some : fun (Out : Type) (some : Type -> Out) (none : Out) -> Out ->
+        (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
           Out)
         (none : Out) -> Out
   :=
@@ -68,7 +68,7 @@ Church-encoded option type
   $ cat options | dependent norm
   <input> :
     fun (Out : Type)
-        (some : fun (Out : Type) (some : Type -> Out) (none : Out) -> Out ->
+        (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
           Out)
         (none : Out) -> Out
   := fun Out some none := some (fun Out some none := some (Type -> Type))

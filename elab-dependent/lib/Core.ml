@@ -148,23 +148,13 @@ module Syntax = struct
       could move this dusugaring step into a {i delaborator}/{i distillation}
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
-  let pp ?(wrap = false) ?(resugar = true) names =
+  let pp ?(resugar = true) names =
     let pp_name fmt = function
       | Some name -> Format.pp_print_string fmt name
       | None -> Format.pp_print_string fmt "_"
     in
 
-    let rec pp_parens ~wrap names fmt = function
-      | (Let _ | Ann _ | FunType _ | FunLit _ | FunApp _) as tm when wrap->
-          Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
-      | tm -> pp_tm names fmt tm
-
-    and pp_name_ann names fmt (name, def_ty) =
-      Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
-        pp_name name
-        (pp_tm names) def_ty
-
-    and pp_tm names fmt = function
+    let rec pp_tm names fmt = function
       | Let (_, _, _) as tm ->
           let rec go names fmt = function
             | Let (name, Ann (def, def_ty), body) when resugar ->
@@ -183,13 +173,11 @@ module Syntax = struct
           go names fmt tm
       | Ann (tm, ty) ->
           Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
-            (pp_parens ~wrap:true names) tm
+            (pp_app_tm names) tm
             (pp_tm names) ty
-      | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
-      | Univ -> Format.fprintf fmt "Type"
       | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
           Format.fprintf fmt "@[%a@ ->@]@ %a"
-            (pp_tm names) param_ty
+            (pp_app_tm names) param_ty
             (pp_tm (None :: names)) body_ty
       | FunType (_, _, _) as tm ->
           let rec go names fmt = function
@@ -204,7 +192,7 @@ module Syntax = struct
                   (go (name :: names)) body_ty
             | body_ty ->
                 Format.fprintf fmt "@[->@ @[%a@]@]"
-                  (pp_tm names) body_ty;
+                  (pp_tm names) body_ty
           in
           Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
       | FunLit (_, _) as tm ->
@@ -212,14 +200,30 @@ module Syntax = struct
           Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
             (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
             (pp_tm (List.rev_append params names)) body
+      | tm ->
+          pp_app_tm names fmt tm
+
+    and pp_app_tm names fmt = function
       | FunApp (_, _) as tm ->
           let head, args = fun_apps tm in
           Format.fprintf fmt "@[<2>%a@ %a@]"
-            (pp_parens ~wrap:true names) head
-            (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_parens ~wrap:true names)) args
+            (pp_atomic_tm names) head
+            (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_atomic_tm names)) args
+      | tm ->
+          pp_atomic_tm names fmt tm
+
+    and pp_atomic_tm names fmt = function
+      | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
+      | Univ -> Format.fprintf fmt "Type"
+      | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
+
+    and pp_name_ann names fmt (name, def_ty) =
+      Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+        pp_name name
+        (pp_tm names) def_ty
     in
 
-    pp_parens ~wrap names
+    pp_tm names
 
 end
 

@@ -25,19 +25,13 @@ let tm :=
 | "let"; p = pattern; ps = list(param); t1 = option(":"; t1 = tm; { t1 }); ":=";
     t2 = tm; ";"; t3 = tm;
     { Surface.Let (p, ps, t1, t2, t3) }
-| ann_tm
-
-let ann_tm :=
-| t1 = fun_tm; ":"; t2 = ann_tm;
+| t1 = app_tm; ":"; t2 = tm;
     { Surface.Ann (t1, t2) }
-| fun_tm
-
-let fun_tm :=
-| t1 =  app_tm; "->"; t2 = fun_tm;
+| t1 =  app_tm; "->"; t2 = tm;
     { Surface.FunArrow (t1, t2) }
-| "fun"; ps = nonempty_list(param); "->"; t = fun_tm;
+| "fun"; ps = nonempty_list(param); "->"; t = tm;
     { Surface.FunType (ps, t) }
-| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = tm; { t1 }); ":="; t2 = fun_tm;
+| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = tm; { t1 }); ":="; t2 = tm;
     { Surface.FunLit (ps, t1, t2) }
 | app_tm
 

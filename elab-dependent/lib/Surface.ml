@@ -97,8 +97,8 @@ let normalise context : Syntax.tm -> Syntax.tm =
   Semantics.normalise context.size context.tms
 let is_convertible context : Semantics.vtm * Semantics.vtm -> bool =
   Semantics.is_convertible context.size
-let pp ?(wrap = false) ?(resugar = true) context =
-  Syntax.pp context.names ~wrap ~resugar
+let pp ?(resugar = true) context =
+  Syntax.pp context.names ~resugar
 
 
 (** {2 Exceptions} *)
