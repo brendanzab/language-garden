@@ -1,35 +1,44 @@
 (cram
+  (package lang-shader-graphics)
   (deps %{bin:shader-graphics}))
 
 (rule
-  (action (with-stdout-to basic.glsl.out
-    (run %{bin:shader-graphics} compile --scene=basic))))
+  (with-stdout-to basic.glsl.out
+    (run %{bin:shader-graphics} compile --scene=basic)))
 
-(rule (alias runtest)
+(rule
+  (alias runtest)
+  (package lang-shader-graphics)
   (action (diff basic.glsl basic.glsl.out)))
 
 (rule
-  (action (with-stdout-to basic.png.out
+  (with-stdout-to basic.png.out
     (pipe-stdout
       (run %{bin:shader-graphics} render --scene=basic)
-      (run pnmtopng)))))
+      (run pnmtopng))))
 
-(rule (alias runtest)
+(rule
+  (alias runtest)
+  (package lang-shader-graphics)
   (action (cmp basic.png basic.png.out)))
 
 
 (rule
-  (action (with-stdout-to readme.glsl.out
-    (run %{bin:shader-graphics} compile --scene=readme))))
+  (with-stdout-to readme.glsl.out
+    (run %{bin:shader-graphics} compile --scene=readme)))
 
-(rule (alias runtest)
+(rule
+  (alias runtest)
+  (package lang-shader-graphics)
   (action (diff readme.glsl readme.glsl.out)))
 
 (rule
-  (action (with-stdout-to readme.png.out
+  (with-stdout-to readme.png.out
     (pipe-stdout
       (run %{bin:shader-graphics} render --scene=readme)
-      (run pnmtopng)))))
+      (run pnmtopng))))
 
-(rule (alias runtest)
+(rule
+  (alias runtest)
+  (package lang-shader-graphics)
   (action (cmp readme.png readme.png.out)))
