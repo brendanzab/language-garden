@@ -44,10 +44,16 @@
               ocamlPackages.menhir
             ];
 
-            # TODO: Make test dependencies optional
             buildInputs = [
-              ocamlPackages.alcotest
               ocamlPackages.cmdliner
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
+            ];
+
+            checkInputs = [
+              ocamlPackages.alcotest
               ocamlPackages.mdx
               ocamlPackages.qcheck
               ocamlPackages.qcheck-core
@@ -65,10 +71,16 @@
               ocamlPackages.menhir
             ];
 
-            # TODO: Make test dependencies optional
             buildInputs = [
-              ocamlPackages.alcotest
               ocamlPackages.cmdliner
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
+            ];
+
+            checkInputs = [
+              ocamlPackages.alcotest
               ocamlPackages.mdx
               ocamlPackages.qcheck
               ocamlPackages.qcheck-core
@@ -82,11 +94,20 @@
             src = ./.;
             duneVersion = "3";
 
-            # TODO: Make test dependencies optional
             nativeBuildInputs = [
-              ocamlPackages.cmdliner
-              ocamlPackages.mdx
               ocamlPackages.menhir
+            ];
+
+            buildInputs = [
+              ocamlPackages.cmdliner
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
+            ];
+
+            checkInputs = [
+              ocamlPackages.mdx
             ];
           };
 
@@ -99,9 +120,19 @@
             duneVersion = "3";
 
             nativeBuildInputs = [
-              ocamlPackages.cmdliner
-              ocamlPackages.mdx
               ocamlPackages.menhir
+            ];
+
+            buildInputs = [
+              ocamlPackages.cmdliner
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
+            ];
+
+            checkInputs = [
+              ocamlPackages.mdx
             ];
           };
 
@@ -112,8 +143,11 @@
             duneVersion = "3";
 
             nativeBuildInputs = [
-              ocamlPackages.cmdliner
               ocamlPackages.menhir
+            ];
+
+            buildInputs = [
+              ocamlPackages.cmdliner
             ];
           };
 
@@ -125,9 +159,15 @@
             src = ./.;
             duneVersion = "3";
 
-            # TODO: Make test dependencies optional
-            nativeBuildInputs = [
+            buildInputs = [
               ocamlPackages.cmdliner
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
+            ];
+
+            checkInputs = [
               ocamlPackages.mdx
             ];
           };
@@ -138,12 +178,18 @@
             src = ./.;
             duneVersion = "3";
 
-            # TODO: Make test dependencies optional
-            nativeBuildInputs = [
+            buildInputs = [
               ocamlPackages.cmdliner
-              ocamlPackages.mdx
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
               # For `lang-shader-graphics/test/dune`
               legacyPackages.netpbm
+            ];
+
+            checkInputs = [
+              ocamlPackages.mdx
             ];
           };
 
@@ -170,9 +216,19 @@
             duneVersion = "3";
 
             nativeBuildInputs = [
-              ocamlPackages.cmdliner
-              ocamlPackages.mdx
               ocamlPackages.menhir
+            ];
+
+            buildInputs = [
+              ocamlPackages.cmdliner
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
+            ];
+
+            checkInputs = [
+              ocamlPackages.mdx
             ];
           };
         };
@@ -204,7 +260,12 @@
             ];
 
             inputsFrom =
-              lib.attrValues self.packages.${system};
+              lib.lists.map
+                (p: p.overrideAttrs (_: {
+                  # Ensure check are included in the development shell
+                  doCheck = true;
+                }))
+                (lib.attrValues self.packages.${system});
           };
         };
 
