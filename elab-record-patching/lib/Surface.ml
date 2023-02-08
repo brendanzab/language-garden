@@ -23,7 +23,7 @@ type tm =
   | FunArrow of tm * tm                    (** Function arrow types: [ A -> B ] *)
   | FunLit of pattern list * tm            (** Function literals: [ fun x := f x ] *)
   | RecType of (string * tm) list          (** Record types: [ { x : A; ... } ]*)
-  | RecLit of (string * tm) list           (** Record literals: [ { x := A; ... } ]*)
+  | RecLit of (string * tm option) list    (** Record literals: [ { x := A; ... } ]*)
   | RecUnit                                (** Unit records: [ {} ] *)
   | SingType of tm * tm                    (** Singleton types: [ A [= x ] ] *)
   | App of tm * tm list                    (** Applications: [ f x ] *)
@@ -241,8 +241,13 @@ let rec check context tm ty : Syntax.tm =
       let rec go defns decls =
         match defns, decls with
         | [], Semantics.Nil -> []
+        (* When the labels match, check the term against the type, handling
+           punned fields appropriately. *)
         | (label, tm) :: defns, Semantics.Cons (label', ty, decls) when label = label' ->
-            let tm = check context tm ty in
+            let tm = match tm with
+              | Some tm -> check context tm ty (* explicit field definition *)
+              | None -> check context (Name label) ty (* punned field definition *)
+            in
             (label, tm) :: go defns (decls (eval context tm))
         (* When the expected type of a field is a singleton we can use it to
             fill in the definition of a missing fields in the record literal. *)
@@ -335,8 +340,6 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
   (* Arrow types. These are implemented as syntactic sugar for non-dependent
       function types. *)
   | FunArrow (param_ty, body_ty) ->
-      (* Arrow types are implemented as syntactic sugar for non-dependent
-          function types. *)
       let param_ty = check context param_ty Semantics.Univ in
       let context = bind_param context None (eval context param_ty) in
       let body_ty = check context body_ty Semantics.Univ in

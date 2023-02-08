@@ -43,6 +43,17 @@
                 map.stdout.exp)))
 
 (rule
+  (with-stdin-from record-field-puns.txt
+    (with-stdout-to record-field-puns.stdout.exp
+      (run %{bin:record-patching} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-record-patching)
+  (action (diff expected/record-field-puns.stdout
+                record-field-puns.stdout.exp)))
+
+(rule
   (with-stdin-from records.txt
     (with-stdout-to records.stdout.exp
       (run %{bin:record-patching} elab))))

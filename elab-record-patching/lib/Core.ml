@@ -257,10 +257,13 @@ module Syntax = struct
         pp_name name
         (pp_tm names) ty
 
-    and pp_defn names fmt (name, ty) =
-      Format.fprintf fmt "@[%a@ :=@]@ %a"
-        pp_name name
-        (pp_tm names) ty
+    and pp_defn names fmt = function
+      | name, Var index when resugar && name = List.nth names index ->
+          Format.fprintf fmt "%a" pp_name name
+      | name, tm ->
+          Format.fprintf fmt "@[%a@ :=@]@ %a"
+            pp_name name
+            (pp_tm names) tm
     in
 
     pp_tm names

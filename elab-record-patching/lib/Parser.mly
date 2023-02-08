@@ -65,7 +65,7 @@ let atomic_tm :=
     { Surface.RecUnit }
 | "{"; ds = nonempty_sequence(l = NAME; ":"; t = tm; { l, t }); "}";
     { Surface.RecType ds }
-| "{"; ds = nonempty_sequence(l = NAME; ":="; t = tm; { l, t }); "}";
+| "{"; ds = nonempty_sequence(defn); "}";
     { Surface.RecLit ds }
 
 let pattern :=
@@ -77,6 +77,12 @@ let pattern :=
 let param :=
 | "("; p = pattern; ":"; t = tm; ")";
     { p, t }
+
+let defn :=
+| l = NAME;
+    { l, None }
+| l = NAME; ":="; t = tm;
+    { l, Some t }
 
 let nonempty_sequence(T) :=
 | t = T; option(";");
