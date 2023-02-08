@@ -3,16 +3,17 @@
   (deps %{bin:shader-graphics}))
 
 (rule
-  (with-stdout-to basic.glsl.out
+  (with-stdout-to basic.glsl.tmp
     (run %{bin:shader-graphics} compile --scene=basic)))
 
 (rule
   (alias runtest)
   (package lang-shader-graphics)
-  (action (diff basic.glsl basic.glsl.out)))
+  (action (diff basic.glsl
+                basic.glsl.tmp)))
 
 (rule
-  (with-stdout-to basic.png.out
+  (with-stdout-to basic.png.tmp
     (pipe-stdout
       (run %{bin:shader-graphics} render --scene=basic)
       (run pnmtopng))))
@@ -20,20 +21,22 @@
 (rule
   (alias runtest)
   (package lang-shader-graphics)
-  (action (cmp basic.png basic.png.out)))
+  (action (cmp basic.png
+               basic.png.tmp)))
 
 
 (rule
-  (with-stdout-to readme.glsl.out
+  (with-stdout-to readme.glsl.tmp
     (run %{bin:shader-graphics} compile --scene=readme)))
 
 (rule
   (alias runtest)
   (package lang-shader-graphics)
-  (action (diff readme.glsl readme.glsl.out)))
+  (action (diff readme.glsl
+                readme.glsl.tmp)))
 
 (rule
-  (with-stdout-to readme.png.out
+  (with-stdout-to readme.png.tmp
     (pipe-stdout
       (run %{bin:shader-graphics} render --scene=readme)
       (run pnmtopng))))
@@ -41,4 +44,5 @@
 (rule
   (alias runtest)
   (package lang-shader-graphics)
-  (action (cmp readme.png readme.png.out)))
+  (action (cmp readme.png
+               readme.png.tmp)))

@@ -1,76 +1,76 @@
 (rule
   (with-stdin-from categories.txt
-    (with-stdout-to categories.stdout.exp
+    (with-stdout-to categories.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff expected/categories.stdout
-                categories.stdout.exp)))
+  (action (diff categories.stdout
+                categories.stdout.tmp)))
 
 (rule
   (with-stdin-from let-ann-check.txt
-    (with-stdout-to let-ann-check.stdout.exp
+    (with-stdout-to let-ann-check.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff expected/let-ann-check.stdout
-                let-ann-check.stdout.exp)))
+  (action (diff let-ann-check.stdout
+                let-ann-check.stdout.tmp)))
 
 (rule
   (with-stdin-from let-ann-infer.txt
-    (with-stdout-to let-ann-infer.stdout.exp
+    (with-stdout-to let-ann-infer.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff expected/let-ann-infer.stdout
-                let-ann-infer.stdout.exp)))
+  (action (diff let-ann-infer.stdout
+                let-ann-infer.stdout.tmp)))
 
 (rule
   (with-stdin-from map.txt
-    (with-stdout-to map.stdout.exp
+    (with-stdout-to map.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff expected/map.stdout
-                map.stdout.exp)))
+  (action (diff map.stdout
+                map.stdout.tmp)))
 
 (rule
   (with-stdin-from record-field-puns.txt
-    (with-stdout-to record-field-puns.stdout.exp
+    (with-stdout-to record-field-puns.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff expected/record-field-puns.stdout
-                record-field-puns.stdout.exp)))
+  (action (diff record-field-puns.stdout
+                record-field-puns.stdout.tmp)))
 
 (rule
   (with-stdin-from records.txt
-    (with-stdout-to records.stdout.exp
+    (with-stdout-to records.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff expected/records.stdout
-                records.stdout.exp)))
+  (action (diff records.stdout
+                records.stdout.tmp)))
 
 (rule
   (with-stdin-from singletons.txt
-    (with-stdout-to singletons.stdout.exp
+    (with-stdout-to singletons.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff expected/singletons.stdout
-                singletons.stdout.exp)))
+  (action (diff singletons.stdout
+                singletons.stdout.tmp)))
