@@ -1,12 +1,11 @@
 <input> : Type :=
   let F := { A : Type; B : Type; f : A -> B };
   let record-ty-patch-1 : { A : Type; B : Type [= A]; f : A -> A } -> F :=
-    fun x := { A := x .A; B := #sing-elim x .B x .A; f := x .f };
+    fun x := { A := x.A; B := #sing-elim x.B x.A; f := x.f };
   let record-ty-patch-2 :
         fun (A : Type)
             { A : Type [= A]; B : Type [= #sing-elim A A]; f : A -> A } -> F
-  :=
-    fun A x := { A := #sing-elim x .A A; B := #sing-elim x .B A; f := x .f };
+  := fun A x := { A := #sing-elim x.A A; B := #sing-elim x.B A; f := x.f };
   let record-ty-patch-3 :
         fun (A : Type)
             { A : Type [= A]; B : Type [= #sing-elim A A];
@@ -14,8 +13,8 @@
             -> F
   :=
     fun A x :=
-      { A := #sing-elim x .A A; B := #sing-elim x .B A;
-        f := #sing-elim x .f (fun x := x) };
+      { A := #sing-elim x.A A; B := #sing-elim x.B A;
+        f := #sing-elim x.f (fun x := x) };
   let record-ty-patch-3b :
         fun (A : Type)
             { A : Type [= A]; B : Type [= #sing-elim A A];
@@ -23,22 +22,22 @@
             -> F
   :=
     fun A x :=
-      { A := #sing-elim x .A A; B := #sing-elim x .B A;
-        f := #sing-elim x .f (fun x := x) };
+      { A := #sing-elim x.A A; B := #sing-elim x.B A;
+        f := #sing-elim x.f (fun x := x) };
   let record-ty-patch-4 :
         fun (A : Type)
             { A : Type [= A]; B : Type [= #sing-elim A A]; f : A -> A } ->
             { A : Type; B : Type [= A]; f : A -> A }
-  := fun A x := { A := #sing-elim x .A A; B := x .B; f := x .f };
+  := fun A x := { A := #sing-elim x.A A; B := x.B; f := x.f };
   let record-ty-patch-5 :
         fun (A : Type)
             { A : Type [= A]; B : Type [= #sing-elim A A]; f : A -> A } ->
             { A : Type [= A]; B : Type; f : A -> B }
-  := fun A x := { A := x .A; B := #sing-elim x .B A; f := x .f };
+  := fun A x := { A := x.A; B := #sing-elim x.B A; f := x.f };
   let record-ty-patch-6 :
         fun (C : Type) { A : Type [= C]; B : Type [= C]; f : C -> C } ->
             { A : Type; B : Type [= C]; f : A -> C }
-  := fun C x := { A := #sing-elim x .A C; B := x .B; f := x .f };
+  := fun C x := { A := #sing-elim x.A C; B := x.B; f := x.f };
   let record-lit-missing-1 :
         fun (C : Type) -> { A : Type [= C]; B : Type [= C]; f : C -> C }
   := fun C := { A := #sing-intro C; B := #sing-intro C; f := fun x := x };
@@ -56,8 +55,8 @@
   let coerce-missing-patched-fields-1 :
         fun (A : Type) (B : Type) { f : A -> B } ->
             { A : Type [= A]; B : Type [= B]; f : A -> B }
-  := fun A B r := { A := #sing-intro A; B := #sing-intro B; f := r .f };
+  := fun A B r := { A := #sing-intro A; B := #sing-intro B; f := r.f };
   let coerce-missing-patched-fields-2 :
         fun (A : Type) (B : Type) { A : Type; f : A -> B } ->
             { A : Type; B : Type [= B]; f : A -> B }
-  := fun A B r := { A := r .A; B := #sing-intro B; f := r .f }; Type
+  := fun A B r := { A := r.A; B := #sing-intro B; f := r.f }; Type

@@ -1,12 +1,12 @@
 <input> : Type :=
   let Bool := fun (Out : Type) { true : Out; false : Out } -> Out;
-  let true : Bool := fun Out cases := cases .true;
-  let false : Bool := fun Out cases := cases .false;
+  let true : Bool := fun Out cases := cases.true;
+  let false : Bool := fun Out cases := cases.false;
   let Option : Type -> Type :=
     fun A := fun (Out : Type) { some : A -> Out; none : Out } -> Out;
-  let none : fun (A : Type) -> Option A := fun A Out cases := cases .none;
+  let none : fun (A : Type) -> Option A := fun A Out cases := cases.none;
   let some : fun (A : Type) A -> Option A :=
-    fun A a Out cases := cases .some a;
+    fun A a Out cases := cases.some a;
   let Eq := { T : Type; eq : T -> T -> Bool };
   let Map :=
     { Key : Type; Map : Type -> Type; empty : fun (A : Type) -> Map A;
@@ -15,19 +15,19 @@
   let eq-map :
         fun (key : Eq)
             ->
-            { Key : Type [= key .T]; Map : Type -> Type;
+            { Key : Type [= key.T]; Map : Type -> Type;
               empty : fun (A : Type) -> Map A;
-              add : fun (A : Type) key .T -> A -> Map A -> Map A;
+              add : fun (A : Type) key.T -> A -> Map A -> Map A;
               lookup :
-                fun (A : Type) key .T -> Map A ->
+                fun (A : Type) key.T -> Map A ->
                     fun (Out : Type) { some : A -> Out; none : Out } -> Out
               }
   :=
     fun key :=
-      { Key := #sing-intro key .T; Map := fun A := key .T -> Option A;
+      { Key := #sing-intro key.T; Map := fun A := key.T -> Option A;
         empty := fun A x := none A;
         add :=
           fun A k v map x :=
-            key .eq x k (Option A) { true := some A v; false := map x };
+            key.eq x k (Option A) { true := some A v; false := map x };
         lookup := fun A k map := map k };
   Type

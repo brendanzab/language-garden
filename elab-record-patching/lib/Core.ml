@@ -209,7 +209,7 @@ module Syntax = struct
     and pp_proj_tm names fmt = function
       | RecProj (_, _) as tm ->
           let head, labels = rec_projs tm in
-          Format.fprintf fmt "@[<2>%a@ %a@]"
+          Format.fprintf fmt "@[<2>%a@,%a@]"
             (pp_proj_tm names) head
             (Format.pp_print_list
               ~pp_sep:Format.pp_print_space
