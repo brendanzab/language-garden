@@ -132,6 +132,14 @@ let singleton_mismatch context ~expected ~found ~ty =
     (pp context) found
     (pp context) ty
 
+let field_mismatch ~expected ~found =
+  Format.asprintf "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[found label:    `%s`@]@]"
+    expected
+    found
+
+let missing_field label =
+  Format.asprintf "field with label `%s` not found in record" label
+
 let not_bound name =
   Format.asprintf "`%s` is not bound in the current scope" name
 
@@ -182,7 +190,7 @@ let rec coerce context from_ty to_ty tm : Syntax.tm =
             let to_tm = Syntax.SingIntro (quote context sing_tm to_ty) in
             (to_label, to_tm) :: go from_decls (to_decls (eval context to_tm))
         | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
-            error ("type mismatch: expected field `" ^ to_label ^ "`, found field `" ^ from_label ^ "`")
+            error (field_mismatch ~expected:to_label ~found:from_label)
         | _, _ -> Semantics.error "mismatched telescope length"
       in
       Syntax.RecLit (go from_decls to_decls)
@@ -254,7 +262,7 @@ let rec check context tm ty : Syntax.tm =
         | defns, Semantics.Cons (label, Semantics.SingType (ty, sing_tm), decls) ->
             let tm = Syntax.SingIntro (quote context sing_tm ty) in
             (label, tm) :: go defns (decls (eval context tm))
-        | _, Semantics.Cons (label, _, _) -> error ("field `" ^ label ^ "` is missing from record literal")
+        | _, Semantics.Cons (label, _, _) -> error (missing_field label)
         | (label, _) :: _, Semantics.Nil -> error ("unexpected field `" ^ label ^ "` in record literal")
       in
       Syntax.RecLit (go defns decls)
@@ -396,7 +404,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
           | head, Semantics.RecType decls ->
               begin match Semantics.proj_ty (eval context head) decls label with
               | Some ty -> (Syntax.RecProj (head, label), ty)
-              | None -> error ("field with label `" ^ label ^ "` not found in record")
+              | None -> error (missing_field label)
               end
           | _ -> error "not a record")
         (infer context head)
