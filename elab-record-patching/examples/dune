@@ -1,0 +1,21 @@
+(rule
+  (with-stdin-from categories.txt
+    (with-stdout-to categories.stdout.tmp
+      (run %{bin:record-patching} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-record-patching)
+  (action (diff categories.stdout
+                categories.stdout.tmp)))
+
+(rule
+  (with-stdin-from map.txt
+    (with-stdout-to map.stdout.tmp
+      (run %{bin:record-patching} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-record-patching)
+  (action (diff map.stdout
+                map.stdout.tmp)))

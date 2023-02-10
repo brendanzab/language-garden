@@ -1,13 +1,4 @@
-(rule
-  (with-stdin-from categories.txt
-    (with-stdout-to categories.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff categories.stdout
-                categories.stdout.tmp)))
+; Let expressions
 
 (rule
   (with-stdin-from let-ann-check.txt
@@ -31,16 +22,7 @@
   (action (diff let-ann-infer.stdout
                 let-ann-infer.stdout.tmp)))
 
-(rule
-  (with-stdin-from map.txt
-    (with-stdout-to map.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff map.stdout
-                map.stdout.tmp)))
+; Records
 
 (rule
   (with-stdin-from record-field-puns.txt
@@ -74,6 +56,8 @@
   (package elab-record-patching)
   (action (diff records.stdout
                 records.stdout.tmp)))
+
+; Singletons
 
 (rule
   (with-stdin-from singleton-check-elim.txt
