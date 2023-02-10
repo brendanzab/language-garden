@@ -55,7 +55,7 @@ With that in mind, the definition of `string-monoid` is elaborated to:
 
 ```text
 let string-monoid : {
-  T : Type [= String ]; -- singleton type patched here
+  T : Type [= String]; -- singleton type patched here
   empty : T;
   append : T -> T -> T;
 } := {
@@ -66,10 +66,6 @@ let string-monoid : {
 ```
 
 ## Future work
-
-### Parser
-
-Implement a parser for the surface language.
 
 ### Total space conversion
 
