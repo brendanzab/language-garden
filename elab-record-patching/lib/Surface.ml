@@ -154,6 +154,10 @@ let ambiguous_param name =
     performing coercions during elaboration we avoid having to introduce
     subtyping in the core language. *)
 let rec coerce context from_ty to_ty tm : Syntax.tm =
+  (* TODO: Return [tm] unchanged if no coercion was needed, avoiding unnecessary
+    eta-expansions to the elaborated terms. An example of this can be seen here:
+    https://github.com/AndrasKovacs/staged/blob/9e381eb162f44912d70fb843c4ca6567b0d1683a/demo/Elaboration.hs#L87-L140 *)
+
   match from_ty, to_ty with
   (* No need to coerce the term if both types are already the same! *)
   | from_ty, to_ty when is_convertible context from_ty to_ty Semantics.Univ -> tm
@@ -174,6 +178,7 @@ let rec coerce context from_ty to_ty tm : Syntax.tm =
       coerce context from_ty to_ty tm
   (* Coerce the fields of a record with record eta expansion *)
   | Semantics.RecType from_decls, Semantics.RecType to_decls ->
+      (* TODO: bind [tm] to a local variable to avoid duplicating records *)
       let rec go from_decls to_decls =
         match from_decls, to_decls with
         | Semantics.Nil, Semantics.Nil -> []
