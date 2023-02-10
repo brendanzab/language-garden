@@ -54,6 +54,17 @@
                 record-field-puns.stdout.tmp)))
 
 (rule
+  (with-stdin-from record-proj-singleton.txt
+    (with-stdout-to record-proj-singleton.stdout.tmp
+      (run %{bin:record-patching} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-record-patching)
+  (action (diff record-proj-singleton.stdout
+                record-proj-singleton.stdout.tmp)))
+
+(rule
   (with-stdin-from records.txt
     (with-stdout-to records.stdout.tmp
       (run %{bin:record-patching} elab))))
@@ -65,12 +76,26 @@
                 records.stdout.tmp)))
 
 (rule
-  (with-stdin-from singletons.txt
-    (with-stdout-to singletons.stdout.tmp
+  (with-stdin-from singleton-check-elim.txt
+    (with-stdout-to singleton-check-elim.stdout.tmp
       (run %{bin:record-patching} elab))))
 
 (rule
   (alias runtest)
   (package elab-record-patching)
-  (action (diff singletons.stdout
-                singletons.stdout.tmp)))
+  (action (diff singleton-check-elim.stdout
+                singleton-check-elim.stdout.tmp)))
+
+(rule
+  (with-stdin-from singleton-check-intro.txt
+    (with-stdout-to singleton-check-intro.stdout.tmp
+      (run %{bin:record-patching} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-record-patching)
+  (action (diff singleton-check-intro.stdout
+                singleton-check-intro.stdout.tmp)))
+
+; TODO: Tests for singleton introduction coercions
+; TODO: Tests for singleton elimination coercions
