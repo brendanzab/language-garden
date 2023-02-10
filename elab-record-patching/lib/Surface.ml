@@ -142,17 +142,17 @@ let ambiguous_param name =
 
 (** {2 Coercive subtyping} *)
 
-(** Coerces a term from one type to another type. By performing coercions
-    during elaboration we avoid having to introduce subtyping in the core
-    language. *)
-let rec coerce context tm from_ty to_ty : Syntax.tm =
+(** Returns a coercion from a term of one type to a term of another type. By
+    performing coercions during elaboration we avoid having to introduce
+    subtyping in the core language. *)
+let rec coerce context from_ty to_ty tm : Syntax.tm =
   match from_ty, to_ty with
   (* No need to coerce the term if both types are already the same! *)
   | from_ty, to_ty when is_convertible context from_ty to_ty Semantics.Univ -> tm
   (* Coerce the term to a singleton with {!Syntax.SingIntro}, if the term is
     convertible to the term expected by the singleton *)
   | from_ty, Semantics.SingType (to_ty, sing_tm) ->
-      let tm = coerce context tm from_ty to_ty in
+      let tm = coerce context from_ty to_ty tm in
       let tm' = eval context tm in
       if is_convertible context sing_tm tm' to_ty then Syntax.SingIntro tm else
         error (singleton_mismatch context
@@ -163,7 +163,7 @@ let rec coerce context tm from_ty to_ty : Syntax.tm =
     and attempt further coercions from its underlying type *)
   | Semantics.SingType (from_ty, sing_tm), to_ty ->
       let tm = Syntax.SingElim (tm, quote context sing_tm from_ty) in
-      coerce context tm from_ty to_ty
+      coerce context from_ty to_ty tm
   (* Coerce the fields of a record with record eta expansion *)
   | Semantics.RecType from_decls, Semantics.RecType to_decls ->
       let rec go from_decls to_decls =
@@ -173,7 +173,7 @@ let rec coerce context tm from_ty to_ty : Syntax.tm =
         | Semantics.Cons (from_label, from_ty, from_decls)
         , Semantics.Cons (to_label, to_ty, to_decls) when from_label = to_label ->
             let from_tm = eval context (Syntax.RecProj (tm, from_label)) in
-            let to_tm = coerce context (Syntax.RecProj (tm, from_label)) from_ty to_ty in
+            let to_tm = coerce context from_ty to_ty (Syntax.RecProj (tm, from_label)) in
             (to_label, to_tm) :: go (from_decls from_tm) (to_decls (eval context to_tm))
         (* When the type of the target field is a singleton we can use it to
             fill in the definition of a missing field in the source term. This
@@ -282,7 +282,7 @@ let rec check context tm ty : Syntax.tm =
   | tm, ty ->
       let tm, ty' = infer context tm in
       let tm, ty' = elim_implicits context tm ty' in
-      coerce context tm ty' ty
+      coerce context ty' ty tm
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
