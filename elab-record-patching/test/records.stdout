@@ -8,22 +8,32 @@
   := fun A x := { A := #sing-elim x.A A; B := #sing-elim x.B A; f := x.f };
   let patch-3 :
         fun (A : Type)
-            { A : Type [= A]; B : Type [= #sing-elim A A];
-              f : (A -> A) [= fun x := x] }
-            -> F
+            {
+              A : Type [= A];
+              B : Type [= #sing-elim A A];
+              f : (A -> A) [= fun x := x]
+            } -> F
   :=
     fun A x :=
-      { A := #sing-elim x.A A; B := #sing-elim x.B A;
-        f := #sing-elim x.f (fun x := x) };
+      {
+        A := #sing-elim x.A A;
+        B := #sing-elim x.B A;
+        f := #sing-elim x.f (fun x := x)
+      };
   let patch-3b :
         fun (A : Type)
-            { A : Type [= A]; B : Type [= #sing-elim A A];
-              f : (A -> A) [= fun x := x] }
-            -> F
+            {
+              A : Type [= A];
+              B : Type [= #sing-elim A A];
+              f : (A -> A) [= fun x := x]
+            } -> F
   :=
     fun A x :=
-      { A := #sing-elim x.A A; B := #sing-elim x.B A;
-        f := #sing-elim x.f (fun x := x) };
+      {
+        A := #sing-elim x.A A;
+        B := #sing-elim x.B A;
+        f := #sing-elim x.f (fun x := x)
+      };
   let patch-4 :
         fun (A : Type)
             { A : Type [= A]; B : Type [= #sing-elim A A]; f : A -> A } ->
@@ -47,8 +57,11 @@
             { A : Type [= C]; B : Type [= C]; f : (C -> C) [= fun x := x] }
   :=
     fun C :=
-      { A := #sing-intro C; B := #sing-intro C; f := #sing-intro (fun x := x)
-        };
+      {
+        A := #sing-intro C;
+        B := #sing-intro C;
+        f := #sing-intro (fun x := x)
+      };
   let coerce-missing-3 :
         fun (C : Type) -> { A : Type [= C]; B : Type [= C]; f : C -> C }
   := fun C := { A := #sing-intro C; B := #sing-intro C; f := fun x := x };

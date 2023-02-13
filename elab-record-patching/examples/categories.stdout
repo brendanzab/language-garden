@@ -1,12 +1,18 @@
 <input> : Type :=
   let Category :=
-    { Ob : Type; Hom : { S : Ob; T : Ob } -> Type;
+    {
+      Ob : Type;
+      Hom : { S : Ob; T : Ob } -> Type;
       id : fun (A : Ob) -> Hom { S := A; T := A };
       seq :
         fun (A : Ob) (B : Ob) (C : Ob) (f : Hom { S := A; T := B })
             (g : Hom { S := B; T := C }) -> Hom { S := A; T := C }
-      };
+    };
   let types : Category :=
-    { Ob := Type; Hom := fun params := params.S -> params.T;
-      id := fun A a := a; seq := fun A B C f g a := g (f a) };
+    {
+      Ob := Type;
+      Hom := fun params := params.S -> params.T;
+      id := fun A a := a;
+      seq := fun A B C f g a := g (f a)
+    };
   Type

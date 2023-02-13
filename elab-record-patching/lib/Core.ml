@@ -174,12 +174,14 @@ module Syntax = struct
                   (pp_tm names) param_ty
                   (go (name :: names)) body_ty
             | body_ty ->
+                (* TODO: improve printing of record types *)
                 Format.fprintf fmt "@[->@ @[%a@]@]"
                   (pp_tm names) body_ty
           in
           Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
       | FunLit (_, _) as tm ->
           let params, body = fun_lits tm in
+          (* TODO: improve printing of record types and literals *)
           Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
             (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
             (pp_tm (List.rev_append params names)) body
@@ -223,32 +225,32 @@ module Syntax = struct
       | Univ -> Format.fprintf fmt "Type"
       | RecType Nil | RecLit [] -> Format.fprintf fmt "{}"
       | RecType decls ->
-          (* TODO: Improve multiline formatting *)
           let rec go_decls names fmt = function
             | Nil -> Format.fprintf fmt ""
             | Cons (label, ty, Nil) ->
-                Format.fprintf fmt "@[<2>%a@]"
+                (* TODO: use trailing semicolons when splitting over multiple lines *)
+                Format.fprintf fmt "@;<1 2>@[<2>%a@]"
                   (pp_decl names) (Some label, ty)
             | Cons (label, ty, decls) ->
-                Format.fprintf fmt "@[<2>%a;@]@ %a"
+                Format.fprintf fmt "@;<1 2>@[<2>%a;@]%a"
                   (pp_decl names) (Some label, ty)
                   (go_decls (Some label :: names)) decls
           in
-          Format.fprintf fmt "@[<2>{@ %a@ }@]"
+          Format.fprintf fmt "@[<hv>{%a@ }@]"
             (go_decls names) decls
       | RecLit defns ->
-          (* TODO: Improve multiline formatting *)
           let rec go_defns fmt = function
             | [] -> Format.fprintf fmt ""
             | (label, ty) :: [] ->
-                Format.fprintf fmt "@[<2>%a@]"
+                (* TODO: use trailing semicolons when splitting over multiple lines *)
+                Format.fprintf fmt "@;<1 2>@[<2>%a@]"
                   (pp_defn names) (Some label, ty)
             | (label, ty) :: decls ->
-                Format.fprintf fmt "@[<2>%a;@]@ %a"
+                Format.fprintf fmt "@;<1 2>@[<2>%a;@]%a"
                   (pp_defn names) (Some label, ty)
                   go_defns decls
           in
-          Format.fprintf fmt "@[<2>{@ %a@ }@]"
+          Format.fprintf fmt "@[<hv>{%a@ }@]"
             go_defns defns
       | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
 
