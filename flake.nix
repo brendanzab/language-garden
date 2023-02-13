@@ -76,6 +76,18 @@
             ];
           };
 
+          compile-closure-conv = ocamlPackages.buildDunePackage {
+            pname = "compile-closure-conv";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+
+            # TODO: Make test dependencies optional
+            nativeBuildInputs = [
+              ocamlPackages.mdx
+            ];
+          };
+
           # Elaboration
 
           elab-dependent = ocamlPackages.buildDunePackage {
@@ -127,6 +139,7 @@
             # TODO: Make test dependencies optional
             nativeBuildInputs = [
               ocamlPackages.cmdliner
+              ocamlPackages.mdx
               # For `lang-shader-graphics/test/dune`
               legacyPackages.netpbm
             ];

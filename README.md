@@ -33,6 +33,9 @@ related to compiling functional programming languages.
   Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
 - [**compile-arith-verified**](./compile-arith-verified/):
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
+- [**compile-closure-conv**](./compile-closure-conv):
+  Type preserving compilation of a simply typed lambda calculus to a language
+  with explicit closures.
 
 ### Languages
 

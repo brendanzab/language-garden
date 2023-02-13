@@ -1,0 +1,10 @@
+(executable
+  (name Main)
+  (public_name closure-conv)
+  (package compile-closure-conv))
+
+(env
+  (dev
+    ; see `ocamlc -warn-help` for information on warnings
+    (flags (:standard -w -unused-constructor
+                      -w -unused-value-declaration))))
