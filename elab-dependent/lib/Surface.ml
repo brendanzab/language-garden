@@ -136,53 +136,17 @@ let ambiguous_param name =
 
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
-let rec check context tm (ty : Semantics.vty) : Syntax.tm =
-  match tm, ty with
+let rec check context tm expected_ty : Syntax.tm =
+  match tm, expected_ty with
   (* Let expressions *)
-  | Let (name, params, def_ty, def, body), ty ->
-      let def, def_ty = infer_fun_lit context params def_ty def in
+  | Let (name, params, def_ty, def, body), expected_ty ->
+      let def, def_ty = infer_def context params def_ty def in
       let context = bind_def context name def_ty (eval context def) in
-      Syntax.Let (name, def, check context body ty)
+      Syntax.Let (name, def, check context body expected_ty)
 
   (* Function literals *)
-  | FunLit (params, body_ty, body), ty ->
-      (* Iterate over the parameters, constructing a function literal in the
-          core language. *)
-      let rec go context params ty =
-        match params, ty with
-        | [], expected_body_ty ->
-            begin match body_ty with
-            | None -> check context body expected_body_ty
-            | Some body_ty ->
-                let body_ty = check context body_ty Semantics.Univ in
-                let body_ty' = eval context body_ty in
-                if is_convertible context (body_ty', expected_body_ty) then
-                  check context body body_ty'
-                else error (type_mismatch context
-                  ~expected:(quote context expected_body_ty)
-                  ~found:body_ty)
-            end
-        | (name, None) :: params, Semantics.FunType (_, param_ty, body_ty) ->
-            let var = next_var context in
-            let context = bind_def context name (Lazy.force param_ty) var in
-            Syntax.FunLit (name, go context params (body_ty var))
-        | (name, Some param_ty) :: params, Semantics.FunType (_, expected_param_ty, body_ty) ->
-            let var = next_var context in
-            let param_ty = check context param_ty Semantics.Univ in
-            let param_ty' = eval context param_ty in
-            let expected_param_ty = Lazy.force expected_param_ty in
-            (* Check that the parameter annotation in the function literal
-                matches the expected parameter type. *)
-            if is_convertible context (param_ty', expected_param_ty) then
-              let context = bind_def context name expected_param_ty var in
-              Syntax.FunLit (name, go context params (body_ty var))
-            else
-              error (type_mismatch context
-                ~expected:(quote context expected_param_ty)
-                ~found:param_ty)
-        | _, _ -> error "too many parameters in function literal"
-      in
-      go context params ty
+  | FunLit (params, body_ty, body), expected_ty ->
+      check_fun_lit context params body_ty body expected_ty
 
   (* For anything else, try inferring the type of the term, then checking to
       see if the inferred type is the same as the expected type.
@@ -190,11 +154,11 @@ let rec check context tm (ty : Semantics.vty) : Syntax.tm =
       Instead of using conversion checking, extensions to this type system
       could trigger unification or try to coerce the term to the expected
       type here. *)
-  | tm, ty ->
+  | tm, expected_ty ->
       let tm, ty' = infer context tm in
-      if is_convertible context (ty', ty) then tm else
+      if is_convertible context (ty', expected_ty) then tm else
         error (type_mismatch context
-          ~expected:(quote context ty)
+          ~expected:(quote context expected_ty)
           ~found:(quote context ty'))
 
 (** Elaborate a term in the surface language into a term in the core language,
@@ -202,7 +166,7 @@ let rec check context tm (ty : Semantics.vty) : Syntax.tm =
 and infer context : tm -> Syntax.tm * Semantics.vty = function
   (* Let expressions *)
   | Let (name, params, def_ty, def, body) ->
-      let def, def_ty = infer_fun_lit context params def_ty def in
+      let def, def_ty = infer_def context params def_ty def in
       let context = bind_def context name def_ty (eval context def) in
       let body, body_ty = infer context body in
       (Syntax.Let (name, def, body), body_ty)
@@ -268,39 +232,73 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
         (infer context head)
         args
 
-and infer_params context params infer_body =
-  match params with
-  | [] -> infer_body context
-  (* We’re in inference mode, so function parameters need annotations *)
-  | (name, None) :: _ -> error (ambiguous_param name)
-  | (name, Some param_ty) :: params ->
+(** Elaborate a function literal in checking mode. *)
+and check_fun_lit context params body_ty body expected_ty =
+  match params, expected_ty with
+  | [], expected_body_ty ->
+      begin match body_ty with
+      | None -> check context body expected_body_ty
+      | Some body_ty ->
+          let body_ty = check context body_ty Semantics.Univ in
+          let body_ty' = eval context body_ty in
+          if is_convertible context (body_ty', expected_body_ty) then
+            check context body body_ty'
+          else error (type_mismatch context
+            ~expected:(quote context expected_body_ty)
+            ~found:body_ty)
+      end
+  | (name, None) :: params, Semantics.FunType (_, expected_param_ty, expected_body_ty) ->
+      let var = next_var context in
+      let context = bind_def context name (Lazy.force expected_param_ty) var in
+      let body = check_fun_lit context params body_ty body (expected_body_ty var) in
+      Syntax.FunLit (name, body)
+  | (name, Some param_ty) :: params, Semantics.FunType (_, expected_param_ty, expected_body_ty) ->
       let var = next_var context in
       let param_ty = check context param_ty Semantics.Univ in
       let param_ty' = eval context param_ty in
-      let context = bind_def context name param_ty' var in
-      let body, body_ty = infer_params context params infer_body in
-      (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
+      let expected_param_ty = Lazy.force expected_param_ty in
+      (* Check that the parameter annotation in the function literal
+          matches the expected parameter type. *)
+      if is_convertible context (param_ty', expected_param_ty) then
+        let context = bind_def context name param_ty' var in
+        let body = check_fun_lit context params body_ty body (expected_body_ty var) in
+        Syntax.FunLit (name, body)
+      else
+        error (type_mismatch context
+          ~expected:(quote context expected_param_ty)
+          ~found:param_ty)
+  | _, _ ->
+      error "too many parameters in function literal"
 
+(** Elaborate a function literal in inference mode. *)
 and infer_fun_lit context params body_ty body =
-  match params, body_ty with
-  | [], None -> infer context body
-  | [], Some body_ty ->
-      let body_ty = check context body_ty Semantics.Univ in
-      let body_ty' = eval context body_ty in
-      let body = check context body body_ty' in
-      (Syntax.Ann (body, body_ty), body_ty')
-  | params, None ->
-      let fun_tm, fun_ty =
-        infer_params context params (fun context ->
-          let body, body_ty = infer context body in
-          body, quote context body_ty)
-      in
-      (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
-  | params, Some body_ty ->
-      let fun_tm, fun_ty =
-        infer_params context params (fun context ->
-          let body_ty = check context body_ty Semantics.Univ in
-          let body_ty' = eval context body_ty in
-          check context body body_ty', body_ty)
-      in
-      (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
+  let rec go context params body_ty body =
+    match params with
+    | [] ->
+        begin match body_ty with
+        | None ->
+            let body, body_ty = infer context body in
+            body, quote context body_ty
+        | Some body_ty ->
+            let body_ty = check context body_ty Semantics.Univ in
+            check context body (eval context body_ty), body_ty
+        end
+    | (name, None) :: _ ->
+        (* We’re in inference mode, so function parameters need annotations *)
+        error (ambiguous_param name)
+    | (name, Some param_ty) :: params ->
+        let var = next_var context in
+        let param_ty = check context param_ty Semantics.Univ in
+        let context = bind_def context name (eval context param_ty) var in
+        let body, body_ty = go context params body_ty body in
+        (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
+  in
+  let fun_tm, fun_ty = go context params body_ty body in
+  (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
+
+(** Elaborate a (potentially) parameterised and annotated definition. *)
+and infer_def context params def_ty def =
+  (* Only annotate definitions when necessary *)
+  match params, def_ty with
+  | [], None -> infer context def
+  | params, def_ty -> infer_fun_lit context params def_ty def
