@@ -1,88 +1,43 @@
-let run tm =
+(** {1 Helper functions} *)
 
-  Format.printf "@.@[<v 2>FunLang:@ %a@]@." (FunLang.pp_tm []) tm;
+let print_error (pos : Lexing.position) message =
+  Printf.eprintf "%s:%d:%d: %s\n"
+      pos.pos_fname
+      pos.pos_lnum
+      (pos.pos_cnum - pos.pos_bol)
+      message
 
-  let _ = FunLang.Validation.synth [] tm in
-  let clos_tm = FunToClos.translate [] 0 0 tm in
+let parse_expr filename in_channel =
+  let lexbuf = Lexing.from_channel in_channel in
+  Lexing.set_filename lexbuf filename;
 
-  Format.printf "@.@[<v 2>ClosLang:@ %a@]@." (ClosLang.pp_tm []) clos_tm;
-  Format.printf "@.";
-
-  let _ = ClosLang.Validation.synth [] clos_tm in
-  let _ = ClosLang.Semantics.eval [] clos_tm in ()
+  try
+    FunParser.main FunLexer.token lexbuf
+  with
+  | FunLexer.Error ->
+      let pos = Lexing.lexeme_start_p lexbuf in
+      print_error pos "unexpected character";
+      exit 1
+  | FunLang.UnboundName n ->
+      (* FIXME: Incorrect position *)
+      let pos = Lexing.lexeme_start_p lexbuf in
+      print_error pos (Format.sprintf "unbound name `%s`" n);
+      exit 1
+  | FunParser.Error ->
+      let pos = Lexing.lexeme_start_p lexbuf in
+      print_error pos "syntax error";
+      exit 1
 
 
 let () =
   Printexc.record_backtrace true;
 
-  let tm = FunLang.Build.(
-    let_ "a" int_ty (int_lit 1) @@ fun _ ->
-    let_ "f" (fun_ty [int_ty] int_ty)
-      (fun_lit "x" int_ty @@ fun x -> x)
-      @@ fun f ->
-    fun_apps f [int_lit 100]
-  ) 0 in
+  let tm = parse_expr "<input>" stdin in
 
-  run tm;
+  let _ = FunLang.Validation.synth [] tm in
+  let clos_tm = FunToClos.translate [] 0 0 tm in
 
+  Format.printf "@[<v>%a@]@." (ClosLang.pp_tm []) clos_tm;
 
-  let tm = FunLang.Build.(
-    let_ "a" int_ty (int_lit 1) @@ fun a ->
-    let_ "f" (fun_ty [int_ty] int_ty)
-      (fun_lit "x" int_ty @@ fun _ -> a)
-      @@ fun f ->
-    fun_apps f [int_lit 100]
-  ) 0 in
-
-  run tm;
-
-
-  let tm = FunLang.Build.(
-    let_ "a" int_ty (int_lit 1) @@ fun a ->
-    let_ "f" (fun_ty [int_ty] int_ty)
-      (fun_lit "x" int_ty @@ fun x ->
-        let_ "y" int_ty (x + a) @@ fun y -> y)
-      @@ fun f ->
-    fun_apps f [int_lit 100]
-  ) 0 in
-
-  run tm;
-
-
-  let tm = FunLang.Build.(
-    let_ "x" int_ty (int_lit 1) @@ fun x ->
-    let_ "y" int_ty (int_lit 2) @@ fun y ->
-    let_ "z" int_ty (int_lit 3) @@ fun _ ->
-    let_ "f" (fun_ty [int_ty; int_ty] int_ty)
-      (fun_lit "w" int_ty @@ fun w ->
-          x + y + w)
-      @@ fun f ->
-    fun_apps f [int_lit 100]
-  ) 0 in
-
-  run tm;
-
-
-  let tm = FunLang.Build.(
-    let_ "a" int_ty (int_lit 2) @@ fun a ->
-    let_ "b" int_ty (int_lit 4) @@ fun _ ->
-    let_ "c" int_ty (int_lit 7) @@ fun c ->
-    let_ "d" int_ty (int_lit 8) @@ fun _ ->
-    fun_lit "x" int_ty @@ fun x ->
-      a * x + c
-  ) 0 in
-
-  run tm;
-
-  let tm = FunLang.Build.(
-    let_ "a" int_ty (int_lit 2) @@ fun a ->
-    let_ "b" int_ty (int_lit 5) @@ fun b ->
-    let_ "f" (fun_ty [int_ty; int_ty] int_ty)
-      (fun_lit "x" int_ty @@ fun x ->
-        fun_lit "y" int_ty @@ fun y ->
-          a * x + b * y)
-      @@ fun f ->
-    fun_apps f [int_lit 7; int_lit 3]
-  ) 0 in
-
-  run tm;
+  let _ = ClosLang.Validation.synth [] clos_tm in
+  let _ = ClosLang.Semantics.eval [] clos_tm in ()

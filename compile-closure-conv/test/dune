@@ -1,0 +1,70 @@
+(rule
+  (with-stdin-from capture-nothing.txt
+    (with-stdout-to capture-nothing.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff capture-nothing.stdout
+                capture-nothing.stdout.tmp)))
+
+
+(rule
+  (with-stdin-from capture-simple.txt
+    (with-stdout-to capture-simple.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff capture-simple.stdout
+                capture-simple.stdout.tmp)))
+
+
+(rule
+  (with-stdin-from capture-with-local-let.txt
+    (with-stdout-to capture-with-local-let.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff capture-with-local-let.stdout
+                capture-with-local-let.stdout.tmp)))
+
+
+(rule
+  (with-stdin-from multiple-captures-1.txt
+    (with-stdout-to multiple-captures-1.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff multiple-captures-1.stdout
+                multiple-captures-1.stdout.tmp)))
+
+
+(rule
+  (with-stdin-from multiple-captures-2.txt
+    (with-stdout-to multiple-captures-2.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff multiple-captures-2.stdout
+                multiple-captures-2.stdout.tmp)))
+
+
+(rule
+  (with-stdin-from multiple-captures-3.txt
+    (with-stdout-to multiple-captures-3.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff multiple-captures-3.stdout
+                multiple-captures-3.stdout.tmp)))

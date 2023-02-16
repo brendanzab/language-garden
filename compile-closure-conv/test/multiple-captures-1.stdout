@@ -1,0 +1,6 @@
+let x : Int := 1;
+let y : Int := 2;
+let z : Int := 3;
+let f : Int -> Int -> Int :=
+  clos(fun (env : (Int, Int)) (w : Int) => env.0 + env.1 + w, (x, y));
+f 100

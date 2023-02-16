@@ -3,6 +3,11 @@
   (public_name closure-conv)
   (package compile-closure-conv))
 
+(menhir
+  (modules FunParser))
+
+(ocamllex FunLexer)
+
 (env
   (dev
     ; see `ocamlc -warn-help` for information on warnings

@@ -1,0 +1,5 @@
+let a : Int := 1;
+let f : Int -> Int :=
+  fun (x : Int) => x;
+
+f 100

@@ -1,0 +1,7 @@
+let a : Int := 2;
+let b : Int := 4;
+let c : Int := 7;
+let d : Int := 8;
+
+fun (x : Int) =>
+  a * x + c

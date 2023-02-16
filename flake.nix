@@ -85,6 +85,7 @@
             # TODO: Make test dependencies optional
             nativeBuildInputs = [
               ocamlPackages.mdx
+              ocamlPackages.menhir
             ];
           };
 

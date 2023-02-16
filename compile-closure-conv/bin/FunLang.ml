@@ -38,6 +38,10 @@ type tm =
   | FunApp of tm * tm
 
 
+(** Exception raised during parsing if a name was unbound *)
+exception UnboundName of string
+
+
 (** {1 Pretty printing} *)
 
 let rec pp_ty fmt =
