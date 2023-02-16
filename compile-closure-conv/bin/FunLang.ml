@@ -177,11 +177,14 @@ module Semantics = struct
         eval (def :: env) body
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
-    | PrimApp (`Neg, [IntLit t1]) -> IntLit (-t1)
-    | PrimApp (`Add, [IntLit t1; IntLit t2]) -> IntLit (t1 + t2)
-    | PrimApp (`Sub, [IntLit t1; IntLit t2]) -> IntLit (t1 - t2)
-    | PrimApp (`Mul, [IntLit t1; IntLit t2]) -> IntLit (t1 * t2)
-    | PrimApp _ -> invalid_arg "invalid prim application"
+    | PrimApp (prim, args) ->
+        begin match prim, List.map (eval env) args with
+        | `Neg, [IntLit t1] -> IntLit (-t1)
+        | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
+        | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
+        | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+        | _, _ -> invalid_arg "invalid prim application"
+        end
     | FunLit (name, param_ty, body) ->
         FunLit (name, param_ty, (env, body))
     | FunApp (head, arg) ->
