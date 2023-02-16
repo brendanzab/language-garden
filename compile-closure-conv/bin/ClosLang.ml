@@ -80,7 +80,7 @@ let rec pp_tm names fmt = function
         pp_ty env_ty
         name
         pp_ty param_ty
-        (pp_tm (name :: "env" :: names)) body
+        (pp_tm [name; "env"]) body
   | tm ->
       pp_app_tm names fmt tm
 and pp_app_tm names fmt = function
@@ -150,15 +150,15 @@ module Semantics = struct
     | TupleProj (head, label) ->
         begin match eval env head with
         | TupleLit vtms -> List.nth vtms label
-        | _ -> invalid_arg "tuple exprected"
+        | _ -> invalid_arg "expected tuple"
         end
     | ClosLit (code, env') -> ClosLit (eval env code, eval env env')
     | ClosApp (head, arg) ->
         begin match eval env head with
         | ClosLit (CodeLit (_, _, body), env') ->
             let arg = eval env arg in
-            eval (arg :: env' :: env) body
-        | _ -> invalid_arg "function exprected"
+            eval [arg; env'] body
+        | _ -> invalid_arg "expected closure"
         end
 
 end
@@ -195,7 +195,10 @@ module Validation = struct
     | PrimApp _ ->
         invalid_arg "invalid prim application"
     | CodeLit (env_ty, (_, param_ty), body) ->
-        let body_ty = synth (param_ty :: env_ty :: context) body in
+        (* Because code literals capture no variables from the surrounding
+           context, the body of the closure is synthesised in a new context
+           that assumes only the parameter and the environment. *)
+        let body_ty = synth [param_ty; env_ty] body in
         CodeType (env_ty, param_ty, body_ty)
     | TupleLit tms ->
         TupleType (List.map (synth context) tms)
@@ -220,7 +223,7 @@ module Validation = struct
         | ClosType (param_ty, body_ty) ->
             check context arg param_ty;
             body_ty
-        | _ -> invalid_arg "expected function"
+        | _ -> invalid_arg "expected closure"
         end
 
 end

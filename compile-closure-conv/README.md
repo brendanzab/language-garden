@@ -9,9 +9,8 @@ An implementation of typed closure conversion for a simply typed lambda calculus
 
 ## Future work
 
-- [x] Closure conversion with de Bruijn indices
+- [x] Closure conversion translation
 - [x] Avoid shifting during translation with de Bruijn levels
-- [ ] Closure conversion to alpha-renamed terms
 - [ ] Lambda lifting
 - [ ] Parameter list flattening
 - [ ] Dependently typed closure conversion. See:

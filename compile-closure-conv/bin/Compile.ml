@@ -1,11 +1,13 @@
 (** {0 Closure conversion} *)
 
-(** Compilation of the {!ClosLang} language to the {!ClosLang} language.
+(** Compilation from {!FunLang} to {!ClosLang}.
 
-    This transformation converts functions into closures, separating the “code”
-    of functions from the captured data. The translation is somewhat fiddly due
-    to the decision to use de Bruijn indices in the source and target languages.
-    We might want to alpha-rename variables to make this easier.
+    This translation converts functions into closures, separating the code of
+    functions from the data implicitly captured from the surronding environment.
+
+    This translation is made somewhat fiddly due to the decision to use de
+    Bruijn indices in the source and target languages. We might want to try
+    alpha-renaming variables to make this easier.
 *)
 
 
@@ -23,7 +25,7 @@ type vtm =
   | Var of int
   | TupleProj of int * int
 
-(** Quote a closure converted value back into a target environmnet of a given size. *)
+(** Quote a closure converted value back into a target environment of a given size. *)
 let quote size' : vtm -> ClosLang.tm =
   function
   | Var level -> Var (size' - level - 1)
@@ -33,7 +35,7 @@ let quote size' : vtm -> ClosLang.tm =
 (** {1 Helper functions} *)
 
 (** Lookup a source variable in the environment *)
-let lookup env index =
+let lookup env index : vtm * ClosLang.ty =
   Option.get (List.nth env index)
 
 (** Return a bitmap of the of the free variables that occur in a term *)
@@ -87,6 +89,8 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
       let def_ty = translate_ty def_ty in
       let def = translate env size size' def in
 
+      (* Compile the body of the let expression, adding a binding to the source
+        and target environments respectively. *)
       let body_env = Some (Var size', def_ty) :: env in
       let body = translate body_env (size + 1) (size' + 1) body in
 
@@ -102,9 +106,11 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
   | FunLit (name, param_ty, body) ->
       let param_ty = translate_ty param_ty in
 
-      (* [fun env x => ...] *)
-      let env_level = size' in
-      let arg_level = size' + 1 in
+      (* There are only two variables bound in the environment of the compiled
+         code literal: one for the environment parameter, and another for the
+         original parameter of the function. *)
+      let env_level = 0 in
+      let param_level = 1 in
 
       (* Returns:
 
@@ -128,11 +134,10 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
       let body_fvs = List.tl (fvs (size + 1) body) in
       let proj_env, env_tms, env_tys = make_env body_fvs 0 in
 
-      (* Translate the body of the function. Note that two variables are being
-         added in the target environment: one for the environment, and another
-         for the original argument of the function. *)
-      let body_env = Some (Var arg_level, param_ty) :: proj_env in
-      let body = translate body_env (size + 1) (size' + 2) body in
+      (* Translate the body of the function, assuming only the environment
+         parameter and original parameter in the target environment. *)
+      let body_env = Some (Var param_level, param_ty) :: proj_env in
+      let body = translate body_env (size + 1) 2 body in
 
       ClosLang.ClosLit
         (CodeLit (TupleType (List.rev env_tys), (name, param_ty), body),
