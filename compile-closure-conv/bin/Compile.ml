@@ -8,8 +8,6 @@
     We might want to alpha-rename variables to make this easier.
 *)
 
-(* TODO: Straighten out environment/substitution terminology *)
-
 
 (** {1 Values} *)
 
@@ -18,8 +16,8 @@
     as those are the only values that will be stored in the environment during
     compilation.
 
-    Variables are represented as de Bruijn levels which allows us to
-    freely add new scopes (weaken the environment) without needing to worry
+    Variables are represented as de Bruijn levels which allows us to freely
+    weaken the target environment (add new bindings) without needing to worry
     about shifting de Bruijn indices.
 *)
 type vtm =
@@ -35,29 +33,28 @@ let quote size' : vtm -> CoreClos.tm =
 
 (** {1 Helper functions} *)
 
-(** Lookup a source variable in the substitutions *)
-let lookup substs index =
-  Option.get (List.nth substs index)
+(** Lookup a source variable in the environment *)
+let lookup env index =
+  Option.get (List.nth env index)
 
-(** Return a bit set of the of the free variables that occur in a term for a
-    given environment size *)
+(** Return a bitmap of the of the free variables that occur in a term *)
 let fvs size (tm : Core.tm) : bool list =
-  (* Set the free variables in a term, beginning at an initial binding depth *)
-  let rec go bs depth : Core.tm -> unit  =
+  (* Traverse a term, recording any free variables in the supplied bitmap. *)
+  let rec go bs offset : Core.tm -> unit  =
     function
-    | Var index when index < depth -> ()              (* bound *)
-    | Var index -> Array.set bs (index - depth) true  (* free *)
-    | Let (_, _, def, body) -> go bs depth def; go bs (depth + 1) body
+    | Var index when index < offset -> ()              (* bound *)
+    | Var index -> Array.set bs (index - offset) true  (* free *)
+    | Let (_, _, def, body) -> go bs offset def; go bs (offset + 1) body
     | BoolLit _ -> ()
     | IntLit _ -> ()
-    | PrimApp (_, args) -> List.iter (go bs depth) args
-    | FunLit (_, _, body) -> go bs (depth + 1) body
-    | FunApp (head, arg) -> go bs depth head; go bs depth arg
+    | PrimApp (_, args) -> List.iter (go bs offset) args
+    | FunLit (_, _, body) -> go bs (offset + 1) body
+    | FunApp (head, arg) -> go bs offset head; go bs offset arg
   in
 
   (* Initialise an array to serve as a bitmap over the environment *)
   let bs = Array.make size false in
-  (* Update the entries of the environmnet with the free variables in [tm] *)
+  (* Update the bitmap with the free variables *)
   go bs 0 tm;
   (* TODO: avoid needing to convert to a list? *)
   Array.to_list bs
@@ -81,18 +78,18 @@ let rec translate_ty : Core.ty -> CoreClos.ty =
     - [size']: the size of the target environment, used for quoting values into
       closure converted terms
 *)
-let rec translate substs size size' : Core.tm -> CoreClos.tm =
+let rec translate env size size' : Core.tm -> CoreClos.tm =
   function
   | Var index ->
-      let vtm, _ = lookup substs index in
+      let vtm, _ = lookup env index in
       quote size' vtm
 
   | Let (name, def_ty, def, body) ->
       let def_ty = translate_ty def_ty in
-      let def = translate substs size size' def in
+      let def = translate env size size' def in
 
-      let body_substs = Some (Var size', def_ty) :: substs in
-      let body = translate body_substs (size + 1) (size' + 1) body in
+      let body_env = Some (Var size', def_ty) :: env in
+      let body = translate body_env (size + 1) (size' + 1) body in
 
       CoreClos.Let (name, def_ty, def, body)
 
@@ -100,7 +97,7 @@ let rec translate substs size size' : Core.tm -> CoreClos.tm =
   | IntLit i -> CoreClos.IntLit i
 
   | PrimApp (prim, args) ->
-      let args = List.map (translate substs size size') args in
+      let args = List.map (translate env size size') args in
       PrimApp (prim, args)
 
   | FunLit (name, param_ty, body) ->
@@ -112,7 +109,7 @@ let rec translate substs size size' : Core.tm -> CoreClos.tm =
 
       (* Returns:
 
-        - a mapping from variables to projections on the environment parameter
+        - a mapping from source variables to projections on the environment parameter
         - a list of terms (in reverse order) to be used when constructing the environment
         - a list of types (in reverse order) to be used in the type of the environment
       *)
@@ -120,29 +117,29 @@ let rec translate substs size size' : Core.tm -> CoreClos.tm =
         match bs with
         | [] -> [], [], []
         | false :: bs ->
-            let env_substs, env_tms, env_tys = make_env bs (index + 1) in
-            None :: env_substs, env_tms, env_tys
+            let proj_env, env_tms, env_tys = make_env bs (index + 1) in
+            None :: proj_env, env_tms, env_tys
         | true :: bs ->
-            let env_substs, env_tms, env_tys = make_env bs (index + 1) in
-            let env_vtm, env_ty = lookup substs index in
-            Some (TupleProj (env_level, List.length env_tms), env_ty) :: env_substs,
+            let proj_env, env_tms, env_tys = make_env bs (index + 1) in
+            let env_vtm, env_ty = lookup env index in
+            Some (TupleProj (env_level, List.length env_tms), env_ty) :: proj_env,
             quote size' env_vtm :: env_tms, env_ty :: env_tys
       in
 
       let body_fvs = List.tl (fvs (size + 1) body) in
-      let env_substs, env_tms, env_tys = make_env body_fvs 0 in
+      let proj_env, env_tms, env_tys = make_env body_fvs 0 in
 
       (* Translate the body of the function. Note that two variables are being
          added in the target environment: one for the environment, and another
          for the original argument of the function. *)
-      let body_substs = Some (Var arg_level, param_ty) :: env_substs in
-      let body = translate body_substs (size + 1) (size' + 2) body in
+      let body_env = Some (Var arg_level, param_ty) :: proj_env in
+      let body = translate body_env (size + 1) (size' + 2) body in
 
       CoreClos.ClosLit
         (CodeLit (TupleType (List.rev env_tys), (name, param_ty), body),
           TupleLit (List.rev env_tms))
 
   | FunApp (head, arg) ->
-      let head = translate substs size size' head in
-      let arg = translate substs size size' arg in
+      let head = translate env size size' head in
+      let arg = translate env size size' arg in
       CoreClos.ClosApp (head, arg)
