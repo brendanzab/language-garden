@@ -99,10 +99,10 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
       let body_env = Some (Var size', def_ty) :: env in
       let body = translate body_env (size + 1) (size' + 1) body in
 
-      ClosLang.Let (name, def_ty, def, body)
+      Let (name, def_ty, def, body)
 
-  | BoolLit b -> ClosLang.BoolLit b
-  | IntLit i -> ClosLang.IntLit i
+  | BoolLit b -> BoolLit b
+  | IntLit i -> IntLit i
 
   | PrimApp (prim, args) ->
       let args = List.map (translate env size size') args in
@@ -150,11 +150,11 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
       let body_env = Some (Var param_level, param_ty) :: proj_env in
       let body = translate body_env (size + 1) 2 body in
 
-      ClosLang.ClosLit
+      ClosLit
         (CodeLit (TupleType (List.rev env_tys), (name, param_ty), body),
           TupleLit (List.rev env_tms))
 
   | FunApp (head, arg) ->
       let head = translate env size size' head in
       let arg = translate env size size' arg in
-      ClosLang.ClosApp (head, arg)
+      ClosApp (head, arg)
