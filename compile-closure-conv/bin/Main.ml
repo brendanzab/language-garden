@@ -2,6 +2,7 @@ let run tm =
 
   Format.printf "@.@[<v 2>FunLang:@ %a@]@." (FunLang.pp_tm []) tm;
 
+  let _ = FunLang.Validation.synth [] tm in
   let clos_tm = Compile.translate [] 0 0 tm in
 
   Format.printf "@.@[<v 2>ClosLang:@ %a@]@." (ClosLang.pp_tm []) clos_tm;

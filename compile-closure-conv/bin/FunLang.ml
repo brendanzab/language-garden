@@ -207,3 +207,47 @@ module Semantics = struct
     | _ -> invalid_arg "expected function"
 
 end
+
+
+module Validation = struct
+
+  let rec check context tm expected_ty =
+    match tm, expected_ty with
+    | tm, expected_ty ->
+        let ty = synth context tm in
+        if ty = expected_ty then () else
+          invalid_arg "mismatched types"
+
+  and synth context tm =
+    match tm with
+    | Var x ->
+        begin match List.nth_opt context x with
+        | Some ty -> ty
+        | None -> invalid_arg "unbound variable"
+        end
+    | Let (_, _, def, body) ->
+        let def_ty = synth context def in
+        synth (def_ty :: context) body
+    | BoolLit _ -> BoolType
+    | IntLit _ -> IntType
+    | PrimApp (`Neg, [t]) ->
+        check context t IntType;
+        IntType
+    | PrimApp ((`Add | `Sub | `Mul), [t1; t2]) ->
+        check context t1 IntType;
+        check context t2 IntType;
+        IntType
+    | PrimApp _ ->
+        invalid_arg "invalid prim application"
+    | FunLit (_, param_ty, body) ->
+        let body_ty = synth (param_ty :: context) body in
+        FunType (param_ty, body_ty)
+    | FunApp (head, arg) ->
+        begin match synth context head with
+        | FunType (param_ty, body_ty) ->
+            check context arg param_ty;
+            body_ty
+        | _ -> invalid_arg "expected function"
+        end
+
+end
