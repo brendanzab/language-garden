@@ -1,6 +1,6 @@
 (** {0 Closure conversion} *)
 
-(** Compilation of the {!Core} language to the {!CoreClos} language.
+(** Compilation of the {!ClosLang} language to the {!ClosLang} language.
 
     This transformation converts functions into closures, separating the “code”
     of functions from the captured data. The translation is somewhat fiddly due
@@ -11,10 +11,9 @@
 
 (** {1 Values} *)
 
-(** Simplified values to be used when substituting source terms for target
-    terms. We only need to worry about variables and projections on variables,
-    as those are the only values that will be stored in the environment during
-    compilation.
+(** Values used when substituting source terms for target terms. We only need to
+    worry about variables and projections on variables, as those are the only
+    values that will be stored in the environment during compilation.
 
     Variables are represented as de Bruijn levels which allows us to freely
     weaken the target environment (add new bindings) without needing to worry
@@ -25,7 +24,7 @@ type vtm =
   | TupleProj of int * int
 
 (** Quote a closure converted value back into a target environmnet of a given size. *)
-let quote size' : vtm -> CoreClos.tm =
+let quote size' : vtm -> ClosLang.tm =
   function
   | Var level -> Var (size' - level - 1)
   | TupleProj (level, label) -> TupleProj (Var (size' - level - 1), label)
@@ -38,9 +37,9 @@ let lookup env index =
   Option.get (List.nth env index)
 
 (** Return a bitmap of the of the free variables that occur in a term *)
-let fvs size (tm : Core.tm) : bool list =
+let fvs size (tm : FunLang.tm) : bool list =
   (* Traverse a term, recording any free variables in the supplied bitmap. *)
-  let rec go bs offset : Core.tm -> unit  =
+  let rec go bs offset : FunLang.tm -> unit  =
     function
     | Var index when index < offset -> ()              (* bound *)
     | Var index -> Array.set bs (index - offset) true  (* free *)
@@ -63,7 +62,7 @@ let fvs size (tm : Core.tm) : bool list =
 (** {1 Translation} *)
 
 (** Translation to closure converted types *)
-let rec translate_ty : Core.ty -> CoreClos.ty =
+let rec translate_ty : FunLang.ty -> ClosLang.ty =
   function
   | BoolType -> BoolType
   | IntType -> IntType
@@ -78,7 +77,7 @@ let rec translate_ty : Core.ty -> CoreClos.ty =
     - [size']: the size of the target environment, used for quoting values into
       closure converted terms
 *)
-let rec translate env size size' : Core.tm -> CoreClos.tm =
+let rec translate env size size' : FunLang.tm -> ClosLang.tm =
   function
   | Var index ->
       let vtm, _ = lookup env index in
@@ -91,10 +90,10 @@ let rec translate env size size' : Core.tm -> CoreClos.tm =
       let body_env = Some (Var size', def_ty) :: env in
       let body = translate body_env (size + 1) (size' + 1) body in
 
-      CoreClos.Let (name, def_ty, def, body)
+      ClosLang.Let (name, def_ty, def, body)
 
-  | BoolLit b -> CoreClos.BoolLit b
-  | IntLit i -> CoreClos.IntLit i
+  | BoolLit b -> ClosLang.BoolLit b
+  | IntLit i -> ClosLang.IntLit i
 
   | PrimApp (prim, args) ->
       let args = List.map (translate env size size') args in
@@ -135,11 +134,11 @@ let rec translate env size size' : Core.tm -> CoreClos.tm =
       let body_env = Some (Var arg_level, param_ty) :: proj_env in
       let body = translate body_env (size + 1) (size' + 2) body in
 
-      CoreClos.ClosLit
+      ClosLang.ClosLit
         (CodeLit (TupleType (List.rev env_tys), (name, param_ty), body),
           TupleLit (List.rev env_tms))
 
   | FunApp (head, arg) ->
       let head = translate env size size' head in
       let arg = translate env size size' arg in
-      CoreClos.ClosApp (head, arg)
+      ClosLang.ClosApp (head, arg)

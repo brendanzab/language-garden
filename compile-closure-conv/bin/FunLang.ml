@@ -1,4 +1,8 @@
-(** {0 Core language} *)
+(** {0 Simply typed lambda calculus} *)
+
+(** This is a simply typed lambda calculus with let expressions, booleans and
+    integers. Variables occurances are represented with de Bruijn indices. *)
+
 
 (** {1 Syntax} *)
 

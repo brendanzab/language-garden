@@ -1,19 +1,19 @@
 let run tm =
 
-  Format.printf "@.@[<v 2>CORE:@ %a@]@." (Core.pp_tm []) tm;
+  Format.printf "@.@[<v 2>CORE:@ %a@]@." (FunLang.pp_tm []) tm;
 
   let clos_tm = Compile.translate [] 0 0 tm in
 
-  Format.printf "@.@[<v 2>CLOS:@ %a@]@." (CoreClos.pp_tm []) clos_tm;
+  Format.printf "@.@[<v 2>CLOS:@ %a@]@." (ClosLang.pp_tm []) clos_tm;
   Format.printf "@.";
 
-  let _ = CoreClos.Validation.synth [] clos_tm in ()
+  let _ = ClosLang.Validation.synth [] clos_tm in ()
 
 
 let () =
   Printexc.record_backtrace true;
 
-  let tm = Core.Build.(
+  let tm = FunLang.Build.(
     let_ "a" int_ty (int_lit 1) @@ fun _ ->
     let_ "f" (fun_ty [int_ty] int_ty)
       (fun_lit "x" int_ty @@ fun x -> x)
@@ -24,7 +24,7 @@ let () =
   run tm;
 
 
-  let tm = Core.Build.(
+  let tm = FunLang.Build.(
     let_ "a" int_ty (int_lit 1) @@ fun a ->
     let_ "f" (fun_ty [int_ty] int_ty)
       (fun_lit "x" int_ty @@ fun _ -> a)
@@ -35,7 +35,7 @@ let () =
   run tm;
 
 
-  let tm = Core.Build.(
+  let tm = FunLang.Build.(
     let_ "a" int_ty (int_lit 1) @@ fun a ->
     let_ "f" (fun_ty [int_ty] int_ty)
       (fun_lit "x" int_ty @@ fun x ->
@@ -47,7 +47,7 @@ let () =
   run tm;
 
 
-  let tm = Core.Build.(
+  let tm = FunLang.Build.(
     let_ "x" int_ty (int_lit 1) @@ fun x ->
     let_ "y" int_ty (int_lit 2) @@ fun y ->
     let_ "z" int_ty (int_lit 3) @@ fun _ ->
@@ -61,7 +61,7 @@ let () =
   run tm;
 
 
-  let tm = Core.Build.(
+  let tm = FunLang.Build.(
     let_ "a" int_ty (int_lit 2) @@ fun a ->
     let_ "b" int_ty (int_lit 4) @@ fun _ ->
     let_ "c" int_ty (int_lit 7) @@ fun c ->
@@ -72,7 +72,7 @@ let () =
 
   run tm;
 
-  let tm = Core.Build.(
+  let tm = FunLang.Build.(
     let_ "a" int_ty (int_lit 2) @@ fun a ->
     let_ "b" int_ty (int_lit 5) @@ fun b ->
     let_ "f" (fun_ty [int_ty; int_ty] int_ty)
