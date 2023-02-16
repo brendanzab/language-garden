@@ -1,10 +1,10 @@
 let run tm =
 
-  Format.printf "@.@[<v 2>CORE:@ %a@]@." (FunLang.pp_tm []) tm;
+  Format.printf "@.@[<v 2>FunLang:@ %a@]@." (FunLang.pp_tm []) tm;
 
   let clos_tm = Compile.translate [] 0 0 tm in
 
-  Format.printf "@.@[<v 2>CLOS:@ %a@]@." (ClosLang.pp_tm []) clos_tm;
+  Format.printf "@.@[<v 2>ClosLang:@ %a@]@." (ClosLang.pp_tm []) clos_tm;
   Format.printf "@.";
 
   let _ = ClosLang.Validation.synth [] clos_tm in

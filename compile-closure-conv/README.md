@@ -22,34 +22,34 @@ An implementation of typed closure conversion for a simply typed lambda calculus
 ```sh
 $ closure-conv
 
-CORE:
+FunLang:
   let a : Int := 1;
   let f : Int -> Int := fun (x : Int) => x;
   f 100
 
-CLOS:
+ClosLang:
   let a : Int := 1;
   let f : Int -> Int := ⟪fun (env : ()) (x : Int) => x, ⟨⟩⟫;
   f 100
 
 
-CORE:
+FunLang:
   let a : Int := 1;
   let f : Int -> Int := fun (x : Int) => a;
   f 100
 
-CLOS:
+ClosLang:
   let a : Int := 1;
   let f : Int -> Int := ⟪fun (env : (Int)) (x : Int) => env.0, ⟨a⟩⟫;
   f 100
 
 
-CORE:
+FunLang:
   let a : Int := 1;
   let f : Int -> Int := fun (x : Int) => let y : Int := #add x a; y;
   f 100
 
-CLOS:
+ClosLang:
   let a : Int := 1;
   let f : Int -> Int :=
     ⟪fun (env : (Int)) (x : Int) => let y : Int := #add x env.0; y,
@@ -57,14 +57,14 @@ CLOS:
   f 100
 
 
-CORE:
+FunLang:
   let x : Int := 1;
   let y : Int := 2;
   let z : Int := 3;
   let f : Int -> Int -> Int := fun (w : Int) => #add (#add x y) w;
   f 100
 
-CLOS:
+ClosLang:
   let x : Int := 1;
   let y : Int := 2;
   let z : Int := 3;
@@ -74,14 +74,14 @@ CLOS:
   f 100
 
 
-CORE:
+FunLang:
   let a : Int := 2;
   let b : Int := 4;
   let c : Int := 7;
   let d : Int := 8;
   fun (x : Int) => #add (#mul a x) c
 
-CLOS:
+ClosLang:
   let a : Int := 2;
   let b : Int := 4;
   let c : Int := 7;
@@ -90,14 +90,14 @@ CLOS:
     ⟨a, c⟩⟫
 
 
-CORE:
+FunLang:
   let a : Int := 2;
   let b : Int := 5;
   let f : Int -> Int -> Int :=
     fun (x : Int) => fun (y : Int) => #add (#mul a x) (#mul b y);
   f 7 3
 
-CLOS:
+ClosLang:
   let a : Int := 2;
   let b : Int := 5;
   let f : Int -> Int -> Int :=
