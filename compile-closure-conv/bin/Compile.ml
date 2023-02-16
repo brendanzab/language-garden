@@ -38,9 +38,9 @@ let quote size' : vtm -> ClosLang.tm =
 let lookup env index : vtm * ClosLang.ty =
   Option.get (List.nth env index)
 
-(** Return a bitmap of the of the free variables that occur in a term *)
+(** Return a bitmask of the free variables that occur in a term *)
 let fvs size (tm : FunLang.tm) : bool list =
-  (* Traverse a term, recording any free variables in the supplied bitmap. *)
+  (* Traverse a term, recording any free variables in the supplied bitmask. *)
   let rec go bs offset : FunLang.tm -> unit  =
     function
     | Var index when index < offset -> ()              (* bound *)
@@ -53,9 +53,9 @@ let fvs size (tm : FunLang.tm) : bool list =
     | FunApp (head, arg) -> go bs offset head; go bs offset arg
   in
 
-  (* Initialise an array to serve as a bitmap over the environment *)
+  (* Initialise an array to serve as a bitmask over the environment *)
   let bs = Array.make size false in
-  (* Update the bitmap with the free variables *)
+  (* Update the bitmask with the free variables *)
   go bs 0 tm;
   (* TODO: avoid needing to convert to a list? *)
   Array.to_list bs
