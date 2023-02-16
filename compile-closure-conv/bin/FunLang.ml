@@ -163,7 +163,7 @@ end
 
 module Semantics = struct
 
-  (* {1 Values} *)
+  (** {1 Values} *)
 
   type vtm =
     | BoolLit of bool
@@ -174,7 +174,7 @@ module Semantics = struct
     vtm list * tm
 
 
-  (* {1 Evaluation} *)
+  (** {1 Evaluation} *)
 
   let rec eval env : tm -> vtm =
     function

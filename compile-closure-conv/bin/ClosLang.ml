@@ -120,7 +120,7 @@ and pp_atomic_tm names fmt = function
 
 module Semantics = struct
 
-  (* {1 Values} *)
+  (** {1 Values} *)
 
   type vtm =
     | BoolLit of bool
@@ -130,7 +130,7 @@ module Semantics = struct
     | ClosLit of vtm * vtm                 (** [ ⟪ v1, v2 ⟫  ] *)
 
 
-  (* {1 Evaluation} *)
+  (** {1 Evaluation} *)
 
   let rec eval env : tm -> vtm =
     function
