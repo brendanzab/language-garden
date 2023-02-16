@@ -123,12 +123,18 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
         | [] -> [], [], []
         | false :: bs ->
             let proj_env, env_tms, env_tys = make_env bs (index + 1) in
+            (* This variable is not mentioned in the body of the function, so
+              encountering it in the body of the closure is a bug. *)
             None :: proj_env, env_tms, env_tys
         | true :: bs ->
             let proj_env, env_tms, env_tys = make_env bs (index + 1) in
             let env_vtm, env_ty = lookup env index in
+            (* This variable is mentioned in the body of the function, so add it
+              to the environment tuple and map any occurrences in the body of
+              the closure to projections off the environment parameter. *)
             Some (TupleProj (env_level, List.length env_tms), env_ty) :: proj_env,
-            quote size' env_vtm :: env_tms, env_ty :: env_tys
+            quote size' env_vtm :: env_tms,
+            env_ty :: env_tys
       in
 
       let body_fvs = List.tl (fvs (size + 1) body) in
