@@ -1,31 +1,35 @@
-(** {0 Closure conversion} *)
+(** {0 Closure conversion}
 
-(** Compilation from {!FunLang} to {!ClosLang}.
+    Compilation from {!FunLang} to {!ClosLang}.
 
     This translation converts functions into closures, separating the code of
     functions from the data implicitly captured from the surronding environment.
+    It’s a modified version of the algorithm described in {{:https://doi.org/10.1145/1291201.1291212}
+    “A type-preserving closure conversion in haskell”}, using de Bruijn levels
+    to simplify the handling of variable bindings.
 
-    This translation is made somewhat fiddly due to the decision to use de
-    Bruijn indices in the source and target languages. We might want to try
+    The implementation is somewhat fiddly due to the decision to use de Bruijn
+    indices in the source and target languages. We might want to try
     alpha-renaming variables to make this easier.
 *)
 
 
 (** {1 Values} *)
 
-(** Values used when substituting source terms for target terms. We only need to
-    worry about variables and projections on variables, as those are the only
-    values that will be stored in the environment during compilation.
+(** Closure converted values used when substituting source terms for target
+    terms. We only need to worry about variables and projections on variables,
+    as those are the only values that will be stored in the environment during
+    compilation.
 
-    Variables are represented as de Bruijn levels which allows us to freely
-    weaken the target environment (add new bindings) without needing to worry
-    about shifting de Bruijn indices.
+    Variables are represented using de Bruijn levels, allowing us to freely
+    weaken the target environment (i.e. add new bindings) without needing to
+    worry about shifting de Bruijn indices.
 *)
 type vtm =
   | Var of int
   | TupleProj of int * int
 
-(** Quote a closure converted value back into a target environment of a given size. *)
+(** Quote a value back into a target environment. *)
 let quote size' : vtm -> ClosLang.tm =
   function
   | Var level -> Var (size' - level - 1)
@@ -34,7 +38,8 @@ let quote size' : vtm -> ClosLang.tm =
 
 (** {1 Helper functions} *)
 
-(** Lookup a source variable in the environment *)
+(** Maps a source variable to a closure converted value in the given
+    environment. Raises an exception if no substition was defined. *)
 let lookup env index : vtm * ClosLang.ty =
   Option.get (List.nth env index)
 

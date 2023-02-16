@@ -1,7 +1,8 @@
-(** {0 A functional language with explicit closures} *)
+(** {0 A functional language with explicit closures}
 
-(** This language makes an explicit distinction between the ‘code’ of closures,
-    and the captured data they close over. *)
+    Unlike {!FunLang}, this language makes an explicit distinction between the
+    ‘code’ of closures, and the captured variables they close over.
+*)
 
 
 (** {1 Syntax} *)
