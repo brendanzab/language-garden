@@ -160,6 +160,8 @@ end
 
 module Semantics = struct
 
+  (* {1 Values} *)
+
   type vtm =
     | BoolLit of bool
     | IntLit of int
@@ -168,6 +170,8 @@ module Semantics = struct
   and clos =
     vtm list * tm
 
+
+  (* {1 Evaluation} *)
 
   let rec eval env : tm -> vtm =
     function
@@ -178,21 +182,28 @@ module Semantics = struct
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
-        begin match prim, List.map (eval env) args with
-        | `Neg, [IntLit t1] -> IntLit (-t1)
-        | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-        | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-        | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
-        | _, _ -> invalid_arg "invalid prim application"
-        end
+        prim_app prim (List.map (eval env) args)
     | FunLit (name, param_ty, body) ->
         FunLit (name, param_ty, (env, body))
     | FunApp (head, arg) ->
-        begin match eval env head with
-        | FunLit (_, _, (env, body)) ->
-            let arg = eval env arg in
-            eval (arg :: env) body
-        | _ -> invalid_arg "function expected"
-        end
+        let head = eval env head in
+        let arg = eval env arg in
+        fun_app head arg
+
+
+  (** {1 Eliminators} *)
+
+  and prim_app prim args =
+    match prim, args with
+    | `Neg, [IntLit t1] -> IntLit (-t1)
+    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
+    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
+    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | _, _ -> invalid_arg "invalid prim application"
+
+  and fun_app head arg =
+    match head with
+    | FunLit (_, _, (env, body)) -> eval (arg :: env) body
+    | _ -> invalid_arg "expected function"
 
 end

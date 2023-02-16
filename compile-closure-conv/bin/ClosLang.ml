@@ -119,6 +119,8 @@ and pp_atomic_tm names fmt = function
 
 module Semantics = struct
 
+  (* {1 Values} *)
+
   type vtm =
     | BoolLit of bool
     | IntLit of int
@@ -126,6 +128,8 @@ module Semantics = struct
     | TupleLit of vtm list                 (** [ (v1, ..., v2) ] *)
     | ClosLit of vtm * vtm                 (** [ ⟪ v1, v2 ⟫  ] *)
 
+
+  (* {1 Evaluation} *)
 
   let rec eval env : tm -> vtm =
     function
@@ -136,30 +140,40 @@ module Semantics = struct
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
-        begin match prim, List.map (eval env) args with
-        | `Neg, [IntLit t1] -> IntLit (-t1)
-        | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-        | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-        | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
-        | _, _ -> invalid_arg "invalid prim application"
-        end
+        prim_app prim (List.map (eval env) args)
     | CodeLit (env_ty, (name, param_ty), body) ->
         CodeLit (env_ty, (name, param_ty), body)
     | TupleLit tms ->
         TupleLit (List.map (eval env) tms)
     | TupleProj (head, label) ->
-        begin match eval env head with
-        | TupleLit vtms -> List.nth vtms label
-        | _ -> invalid_arg "expected tuple"
-        end
+        let head = eval env head in
+        tuple_proj head label
     | ClosLit (code, env') -> ClosLit (eval env code, eval env env')
     | ClosApp (head, arg) ->
-        begin match eval env head with
-        | ClosLit (CodeLit (_, _, body), env') ->
-            let arg = eval env arg in
-            eval [arg; env'] body
-        | _ -> invalid_arg "expected closure"
-        end
+        let head = eval env head in
+        let arg = eval env arg in
+        clos_app head arg
+
+
+  (** {1 Eliminators} *)
+
+  and prim_app prim args =
+    match prim, args with
+    | `Neg, [IntLit t1] -> IntLit (-t1)
+    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
+    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
+    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | _, _ -> invalid_arg "invalid prim application"
+
+  and tuple_proj head label =
+    match head with
+    | TupleLit vtms -> List.nth vtms label
+    | _ -> invalid_arg "expected tuple"
+
+  and clos_app head arg =
+    match head with
+    | ClosLit (CodeLit (_, _, body), env) -> eval [arg; env] body
+    | _ -> invalid_arg "expected closure"
 
 end
 
