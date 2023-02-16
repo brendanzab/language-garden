@@ -7,7 +7,8 @@ let run tm =
   Format.printf "@.@[<v 2>CLOS:@ %a@]@." (ClosLang.pp_tm []) clos_tm;
   Format.printf "@.";
 
-  let _ = ClosLang.Validation.synth [] clos_tm in ()
+  let _ = ClosLang.Validation.synth [] clos_tm in
+  let _ = ClosLang.Semantics.eval [] clos_tm in ()
 
 
 let () =
