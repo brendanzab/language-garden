@@ -12,9 +12,9 @@ An implementation of typed closure conversion for a simply typed lambda calculus
 [`FunLang`]: ./bin/FunLang.ml
 [`ClosLang`]: ./bin/ClosLang.ml
 
-| Source      | Translation   | Target       |
-| :---------: | :-----------: | :----------: |
-| [`FunLang`] | [`FunToClos`] | [`ClosLang`] |
+| Translation   | Source      |   | Target       |
+| ------------- | ----------- | - | ------------ |
+| [`FunToClos`] | [`FunLang`] | → | [`ClosLang`] |
 
 [`FunToClos`]: ./bin/FunToClos.ml
 
