@@ -1,4 +1,4 @@
-(** {0 A functional language with explicit closures}
+(** {0 Closure converted functional language}
 
     Unlike {!FunLang}, this language makes an explicit distinction between the
     ‘code’ of closures, and the captured variables they close over.

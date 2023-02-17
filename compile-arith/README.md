@@ -6,6 +6,26 @@ The correctness of compilation and pretty printing are tested with
 [property-based tests](./test/Properties.ml) implemented using the [qcheck]
 library.
 
+## Compiler overview
+
+| Language      | Description                  |
+| ------------- | ---------------------------- |
+| [`TreeLang`]  | Arithmetic expressions as a tree of nested subexpressions |
+| [`AnfLang`]   | Arithmetic expressions in A-Normal Form |
+| [`StackLang`] | Arithmetic expressions as stack machine instructions |
+
+[`TreeLang`]: ./lib/TreeLang.ml
+[`AnfLang`]: ./lib/AnfLang.ml
+[`StackLang`]: ./lib/StackLang.ml
+
+| Source       | Translation     | Target        |
+| :----------: | :-------------: | :-----------: |
+| [`TreeLang`] | [`TreeToAnf`]   | [`AnfLang`]   |
+| [`TreeLang`] | [`TreeToStack`] | [`StackLang`] |
+
+[`TreeToAnf`]: ./lib/TreeToAnf.ml
+[`TreeToStack`]: ./lib/TreeToStack.ml
+
 ## Compilation Targets
 
 The compiler currently targets the following intermediate languages:

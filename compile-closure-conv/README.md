@@ -2,6 +2,22 @@
 
 An implementation of typed closure conversion for a simply typed lambda calculus.
 
+## Compiler overview
+
+| Language     | Description                  |
+| ------------ | ---------------------------- |
+| [`FunLang`]  | Simply typed lambda calculus |
+| [`ClosLang`] | Closure converted functional language |
+
+[`FunLang`]: ./bin/FunLang.ml
+[`ClosLang`]: ./bin/ClosLang.ml
+
+| Source      | Translation   | Target       |
+| :---------: | :-----------: | :----------: |
+| [`FunLang`] | [`FunToClos`] | [`ClosLang`] |
+
+[`FunToClos`]: ./bin/FunToClos.ml
+
 ## Resources
 
 - “Typed closure conversion” <https://doi.org/10.1145/237721.237791>
