@@ -45,7 +45,7 @@ FunLang:
 
 ClosLang:
   let a : Int := 1;
-  let f : Int -> Int := ⟪fun (env : ()) (x : Int) => x, ⟨⟩⟫;
+  let f : Int -> Int := clos(fun (env : ()) (x : Int) => x, ());
   f 100
 
 
@@ -56,20 +56,19 @@ FunLang:
 
 ClosLang:
   let a : Int := 1;
-  let f : Int -> Int := ⟪fun (env : (Int)) (x : Int) => env.0, ⟨a⟩⟫;
+  let f : Int -> Int := clos(fun (env : (Int)) (x : Int) => env.0, (a));
   f 100
 
 
 FunLang:
   let a : Int := 1;
-  let f : Int -> Int := fun (x : Int) => let y : Int := #add x a; y;
+  let f : Int -> Int := fun (x : Int) => let y : Int := x + a; y;
   f 100
 
 ClosLang:
   let a : Int := 1;
   let f : Int -> Int :=
-    ⟪fun (env : (Int)) (x : Int) => let y : Int := #add x env.0; y,
-      ⟨a⟩⟫;
+    clos(fun (env : (Int)) (x : Int) => let y : Int := x + env.0; y, (a));
   f 100
 
 
@@ -77,7 +76,7 @@ FunLang:
   let x : Int := 1;
   let y : Int := 2;
   let z : Int := 3;
-  let f : Int -> Int -> Int := fun (w : Int) => #add (#add x y) w;
+  let f : Int -> Int -> Int := fun (w : Int) => (x + y) + w;
   f 100
 
 ClosLang:
@@ -85,8 +84,7 @@ ClosLang:
   let y : Int := 2;
   let z : Int := 3;
   let f : Int -> Int -> Int :=
-    ⟪fun (env : (Int, Int)) (w : Int) => #add (#add env.0 env.1) w,
-      ⟨x, y⟩⟫;
+    clos(fun (env : (Int, Int)) (w : Int) => (env.0 + env.1) + w, (x, y));
   f 100
 
 
@@ -95,33 +93,32 @@ FunLang:
   let b : Int := 4;
   let c : Int := 7;
   let d : Int := 8;
-  fun (x : Int) => #add (#mul a x) c
+  fun (x : Int) => a * x + c
 
 ClosLang:
   let a : Int := 2;
   let b : Int := 4;
   let c : Int := 7;
   let d : Int := 8;
-  ⟪fun (env : (Int, Int)) (x : Int) => #add (#mul env.0 x) env.1,
-    ⟨a, c⟩⟫
+  clos(fun (env : (Int, Int)) (x : Int) => env.0 * x + env.1, (a, c))
 
 
 FunLang:
   let a : Int := 2;
   let b : Int := 5;
   let f : Int -> Int -> Int :=
-    fun (x : Int) => fun (y : Int) => #add (#mul a x) (#mul b y);
+    fun (x : Int) => fun (y : Int) => a * x + b * y;
   f 7 3
 
 ClosLang:
   let a : Int := 2;
   let b : Int := 5;
   let f : Int -> Int -> Int :=
-    ⟪fun (env : (Int, Int)) (x : Int) =>
-       ⟪fun (env : (Int, Int, Int)) (y : Int) =>
-          #add (#mul env.0 env.2) (#mul env.1 y),
-         ⟨env.0, env.1, x⟩⟫,
-      ⟨a, b⟩⟫;
+    clos(fun (env : (Int, Int)) (x : Int) =>
+         clos(fun (env : (Int, Int, Int)) (y : Int) =>
+              env.0 * env.2 + env.1 * y,
+           (env.0, env.1, x)),
+      (a, b));
   f 7 3
 
 ```

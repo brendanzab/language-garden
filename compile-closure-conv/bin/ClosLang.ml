@@ -16,10 +16,10 @@ type prim = [
 
 let string_of_prim : prim -> string =
   function
-  | `Neg -> "#neg"
-  | `Add -> "#add"
-  | `Sub -> "#sub"
-  | `Mul -> "#mul"
+  | `Neg -> "neg"
+  | `Add -> "add"
+  | `Sub -> "sub"
+  | `Mul -> "mul"
 
 
 type ty =
@@ -83,16 +83,33 @@ let rec pp_tm names fmt = function
         pp_ty param_ty
         (pp_tm [name; "env"]) body
   | tm ->
+      pp_add_tm names fmt tm
+and pp_add_tm names fmt = function
+  | PrimApp (`Add, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ +@ %a@]"
+        (pp_mul_tm names) arg1
+        (pp_add_tm names) arg2
+  | PrimApp (`Sub, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ -@ %a@]"
+        (pp_mul_tm names) arg1
+        (pp_add_tm names) arg2
+  | tm ->
+      pp_mul_tm names fmt tm
+and pp_mul_tm names fmt = function
+  | PrimApp (`Mul, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ *@ %a@]"
+        (pp_app_tm names) arg1
+        (pp_mul_tm names) arg2
+  | tm ->
       pp_app_tm names fmt tm
 and pp_app_tm names fmt = function
   | ClosApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
         (pp_proj_tm names) arg
-  | PrimApp (prim, args) ->
-      Format.fprintf fmt "@[<2>%s@ %a@]"
-        (string_of_prim prim)
-        (Format.pp_print_list (pp_proj_tm names) ~pp_sep:Format.pp_print_space) args
+  | PrimApp (`Neg, [arg]) ->
+      Format.fprintf fmt "@[-%a@]"
+        (pp_atomic_tm names) arg
   | tm ->
       pp_proj_tm names fmt tm
 and pp_proj_tm names fmt = function
@@ -109,12 +126,13 @@ and pp_atomic_tm names fmt = function
   | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i
   | ClosLit (code, env) ->
-      Format.fprintf fmt "@[<2>⟪%a,@ %a⟫@]"
+      Format.fprintf fmt "@[<2>clos(%a,@ %a)@]"
         (pp_tm names) code
         (pp_tm names) env
   | TupleLit tms ->
-      Format.fprintf fmt "@[⟨%a⟩@]"
+      Format.fprintf fmt "@[(%a)@]"
         (Format.pp_print_list (pp_tm names) ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")) tms
+  (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
 
 
