@@ -87,80 +87,6 @@ and pp_atomic_tm names fmt = function
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
 
 
-module Build = struct
-
-  type 'a m = int -> 'a
-
-  let var (level : int) : tm m =
-    fun size ->
-      Var (size - level - 1)
-
-  let bind_var (cont : int -> 'a m) : 'a m =
-    fun size ->
-      cont size (size + 1)
-
-  let scope (cont : tm m -> 'a m) : 'a m =
-    bind_var (fun level -> cont (var level))
-
-
-  (** {1 Types} *)
-
-  let bool_ty : ty = BoolType
-
-  let int_ty : ty = IntType
-
-  let fun_ty (param_tys : ty list) (body_ty : ty) : ty =
-    List.fold_right
-      (fun param_ty acc -> FunType (param_ty, acc))
-      param_tys
-      body_ty
-
-
-  (** {1 Terms} *)
-
-  let let_ (name : string) (def_ty : ty) (def : tm m) (body : tm m -> tm m) : tm m =
-    fun env ->
-      Let (name, def_ty, def env, scope body env)
-
-  let ( let* ) (name, ty, tm) body =
-    let_ name ty tm body
-
-  let bool_lit (b : bool) : tm m =
-    fun _ -> BoolLit b
-
-  let int_lit (i : int) : tm m =
-    fun _ -> IntLit i
-
-  let prim_app (prim : prim) (args : tm m list) : tm m =
-    fun env ->
-      PrimApp (prim, List.map (fun arg -> arg env) args)
-
-  let neg x : tm m =
-    prim_app `Neg [x]
-
-  let ( + ) x y : tm m =
-    prim_app `Add [x; y]
-
-  let ( - ) x y : tm m =
-    prim_app `Sub [x; y]
-
-  let ( * ) x y : tm m =
-    prim_app `Mul [x; y]
-
-  let fun_lit (name : string) (param_ty : ty) (body : tm m -> tm m) : tm m =
-    fun env ->
-      FunLit (name, param_ty, scope body env)
-
-  let fun_app (head : tm m) (arg : tm m) : tm m =
-    fun env ->
-      FunApp (head env, arg env)
-
-  let fun_apps (head : tm m) (args : tm m list) : tm m =
-    List.fold_left fun_app head args
-
-end
-
-
 module Semantics = struct
 
   (** {1 Values} *)
@@ -252,5 +178,79 @@ module Validation = struct
             body_ty
         | _ -> invalid_arg "expected function"
         end
+
+end
+
+
+module Build = struct
+
+  type 'a m = int -> 'a
+
+  let var (level : int) : tm m =
+    fun size ->
+      Var (size - level - 1)
+
+  let bind_var (cont : int -> 'a m) : 'a m =
+    fun size ->
+      cont size (size + 1)
+
+  let scope (cont : tm m -> 'a m) : 'a m =
+    bind_var (fun level -> cont (var level))
+
+
+  (** {1 Types} *)
+
+  let bool_ty : ty = BoolType
+
+  let int_ty : ty = IntType
+
+  let fun_ty (param_tys : ty list) (body_ty : ty) : ty =
+    List.fold_right
+      (fun param_ty acc -> FunType (param_ty, acc))
+      param_tys
+      body_ty
+
+
+  (** {1 Terms} *)
+
+  let let_ (name : string) (def_ty : ty) (def : tm m) (body : tm m -> tm m) : tm m =
+    fun env ->
+      Let (name, def_ty, def env, scope body env)
+
+  let ( let* ) (name, ty, tm) body =
+    let_ name ty tm body
+
+  let bool_lit (b : bool) : tm m =
+    fun _ -> BoolLit b
+
+  let int_lit (i : int) : tm m =
+    fun _ -> IntLit i
+
+  let prim_app (prim : prim) (args : tm m list) : tm m =
+    fun env ->
+      PrimApp (prim, List.map (fun arg -> arg env) args)
+
+  let neg x : tm m =
+    prim_app `Neg [x]
+
+  let ( + ) x y : tm m =
+    prim_app `Add [x; y]
+
+  let ( - ) x y : tm m =
+    prim_app `Sub [x; y]
+
+  let ( * ) x y : tm m =
+    prim_app `Mul [x; y]
+
+  let fun_lit (name : string) (param_ty : ty) (body : tm m -> tm m) : tm m =
+    fun env ->
+      FunLit (name, param_ty, scope body env)
+
+  let fun_app (head : tm m) (arg : tm m) : tm m =
+    fun env ->
+      FunApp (head env, arg env)
+
+  let fun_apps (head : tm m) (args : tm m list) : tm m =
+    List.fold_left fun_app head args
 
 end
