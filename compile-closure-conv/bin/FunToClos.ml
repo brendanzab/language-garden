@@ -36,12 +36,11 @@ let quote size' : vtm -> ClosLang.tm =
   | TupleProj (level, label) -> TupleProj (Var (size' - level - 1), label)
 
 
-(** {1 Helper functions} *)
+(** {1 Environment} *)
 
-(** Maps a source variable to a closure converted value in the given
-    environment. Raises an exception if no substition was defined. *)
-let lookup env index : vtm * ClosLang.ty =
-  Option.get (List.nth env index)
+(** Compilation environment that maps source variables to closure converted
+    values and their types. *)
+type env = (vtm * ClosLang.ty) option list
 
 (** Return a bitmask of the part of an environment that is used in a term *)
 let fvs size (tm : FunLang.tm) : bool array =
@@ -87,7 +86,7 @@ let rec translate_ty : FunLang.ty -> ClosLang.ty =
 let rec translate env size size' : FunLang.tm -> ClosLang.tm =
   function
   | Var index ->
-      let vtm, _ = lookup env index in
+      let vtm, _ = Option.get (List.nth env index) in
       quote size' vtm
 
   | Let (name, def_ty, def, body) ->
