@@ -38,7 +38,7 @@ type tm =
   | CodeLit of ty * (string * ty) * tm    (** [ fun env x => e ] *)
   | TupleLit of tm list                   (** [ (e1, ..., e2) ] *)
   | TupleProj of tm * int                 (** [ e.n ] *)
-  | ClosLit of tm * tm                    (** [ ⟪ e1, e2 ⟫  ] *)
+  | ClosLit of tm * tm                    (** [ clos(e1, e2) ] *)
   | ClosApp of tm * tm                    (** [ e1 e2 ] *)
 
 
@@ -146,9 +146,9 @@ module Semantics = struct
   type vtm =
     | BoolLit of bool
     | IntLit of int
-    | CodeLit of ty * (string * ty) * tm   (** [ λ env. λ x. e ] *)
+    | CodeLit of ty * (string * ty) * tm   (** [ fun env x => e ] *)
     | TupleLit of vtm list                 (** [ (v1, ..., v2) ] *)
-    | ClosLit of vtm * vtm                 (** [ ⟪ v1, v2 ⟫  ] *)
+    | ClosLit of vtm * vtm                 (** [ clos(v1, v2)  ] *)
 
 
   (** {1 Evaluation} *)
@@ -231,9 +231,9 @@ module Validation = struct
     | PrimApp _ ->
         invalid_arg "invalid prim application"
     | CodeLit (env_ty, (_, param_ty), body) ->
-        (* Because code literals capture no variables from the surrounding
-           context, the body of the closure is synthesised in a new context
-           that assumes only the parameter and the environment. *)
+        (* Code literals capture no variables from the surrounding context, so
+          the body of the closure is synthesised in a new context that assumes
+          only the parameter and the environment. *)
         let body_ty = synth [param_ty; env_ty] body in
         CodeType (env_ty, param_ty, body_ty)
     | TupleLit tms ->

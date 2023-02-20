@@ -16,7 +16,7 @@
 
 (** {1 Values} *)
 
-(** Closure converted values used when substituting source terms for target
+(** Values used when substituting source terms for closure converted target
     terms. We only need to worry about variables and projections on variables,
     as those are the only values that will be stored in the environment during
     compilation.
