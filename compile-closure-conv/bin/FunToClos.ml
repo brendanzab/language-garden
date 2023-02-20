@@ -43,27 +43,27 @@ let quote size' : vtm -> ClosLang.tm =
 let lookup env index : vtm * ClosLang.ty =
   Option.get (List.nth env index)
 
-(** Return a bitmask of the free variables that occur in a term *)
-let fvs size (tm : FunLang.tm) : bool list =
+(** Return a bitmask of the part of an environment that is used in a term *)
+let fvs size (tm : FunLang.tm) : bool array =
   (* Traverse a term, recording any free variables in the supplied bitmask. *)
-  let rec go bs offset : FunLang.tm -> unit  =
+  let rec go mask offset : FunLang.tm -> unit  =
     function
-    | Var index when index < offset -> ()              (* bound *)
-    | Var index -> Array.set bs (index - offset) true  (* free *)
-    | Let (_, _, def, body) -> go bs offset def; go bs (offset + 1) body
+    | Var index when index < offset -> ()
+    | Var index -> Array.set mask (size + offset - index - 1) true
+    | Let (_, _, def, body) -> go mask offset def; go mask (offset + 1) body
     | BoolLit _ -> ()
     | IntLit _ -> ()
-    | PrimApp (_, args) -> List.iter (go bs offset) args
-    | FunLit (_, _, body) -> go bs (offset + 1) body
-    | FunApp (head, arg) -> go bs offset head; go bs offset arg
+    | PrimApp (_, args) -> List.iter (go mask offset) args
+    | FunLit (_, _, body) -> go mask (offset + 1) body
+    | FunApp (head, arg) -> go mask offset head; go mask offset arg
   in
 
   (* Initialise an array to serve as a bitmask over the environment *)
-  let bs = Array.make size false in
+  let mask = Array.make size false in
   (* Update the bitmask with the free variables *)
-  go bs 0 tm;
-  (* TODO: avoid needing to convert to a list? *)
-  Array.to_list bs
+  go mask 0 tm;
+
+  mask
 
 
 (** {1 Translation} *)
@@ -123,27 +123,28 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
         - a list of terms (in reverse order) to be used when constructing the environment
         - a list of types (in reverse order) to be used in the type of the environment
       *)
-      let rec make_env bs index =
-        match bs with
+      let rec make_env env mask index =
+        match env with
         | [] -> [], [], []
-        | false :: bs ->
-            let proj_env, env_tms, env_tys = make_env bs (index + 1) in
-            (* This variable is not mentioned in the body of the function, so
-              encountering it in the body of the closure is a bug. *)
-            None :: proj_env, env_tms, env_tys
-        | true :: bs ->
-            let proj_env, env_tms, env_tys = make_env bs (index + 1) in
-            let env_vtm, env_ty = lookup env index in
-            (* This variable is mentioned in the body of the function, so add it
-              to the environment tuple and map any occurrences in the body of
-              the closure to projections off the environment parameter. *)
-            Some (TupleProj (env_level, List.length env_tms), env_ty) :: proj_env,
-            quote size' env_vtm :: env_tms,
-            env_ty :: env_tys
+        | binding :: env ->
+            let proj_env, env_tms, env_tys = make_env env mask (index + 1) in
+            (* Check if the current binding was used *)
+            if mask.(size - index - 1) then
+              (* This binding was used in the body of the function, so add
+                it to the environment tuple and map any occurrences in the body
+                of the closure to projections off the environment parameter. *)
+              let env_vtm, env_ty = Option.get binding in
+              Some (TupleProj (env_level, List.length env_tms), env_ty) :: proj_env,
+              quote size' env_vtm :: env_tms,
+              env_ty :: env_tys
+            else
+              (* This binding was not used in the body of the function, so
+                encountering it in the body of the closure is a bug. *)
+              None :: proj_env, env_tms, env_tys
       in
 
-      let body_fvs = List.tl (fvs (size + 1) body) in
-      let proj_env, env_tms, env_tys = make_env body_fvs 0 in
+      let mask = fvs (size + 1) body in
+      let proj_env, env_tms, env_tys = make_env env mask 0 in
 
       (* Translate the body of the function, assuming only the environment
          parameter and original parameter in the target environment. *)
