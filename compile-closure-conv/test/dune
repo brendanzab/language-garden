@@ -68,3 +68,15 @@
   (package compile-closure-conv)
   (action (diff multiple-captures-3.stdout
                 multiple-captures-3.stdout.tmp)))
+
+
+(rule
+  (with-stdin-from partial-application.txt
+    (with-stdout-to partial-application.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff partial-application.stdout
+                partial-application.stdout.tmp)))

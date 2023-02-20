@@ -1,0 +1,13 @@
+let h : (Int -> Int) -> Int :=
+  fun (x : Int -> Int) => x 7;
+
+let g : Int :=
+  fun (a : Int) =>
+    let f : Int -> Int :=
+      fun (b : Int) => a + b;
+    h f;
+--    ^ lambda lifting would fail here
+--      too few arguments, so requires a closure
+--      see: https://www.cse.chalmers.se/edu/year/2011/course/CompFun/lecture2.pdf#page=21
+
+g
