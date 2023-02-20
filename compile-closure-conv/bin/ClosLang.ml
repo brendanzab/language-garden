@@ -7,21 +7,6 @@
 
 (** {1 Syntax} *)
 
-type prim = [
-  | `Neg
-  | `Add
-  | `Sub
-  | `Mul
-]
-
-let string_of_prim : prim -> string =
-  function
-  | `Neg -> "neg"
-  | `Add -> "add"
-  | `Sub -> "sub"
-  | `Mul -> "mul"
-
-
 type ty =
   | BoolType                        (** [ Bool ] *)
   | IntType                         (** [ Int ] *)
@@ -34,7 +19,7 @@ type tm =
   | Let of string * ty * tm * tm
   | BoolLit of bool
   | IntLit of int
-  | PrimApp of prim * tm list
+  | PrimApp of Prim.t * tm list
   | CodeLit of ty * (string * ty) * tm    (** [ fun env x => e ] *)
   | TupleLit of tm list                   (** [ (e1, ..., e2) ] *)
   | TupleProj of tm * int                 (** [ e.n ] *)

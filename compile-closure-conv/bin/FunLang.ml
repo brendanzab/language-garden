@@ -9,20 +9,6 @@
 
 (** {1 Syntax} *)
 
-type prim = [
-  | `Neg
-  | `Add
-  | `Sub
-  | `Mul
-]
-
-let string_of_prim : prim -> string =
-  function
-  | `Neg -> "neg"
-  | `Add -> "add"
-  | `Sub -> "sub"
-  | `Mul -> "mul"
-
 type ty =
   | BoolType
   | IntType
@@ -33,7 +19,7 @@ type tm =
   | Let of string * ty * tm * tm
   | BoolLit of bool
   | IntLit of int
-  | PrimApp of prim * tm list
+  | PrimApp of Prim.t * tm list
   | FunLit of string * ty * tm
   | FunApp of tm * tm
 
@@ -251,7 +237,7 @@ module Build = struct
   let int_lit (i : int) : tm m =
     fun _ -> IntLit i
 
-  let prim_app (prim : prim) (args : tm m list) : tm m =
+  let prim_app (prim : Prim.t) (args : tm m list) : tm m =
     fun env ->
       PrimApp (prim, List.map (fun arg -> arg env) args)
 
