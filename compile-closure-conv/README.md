@@ -2,6 +2,11 @@
 
 An implementation of typed closure conversion for a simply typed lambda calculus.
 
+Closure conversion is a translation pass that makes implicit variable captures
+explicit, by translating anonymous functions into pairs that contain an
+environment of captures along with the code of the original function, rewritten
+to access captures from the environment explicitly.
+
 ## Compiler overview
 
 | Language     | Description                  |

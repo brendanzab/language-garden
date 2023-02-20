@@ -124,6 +124,9 @@ module Semantics = struct
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
     | FunLit (name, param_ty, body) ->
+        (* We actually do a very naive form of dynamic closure conversion here,
+          just capturing the entire environment along with the code of the body.
+          We’ll do a more thorough job in the compiler though. *)
         FunLit (name, param_ty, (env, body))
     | FunApp (head, arg) ->
         let head = eval env head in

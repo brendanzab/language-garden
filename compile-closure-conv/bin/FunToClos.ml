@@ -119,7 +119,8 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
 
       (* Returns:
 
-        - a mapping from source variables to projections on the environment parameter
+        - an environmnent that maps from source variables that were used in the
+          body of the function to projections off the environment parameter
         - a list of terms (in reverse order) to be used when constructing the environment
         - a list of types (in reverse order) to be used in the type of the environment
       *)
@@ -143,6 +144,10 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
               None :: proj_env, env_tms, env_tys
       in
 
+      (* Create a mask over the environment, recording the free variables used
+         in the body of the function. Note that this will include the parameter
+         of the function – this does not matter however as our iteration over
+         the mask in [make_env] is limited by [env]. *)
       let mask = fvs (size + 1) body in
       let proj_env, env_tms, env_tys = make_env env mask 0 in
 
