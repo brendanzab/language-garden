@@ -115,7 +115,7 @@ module Semantics = struct
 
   let rec eval env : tm -> vtm =
     function
-    | Var x -> List.nth env x
+    | Var index -> List.nth env index
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
@@ -163,8 +163,8 @@ module Validation = struct
 
   and synth context tm =
     match tm with
-    | Var x ->
-        begin match List.nth_opt context x with
+    | Var index ->
+        begin match List.nth_opt context index with
         | Some ty -> ty
         | None -> invalid_arg "unbound variable"
         end
