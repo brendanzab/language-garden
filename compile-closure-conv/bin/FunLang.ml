@@ -107,8 +107,10 @@ module Semantics = struct
     | IntLit of int
     | FunLit of string * ty * clos
 
-  and clos =
-    vtm list * tm
+  and clos = {
+    env : vtm list;
+    body : tm;
+  }
 
 
   (** {1 Evaluation} *)
@@ -124,10 +126,10 @@ module Semantics = struct
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
     | FunLit (name, param_ty, body) ->
-        (* We actually do a very naive form of dynamic closure conversion here,
-          just capturing the entire environment along with the code of the body.
-          We’ll do a more thorough job in the compiler though. *)
-        FunLit (name, param_ty, (env, body))
+        (* We do a naive form of dynamic closure conversion here, just capturing
+          the entire environment along with the code of the body. We’ll do a
+          more thorough job in the compiler though. *)
+        FunLit (name, param_ty, { env; body })
     | FunApp (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
@@ -146,7 +148,7 @@ module Semantics = struct
 
   and fun_app head arg =
     match head with
-    | FunLit (_, _, (env, body)) -> eval (arg :: env) body
+    | FunLit (_, _, { env; body }) -> eval (arg :: env) body
     | _ -> invalid_arg "expected function"
 
 end
