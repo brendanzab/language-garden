@@ -2,10 +2,9 @@
 
 An implementation of typed closure conversion for a simply typed lambda calculus.
 
-Closure conversion is a translation pass that makes implicit variable captures
-explicit, by translating anonymous functions into pairs that contain an
-environment of captures along with the code of the original function, rewritten
-to access captures from the environment explicitly.
+Closure conversion makes implicit variable captures explicit by translating
+anonymous functions into closures that contain the _code_ of the original
+function and an _environment_ of the captured variables.
 
 ## Compiler overview
 
@@ -64,6 +63,7 @@ f 7 3
 - [x] Avoid shifting during translation with de Bruijn levels
 - [ ] Lambda lifting
 - [ ] Parameter list flattening
+- [ ] Recursive functions
 - [ ] Dependently typed closure conversion. See:
   - “Typed closure conversion for the calculus of constructions” <https://doi.org/10.1145/3192366.3192372>
   - “Compiling with Dependent Types” <https://www.williamjbowman.com/resources/wjb-dissertation.pdf>
