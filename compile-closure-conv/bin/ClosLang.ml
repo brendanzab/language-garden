@@ -21,7 +21,7 @@ type tm =
   | IntLit of int
   | PrimApp of Prim.t * tm list
   | CodeLit of ty * (string * ty) * tm    (** [ fun env x => e ] *)
-  | TupleLit of tm list                   (** [ (e1, ..., e2) ] *)
+  | TupleLit of tm list                   (** [ (e1, ..., en) ] *)
   | TupleProj of tm * int                 (** [ e.n ] *)
   | ClosLit of tm * tm                    (** [ clos(e1, e2) ] *)
   | ClosApp of tm * tm                    (** [ e1 e2 ] *)
