@@ -1,3 +1,10 @@
+module ClosLang = ClosureConv.ClosLang
+module FunLang = ClosureConv.FunLang
+module FunLexer = ClosureConv.FunLexer
+module FunParser = ClosureConv.FunParser
+module FunToClos = ClosureConv.FunToClos
+
+
 (** {1 Helper functions} *)
 
 let print_error (pos : Lexing.position) message =

@@ -1,0 +1,8 @@
+(library
+  (name ClosureConv)
+  (public_name compile-closure-conv))
+
+(menhir
+  (modules FunParser))
+
+(ocamllex FunLexer)

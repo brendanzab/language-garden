@@ -13,14 +13,14 @@ function and an _environment_ of the captured variables.
 | [`FunLang`]  | Simply typed lambda calculus |
 | [`ClosLang`] | Closure converted functional language |
 
-[`FunLang`]: ./bin/FunLang.ml
-[`ClosLang`]: ./bin/ClosLang.ml
+[`FunLang`]: ./lib/FunLang.ml
+[`ClosLang`]: ./lib/ClosLang.ml
 
 | Translation   | Source      |   | Target       |
 | ------------- | ----------- | - | ------------ |
 | [`FunToClos`] | [`FunLang`] | → | [`ClosLang`] |
 
-[`FunToClos`]: ./bin/FunToClos.ml
+[`FunToClos`]: ./lib/FunToClos.ml
 
 ## Example
 
