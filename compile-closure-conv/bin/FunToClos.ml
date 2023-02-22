@@ -116,42 +116,41 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
       let env_level = 0 in
       let param_level = 1 in
 
-      (* Returns:
+      (* Create a mask over the environment that records the free variables used
+         in the body of the function. *)
+      let body_fvs = fvs (size + 1) body in
 
-        - an environmnent that maps from source variables that were used in the
-          body of the function to projections off the environment parameter
+      (* Prunes the current environment with the bitmask, returning:
+
+        - an environmnent that substitutes source variables that were used in
+          the body of the function to projections off the environment parameter
         - a list of terms (in reverse order) to be used when constructing the environment
         - a list of types (in reverse order) to be used in the type of the environment
       *)
-      let rec make_env env mask index =
+      let rec make_env env index =
         match env with
         | [] -> [], [], []
         | binding :: env ->
-            let proj_env, env_tms, env_tys = make_env env mask (index + 1) in
-            (* Check if the current binding was used *)
-            if mask.(size - index - 1) then
+            let env', tms, tys = make_env env (index + 1) in
+            (* Check if the current binding was used in the body *)
+            if body_fvs.(size - index - 1) then
               (* This binding was used in the body of the function, so add
                 it to the environment tuple and map any occurrences in the body
                 of the closure to projections off the environment parameter. *)
-              let env_vtm, env_ty = Option.get binding in
-              Some (TupleProj (env_level, List.length env_tms), env_ty) :: proj_env,
-              quote size' env_vtm :: env_tms,
-              env_ty :: env_tys
+              let vtm, ty = Option.get binding in
+              Some (TupleProj (env_level, List.length tms), ty) :: env',
+              quote size' vtm :: tms,
+              ty :: tys
             else
               (* This binding was not used in the body of the function, so
                 encountering it in the body of the closure is a bug. *)
-              None :: proj_env, env_tms, env_tys
+              None :: env', tms, tys
       in
 
-      (* Create a mask over the environment, recording the free variables used
-         in the body of the function. Note that this will include the parameter
-         of the function – this does not matter however as our iteration over
-         the mask in [make_env] is limited by [env]. *)
-      let mask = fvs (size + 1) body in
-      let proj_env, env_tms, env_tys = make_env env mask 0 in
+      (* Construct the environments *)
+      let proj_env, env_tms, env_tys = make_env env 0 in
 
-      (* Translate the body of the function, assuming only the environment
-         parameter and original parameter in the target environment. *)
+      (* Translate the body of the function *)
       let body_env = Some (Var param_level, param_ty) :: proj_env in
       let body = translate body_env (size + 1) 2 body in
 
