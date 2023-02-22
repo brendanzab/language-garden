@@ -47,12 +47,17 @@ and pp_atomic_ty fmt =
 
 
 let rec pp_tm names fmt = function
-  | Let (name, def_ty, def, body) ->
-      Format.fprintf fmt "@[<2>@[let@ %s@ :@ %a@ :=@]@ %a;@]@ %a"
-        name
-        pp_ty def_ty
-        (pp_tm names) def
-        (pp_tm (name :: names)) body
+  | Let _ as tm ->
+      let rec go names fmt = function
+        | Let (name, def_ty, def, body) ->
+            Format.fprintf fmt "@[<2>@[let @[<2>@[%s :@]@ %a@]@ :=@]@ @[%a;@]@]@ %a"
+              name
+              pp_ty def_ty
+              (pp_tm names) def
+              (go (name :: names)) body
+        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+      in
+      go names fmt tm
   | FunLit (name, param_ty, body) ->
       Format.fprintf fmt "@[@[fun@ @[(%s@ :@ %a)@]@ =>@]@ %a@]"
         name

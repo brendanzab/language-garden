@@ -1,0 +1,8 @@
+let add-captured : Int -> Int :=
+  let x : Int := 5;
+  let add-x : Int -> Int :=
+    fun (y : Int) => x + y;
+
+  add-x;
+
+add-captured 3 + 4

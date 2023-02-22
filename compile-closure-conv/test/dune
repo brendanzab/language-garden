@@ -71,12 +71,24 @@
 
 
 (rule
-  (with-stdin-from partial-application.txt
-    (with-stdout-to partial-application.stdout.tmp
+  (with-stdin-from partial-application-1.txt
+    (with-stdout-to partial-application-1.stdout.tmp
       (run %{bin:closure-conv} elab))))
 
 (rule
   (alias runtest)
   (package compile-closure-conv)
-  (action (diff partial-application.stdout
-                partial-application.stdout.tmp)))
+  (action (diff partial-application-1.stdout
+                partial-application-1.stdout.tmp)))
+
+
+(rule
+  (with-stdin-from partial-application-2.txt
+    (with-stdout-to partial-application-2.stdout.tmp
+      (run %{bin:closure-conv} elab))))
+
+(rule
+  (alias runtest)
+  (package compile-closure-conv)
+  (action (diff partial-application-2.stdout
+                partial-application-2.stdout.tmp)))
