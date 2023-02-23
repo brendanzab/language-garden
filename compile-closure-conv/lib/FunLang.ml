@@ -169,7 +169,10 @@ module Validation = struct
     | tm, expected_ty ->
         let ty = synth context tm in
         if ty = expected_ty then () else
-          invalid_arg "mismatched types"
+          invalid_arg
+            (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+              pp_ty expected_ty
+              pp_ty ty)
 
   and synth context tm =
     match tm with
@@ -200,7 +203,9 @@ module Validation = struct
         | FunType (param_ty, body_ty) ->
             check context arg param_ty;
             body_ty
-        | _ -> invalid_arg "expected function"
+        | ty ->
+            invalid_arg
+              (Format.asprintf "expected function but found term of type %a" pp_ty ty)
         end
 
 end

@@ -200,7 +200,10 @@ module Validation = struct
     | tm, expected_ty ->
         let ty = synth context tm in
         if ty = expected_ty then () else
-          invalid_arg "mismatched types"
+          invalid_arg
+            (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+              pp_ty expected_ty
+              pp_ty ty)
 
   and synth context tm =
     match tm with
@@ -236,23 +239,32 @@ module Validation = struct
         | TupleType tys ->
             begin match List.nth_opt tys label with
             | Some ty -> ty
-            | None -> invalid_arg "invalid tuple label"
+            | None ->
+                invalid_arg
+                  (Format.asprintf "projected %i on a tuple with %i elements"
+                    label (List.length tys))
             end
-        | _ -> invalid_arg "not a tuple"
+        | ty ->
+            invalid_arg
+              (Format.asprintf "expected tuple but found term of type %a" pp_ty ty)
         end
     | ClosLit (code, env) ->
         begin match synth context code with
         | CodeType (env_ty, param_ty, body_ty) ->
             check context env env_ty;
             ClosType (param_ty, body_ty)
-        | _ -> invalid_arg "expected code"
+        | ty ->
+            invalid_arg
+              (Format.asprintf "expected code but found term of type %a" pp_ty ty)
         end
     | ClosApp (head, arg) ->
         begin match synth context head with
         | ClosType (param_ty, body_ty) ->
             check context arg param_ty;
             body_ty
-        | _ -> invalid_arg "expected closure"
+        | ty ->
+            invalid_arg
+              (Format.asprintf "expected closure but found term of type %a" pp_ty ty)
         end
 
 end
