@@ -52,25 +52,27 @@ and pp_atomic_ty fmt =
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
+let pp_name_ann fmt (name, ty) =
+  Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
+
+let pp_param fmt (name, ty) =
+  Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
 
 let rec pp_tm names fmt = function
   | Let _ as tm ->
       let rec go names fmt = function
         | Let (name, def_ty, def, body) ->
-            Format.fprintf fmt "@[<2>@[let @[<2>@[%s :@]@ %a@]@ :=@]@ @[%a;@]@]@ %a"
-              name
-              pp_ty def_ty
+            Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+              pp_name_ann (name, def_ty)
               (pp_tm names) def
               (go (name :: names)) body
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
       go names fmt tm
   | CodeLit (env_ty, (name, param_ty), body) ->
-      Format.fprintf fmt "@[@[fun@ @[(%s@ :@ %a)@]@ @[(%s@ :@ %a)@]@ =>@]@ %a@]"
-        "env"
-        pp_ty env_ty
-        name
-        pp_ty param_ty
+      Format.fprintf fmt "@[@[fun@ %a@ %a@ =>@]@ %a@]"
+        pp_param ("env", env_ty)
+        pp_param (name, param_ty)
         (pp_tm [name; "env"]) body
   | tm ->
       pp_add_tm names fmt tm
