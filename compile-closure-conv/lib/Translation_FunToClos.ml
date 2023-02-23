@@ -1,17 +1,20 @@
-(** {0 Closure conversion}
+(** {0 Typed closure conversion on nameless terms}
 
-    Compilation from {!FunLang} to {!ClosLang}.
+    Translation from {!Lang.Fun} to {!Lang.Clos}.
 
     This translation converts functions into closures, separating the code of
-    functions from the data implicitly captured from the surronding environment.
+    functions from the data implicitly captured from the surrounding environment.
     It’s a modified version of the algorithm described in {{:https://doi.org/10.1145/1291201.1291212}
     “A type-preserving closure conversion in haskell”}, using de Bruijn levels
     to simplify the handling of variable bindings.
 
     The implementation is somewhat fiddly due to the decision to use de Bruijn
-    indices in the source and target languages. We might want to try
-    alpha-renaming variables to make this easier.
+    indices in the source and target languages. {!Translate.FunAToClosA} uses
+    alpha renamed terms, which simplifies this somewhat.
 *)
+
+module Fun = Lang.Fun
+module Clos = Lang.Clos
 
 
 (** {1 Values} *)
@@ -30,7 +33,7 @@ type vtm =
   | TupleProj of int * int
 
 (** Quote a value back into a target environment. *)
-let quote size' : vtm -> ClosLang.tm =
+let quote size' : vtm -> Clos.tm =
   function
   | Var level -> Var (size' - level - 1)
   | TupleProj (level, label) -> TupleProj (Var (size' - level - 1), label)
@@ -40,13 +43,13 @@ let quote size' : vtm -> ClosLang.tm =
 
 (** Compilation environment that maps source variables to closure converted
     values and their types. *)
-type env = (vtm * ClosLang.ty) option list
+type env = (vtm * Clos.ty) option list
 
 
 (** {1 Translation} *)
 
 (** Translation to closure converted types *)
-let rec translate_ty : FunLang.ty -> ClosLang.ty =
+let rec translate_ty : Fun.ty -> Clos.ty =
   function
   | BoolType -> BoolType
   | IntType -> IntType
@@ -61,7 +64,7 @@ let rec translate_ty : FunLang.ty -> ClosLang.ty =
     - [size']: the size of the target environment, used for quoting values into
       closure converted terms
 *)
-let rec translate env size size' : FunLang.tm -> ClosLang.tm =
+let rec translate env size size' : Fun.tm -> Clos.tm =
   function
   | Var index ->
       let vtm, _ = Option.get (List.nth env index) in
@@ -96,7 +99,7 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
 
       (* Create a mask over the environment that records the free variables used
          in the body of the function. *)
-      let body_fvs = FunLang.fvs (size + 1) body in
+      let body_fvs = Fun.fvs (size + 1) body in
 
       (* Prunes the current environment with the bitmask, returning:
 

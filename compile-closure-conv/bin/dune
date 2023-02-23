@@ -3,4 +3,5 @@
   (public_name closure-conv)
   (package compile-closure-conv)
   (libraries
+    cmdliner
     compile-closure-conv))

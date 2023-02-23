@@ -6,6 +6,7 @@ homepage: "https://github.com/brendanzab/language-garden"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.0"}
+  "cmdliner" {>= "v1.1.1"}
   "menhir" {build}
   "odoc" {with-doc}
 ]

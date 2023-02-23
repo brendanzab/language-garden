@@ -1,5 +1,5 @@
 {
-  open FunParser
+  open Lang_Fun_Parser
 
   exception Error
 }

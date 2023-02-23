@@ -40,6 +40,7 @@
 (package
   (name compile-closure-conv)
   (depends
+    (cmdliner (>= v1.1.1))
     (menhir :build)))
 
 ; Elaboration

@@ -87,7 +87,7 @@ let rec pp_tm names fmt = function
       in
       go names fmt tm
   | FunLit (name, param_ty, body) ->
-      Format.fprintf fmt "@[@[fun@ @%a@ =>@]@ %a@]"
+      Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
         pp_param (name, param_ty)
         (pp_tm (name :: names)) body
   | tm ->

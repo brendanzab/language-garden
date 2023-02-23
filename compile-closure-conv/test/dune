@@ -1,7 +1,7 @@
 (rule
   (with-stdin-from capture-nothing.txt
     (with-stdout-to capture-nothing.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
@@ -13,7 +13,7 @@
 (rule
   (with-stdin-from capture-simple.txt
     (with-stdout-to capture-simple.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
@@ -25,7 +25,7 @@
 (rule
   (with-stdin-from capture-with-local-let.txt
     (with-stdout-to capture-with-local-let.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
@@ -37,7 +37,7 @@
 (rule
   (with-stdin-from multiple-captures-1.txt
     (with-stdout-to multiple-captures-1.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
@@ -49,7 +49,7 @@
 (rule
   (with-stdin-from multiple-captures-2.txt
     (with-stdout-to multiple-captures-2.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
@@ -61,7 +61,7 @@
 (rule
   (with-stdin-from multiple-captures-3.txt
     (with-stdout-to multiple-captures-3.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
@@ -73,7 +73,7 @@
 (rule
   (with-stdin-from partial-application-1.txt
     (with-stdout-to partial-application-1.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
@@ -85,7 +85,7 @@
 (rule
   (with-stdin-from partial-application-2.txt
     (with-stdout-to partial-application-2.stdout.tmp
-      (run %{bin:closure-conv} elab))))
+      (run %{bin:closure-conv} compile --target=clos))))
 
 (rule
   (alias runtest)
