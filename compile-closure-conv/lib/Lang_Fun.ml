@@ -28,8 +28,9 @@ type tm =
 exception UnboundName of string
 
 
-(** Return a bitmask (indexed by level) of the part of an environment that is
-    used in a term. *)
+(** Compute the part of an environment that is used in a term. Returns a bitmask
+    over the environment (indexed by level), raising an exception if a variable
+    is found that is greater than or equal to [size]. *)
 let fvs size tm : bool array =
   (* Traverse a term, recording any free variables in the supplied bitmask. *)
   let rec go mask offset =
