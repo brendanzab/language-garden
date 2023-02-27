@@ -42,28 +42,6 @@ let quote size' : vtm -> ClosLang.tm =
     values and their types. *)
 type env = (vtm * ClosLang.ty) option list
 
-(** Return a bitmask of the part of an environment that is used in a term *)
-let fvs size (tm : FunLang.tm) : bool array =
-  (* Traverse a term, recording any free variables in the supplied bitmask. *)
-  let rec go mask offset : FunLang.tm -> unit  =
-    function
-    | Var index when index < offset -> ()
-    | Var index -> Array.set mask (size + offset - index - 1) true
-    | Let (_, _, def, body) -> go mask offset def; go mask (offset + 1) body
-    | BoolLit _ -> ()
-    | IntLit _ -> ()
-    | PrimApp (_, args) -> List.iter (go mask offset) args
-    | FunLit (_, _, body) -> go mask (offset + 1) body
-    | FunApp (head, arg) -> go mask offset head; go mask offset arg
-  in
-
-  (* Initialise an array to serve as a bitmask over the environment *)
-  let mask = Array.make size false in
-  (* Update the bitmask with the free variables *)
-  go mask 0 tm;
-
-  mask
-
 
 (** {1 Translation} *)
 
@@ -118,7 +96,7 @@ let rec translate env size size' : FunLang.tm -> ClosLang.tm =
 
       (* Create a mask over the environment that records the free variables used
          in the body of the function. *)
-      let body_fvs = fvs (size + 1) body in
+      let body_fvs = FunLang.fvs (size + 1) body in
 
       (* Prunes the current environment with the bitmask, returning:
 

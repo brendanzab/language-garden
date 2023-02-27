@@ -28,6 +28,30 @@ type tm =
 exception UnboundName of string
 
 
+(** Return a bitmask (indexed by level) of the part of an environment that is
+    used in a term. *)
+let fvs size tm : bool array =
+  (* Traverse a term, recording any free variables in the supplied bitmask. *)
+  let rec go mask offset =
+    function
+    | Var index when index < offset -> ()
+    | Var index -> Array.set mask (size + offset - index - 1) true
+    | Let (_, _, def, body) -> go mask offset def; go mask (offset + 1) body
+    | BoolLit _ -> ()
+    | IntLit _ -> ()
+    | PrimApp (_, args) -> List.iter (go mask offset) args
+    | FunLit (_, _, body) -> go mask (offset + 1) body
+    | FunApp (head, arg) -> go mask offset head; go mask offset arg
+  in
+
+  (* Initialise an array to serve as a bitmask over the environment *)
+  let mask = Array.make size false in
+  (* Update the bitmask with the free variables *)
+  go mask 0 tm;
+
+  mask
+
+
 (** {1 Pretty printing} *)
 
 let rec pp_ty fmt =
