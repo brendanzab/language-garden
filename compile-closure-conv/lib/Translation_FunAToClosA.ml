@@ -92,7 +92,7 @@ let rec translate env : FunA.tm -> ClosA.tm =
         translate body_env body in
 
       (* Lists of terms and types to be used when explicitly constructing the
-         envrionment of the closure *)
+         environment of the closure *)
       let env_tys = List.map (fun id -> snd (IdMap.find id env)) body_fvs in
       let env_tms = List.map (fun id -> fst (IdMap.find id env)) body_fvs in
 
