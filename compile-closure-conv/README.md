@@ -18,7 +18,7 @@ de Bruijn indexed terms, the other between alpha-renamed terms.
                         │
            ╭────────────┴────────────╮
            │                         │
-Translation.FunToClos     Translation.FunAToClosA
+Translation.FunToClos     Translation.FunToFunA
            │                         │
            ▼                         ▼
      ┌───────────┐             ┌───────────┐
@@ -56,6 +56,9 @@ Translation.FunToClos     Translation.FunAToClosA
 [`Translation.FunToClos`]: ./lib/Translation_FunToClos.ml
 [`Translation.FunAToClosA`]: ./lib/Translation_FunAToClosA.ml
 
+An evaluator and type checker is implemented for each intermediate language.
+Every translation pass should produce well-typed programs in the target language.
+
 ## Example
 
 Source term:
@@ -71,7 +74,7 @@ let f : Int -> Int -> Int :=
 f 7 3
 ```
 
-Closure compiled term:
+Closure converted term:
 
 <!-- $MDX file=test/multiple-captures-3.stdout -->
 ```text
