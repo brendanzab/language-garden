@@ -202,8 +202,8 @@ module Semantics = struct
     | ClosLit (CodeLit ((env_var, _), (param_var, _), body), env) ->
         let env =
           VarMap.empty
-            |> VarMap.add env_var env
-            |> VarMap.add param_var arg
+          |> VarMap.add env_var env
+          |> VarMap.add param_var arg
         in
         eval env body
     | _ -> invalid_arg "expected closure"
