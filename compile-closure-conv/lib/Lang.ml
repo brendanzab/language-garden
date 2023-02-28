@@ -23,3 +23,6 @@ module FunA = Lang_FunA
 
 (** Closure converted language (alpha-renamed) *)
 module ClosA = Lang_ClosA
+
+(** Lambda lifted language (alpha-renamed) *)
+module LiftedA = Lang_LiftedA

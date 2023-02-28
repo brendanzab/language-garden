@@ -12,7 +12,6 @@
 module FunA = Lang.FunA
 module ClosA = Lang.ClosA
 
-(** We’ll mainly be mapping source variables to target terms *)
 module VarMap = FunA.VarMap
 module VarSet = FunA.VarSet
 

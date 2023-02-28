@@ -39,6 +39,7 @@ type compile_target = [
   | `Clos
   | `FunA
   | `ClosA
+  | `LiftedA
 ]
 
 let compile : compile_target -> unit =
@@ -78,18 +79,38 @@ let compile : compile_target -> unit =
       let _ = Lang.ClosA.Validation.synth Lang.ClosA.VarMap.empty closa_tm in
       let _ = Lang.ClosA.Semantics.eval Lang.ClosA.VarMap.empty closa_tm in ()
 
+  | `LiftedA ->
+      let fun_tm = parse_expr "<input>" stdin in
+
+      let _ = Lang.Fun.Validation.synth [] fun_tm in
+      let funa_tm = Translation.FunToFunA.translate [] fun_tm in
+      let _ = Lang.FunA.Validation.synth Lang.FunA.VarMap.empty funa_tm in
+      let lifteda_tm = Translation.FunAToLiftedA.translate funa_tm in
+
+      Format.printf "@[<v>%a@]@." (Lang.LiftedA.pp_lifted_tm) lifteda_tm;
+
+      let _ = Lang.LiftedA.Validation.synth_lifted lifteda_tm in
+      let _ = Lang.LiftedA.Semantics.eval_lifted lifteda_tm in ()
+
 
 (** {1 CLI options} *)
 
 let cmd =
   let open Cmdliner in
 
+  let targets = [
+    "clos", `Clos;
+    "fun-a", `FunA;
+    "clos-a", `ClosA;
+    "lifted-a", `LiftedA;
+  ] in
+
   let compile_target : compile_target Term.t =
     Arg.(required
-      & opt (some & enum ["clos", `Clos; "fun-a", `FunA; "clos-a", `ClosA]) None
+      & opt (some & enum targets) None
       & info ["target"] ~docv:"TARGET"
           ~doc:"The target language to compile to. The value of $(docv) must \
-                be one of $(b,clos), $(b,fun-a) or $(b,clos-a).")
+                be one of $(b,clos), $(b,fun-a), $(b,clos-a) or $(b,lifted-a).")
   in
 
   Cmd.group (Cmd.info "compile-closure-conv") [

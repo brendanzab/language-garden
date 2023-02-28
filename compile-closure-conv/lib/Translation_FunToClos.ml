@@ -11,6 +11,9 @@
     The implementation is somewhat fiddly due to the decision to use de Bruijn
     indices in the source and target languages. {!Translate.FunAToClosA} uses
     alpha renamed terms, which simplifies this somewhat.
+
+    Note that we don’t do any uncurrying during this translation, which results
+    in more closures being constructed than might otherwise be necessary.
 *)
 
 module Fun = Lang.Fun

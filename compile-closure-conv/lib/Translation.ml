@@ -8,3 +8,6 @@ module FunToClos = Translation_FunToClos
 
 (** Typed closure conversion on alpha renamed terms *)
 module FunAToClosA = Translation_FunAToClosA
+
+(** Typed lambda lifting on alpha renamed terms *)
+module FunAToLiftedA = Translation_FunAToLiftedA
