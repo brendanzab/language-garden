@@ -81,11 +81,11 @@ Closure converted term:
 let a : Int := 2;
 let b : Int := 5;
 let f : Int -> Int -> Int :=
-  clos(fun (env : (Int, Int)) (x : Int) =>
-       clos(fun (env : (Int, Int, Int)) (y : Int) =>
+  clos(fun (env : {Int, Int}) (x : Int) =>
+       clos(fun (env : {Int, Int, Int}) (y : Int) =>
             env.0 * env.2 + env.1 * y,
-         (env.0, env.1, x)),
-    (a, b));
+         {env.0, env.1, x}),
+    {a, b});
 f 7 3
 ```
 

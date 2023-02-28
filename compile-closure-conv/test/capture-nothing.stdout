@@ -1,3 +1,3 @@
 let a : Int := 1;
-let f : Int -> Int := clos(fun (env : ()) (x : Int) => x, ());
+let f : Int -> Int := clos(fun (env : {}) (x : Int) => x, {});
 f 100

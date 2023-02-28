@@ -59,7 +59,7 @@ and pp_atomic_ty fmt =
         pp_ty param_ty
         pp_ty body_ty
   | TupleType tys ->
-      Format.fprintf fmt "@[(%a)@]"
+      Format.fprintf fmt "@[{%a}@]"
         (Format.pp_print_list pp_ty ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")) tys
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
@@ -141,11 +141,8 @@ and pp_atomic_tm fmt = function
       Format.fprintf fmt "@[<2>clos(%a,@ %a)@]"
         pp_tm code
         pp_tm env
-  | TupleLit [tm] ->
-      Format.fprintf fmt "@[(%a,)@]"
-        pp_tm tm
   | TupleLit tms ->
-      Format.fprintf fmt "@[(%a)@]"
+      Format.fprintf fmt "@[{%a}@]"
         (Format.pp_print_list pp_tm ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")) tms
   (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" pp_tm tm
