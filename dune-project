@@ -52,6 +52,9 @@
     (menhir :build)))
 
 (package
+  (name elab-stlc-unification))
+
+(package
   (name elab-record-patching)
   (depends
     (cmdliner (>= v1.1.1))

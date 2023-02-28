@@ -136,6 +136,13 @@
             ];
           };
 
+          elab-stlc-unification = ocamlPackages.buildDunePackage {
+            pname = "elab-stlc-unification";
+            version = "0";
+            src = ./.;
+            duneVersion = "3";
+          };
+
           elab-record-patching = ocamlPackages.buildDunePackage {
             pname = "elab-record-patching";
             version = "0";
