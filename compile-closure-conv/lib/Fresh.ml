@@ -7,13 +7,16 @@ module type S = sig
   type t = private int
 
   (** Returns a fresh id *)
-  val fresh : unit -> t
+  val fresh : string -> t
 
   (** Total ordering of ids *)
   val compare : t -> t -> int
 
   (** Convert an id to an integer *)
   val to_int : t -> int
+
+  (** Recover the name that an id was generated with (not guaranteed to be unique) *)
+  val name : t -> string
 
 end
 
@@ -22,15 +25,27 @@ module Make () : S = struct
 
   type t = int
 
+  (** Fresh variable state *)
   let next_id = ref 0
 
-  let fresh () =
+  (** For storing the variable names *)
+  module IdMap = Map.Make (Int)
+
+  (** A global store of variable names. This might not be an ideal approach
+      more long-running compilers (it’s a memory leak), but it saves us having
+      to cart around the names separately. *)
+  let names = ref IdMap.empty
+
+  let fresh name =
     let id = !next_id in
     incr next_id;
+    names := IdMap.add id name !names;
     id
 
   let compare = Int.compare
 
   let to_int id = id
+
+  let name id = IdMap.find id !names
 
 end

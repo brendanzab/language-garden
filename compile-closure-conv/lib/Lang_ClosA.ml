@@ -6,10 +6,10 @@
 
 (** {1 Variables} *)
 
-module Id = Fresh.Make ()
+module Var = Fresh.Make ()
 
-module IdMap = Map.Make (Id)
-module IdSet = Set.Make (Id)
+module VarMap = Map.Make (Var)
+module VarSet = Set.Make (Var)
 
 
 (** {1 Syntax} *)
@@ -21,18 +21,13 @@ type ty =
   | TupleType of ty list            (** [ (t1, ... tn) ] *)
   | ClosType of ty * ty             (** [ t1 -> t2 ] *)
 
-type var = {
-  name : string;
-  id : Id.t;
-}
-
 type tm =
-  | Var of var
-  | Let of var * ty * tm * tm
+  | Var of Var.t
+  | Let of Var.t * ty * tm * tm
   | BoolLit of bool
   | IntLit of int
   | PrimApp of Prim.t * tm list
-  | CodeLit of (var * ty) * (var * ty) * tm
+  | CodeLit of (Var.t * ty) * (Var.t * ty) * tm
   | TupleLit of tm list
   | TupleProj of tm * int
   | ClosLit of tm * tm
@@ -66,8 +61,8 @@ and pp_atomic_ty fmt =
 
 let pp_var fmt var =
   Format.fprintf fmt "%s%i"
-    var.name
-    (Id.to_int var.id)
+    (Var.name var)
+    (Var.to_int var)
 
 let pp_name_ann fmt (var, ty) =
   Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
@@ -155,7 +150,7 @@ module Semantics = struct
   type vtm =
     | BoolLit of bool
     | IntLit of int
-    | CodeLit of (var * ty) * (var * ty) * tm
+    | CodeLit of (Var.t * ty) * (Var.t * ty) * tm
     | TupleLit of vtm list
     | ClosLit of vtm * vtm
 
@@ -164,10 +159,10 @@ module Semantics = struct
 
   let rec eval env : tm -> vtm =
     function
-    | Var var -> IdMap.find var.id env
+    | Var var -> VarMap.find var env
     | Let (def_var, _, def, body) ->
         let def = eval env def in
-        eval (IdMap.add def_var.id def env) body
+        eval (VarMap.add def_var def env) body
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
@@ -206,9 +201,9 @@ module Semantics = struct
     match head with
     | ClosLit (CodeLit ((env_var, _), (param_var, _), body), env) ->
         let env =
-          IdMap.empty
-            |> IdMap.add env_var.id env
-            |> IdMap.add param_var.id arg
+          VarMap.empty
+            |> VarMap.add env_var env
+            |> VarMap.add param_var arg
         in
         eval env body
     | _ -> invalid_arg "expected closure"
@@ -231,13 +226,13 @@ module Validation = struct
   and synth context tm =
     match tm with
     | Var var ->
-        begin match IdMap.find_opt var.id context with
+        begin match VarMap.find_opt var context with
         | Some ty -> ty
         | None -> invalid_arg "unbound variable"
         end
     | Let (def_var, _, def, body) ->
         let def_ty = synth context def in
-        synth (IdMap.add def_var.id def_ty context) body
+        synth (VarMap.add def_var def_ty context) body
     | BoolLit _ -> BoolType
     | IntLit _ -> IntType
     | PrimApp (`Neg, [t]) ->
@@ -254,9 +249,9 @@ module Validation = struct
           the body of the closure is synthesised in a new context that assumes
           only the parameter and the environment. *)
         let body_context =
-          IdMap.empty
-          |> IdMap.add env_var.id env_ty
-          |> IdMap.add param_var.id param_ty
+          VarMap.empty
+          |> VarMap.add env_var env_ty
+          |> VarMap.add param_var param_ty
         in
         let body_ty = synth body_context body in
         CodeType (env_ty, param_ty, body_ty)

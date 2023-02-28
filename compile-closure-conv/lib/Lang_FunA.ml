@@ -6,41 +6,36 @@
 
 (** {1 Variables} *)
 
-module Id = Fresh.Make ()
+module Var = Fresh.Make ()
 
-module IdMap = Map.Make (Id)
-module IdSet = Set.Make (Id)
+module VarMap = Map.Make (Var)
+module VarSet = Set.Make (Var)
 
 
 (** {1 Syntax} *)
 
 type ty = Lang_Fun.ty
 
-type var = {
-  name : string;
-  id : Id.t;
-}
-
 type tm =
-  | Var of var
-  | Let of var * ty * tm * tm
+  | Var of Var.t
+  | Let of Var.t * ty * tm * tm
   | BoolLit of bool
   | IntLit of int
   | PrimApp of Prim.t * tm list
-  | FunLit of var * ty * tm
+  | FunLit of Var.t * ty * tm
   | FunApp of tm * tm
 
 
 (** Return the part of an environment that is used in a term *)
-let rec fvs : tm -> IdSet.t =
+let rec fvs : tm -> VarSet.t =
   function
-  | Var var -> IdSet.singleton var.id
-  | Let (def_var, _, def, body) -> IdSet.union (fvs def) (IdSet.remove def_var.id (fvs body))
-  | BoolLit _ -> IdSet.empty
-  | IntLit _ -> IdSet.empty
-  | PrimApp (_, args) -> List.fold_left IdSet.union IdSet.empty (List.map fvs args)
-  | FunLit (param_var, _, body) -> IdSet.remove param_var.id (fvs body)
-  | FunApp (head, arg) -> IdSet.union (fvs head) (fvs arg)
+  | Var var -> VarSet.singleton var
+  | Let (def_var, _, def, body) -> VarSet.union (fvs def) (VarSet.remove def_var (fvs body))
+  | BoolLit _ -> VarSet.empty
+  | IntLit _ -> VarSet.empty
+  | PrimApp (_, args) -> List.fold_left VarSet.union VarSet.empty (List.map fvs args)
+  | FunLit (param_var, _, body) -> VarSet.remove param_var (fvs body)
+  | FunApp (head, arg) -> VarSet.union (fvs head) (fvs arg)
 
 
 (** {1 Pretty printing} *)
@@ -49,8 +44,8 @@ let pp_ty = Lang_Fun.pp_ty
 
 let pp_var fmt var =
   Format.fprintf fmt "%s%i"
-    var.name
-    (Id.to_int var.id)
+    (Var.name var)
+    (Var.to_int var)
 
 let pp_name_ann fmt (var, ty) =
   Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
@@ -123,10 +118,10 @@ module Semantics = struct
   type vtm =
     | BoolLit of bool
     | IntLit of int
-    | FunLit of var * ty * clos
+    | FunLit of Var.t * ty * clos
 
   and clos = {
-    env : vtm IdMap.t;
+    env : vtm VarMap.t;
     body : tm;
   }
 
@@ -135,10 +130,10 @@ module Semantics = struct
 
   let rec eval env : tm -> vtm =
     function
-    | Var var -> IdMap.find var.id env
+    | Var var -> VarMap.find var env
     | Let (def_var, _, def, body) ->
         let def = eval env def in
-        eval (IdMap.add def_var.id def env) body
+        eval (VarMap.add def_var def env) body
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
@@ -167,7 +162,7 @@ module Semantics = struct
   and fun_app head arg =
     match head with
     | FunLit (param_var, _, { env; body }) ->
-        eval (IdMap.add param_var.id arg env) body
+        eval (VarMap.add param_var arg env) body
     | _ -> invalid_arg "expected function"
 
 end
@@ -188,13 +183,13 @@ module Validation = struct
   and synth context tm =
     match tm with
     | Var var ->
-        begin match IdMap.find_opt var.id context with
+        begin match VarMap.find_opt var context with
         | Some ty -> ty
         | None -> invalid_arg "unbound variable"
         end
     | Let (def_var, _, def, body) ->
         let def_ty = synth context def in
-        synth (IdMap.add def_var.id def_ty context) body
+        synth (VarMap.add def_var def_ty context) body
     | BoolLit _ -> BoolType
     | IntLit _ -> IntType
     | PrimApp (`Neg, [t]) ->
@@ -207,7 +202,7 @@ module Validation = struct
     | PrimApp _ ->
         invalid_arg "invalid prim application"
     | FunLit (param_var, param_ty, body) ->
-        let body_ty = synth (IdMap.add param_var.id param_ty context) body in
+        let body_ty = synth (VarMap.add param_var param_ty context) body in
         FunType (param_ty, body_ty)
     | FunApp (head, arg) ->
         begin match synth context head with

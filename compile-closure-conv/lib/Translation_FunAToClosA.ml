@@ -13,12 +13,8 @@ module FunA = Lang.FunA
 module ClosA = Lang.ClosA
 
 (** We’ll mainly be mapping source variables to target terms *)
-module IdMap = FunA.IdMap
-module IdSet = FunA.IdSet
-
-(** Generate a fresh variable *)
-let fresh_var name : ClosA.var =
-  { name; id = ClosA.Id.fresh () }
+module VarMap = FunA.VarMap
+module VarSet = FunA.VarSet
 
 
 (** {1 Translation} *)
@@ -35,17 +31,17 @@ let rec translate_ty : FunA.ty -> ClosA.ty =
 let rec translate env : FunA.tm -> ClosA.tm =
   function
   | Var var ->
-      fst (IdMap.find var.id env)
+      fst (VarMap.find var env)
 
   | Let (def_var, def_ty, def, body) ->
       (* Create a fresh variable for the definition in the target language,
          and then translate the definition *)
-      let def_var' = fresh_var def_var.name in
+      let def_var' = ClosA.Var.fresh (FunA.Var.name def_var) in
       let def_ty = translate_ty def_ty in
       let def = translate env def in
 
       (* Translate the body of the let expression with the definition bound *)
-      let body_env = IdMap.add def_var.id (ClosA.Var def_var', def_ty) env in
+      let body_env = VarMap.add def_var (ClosA.Var def_var', def_ty) env in
       let body = translate body_env body in
 
       Let (def_var', def_ty, def, body)
@@ -60,11 +56,11 @@ let rec translate env : FunA.tm -> ClosA.tm =
   | FunLit (param_var, param_ty, body) ->
       (* A fresh variable to be used for the environment parameter in the code
         of the closure *)
-      let env_var' = fresh_var "env" in
+      let env_var' = ClosA.Var.fresh "env" in
 
       (* Create a fresh variable for the parameter in the target language,
          and then transtlate the parameter *)
-      let param_var' = fresh_var param_var.name in
+      let param_var' = ClosA.Var.fresh (FunA.Var.name param_var) in
       let param_ty = translate_ty param_ty in
       let param_tm = ClosA.Var param_var' in
 
@@ -72,8 +68,8 @@ let rec translate env : FunA.tm -> ClosA.tm =
          function from the surrounding environment *)
       let body_fvs =
         FunA.fvs body
-        |> IdSet.remove param_var.id
-        |> IdSet.elements
+        |> VarSet.remove param_var
+        |> VarSet.elements
       in
 
       (* Translate the body of the closure’s code in an environment where
@@ -83,18 +79,18 @@ let rec translate env : FunA.tm -> ClosA.tm =
         let _, body_env =
           List.fold_left
             (fun (label, body_env) id ->
-              let ty = snd (IdMap.find id env) in
+              let ty = snd (VarMap.find id env) in
               let tm = ClosA.TupleProj (Var env_var', label) in
-              label + 1, IdMap.add id (tm, ty) body_env)
-            (0, IdMap.singleton param_var.id (param_tm, param_ty))
+              label + 1, VarMap.add id (tm, ty) body_env)
+            (0, VarMap.singleton param_var (param_tm, param_ty))
             body_fvs
         in
         translate body_env body in
 
       (* Lists of terms and types to be used when explicitly constructing the
          environment of the closure *)
-      let env_tys = List.map (fun id -> snd (IdMap.find id env)) body_fvs in
-      let env_tms = List.map (fun id -> fst (IdMap.find id env)) body_fvs in
+      let env_tys = List.map (fun id -> snd (VarMap.find id env)) body_fvs in
+      let env_tms = List.map (fun id -> fst (VarMap.find id env)) body_fvs in
 
       (* Construct the closure *)
       ClosLit

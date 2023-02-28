@@ -62,21 +62,21 @@ let compile : compile_target -> unit =
 
       Format.printf "@[<v>%a@]@." Lang.FunA.pp_tm funa_tm;
 
-      let _ = Lang.FunA.Validation.synth Lang.FunA.IdMap.empty funa_tm in
-      let _ = Lang.FunA.Semantics.eval Lang.FunA.IdMap.empty funa_tm in ()
+      let _ = Lang.FunA.Validation.synth Lang.FunA.VarMap.empty funa_tm in
+      let _ = Lang.FunA.Semantics.eval Lang.FunA.VarMap.empty funa_tm in ()
 
   | `ClosA ->
       let fun_tm = parse_expr "<input>" stdin in
 
       let _ = Lang.Fun.Validation.synth [] fun_tm in
       let funa_tm = Translation.FunToFunA.translate [] fun_tm in
-      let _ = Lang.FunA.Validation.synth Lang.FunA.IdMap.empty funa_tm in
-      let closa_tm = Translation.FunAToClosA.translate Lang.FunA.IdMap.empty funa_tm in
+      let _ = Lang.FunA.Validation.synth Lang.FunA.VarMap.empty funa_tm in
+      let closa_tm = Translation.FunAToClosA.translate Lang.FunA.VarMap.empty funa_tm in
 
       Format.printf "@[<v>%a@]@." (Lang.ClosA.pp_tm) closa_tm;
 
-      let _ = Lang.ClosA.Validation.synth Lang.ClosA.IdMap.empty closa_tm in
-      let _ = Lang.ClosA.Semantics.eval Lang.ClosA.IdMap.empty closa_tm in ()
+      let _ = Lang.ClosA.Validation.synth Lang.ClosA.VarMap.empty closa_tm in
+      let _ = Lang.ClosA.Semantics.eval Lang.ClosA.VarMap.empty closa_tm in ()
 
 
 (** {1 CLI options} *)
