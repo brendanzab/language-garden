@@ -55,13 +55,13 @@ Translation.FunToClos     Translation.FunToFunA
 
 | Translation                   | Source          | Target           | Description
 | ----------------------------- | --------------- | ---------------- | ---------------------------------
-| [`Translation.FunToFunA`]     | [`Lang.Fun`]    | [`Lang.FunA`]    | Alpha renaming translation
 | [`Translation.FunToClos`]     | [`Lang.Fun`]    | [`Lang.Clos`]    | Typed closure conversion
+| [`Translation.FunToFunA`]     | [`Lang.Fun`]    | [`Lang.FunA`]    | Alpha renaming translation
 | [`Translation.FunAToClosA`]   | [`Lang.FunA`]   | [`Lang.ClosA`]   | Typed closure conversion (alpha renamed)
 | [`Translation.FunAToLiftedA`] | [`Lang.FunA`]   | [`Lang.LiftedA`] | Typed lambda lifting (alpha renamed)
 
-[`Translation.FunToFunA`]: ./lib/Translation_FunToFunA.ml
 [`Translation.FunToClos`]: ./lib/Translation_FunToClos.ml
+[`Translation.FunToFunA`]: ./lib/Translation_FunToFunA.ml
 [`Translation.FunAToClosA`]: ./lib/Translation_FunAToClosA.ml
 [`Translation.FunAToLiftedA`]: ./lib/Translation_FunAToLiftedA.ml
 
@@ -112,6 +112,7 @@ f 7 3
 - [x] Lambda lifting
 - [ ] Parameter list flattening
 - [ ] Recursive functions
+- [ ] Promote tests for all targets
 - [ ] Property based tests
 - [ ] Dependently typed closure conversion. See:
   - “Typed closure conversion for the calculus of constructions” <https://doi.org/10.1145/3192366.3192372>
