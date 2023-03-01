@@ -18,7 +18,7 @@ module VarSet = FunA.VarSet
 
 (** {1 Translation} *)
 
-(** Translation to closure converted types *)
+(** Translation to lambda-lifted types *)
 let rec translate_ty : FunA.ty -> LiftedA.ty =
   function
   | BoolType -> BoolType
