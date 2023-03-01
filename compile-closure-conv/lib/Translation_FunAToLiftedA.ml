@@ -35,7 +35,6 @@ let rec translate globals locals ?name : FunA.tm -> LiftedA.globals * LiftedA.tm
 
   | Let (def_var, def_ty, def, body) ->
       let def_name = FunA.Var.name def_var in
-      let def_var' = LiftedA.LocalVar.fresh def_name in
       let def_ty = translate_ty def_ty in
 
       (* Function literals will be lifted to the top level, so there’s no need to
@@ -45,6 +44,7 @@ let rec translate globals locals ?name : FunA.tm -> LiftedA.globals * LiftedA.tm
           let body_env = VarMap.add def_var (def, def_ty) locals in
           translate globals body_env body
       | globals, def ->
+          let def_var' = LiftedA.LocalVar.fresh def_name in
           let body_env = VarMap.add def_var (LiftedA.LocalVar def_var', def_ty) locals in
           let globals, body = translate globals body_env body in
           globals, Let (def_var', def_ty, def, body)
