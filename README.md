@@ -16,12 +16,12 @@ _core language_. This approach to type checking is particularly popular and
 useful for implementing dependently typed programming languages, but is more
 widely applicable as well.
 
-- [**elab-stlc-unification**](./elab-stlc-unification):
-  An elaborator for a simply typed lambda calculus with mutable metavariables.
 - [**elab-dependent**](./elab-dependent/):
   An elaborator for a small dependently typed lambda calculus.
 - [**elab-record-patching**](./elab-record-patching/):
   An elaborator of a dependently typed lambda calculus with singletons and record patching.
+- [**elab-stlc-unification**](./elab-stlc-unification):
+  An elaborator for a simply typed lambda calculus where type annotations can be omitted.
 
 ### Compilation
 
