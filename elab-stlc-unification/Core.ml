@@ -36,6 +36,7 @@ module Semantics = struct
   (** {1 Values} *)
 
   type vtm =
+    | Var of int
     | IntLit of int
     | FunLit of string * ty * (vtm -> vtm)
 
@@ -73,6 +74,23 @@ module Semantics = struct
         let head = eval env head in
         let arg = eval env arg in
         fun_app head arg
+
+
+  (** {1 Quotation} *)
+
+  let rec quote (size : int) : vtm -> tm =
+    function
+    | Var level -> Var (size - level - 1)
+    | IntLit i -> IntLit i
+    | FunLit (name, param_ty, body) ->
+        let body = quote (size + 1) (body (Var size)) in
+        FunLit (name, param_ty, body)
+
+
+  (** {1 Normalisation} *)
+
+  let normalise (env : vtm list) (tm : tm) : tm =
+    quote (List.length env) (eval env tm)
 
 end
 
