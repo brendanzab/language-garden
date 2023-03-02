@@ -87,7 +87,8 @@ let fresh_meta =
     incr next_id;
     MetaVar (ref (Unsolved id))
 
-(** Force any solved metas on the outermost part of a type *)
+(** Force any solved metavariables on the outermost part of a type. Chains of
+    metavariables will be collapsed to make forcing faster in the future. *)
 let rec force : ty -> ty =
   function
   | MetaVar m as ty ->
