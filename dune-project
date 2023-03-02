@@ -52,7 +52,9 @@
     (menhir :build)))
 
 (package
-  (name elab-stlc-unification))
+  (name elab-stlc-unification)
+  (depends
+    (menhir :build)))
 
 (package
   (name elab-record-patching)

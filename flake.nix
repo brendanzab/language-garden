@@ -141,6 +141,18 @@
             version = "0";
             src = ./.;
             duneVersion = "3";
+
+            nativeBuildInputs = [
+              ocamlPackages.menhir
+            ];
+
+            nativeCheckInputs = [
+              ocamlPackages.mdx.bin
+            ];
+
+            checkInputs = [
+              ocamlPackages.mdx
+            ];
           };
 
           elab-record-patching = ocamlPackages.buildDunePackage {

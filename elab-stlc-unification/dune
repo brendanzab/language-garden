@@ -2,3 +2,13 @@
   (name Main)
   (public_name stlc-unification)
   (package elab-stlc-unification))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(ocamllex Lexer)
+
+(mdx
+  (package elab-stlc-unification)
+  (deps %{bin:stlc-unification}))
