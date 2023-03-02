@@ -1,4 +1,4 @@
-(** {0 Compiler CLI} *)
+(** {0 Elaborator CLI} *)
 
 module Surface = ElabRecordPatching.Surface
 module Core = ElabRecordPatching.Core

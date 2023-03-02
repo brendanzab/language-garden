@@ -1,4 +1,4 @@
-(** {0 Compiler CLI} *)
+(** {0 Elaborator CLI} *)
 
 module Surface = ElabDependent.Surface
 module Lexer = ElabDependent.Lexer
