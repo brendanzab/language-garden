@@ -24,6 +24,6 @@ fun (x : Int) => x + 2 : Int -> Int
 ```
 
 ```sh
-$ stlc-unification <<< "let f := fun x => x; f 3"
+$ stlc-unification <<< "let f x := x; f 3"
 let f : Int -> Int := fun (x : Int) => x; f 3 : Int
 ```

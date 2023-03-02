@@ -21,10 +21,13 @@ let main :=
     { tm }
 
 let tm :=
-| "let"; n = NAME; ":="; tm0 = tm; ";"; tm1 = tm;
-    { Surface.Let (n, tm0, tm1) }
-| "fun"; n = NAME; "=>"; t = tm;
-    { Surface.FunLit (n, t) }
+| "let"; n = NAME; ns = nonempty_list(NAME); ":="; tm0 = tm; ";"; tm1 = tm;
+    {
+      let tm0 = List.fold_right (fun n t -> Surface.FunLit (n, t)) ns tm0 in
+      Surface.Let (n, tm0, tm1)
+    }
+| "fun"; ns = nonempty_list(NAME); "=>"; t = tm;
+    { List.fold_right (fun n t -> Surface.FunLit (n, t)) ns t }
 | add_tm
 
 let add_tm :=
