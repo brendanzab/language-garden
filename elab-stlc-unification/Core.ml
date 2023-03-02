@@ -11,27 +11,6 @@ and meta_state =
   | Solved of ty
   | Unsolved of int
 
-(** Create a fresh, unsolved metavariable *)
-let fresh_meta =
-  let next_id = ref 0 in
-  fun () ->
-    let id = !next_id in
-    incr next_id;
-    MetaVar (ref (Unsolved id))
-
-(** Force any solved metas on the outermost part of a type *)
-let rec force : ty -> ty =
-  function
-  | MetaVar m as ty ->
-      begin match !m with
-      | Solved ty ->
-          let ty = force ty in
-          m := Solved ty;
-          ty
-      | Unsolved _ -> ty
-      end
-  | ty -> ty
-
 
 (** {1 Terms} *)
 
@@ -96,6 +75,30 @@ module Semantics = struct
         fun_app head arg
 
 end
+
+
+(** {1 Functions related to metavariables} *)
+
+(** Create a fresh, unsolved metavariable *)
+let fresh_meta =
+  let next_id = ref 0 in
+  fun () ->
+    let id = !next_id in
+    incr next_id;
+    MetaVar (ref (Unsolved id))
+
+(** Force any solved metas on the outermost part of a type *)
+let rec force : ty -> ty =
+  function
+  | MetaVar m as ty ->
+      begin match !m with
+      | Solved ty ->
+          let ty = force ty in
+          m := Solved ty;
+          ty
+      | Unsolved _ -> ty
+      end
+  | ty -> ty
 
 
 (** {1 Unification} *)
