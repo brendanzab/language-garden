@@ -52,94 +52,6 @@ type tm =
   | PrimApp of prim * tm list
 
 
-(** {1 Pretty printing} *)
-
-let rec pp_ty fmt =
-  function
-  | FunType (param_ty, body_ty) ->
-      Format.fprintf fmt "%a -> %a"
-        pp_atomic_ty param_ty
-        pp_ty body_ty
-  | ty ->
-      pp_atomic_ty fmt ty
-and pp_atomic_ty fmt =
-  function
-  | IntType -> Format.fprintf fmt "Int"
-  | MetaVar m -> pp_meta fmt m
-  | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
-
-and pp_meta fmt m =
-  pp_meta_state fmt !m
-
-and pp_meta_state fmt =
-  function
-  | Solved ty -> pp_ty fmt ty
-  | Unsolved id -> Format.fprintf fmt "?%i" id
-
-let pp_name_ann fmt (name, ty) =
-  Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
-
-let pp_param fmt (name, ty) =
-  Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
-
-let rec pp_tm names fmt =
-  function
-  | Let _ as tm ->
-      let rec go names fmt = function
-        | Let (name, def_ty, def, body) ->
-            Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
-              pp_name_ann (name, def_ty)
-              (pp_tm names) def
-              (go (name :: names)) body
-        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
-      in
-      go names fmt tm
-  | FunLit (name, param_ty, body) ->
-      Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
-        pp_param (name, param_ty)
-        (pp_tm (name :: names)) body
-  | tm ->
-      pp_add_tm names fmt tm
-and pp_add_tm names fmt =
-  function
-  | PrimApp (`Add, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ +@ %a@]"
-        (pp_mul_tm names) arg1
-        (pp_add_tm names) arg2
-  | PrimApp (`Sub, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ -@ %a@]"
-        (pp_mul_tm names) arg1
-        (pp_add_tm names) arg2
-  | tm ->
-      pp_mul_tm names fmt tm
-and pp_mul_tm names fmt =
-  function
-  | PrimApp (`Mul, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ *@ %a@]"
-        (pp_app_tm names) arg1
-        (pp_mul_tm names) arg2
-  | tm ->
-      pp_app_tm names fmt tm
-and pp_app_tm names fmt =
-  function
-  | FunApp (head, arg) ->
-      Format.fprintf fmt "@[%a@ %a@]"
-        (pp_app_tm names) head
-        (pp_atomic_tm names) arg
-  | PrimApp (`Neg, [arg]) ->
-      Format.fprintf fmt "@[-%a@]"
-        (pp_atomic_tm names) arg
-  | tm ->
-      pp_atomic_tm names fmt tm
-and pp_atomic_tm names fmt =
-  function
-  | Var index ->
-      Format.fprintf fmt "%s" (List.nth names index)
-  | IntLit i -> Format.fprintf fmt "%i" i
-  (* FIXME: Will loop forever on invalid primitive applications *)
-  | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
-
-
 module Semantics = struct
 
   (** {1 Values} *)
@@ -244,3 +156,91 @@ let rec zonk =
       | Solved ty -> zonk ty
       | Unsolved _ -> ty
       end
+
+
+(** {1 Pretty printing} *)
+
+let rec pp_ty fmt =
+  function
+  | FunType (param_ty, body_ty) ->
+      Format.fprintf fmt "%a -> %a"
+        pp_atomic_ty param_ty
+        pp_ty body_ty
+  | ty ->
+      pp_atomic_ty fmt ty
+and pp_atomic_ty fmt =
+  function
+  | IntType -> Format.fprintf fmt "Int"
+  | MetaVar m -> pp_meta fmt m
+  | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
+
+and pp_meta fmt m =
+  pp_meta_state fmt !m
+
+and pp_meta_state fmt =
+  function
+  | Solved ty -> pp_ty fmt ty
+  | Unsolved id -> Format.fprintf fmt "?%i" id
+
+let pp_name_ann fmt (name, ty) =
+  Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
+
+let pp_param fmt (name, ty) =
+  Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
+
+let rec pp_tm names fmt =
+  function
+  | Let _ as tm ->
+      let rec go names fmt = function
+        | Let (name, def_ty, def, body) ->
+            Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+              pp_name_ann (name, def_ty)
+              (pp_tm names) def
+              (go (name :: names)) body
+        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+      in
+      go names fmt tm
+  | FunLit (name, param_ty, body) ->
+      Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
+        pp_param (name, param_ty)
+        (pp_tm (name :: names)) body
+  | tm ->
+      pp_add_tm names fmt tm
+and pp_add_tm names fmt =
+  function
+  | PrimApp (`Add, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ +@ %a@]"
+        (pp_mul_tm names) arg1
+        (pp_add_tm names) arg2
+  | PrimApp (`Sub, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ -@ %a@]"
+        (pp_mul_tm names) arg1
+        (pp_add_tm names) arg2
+  | tm ->
+      pp_mul_tm names fmt tm
+and pp_mul_tm names fmt =
+  function
+  | PrimApp (`Mul, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ *@ %a@]"
+        (pp_app_tm names) arg1
+        (pp_mul_tm names) arg2
+  | tm ->
+      pp_app_tm names fmt tm
+and pp_app_tm names fmt =
+  function
+  | FunApp (head, arg) ->
+      Format.fprintf fmt "@[%a@ %a@]"
+        (pp_app_tm names) head
+        (pp_atomic_tm names) arg
+  | PrimApp (`Neg, [arg]) ->
+      Format.fprintf fmt "@[-%a@]"
+        (pp_atomic_tm names) arg
+  | tm ->
+      pp_atomic_tm names fmt tm
+and pp_atomic_tm names fmt =
+  function
+  | Var index ->
+      Format.fprintf fmt "%s" (List.nth names index)
+  | IntLit i -> Format.fprintf fmt "%i" i
+  (* FIXME: Will loop forever on invalid primitive applications *)
+  | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
