@@ -24,6 +24,29 @@ fun (x : Int) => x + 2 : Int -> Int
 ```
 
 ```sh
+$ stlc-unification <<< "fun x f => f x * x"
+fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
+```
+
+```sh
 $ stlc-unification <<< "let f x := x; f 3"
 let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+```
+
+Some type errors:
+
+```sh
+$ stlc-unification <<< "let f x := x + 1; f f"
+mismatched types:
+  expected: (Int -> Int) -> ?1
+  found: Int -> Int
+[1]
+```
+
+```sh
+$ stlc-unification <<< "fun f => f f"
+infinite type:
+  expected: ?0 -> ?1
+  found: ?0
+[1]
 ```
