@@ -262,7 +262,8 @@
             inputsFrom =
               lib.lists.map
                 (p: p.overrideAttrs (_: {
-                  # Ensure check are included in the development shell
+                  # Ensure that the `nativeCheckInputs` and `checkInputs` are
+                  # included in the development shell
                   doCheck = true;
                 }))
                 (lib.attrValues self.packages.${system});
