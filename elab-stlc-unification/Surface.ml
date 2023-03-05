@@ -92,4 +92,4 @@ and infer_fun_lit (context : context) (names : string list) (body : tm) : Core.t
       in
       FunLit (name, param_ty, body), FunType (param_ty, body_ty)
 
-(* TODO: check unsolved metas - perhaps store in a matacontext? *)
+(* TODO: check unsolved metas - perhaps store in a metacontext? *)
