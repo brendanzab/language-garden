@@ -52,8 +52,14 @@ let f : Int -> Int := fun (x : Int) => x; f 3 : Int
 Some type errors:
 
 ```sh
+$ stlc-unification <<< "let x := 1; y"
+<input>:1:12: `y` was not bound in the current scope
+[1]
+```
+
+```sh
 $ stlc-unification <<< "let f x := x + 1; f f"
-mismatched types:
+<input>:1:18: mismatched types:
   expected: (Int -> Int) -> ?1
   found: Int -> Int
 [1]
@@ -61,7 +67,7 @@ mismatched types:
 
 ```sh
 $ stlc-unification <<< "fun f => f f"
-infinite type:
+<input>:1:9: infinite type:
   expected: ?0 -> ?1
   found: ?0
 [1]

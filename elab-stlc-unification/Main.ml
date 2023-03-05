@@ -35,8 +35,8 @@ let () =
 
   let tm, ty =
     try Surface.infer [] tm with
-    | Surface.Error msg ->
-        Printf.eprintf "%s\n" msg;
+    | Surface.Error ((start, _), msg) ->
+        print_error start msg;
         exit 1
   in
 

@@ -1,11 +1,24 @@
 (** {0 Surface language} *)
 
+(** The start and end position in a source file *)
+type loc =
+  Lexing.position * Lexing.position
+
+(** Located nodes *)
+type 'a located = {
+  loc : loc;
+  data : 'a;
+}
+
 (** Terms in the surface language *)
 type tm =
+  tm_data located
+
+and tm_data =
   | Name of string
-  | Let of string * tm * tm
+  | Let of string * string list * tm * tm
   | IntLit of int
-  | FunLit of string * tm
+  | FunLit of string list * tm
   | FunApp of tm * tm
   | Op2 of [`Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
@@ -18,43 +31,43 @@ type context =
   (string * Core.ty) Core.env
 
 (** An error thrown during elaboration *)
-exception Error of string
+exception Error of loc * string
 
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
+  let loc = tm.loc in
   let tm, ty' = infer context tm in
   try Core.unify ty ty'; tm with
   | Core.InfiniteType _ ->
       raise (Error
-        (Format.asprintf "@[<v 2>@[infinite type:@]@ @[expected: %a@]@ @[found: %a@]@]"
+        (loc, Format.asprintf "@[<v 2>@[infinite type:@]@ @[expected: %a@]@ @[found: %a@]@]"
           Core.pp_ty (Core.zonk_ty ty)
           Core.pp_ty (Core.zonk_ty ty')))
   | Core.MismatchedTypes (_, _) ->
       raise (Error
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+        (loc, Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           Core.pp_ty (Core.zonk_ty ty)
           Core.pp_ty (Core.zonk_ty ty')))
 
-(** Elaborate a surface term into a core term, inferring the type. *)
+(** Elaborate a surface term into a core term, inferring its type. *)
 and infer (context : context) (tm : tm) : Core.tm * Core.ty =
-  match tm with
+  match tm.data with
   | Name name ->
       let rec go index context : Core.tm * Core.ty =
         match context with
         | (name', ty) :: _ when name = name' -> Var index, ty
         | (_, _) :: context -> go (index + 1) context
-        | [] -> raise (Error (Format.asprintf "the variable `%s` is not bound in the current scope" name))
+        | [] -> raise (Error
+            (tm.loc, Format.asprintf "`%s` was not bound in the current scope" name))
       in
       go 0 context
-  | Let (def_name, def, body) ->
-      let def, def_ty = infer context def in
+  | Let (def_name, param_names, def_body, body) ->
+      let def, def_ty = infer_fun_lit context param_names def_body in
       let body, body_ty = infer ((def_name, def_ty) :: context) body in
       Let (def_name, def_ty, def, body), body_ty
   | IntLit i -> IntLit i, IntType
-  | FunLit (param_name, body) ->
-      let param_ty = Core.fresh_meta () in
-      let body, body_ty = infer ((param_name, param_ty) :: context) body in
-      FunLit (param_name, param_ty, body), FunType (param_ty, body_ty)
+  | FunLit (param_names, body) ->
+      infer_fun_lit context param_names body
   | FunApp (head, arg) ->
       let arg, arg_ty = infer context arg in
       let body_ty = Core.fresh_meta () in
@@ -67,5 +80,16 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | Op1 ((`Neg) as prim, tm) ->
       let tm = check context tm IntType in
       PrimApp (prim, [tm]), IntType
+
+(** Elaborate a function literal, inferring its type. *)
+and infer_fun_lit (context : context) (names : string list) (body : tm) : Core.tm * Core.ty =
+  match names with
+  | [] -> infer context body
+  | name :: names ->
+      let param_ty = Core.fresh_meta () in
+      let body, body_ty =
+        infer_fun_lit ((name, param_ty) :: context) names body
+      in
+      FunLit (name, param_ty, body), FunType (param_ty, body_ty)
 
 (* TODO: check unsolved metas - perhaps store in a matacontext? *)

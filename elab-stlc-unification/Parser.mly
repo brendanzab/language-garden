@@ -17,35 +17,33 @@
 %%
 
 let main :=
-| tm = tm; END;
+| tm = located(tm); END;
     { tm }
 
+
 let tm :=
-| "let"; n = NAME; ns = nonempty_list(NAME); ":="; tm0 = tm; ";"; tm1 = tm;
-    {
-      let tm0 = List.fold_right (fun n t -> Surface.FunLit (n, t)) ns tm0 in
-      Surface.Let (n, tm0, tm1)
-    }
-| "fun"; ns = nonempty_list(NAME); "=>"; t = tm;
-    { List.fold_right (fun n t -> Surface.FunLit (n, t)) ns t }
+| "let"; n = NAME; ns = list(NAME); ":="; tm0 = located(tm); ";"; tm1 = located(tm);
+    { Surface.Let (n, ns, tm0, tm1) }
+| "fun"; ns = nonempty_list(NAME); "=>"; t = located(tm);
+    {  Surface.FunLit (ns, t) }
 | add_tm
 
 let add_tm :=
-| tm0 = mul_tm; "+"; tm1 = add_tm;
+| tm0 = located(mul_tm); "+"; tm1 = located(add_tm);
     { Surface.Op2 (`Add, tm0, tm1) }
-| tm0 = mul_tm; "-"; tm1 = add_tm;
+| tm0 = located(mul_tm); "-"; tm1 = located(add_tm);
     { Surface.Op2 (`Sub, tm0, tm1) }
 | mul_tm
 
 let mul_tm :=
-| tm0 = app_tm; "*"; tm1 = mul_tm;
+| tm0 = located(app_tm); "*"; tm1 = located(mul_tm);
     { Surface.Op2 (`Mul, tm0, tm1) }
 | app_tm
 
 let app_tm :=
-| tm0 = app_tm; tm1 = atomic_tm;
+| tm0 = located(app_tm); tm1 = located(atomic_tm);
     { Surface.FunApp (tm0, tm1) }
-| "-"; tm = atomic_tm;
+| "-"; tm = located(atomic_tm);
     { Surface.Op1 (`Neg, tm) }
 | atomic_tm
 
@@ -56,3 +54,8 @@ let atomic_tm :=
     { Surface.Name n }
 | i = NUMBER;
     { Surface.IntLit i }
+
+
+let located(X) :=
+| data = X;
+    { Surface.{ loc = $loc; data } }
