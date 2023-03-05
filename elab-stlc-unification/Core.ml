@@ -1,18 +1,42 @@
 (** {0 Core language} *)
 
-(** {1 Types} *)
+(** {1 Nameless binding structure} *)
 
+(** The binding structure of terms is represented in the core language by
+    using numbers that represent the distance to a binder, instead of by the
+    names attached to those binders. *)
+
+(** {i De Bruijn index} that represents a variable by the number of binders
+    between the variable and the binder it refers to. *)
+type index = int
+
+(** {i De Bruijn level} that represents a variable by the number of binders
+    from the top of the environment to the binder that it refers to. These do
+    not change their meaning as new bindings are added to the environment. *)
+type level = int
+
+(** Converts a {!level} to an {!index} that is bound in an environment of the
+    supplied size. Assumes that [ size > level ]. *)
+let level_to_index size level =
+  size - level - 1
+
+(** An environment of bindings that can be looked up directly using a
+    {!index}, or by inverting a {!level} using {!level_to_index}. *)
+type 'a env = 'a list
+
+
+(** {1 Syntax} *)
+
+(** Type syntax *)
 type ty =
   | IntType
   | FunType of ty * ty
   | MetaVar of meta_state ref
 
+(** The state of a metavariable, updated during unification *)
 and meta_state =
   | Solved of ty
   | Unsolved of int
-
-
-(** {1 Terms} *)
 
 (** Primitive operations *)
 type prim = [
@@ -22,8 +46,9 @@ type prim = [
   | `Neg  (** [Int -> Int] *)
 ]
 
+(** Term syntax *)
 type tm =
-  | Var of int
+  | Var of index
   | Let of string * ty * tm * tm
   | IntLit of int
   | FunLit of string * ty * tm
@@ -36,7 +61,7 @@ module Semantics = struct
   (** {1 Values} *)
 
   type vtm =
-    | Var of int
+    | Var of level
     | IntLit of int
     | FunLit of string * ty * (vtm -> vtm)
 
@@ -59,7 +84,7 @@ module Semantics = struct
 
   (** {1 Evaluation} *)
 
-  let rec eval (env : vtm list) : tm -> vtm =
+  let rec eval (env : vtm env) : tm -> vtm =
     function
     | Var index -> List.nth env index
     | Let (_, _, def, body) ->
@@ -80,7 +105,7 @@ module Semantics = struct
 
   let rec quote (size : int) : vtm -> tm =
     function
-    | Var level -> Var (size - level - 1)
+    | Var level -> Var (level_to_index size level)
     | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
         let body = quote (size + 1) (body (Var size)) in
@@ -192,7 +217,7 @@ let rec zonk_tm : tm -> tm =
 
 (** {1 Pretty printing} *)
 
-let rec pp_ty fmt =
+let rec pp_ty (fmt : Format.formatter) : ty -> unit =
   function
   | FunType (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
@@ -216,7 +241,7 @@ let pp_name_ann fmt (name, ty) =
 let pp_param fmt (name, ty) =
   Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
 
-let rec pp_tm names fmt =
+let rec pp_tm (names : string env) (fmt : Format.formatter) : tm -> unit =
   function
   | Let _ as tm ->
       let rec go names fmt = function

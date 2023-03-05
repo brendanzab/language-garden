@@ -1,5 +1,6 @@
 (** {0 Surface language} *)
 
+(** Terms in the surface language *)
 type tm =
   | Name of string
   | Let of string * tm * tm
@@ -12,9 +13,15 @@ type tm =
 
 (** {1 Elaboration} *)
 
+(** A stack of bindings currently in scope *)
+type context =
+  (string * Core.ty) Core.env
+
+(** An error thrown during elaboration *)
 exception Error of string
 
-let rec check context (tm : tm) (ty : Core.ty) : Core.tm =
+(** Elaborate a surface term into a core term, given an expected type. *)
+let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   let tm, ty' = infer context tm in
   try Core.unify ty ty'; tm with
   | Core.InfiniteType _ ->
@@ -28,7 +35,8 @@ let rec check context (tm : tm) (ty : Core.ty) : Core.tm =
           Core.pp_ty (Core.zonk_ty ty)
           Core.pp_ty (Core.zonk_ty ty')))
 
-and infer context (tm : tm) : Core.tm * Core.ty =
+(** Elaborate a surface term into a core term, inferring the type. *)
+and infer (context : context) (tm : tm) : Core.tm * Core.ty =
   match tm with
   | Name name ->
       let rec go index context : Core.tm * Core.ty =
