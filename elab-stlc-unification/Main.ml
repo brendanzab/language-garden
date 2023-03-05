@@ -41,5 +41,5 @@ let () =
   in
 
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm []) tm
-    Core.pp_ty ty
+    (Core.pp_tm []) (Core.zonk_tm tm)
+    Core.pp_ty (Core.zonk_ty ty)

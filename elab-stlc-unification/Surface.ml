@@ -20,13 +20,13 @@ let rec check context (tm : tm) (ty : Core.ty) : Core.tm =
   | Core.InfiniteType _ ->
       raise (Error
         (Format.asprintf "@[<v 2>@[infinite type:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty ty
-          Core.pp_ty ty'))
+          Core.pp_ty (Core.zonk_ty ty)
+          Core.pp_ty (Core.zonk_ty ty')))
   | Core.MismatchedTypes (_, _) ->
       raise (Error
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty ty
-          Core.pp_ty ty'))
+          Core.pp_ty (Core.zonk_ty ty)
+          Core.pp_ty (Core.zonk_ty ty')))
 
 and infer context (tm : tm) : Core.tm * Core.ty =
   match tm with

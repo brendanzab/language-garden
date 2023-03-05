@@ -163,12 +163,37 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       unify ty mty
 
 
+(** {1 Zonking} *)
+
+(** These functions flatten solved metavariables in types. This is imporatant
+    for pretty printing types, as we want to be able to ‘see through’
+    metavariables to properly associate function types. *)
+
+let rec zonk_ty (ty : ty) : ty =
+  match force ty with
+  | IntType -> IntType
+  | FunType (param_ty, body_ty) ->
+      FunType (zonk_ty param_ty, zonk_ty body_ty)
+  | MetaVar _ as ty -> ty
+
+let rec zonk_tm : tm -> tm =
+  function
+  | Var index -> Var index
+  | Let (name, def_ty, def, body) ->
+      Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
+  | IntLit i -> IntLit i
+  | PrimApp (prim, args) ->
+      PrimApp (prim, List.map zonk_tm args)
+  | FunLit (name, param_ty, body) ->
+      FunLit (name, zonk_ty param_ty, zonk_tm body)
+  | FunApp (head, arg) ->
+      FunApp (zonk_tm head, zonk_tm arg)
+
+
 (** {1 Pretty printing} *)
 
-let rec pp_ty fmt ty =
-  (* Forcing here is important because we want to handle precedences correctly
-     through metavariable solutions *)
-  match force ty with
+let rec pp_ty fmt =
+  function
   | FunType (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
