@@ -1,5 +1,7 @@
 (** {0 Surface language} *)
 
+(** {1 Syntax} *)
+
 (** The start and end position in a source file *)
 type loc =
   Lexing.position * Lexing.position
