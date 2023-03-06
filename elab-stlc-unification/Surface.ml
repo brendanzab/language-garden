@@ -49,7 +49,7 @@ and tm_data =
 (** The reason why a metavariable was inserted *)
 type meta_info = [
   | `FunParam of loc
-  | `FunBody of loc
+  | `FunApp of loc
 ]
 
 (** A global list of the metavariables inserted during elaboration. This is used
@@ -138,7 +138,7 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       infer_fun_lit context param_names body
   | FunApp (head, arg) ->
       let arg, arg_ty = infer context arg in
-      let body_ty = fresh_meta (`FunBody tm.loc) in
+      let body_ty = fresh_meta (`FunApp tm.loc) in
       let head = check context head (FunType (arg_ty, body_ty)) in
       FunApp (head, arg), body_ty
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->

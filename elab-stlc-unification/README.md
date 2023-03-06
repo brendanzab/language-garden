@@ -80,6 +80,6 @@ $ stlc-unification <<< "fun x => x"
 ```sh
 $ stlc-unification <<< "fun f x => f x"
 <input>:1:6: ambiguous function parameter
-<input>:1:11: ambiguous function body
+<input>:1:11: ambiguous function application
 [1]
 ```

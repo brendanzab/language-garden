@@ -48,5 +48,5 @@ let () =
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
         | `FunParam (start, _) -> print_error start "ambiguous function parameter"
-        | `FunBody (start, _) -> print_error start "ambiguous function body");
+        | `FunApp (start, _) -> print_error start "ambiguous function application");
       exit 1
