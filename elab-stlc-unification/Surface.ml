@@ -41,10 +41,7 @@ let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   let tm, ty' = infer context tm in
   try Core.unify ty ty'; tm with
   | Core.InfiniteType _ ->
-      raise (Error
-        (loc, Format.asprintf "@[<v 2>@[infinite type:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty (Core.zonk_ty ty)
-          Core.pp_ty (Core.zonk_ty ty')))
+      raise (Error (loc, "infinite type"))
   | Core.MismatchedTypes (_, _) ->
       raise (Error
         (loc, Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
@@ -64,7 +61,9 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       in
       go 0 context
   | Let (def_name, param_names, def_body, body) ->
-      let def, def_ty = infer_fun_lit context param_names def_body in
+      let def, def_ty =
+        infer_fun_lit context param_names def_body
+      in
       let body, body_ty = infer ((def_name, def_ty) :: context) body in
       Let (def_name, def_ty, def, body), body_ty
   | IntLit i -> IntLit i, IntType

@@ -67,8 +67,6 @@ $ stlc-unification <<< "let f x := x + 1; f f"
 
 ```sh
 $ stlc-unification <<< "fun f => f f"
-<input>:1:9: infinite type:
-  expected: ?0 -> ?1
-  found: ?0
+<input>:1:9: infinite type
 [1]
 ```
