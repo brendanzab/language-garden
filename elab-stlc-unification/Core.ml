@@ -30,6 +30,7 @@ type 'a env = 'a list
 
 (** Type syntax *)
 type ty =
+  | BoolType
   | IntType
   | FunType of ty * ty
   | MetaVar of meta_state ref
@@ -41,6 +42,7 @@ and meta_state =
 
 (** Primitive operations *)
 type prim = [
+  | `Eq   (** [Int -> Int -> Bool] *)
   | `Add  (** [Int -> Int -> Int] *)
   | `Sub  (** [Int -> Int -> Int] *)
   | `Mul  (** [Int -> Int -> Int] *)
@@ -51,6 +53,8 @@ type prim = [
 type tm =
   | Var of index
   | Let of string * ty * tm * tm
+  | BoolLit of bool
+  | BoolElim of tm * tm * tm
   | IntLit of int
   | FunLit of string * ty * tm
   | FunApp of tm * tm
@@ -63,18 +67,26 @@ module Semantics = struct
 
   type vtm =
     | Var of level
+    | BoolLit of bool
     | IntLit of int
     | FunLit of string * ty * (vtm -> vtm)
 
 
   (** {1 Eliminators} *)
 
+  let bool_elim head tm0 tm1 =
+    match head with
+    | BoolLit true -> tm0 ()
+    | BoolLit false -> tm1 ()
+    | _ -> invalid_arg "expected boolean"
+
   let prim_app prim args =
     match prim, args with
-    | `Neg, [IntLit t1] -> IntLit (-t1)
+    | `Eq, [IntLit t1; IntLit t2] -> BoolLit (t1 = t2)
     | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
     | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
     | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | `Neg, [IntLit t1] -> IntLit (-t1)
     | _, _ -> invalid_arg "invalid prim application"
 
   let fun_app head arg =
@@ -92,6 +104,12 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
+    | BoolLit b -> BoolLit b
+    | BoolElim (head, tm0, tm1) ->
+        let head = eval env head in
+        let tm0 () = eval env tm0 in
+        let tm1 () = eval env tm1 in
+        bool_elim head tm0 tm1
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
@@ -109,6 +127,7 @@ module Semantics = struct
   let rec quote (size : int) : vtm -> tm =
     function
     | Var level -> Var (level_to_index size level)
+    | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
         let body = quote (size + 1) (body (Var size)) in
@@ -165,6 +184,7 @@ let rec occurs (id : int) (ty : ty) : unit =
           raise (InfiniteType id)
       | Unsolved _ | Solved _-> ()
       end
+  | BoolType -> ()
   | IntType -> ()
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
@@ -176,6 +196,7 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
   match force ty0, force ty1 with
   | ty0, ty1 when ty0 = ty1 -> ()
   | MetaVar m, ty | ty, MetaVar m -> unify_meta m ty
+  | BoolType, BoolType -> ()
   | IntType, IntType -> ()
   | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
       unify param_ty0 param_ty1;
@@ -201,6 +222,7 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
 
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
+  | BoolType -> BoolType
   | IntType -> IntType
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
@@ -211,6 +233,9 @@ let rec zonk_tm : tm -> tm =
   | Var index -> Var index
   | Let (name, def_ty, def, body) ->
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
+  | BoolLit b -> BoolLit b
+  | BoolElim (head, tm0, tm1) ->
+      BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
   | IntLit i -> IntLit i
   | PrimApp (prim, args) ->
       PrimApp (prim, List.map zonk_tm args)
@@ -232,6 +257,7 @@ let rec pp_ty (fmt : Format.formatter) : ty -> unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt =
   function
+  | BoolType -> Format.fprintf fmt "Bool"
   | IntType -> Format.fprintf fmt "Int"
   | MetaVar m ->
       begin match !m with
@@ -262,6 +288,20 @@ let rec pp_tm (names : string env) (fmt : Format.formatter) : tm -> unit =
       Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
         pp_param (name, param_ty)
         (pp_tm (name :: names)) body
+  | tm -> pp_if_tm names fmt tm
+and pp_if_tm names fmt = function
+  | BoolElim (head, tm0, tm1) ->
+      Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
+        (pp_eq_tm names) head
+        (pp_eq_tm names) tm0
+        (pp_if_tm names) tm1
+  | tm ->
+      pp_eq_tm names fmt tm
+and pp_eq_tm names fmt = function
+  | PrimApp (`Eq, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ =@ %a@]"
+        (pp_add_tm names) arg1
+        (pp_eq_tm names) arg2
   | tm ->
       pp_add_tm names fmt tm
 and pp_add_tm names fmt =
@@ -299,6 +339,8 @@ and pp_atomic_tm names fmt =
   function
   | Var index ->
       Format.fprintf fmt "%s" (List.nth names index)
+  | BoolLit true -> Format.fprintf fmt "true"
+  | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i
   (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm

@@ -36,7 +36,8 @@ related to compiling functional programming languages.
 - [**compile-arith-verified**](./compile-arith-verified/):
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
 - [**compile-closure-conv**](./compile-closure-conv):
-  Typed closure conversion and lambda lifting for a simply typed lambda calculus.
+  Typed closure conversion and lambda lifting for a simply typed lambda calculus
+  with booleans and integers.
 
 ### Languages
 

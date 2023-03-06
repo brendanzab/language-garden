@@ -1,6 +1,6 @@
 # Simply typed lambda calculus with unification
 
-This an elaborator for a simply typed lambda calculus (with primitive integers)
+This an elaborator for a simply typed lambda calculus (with booleans and integers)
 that allows programmers to omit type annotations. This is done by inserting
 _metavariables_ that stand-in for unknown types during elaboration. These are
 later updated based on how they are used in other parts of the program.
@@ -49,6 +49,11 @@ $ stlc-unification <<< "let f x := x; f 3"
 let f : Int -> Int := fun (x : Int) => x; f 3 : Int
 ```
 
+```sh
+$ stlc-unification <<< "fun x y => if x = 0 then y else 3"
+fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
+```
+
 Some type errors:
 
 ```sh
@@ -81,5 +86,13 @@ $ stlc-unification <<< "fun x => x"
 $ stlc-unification <<< "fun f x => f x"
 <input>:1:6: ambiguous function parameter
 <input>:1:11: ambiguous function application
+[1]
+```
+
+```sh
+$ stlc-unification <<< "fun x => if x then true else 3"
+<input>:1:29: mismatched types:
+  expected: Bool
+  found: Int
 [1]
 ```

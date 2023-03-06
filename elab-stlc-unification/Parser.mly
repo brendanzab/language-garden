@@ -1,10 +1,16 @@
 %token <string> NAME
 %token <int> NUMBER
+%token KEYWORD_ELSE "else"
 %token KEYWORD_FUN "fun"
+%token KEYWORD_FALSE "false"
+%token KEYWORD_IF "if"
 %token KEYWORD_LET "let"
+%token KEYWORD_THEN "then"
+%token KEYWORD_TRUE "true"
 %token ADD "+"
 %token ASTERISK "*"
 %token COLON_EQUALS ":="
+%token EQUALS "="
 %token EQUALS_GREATER "=>"
 %token HYPHEN "-"
 %token SEMICOLON ";"
@@ -26,6 +32,16 @@ let tm :=
     { Surface.Let (n, ns, tm0, tm1) }
 | "fun"; ns = nonempty_list(binder); "=>"; t = located(tm);
     { Surface.FunLit (ns, t) }
+| if_tm
+
+let if_tm :=
+| "if"; tm0 = located(eq_tm); "then"; tm1 = located(eq_tm); "else"; tm2 = located(if_tm);
+    { Surface.IfThenElse (tm0, tm1, tm2) }
+| eq_tm
+
+let eq_tm :=
+| tm0 = located(add_tm); "="; tm1 = located(eq_tm);
+    { Surface.Op2 (`Eq, tm0, tm1) }
 | add_tm
 
 let add_tm :=
@@ -52,6 +68,10 @@ let atomic_tm :=
     { t }
 | n = NAME;
     { Surface.Name n }
+| "true";
+    { Surface.BoolLit true }
+| "false";
+    { Surface.BoolLit false }
 | i = NUMBER;
     { Surface.IntLit i }
 

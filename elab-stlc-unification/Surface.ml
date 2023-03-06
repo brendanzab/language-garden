@@ -27,10 +27,12 @@ type tm =
 and tm_data =
   | Name of string
   | Let of binder * binder list * tm * tm
+  | BoolLit of bool
+  | IfThenElse of tm * tm * tm
   | IntLit of int
   | FunLit of binder list * tm
   | FunApp of tm * tm
-  | Op2 of [`Add | `Sub | `Mul] * tm * tm
+  | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
 
@@ -50,6 +52,7 @@ and tm_data =
 type meta_info = [
   | `FunParam of loc
   | `FunApp of loc
+  | `IfBranches of loc
 ]
 
 (** A global list of the metavariables inserted during elaboration. This is used
@@ -133,6 +136,13 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let def, def_ty = infer_fun_lit context param_names def_body in
       let body, body_ty = infer ((def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
+  | BoolLit b -> BoolLit b, BoolType
+  | IfThenElse (head, tm0, tm1) ->
+      let head = check context head BoolType in
+      let ty = fresh_meta (`IfBranches tm.loc) in
+      let tm0 = check context tm0 ty in
+      let tm1 = check context tm1 ty in
+      BoolElim (head, tm0, tm1), ty
   | IntLit i -> IntLit i, IntType
   | FunLit (param_names, body) ->
       infer_fun_lit context param_names body
@@ -141,6 +151,10 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let body_ty = fresh_meta (`FunApp tm.loc) in
       let head = check context head (FunType (arg_ty, body_ty)) in
       FunApp (head, arg), body_ty
+  | Op2 ((`Eq) as prim, tm0, tm1) ->
+      let tm0 = check context tm0 IntType in
+      let tm1 = check context tm1 IntType in
+      PrimApp (prim, [tm0; tm1]), BoolType
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
       let tm0 = check context tm0 IntType in
       let tm1 = check context tm1 IntType in
