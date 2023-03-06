@@ -85,6 +85,7 @@ module Semantics = struct
 
   (** {1 Evaluation} *)
 
+  (** Evaluate a term from the syntax into its semantic interpretation *)
   let rec eval (env : vtm env) : tm -> vtm =
     function
     | Var index -> List.nth env index
@@ -104,6 +105,7 @@ module Semantics = struct
 
   (** {1 Quotation} *)
 
+  (** Convert terms from the semantic domain back into syntax. *)
   let rec quote (size : int) : vtm -> tm =
     function
     | Var level -> Var (level_to_index size level)
@@ -115,6 +117,8 @@ module Semantics = struct
 
   (** {1 Normalisation} *)
 
+  (** By evaluating a term then quoting the result, we can produce a term that
+      is reduced as much as possible in the current environment. *)
   let normalise (env : vtm list) (tm : tm) : tm =
     quote (List.length env) (eval env tm)
 

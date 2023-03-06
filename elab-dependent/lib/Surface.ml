@@ -1,8 +1,9 @@
-(** {0 Surface language} *)
+(** {0 Surface language}
 
-(** The surface language closely mirrors what the programmer originaly wrote,
+    The surface language closely mirrors what the programmer originaly wrote,
     including syntactic sugar and higher level language features that make
-    programming more convenient (in comparison to the {!Core.Syntax}). *)
+    programming more convenient (in comparison to the {!Core.Syntax}).
+*)
 
 
 (** Returns the index of the given element in the list *)
@@ -34,9 +35,8 @@ and params = param list
 
 (** {1 Elaboration } *)
 
-(** This is where we implement user-facing type checking, in addition to
-    translating the convenient surface language into a simpler, more explicit
-    core language.
+(** This is where we implement user-facing type checking, while also translating
+    the surface language into the simpler, more explicit core language.
 
     While we {e could} translate syntactic sugar in the parser, by leaving
     this to elaboration time we make it easier to report higher quality error
@@ -104,8 +104,8 @@ let pp ?(resugar = true) context =
 (** {2 Exceptions} *)
 
 (** An error that will be raised if there was a problem in the surface syntax,
-    usually as a result of type errors or a missing type annotations. This is
-    normal, and should be rendered nicely to the programmer. *)
+    usually as a result of type errors. This is normal, and should be rendered
+    nicely to the programmer. *)
 exception Error of string
 
 (** Raises an {!Error} exception *)

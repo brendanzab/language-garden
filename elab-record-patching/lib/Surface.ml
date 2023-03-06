@@ -1,9 +1,9 @@
-(** {0 Surface language} *)
+(** {0 Surface language}
 
-(** The surface language closely mirrors what the programmer originaly wrote,
-    including syntactic sugar, subtyping, and other higher level language
-    features that make programming more convenient (in comparison to the
-    {!Core.Syntax}). *)
+    The surface language closely mirrors what the programmer originaly wrote,
+    including syntactic sugar and higher level language features that make
+    programming more convenient (in comparison to the {!Core.Syntax}).
+*)
 
 
 open Base
@@ -113,8 +113,8 @@ let pp ?(resugar = true) context : Format.formatter -> Syntax.tm -> unit =
 (** {2 Elaboration errors} *)
 
 (** An error that will be raised if there was a problem in the surface syntax,
-    usually as a result of type errors or a missing type annotations. This is
-    normal, and should be rendered nicely to the programmer. *)
+    usually as a result of type errors. This is normal, and should be rendered
+    nicely to the programmer. *)
 exception Error of string
 
 (** Raises an {!Error} exception *)

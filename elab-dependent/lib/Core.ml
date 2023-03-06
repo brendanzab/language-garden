@@ -312,12 +312,12 @@ module Semantics = struct
 
   (** {1 Quotation} *)
 
-  (** Quotation allows us to convert terms from semantic domain back into
+  (** Quotation allows us to convert terms from the semantic domain back into
       syntax. This can be useful to find the normal form of a term, or when
       including terms from the semantics in the syntax during elaboration.
 
       The size parameter is the number of bindings present in the environment
-      where we the resulting terms should be bound, allowing us to convert
+      where the resulting terms should be bound, allowing us to convert
       variables in the semantic domain back to an {!index} representation
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at. *)

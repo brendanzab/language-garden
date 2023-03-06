@@ -1,4 +1,9 @@
-(** {0 Surface language} *)
+(** {0 Surface language}
+
+    The surface language closely mirrors what the programmer originaly wrote,
+    including syntactic sugar and higher level language features that make
+    programming more convenient (in comparison to the {!Core}).
+*)
 
 (** {1 Syntax} *)
 
@@ -12,6 +17,7 @@ type 'a located = {
   data : 'a;
 }
 
+(** Names that bind definitions or parameters *)
 type binder = string located
 
 (** Terms in the surface language *)
@@ -29,6 +35,16 @@ and tm_data =
 
 
 (** {1 Elaboration} *)
+
+(** This is where we implement user-facing type checking, while also translating
+    the surface language into the simpler, more explicit core language.
+
+    While we {e could} translate syntactic sugar in the parser, by leaving
+    this to elaboration time we make it easier to report higher quality error
+    messages that are more relevant to what the programmer originally wrote.
+*)
+
+(** {2 Metavariables} *)
 
 (** The reason why a metavariable was inserted *)
 type meta_info = [
@@ -59,6 +75,9 @@ let unsolved_metas () : meta_info list =
   in
   go [] !metas
 
+
+(** {2 Local bindings} *)
+
 (** A stack of bindings currently in scope *)
 type context = (string * Core.ty) Core.env
 
@@ -72,8 +91,20 @@ let lookup (context : context) (name : string) : (Core.index * Core.ty) option =
   in
   go 0 context
 
-(** An error thrown during elaboration *)
+
+(** {2 Elaboration errors} *)
+
+(** An error that will be raised if there was a problem in the surface syntax,
+    usually as a result of type errors. This is normal, and should be rendered
+    nicely to the programmer. *)
 exception Error of loc * string
+
+
+(** {2 Type checking} *)
+
+(** In this algorithm type checking is mainly unidirectional, relying on the
+    [infer] funtion, but a {!check} function is provided for convenience.
+*)
 
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
