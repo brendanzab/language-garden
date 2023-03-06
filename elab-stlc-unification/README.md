@@ -70,3 +70,16 @@ $ stlc-unification <<< "fun f => f f"
 <input>:1:9: infinite type
 [1]
 ```
+
+```sh
+$ stlc-unification <<< "fun x => x"
+<input>:1:4: ambiguous function parameter
+[1]
+```
+
+```sh
+$ stlc-unification <<< "fun f x => f x"
+<input>:1:6: ambiguous function parameter
+<input>:1:11: ambiguous function body
+[1]
+```
