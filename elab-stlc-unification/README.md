@@ -1,9 +1,9 @@
 # Simply typed lambda calculus with unification
 
-This an elaborator for the simply typed lambda calculus that allows programmers
-to omit type annotations. This is done by inserting _metavariables_ that
-stand-in for unknown types during elaboration. These are updated later based
-on how they are used in other parts of the program.
+This an elaborator for a simply typed lambda calculus (with primitive integers)
+that allows programmers to omit type annotations. This is done by inserting
+_metavariables_ that stand-in for unknown types during elaboration. These are
+later updated based on how they are used in other parts of the program.
 
 This approach is a stepping-stone to more powerful type checking algorithms,
 such as those for Hindley-Milner type systems. Note that it’s not a highly
