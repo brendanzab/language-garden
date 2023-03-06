@@ -99,6 +99,10 @@ let lookup (context : context) (name : string) : (Core.index * Core.ty) option =
     nicely to the programmer. *)
 exception Error of loc * string
 
+(** Raises an {!Error} exception *)
+let error loc message =
+  raise (Error (loc, message))
+
 
 (** {2 Type checking} *)
 
@@ -110,13 +114,12 @@ exception Error of loc * string
 let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   let tm', ty' = infer context tm in
   try Core.unify ty ty'; tm' with
-  | Core.InfiniteType _ ->
-      raise (Error (tm.loc, "infinite type"))
+  | Core.InfiniteType _ -> error tm.loc "infinite type"
   | Core.MismatchedTypes (_, _) ->
-      raise (Error
-        (tm.loc, Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+      error tm.loc
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           Core.pp_ty (Core.zonk_ty ty)
-          Core.pp_ty (Core.zonk_ty ty')))
+          Core.pp_ty (Core.zonk_ty ty'))
 
 (** Elaborate a surface term into a core term, inferring its type. *)
 and infer (context : context) (tm : tm) : Core.tm * Core.ty =
@@ -124,7 +127,7 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | Name name ->
       begin match lookup context name with
       | Some (index, ty) -> Var index, ty
-      | None -> raise (Error (tm.loc, Format.asprintf "unbound name `%s`" name))
+      | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
       end
   | Let (def_name, param_names, def_body, body) ->
       let def, def_ty = infer_fun_lit context param_names def_body in
