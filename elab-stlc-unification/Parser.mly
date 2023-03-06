@@ -25,7 +25,7 @@ let tm :=
 | "let"; n = NAME; ns = list(NAME); ":="; tm0 = located(tm); ";"; tm1 = located(tm);
     { Surface.Let (n, ns, tm0, tm1) }
 | "fun"; ns = nonempty_list(NAME); "=>"; t = located(tm);
-    {  Surface.FunLit (ns, t) }
+    { Surface.FunLit (ns, t) }
 | add_tm
 
 let add_tm :=
