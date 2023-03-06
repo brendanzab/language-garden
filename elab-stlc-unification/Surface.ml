@@ -32,19 +32,28 @@ and tm_data =
 type context =
   (string * Core.ty) Core.env
 
+(** Lookup a name in the context *)
+let lookup (context : context) (name : string) : (Core.index * Core.ty) option =
+  let rec go index context =
+    match context with
+    | (name', ty) :: _ when name = name' -> Some (index, ty)
+    | (_, _) :: context -> go (index + 1) context
+    | [] -> None
+  in
+  go 0 context
+
 (** An error thrown during elaboration *)
 exception Error of loc * string
 
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
-  let loc = tm.loc in
-  let tm, ty' = infer context tm in
-  try Core.unify ty ty'; tm with
+  let tm', ty' = infer context tm in
+  try Core.unify ty ty'; tm' with
   | Core.InfiniteType _ ->
-      raise (Error (loc, "infinite type"))
+      raise (Error (tm.loc, "infinite type"))
   | Core.MismatchedTypes (_, _) ->
       raise (Error
-        (loc, Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+        (tm.loc, Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           Core.pp_ty (Core.zonk_ty ty)
           Core.pp_ty (Core.zonk_ty ty')))
 
@@ -52,18 +61,12 @@ let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
 and infer (context : context) (tm : tm) : Core.tm * Core.ty =
   match tm.data with
   | Name name ->
-      let rec go index context : Core.tm * Core.ty =
-        match context with
-        | (name', ty) :: _ when name = name' -> Var index, ty
-        | (_, _) :: context -> go (index + 1) context
-        | [] -> raise (Error
-            (tm.loc, Format.asprintf "`%s` was not bound in the current scope" name))
-      in
-      go 0 context
+      begin match lookup context name with
+      | Some (index, ty) -> Var index, ty
+      | None -> raise (Error (tm.loc, Format.asprintf "unbound name `%s`" name))
+      end
   | Let (def_name, param_names, def_body, body) ->
-      let def, def_ty =
-        infer_fun_lit context param_names def_body
-      in
+      let def, def_ty = infer_fun_lit context param_names def_body in
       let body, body_ty = infer ((def_name, def_ty) :: context) body in
       Let (def_name, def_ty, def, body), body_ty
   | IntLit i -> IntLit i, IntType
@@ -88,9 +91,7 @@ and infer_fun_lit (context : context) (names : string list) (body : tm) : Core.t
   | [] -> infer context body
   | name :: names ->
       let param_ty = Core.fresh_meta () in
-      let body, body_ty =
-        infer_fun_lit ((name, param_ty) :: context) names body
-      in
+      let body, body_ty = infer_fun_lit ((name, param_ty) :: context) names body in
       FunLit (name, param_ty, body), FunType (param_ty, body_ty)
 
 (* TODO: check unsolved metas - perhaps store in a metacontext? *)

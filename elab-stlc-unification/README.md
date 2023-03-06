@@ -53,7 +53,7 @@ Some type errors:
 
 ```sh
 $ stlc-unification <<< "let x := 1; y"
-<input>:1:12: `y` was not bound in the current scope
+<input>:1:12: unbound name `y`
 [1]
 ```
 
