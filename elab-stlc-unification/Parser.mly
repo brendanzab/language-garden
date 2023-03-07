@@ -26,6 +26,12 @@ let main :=
 | tm = located(tm); END;
     { tm }
 
+let located(X) :=
+| data = X;
+    { Surface.{ loc = $loc; data } }
+
+let binder :=
+| located(NAME)
 
 let tm :=
 | "let"; n = binder; ns = list(binder); ":="; tm0 = located(tm); ";"; tm1 = located(tm);
@@ -74,11 +80,3 @@ let atomic_tm :=
     { Surface.BoolLit false }
 | i = NUMBER;
     { Surface.IntLit i }
-
-
-let binder :=
-| located(NAME)
-
-let located(X) :=
-| data = X;
-    { Surface.{ loc = $loc; data } }
