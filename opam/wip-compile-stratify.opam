@@ -5,7 +5,7 @@ license: "Apache-2.0"
 homepage: "https://github.com/brendanzab/language-garden"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
-  "dune" {>= "3.0"}
+  "dune" {>= "3.8"}
   "odoc" {with-doc}
 ]
 build: [

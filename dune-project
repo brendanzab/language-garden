@@ -1,4 +1,4 @@
-(lang dune 3.0)
+(lang dune 3.8)
 
 (name language-garden)
 
@@ -8,6 +8,7 @@
 
 (implicit_transitive_deps false)
 (generate_opam_files true)
+(opam_file_location inside_opam_directory)
 
 
 (source (github brendanzab/language-garden))
