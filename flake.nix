@@ -14,15 +14,73 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+
+    opam-repository = {
+      url = "github:ocaml/opam-repository";
+      flake = false;
+    };
+
+    opam-nix = {
+      url = "github:tweag/opam-nix";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.opam-repository.follows = "opam-repository";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, flake-utils, opam-nix, nixpkgs, ... }@inputs:
     # Construct an output set that supports a number of default systems
     flake-utils.lib.eachDefaultSystem (system:
       let
-        legacyPackages = nixpkgs.legacyPackages.${system};
-        ocamlPackages = legacyPackages.ocamlPackages;
-        lib = legacyPackages.lib;
+        pkgs = nixpkgs.legacyPackages.${system};
+        opam-lib = opam-nix.lib.${system};
+
+        # Local packages, detected from the `*.opam` files found in `./opam/`.
+        localPackagesQuery = builtins.mapAttrs (_: pkgs.lib.last)
+          (opam-lib.listRepo (opam-lib.makeOpamRepo ./.));
+        # Development packages, automatically added to the development shell.
+        devPackagesQuery = {
+          ocaml-lsp-server = "*";
+          # FIXME: ocamlformat 0.26.0 fails to build with:
+          #
+          #     File "lib/dune", line 39, characters 2-16:
+          #     39 |   ocp-indent.lib
+          #            ^^^^^^^^^^^^^^
+          #     Error: Library "ocp-indent.lib" not found.
+          #     -> required by library "ocamlformat-lib" in _build/default/lib
+          #     -> required by _build/default/META.ocamlformat-lib
+          #     -> required by _build/install/default/lib/ocamlformat-lib/META
+          #     -> required by _build/default/ocamlformat-lib.install
+          #     -> required by alias install
+          ocamlformat = "0.25.1";
+          utop = "*";
+        };
+        query = devPackagesQuery // {
+          ## Force versions of certain packages here, e.g:
+          ## - force the ocaml compiler to be taken from opam-repository:
+          ocaml-base-compiler = "*";
+          ## - or force the compiler to be taken from nixpkgs and be a certain version:
+          # ocaml-system = "4.14.0";
+          ## - or force ocamlfind to be a certain version:
+          # ocamlfind = "1.9.2";
+        };
+
+        overlay = final: prev: {
+          lang-shader-graphics = prev.lang-shader-graphics.overrideAttrs (previousAttrs: {
+            nativeCheckInputs = [
+              # For `lang-shader-graphics/test/dune`
+              pkgs.netpbm
+            ];
+          });
+        };
+
+        legacyPackages = (opam-lib.buildOpamProject' { } ./. query).overrideScope' overlay;
+        devPackages = pkgs.lib.getAttrs (builtins.attrNames devPackagesQuery) legacyPackages;
+        packages = pkgs.lib.getAttrs (builtins.attrNames localPackagesQuery) legacyPackages;
+
+        legacyTestPackages =
+          (opam-lib.buildOpamProject' { resolveArgs.with-test = true; } ./. query).overrideScope' overlay;
+        testPackages = pkgs.lib.getAttrs (builtins.attrNames localPackagesQuery) legacyTestPackages;
       in
       {
         # Exposed packages that can be built or run with `nix build` or
@@ -31,226 +89,13 @@
         #     $ nix build .#<name>
         #     $ nix run .#<name> -- <args?>
         #
-        packages = {
-          # Compilation
+        inherit packages;
 
-          compile-arith = ocamlPackages.buildDunePackage {
-            pname = "compile-arith";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-            ];
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-            ];
-
-            checkInputs = [
-              ocamlPackages.alcotest
-              ocamlPackages.mdx
-              ocamlPackages.qcheck
-              ocamlPackages.qcheck-core
-              ocamlPackages.qcheck-alcotest
-            ];
-          };
-
-          compile-arithcond = ocamlPackages.buildDunePackage {
-            pname = "compile-arithcond";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-            ];
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-            ];
-
-            checkInputs = [
-              ocamlPackages.alcotest
-              ocamlPackages.mdx
-              ocamlPackages.qcheck
-              ocamlPackages.qcheck-core
-              ocamlPackages.qcheck-alcotest
-            ];
-          };
-
-          compile-closure-conv = ocamlPackages.buildDunePackage {
-            pname = "compile-closure-conv";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-            ];
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-            ];
-
-            checkInputs = [
-              ocamlPackages.mdx
-            ];
-          };
-
-          # Elaboration
-
-          elab-dependent = ocamlPackages.buildDunePackage {
-            pname = "elab-dependent";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-            ];
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-            ];
-
-            checkInputs = [
-              ocamlPackages.mdx
-            ];
-          };
-
-          elab-stlc-unification = ocamlPackages.buildDunePackage {
-            pname = "elab-stlc-unification";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-            ];
-
-            checkInputs = [
-              ocamlPackages.mdx
-            ];
-          };
-
-          elab-record-patching = ocamlPackages.buildDunePackage {
-            pname = "elab-record-patching";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-            ];
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-          };
-
-          # Languages
-
-          lang-fractal-growth = ocamlPackages.buildDunePackage {
-            pname = "lang-fractal-growth";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-            ];
-
-            checkInputs = [
-              ocamlPackages.mdx
-            ];
-          };
-
-          lang-shader-graphics = ocamlPackages.buildDunePackage {
-            pname = "lang-shader-graphics";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-              # For `lang-shader-graphics/test/dune`
-              legacyPackages.netpbm
-            ];
-
-            checkInputs = [
-              ocamlPackages.mdx
-            ];
-          };
-
-          # WIP projects
-
-          wip-compile-stratify = ocamlPackages.buildDunePackage {
-            pname = "wip-compile-stratify";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-          };
-
-          wip-compile-uncurry = ocamlPackages.buildDunePackage {
-            pname = "wip-compile-uncurry";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-          };
-
-          wip-elab-builtins = ocamlPackages.buildDunePackage {
-            pname = "wip-elab-builtins";
-            version = "0";
-            src = ./.;
-            duneVersion = "3";
-
-            nativeBuildInputs = [
-              ocamlPackages.menhir
-            ];
-
-            buildInputs = [
-              ocamlPackages.cmdliner
-            ];
-
-            nativeCheckInputs = [
-              ocamlPackages.mdx.bin
-            ];
-
-            checkInputs = [
-              ocamlPackages.mdx
-            ];
-          };
-        };
+        # Used for nixpkgs packages, also accessible via `nix build`:
+        #
+        #     $ nix build .#<name>
+        #
+        inherit legacyPackages;
 
         # Development shells
         #
@@ -263,52 +108,11 @@
         #    $ echo "use flake" > .envrc && direnv allow
         #    $ dune build @test
         #
-        devShells = {
-          default = legacyPackages.mkShell {
-            nativeBuildInputs = [
-              # Language formatters
-              legacyPackages.nixpkgs-fmt
-              legacyPackages.ocamlformat
-              # For `dune build --watch ...`
-              legacyPackages.fswatch
-              # Editor tools
-              ocamlPackages.ocaml-lsp
-              ocamlPackages.ocamlformat-rpc-lib
-              # Fancy REPL thing
-              ocamlPackages.utop
-            ];
-
-            inputsFrom =
-              lib.lists.map
-                (p: p.overrideAttrs (_: {
-                  # Ensure that the `nativeCheckInputs` and `checkInputs` are
-                  # included in the development shell
-                  doCheck = true;
-                }))
-                (lib.attrValues self.packages.${system});
-          };
+        devShells.default = pkgs.mkShell {
+          inputsFrom = builtins.attrValues testPackages;
+          buildInputs = builtins.attrValues devPackages ++ [
+            # You can add packages from nixpkgs here
+          ];
         };
-
-        # Flake checks
-        #
-        #     $ nix flake check
-        #
-        checks = {
-          # Check Nix formatting
-          nixpkgs-fmt = legacyPackages.runCommand "check-nixpkgs-fmt"
-            { nativeBuildInputs = [ legacyPackages.nixpkgs-fmt ]; }
-            ''
-              mkdir $out
-              nixpkgs-fmt --check ${./flake.nix}
-            '';
-        }
-        # Dune package tests
-        // lib.mapAttrs
-          (name: package:
-            package.overrideAttrs (oldAttrs: {
-              name = "check-${oldAttrs.name}";
-              doCheck = true;
-            }))
-          self.packages.${system};
       });
 }
