@@ -1,0 +1,6 @@
+thing(3).
+
+foo(X, Y) <- thing(Y).
+%   ^ error: variable `X` does not appear in the body of the rule
+
+? foo(1, 3).

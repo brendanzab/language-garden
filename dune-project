@@ -19,6 +19,7 @@
 
 (package (name lang-fractal-growth))
 (package (name lang-shader-graphics))
+(package (name lang-datalog))
 
 (package (name wip-compile-stratify))
 (package (name wip-compile-uncurry))

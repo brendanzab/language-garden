@@ -43,6 +43,8 @@ related to compiling functional programming languages.
 
 Miscellaneous programming language experiments.
 
+- [**lang-datalog**](./lang-datalog/):
+  A simple Datalog interpreter.
 - [**lang-fractal-growth**](./lang-fractal-growth/):
   Experiments with using grammars and rewriting systems to model fractal growth.
 - [**lang-shader-graphics**](./lang-shader-graphics/):

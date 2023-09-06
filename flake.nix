@@ -99,6 +99,7 @@
         elab-dependent = [ "dependent" ];
         elab-record-patching = [ "record-patching" ];
         elab-stlc-unification = [ "stlc-unification" ];
+        lang-datalog = [ "datalog" ];
         lang-fractal-growth = [ "fractal-growth" ];
         lang-shader-graphics = [ "shader-graphics" ];
         wip-compile-stratify = [ "stratify" ];

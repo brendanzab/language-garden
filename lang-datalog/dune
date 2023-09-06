@@ -1,0 +1,10 @@
+(executable
+  (name Main)
+  (public_name datalog)
+  (package lang-datalog))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(ocamllex Lexer)

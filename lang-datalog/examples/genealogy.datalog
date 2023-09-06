@@ -1,0 +1,52 @@
+% Genealogy of Elrond <https://tolkiengateway.net/wiki/Elrond#Genealogy>
+
+parent("Arwen", "Eldarion").
+parent("Aragorn II", "Eldarion").
+
+parent("Celebrían", "Elladan").
+parent("Celebrían", "Elrohir").
+parent("Celebrían", "Arwen").
+parent("Elrond", "Elladan").
+parent("Elrond", "Elrohir").
+parent("Elrond", "Arwen").
+
+parent("Eärwen", "Galadriel").
+parent("Finarfen", "Galadriel").
+
+parent("Elwing", "Elrond").
+parent("Elwing", "Elros").
+parent("Eärendil", "Elrond").
+parent("Eärendil", "Elros").
+
+parent("Galadhon", "Celeborn").
+parent("Galadhon", "Galathil").
+
+parent("Galadriel", "Celebrían").
+parent("Celeborn", "Celebrían").
+
+parent("Galathil", "Nimloth").
+
+parent("Lúthien", "Dior").
+parent("Beren", "Dior").
+
+parent("Melian", "Lúthien").
+parent("Elu Thingol", "Lúthien").
+
+parent("Nimloth", "Elwing").
+parent("Dior", "Elwing").
+
+parent("Tuor", "Eärendil").
+parent("Idril", "Eärendil").
+
+% TODO: Elros .. Aragorn II:
+% See <https://tolkiengateway.net/wiki/Ancestry_of_Aragorn_II>
+
+
+ancestor(X, Y) <- parent(X, Y).
+ancestor(X, Z) <- parent(X, Y), ancestor(Y, Z).
+
+
+? ancestor("Melian", Intermediate),
+  ancestor(Intermediate, "Arwen").
+? ancestor("Elrond", "Bilbo").
+? ancestor("Elrond", "Arwen").
