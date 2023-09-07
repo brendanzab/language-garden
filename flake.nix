@@ -74,12 +74,14 @@
           });
         };
 
-        legacyPackages = (opam-lib.buildOpamProject' { } ./. query).overrideScope' overlay;
+        buildOpamProject = options:
+          (opam-lib.buildOpamProject' options ./. query).overrideScope' overlay;
+
+        legacyPackages = buildOpamProject { };
         devPackages = pkgs.lib.getAttrs (builtins.attrNames devPackagesQuery) legacyPackages;
         packages = pkgs.lib.getAttrs (builtins.attrNames localPackagesQuery) legacyPackages;
 
-        legacyTestPackages =
-          (opam-lib.buildOpamProject' { resolveArgs.with-test = true; } ./. query).overrideScope' overlay;
+        legacyTestPackages = buildOpamProject { resolveArgs.with-test = true; };
         testPackages = pkgs.lib.getAttrs (builtins.attrNames localPackagesQuery) legacyTestPackages;
       in
       {
