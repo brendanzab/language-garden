@@ -58,7 +58,7 @@
         query = devPackagesQuery // {
           ## Force versions of certain packages here, e.g:
           ## - force the ocaml compiler to be taken from opam-repository:
-          ocaml-base-compiler = "*";
+          ocaml-base-compiler = "5.0.0"; # Fix for opam-nix choosing 5.0.0~rc1 over 5.0.0
           ## - or force the compiler to be taken from nixpkgs and be a certain version:
           # ocaml-system = "4.14.0";
           ## - or force ocamlfind to be a certain version:
