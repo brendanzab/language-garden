@@ -18,7 +18,9 @@
     },
     "flake-utils": {
       "inputs": {
-        "systems": "systems"
+        "systems": [
+          "systems"
+        ]
       },
       "locked": {
         "lastModified": 1692799911,
@@ -154,7 +156,8 @@
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
         "opam-nix": "opam-nix",
-        "opam-repository": "opam-repository"
+        "opam-repository": "opam-repository",
+        "systems": "systems"
       }
     },
     "systems": {
