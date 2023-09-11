@@ -90,6 +90,21 @@
           });
         });
 
+      # Executables that don’t have the same name as the package they were
+      # defined in can be listed here to register them with `nix run`.
+      executables = {
+        compile-arith = [ "arith" ];
+        compile-arithcond = [ "arithcond" ];
+        compile-closure-conv = [ "closure-conv" ];
+        elab-dependent = [ "dependent" ];
+        elab-record-patching = [ "record-patching" ];
+        elab-stlc-unification = [ "stlc-unification" ];
+        lang-fractal-growth = [ "fractal-growth" ];
+        lang-shader-graphics = [ "shader-graphics" ];
+        wip-compile-stratify = [ "stratify" ];
+        wip-elab-builtins = [ "builtins" ];
+      };
+
       buildOpamProject = system: options:
         (opam-nix.lib.${system}.buildOpamProject' options ./. query).overrideScope'
           overlay.${system};
@@ -122,6 +137,21 @@
       #     $ nix build .#<name>
       #
       inherit legacyPackages;
+
+      # Exposed executables than can be executed with `nix run`:
+      #
+      #     $ nix run .#<name>
+      #     $ nix run .#<name> -- <args>
+      #
+      apps = eachSystem (system:
+        nixpkgs.lib.foldlAttrs
+          (apps: package: names:
+            apps // nixpkgs.lib.genAttrs names (name: {
+              type = "app";
+              program = "${packages.${system}.${package}}/bin/${name}";
+            }))
+          { }
+          executables);
 
       # Development shells
       #
