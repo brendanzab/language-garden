@@ -1,0 +1,35 @@
+% A Miniature Airline - they only have two flights
+%
+% Illustrating the reduction of n-ary to binary predicates
+%
+% Example from Chapter 16 of “Symbolic Processing In Pascal” by Manfred von Thun
+% <https://nickelsworth.github.io/sympas/16-datalog.html>
+
+departure_place(1, "Melbourne").       arrival_place(1, "Honolulu").
+departure_day(1, "Monday").            arrival_day(1, "Tuesday").
+departure_time(1, "h20").              arrival_time(1, "h08").
+
+departure_place(2, "Honolulu").        arrival_place(2, "Melbourne").
+departure_day(2, "Thursday").          arrival_day(2, "Friday").
+departure_time(2, "h22").              arrival_time(2, "h10").
+
+flight(FlightNumber, DeparturePlace, DepartureDay, DepartureTime,
+                     ArrivalPlace,   ArrivalDay,   ArrivalTime) <-
+  departure_place(FlightNumber, DeparturePlace),    arrival_place(FlightNumber, ArrivalPlace),
+  departure_day(FlightNumber, DepartureDay),        arrival_day(FlightNumber, ArrivalDay),
+  departure_time(FlightNumber, DepartureTime),      arrival_time(FlightNumber, ArrivalTime).
+
+% What is the flight departing Honolulu and arriving in Melbourne?
+
+? flight(FlightNumber, "Honolulu",  DepartureDay, DepartureTime,
+                       "Melbourne", ArrivalDay,   ArrivalTime).
+
+% which flight arrives on a Tuesday?
+
+? flight(FlightNumber, DeparturePlace, DepartureDay, DepartureTime,
+                       ArrivalPlace,   "Tuesday",    ArrivalTime).
+
+% Which flight arrives on a Thursday?
+
+? flight(FlightNumber, DeparturePlace, DepartureDay, DepartureTime,
+                       ArrivalPlace,   "Thursday",   ArrivalTime).

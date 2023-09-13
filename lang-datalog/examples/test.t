@@ -1,3 +1,53 @@
+Airline example
+  $ cat ./airline.datalog | datalog
+  ────────────────────────────────────────────────────────────────────────────────
+  Knowledge Base
+  ────────────────────────────────────────────────────────────────────────────────
+  departure_place(1, "Melbourne").
+  arrival_place(1, "Honolulu").
+  departure_day(1, "Monday").
+  arrival_day(1, "Tuesday").
+  departure_time(1, "h20").
+  arrival_time(1, "h08").
+  departure_place(2, "Honolulu").
+  arrival_place(2, "Melbourne").
+  departure_day(2, "Thursday").
+  arrival_day(2, "Friday").
+  departure_time(2, "h22").
+  arrival_time(2, "h10").
+  flight(1, "Melbourne", "Monday", "h20", "Honolulu", "Tuesday", "h08").
+  flight(2, "Honolulu", "Thursday", "h22", "Melbourne", "Friday", "h10").
+  
+  ────────────────────────────────────────────────────────────────────────────────
+  Query Results
+  ────────────────────────────────────────────────────────────────────────────────
+  ?
+    flight(FlightNumber, "Honolulu", DepartureDay, DepartureTime, "Melbourne",
+    ArrivalDay, ArrivalTime).
+    > FlightNumber := 2.
+      DepartureDay := "Thursday".
+      DepartureTime := "h22".
+      ArrivalDay := "Friday".
+      ArrivalTime := "h10".
+    yes
+  
+  ?
+    flight(FlightNumber, DeparturePlace, DepartureDay, DepartureTime,
+    ArrivalPlace, "Tuesday", ArrivalTime).
+    > FlightNumber := 1.
+      DeparturePlace := "Melbourne".
+      DepartureDay := "Monday".
+      DepartureTime := "h20".
+      ArrivalPlace := "Honolulu".
+      ArrivalTime := "h08".
+    yes
+  
+  ?
+    flight(FlightNumber, DeparturePlace, DepartureDay, DepartureTime,
+    ArrivalPlace, "Thursday", ArrivalTime).
+    no
+  
+
 Genealogy example
   $ cat ./genealogy.datalog | datalog
   ────────────────────────────────────────────────────────────────────────────────
