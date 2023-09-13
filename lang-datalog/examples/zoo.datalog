@@ -1,0 +1,72 @@
+% Zoological Database
+%
+% > Note that this database treats species of animals and also
+% > their sizes, colours and so on as individuals. This ploy is
+% > philosophically suspect, but computationally convenient.
+% >
+% > -- Manfred von Thun
+%
+% Example from Chapter 16 of “Symbolic Processing In Pascal” by Manfred von Thun
+% <https://nickelsworth.github.io/sympas/16-datalog.html>
+
+size("mouse", "tiny").
+size("frog", "tiny").
+size("rabbit", "small").
+size("fox", "small").
+size("wolf", "medium").
+size("goat", "medium").
+size("pig", "medium").
+size("bear", "big").
+size("horse", "big").
+size("cow", "big").
+size("elephant", "huge").
+size("giraffe", "huge").
+
+size(X, "small") <- size(X, "tiny").
+size(X, "big") <- size(X, "huge").
+
+colour("mouse", "grey").
+colour("mouse", "black").
+colour("mouse", "white").
+colour("frog", "green").
+colour("rabbit", "brown").
+colour("rabbit", "white").
+colour("fox", "red").
+colour("wolf", "brown").
+colour("elephant", "grey").
+
+feet("horse", "hooves").
+feet("cow", "hooves").
+feet("goat", "hooves").
+feet("rabbit", "paws").
+feet("fox", "paws").
+feet("bear", "paws").
+
+herbivore("rabbit").
+herbivore("elephant").
+herbivore("giraffe").
+herbivore(X) <- feet(X, "hooves").
+
+carnivore("fox").
+carnivore("wolf").
+carnivore("bear").
+
+bigger(X, Y) <- size(X, "small"), size(Y, "tiny").
+bigger(X, Y) <- size(X, "medium"), size(Y, "small").
+bigger(X, Y) <- size(X, "big"), size(Y, "medium").
+bigger(X, Y) <- size(X, "huge"), size(Y, "big").
+
+eats(X, "grass") <- herbivore(X).
+eats(X, "leaves") <- herbivore(X).
+eats(X, Y) <- carnivore(X), bigger(X, Y).
+
+eaten(X) <- eats(Y, X).
+
+% which animal eats another animal of the same colour?
+? eats(Eater, Eaten), colour(Eater, Colour), colour(Eaten, Colour).
+
+% which tiny animals are eaten?
+? eaten(X), size(X, "tiny").
+
+% What herbivore is big and grey?
+? herbivore(Animal), size(Animal, "big"), colour(Animal, "grey").
