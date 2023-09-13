@@ -57,6 +57,9 @@ Genealogy example
   ancestor("Dior", "Elwing").
   ancestor("Tuor", "Eärendil").
   ancestor("Idril", "Eärendil").
+  ancestor("Elros", "Eldarion").
+  ancestor("Elwing", "Aragorn II").
+  ancestor("Eärendil", "Aragorn II").
   ancestor("Celebrían", "Eldarion").
   ancestor("Elrond", "Eldarion").
   ancestor("Galadriel", "Elladan").
@@ -88,10 +91,14 @@ Genealogy example
   ancestor("Galathil", "Elwing").
   ancestor("Lúthien", "Elwing").
   ancestor("Beren", "Elwing").
-  ancestor("Galadriel", "Eldarion").
-  ancestor("Celeborn", "Eldarion").
+  ancestor("Nimloth", "Aragorn II").
+  ancestor("Dior", "Aragorn II").
+  ancestor("Tuor", "Aragorn II").
+  ancestor("Idril", "Aragorn II").
   ancestor("Elwing", "Eldarion").
   ancestor("Eärendil", "Eldarion").
+  ancestor("Galadriel", "Eldarion").
+  ancestor("Celeborn", "Eldarion").
   ancestor("Eärwen", "Elladan").
   ancestor("Finarfen", "Elladan").
   ancestor("Galadhon", "Elladan").
@@ -122,13 +129,16 @@ Genealogy example
   ancestor("Galadhon", "Elwing").
   ancestor("Melian", "Elwing").
   ancestor("Elu Thingol", "Elwing").
-  ancestor("Eärwen", "Eldarion").
-  ancestor("Finarfen", "Eldarion").
-  ancestor("Galadhon", "Eldarion").
+  ancestor("Galathil", "Aragorn II").
+  ancestor("Lúthien", "Aragorn II").
+  ancestor("Beren", "Aragorn II").
   ancestor("Nimloth", "Eldarion").
   ancestor("Dior", "Eldarion").
   ancestor("Tuor", "Eldarion").
   ancestor("Idril", "Eldarion").
+  ancestor("Eärwen", "Eldarion").
+  ancestor("Finarfen", "Eldarion").
+  ancestor("Galadhon", "Eldarion").
   ancestor("Galathil", "Elladan").
   ancestor("Lúthien", "Elladan").
   ancestor("Beren", "Elladan").
@@ -144,6 +154,9 @@ Genealogy example
   ancestor("Galadhon", "Elros").
   ancestor("Melian", "Elros").
   ancestor("Elu Thingol", "Elros").
+  ancestor("Galadhon", "Aragorn II").
+  ancestor("Melian", "Aragorn II").
+  ancestor("Elu Thingol", "Aragorn II").
   ancestor("Galathil", "Eldarion").
   ancestor("Lúthien", "Eldarion").
   ancestor("Beren", "Eldarion").
@@ -166,6 +179,16 @@ Genealogy example
     yes
   
   ? ancestor("Melian", X), ancestor(X, "Arwen").
+    > X := "Elrond".
+    > X := "Elwing".
+    > X := "Dior".
+    > X := "Lúthien".
+    yes
+  
+  ? ancestor("Melian", X), ancestor(X, "Eldarion").
+    > X := "Arwen".
+    > X := "Aragorn II".
+    > X := "Elros".
     > X := "Elrond".
     > X := "Elwing".
     > X := "Dior".

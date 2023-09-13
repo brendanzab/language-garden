@@ -38,8 +38,9 @@ parent("Dior", "Elwing").
 parent("Tuor", "Eärendil").
 parent("Idril", "Eärendil").
 
-% TODO: Elros .. Aragorn II:
 % See <https://tolkiengateway.net/wiki/Ancestry_of_Aragorn_II>
+ancestor("Elros", X) <- ancestor("Aragorn II", X).
+ancestor(X, "Aragorn II") <- ancestor(X, "Elros").
 
 
 ancestor(X, Y) <- parent(X, Y).
@@ -55,6 +56,10 @@ ancestor(X, Z) <- parent(X, Y), ancestor(Y, Z).
 % The ancestors between Melian and Arwen
 ? ancestor("Melian", X),
   ancestor(X, "Arwen").
+
+% The ancestors between Melian and Eldarion
+? ancestor("Melian", X),
+  ancestor(X, "Eldarion").
 
 % The decendents of Galadriel
 ? ancestor("Galadriel", Descendent).
