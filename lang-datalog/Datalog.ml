@@ -13,10 +13,7 @@ type const =
 (** Terms that are used in the arguments of atomic symbols. *)
 type term =
   | Var of string
-  (** Variables. *)
-
   | Const of const
-  (** Constants. *)
 
 (** Atomic symbols. These are considered {i ground} if none of the [terms]
     are variables. *)
