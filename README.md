@@ -66,9 +66,19 @@ projects need more work put into them and a more incomplete in comparison.
 
 ## Development setup
 
+### With Nix
+
 Using [Nix] is not required, but can be useful for setting up a development
 shell with the packages and tools used in this project. With [Nix flakes]
-enabled and [nix-direnv] installed, run:
+enabled:
+
+```sh
+nix run .#arith -- compile --target=anf <<< "1 + 2 * 27"
+```
+
+[nix-direnv] can be used to load development tools into your shell
+automatically. Once it’s installed, run the following commands to enable it in
+the project directory:
 
 ```sh
 echo "use flake" > .envrc
@@ -77,16 +87,23 @@ direnv allow
 
 You’ll want to locally exclude the `.envrc`, or add it to your global gitignore.
 
-After that, dune can be used to build, test, and run the projects:
+After that, [dune] can be used to build, test, and run the projects:
 
 ```sh
 dune build
 dune test
-dune exec compile-arith <<< "1 + 2 * 27"
+dune exec arith -- compile --target=anf <<< "1 + 2 * 27"
 ```
 
-Alternatively, opam files are provided (but might be broken).
-
+[dune]: https://dune.build
 [Nix]: https://nixos.org
 [Nix flakes]: https://nixos.wiki/wiki/Flakes
 [nix-direnv]: https://github.com/nix-community/nix-direnv
+
+### With opam
+
+Alternatively, [opam] package definitions are provided in the [`./opam`](./opam)
+directory. They drive the Nix flake, so _should_ be up to date. I don’t use opam
+however, so I’m not sure what the workflow is.
+
+[opam]: opam.ocaml.org
