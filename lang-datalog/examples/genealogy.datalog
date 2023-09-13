@@ -38,32 +38,48 @@ parent("Dior", "Elwing").
 parent("Tuor", "Eärendil").
 parent("Idril", "Eärendil").
 
-% See <https://tolkiengateway.net/wiki/Ancestry_of_Aragorn_II>
-ancestor("Elros", X) <- ancestor("Aragorn II", X).
-ancestor(X, "Aragorn II") <- ancestor(X, "Elros").
+% Genealogy of Aragorn <https://tolkiengateway.net/wiki/Aragorn#Genealogy>
+
+parent("Elendil", "Isildur").
+parent("Elendil", "Anárion").
+
+parent("Gilraen", "Aragorn II").
+parent("Arathorn II", "Aragorn II").
+
+ancestor("Elros", X)   <- ancestor("Elendil", X).     ancestor(X, "Elendil")     <- ancestor(X, "Elros").
+ancestor("Isildur", X) <- ancestor("Arvedui", X).     ancestor(X, "Arvedui")     <- ancestor(X, "Isildur").
+ancestor("Anárion", X) <- ancestor("Fíriel", X).      ancestor(X, "Fíriel")      <- ancestor(X, "Anárion").
+ancestor("Fíriel", X)  <- ancestor("Arathorn II", X). ancestor(X, "Arathorn II") <- ancestor(X, "Fíriel").
+ancestor("Arvedui", X) <- ancestor("Arathorn II", X). ancestor(X, "Arathorn II") <- ancestor(X, "Arvedui").
 
 
 ancestor(X, Y) <- parent(X, Y).
 ancestor(X, Z) <- parent(X, Y), ancestor(Y, Z).
 
 
-% Elrond is not an ancestor of Bilbo
-? ancestor("Elrond", "Bilbo").
+% Is Elrond an ancestor of Celeborn?
+? ancestor("Elrond", "Celeborn").
 
-% Elrond is an ancestor of Eldarion
+% Is Elrond is an ancestor of Eldarion?
 ? ancestor("Elrond", "Eldarion").
 
-% The ancestors between Melian and Arwen
+% Who are Elrond’s children?
+? parent("Elrond", Child).
+
+% Who are Elrond’s parents?
+? parent(Parent, "Elrond").
+
+% Who are the ancestors between Melian and Arwen?
 ? ancestor("Melian", X),
   ancestor(X, "Arwen").
 
-% The ancestors between Melian and Eldarion
+% Who are the ancestors between Melian and Eldarion?
 ? ancestor("Melian", X),
   ancestor(X, "Eldarion").
 
-% The decendents of Galadriel
+% Who are the decendents of Galadriel?
 ? ancestor("Galadriel", Descendent).
 
-% The family tree of Elwing’s ancestors
+% What is the family tree of Elwing’s ancestors?
 ? ancestor(Ancestor, Descendant),
   ancestor(Descendant, "Elwing").
