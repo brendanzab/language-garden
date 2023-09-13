@@ -21,6 +21,11 @@ let parse_program filename in_channel =
       print_error pos "syntax error";
       exit 1
 
+let pp_print_binding ppf (var, term) =
+  Format.fprintf ppf "@[%a@ :=@ %a@]"
+    Datalog.pp_print_term var
+    Datalog.pp_print_term term
+
 let () =
   Printexc.record_backtrace true;
 
@@ -49,14 +54,14 @@ let () =
   program.queries |> List.iter (fun query ->
     Format.printf "@[%a@]@\n" Datalog.pp_print_query query;
     match Datalog.run_query query kb with
-    | None ->
-        Format.printf "  None.@\n";
+    | [] ->
+        Format.printf "  no@\n";
         Format.printf "@\n";
-    | Some results ->
-        results |> List.iter (fun (var, term) ->
-          Format.printf "@[  > %a@ :=@ %a@].@\n"
-            Datalog.pp_print_term var
-            Datalog.pp_print_term term);
-        Format.printf "  Ok.@\n";
+    | results ->
+        results |> List.iter (List.iteri
+          (function
+            | 0 -> Format.printf "@[  > %a@].@\n" pp_print_binding;
+            | _ -> Format.printf "@[    %a@].@\n" pp_print_binding));
+        Format.printf "  yes@\n";
         Format.printf "@\n";
   );

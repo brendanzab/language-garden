@@ -261,7 +261,7 @@ let solve (rs : rule list) : knowledge_base =
 
 (** Run a query against the knowledge base, returning a list of possible
     variable bindings from the query. *)
-let run_query (query : atom list) (kb : knowledge_base) : (term * term) list option =
+let run_query (query : atom list) (kb : knowledge_base) : (term * term) list list =
   (* Collect the free variables in the query *)
   let free_vars =
     query
@@ -269,11 +269,6 @@ let run_query (query : atom list) (kb : knowledge_base) : (term * term) list opt
           List.filter (function Var _ -> true | _ -> false) atom.args)
       |> List.remove_dupes
   in
-  let bindings =
-    add_rules [{ head = { name = "$query"; args = free_vars }; body = query; }] kb
-      |> List.filter (fun atom -> atom.name = "$query")
-      |> List.map (fun atom -> List.combine free_vars atom.args)
-  in
-  match bindings with
-  | [] -> None
-  | bindings -> Some (List.flatten bindings)
+  add_rules [{ head = { name = "$query"; args = free_vars }; body = query; }] kb
+    |> List.filter (fun atom -> atom.name = "$query")
+    |> List.map (fun atom -> List.combine free_vars atom.args)

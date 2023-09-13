@@ -159,18 +159,47 @@ Genealogy example
   ────────────────────────────────────────────────────────────────────────────────
   Query Results
   ────────────────────────────────────────────────────────────────────────────────
-  ? ancestor("Melian", Intermediate), ancestor(Intermediate, "Arwen").
-    > Intermediate := "Elrond".
-    > Intermediate := "Elwing".
-    > Intermediate := "Dior".
-    > Intermediate := "Lúthien".
-    Ok.
-  
   ? ancestor("Elrond", "Bilbo").
-    None.
+    no
   
-  ? ancestor("Elrond", "Arwen").
-    Ok.
+  ? ancestor("Elrond", "Eldarion").
+    yes
+  
+  ? ancestor("Melian", X), ancestor(X, "Arwen").
+    > X := "Elrond".
+    > X := "Elwing".
+    > X := "Dior".
+    > X := "Lúthien".
+    yes
+  
+  ? ancestor("Galadriel", Descendent).
+    > Descendent := "Celebrían".
+    > Descendent := "Elladan".
+    > Descendent := "Elrohir".
+    > Descendent := "Arwen".
+    > Descendent := "Eldarion".
+    yes
+  
+  ? ancestor(Ancestor, Descendant), ancestor(Descendant, "Elwing").
+    > Ancestor := "Galathil".
+      Descendant := "Nimloth".
+    > Ancestor := "Galadhon".
+      Descendant := "Nimloth".
+    > Ancestor := "Lúthien".
+      Descendant := "Dior".
+    > Ancestor := "Beren".
+      Descendant := "Dior".
+    > Ancestor := "Melian".
+      Descendant := "Dior".
+    > Ancestor := "Elu Thingol".
+      Descendant := "Dior".
+    > Ancestor := "Galadhon".
+      Descendant := "Galathil".
+    > Ancestor := "Melian".
+      Descendant := "Lúthien".
+    > Ancestor := "Elu Thingol".
+      Descendant := "Lúthien".
+    yes
   
 
 Graph example
@@ -187,3 +216,12 @@ Graph example
   ────────────────────────────────────────────────────────────────────────────────
   Query Results
   ────────────────────────────────────────────────────────────────────────────────
+  ? path(X, Y).
+    > X := 1.
+      Y := 2.
+    > X := 2.
+      Y := 3.
+    > X := 1.
+      Y := 3.
+    yes
+  

@@ -3,3 +3,5 @@ path(X, Y) <- edge(X, Z), edge(Z, Y).
 
 edge(1, 2).
 edge(2, 3).
+
+? path(X, Y).

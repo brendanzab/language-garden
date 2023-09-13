@@ -46,7 +46,19 @@ ancestor(X, Y) <- parent(X, Y).
 ancestor(X, Z) <- parent(X, Y), ancestor(Y, Z).
 
 
-? ancestor("Melian", Intermediate),
-  ancestor(Intermediate, "Arwen").
+% Elrond is not an ancestor of Bilbo
 ? ancestor("Elrond", "Bilbo").
-? ancestor("Elrond", "Arwen").
+
+% Elrond is an ancestor of Eldarion
+? ancestor("Elrond", "Eldarion").
+
+% The ancestors between Melian and Arwen
+? ancestor("Melian", X),
+  ancestor(X, "Arwen").
+
+% The decendents of Galadriel
+? ancestor("Galadriel", Descendent).
+
+% The family tree of Elwing’s ancestors
+? ancestor(Ancestor, Descendant),
+  ancestor(Descendant, "Elwing").
