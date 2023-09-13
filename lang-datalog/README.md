@@ -59,3 +59,17 @@ Query Results
   yes
 
 ```
+
+## Additional Resources
+
+Here’s some additional resources on Datalog that looked interesting, but I
+haven’t had time to go through yet:
+
+- [“Foundations of databases”](http://webdam.inria.fr/Alice/)
+  by Abiteboul, Hull, and Vianu
+- [“Datalog - a precursor to Prolog”](https://nickelsworth.github.io/sympas/16-datalog.html)
+  by Manfred von Thun from “Symbolic Processing In Pascal”
+- [“A relatively simple Datalog engine in Rust”](https://github.com/frankmcsherry/blog/blob/master/posts/2018-05-19.md)
+  by Frank McSherry
+- [“Codebase as Database: Turning the IDE Inside Out with Datalog”](https://petevilter.me/post/datalog-typechecking/)
+  by Pete Vilter
