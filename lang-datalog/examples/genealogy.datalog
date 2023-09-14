@@ -39,6 +39,9 @@ parent("Tuor", "Eärendil").
 parent("Idril", "Eärendil").
 
 % Genealogy of Aragorn <https://tolkiengateway.net/wiki/Aragorn#Genealogy>
+%
+% Can’t be bothered to define Aragorn’s unbroken genealogy – it’s huge! Just
+% note key figures and fill in the gaps using the `distantAncestor` relation.
 
 parent("Elendil", "Isildur").
 parent("Elendil", "Anárion").
@@ -46,15 +49,21 @@ parent("Elendil", "Anárion").
 parent("Gilraen", "Aragorn II").
 parent("Arathorn II", "Aragorn II").
 
-ancestor("Elros", X)   <- ancestor("Elendil", X).     ancestor(X, "Elendil")     <- ancestor(X, "Elros").
-ancestor("Isildur", X) <- ancestor("Arvedui", X).     ancestor(X, "Arvedui")     <- ancestor(X, "Isildur").
-ancestor("Anárion", X) <- ancestor("Fíriel", X).      ancestor(X, "Fíriel")      <- ancestor(X, "Anárion").
-ancestor("Fíriel", X)  <- ancestor("Arathorn II", X). ancestor(X, "Arathorn II") <- ancestor(X, "Fíriel").
-ancestor("Arvedui", X) <- ancestor("Arathorn II", X). ancestor(X, "Arathorn II") <- ancestor(X, "Arvedui").
+distantAncestor("Elros", "Elendil").
+distantAncestor("Isildur", "Arvedui").
+distantAncestor("Anárion", "Fíriel").
+distantAncestor("Fíriel", "Arathorn II").
+distantAncestor("Arvedui", "Arathorn II").
 
+
+% Ancestor relation
 
 ancestor(X, Y) <- parent(X, Y).
 ancestor(X, Z) <- parent(X, Y), ancestor(Y, Z).
+
+% Some additional rules to handle distant ancestors
+ancestor(X, Z) <- distantAncestor(X, Y), ancestor(Y, Z). % Common decendents
+ancestor(Z, Y) <- distantAncestor(X, Y), ancestor(Z, X). % Common ancestors
 
 
 % Is Elrond an ancestor of Celeborn?

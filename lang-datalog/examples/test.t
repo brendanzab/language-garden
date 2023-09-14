@@ -84,6 +84,11 @@ Genealogy example
   parent("Elendil", "Anárion").
   parent("Gilraen", "Aragorn II").
   parent("Arathorn II", "Aragorn II").
+  distantAncestor("Elros", "Elendil").
+  distantAncestor("Isildur", "Arvedui").
+  distantAncestor("Anárion", "Fíriel").
+  distantAncestor("Fíriel", "Arathorn II").
+  distantAncestor("Arvedui", "Arathorn II").
   ancestor("Arwen", "Eldarion").
   ancestor("Aragorn II", "Eldarion").
   ancestor("Celebrían", "Elladan").
@@ -115,14 +120,6 @@ Genealogy example
   ancestor("Elendil", "Anárion").
   ancestor("Gilraen", "Aragorn II").
   ancestor("Arathorn II", "Aragorn II").
-  ancestor("Elros", "Isildur").
-  ancestor("Elros", "Anárion").
-  ancestor("Elwing", "Elendil").
-  ancestor("Eärendil", "Elendil").
-  ancestor("Elendil", "Arvedui").
-  ancestor("Elendil", "Fíriel").
-  ancestor("Fíriel", "Aragorn II").
-  ancestor("Arvedui", "Aragorn II").
   ancestor("Celebrían", "Eldarion").
   ancestor("Elrond", "Eldarion").
   ancestor("Gilraen", "Eldarion").
@@ -156,21 +153,14 @@ Genealogy example
   ancestor("Galathil", "Elwing").
   ancestor("Lúthien", "Elwing").
   ancestor("Beren", "Elwing").
-  ancestor("Elros", "Arvedui").
-  ancestor("Elros", "Fíriel").
-  ancestor("Nimloth", "Elendil").
-  ancestor("Dior", "Elendil").
-  ancestor("Tuor", "Elendil").
-  ancestor("Idril", "Elendil").
-  ancestor("Isildur", "Aragorn II").
-  ancestor("Anárion", "Aragorn II").
-  ancestor("Fíriel", "Eldarion").
-  ancestor("Elendil", "Arathorn II").
-  ancestor("Arvedui", "Eldarion").
-  ancestor("Elwing", "Isildur").
-  ancestor("Eärendil", "Isildur").
-  ancestor("Elwing", "Anárion").
-  ancestor("Eärendil", "Anárion").
+  ancestor("Elros", "Isildur").
+  ancestor("Elros", "Anárion").
+  ancestor("Fíriel", "Aragorn II").
+  ancestor("Arvedui", "Aragorn II").
+  ancestor("Elwing", "Elendil").
+  ancestor("Eärendil", "Elendil").
+  ancestor("Elendil", "Arvedui").
+  ancestor("Elendil", "Fíriel").
   ancestor("Galadriel", "Eldarion").
   ancestor("Celeborn", "Eldarion").
   ancestor("Elwing", "Eldarion").
@@ -205,25 +195,21 @@ Genealogy example
   ancestor("Galadhon", "Elwing").
   ancestor("Melian", "Elwing").
   ancestor("Elu Thingol", "Elwing").
-  ancestor("Elros", "Arathorn II").
-  ancestor("Galathil", "Elendil").
-  ancestor("Lúthien", "Elendil").
-  ancestor("Beren", "Elendil").
-  ancestor("Isildur", "Eldarion").
-  ancestor("Elwing", "Arvedui").
-  ancestor("Eärendil", "Arvedui").
-  ancestor("Anárion", "Eldarion").
-  ancestor("Elwing", "Fíriel").
-  ancestor("Eärendil", "Fíriel").
-  ancestor("Elendil", "Aragorn II").
-  ancestor("Nimloth", "Isildur").
-  ancestor("Dior", "Isildur").
-  ancestor("Tuor", "Isildur").
-  ancestor("Idril", "Isildur").
-  ancestor("Nimloth", "Anárion").
-  ancestor("Dior", "Anárion").
-  ancestor("Tuor", "Anárion").
-  ancestor("Idril", "Anárion").
+  ancestor("Elwing", "Isildur").
+  ancestor("Eärendil", "Isildur").
+  ancestor("Elwing", "Anárion").
+  ancestor("Eärendil", "Anárion").
+  ancestor("Nimloth", "Elendil").
+  ancestor("Dior", "Elendil").
+  ancestor("Tuor", "Elendil").
+  ancestor("Idril", "Elendil").
+  ancestor("Fíriel", "Eldarion").
+  ancestor("Arvedui", "Eldarion").
+  ancestor("Anárion", "Aragorn II").
+  ancestor("Isildur", "Aragorn II").
+  ancestor("Elros", "Arvedui").
+  ancestor("Elros", "Fíriel").
+  ancestor("Elendil", "Arathorn II").
   ancestor("Eärwen", "Eldarion").
   ancestor("Finarfen", "Eldarion").
   ancestor("Galadhon", "Eldarion").
@@ -246,7 +232,40 @@ Genealogy example
   ancestor("Galadhon", "Elros").
   ancestor("Melian", "Elros").
   ancestor("Elu Thingol", "Elros").
-  ancestor("Elros", "Aragorn II").
+  ancestor("Nimloth", "Isildur").
+  ancestor("Dior", "Isildur").
+  ancestor("Tuor", "Isildur").
+  ancestor("Idril", "Isildur").
+  ancestor("Nimloth", "Anárion").
+  ancestor("Dior", "Anárion").
+  ancestor("Tuor", "Anárion").
+  ancestor("Idril", "Anárion").
+  ancestor("Galathil", "Elendil").
+  ancestor("Lúthien", "Elendil").
+  ancestor("Beren", "Elendil").
+  ancestor("Elendil", "Aragorn II").
+  ancestor("Elwing", "Arvedui").
+  ancestor("Eärendil", "Arvedui").
+  ancestor("Elwing", "Fíriel").
+  ancestor("Eärendil", "Fíriel").
+  ancestor("Anárion", "Eldarion").
+  ancestor("Isildur", "Eldarion").
+  ancestor("Elros", "Arathorn II").
+  ancestor("Galathil", "Eldarion").
+  ancestor("Lúthien", "Eldarion").
+  ancestor("Beren", "Eldarion").
+  ancestor("Melian", "Elladan").
+  ancestor("Elu Thingol", "Elladan").
+  ancestor("Melian", "Elrohir").
+  ancestor("Elu Thingol", "Elrohir").
+  ancestor("Melian", "Arwen").
+  ancestor("Elu Thingol", "Arwen").
+  ancestor("Galathil", "Isildur").
+  ancestor("Lúthien", "Isildur").
+  ancestor("Beren", "Isildur").
+  ancestor("Galathil", "Anárion").
+  ancestor("Lúthien", "Anárion").
+  ancestor("Beren", "Anárion").
   ancestor("Galadhon", "Elendil").
   ancestor("Melian", "Elendil").
   ancestor("Elu Thingol", "Elendil").
@@ -258,25 +277,18 @@ Genealogy example
   ancestor("Dior", "Fíriel").
   ancestor("Tuor", "Fíriel").
   ancestor("Idril", "Fíriel").
+  ancestor("Elendil", "Eldarion").
   ancestor("Elwing", "Arathorn II").
   ancestor("Eärendil", "Arathorn II").
-  ancestor("Elendil", "Eldarion").
-  ancestor("Galathil", "Isildur").
-  ancestor("Lúthien", "Isildur").
-  ancestor("Beren", "Isildur").
-  ancestor("Galathil", "Anárion").
-  ancestor("Lúthien", "Anárion").
-  ancestor("Beren", "Anárion").
-  ancestor("Galathil", "Eldarion").
-  ancestor("Lúthien", "Eldarion").
-  ancestor("Beren", "Eldarion").
-  ancestor("Melian", "Elladan").
-  ancestor("Elu Thingol", "Elladan").
-  ancestor("Melian", "Elrohir").
-  ancestor("Elu Thingol", "Elrohir").
-  ancestor("Melian", "Arwen").
-  ancestor("Elu Thingol", "Arwen").
-  ancestor("Elros", "Eldarion").
+  ancestor("Elros", "Aragorn II").
+  ancestor("Melian", "Eldarion").
+  ancestor("Elu Thingol", "Eldarion").
+  ancestor("Galadhon", "Isildur").
+  ancestor("Melian", "Isildur").
+  ancestor("Elu Thingol", "Isildur").
+  ancestor("Galadhon", "Anárion").
+  ancestor("Melian", "Anárion").
+  ancestor("Elu Thingol", "Anárion").
   ancestor("Galathil", "Arvedui").
   ancestor("Lúthien", "Arvedui").
   ancestor("Beren", "Arvedui").
@@ -289,14 +301,7 @@ Genealogy example
   ancestor("Idril", "Arathorn II").
   ancestor("Elwing", "Aragorn II").
   ancestor("Eärendil", "Aragorn II").
-  ancestor("Galadhon", "Isildur").
-  ancestor("Melian", "Isildur").
-  ancestor("Elu Thingol", "Isildur").
-  ancestor("Galadhon", "Anárion").
-  ancestor("Melian", "Anárion").
-  ancestor("Elu Thingol", "Anárion").
-  ancestor("Melian", "Eldarion").
-  ancestor("Elu Thingol", "Eldarion").
+  ancestor("Elros", "Eldarion").
   ancestor("Galadhon", "Arvedui").
   ancestor("Melian", "Arvedui").
   ancestor("Elu Thingol", "Arvedui").
@@ -352,14 +357,14 @@ Genealogy example
     > X := "Aragorn II".
     > X := "Elrond".
     > X := "Arathorn II".
+    > X := "Elwing".
     > X := "Fíriel".
     > X := "Arvedui".
-    > X := "Elwing".
-    > X := "Isildur".
-    > X := "Anárion".
     > X := "Dior".
-    > X := "Elendil".
+    > X := "Anárion".
+    > X := "Isildur".
     > X := "Lúthien".
+    > X := "Elendil".
     > X := "Elros".
     yes
   
