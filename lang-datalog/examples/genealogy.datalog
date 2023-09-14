@@ -1,3 +1,5 @@
+% A genealogy of characters from Tolkien’s legendarium.
+
 % Genealogy of Elrond <https://tolkiengateway.net/wiki/Elrond#Genealogy>
 
 parent("Arwen", "Eldarion").

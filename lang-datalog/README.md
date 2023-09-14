@@ -60,6 +60,10 @@ Query Results
 
 ```
 
+More examples can be found in the [`./examples/`](./examples/) directory,
+including a [genealogy of characters](./examples/genealogy.datalog) from
+Tolkien’s legendarium.
+
 ## Additional Resources
 
 Here’s some additional resources on Datalog that looked interesting, but I
