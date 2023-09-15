@@ -90,18 +90,25 @@ module List : sig
   val remove_dupes : 'a list -> 'a list
   (** [remove_dupes xs] removes all the duplicate elements from [xs]. *)
 
+  val subset : 'a list -> 'a list -> bool
+  (** [subset xs ys] returns [true] if all the elements of [xs] appear somewhere
+      in [ys]. *)
+
 end = struct
 
   include List
 
-  let remove_dupes (l : 'a list) : 'a list =
+  let remove_dupes xs =
     (* https://stackoverflow.com/a/58352698/679485 *)
     let rec go acc seen = function
         | [] -> List.rev acc
-        | a :: rest when List.mem a seen -> go acc seen rest
-        | a :: rest -> (go [@tailcall]) (a :: acc) (a :: seen) rest
+        | x :: xs when List.mem x seen -> go acc seen xs
+        | x :: xs -> (go [@tailcall]) (x :: acc) (x :: seen) xs
     in
-    go [] [] l
+    go [] [] xs
+
+  let subset xs ys =
+    List.for_all (fun x -> List.mem x ys) xs
 
 end
 
@@ -213,6 +220,12 @@ let eval_rule (kb : knowledge_base) (r : rule) : knowledge_base =
   (* Apply the head to each substitution produced *)
   List.map (Subst.apply r.head) (eval_body kb r.body)
 
+(** Collect the variables found in an atom *)
+let atom_vars (atom : atom) : string list =
+  atom.args
+    |> List.filter_map (function Var v -> Some v | _ -> None)
+    |> List.remove_dupes
+
 (** [is_range_restricted rule] enforces the {i range restriction} by returning
     [true] if every variable in the head of the rule appears somewhere in the
     body of the rule.
@@ -223,13 +236,7 @@ let eval_rule (kb : knowledge_base) (r : rule) : knowledge_base =
 let is_range_restricted (r : rule) : bool =
   (* TODO: Return a list of the variables that do not exist in the body, for
      better error reporting *)
-  let is_subset_of xs ys = List.for_all (fun x -> List.mem x ys) xs in
-  let vars atom =
-    atom.args
-      |> List.filter (function Var _ -> true | _ -> false)
-      |> List.remove_dupes
-  in
-  is_subset_of (vars r.head) (List.concat_map vars r.body)
+  List.subset (atom_vars r.head) (List.concat_map atom_vars r.body)
 
 (** Evaluate each rule independently and then combines the newly derived facts
     with what we already know. *)
@@ -257,15 +264,12 @@ let solve (rs : rule list) : knowledge_base =
   add_rules rs []
 
 (** Run a query against the knowledge base, returning a list of possible
-    variable bindings from the query. *)
-let run_query (query : atom list) (kb : knowledge_base) : (term * term) list list =
-  (* Collect the free variables in the query *)
-  let free_vars =
-    query
-      |> List.concat_map (fun atom ->
-          List.filter (function Var _ -> true | _ -> false) atom.args)
-      |> List.remove_dupes
-  in
-  add_rules [{ head = { name = "$query"; args = free_vars }; body = query; }] kb
+    substitution solutions. *)
+let run_query (query : atom list) (kb : knowledge_base) : (string * term) list list =
+  let vars = query |> List.concat_map atom_vars |> List.remove_dupes in
+  let args = vars |> List.map (fun v -> Var v) in
+
+  kb
+    |> add_rules [{ head = { name = "$query"; args }; body = query }]
     |> List.filter (fun atom -> atom.name = "$query")
-    |> List.map (fun atom -> List.combine free_vars atom.args)
+    |> List.map (fun atom -> List.combine vars atom.args)

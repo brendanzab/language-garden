@@ -23,7 +23,7 @@ let parse_program filename in_channel =
 
 let pp_print_binding ppf (var, term) =
   Format.fprintf ppf "@[%a@ :=@ %a@]"
-    Datalog.pp_print_term var
+    Format.pp_print_string var
     Datalog.pp_print_term term
 
 let () =
@@ -57,8 +57,8 @@ let () =
     | [] ->
         Format.printf "  no@\n";
         Format.printf "@\n";
-    | results ->
-        results |> List.iter (List.iteri
+    | solutions ->
+        solutions |> List.iter (List.iteri
           (function
             | 0 -> Format.printf "@[  > %a@].@\n" pp_print_binding;
             | _ -> Format.printf "@[    %a@].@\n" pp_print_binding));
