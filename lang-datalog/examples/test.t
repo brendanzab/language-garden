@@ -345,27 +345,27 @@ Genealogy example
     > Parent := "Eärendil".
     yes
   
-  ? ancestor("Melian", X), ancestor(X, "Arwen").
-    > X := "Elrond".
-    > X := "Elwing".
-    > X := "Dior".
-    > X := "Lúthien".
+  ? ancestor("Melian", Intermediate), ancestor(Intermediate, "Arwen").
+    > Intermediate := "Elrond".
+    > Intermediate := "Elwing".
+    > Intermediate := "Dior".
+    > Intermediate := "Lúthien".
     yes
   
-  ? ancestor("Melian", X), ancestor(X, "Eldarion").
-    > X := "Arwen".
-    > X := "Aragorn II".
-    > X := "Elrond".
-    > X := "Arathorn II".
-    > X := "Elwing".
-    > X := "Fíriel".
-    > X := "Arvedui".
-    > X := "Dior".
-    > X := "Anárion".
-    > X := "Isildur".
-    > X := "Lúthien".
-    > X := "Elendil".
-    > X := "Elros".
+  ? ancestor("Melian", Intermediate), ancestor(Intermediate, "Eldarion").
+    > Intermediate := "Arwen".
+    > Intermediate := "Aragorn II".
+    > Intermediate := "Elrond".
+    > Intermediate := "Arathorn II".
+    > Intermediate := "Elwing".
+    > Intermediate := "Fíriel".
+    > Intermediate := "Arvedui".
+    > Intermediate := "Dior".
+    > Intermediate := "Anárion".
+    > Intermediate := "Isildur".
+    > Intermediate := "Lúthien".
+    > Intermediate := "Elendil".
+    > Intermediate := "Elros".
     yes
   
   ? ancestor("Galadriel", Descendent).

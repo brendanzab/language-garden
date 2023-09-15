@@ -81,12 +81,12 @@ ancestor(Z, Y) <- distantAncestor(X, Y), ancestor(Z, X). % Common ancestors
 ? parent(Parent, "Elrond").
 
 % Who are the ancestors between Melian and Arwen?
-? ancestor("Melian", X),
-  ancestor(X, "Arwen").
+? ancestor("Melian", Intermediate),
+  ancestor(Intermediate, "Arwen").
 
 % Who are the ancestors between Melian and Eldarion?
-? ancestor("Melian", X),
-  ancestor(X, "Eldarion").
+? ancestor("Melian", Intermediate),
+  ancestor(Intermediate, "Eldarion").
 
 % Who are the decendents of Galadriel?
 ? ancestor("Galadriel", Descendent).
