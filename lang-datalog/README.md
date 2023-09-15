@@ -20,14 +20,19 @@ A simple example of defining and querying a graph using Datalog:
 
 <!-- $MDX file=examples/graph.datalog -->
 ```datalog
+% Directed graphs
+
 path(X, Y) <- edge(X, Y).
 path(X, Y) <- edge(X, Z), edge(Z, Y).
 
 edge(1, 2).
 edge(2, 3).
 
-? path(X, 3).
-? path(X, Y).
+? path(3, 1).
+? path(1, 3).
+
+? path(Start, 3).
+? path(Start, End).
 ```
 
 ```sh
@@ -44,23 +49,29 @@ path(1, 3).
 ────────────────────────────────────────────────────────────────────────────────
 Query Results
 ────────────────────────────────────────────────────────────────────────────────
-? path(X, 3).
-  > X := 2.
-  > X := 1.
+? path(3, 1).
+  no
+
+? path(1, 3).
   yes
 
-? path(X, Y).
-  > X := 1.
-    Y := 2.
-  > X := 2.
-    Y := 3.
-  > X := 1.
-    Y := 3.
+? path(Start, 3).
+  > Start := 2.
+  > Start := 1.
+  yes
+
+? path(Start, End).
+  > Start := 1.
+    End := 2.
+  > Start := 2.
+    End := 3.
+  > Start := 1.
+    End := 3.
   yes
 
 ```
 
-More examples can be found in the [`./examples/`](./examples/) directory,
+More examples can be found in the [examples](./examples/) directory,
 including a [genealogy of characters](./examples/genealogy.datalog) from
 Tolkien’s legendarium.
 

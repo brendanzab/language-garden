@@ -1,8 +1,13 @@
+% Directed graphs
+
 path(X, Y) <- edge(X, Y).
 path(X, Y) <- edge(X, Z), edge(Z, Y).
 
 edge(1, 2).
 edge(2, 3).
 
-? path(X, 3).
-? path(X, Y).
+? path(3, 1).
+? path(1, 3).
+
+? path(Start, 3).
+? path(Start, End).
