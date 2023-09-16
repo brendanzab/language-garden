@@ -56,16 +56,16 @@ Genealogy example
   parent("Arwen", "Eldarion").
   parent("Aragorn II", "Eldarion").
   parent("Celebrían", "Elladan").
-  parent("Celebrían", "Elrohir").
-  parent("Celebrían", "Arwen").
   parent("Elrond", "Elladan").
+  parent("Celebrían", "Elrohir").
   parent("Elrond", "Elrohir").
+  parent("Celebrían", "Arwen").
   parent("Elrond", "Arwen").
   parent("Eärwen", "Galadriel").
   parent("Finarfen", "Galadriel").
   parent("Elwing", "Elrond").
-  parent("Elwing", "Elros").
   parent("Eärendil", "Elrond").
+  parent("Elwing", "Elros").
   parent("Eärendil", "Elros").
   parent("Galadhon", "Celeborn").
   parent("Galadhon", "Galathil").
@@ -92,16 +92,16 @@ Genealogy example
   ancestor("Arwen", "Eldarion").
   ancestor("Aragorn II", "Eldarion").
   ancestor("Celebrían", "Elladan").
-  ancestor("Celebrían", "Elrohir").
-  ancestor("Celebrían", "Arwen").
   ancestor("Elrond", "Elladan").
+  ancestor("Celebrían", "Elrohir").
   ancestor("Elrond", "Elrohir").
+  ancestor("Celebrían", "Arwen").
   ancestor("Elrond", "Arwen").
   ancestor("Eärwen", "Galadriel").
   ancestor("Finarfen", "Galadriel").
   ancestor("Elwing", "Elrond").
-  ancestor("Elwing", "Elros").
   ancestor("Eärendil", "Elrond").
+  ancestor("Elwing", "Elros").
   ancestor("Eärendil", "Elros").
   ancestor("Galadhon", "Celeborn").
   ancestor("Galadhon", "Galathil").
@@ -126,22 +126,22 @@ Genealogy example
   ancestor("Arathorn II", "Eldarion").
   ancestor("Galadriel", "Elladan").
   ancestor("Celeborn", "Elladan").
-  ancestor("Galadriel", "Elrohir").
-  ancestor("Celeborn", "Elrohir").
-  ancestor("Galadriel", "Arwen").
-  ancestor("Celeborn", "Arwen").
   ancestor("Elwing", "Elladan").
   ancestor("Eärendil", "Elladan").
+  ancestor("Galadriel", "Elrohir").
+  ancestor("Celeborn", "Elrohir").
   ancestor("Elwing", "Elrohir").
   ancestor("Eärendil", "Elrohir").
+  ancestor("Galadriel", "Arwen").
+  ancestor("Celeborn", "Arwen").
   ancestor("Elwing", "Arwen").
   ancestor("Eärendil", "Arwen").
   ancestor("Nimloth", "Elrond").
   ancestor("Dior", "Elrond").
-  ancestor("Nimloth", "Elros").
-  ancestor("Dior", "Elros").
   ancestor("Tuor", "Elrond").
   ancestor("Idril", "Elrond").
+  ancestor("Nimloth", "Elros").
+  ancestor("Dior", "Elros").
   ancestor("Tuor", "Elros").
   ancestor("Idril", "Elros").
   ancestor("Eärwen", "Celebrían").
@@ -168,20 +168,20 @@ Genealogy example
   ancestor("Eärwen", "Elladan").
   ancestor("Finarfen", "Elladan").
   ancestor("Galadhon", "Elladan").
-  ancestor("Eärwen", "Elrohir").
-  ancestor("Finarfen", "Elrohir").
-  ancestor("Galadhon", "Elrohir").
-  ancestor("Eärwen", "Arwen").
-  ancestor("Finarfen", "Arwen").
-  ancestor("Galadhon", "Arwen").
   ancestor("Nimloth", "Elladan").
   ancestor("Dior", "Elladan").
   ancestor("Tuor", "Elladan").
   ancestor("Idril", "Elladan").
+  ancestor("Eärwen", "Elrohir").
+  ancestor("Finarfen", "Elrohir").
+  ancestor("Galadhon", "Elrohir").
   ancestor("Nimloth", "Elrohir").
   ancestor("Dior", "Elrohir").
   ancestor("Tuor", "Elrohir").
   ancestor("Idril", "Elrohir").
+  ancestor("Eärwen", "Arwen").
+  ancestor("Finarfen", "Arwen").
+  ancestor("Galadhon", "Arwen").
   ancestor("Nimloth", "Arwen").
   ancestor("Dior", "Arwen").
   ancestor("Tuor", "Arwen").
