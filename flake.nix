@@ -97,6 +97,7 @@
         compile-arithcond = [ "arithcond" ];
         compile-closure-conv = [ "closure-conv" ];
         elab-dependent = [ "dependent" ];
+        elab-dependent-sugar = [ "dependent-sugar" ];
         elab-record-patching = [ "record-patching" ];
         elab-stlc-unification = [ "stlc-unification" ];
         lang-datalog = [ "datalog" ];

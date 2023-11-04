@@ -18,6 +18,8 @@ widely applicable as well.
 
 - [**elab-dependent**](./elab-dependent/):
   An elaborator for a small dependently typed lambda calculus.
+- [**elab-dependent-sugar**](./elab-dependent-sugar/):
+  An elaborator for a small dependently typed lambda calculus with syntactic sugar.
 - [**elab-record-patching**](./elab-record-patching/):
   An elaborator of a dependently typed lambda calculus with singletons and record patching.
 - [**elab-stlc-unification**](./elab-stlc-unification):

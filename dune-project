@@ -14,6 +14,7 @@
 (package (name compile-closure-conv))
 
 (package (name elab-dependent))
+(package (name elab-dependent-sugar))
 (package (name elab-stlc-unification))
 (package (name elab-record-patching))
 

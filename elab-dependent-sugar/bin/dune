@@ -1,0 +1,13 @@
+(executable
+  (name main)
+  (public_name dependent-sugar)
+  (package elab-dependent-sugar)
+  (libraries
+    elab-dependent-sugar
+    cmdliner))
+
+(env
+  (dev
+    ; see `ocamlc -warn-help` for information on warnings
+    (flags (:standard -w -unused-constructor
+                      -w -unused-value-declaration))))
