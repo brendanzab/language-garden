@@ -17,12 +17,12 @@ core language.
 
 <!-- $MDX file=test/readme/bools.txt -->
 ```
-let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
-let true : Bool := fun Out true false := true;
-let false : Bool := fun Out true false := false;
+let Bool : Type := fun (Out : Type) (true : Out) (false : Out) -> Out;
+let true : Bool := fun Out true false => true;
+let false : Bool := fun Out true false => false;
 
-let not (b : Bool) : Bool :=
-  fun (Out : Type) (true : Out) (false : Out) := b Out false true;
+let not : Bool -> Bool := fun b =>
+  fun Out true false => b Out false true;
 
 true Bool false
 ```

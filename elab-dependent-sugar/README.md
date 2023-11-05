@@ -19,7 +19,7 @@ true Bool false
 ```
 
 ```sh
-$ cat ./test/readme/bools.txt | dependent norm
+$ cat ./test/readme/bools.txt | dependent-sugar norm
 <input> :
   fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
       (Out : Type) (true : Out) (false : Out) -> Out
