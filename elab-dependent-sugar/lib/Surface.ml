@@ -169,7 +169,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
       let def, def_ty = infer_def context params def_ty def in
       let context = bind_def context name def_ty (eval context def) in
       let body, body_ty = infer context body in
-      (Syntax.Let (name, def, body), body_ty)
+      Syntax.Let (name, def, body), body_ty
 
   (* Named terms *)
   | Name name ->
@@ -186,14 +186,14 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
       let ty = check context ty Semantics.Univ in
       let ty' = eval context ty in
       let tm = check context tm ty' in
-      (Syntax.Ann (tm, ty), ty')
+      Syntax.Ann (tm, ty), ty'
 
   (* Universes *)
   | Univ ->
       (* We use [Type : Type] here for simplicity, which means this type
           theory is inconsistent. This is okay for a toy type system, but we’d
           want look into using universe levels in an actual implementation. *)
-      (Syntax.Univ, Semantics.Univ)
+      Syntax.Univ, Semantics.Univ
 
   (* Function types *)
   | FunType (params, body_ty) ->
@@ -206,7 +206,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
             let context = bind_param context name (eval context param_ty) in
             Syntax.FunType (name, param_ty, go context params)
       in
-      (go context params, Semantics.Univ)
+      go context params, Semantics.Univ
 
   (* Arrow types. These are implemented as syntactic sugar for non-dependent
       function types. *)
@@ -214,7 +214,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
       let param_ty = check context param_ty Semantics.Univ in
       let context = bind_param context None (eval context param_ty) in
       let body_ty = check context body_ty Semantics.Univ in
-      (Syntax.FunType (None, param_ty, body_ty), Semantics.Univ)
+      Syntax.FunType (None, param_ty, body_ty), Semantics.Univ
 
   (* Function literals *)
   | FunLit (params, body_ty, body) ->
@@ -291,10 +291,10 @@ and infer_fun_lit context params body_ty body =
         let param_ty = check context param_ty Semantics.Univ in
         let context = bind_def context name (eval context param_ty) var in
         let body, body_ty = go context params body_ty body in
-        (Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty))
+        Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty)
   in
   let fun_tm, fun_ty = go context params body_ty body in
-  (Syntax.Ann (fun_tm, fun_ty), eval context fun_ty)
+  Syntax.Ann (fun_tm, fun_ty), eval context fun_ty
 
 (** Elaborate a (potentially) parameterised and annotated definition. *)
 and infer_def context params def_ty def =

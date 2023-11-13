@@ -228,7 +228,7 @@ let rec check context tm ty : Syntax.tm =
             let def_ty = check context def_ty Semantics.Univ in
             let def_ty' = eval context def_ty in
             let def = check context def def_ty' in
-            (Syntax.Ann (def, def_ty), def_ty')
+            Syntax.Ann (def, def_ty), def_ty'
       in
       let context = bind_def context name def_ty (eval context def) in
       Syntax.Let (name, def, check context body ty)
@@ -309,11 +309,11 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
             let def_ty = check context def_ty Semantics.Univ in
             let def_ty' = eval context def_ty in
             let def = check context def def_ty' in
-            (Syntax.Ann (def, def_ty), def_ty')
+            Syntax.Ann (def, def_ty), def_ty'
       in
       let context = bind_def context name def_ty (eval context def) in
       let body, body_ty = infer context body in
-      (Syntax.Let (name, def, body), body_ty)
+      Syntax.Let (name, def, body), body_ty
 
   (* Named terms *)
   | Name name ->
@@ -321,7 +321,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
           [name], starting from the most recent binding. This gives us the
           corresponding de Bruijn index of the variable. *)
       begin match List.elem_index (Some name) context.names with
-      | Some index -> (Syntax.Var index, List.nth context.tys index)
+      | Some index -> Syntax.Var index, List.nth context.tys index
       | None -> error (not_bound name)
       end
 
@@ -330,14 +330,14 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
       let ty = check context ty Semantics.Univ in
       let ty' = eval context ty in
       let tm = check context tm ty' in
-      (Syntax.Ann (tm, ty), ty')
+      Syntax.Ann (tm, ty), ty'
 
     (* Universes *)
   | Univ ->
       (* We use [Type : Type] here for simplicity, which means this type
           theory is inconsistent. This is okay for a toy type system, but we’d
           want look into using universe levels in an actual implementation. *)
-      (Syntax.Univ, Semantics.Univ)
+      Syntax.Univ, Semantics.Univ
 
   (* Function types *)
   | FunType (params, body_ty) ->
@@ -348,7 +348,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
             let context = bind_param context name (eval context param_ty) in
             Syntax.FunType (name, param_ty, go context params)
       in
-      (go context params, Semantics.Univ)
+      go context params, Semantics.Univ
 
   (* Arrow types. These are implemented as syntactic sugar for non-dependent
       function types. *)
@@ -356,7 +356,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
       let param_ty = check context param_ty Semantics.Univ in
       let context = bind_param context None (eval context param_ty) in
       let body_ty = check context body_ty Semantics.Univ in
-      (Syntax.FunType (None, param_ty, body_ty), Semantics.Univ)
+      Syntax.FunType (None, param_ty, body_ty), Semantics.Univ
 
   (* Function literals. These do not have type annotations on their arguments
       and so we don’t know ahead of time what types to use for the arguments
@@ -375,7 +375,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
             let context = bind_param context (Some label) (eval context ty) in
             Syntax.Cons (label, ty, go context (label :: seen_labels) decls)
       in
-      (Syntax.RecType (go context [] decls), Semantics.Univ)
+      Syntax.RecType (go context [] decls), Semantics.Univ
 
   (* Unit records. These are ambiguous in inference mode. We could default to
       one or the other, and perhaps coerce between them, but we choose just to
@@ -387,7 +387,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
   | SingType (ty, sing_tm) ->
       let ty = check context ty Semantics.Univ in
       let sing_tm = check context sing_tm (eval context ty) in
-      (Syntax.SingType (ty, sing_tm), Semantics.Univ)
+      Syntax.SingType (ty, sing_tm), Semantics.Univ
 
   (* Application *)
   | App (head, args) ->
@@ -396,7 +396,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
           match elim_implicits context head head_ty with
           | head, Semantics.FunType (_, param_ty, body_ty) ->
               let arg = check context arg param_ty in
-              (Syntax.FunApp (head, arg), body_ty (eval context arg))
+              Syntax.FunApp (head, arg), body_ty (eval context arg)
           | _ -> error "not a function")
         (infer context head)
         args
@@ -408,7 +408,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
           match elim_implicits context head head_ty with
           | head, Semantics.RecType decls ->
               begin match Semantics.proj_ty (eval context head) decls label with
-              | Some ty -> (Syntax.RecProj (head, label), ty)
+              | Some ty -> Syntax.RecProj (head, label), ty
               | None -> error (missing_field label)
               end
           | _ -> error "not a record")
@@ -447,7 +447,7 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
         begin match eval context head with
         | Semantics.RecType decls ->
             let decls = go context decls patches in
-            (Syntax.RecType decls, Semantics.Univ)
+            Syntax.RecType decls, Semantics.Univ
         | _ -> error "can only patch record types"
         end
 
@@ -464,4 +464,4 @@ and elim_implicits context tm = function
       elim_implicits context tm ty
   (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
     for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
-  | ty -> (tm, ty)
+  | ty -> tm, ty

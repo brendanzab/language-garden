@@ -137,7 +137,7 @@ module Syntax = struct
   let fun_apps tm =
     let rec go args = function
       | FunApp (head, arg) -> go (arg :: args) head
-      | head -> (head, args)
+      | head -> head, args
     in
     go [] tm
 
