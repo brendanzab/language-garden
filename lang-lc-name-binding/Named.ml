@@ -126,7 +126,7 @@ let rec normalise (e : expr) : expr =
   | Let (x, def, body) -> normalise (subst (x, normalise def) body)
   | FunLit (x, body) -> FunLit (x, normalise body)
   | FunApp (head, arg) -> begin
-      match normalise head with
+      match eval head with
       | FunLit (x, body) -> normalise (subst (x, normalise arg) body)
       | head -> FunApp (head, normalise arg)
   end
