@@ -14,10 +14,12 @@ tree-walking interpreters for the simply typed lambda calculus.
 | [`LocallyNameless`] (TODO)  | Term Rewriting    | Names + Indices | Names + Indices         |
 
 I personally prefer [`NamelessClosures`] and [`NamelessHoas`] for most things.
-NbE in particular is pretty useful as using separate types for the syntax and
-semantics can help to ensure you don’t forget to fully evaluate terms, and helps
-to avoid expensive shifting when using de Bruijn indices (this is done in a
-single pass during quotation).
+Normalisation-by-evaluation (NbE) in particular is pretty useful because using
+separate types for the syntax and semantics can help to ensure you don’t forget
+to fully evaluate terms (this is very important in dependent type checkers!). It
+also avoids expensive shifting when using de Bruijn indices (this is done in a
+single pass during quotation), and the delicacy of implementing capture-avoiding
+substitution when using names.
 
 [`Named`]:              ./Named.ml
 [`NamedClosures`]:      ./NamedClosures.ml
