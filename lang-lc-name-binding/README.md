@@ -12,6 +12,7 @@ tree-walking interpreters for the simply typed lambda calculus.
 | [`NamelessClosures`]        | NbE               | Indices         | Levels + Closures       |
 | [`NamelessHoas`]            | NbE               | Indices         | Levels + Host functions |
 | [`LocallyNameless`] (TODO)  | Term Rewriting    | Names + Indices | Names + Indices         |
+| [`Unique`]                  | Term Rewriting    | Unique Ids      | Unique Ids              |
 
 I personally prefer [`NamelessClosures`] and [`NamelessHoas`] for most things.
 Normalisation-by-evaluation (NbE) in particular is pretty useful because using
@@ -28,8 +29,11 @@ substitution when using names.
 [`NamelessClosures`]:   ./NamelessClosures.ml
 [`NamelessHoas`]:       ./NamelessHoas.ml
 [`LocallyNameless`]:    ./LocallyNameless.ml
+[`Unique`]:             ./Unique.ml
 
 ## Resources
 
 - [AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/tree/master)
-- Benjamin C. Pierce, “Types and Programming Languages” <https://www.cis.upenn.edu/~bcpierce/tapl/>
+- Benjamin C. Pierce, “Types and Programming Languages” ([URL](https://www.cis.upenn.edu/~bcpierce/tapl/))
+- Lennart Augustsson, “λ-calculus cooked four ways” ([PDF](https://github.com/mietek/cook/blob/master/doc/pdf/augustsson-2006.pdf))
+- [sweirich/lambda-n-ways](https://github.com/sweirich/lambda-n-ways/)
