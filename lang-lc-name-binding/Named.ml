@@ -67,19 +67,23 @@ let rec subst (x, s : string * expr) (e : expr) : expr =
   (* Based on https://github.com/sweirich/lambda-n-ways/blob/c4ffc2add78d63b89c3d5d872f6787dadb890626/lib/Named/Lennart.hs#L83-L114 *)
   let fvs = free_vars s in
   let vs = StringSet.add x fvs in
+  let freshen_body y body =
+    (* NOTE: Just the free variables are sufficient, but it’s faster to collect
+       all of the variables without removing the bound ones. *)
+    let y' = fresh (StringSet.union vs (all_vars body)) y in
+    y', subst (y, Var y') body
+  in
   let rec go e =
     match e with
     | Var y -> if x = y then s else e
     | Let (y, _, _) when x = y -> e
     | Let (y, def, body) when StringSet.mem y fvs ->
-        let y' = fresh (StringSet.union vs (all_vars body)) y in
-        let body' = subst (y, Var y') body in
+        let y', body' = freshen_body y body in
         Let (y', go def, go body')
     | Let (y, def, body) -> Let (y, def, go body)
     | FunLit (y, _) when x = y -> e
     | FunLit (y, body) when StringSet.mem y fvs ->
-        let y' = fresh (StringSet.union vs (all_vars body)) y in
-        let body' = subst (y, Var y') body in
+        let y', body' = freshen_body y body in
         FunLit (y', go body')
     | FunLit (y, body) -> FunLit (y, go body)
     | FunApp (head, arg) -> FunApp (go head, go arg)
