@@ -1,0 +1,4 @@
+(executable
+  (name Main)
+  (public_name name-binding-comparison)
+  (package lang-lc-name-binding))

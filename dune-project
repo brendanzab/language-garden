@@ -18,9 +18,10 @@
 (package (name elab-stlc-unification))
 (package (name elab-record-patching))
 
-(package (name lang-fractal-growth))
-(package (name lang-shader-graphics))
 (package (name lang-datalog))
+(package (name lang-fractal-growth))
+(package (name lang-lc-name-binding))
+(package (name lang-shader-graphics))
 
 (package (name wip-compile-stratify))
 (package (name wip-compile-uncurry))
