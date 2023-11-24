@@ -5,8 +5,6 @@
     “λ-calculus cooked four ways”}.
 *)
 
-(** {1 Syntax} *)
-
 module Id : sig
   (** Unique identifiers *)
 
@@ -33,11 +31,27 @@ end = struct
 
 end
 
+
+(** {1 Syntax} *)
+
 type expr =
   | Var of Id.t
   | Let of string * Id.t * expr * expr
   | FunLit of string * Id.t * expr
   | FunApp of expr * expr
+
+let of_named (e : Named.expr) : expr =
+  let rec go (is : (string * Id.t) list) (e : Named.expr) : expr =
+    match e with
+    | Var x -> Var (List.assoc x is)
+    | Let (x, def, body) -> let i = Id.fresh () in Let (x, i, go is def, go ((x, i) :: is) body)
+    | FunLit (x, body) -> let i = Id.fresh () in FunLit (x, i, go ((x, i) :: is) body)
+    | FunApp (head, arg) -> FunApp (go is head, go is arg)
+  in
+  go [] e
+
+(* TODO: to_named *)
+
 
 (** {2 Alpha Equivalence} *)
 

@@ -3,6 +3,14 @@
     (HOAS) in the semantic domain.
 *)
 
+(** [elem_index x xs] returns the index of the first occurance of [x] in [xs]. *)
+let elem_index (a : 'a) (xs : 'a list) =
+  let rec go i = function
+    | [] -> None
+    | x :: xs -> if x = a then Some i else go (i + 1) xs in
+  go 0 xs
+
+
 (** {1 Syntax} *)
 
 type expr =
@@ -10,6 +18,18 @@ type expr =
   | Let of string * expr * expr
   | FunLit of string * expr
   | FunApp of expr * expr
+
+let of_named (e : Named.expr) : expr =
+  let rec go (ns : string list) (e : Named.expr) : expr =
+    match e with
+    | Var x -> Var (elem_index x ns |> Option.get)
+    | Let (x, def, body) -> Let (x, go ns def, go (x :: ns) body)
+    | FunLit (x, body) -> FunLit (x, go (x :: ns) body)
+    | FunApp (head, arg) -> FunApp (go ns head, go ns arg)
+  in
+  go [] e
+
+(* TODO: to_named *)
 
 
 (** {2 Alpha Equivalence} *)
