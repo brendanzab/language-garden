@@ -100,26 +100,20 @@ let rec is_val (e : expr) : bool =
 
 (** {2 Evaluation} *)
 
-exception NoRuleApplies
-
-(** Small-step evaluation *)
-let rec eval1 (e : expr) : expr =
-  match e with
-  | Let (x, def, body) when is_val def -> subst (x, def) body
-  | Let (x, def, body) -> Let (x, eval1 def, body)
-  | FunApp (FunLit (x, body), arg) when is_val arg -> subst (x, arg) body
-  | FunApp (head, arg) when is_val head -> FunApp (head, eval1 arg)
-  | FunApp (head, arg) -> FunApp (eval1 head, arg)
-  | Var _ | FunLit (_, _) -> raise NoRuleApplies
-
-(** Evaluate an expression by repeatedly applying the small-step evaluation
-    rules until no more apply.  *)
 let rec eval (e : expr) : expr =
-  try
-    let e' = eval1 e in
-    (eval [@tailcall]) e'
-  with
-    | NoRuleApplies -> e
+  match e with
+  | Var _ -> e
+  | Let (x, def, body) ->
+      let def = if is_val def then def else eval def in
+      eval (subst (x, def) body)
+  | FunLit (_, _) -> e
+  | FunApp (head, arg) -> begin
+      let head = if is_val head then head else eval head in
+      let arg = if is_val arg then arg else eval arg in
+      match head with
+      | FunLit (x, body) -> eval (subst (x, arg) body)
+      | head -> FunApp (head, arg)
+  end
 
 (** {2 Normalisation} *)
 
