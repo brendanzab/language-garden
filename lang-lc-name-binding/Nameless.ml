@@ -61,7 +61,7 @@ let subst_top (s : expr) (e : expr) : expr =
 
 (** {1 Semantics} *)
 
-let rec is_val (e : expr) : bool =
+let is_val (e : expr) : bool =
   match e with
   | FunLit _ -> true
   | _ -> false

@@ -44,11 +44,11 @@ type expr =
 (** Compare the syntactic structure of two expressions, taking into account
     binding structure while ignoring differences in names. *)
 let alpha_equiv (e1 : expr) (e2 : expr) =
-  (** Compare for alpha equivalence by comparing the binding depth of variable
-      names in each expression. This approach is described in section 6.1 of
-      {{:https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf}
-      “Checking Dependent Types with Normalization by Evaluation: A Tutorial
-      (Haskell Version)”} by David Christiansen *)
+  (* Compare for alpha equivalence by comparing the binding depth of variable
+    names in each expression. This approach is described in section 6.1 of
+    {{:https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf}
+    “Checking Dependent Types with Normalization by Evaluation: A Tutorial
+    (Haskell Version)”} by David Christiansen. *)
   let rec go (size : int) (ns1, e1 : int Id.Map.t * expr) (ns2, e2 : int Id.Map.t * expr) : bool =
     match e1, e2 with
     | Var i1, Var i2 -> begin
@@ -100,7 +100,7 @@ let subst (i, s : Id.t * expr) (e : expr) : expr =
 
 (** {1 Semantics} *)
 
-let rec is_val (e : expr) : bool =
+let is_val (e : expr) : bool =
   match e with
   | FunLit _ -> true
   | _ -> false
