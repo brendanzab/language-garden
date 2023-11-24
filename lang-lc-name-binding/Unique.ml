@@ -75,7 +75,7 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
         go size (ns1, def1) (ns2, def2)
           && go (size + 1) (Id.Map.add i1 size ns1, body1) (Id.Map.add i2 size ns2, body2)
     | FunLit (_, i1, body1), FunLit (_, i2, body2) ->
-      go (size + 1) (Id.Map.add i1 size ns1, body1) (Id.Map.add i2 size ns2, body2)
+        go (size + 1) (Id.Map.add i1 size ns1, body1) (Id.Map.add i2 size ns2, body2)
     | FunApp (head1, arg1), FunApp (head2, arg2) ->
         go size (ns1, head1) (ns2, head2) && go size (ns1, arg1) (ns2, arg2)
     | _, _ -> false

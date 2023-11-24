@@ -32,7 +32,7 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
         go size (ns1, def1) (ns2, def2)
           && go (size + 1) ((x1, size) :: ns1, body1) ((x2, size) :: ns2, body2)
     | FunLit (x1, body1), FunLit (x2, body2) ->
-      go (size + 1) ((x1, size) :: ns1, body1) ((x2, size) :: ns2, body2)
+        go (size + 1) ((x1, size) :: ns1, body1) ((x2, size) :: ns2, body2)
     | FunApp (head1, arg1), FunApp (head2, arg2) ->
         go size (ns1, head1) (ns2, head2) && go size (ns1, arg1) (ns2, arg2)
     | _, _ -> false
