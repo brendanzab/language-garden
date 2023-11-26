@@ -1,6 +1,6 @@
 (** The lambda calculus, implemented using normalisation-by-evaluation with
-    unique identifiers in the syntax and higher-order abstract syntax (HOAS) in
-    the semantic domain.
+    unique identifiers and higher-order abstract syntax (HOAS) in the semantic
+    domain.
 *)
 
 module Id : sig

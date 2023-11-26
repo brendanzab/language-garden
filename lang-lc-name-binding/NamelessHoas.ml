@@ -1,5 +1,5 @@
 (** The lambda calculus, implemented using normalisation-by-evaluation with de
-    Bruijn indices in the syntax, and levels and higher-order abstract syntax
+    Bruijn indices in the syntax, and levels with  higher-order abstract syntax
     (HOAS) in the semantic domain.
 *)
 
