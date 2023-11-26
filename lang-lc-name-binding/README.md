@@ -17,8 +17,8 @@ programming language implementations.
 | [`LocallyNameless`] (TODO)  | Strings + De Bruijn indices  |
 
 These interpreters apply substitutions directly to the syntax.
-This might seem like a straightforward, but unfortunately a great amount of care
-needs to betaken to ensure that substitutions are capture-avoiding.
+This might seem straightforward, but a great amount of care needs to be taken to
+ensure that substitutions are capture-avoiding.
 
 Both the named and unique identifier approaches to variable representation
 require substitutions to be taken into account when checking for alpha
