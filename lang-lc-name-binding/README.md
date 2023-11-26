@@ -7,40 +7,49 @@ tree-walking interpreters for the simply typed lambda calculus.
 
 ### Term rewriting based interpreters
 
-| Module                      | Variables          |
-| --------------------------- | ------------------ |
-| [`Named`]                   | Strings            |
-| [`Nameless`]                | Indices            |
-| [`Unique`]                  | Unique Ids         |
-| [`LocallyNameless`] (TODO)  | Strings + Indices  |
+| Module                      | Variables (Syntax)           |
+| --------------------------- | ---------------------------- |
+| [`Named`]                   | Strings                      |
+| [`Nameless`]                | De Bruijn indices            |
+| [`Unique`]                  | Unique identifiers           |
+| [`LocallyNameless`] (TODO)  | Strings + De Bruijn indices  |
 
-These interpreters apply rewrites directly to the syntax. On the surface this
-seems like a straightforward approach, but requires a great amount of care to be
-taken to ensure that substitutions are capture-avoiding.
+These interpreters apply substitutions directly to the syntax. This might seems
+on the surface like a straightforward approach, but a great amount of care needs
+to be taken to ensure that substitutions are capture-avoiding.
 
-### Normalisation-by-evaluation (NbE) based interpreters
+Both the named and unique identifier approaches to variable representation
+require substitutions to be taken into account when checking for alpha
+equivalence. In contrast, for De Bruijn indices this is a straightforward
+equality comparison.
+
+### Normalisation-by-evaluation based interpreters
 
 | Module                      | Variables (Syntax) | Variables (Semantics)  | Closures (Semantics)    |
 | --------------------------- | ------------------ | ---------------------- | ----------------------- |
 | [`NamedClosures`]           | Strings            | Strings                | Defunctionalised        |
 | [`NamedHoas`]               | Strings            | Strings                | Host functions          |
-| [`NamelessClosures`]        | Indices            | Levels                 | Defunctionalised        |
-| [`NamelessHoas`]            | Indices            | Levels                 | Host functions          |
-| [`UniqueClosures`]          | Unique Ids         | Unique Ids             | Defunctionalised        |
-| [`UniqueHoas`]              | Unique Ids         | Unique Ids             | Host functions          |
+| [`NamelessClosures`]        | De Bruijn indices  | De Bruijn levels       | Defunctionalised        |
+| [`NamelessHoas`]            | De Bruijn indices  | De Bruijn levels       | Host functions          |
+| [`UniqueClosures`]          | Unique identifiers | Unique identifiers     | Defunctionalised        |
+| [`UniqueHoas`]              | Unique identifiers | Unique identifiers     | Host functions          |
 
-Normalisation-by-evaluation breaks up normalisation into evaluation and
+Normalisation-by-evaluation (NbE) breaks up normalisation into evaluation and
 quotation. This makes capture-avoidance much more straightforward and efficient,
 as variables only need to be renamed once during quotation.
+In the case of named and unique variables, fresh names are generated as
+binders are encountered.
+For de Bruijn indices, quotation handles the shifting of variables in a single
+pass, using the size of the environment to convert from levels back to indices.
 
 ## Discussion
 
 I personally prefer [`NamelessClosures`] and [`NamelessHoas`] for most things.
-Normalisation-by-evaluation (NbE) in particular is pretty useful because using
-separate types for the syntax and semantics can help to ensure you don’t forget
-to fully evaluate terms. It also avoids expensive shifting when using de Bruijn
-indices (this is done in a single pass during quotation), and the delicacy of
-implementing capture-avoiding substitution when using names.
+NbE is nice because using separate types for the syntax and semantics helps to
+ensure you don’t forget to fully evaluate terms.
+As mentioned before, it also avoids expensive shifting when using de Bruijn
+indices, and avoids the delicacy of implementing capture-avoiding substitution
+when using names.
 
 [`Named`]:              ./Named.ml
 [`NamedClosures`]:      ./NamedClosures.ml
