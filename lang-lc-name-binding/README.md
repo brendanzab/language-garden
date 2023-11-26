@@ -5,7 +5,7 @@ tree-walking interpreters for the simply typed lambda calculus.
 
 ## Overview
 
-Term rewriting based interpreters:
+### Term rewriting based interpreters
 
 | Module                      | Variables          |
 | --------------------------- | ------------------ |
@@ -14,9 +14,13 @@ Term rewriting based interpreters:
 | [`Unique`]                  | Unique Ids         |
 | [`LocallyNameless`] (TODO)  | Strings + Indices  |
 
-Normalisation-by-evaluation (NbE) based interpreters:
+These interpreters apply rewrites directly to the syntax. On the surface this
+seems like a straightforward approach, but requires a great amount of care to be
+taken to ensure that substitutions are capture-avoiding.
 
-| Module                      | Variables (Syntax) | Variables (Semantics)  | Closures                |
+### Normalisation-by-evaluation (NbE) based interpreters
+
+| Module                      | Variables (Syntax) | Variables (Semantics)  | Closures (Semantics)    |
 | --------------------------- | ------------------ | ---------------------- | ----------------------- |
 | [`NamedClosures`]           | Strings            | Strings                | First-order closures    |
 | [`NamedHoas`]               | Strings            | Strings                | Host functions          |
@@ -24,6 +28,10 @@ Normalisation-by-evaluation (NbE) based interpreters:
 | [`NamelessHoas`]            | Indices            | Levels                 | Host functions          |
 | [`UniqueClosures`]          | Unique Ids         | Unique Ids             | First-order closures    |
 | [`UniqueHoas`]              | Unique Ids         | Unique Ids             | Host functions          |
+
+Normalisation-by-evaluation breaks up normalisation into evaluation and
+quotation. This makes capture-avoidance much more straightforward and efficient,
+as variables only need to be renamed once during quotation.
 
 ## Discussion
 
