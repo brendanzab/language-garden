@@ -1,5 +1,6 @@
 (** The lambda calculus, implemented using normalisation-by-evaluation with
-    names in the syntax and first-order closures in the semantic domain.
+    names in the syntax and defunctionalised, first-order closures in the
+    semantic domain.
 *)
 
 (** {1 Syntax} *)

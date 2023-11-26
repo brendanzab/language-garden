@@ -1,6 +1,6 @@
 (** The lambda calculus, implemented using normalisation-by-evaluation with
-    unique identifiers in the syntax and first-order closures in the semantic
-    domain.
+    unique identifiers in the syntax and defunctionalised, first-order closures
+    in the semantic domain.
 *)
 
 module Id : sig

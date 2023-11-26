@@ -22,11 +22,11 @@ taken to ensure that substitutions are capture-avoiding.
 
 | Module                      | Variables (Syntax) | Variables (Semantics)  | Closures (Semantics)    |
 | --------------------------- | ------------------ | ---------------------- | ----------------------- |
-| [`NamedClosures`]           | Strings            | Strings                | First-order closures    |
+| [`NamedClosures`]           | Strings            | Strings                | Defunctionalised        |
 | [`NamedHoas`]               | Strings            | Strings                | Host functions          |
-| [`NamelessClosures`]        | Indices            | Levels                 | First-order closures    |
+| [`NamelessClosures`]        | Indices            | Levels                 | Defunctionalised        |
 | [`NamelessHoas`]            | Indices            | Levels                 | Host functions          |
-| [`UniqueClosures`]          | Unique Ids         | Unique Ids             | First-order closures    |
+| [`UniqueClosures`]          | Unique Ids         | Unique Ids             | Defunctionalised        |
 | [`UniqueHoas`]              | Unique Ids         | Unique Ids             | Host functions          |
 
 Normalisation-by-evaluation breaks up normalisation into evaluation and
@@ -38,10 +38,9 @@ as variables only need to be renamed once during quotation.
 I personally prefer [`NamelessClosures`] and [`NamelessHoas`] for most things.
 Normalisation-by-evaluation (NbE) in particular is pretty useful because using
 separate types for the syntax and semantics can help to ensure you don’t forget
-to fully evaluate terms (this is very important in dependent type checkers!). It
-also avoids expensive shifting when using de Bruijn indices (this is done in a
-single pass during quotation), and the delicacy of implementing capture-avoiding
-substitution when using names.
+to fully evaluate terms. It also avoids expensive shifting when using de Bruijn
+indices (this is done in a single pass during quotation), and the delicacy of
+implementing capture-avoiding substitution when using names.
 
 [`Named`]:              ./Named.ml
 [`NamedClosures`]:      ./NamedClosures.ml

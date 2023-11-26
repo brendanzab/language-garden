@@ -1,6 +1,6 @@
 (** The lambda calculus, implemented using normalisation-by-evaluation with de
-    Bruijn indices in the syntax, and levels and first-order closures in the
-    semantic domain.
+    Bruijn indices in the syntax, and levels defunctionalised, first-order
+    closures in the semantic domain.
 *)
 
 (** [elem_index x xs] returns the index of the first occurance of [x] in [xs]. *)
