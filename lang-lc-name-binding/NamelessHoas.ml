@@ -29,7 +29,8 @@ let of_named (e : Named.expr) : expr =
   in
   go [] e
 
-(* TODO: to_named *)
+let to_named (_e : expr) : Named.expr =
+  failwith "TODO"
 
 
 (** {2 Alpha Equivalence} *)
