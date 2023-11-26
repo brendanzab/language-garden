@@ -11,8 +11,9 @@ tree-walking interpreters for the simply typed lambda calculus.
 | [`Nameless`]                | Term Rewriting    | Indices         | Indices                 |
 | [`NamelessClosures`]        | NbE               | Indices         | Levels + Closures       |
 | [`NamelessHoas`]            | NbE               | Indices         | Levels + Host functions |
-| [`LocallyNameless`] (TODO)  | Term Rewriting    | Names + Indices | Names + Indices         |
 | [`Unique`]                  | Term Rewriting    | Unique Ids      | Unique Ids              |
+| [`UniqueClosures`]          | NbE               | Unique Ids      | Unique Ids + Closures   |
+| [`LocallyNameless`] (TODO)  | Term Rewriting    | Names + Indices | Names + Indices         |
 
 I personally prefer [`NamelessClosures`] and [`NamelessHoas`] for most things.
 Normalisation-by-evaluation (NbE) in particular is pretty useful because using
@@ -28,8 +29,9 @@ substitution when using names.
 [`Nameless`]:           ./Nameless.ml
 [`NamelessClosures`]:   ./NamelessClosures.ml
 [`NamelessHoas`]:       ./NamelessHoas.ml
-[`LocallyNameless`]:    ./LocallyNameless.ml
 [`Unique`]:             ./Unique.ml
+[`UniqueClosures`]:     ./UniqueClosures.ml
+[`LocallyNameless`]:    ./LocallyNameless.ml
 
 ## Resources
 

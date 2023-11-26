@@ -11,3 +11,4 @@ module NamelessClosures = NamelessClosures
 module NamelessHoas = NamelessHoas
 
 module Unique = Unique
+module UniqueClosures = UniqueClosures
