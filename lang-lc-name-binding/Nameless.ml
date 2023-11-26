@@ -1,11 +1,12 @@
 (** The lambda calculus, implemented using de Bruijn indices, as demonstrated in
     “Types and Programming Languages”.
 
-    This approach is expensive (requiring lots of tree-traversals and memory
-    allocations) and error prone (it’s very easy to forget to shift a de Bruijn
-    index), and I don’t recommend it for most implementations. See
-    {!NamelessClosures} and {!NamelessHoas} for better approaches that employ
-    de Bruijn indices.
+    This approach makes alpha-equivalence trivial at the expense of literally
+    everything else. It’s expensive, requiring lots of tree-traversals and
+    transient memory allocations, and error prone (it’s very easy to forget to
+    shift a de Bruijn index). I don’t recommend it for most implementations.
+    See {!NamelessClosures} and {!NamelessHoas} for far better approaches that
+    use de Bruijn indices.
 *)
 
 (** [elem_index x xs] returns the index of the first occurance of [x] in [xs]. *)

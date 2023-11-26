@@ -1,6 +1,12 @@
-(** The lambda calculus, implemented using names. *)
+(** The lambda calculus, implemented using names.
 
-module StringSet = Set.Make (String)
+    This is one of the most naive approaches you could use to implement the
+    lambda calculus. We just use the names from the original lambda terms
+    directly, meaning that in order to implement capture avoiding substitution
+    we need to compute free variable sets, using those to freshen variables
+    appropriately. Alpha equivalence also needs to take into account of names,
+    building up substitutions from names to levels.
+*)
 
 (** {1 Syntax} *)
 
@@ -39,7 +45,9 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
   in
   go 0 ([], e1) ([], e2)
 
-(** {2 Free Variables} *)
+(** {2 Variable sets} *)
+
+module StringSet = Set.Make (String)
 
 let rec fresh (ns : StringSet.t) (x : string) : string =
   match StringSet.mem x ns with
