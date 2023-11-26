@@ -3,17 +3,28 @@
 This project is a comparison of name binding techniques as applied to
 tree-walking interpreters for the simply typed lambda calculus.
 
-| Module                      | Interpreter style | Expressions     | Values                  |
-| --------------------------- | ----------------- | --------------- | ----------------------- |
-| [`Named`]                   | Term Rewriting    | Names           | Names                   |
-| [`NamedClosures`]           | NbE               | Names           | Names + Closures        |
-| [`NamedHoas`]               | NbE               | Names           | Levels + Host functions |
-| [`Nameless`]                | Term Rewriting    | Indices         | Indices                 |
-| [`NamelessClosures`]        | NbE               | Indices         | Levels + Closures       |
-| [`NamelessHoas`]            | NbE               | Indices         | Levels + Host functions |
-| [`Unique`]                  | Term Rewriting    | Unique Ids      | Unique Ids              |
-| [`UniqueClosures`]          | NbE               | Unique Ids      | Unique Ids + Closures   |
-| [`LocallyNameless`] (TODO)  | Term Rewriting    | Names + Indices | Names + Indices         |
+## Overview
+
+Term rewriting based interpreters:
+
+| Module                      | Variables          |
+| --------------------------- | ------------------ |
+| [`Named`]                   | Strings            |
+| [`Nameless`]                | Indices            |
+| [`Unique`]                  | Unique Ids         |
+| [`LocallyNameless`] (TODO)  | Strings + Indices  |
+
+Normalisation-by-evaluation (NbE) based interpreters:
+
+| Module                      | Variables (Syntax) | Variables (Semantics)  | Closures                |
+| --------------------------- | ------------------ | ---------------------- | ----------------------- |
+| [`NamedClosures`]           | Strings            | Strings                | First-order closures    |
+| [`NamedHoas`]               | Strings            | Strings                | Host functions          |
+| [`NamelessClosures`]        | Indices            | Levels                 | First-order closures    |
+| [`NamelessHoas`]            | Indices            | Levels                 | Host functions          |
+| [`UniqueClosures`]          | Unique Ids         | Unique Ids             | First-order closures    |
+
+## Discussion
 
 I personally prefer [`NamelessClosures`] and [`NamelessHoas`] for most things.
 Normalisation-by-evaluation (NbE) in particular is pretty useful because using
