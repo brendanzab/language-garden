@@ -23,6 +23,7 @@ Normalisation-by-evaluation (NbE) based interpreters:
 | [`NamelessClosures`]        | Indices            | Levels                 | First-order closures    |
 | [`NamelessHoas`]            | Indices            | Levels                 | Host functions          |
 | [`UniqueClosures`]          | Unique Ids         | Unique Ids             | First-order closures    |
+| [`UniqueHoas`]              | Unique Ids         | Unique Ids             | Host functions          |
 
 ## Discussion
 
@@ -42,6 +43,7 @@ substitution when using names.
 [`NamelessHoas`]:       ./NamelessHoas.ml
 [`Unique`]:             ./Unique.ml
 [`UniqueClosures`]:     ./UniqueClosures.ml
+[`UniqueHoas`]:         ./UniqueHoas.ml
 [`LocallyNameless`]:    ./LocallyNameless.ml
 
 ## Resources
