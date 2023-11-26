@@ -20,7 +20,7 @@
 
 (package (name lang-datalog))
 (package (name lang-fractal-growth))
-(package (name lang-lc-name-binding))
+(package (name lang-lc-interpreters))
 (package (name lang-shader-graphics))
 
 (package (name wip-compile-stratify))

@@ -102,7 +102,7 @@
         elab-stlc-unification = [ "stlc-unification" ];
         lang-datalog = [ "datalog" ];
         lang-fractal-growth = [ "fractal-growth" ];
-        lang-name-binding-comparison = [ "name-binding-comparison" ];
+        lang-lc-interpreters = [ "lc-interpreters" ];
         lang-shader-graphics = [ "shader-graphics" ];
         wip-compile-stratify = [ "stratify" ];
         wip-elab-builtins = [ "builtins" ];

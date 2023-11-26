@@ -1,4 +1,4 @@
-# A comparison of name binding techniques
+# A comparison of lambda calculus interpreters
 
 This project is a comparison of name binding techniques as applied to
 tree-walking interpreters for the simply typed lambda calculus.

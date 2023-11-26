@@ -49,9 +49,9 @@ Miscellaneous programming language experiments.
   A simple Datalog interpreter.
 - [**lang-fractal-growth**](./lang-fractal-growth/):
   Experiments with using grammars and rewriting systems to model fractal growth.
-- [**lang-lc-name-binding**](./lang-lc-name-binding/):
-  A comparison of name binding techniques as applied to tree-walking
-  interpreters for the simply typed lambda calculus.
+- [**lang-lc-interpreters**](./lang-lc-interpreters/):
+  A comparison of lambda calculus interpreters using different approaches to
+  name binding.
 - [**lang-shader-graphics**](./lang-shader-graphics/):
   An embedded DSL for describing procedural graphics, based on signed distance
   functions. These can be rendered on the CPU or compiled to GLSL shaders.
