@@ -61,7 +61,7 @@ let rec eval (vs : env) (e : expr) : value =
   | FunApp (head, arg) -> begin
       match eval vs head with
       | FunLit (_, body) -> body (eval vs arg)
-      | Neu n -> Neu (FunApp (n, eval vs arg))
+      | Neu nv -> Neu (FunApp (nv, eval vs arg))
   end
 
 (** {2 Quotation} *)

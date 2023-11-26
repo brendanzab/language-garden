@@ -59,7 +59,7 @@ let rec eval (vs : env) (e : expr) : value =
   match e with
   | Var x -> List.assoc x vs
   | Let (x, def, body) -> eval ((x, eval vs def) :: vs) body
-  | FunLit (n, body) -> FunLit (n, vs, body)
+  | FunLit (x, body) -> FunLit (x, vs, body)
   | FunApp (head, arg) -> begin
       match eval vs head with
       | FunLit cl -> inst cl (eval vs arg)
