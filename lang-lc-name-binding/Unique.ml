@@ -85,26 +85,42 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
 (** {2 Substitution} *)
 
 let subst (i, s : Id.t * expr) (e : expr) : expr =
-  (* TODO: Don’t need to clone lambda-free terms *)
-  let rec clone m e =
-    match e with
-    | Var i -> begin
-        match Id.Map.find_opt i m with
-        | None -> e
-        | Some i -> Var i
-    end
-    | Let (x, i, def, body) ->
-        let i' = Id.fresh () in
-        Let (x, i', clone m def, clone (Id.Map.add i i' m) body)
-    | FunLit (x, i, body) ->
-        let i' = Id.fresh () in
-        FunLit (x, i', clone (Id.Map.add i i' m) body)
-    | FunApp (head, arg) ->
-        FunApp (clone m head, clone m arg)
+  let clone (e : expr) : expr =
+    let rec rename (m : Id.t Id.Map.t) (e : expr) : expr =
+      match e with
+      | Var i -> begin
+          match Id.Map.find_opt i m with
+          | None -> e
+          | Some i -> Var i
+      end
+      | Let (x, i, def, body) ->
+          let i' = Id.fresh () in
+          Let (x, i', rename m def, rename (Id.Map.add i i' m) body)
+      | FunLit (x, i, body) ->
+          let i' = Id.fresh () in
+          FunLit (x, i', rename (Id.Map.add i i' m) body)
+      | FunApp (head, arg) ->
+          FunApp (rename m head, rename m arg)
+    in
+    let rec rename_binders (e : expr) : expr option =
+      match e with
+      | Var _ -> None
+      | Let _ | FunLit _ ->
+          Some (rename Id.Map.empty e)
+      | FunApp (head, arg) -> begin
+          match rename_binders head, rename_binders arg with
+          | Some head, None -> Some (FunApp (head, arg))
+          | None, Some arg -> Some (FunApp (head, arg))
+          | Some head, Some arg -> Some (FunApp (head, arg))
+          | None, None -> None
+      end
+    in
+    rename_binders e
+    |> Option.value ~default:e
   in
-  let rec go e =
+  let rec go (e : expr) : expr =
     match e with
-    | Var j -> if i = j then clone Id.Map.empty s else e
+    | Var j -> if i = j then clone s else e
     | Let (x, j, def, body) -> Let (x, j, go def, go body)
     | FunLit (x, j, body) -> FunLit (x, j, go body)
     | FunApp (head, arg) -> FunApp (go head, go arg)
