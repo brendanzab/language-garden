@@ -38,6 +38,8 @@ type expr =
   | FunLit of string * Id.t * expr
   | FunApp of expr * expr
 
+(** {2 Conversions} *)
+
 let of_named (e : Named.expr) : expr =
   let rec go (is : (string * Id.t) list) (e : Named.expr) : expr =
     match e with
@@ -48,9 +50,19 @@ let of_named (e : Named.expr) : expr =
   in
   go [] e
 
-let to_named (_e : expr) : Named.expr =
-  failwith "TODO"
-
+let to_named (e : expr) : Named.expr =
+  let rec go (ns : Named.StringSet.t) (m : string Id.Map.t) (e : expr) : Named.expr =
+    match e with
+    | Var i -> Var (Id.Map.find i m)
+    | Let (x, i, def, body) ->
+        let x = Named.fresh ns x in
+        Let (x, go ns m def, go (Named.StringSet.add x ns) (Id.Map.add i x m) body)
+    | FunLit (x, i, body) ->
+        let x = Named.fresh ns x in
+        FunLit (x, go (Named.StringSet.add x ns) (Id.Map.add i x m) body)
+    | FunApp (head, arg) -> FunApp (go ns m head, go ns m arg)
+  in
+  go Named.StringSet.empty Id.Map.empty e
 
 (** {2 Alpha Equivalence} *)
 

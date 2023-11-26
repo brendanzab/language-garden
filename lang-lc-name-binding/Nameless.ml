@@ -25,6 +25,8 @@ type expr =
   | FunLit of string * expr
   | FunApp of expr * expr
 
+(** {2 Conversions} *)
+
 let of_named (e : Named.expr) : expr =
   let rec go (ns : string list) (e : Named.expr) : expr =
     match e with
@@ -35,8 +37,20 @@ let of_named (e : Named.expr) : expr =
   in
   go [] e
 
-(* TODO: to_named *)
-
+let to_named (e : expr) : Named.expr =
+  let rec fresh (ns : string list) (x : string) : string =
+    match List.mem x ns with
+    | true -> fresh ns (x ^ "'")
+    | false -> x
+  in
+  let rec go (ns : string list) (e : expr) : Named.expr =
+    match e with
+    | Var i -> Var (List.nth ns i)
+    | Let (x, def, body) -> let x = fresh ns x in Let (x, go ns def, go (x :: ns) body)
+    | FunLit (x, body) -> let x = fresh ns x in FunLit (x, go (x :: ns) body)
+    | FunApp (head, arg) -> FunApp (go ns head, go ns arg)
+  in
+  go [] e
 
 (** {2 Alpha Equivalence} *)
 
