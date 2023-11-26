@@ -14,7 +14,6 @@ programming language implementations.
 | [`Named`]                   | Strings                      |
 | [`Nameless`]                | De Bruijn indices            |
 | [`Unique`]                  | Unique identifiers           |
-| [`LocallyNameless`] (TODO)  | Strings + De Bruijn indices  |
 
 These interpreters apply substitutions directly to the syntax.
 This might seem straightforward, but a great amount of care needs to be taken to
@@ -62,7 +61,6 @@ case trees more straightforward.
 [`Unique`]:             ./Unique.ml
 [`UniqueClosures`]:     ./UniqueClosures.ml
 [`UniqueHoas`]:         ./UniqueHoas.ml
-[`LocallyNameless`]:    ./LocallyNameless.ml
 
 ## Resources
 

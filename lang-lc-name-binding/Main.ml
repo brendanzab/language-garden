@@ -13,5 +13,3 @@ module NamelessHoas = NamelessHoas
 module Unique = Unique
 module UniqueClosures = UniqueClosures
 module UniqueHoas = UniqueHoas
-
-module LocallyNameless = LocallyNameless
