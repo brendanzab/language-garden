@@ -1,6 +1,6 @@
 (* TODO: entrypoint *)
 
-(* NOTE: Tempory module re-exports to ensure they are checked properly *)
+(* NOTE: Tempory re-exports to ensure modules are typechecked *)
 
 module Named = Named
 module NamedClosures = NamedClosures
@@ -12,3 +12,4 @@ module NamelessHoas = NamelessHoas
 
 module Unique = Unique
 module UniqueClosures = UniqueClosures
+module UniqueHoas = UniqueHoas
