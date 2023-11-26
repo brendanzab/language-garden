@@ -1,5 +1,5 @@
 (** The lambda calculus, implemented using normalisation-by-evaluation with de
-    Bruijn indices in the syntax, and levels defunctionalised, first-order
+    Bruijn indices in the syntax, and levels with defunctionalised, first-order
     closures in the semantic domain.
 *)
 
@@ -84,18 +84,18 @@ let rec eval (vs : env) (e : expr) : value =
   | FunLit (x, body) -> FunLit (x, (vs, body))
   | FunApp (head, arg) -> begin
       match eval vs head with
-      | FunLit (_, cl) -> inst cl (eval vs arg)
+      | FunLit (_, body) -> inst body (eval vs arg)
       | Neu nv -> Neu (FunApp (nv, eval vs arg))
   end
-and inst (vs, body : clos) (arg : value) : value =
-  eval (arg :: vs) body
+and inst (vs, e : clos) (arg : value) : value =
+  eval (arg :: vs) e
 
 (** {2 Quotation} *)
 
 let rec quote (size : int) (v : value) : expr =
   match v with
   | Neu nv -> quote_neu size nv
-  | FunLit (x, cl) -> FunLit (x, quote (size + 1) (inst cl (Neu (Var size))))
+  | FunLit (x, body) -> FunLit (x, quote (size + 1) (inst body (Neu (Var size))))
 and quote_neu (size : int) (nv : neu) : expr =
   match nv with
   | Var l -> Var (size - l - 1)

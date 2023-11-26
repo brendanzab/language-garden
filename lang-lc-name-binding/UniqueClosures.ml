@@ -116,20 +116,20 @@ let rec eval (vs : env) (e : expr) : value =
   | FunLit (x, i, body) -> FunLit (x, (i, vs, body))
   | FunApp (head, arg) -> begin
       match eval vs head with
-      | FunLit (_, cl) -> inst cl (eval vs arg)
+      | FunLit (_, body) -> inst body (eval vs arg)
       | Neu nv -> Neu (FunApp (nv, eval vs arg))
   end
-and inst (i, vs, body : clos) (arg : value) : value =
-  eval (Id.Map.add i arg vs) body
+and inst (i, vs, e : clos) (arg : value) : value =
+  eval (Id.Map.add i arg vs) e
 
 (** {2 Quotation} *)
 
 let rec quote (v : value) : expr =
   match v with
   | Neu nv -> quote_neu nv
-  | FunLit (x, cl) ->
+  | FunLit (x, body) ->
       let i = Id.fresh () in
-      FunLit (x, i, quote (inst cl (Neu (Var i))))
+      FunLit (x, i, quote (inst body (Neu (Var i))))
 and quote_neu (nv : neu) : expr =
   match nv with
   | Var x -> Var x

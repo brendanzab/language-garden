@@ -62,11 +62,11 @@ let rec eval (vs : env) (e : expr) : value =
   | FunLit (x, body) -> FunLit (x, vs, body)
   | FunApp (head, arg) -> begin
       match eval vs head with
-      | FunLit cl -> inst cl (eval vs arg)
+      | FunLit body -> inst body (eval vs arg)
       | Neu nv -> Neu (FunApp (nv, eval vs arg))
   end
-and inst (x, vs, body : clos) (arg : value) : value =
-  eval ((x, arg) :: vs) body
+and inst (x, vs, e : clos) (arg : value) : value =
+  eval ((x, arg) :: vs) e
 
 (** {2 Quotation} *)
 
@@ -78,9 +78,9 @@ let rec fresh (ns : string list) (x : string) : string =
 let rec quote (ns : string list) (v : value) : expr =
   match v with
   | Neu nv -> quote_neu ns nv
-  | FunLit (x, _, _ as cl) ->
+  | FunLit (x, _, _ as body) ->
       let x = fresh ns x in
-      FunLit (x, quote (x :: ns) (inst cl (Neu (Var x))))
+      FunLit (x, quote (x :: ns) (inst body (Neu (Var x))))
 and quote_neu (ns : string list) (nv : neu) : expr =
   match nv with
   | Var x -> Var x
