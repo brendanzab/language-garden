@@ -2,6 +2,8 @@
 
 This project is a comparison of name binding techniques as applied to
 tree-walking interpreters for the simply typed lambda calculus.
+Lambda calculus interpreters like these form the basis of more advanced
+programming language implementations.
 
 ## Overview
 
@@ -14,9 +16,9 @@ tree-walking interpreters for the simply typed lambda calculus.
 | [`Unique`]                  | Unique identifiers           |
 | [`LocallyNameless`] (TODO)  | Strings + De Bruijn indices  |
 
-These interpreters apply substitutions directly to the syntax. This might seems
-on the surface like a straightforward approach, but a great amount of care needs
-to be taken to ensure that substitutions are capture-avoiding.
+These interpreters apply substitutions directly to the syntax.
+This might seem like a straightforward, but unfortunately a great amount of care
+needs to betaken to ensure that substitutions are capture-avoiding.
 
 Both the named and unique identifier approaches to variable representation
 require substitutions to be taken into account when checking for alpha
@@ -35,21 +37,21 @@ equality comparison.
 | [`UniqueHoas`]              | Unique identifiers | Unique identifiers     | Host functions          |
 
 Normalisation-by-evaluation (NbE) breaks up normalisation into evaluation and
-quotation. This makes capture-avoidance much more straightforward and efficient,
-as variables only need to be renamed once during quotation.
-In the case of named and unique variables, fresh names are generated as
-binders are encountered.
-For de Bruijn indices, quotation handles the shifting of variables in a single
-pass, using the size of the environment to convert from levels back to indices.
+quotation.
+In NbE, a separate datatype is used for values, which can be helpful for
+ensuring you don’t forget to fully evaluate terms – the types guide you to a
+correct implementation.
+It also makes capture-avoidance much more straightforward and efficient,
+as variables only need to be renamed or shifted in a single pass during
+quotation.
 
 ## Discussion
 
-I personally prefer [`NamelessClosures`] and [`NamelessHoas`] for most things.
-NbE is nice because using separate types for the syntax and semantics helps to
-ensure you don’t forget to fully evaluate terms.
-As mentioned before, it also avoids expensive shifting when using de Bruijn
-indices, and avoids the delicacy of implementing capture-avoiding substitution
-when using names.
+For implementations I personally prefer [`NamelessClosures`] or
+[`NamelessHoas`] for most things, as it provides a good balance of convenience,
+ease of implementation, and performance. Other constraints might tip the balance
+however, for example unique identifiers can make elaborating pattern matching to
+case trees more straightforward.
 
 [`Named`]:              ./Named.ml
 [`NamedClosures`]:      ./NamedClosures.ml
