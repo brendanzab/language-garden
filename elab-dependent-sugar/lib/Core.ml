@@ -20,7 +20,7 @@ type name = string option
 
 (** {i De Bruijn index} that represents a variable occurance by the number of
     binders between the occurance and the binder it refers to. *)
-    type index = int
+type index = int
 
 (** {i De Bruijn level} that represents a variable occurance by the number of
     binders from the top of the environment to the binder that the ocurrance

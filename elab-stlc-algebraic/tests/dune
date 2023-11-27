@@ -1,0 +1,5 @@
+(cram
+  (package elab-stlc-algebraic)
+  (deps
+    %{bin:stlc-algebraic}
+    (glob_files ./*.txt)))

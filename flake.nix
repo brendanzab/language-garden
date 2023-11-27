@@ -99,6 +99,7 @@
         elab-dependent = [ "dependent" ];
         elab-dependent-sugar = [ "dependent-sugar" ];
         elab-record-patching = [ "record-patching" ];
+        elab-stlc-algebraic = [ "stlc-algebraic" ];
         elab-stlc-unification = [ "stlc-unification" ];
         lang-datalog = [ "datalog" ];
         lang-fractal-growth = [ "fractal-growth" ];

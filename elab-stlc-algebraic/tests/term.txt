@@ -1,0 +1,1 @@
+fun (f : A -> B) => fun (a : A) => f a

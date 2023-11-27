@@ -1,0 +1,5 @@
+let id : A -> A :=
+  fun x => x;
+
+fun (x : A) =>
+  id x
