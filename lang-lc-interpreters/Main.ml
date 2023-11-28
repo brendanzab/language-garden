@@ -2,6 +2,9 @@
 
 (* NOTE: Tempory re-exports to ensure modules are typechecked *)
 
+module Lexer = Lexer
+module Parser = Parser
+
 module Named = Named
 module NamedClosures = NamedClosures
 module NamedHoas = NamedHoas

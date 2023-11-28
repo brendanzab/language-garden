@@ -2,3 +2,9 @@
   (name Main)
   (public_name name-binding-comparison)
   (package lang-lc-interpreters))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(ocamllex Lexer)
