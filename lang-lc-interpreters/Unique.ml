@@ -99,6 +99,7 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
 
 let subst (i, s : Id.t * expr) (e : expr) : expr =
   let clone (e : expr) : expr =
+    (* Rename all binders with fresh ids *)
     let rec rename (m : Id.t Id.Map.t) (e : expr) : expr =
       match e with
       | Var i -> begin
@@ -115,6 +116,7 @@ let subst (i, s : Id.t * expr) (e : expr) : expr =
       | FunApp (head, arg) ->
           FunApp (rename m head, rename m arg)
     in
+    (* Rename only terms that include binders *)
     let rec rename_binders (e : expr) : expr option =
       match e with
       | Var _ -> None
