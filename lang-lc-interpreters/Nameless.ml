@@ -67,29 +67,23 @@ let rec alpha_equiv (e1 : expr) (e2 : expr) =
       alpha_equiv head1 head2 && alpha_equiv arg1 arg2
   | _, _ -> false
 
-(** {2 Shifting} *)
+(** {2 Updating variables} *)
+
+let map_vars (on_var : int -> int -> expr) (size : int) (e : expr) : expr =
+  let rec go (size : int) (e : expr) : expr =
+    match e with
+    | Var i -> on_var size i
+    | Let (x, def, body) -> Let (x, go size def, go (size + 1) body)
+    | FunLit (x, body) -> FunLit (x, go (size + 1) body)
+    | FunApp (e1, e2) -> FunApp (go size e1, go size e2)
+  in
+  go size e
 
 let shift (diff : int) (e : expr) : expr =
-  let rec walk (cutoff : int) (e : expr) : expr =
-    match e with
-    | Var i -> if i >= cutoff then Var (i + diff) else Var i
-    | Let (x, def, body) -> Let (x, walk cutoff def, walk (cutoff + 1) body)
-    | FunLit (x, body) -> FunLit (x, walk (cutoff + 1) body)
-    | FunApp (e1, e2) -> FunApp (walk cutoff e1, walk cutoff e2)
-  in
-  walk 0 e
-
-(** {2 Substitution} *)
+  map_vars (fun size i -> if i >= size then Var (i + diff) else Var i) 0 e
 
 let subst (i, s : int * expr) (e : expr) : expr =
-  let rec walk (cutoff : int) (e : expr) : expr =
-    match e with
-    | Var j -> if i = j + cutoff then shift cutoff s else e
-    | Let (x, def, body) -> Let (x, walk cutoff def, walk (cutoff + 1) body)
-    | FunLit (x, body) -> FunLit (x, walk (cutoff + 1) body)
-    | FunApp (head, arg) -> FunApp (walk cutoff head, walk cutoff arg)
-  in
-  walk 0 e
+  map_vars (fun size j -> if i = j + size then shift size s else e) 0 e
 
 let subst_top (s : expr) (e : expr) : expr =
   shift (-1) (subst (0, shift 1 s) e)
