@@ -44,6 +44,15 @@ It also makes capture-avoidance much more straightforward and efficient,
 as variables only need to be renamed or shifted in a single pass during
 quotation.
 
+## Todo
+
+- [x] Named
+- [x] Unique ids
+- [x] De Bruijn indices
+- [ ] De Bruijn levels
+- [ ] Co-de Bruijn
+- [ ] Locally nameless
+
 ## Discussion
 
 For implementations I personally prefer [`NamelessClosures`] or
