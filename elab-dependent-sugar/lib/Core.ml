@@ -119,7 +119,8 @@ module Syntax = struct
   *)
 
   (** Returns [ true ] if the variable is bound anywhere in the term *)
-  let rec is_bound var = function
+  let rec is_bound (var : index) : tm -> bool =
+    function
     | Let (_, def, body) -> is_bound var def || is_bound (var + 1) body
     | Ann (tm, ty) -> is_bound var tm || is_bound var ty
     | Var index -> index = var
@@ -128,13 +129,14 @@ module Syntax = struct
     | FunLit (_, body) -> is_bound (var + 1) body
     | FunApp (head, arg) -> is_bound var head || is_bound var arg
 
-  let rec fun_lits = function
+  let rec fun_lits : tm -> name list * ty =
+    function
     | FunLit (name, body) ->
         let names, body = fun_lits body
         in name :: names, body
     | body -> [], body
 
-  let fun_apps tm =
+  let fun_apps (tm : tm) : ty * ty list =
     let rec go args = function
       | FunApp (head, arg) -> go (arg :: args) head
       | head -> (head, args)
@@ -149,7 +151,7 @@ module Syntax = struct
       could move this dusugaring step into a {i delaborator}/{i distillation}
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
-  let pp ?(resugar = true) names =
+  let pp ?(resugar = true) (names : string option env) : Format.formatter -> tm -> unit =
     let pp_name fmt = function
       | Some name -> Format.pp_print_string fmt name
       | None -> Format.pp_print_string fmt "_"
@@ -287,7 +289,7 @@ module Semantics = struct
       term is in a neutral form. *)
 
   (** Compute a function application *)
-  let app head arg =
+  let app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu neu -> Neu (FunApp (neu, Lazy.from_val arg))
     | FunLit (_, body) -> body arg
@@ -297,7 +299,8 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval env = function
+  let rec eval (env : vtm env) : Syntax.tm -> vtm =
+    function
     | Syntax.Let (_, def, body) -> eval (eval env def :: env) body
     | Syntax.Ann (tm, _) -> eval env tm
     | Syntax.Var index -> List.nth env index
@@ -321,7 +324,8 @@ module Semantics = struct
       variables in the semantic domain back to an {!index} representation
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at. *)
-  let rec quote size = function
+  let rec quote (size : int) : vtm -> Syntax.tm =
+    function
     | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
     | FunType (name, param_ty, body_ty) ->
@@ -330,7 +334,8 @@ module Semantics = struct
     | FunLit (name, body) ->
         let x = Neu (Var size) in
         Syntax.FunLit (name, quote (size + 1) (body x))
-  and quote_neu size = function
+  and quote_neu (size : int) : neu -> Syntax.tm =
+    function
     | Var level -> Syntax.Var (level_to_index size level)
     | FunApp (neu, arg) -> Syntax.FunApp (quote_neu size neu, quote size (Lazy.force arg))
 
@@ -339,15 +344,16 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise size tms tm : Syntax.tm =
-    quote size (eval tms tm)
+  let normalise (size : int) (env : vtm env) (tm : Syntax.tm) : Syntax.tm =
+    quote size (eval (env : vtm env) tm)
 
 
   (** {1 Conversion Checking} *)
 
-  (** Conversion checking is checks if two terms of the same type compute to
-      the same term by-definition. *)
-  let rec is_convertible size = function
+  (** Checks that two values compute to the same term under the assumption that
+      both values have the same type. *)
+  let rec is_convertible (size : int) : vtm * vtm -> bool =
+    function
     | Neu neu1, Neu neu2 -> is_convertible_neu size (neu1, neu2)
     | Univ, Univ -> true
     | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
@@ -362,7 +368,8 @@ module Semantics = struct
         let x = Neu (Var size) in
         is_convertible size (body x, app fun_tm x)
     | _, _ -> false
-  and is_convertible_neu size = function
+  and is_convertible_neu (size : int) : neu * neu -> bool =
+    function
     | Var level1, Var level2 -> level1 = level2
     | FunApp (neu1, arg1), FunApp (neu2, arg2)  ->
         is_convertible_neu size (neu1, neu2)
