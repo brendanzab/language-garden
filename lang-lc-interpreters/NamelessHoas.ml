@@ -3,17 +3,9 @@
     (HOAS) in the semantic domain.
 *)
 
-(** [elem_index x xs] returns the index of the first occurance of [x] in [xs]. *)
-let elem_index (a : 'a) (xs : 'a list) =
-  let rec go i = function
-    | [] -> None
-    | x :: xs -> if x = a then Some i else go (i + 1) xs in
-  go 0 xs
-
-
 (** {1 Syntax} *)
 
-type expr =
+type expr = Nameless.expr =
   | Var of int (* de Bruijn index *)
   | Let of string * expr * expr
   | FunLit of string * expr
@@ -22,44 +14,17 @@ type expr =
 (** {2 Conversions} *)
 
 let of_named (e : Named.expr) : expr =
-  let rec go (ns : string list) (e : Named.expr) : expr =
-    match e with
-    | Var x -> Var (elem_index x ns |> Option.get)
-    | Let (x, def, body) -> Let (x, go ns def, go (x :: ns) body)
-    | FunLit (x, body) -> FunLit (x, go (x :: ns) body)
-    | FunApp (head, arg) -> FunApp (go ns head, go ns arg)
-  in
-  go [] e
+  Nameless.of_named e
 
 let to_named (e : expr) : Named.expr =
-  let rec fresh (ns : string list) (x : string) : string =
-    match List.mem x ns with
-    | true -> fresh ns (x ^ "'")
-    | false -> x
-  in
-  let rec go (ns : string list) (e : expr) : Named.expr =
-    match e with
-    | Var i -> Var (List.nth ns i)
-    | Let (x, def, body) -> let x = fresh ns x in Let (x, go ns def, go (x :: ns) body)
-    | FunLit (x, body) -> let x = fresh ns x in FunLit (x, go (x :: ns) body)
-    | FunApp (head, arg) -> FunApp (go ns head, go ns arg)
-  in
-  go [] e
+  Nameless.to_named e
 
 (** {2 Alpha Equivalence} *)
 
 (** Compare the syntactic structure of two expressions, taking into account
     binding structure while ignoring differences in names. *)
-let rec alpha_equiv (e1 : expr) (e2 : expr) =
-  match e1, e2 with
-  | Var i1, Var i2 -> i1 = i2
-  | Let (_, def1, body1), Let (_, def2, body2) ->
-      alpha_equiv def1 def2 && alpha_equiv body1 body2
-  | FunLit (_, body1), FunLit (_, body2) ->
-      alpha_equiv body1 body2
-  | FunApp (head1, arg1), FunApp (head2, arg2) ->
-      alpha_equiv head1 head2 && alpha_equiv arg1 arg2
-  | _, _ -> false
+let alpha_equiv (e1 : expr) (e2 : expr) =
+  Nameless.alpha_equiv e1 e2
 
 
 (** {1 Semantics} *)
