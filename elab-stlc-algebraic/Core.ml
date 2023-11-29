@@ -236,12 +236,18 @@ let let_check (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> 
 
 (** Function rules *)
 
-let fun_intro_check (param_n : name) (body_elab : var -> check) :  [> `UnexpectedFunLit] check_err =
-  fun ty ctx ->
-    match ty with
-    | FunTy (param_ty, body_ty) ->
+let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> check) :  [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit] check_err =
+  fun fun_ty ctx ->
+    match param_ty, fun_ty with
+    | None, FunTy (param_ty, body_ty) ->
         let body_tm = body_elab ctx.size body_ty (add_bind param_ty ctx) in
-        Ok (FunLit (param_n, param_ty, body_tm))
+        Ok (FunLit (param_n, param_ty, body_tm) : tm)
+    | Some param_ty, FunTy (param_ty', body_ty) ->
+        if param_ty = param_ty' then
+          let body_tm = body_elab ctx.size body_ty (add_bind param_ty ctx) in
+          Ok (FunLit (param_n, param_ty, body_tm))
+        else
+          Error (`MismatchedParamTy (param_ty, param_ty'))
     | _ ->
         Error `UnexpectedFunLit
 

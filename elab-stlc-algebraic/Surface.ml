@@ -46,30 +46,19 @@ let rec check (ctx : context) (tm : tm) : Core.check =
           (n.data, def_ty, check ctx def_tm)
           (fun v -> check ((n.data, v) :: ctx) body_tm)
           ty
-    | FunLit (n, None, body_tm) ->
-        Core.fun_intro_check n.data (fun v -> check ((n.data, v) :: ctx) body_tm) ty
+    | FunLit (n, param_ty, body_tm) ->
+        Core.fun_intro_check (n.data, param_ty) (fun v -> check ((n.data, v) :: ctx) body_tm) ty
+        (*                            ^^^^^^^^ TODO: insert a metavariable instead? *)
         |> Core.handle (function
           | `UnexpectedFunLit ->
               error tm.loc
                 (Format.asprintf "found function, expected `%a`"
-                  Core.pp_ty ty))
-    | FunLit (n, Some param_ty, body_tm) -> begin
-        (* TODO: this feels messy :[ *)
-        match ty with
-        | FunTy (param_ty', _) when param_ty' = param_ty ->
-            Core.fun_intro_check n.data (fun v -> check ((n.data, v) :: ctx) body_tm) ty
-            |> Core.handle (function
-              | `UnexpectedFunLit -> bug tm.loc "unexpected function literal")
-        | FunTy (expected_ty, _) ->
-            error n.loc
-              (Format.asprintf "unexpected parameter type, found `%a`, expected `%a`"
-                Core.pp_ty param_ty
-                Core.pp_ty expected_ty)
-        | ty ->
-            error tm.loc
-              (Format.asprintf "found function, expected `%a`"
-                Core.pp_ty ty)
-    end
+                  Core.pp_ty ty)
+          | `MismatchedParamTy (found_ty, expected_ty) ->
+              error tm.loc
+                (Format.asprintf "mismatched parameter type, found `%a` expected `%a`"
+                  Core.pp_ty found_ty
+                  Core.pp_ty expected_ty))
     | _ ->
         Core.conv (synth ctx tm) ty
         |> Core.handle (function

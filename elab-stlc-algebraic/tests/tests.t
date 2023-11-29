@@ -25,7 +25,7 @@ Unexpected function literal
 
 Unexpected parameter type
   $ stlc-algebraic <<< "(fun (a : A) => a) : B -> B"
-  <input>:1:6: error: unexpected parameter type, found `A`, expected `B`
+  <input>:1:0: error: mismatched parameter type, found `A` expected `B`
   [1]
 
 Unbound variable

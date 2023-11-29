@@ -61,6 +61,6 @@ val let_check : name * ty * check -> (var -> check) -> check
 
 (** {2 Function rules} *)
 
-val fun_intro_check : name -> (var -> check) -> [> `UnexpectedFunLit] check_err
+val fun_intro_check : name * ty option -> (var -> check) -> [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit] check_err
 val fun_intro_synth : name * ty -> (var -> synth) -> synth
 val fun_elim : synth -> synth -> [> `UnexpectedArg of ty  | `TypeMismatch of ty * ty] synth_err
