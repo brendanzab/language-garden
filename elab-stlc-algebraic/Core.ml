@@ -1,3 +1,5 @@
+module Void = Basis.Void
+
 type name = string
 
 
@@ -159,100 +161,111 @@ let add_bind (ty : ty) (ctx : context) = {
 
 (* Elaboration effect *)
 
-type 'a elab = context -> 'a
+type ('a, 'e) elab_err = context -> ('a, 'e) result
+
+type 'a elab = ('a, Void.t) elab_err
+
+let run_err (elab : ('a, 'e) elab_err) : ('a, 'e) result =
+  elab empty
+
+let run_with (elab : 'a elab) (ctx : context) : 'a =
+  match elab ctx with
+  | Ok x -> x
 
 let run (elab : 'a elab) : 'a =
-  elab empty
+  match elab empty with
+  | Ok x -> x
 
 
 (* Error handling *)
 
-exception UnboundVar
-exception UnexpectedFunLit
-exception UnexpectedArg of { head_ty : ty }
-exception TypeMismatch of { found_ty : ty; expected_ty : ty }
-
-let fail (e : exn) : 'a elab =
+let fail (e : 'e) : ('a, 'e) elab_err =
   fun _ ->
-    raise e
+    Error e
 
-let handle (f : exn -> 'a elab option) (elab : 'a elab) : 'a elab  =
+let handle (f : 'e1 -> ('a, 'e2) elab_err) (elab : ('a, 'e1) elab_err) : ('a, 'e2) elab_err  =
   fun ctx ->
-    try elab ctx with
-    | e -> begin
-        match f e with
-        | Some elab' -> elab' ctx
-        | None -> raise e
-    end
+    match elab ctx with
+    | Ok x -> Ok x
+    | Error e -> f e ctx
+
+let handle_absurd (elab : 'a elab) : ('a, 'e2) elab_err  =
+  elab |> handle Void.absurd
 
 
 (* Forms of Judgement *)
 
 type var = level
 
-type check = ty -> tm elab
-type synth = (tm * ty) elab
+
+type 'e check_err = ty -> (tm, 'e) elab_err
+type 'e synth_err = (tm * ty, 'e) elab_err
+
+type check = Void.t check_err
+type synth = Void.t synth_err
+
+
+let ( let* ) = Result.bind
 
 
 (** Directional rules *)
 
-let conv (elab : synth) : check =
-  fun ty ctx ->
-    let tm, ty' = elab ctx in
-    match ty = ty' with
-    | true -> tm
-    | false -> raise (TypeMismatch { found_ty = ty'; expected_ty = ty })
+let conv (elab : synth) : [> `TypeMismatch of ty * ty] check_err =
+  fun expected_ty ctx ->
+    let tm, found_ty = run_with elab ctx in
+    match expected_ty = found_ty with
+    | true -> Ok tm
+    | false -> Error (`TypeMismatch (found_ty, expected_ty))
 
 let ann (elab : check) (ty : ty) : synth =
   fun ctx ->
-    let tm = elab ty ctx in
-    Ann (tm, ty), ty
+    let tm = run_with (elab ty) ctx in
+    Ok (Ann (tm, ty), ty)
 
 
 (* Structural rules *)
 
-let var (l : var) : synth =
+let var (l : var) : [> `UnboundVar] synth_err =
   fun ctx ->
     let i = level_to_index ctx.size l in
     match List.nth_opt ctx.bindings i with
-    | Some ty -> Var i, ty
-    | None -> raise UnboundVar
+    | Some ty -> Ok (Var i, ty)
+    | None -> Error `UnboundVar
 
 let let_synth (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> synth) : synth =
   fun ctx ->
-    let def_tm = def_elab def_ty ctx in
-    let body_tm, body_ty = body_elab ctx.size (add_bind def_ty ctx) in
-    Let (def_n, def_ty, def_tm, body_tm), body_ty
+    let def_tm = run_with (def_elab def_ty) ctx in
+    let body_tm, body_ty = run_with (body_elab ctx.size) (add_bind def_ty ctx) in
+    Ok (Let (def_n, def_ty, def_tm, body_tm), body_ty)
 
 let let_check (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> check) : check =
   fun body_ty ctx ->
-    let def_tm = def_elab def_ty ctx in
-    let body_tm = body_elab ctx.size body_ty (add_bind def_ty ctx) in
-    Let (def_n, def_ty, def_tm, body_tm)
+    let def_tm = run_with (def_elab def_ty) ctx in
+    let body_tm = run_with (body_elab ctx.size body_ty) (add_bind def_ty ctx) in
+    Ok (Let (def_n, def_ty, def_tm, body_tm))
 
 
 (** Function rules *)
 
-let fun_intro_check (param_n : name) (body_elab : var -> check) : check =
+let fun_intro_check (param_n : name) (body_elab : var -> check) :  [> `UnexpectedFunLit] check_err =
   fun ty ctx ->
     match ty with
     | FunTy (param_ty, body_ty) ->
-        let body_tm = body_elab ctx.size body_ty (add_bind param_ty ctx) in
-        FunLit (param_n, param_ty, body_tm)
+        let body_tm = run_with (body_elab ctx.size body_ty) (add_bind param_ty ctx) in
+        Ok (FunLit (param_n, param_ty, body_tm))
     | _ ->
-        raise UnexpectedFunLit
+        Error `UnexpectedFunLit
 
 let fun_intro_synth (param_n, param_ty : name * ty) (body_elab : var -> synth) : synth =
   fun ctx ->
-    let body_tm, body_ty = body_elab ctx.size (add_bind param_ty ctx) in
-    FunLit (param_n, param_ty, body_tm),
-    FunTy (param_ty, body_ty)
+    let body_tm, body_ty = run_with (body_elab ctx.size) (add_bind param_ty ctx) in
+    Ok (FunLit (param_n, param_ty, body_tm), FunTy (param_ty, body_ty))
 
-let fun_elim (head_elab : synth) (arg_elab : synth) : synth =
+let fun_elim (head_elab : synth) (arg_elab : synth) : [> `UnexpectedArg of ty  | `TypeMismatch of ty * ty] synth_err =
   fun ctx ->
-    match head_elab ctx with
+    match run_with head_elab ctx with
     | head_tm, FunTy (param_ty, body_ty) ->
-        let arg_tm = conv arg_elab param_ty ctx in
-        FunApp (head_tm, arg_tm), body_ty
+        let* arg_tm = conv arg_elab param_ty ctx in
+        Ok (FunApp (head_tm, arg_tm), body_ty)
     | _, head_ty ->
-        raise (UnexpectedArg { head_ty })
+        Error (`UnexpectedArg head_ty)

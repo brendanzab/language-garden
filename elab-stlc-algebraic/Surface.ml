@@ -49,19 +49,17 @@ let rec check (ctx : context) (tm : tm) : Core.check =
     | FunLit (n, None, body_tm) ->
         Core.fun_intro_check n.data (fun v -> check ((n.data, v) :: ctx) body_tm) ty
         |> Core.handle (function
-          | Core.UnexpectedFunLit ->
+          | `UnexpectedFunLit ->
               error tm.loc
                 (Format.asprintf "found function, expected `%a`"
-                  Core.pp_ty ty)
-          | _ -> None)
+                  Core.pp_ty ty))
     | FunLit (n, Some param_ty, body_tm) -> begin
         (* TODO: this feels messy :[ *)
         match ty with
         | FunTy (param_ty', _) when param_ty' = param_ty ->
             Core.fun_intro_check n.data (fun v -> check ((n.data, v) :: ctx) body_tm) ty
             |> Core.handle (function
-              | Core.UnexpectedFunLit -> bug tm.loc "unexpected function literal"
-              | _ -> None)
+              | `UnexpectedFunLit -> bug tm.loc "unexpected function literal")
         | FunTy (expected_ty, _) ->
             error n.loc
               (Format.asprintf "unexpected parameter type, found `%a`, expected `%a`"
@@ -75,12 +73,11 @@ let rec check (ctx : context) (tm : tm) : Core.check =
     | _ ->
         Core.conv (synth ctx tm) ty
         |> Core.handle (function
-          | Core.TypeMismatch { found_ty; expected_ty } ->
+          | `TypeMismatch (found_ty, expected_ty) ->
               error tm.loc
                 (Format.asprintf "type mismatch, found `%a` expected `%a`"
                   Core.pp_ty found_ty
-                  Core.pp_ty expected_ty)
-          | _ -> None)
+                  Core.pp_ty expected_ty))
 
 and synth (ctx : context) (tm : tm) : Core.synth =
   match tm.data with
@@ -89,8 +86,7 @@ and synth (ctx : context) (tm : tm) : Core.synth =
       | Some i ->
           Core.var i
           |> Core.handle (function
-            | Core.UnboundVar -> bug tm.loc "unbound core variable"
-            | _ -> None)
+            | `UnboundVar -> bug tm.loc "unbound core variable")
       | None ->
           error tm.loc (Format.asprintf "unbound variable `%s`" n)
   end
@@ -109,16 +105,15 @@ and synth (ctx : context) (tm : tm) : Core.synth =
   | FunApp (head_tm, arg_tm) ->
       Core.fun_elim (synth ctx head_tm) (synth ctx arg_tm)
       |> Core.handle (function
-        | Core.UnexpectedArg { head_ty } ->
+        | `UnexpectedArg head_ty ->
             error head_tm.loc
               (Format.asprintf "unexpected argument applied to `%a`"
                 Core.pp_ty head_ty)
-        | Core.TypeMismatch { found_ty; expected_ty } ->
+        | `TypeMismatch (found_ty, expected_ty) ->
           error arg_tm.loc
             (Format.asprintf "mismatched argument type, found `%a` expected `%a`"
               Core.pp_ty found_ty
-              Core.pp_ty expected_ty)
-        | _ -> None)
+              Core.pp_ty expected_ty))
 
 let elab_check (tm : tm) (ty : ty) : Core.tm =
   Core.run (check [] tm ty)
