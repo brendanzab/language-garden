@@ -102,40 +102,41 @@ let pp_tm (fmt : Format.formatter) (tm : tm) : unit =
   pp_tm [] fmt tm
 
 
+module Semantics = struct
 
-(* Semantics *)
+  type vtm =
+    | Neu of ntm
+    | FunLit of name * ty * (vtm -> vtm)
+  and ntm =
+    | Var of level
+    | FunApp of ntm * vtm
 
-type vtm =
-  | Neu of ntm
-  | FunLit of name * ty * (vtm -> vtm)
-and ntm =
-  | Var of level
-  | FunApp of ntm * vtm
+  let rec eval (vtms : vtm env) (tm : tm) : vtm =
+    match tm with
+    | Var i -> List.nth vtms i
+    | Ann (tm, _) -> eval vtms tm
+    | Let (_, _, def_tm, body_tm) -> eval (eval vtms def_tm :: vtms) body_tm
+    | FunLit (x, param_ty, body_tm) -> FunLit (x, param_ty, fun v -> eval (v :: vtms) body_tm)
+    | FunApp (head_tm, arg_tm) -> begin
+        match eval vtms head_tm with
+        | FunLit (_, _, body) -> body (eval vtms arg_tm)
+        | Neu ntm -> Neu (FunApp (ntm, eval vtms arg_tm))
+    end
 
-let rec eval (vtms : vtm env) (tm : tm) : vtm =
-  match tm with
-  | Var i -> List.nth vtms i
-  | Ann (tm, _) -> eval vtms tm
-  | Let (_, _, def_tm, body_tm) -> eval (eval vtms def_tm :: vtms) body_tm
-  | FunLit (x, param_ty, body_tm) -> FunLit (x, param_ty, fun v -> eval (v :: vtms) body_tm)
-  | FunApp (head_tm, arg_tm) -> begin
-      match eval vtms head_tm with
-      | FunLit (_, _, body) -> body (eval vtms arg_tm)
-      | Neu ntm -> Neu (FunApp (ntm, eval vtms arg_tm))
-  end
+  let rec quote (size : int) (vtm : vtm) : tm =
+    match vtm with
+    | Neu ntm -> quote_ntm size ntm
+    | FunLit (x, param_ty, body) -> FunLit (x, param_ty, quote (size + 1) (body (Neu (Var size))))
+  and quote_ntm (size : int) (ntm : ntm) : tm =
+    match ntm with
+    | Var l -> Var (level_to_index size l)
+    | FunApp (head, arg) -> FunApp (quote_ntm size head, quote size arg)
 
-let rec quote (size : int) (vtm : vtm) : tm =
-  match vtm with
-  | Neu ntm -> quote_ntm size ntm
-  | FunLit (x, param_ty, body) -> FunLit (x, param_ty, quote (size + 1) (body (Neu (Var size))))
-and quote_ntm (size : int) (ntm : ntm) : tm =
-  match ntm with
-  | Var l -> Var (level_to_index size l)
-  | FunApp (head, arg) -> FunApp (quote_ntm size head, quote size arg)
+  let normalise (vtms : vtm env) (tm : tm) : tm =
+    quote (List.length vtms) (eval vtms tm)
+    [@@ warning "-unused-value-declaration"]
 
-let normalise (vtms : vtm env) (tm : tm) : tm =
-  quote (List.length vtms) (eval vtms tm)
-  [@@ warning "-unused-value-declaration"]
+end
 
 
 (* Typing context *)
