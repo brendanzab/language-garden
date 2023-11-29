@@ -29,11 +29,6 @@ type ('a, 'e) elab_err
 val run : 'a elab -> 'a
 val run_err : ('a, 'e) elab_err -> ('a, 'e) result
 
-(** {2 Error handling} *)
-
-val fail : 'e -> ('a, 'e) elab_err
-val handle : ('e -> 'a elab) -> ('a, 'e) elab_err -> 'a elab
-
 
 (** {1 Forms of judgement} *)
 
@@ -44,6 +39,12 @@ type synth = (tm * ty) elab
 
 type 'e check_err = ty -> (tm, 'e) elab_err
 type 'e synth_err = (tm * ty, 'e) elab_err
+
+(** {2 Error handling} *)
+
+val fail : 'e -> 'e synth_err
+val catch_check : ('e -> check) -> 'e check_err -> check
+val catch_synth : ('e -> synth) -> 'e synth_err -> synth
 
 
 (** {1 Inference rules} *)
@@ -61,6 +62,6 @@ val let_check : name * ty * check -> (var -> check) -> check
 
 (** {2 Function rules} *)
 
-val fun_intro_check : name * ty option -> (var -> check) -> [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit] check_err
+val fun_intro_check : name * ty option -> (var -> check) -> [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit of ty] check_err
 val fun_intro_synth : name * ty -> (var -> synth) -> synth
 val fun_elim : synth -> synth -> [> `UnexpectedArg of ty  | `TypeMismatch of ty * ty] synth_err

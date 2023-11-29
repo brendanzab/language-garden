@@ -170,19 +170,6 @@ let run_err (elab : ('a, 'e) elab_err) : ('a, 'e) result =
   elab empty
 
 
-(* Error handling *)
-
-let fail (e : 'e) : ('a, 'e) elab_err =
-  fun _ ->
-    Error e
-
-let handle (f : 'e -> 'a elab) (elab : ('a, 'e) elab_err) : 'a elab  =
-  fun ctx ->
-    match elab ctx with
-    | Ok x -> x
-    | Error e -> f e ctx
-
-
 (* Forms of Judgement *)
 
 type var = level
@@ -192,6 +179,25 @@ type synth = (tm * ty) elab
 
 type 'e check_err = ty -> (tm, 'e) elab_err
 type 'e synth_err = (tm * ty, 'e) elab_err
+
+
+(* Error handling *)
+
+let fail (e : 'e) : ('a, 'e) elab_err =
+  fun _ ->
+    Error e
+
+let catch_check (f : 'e -> check) (elab : 'e check_err) : check =
+  fun ty ctx ->
+    match elab ty ctx with
+    | Ok x -> x
+    | Error e -> f e ty ctx
+
+let catch_synth (f : 'e -> synth) (elab : 'e synth_err) : synth =
+  fun ctx ->
+    match elab ctx with
+    | Ok x -> x
+    | Error e -> f e ctx
 
 
 let ( let* ) = Result.bind
@@ -236,7 +242,7 @@ let let_check (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> 
 
 (** Function rules *)
 
-let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> check) :  [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit] check_err =
+let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> check) :  [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit of ty] check_err =
   fun fun_ty ctx ->
     match param_ty, fun_ty with
     | None, FunTy (param_ty, body_ty) ->
@@ -249,7 +255,7 @@ let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> c
         else
           Error (`MismatchedParamTy (param_ty, param_ty'))
     | _ ->
-        Error `UnexpectedFunLit
+        Error (`UnexpectedFunLit fun_ty)
 
 let fun_intro_synth (param_n, param_ty : name * ty) (body_elab : var -> synth) : synth =
   fun ctx ->
