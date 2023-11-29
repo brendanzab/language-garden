@@ -168,8 +168,8 @@ let run (elab : 'a elab) : 'a =
 
 exception UnboundVar
 exception UnexpectedFunLit
-exception ExpectedFunTy
-exception TypeMismatch
+exception UnexpectedArg of { head_ty : ty }
+exception TypeMismatch of { found_ty : ty; expected_ty : ty }
 
 let fail (e : exn) : 'a elab =
   fun _ ->
@@ -200,7 +200,7 @@ let conv (elab : synth) : check =
     let tm, ty' = elab ctx in
     match ty = ty' with
     | true -> tm
-    | false -> raise TypeMismatch
+    | false -> raise (TypeMismatch { found_ty = ty'; expected_ty = ty })
 
 let ann (elab : check) (ty : ty) : synth =
   fun ctx ->
@@ -253,5 +253,5 @@ let fun_elim (head_elab : synth) (arg_elab : synth) : synth =
     | head_tm, FunTy (param_ty, body_ty) ->
         let arg_tm = conv arg_elab param_ty ctx in
         FunApp (head_tm, arg_tm), body_ty
-    | _ ->
-        raise ExpectedFunTy
+    | _, head_ty ->
+        raise (UnexpectedArg { head_ty })

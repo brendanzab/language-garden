@@ -43,6 +43,8 @@ let tm :=
     { Surface.FunLit (n, None, tm) }
 | "fun"; "("; n = located(NAME); ":"; ty = ty; ")"; "=>"; tm = located(tm);
     { Surface.FunLit (n, Some ty, tm) }
+| tm = located(app_tm); ":"; ty = ty;
+    { Surface.Ann (tm, ty) }
 | app_tm
 
 let app_tm :=

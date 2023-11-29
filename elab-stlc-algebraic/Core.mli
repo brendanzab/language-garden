@@ -33,8 +33,8 @@ val run : 'a elab -> 'a
 
 exception UnboundVar
 exception UnexpectedFunLit
-exception ExpectedFunTy
-exception TypeMismatch
+exception UnexpectedArg of { head_ty : ty }
+exception TypeMismatch of { found_ty : ty; expected_ty : ty }
 
 val fail : exn -> 'a elab
 
@@ -97,7 +97,7 @@ val fun_intro_synth : name * ty -> (var -> synth) -> synth
 val fun_elim : synth -> synth -> synth
 (** Function elimination
 
-    @raises ExpectedFunTy if the head is not a function type
+    @raises UnexpectedArg if the head is not a function type
     @raises TypeMismatch if the type of the argument does not match the type of
             the parameter
 *)
