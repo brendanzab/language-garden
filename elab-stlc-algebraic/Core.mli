@@ -1,8 +1,5 @@
 (** The core language. *)
 
-module Void := Basis.Void
-
-
 type name = string
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
@@ -26,17 +23,16 @@ val pp_tm : Format.formatter -> tm -> unit
 
 (** {1 Elaboration effect} *)
 
+type 'a elab
 type ('a, 'e) elab_err
-type 'a elab = ('a, Void.t) elab_err
 
-val run_err : ('a, 'e) elab_err -> ('a, 'e) result
 val run : 'a elab -> 'a
+val run_err : ('a, 'e) elab_err -> ('a, 'e) result
 
 (** {2 Error handling} *)
 
 val fail : 'e -> ('a, 'e) elab_err
-val handle : ('e1 -> ('a, 'e2) elab_err) -> ('a, 'e1) elab_err ->  ('a, 'e2) elab_err
-val handle_absurd : 'a elab -> ('a, 'e2) elab_err
+val handle : ('e -> 'a elab) -> ('a, 'e) elab_err -> 'a elab
 
 
 (** {1 Forms of judgement} *)

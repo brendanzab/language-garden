@@ -1,5 +1,3 @@
-module Void = Basis.Void
-
 type name = string
 
 
@@ -161,20 +159,15 @@ let add_bind (ty : ty) (ctx : context) = {
 
 (* Elaboration effect *)
 
+type 'a elab = context -> 'a
+
 type ('a, 'e) elab_err = context -> ('a, 'e) result
 
-type 'a elab = ('a, Void.t) elab_err
+let run (elab : 'a elab) : 'a =
+  elab empty
 
 let run_err (elab : ('a, 'e) elab_err) : ('a, 'e) result =
   elab empty
-
-let run_with (elab : 'a elab) (ctx : context) : 'a =
-  match elab ctx with
-  | Ok x -> x
-
-let run (elab : 'a elab) : 'a =
-  match elab empty with
-  | Ok x -> x
 
 
 (* Error handling *)
@@ -183,26 +176,22 @@ let fail (e : 'e) : ('a, 'e) elab_err =
   fun _ ->
     Error e
 
-let handle (f : 'e1 -> ('a, 'e2) elab_err) (elab : ('a, 'e1) elab_err) : ('a, 'e2) elab_err  =
+let handle (f : 'e -> 'a elab) (elab : ('a, 'e) elab_err) : 'a elab  =
   fun ctx ->
     match elab ctx with
-    | Ok x -> Ok x
+    | Ok x -> x
     | Error e -> f e ctx
-
-let handle_absurd (elab : 'a elab) : ('a, 'e2) elab_err  =
-  elab |> handle Void.absurd
 
 
 (* Forms of Judgement *)
 
 type var = level
 
+type check = ty -> tm elab
+type synth = (tm * ty) elab
 
 type 'e check_err = ty -> (tm, 'e) elab_err
 type 'e synth_err = (tm * ty, 'e) elab_err
-
-type check = Void.t check_err
-type synth = Void.t synth_err
 
 
 let ( let* ) = Result.bind
@@ -212,15 +201,15 @@ let ( let* ) = Result.bind
 
 let conv (elab : synth) : [> `TypeMismatch of ty * ty] check_err =
   fun expected_ty ctx ->
-    let tm, found_ty = run_with elab ctx in
+    let tm, found_ty = elab ctx in
     match expected_ty = found_ty with
     | true -> Ok tm
     | false -> Error (`TypeMismatch (found_ty, expected_ty))
 
 let ann (elab : check) (ty : ty) : synth =
   fun ctx ->
-    let tm = run_with (elab ty) ctx in
-    Ok (Ann (tm, ty), ty)
+    let tm = elab ty ctx in
+    Ann (tm, ty), ty
 
 
 (* Structural rules *)
@@ -234,15 +223,15 @@ let var (l : var) : [> `UnboundVar] synth_err =
 
 let let_synth (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> synth) : synth =
   fun ctx ->
-    let def_tm = run_with (def_elab def_ty) ctx in
-    let body_tm, body_ty = run_with (body_elab ctx.size) (add_bind def_ty ctx) in
-    Ok (Let (def_n, def_ty, def_tm, body_tm), body_ty)
+    let def_tm = def_elab def_ty ctx in
+    let body_tm, body_ty = body_elab ctx.size (add_bind def_ty ctx) in
+    Let (def_n, def_ty, def_tm, body_tm), body_ty
 
 let let_check (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> check) : check =
   fun body_ty ctx ->
-    let def_tm = run_with (def_elab def_ty) ctx in
-    let body_tm = run_with (body_elab ctx.size body_ty) (add_bind def_ty ctx) in
-    Ok (Let (def_n, def_ty, def_tm, body_tm))
+    let def_tm = def_elab def_ty ctx in
+    let body_tm = body_elab ctx.size body_ty (add_bind def_ty ctx) in
+    Let (def_n, def_ty, def_tm, body_tm)
 
 
 (** Function rules *)
@@ -251,19 +240,19 @@ let fun_intro_check (param_n : name) (body_elab : var -> check) :  [> `Unexpecte
   fun ty ctx ->
     match ty with
     | FunTy (param_ty, body_ty) ->
-        let body_tm = run_with (body_elab ctx.size body_ty) (add_bind param_ty ctx) in
+        let body_tm = body_elab ctx.size body_ty (add_bind param_ty ctx) in
         Ok (FunLit (param_n, param_ty, body_tm))
     | _ ->
         Error `UnexpectedFunLit
 
 let fun_intro_synth (param_n, param_ty : name * ty) (body_elab : var -> synth) : synth =
   fun ctx ->
-    let body_tm, body_ty = run_with (body_elab ctx.size) (add_bind param_ty ctx) in
-    Ok (FunLit (param_n, param_ty, body_tm), FunTy (param_ty, body_ty))
+    let body_tm, body_ty = body_elab ctx.size (add_bind param_ty ctx) in
+    FunLit (param_n, param_ty, body_tm), FunTy (param_ty, body_ty)
 
 let fun_elim (head_elab : synth) (arg_elab : synth) : [> `UnexpectedArg of ty  | `TypeMismatch of ty * ty] synth_err =
   fun ctx ->
-    match run_with head_elab ctx with
+    match head_elab ctx with
     | head_tm, FunTy (param_ty, body_ty) ->
         let* arg_tm = conv arg_elab param_ty ctx in
         Ok (FunApp (head_tm, arg_tm), body_ty)
