@@ -62,14 +62,14 @@ let rec check (ctx : context) (tm : tm) : Core.check =
             |> Core.handle (function
               | Core.UnexpectedFunLit -> bug tm.loc "unexpected function literal"
               | _ -> None)
-        | FunTy (param_ty', _) ->
+        | FunTy (expected_ty, _) ->
             error n.loc
-              (Format.asprintf "unexpected parameter type, found `%a`, expected: `%a`"
+              (Format.asprintf "unexpected parameter type, found `%a`, expected `%a`"
                 Core.pp_ty param_ty
-                Core.pp_ty param_ty')
+                Core.pp_ty expected_ty)
         | ty ->
             error tm.loc
-              (Format.asprintf "found function, expected: `%a`"
+              (Format.asprintf "found function, expected `%a`"
                 Core.pp_ty ty)
     end
     | _ ->
@@ -78,8 +78,8 @@ let rec check (ctx : context) (tm : tm) : Core.check =
           | Core.TypeMismatch { found_ty; expected_ty } ->
               error tm.loc
                 (Format.asprintf "type mismatch, found `%a` expected `%a`"
-                  Core.pp_ty expected_ty
-                  Core.pp_ty found_ty)
+                  Core.pp_ty found_ty
+                  Core.pp_ty expected_ty)
           | _ -> None)
 
 and synth (ctx : context) (tm : tm) : Core.synth =
@@ -116,8 +116,8 @@ and synth (ctx : context) (tm : tm) : Core.synth =
         | Core.TypeMismatch { found_ty; expected_ty } ->
           error arg_tm.loc
             (Format.asprintf "mismatched argument type, found `%a` expected `%a`"
-              Core.pp_ty expected_ty
-              Core.pp_ty found_ty)
+              Core.pp_ty found_ty
+              Core.pp_ty expected_ty)
         | _ -> None)
 
 let elab_check (tm : tm) (ty : ty) : Core.tm =

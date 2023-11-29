@@ -20,12 +20,12 @@ Unexpected function literal
 
 Unexpected function literal
   $ stlc-algebraic <<< "(fun (a : A) => a) : B"
-  <input>:1:0: error: found function, expected: `B`
+  <input>:1:0: error: found function, expected `B`
   [1]
 
 Unexpected parameter type
   $ stlc-algebraic <<< "(fun (a : A) => a) : B -> B"
-  <input>:1:6: error: unexpected parameter type, found `A`, expected: `B`
+  <input>:1:6: error: unexpected parameter type, found `A`, expected `B`
   [1]
 
 Unbound variable
@@ -33,9 +33,9 @@ Unbound variable
   <input>:1:15: error: unbound variable `b`
   [1]
 
-Type mismatch (FIXME: found/expected order?)
+Type mismatch
   $ stlc-algebraic <<< "fun (a : A) => a : B"
-  <input>:1:15: error: type mismatch, found `B` expected `A`
+  <input>:1:15: error: type mismatch, found `A` expected `B`
   [1]
 
 Missing parameter annotation
@@ -45,5 +45,5 @@ Missing parameter annotation
 
 Mismatched argument
   $ stlc-algebraic <<< "fun (f : A -> B) => fun (b : B) => f b"
-  <input>:1:37: error: mismatched argument type, found `A` expected `B`
+  <input>:1:37: error: mismatched argument type, found `B` expected `A`
   [1]
