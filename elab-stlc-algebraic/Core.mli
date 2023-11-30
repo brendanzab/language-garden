@@ -23,6 +23,8 @@ val pp_tm : Format.formatter -> tm -> unit
 
 (** {1 Elaboration effect} *)
 
+(** Total and non-total elaboration effects. *)
+
 type 'a elab
 type ('a, 'e) elab_err
 
@@ -48,6 +50,24 @@ val catch_synth : ('e -> synth) -> 'e synth_err -> synth
 
 
 (** {1 Inference rules} *)
+
+(** Here we encode inference rules from natural deduction:
+
+    {v
+     premise_1 ... premise_n
+    ─────────────────────────
+           conclusion
+    v}
+
+    As functions in the form:
+
+    {v
+    premise_1 -> ... -> premise_n -> conclusion
+    v}
+
+    Higher-order abstract syntax (HOAS) is used to represent places where new
+    bindings are added to the typing context.
+*)
 
 (** {2 Directional rules} *)
 
