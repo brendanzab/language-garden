@@ -16,6 +16,13 @@ defined in the core.
 Elaboration no longer needs to interact with core terms directly, and can
 instead focus on desugaring and error reporting.
 
+## Todo
+
+- [x] Elaboration of lambda terms
+- [x] Elaboration tests
+- [ ] Unification and metavariables
+- [ ] Collect multiple errors during elaboration
+
 ## Resources
 
 Presentations:
