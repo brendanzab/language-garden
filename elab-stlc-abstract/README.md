@@ -2,9 +2,10 @@
 
 A useful pattern for implementing typed programming languages is to translate a
 high level, user friendly _surface language_ into a small, typed _core language_
-that is close to known type theories.
-This process is called _elaboration_ and is used in languages such as GHC Haskell
-and Idris.
+that is close to well-understood type theories.
+Because it fills in details that were otherwise implicit, we call this process
+_elaboration_, and you can find it used in the implementations of languages such
+as GHC Haskell, Idris and Coq.
 Unfortunately elaboration can get rather complicated, because type-directed
 desugaring, type checking and error reporting are all fused together.
 
