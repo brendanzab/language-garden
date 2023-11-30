@@ -37,14 +37,12 @@ Presentations:
 Related projects:
 
 - [jonsterling/dreamtt](https://github.com/jonsterling/dreamtt/):
-  A pedagogic implementation of abstract bidirectional elaboration for dependent
-  type theory.
+  Pedagogic abstract elaboration for dependent type theory.
 - [RedPRL/cooltt](https://github.com/RedPRL/cooltt/):
-  A cool implementation of normalization by evaluation (NbE) & elaboration for
-  Cartesian cubical type theory.
+  Elaboration for Cartesian cubical type theory.
 - [RedPRL/algaett](https://github.com/RedPRL/algaett/):
-  An experimental elaborator for dependent type theory using effects and handlers.
+  Elaborator for dependent type theory using effects and handlers.
 - [TOTBWF/MicroTT.ml](https://gist.github.com/TOTBWF/9b2c071d2edb1c6596b785656c866fd6):
   A simple single-file elaborator for MLTT.
 - [TOTBWF/teenytt](https://github.com/TOTBWF/teenytt)
-  A very small, didactic proof assistant designed around dependent type theory.
+  A very small, didactic proof assistant for dependent type theory.
