@@ -15,7 +15,7 @@
 
 (package (name elab-dependent))
 (package (name elab-dependent-sugar))
-(package (name elab-stlc-algebraic))
+(package (name elab-stlc-abstract))
 (package (name elab-stlc-unification))
 (package (name elab-record-patching))
 

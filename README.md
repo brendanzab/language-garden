@@ -24,7 +24,7 @@ widely applicable as well.
   An elaborator of a dependently typed lambda calculus with singletons and record patching.
 - [**elab-stlc-unification**](./elab-stlc-unification):
   An elaborator for a simply typed lambda calculus where type annotations can be omitted.
-- [**elab-stlc-algebraic**](./elab-stlc-algebraic):
+- [**elab-stlc-abstract**](./elab-stlc-abstract):
   An LCF-style elaborator that moves the construction of well-typed terms behind
   a trusted interface.
 

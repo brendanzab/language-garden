@@ -1,7 +1,7 @@
 (executable
   (name Main)
-  (public_name stlc-algebraic)
-  (package elab-stlc-algebraic))
+  (public_name stlc-abstract)
+  (package elab-stlc-abstract))
 
 (menhir
   (modules Parser)

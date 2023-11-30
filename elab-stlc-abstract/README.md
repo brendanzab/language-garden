@@ -1,4 +1,4 @@
-# Algebraic elaboration for STLC
+# Abstract elaboration for STLC
 
 A useful pattern for implementing typed programming languages is to translate a
 high level, user friendly _surface language_ into a small, typed _core language_
