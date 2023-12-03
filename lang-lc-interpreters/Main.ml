@@ -18,20 +18,22 @@ end
 [@@warning "-unused-value-declaration"]
 
 
-module Named : Lang with type expr = Named.expr = struct
+module Named : Lang
+  with type expr = Named.expr
+= struct
   include Named
   let to_named = Fun.id
   let of_named = Fun.id
 end
 
-module NamedClosures : Lang with type expr = Named.expr = struct
+module NamedClosures : Lang = struct
   include NamedClosures
   let to_named = Fun.id
   let of_named = Fun.id
   let normalise = normalise []
 end
 
-module NamedHoas : Lang with type expr = Named.expr = struct
+module NamedHoas : Lang = struct
   include NamedHoas
   let to_named = Fun.id
   let of_named = Fun.id
