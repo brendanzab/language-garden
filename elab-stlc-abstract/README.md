@@ -1,20 +1,24 @@
 # Abstract elaboration for STLC
 
-Translating a high level, user friendly _surface language_ into a small, typed
-_core language_ that is close to well-understood type theories is a useful
-pattern for implementing typed programming languages.
-We call this process _elaboration_ because it fills in details that were
-otherwise implicit, and it is used in the implementations of languages such as
-GHC Haskell, Idris and Coq.
+The translation of a high level, user friendly _surface language_ into a small,
+typed _core language_ is a useful pattern for implementing typed programming
+languages.
+We call this _elaboration_ because it fills in details that were otherwise
+implicit, and it is used in the implementations of languages such as GHC Haskell,
+Idris and Coq.
 
 Unfortunately elaborators can get rather complicated because type checking,
 desugaring and error reporting are all fused together.
 This project explores a way to alleviate this burden on the elaborator by
 taking an LCF-inspired approach.
 Instead of type checking and constructing core terms within the elaborator, we
-instead move this behind trusted inference rules defined in the core.
+instead move this behind trusted inference rules defined in the core
+(see [`Core.mli`]).
 Elaboration no longer needs to interact with core terms directly, and can
-instead focus on desugaring and error reporting.
+instead focus on desugaring and error reporting (see [`Surface.ml`]).
+
+[`Core.mli`]: ./Core.mli
+[`Surface.ml`]: ./Surface.ml
 
 ## Todo
 
