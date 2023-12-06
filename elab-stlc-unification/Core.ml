@@ -28,6 +28,9 @@ type 'a env = 'a list
 
 (** {1 Syntax} *)
 
+(** Metavariable identifier *)
+type meta_id = int
+
 (** Type syntax *)
 type ty =
   | BoolType
@@ -38,7 +41,7 @@ type ty =
 (** The state of a metavariable, updated during unification *)
 and meta_state =
   | Solved of ty
-  | Unsolved of int
+  | Unsolved of meta_id
 
 (** Primitive operations *)
 type prim = [
@@ -171,12 +174,12 @@ let rec force : ty -> ty =
 
 (** {1 Unification} *)
 
-exception InfiniteType of int
+exception InfiniteType of meta_id
 exception MismatchedTypes of ty * ty
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
-let rec occurs (id : int) (ty : ty) : unit =
+let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
   | MetaVar m ->
       begin match !m with
