@@ -23,13 +23,12 @@ val pp_tm : Format.formatter -> tm -> unit
 
 (** {1 Elaboration effect} *)
 
-(** Total and non-total elaboration effects. *)
+(** Total and partial elaboration effects. *)
 
 type 'a elab
-type ('a, 'e) elab_err
+type ('a, 'e) elab_err = ('a, 'e) result elab
 
 val run : 'a elab -> 'a
-val run_err : ('a, 'e) elab_err -> ('a, 'e) result
 
 
 (** {1 Forms of judgement} *)

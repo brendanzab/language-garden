@@ -161,12 +161,9 @@ let add_bind (ty : ty) (ctx : context) = {
 
 type 'a elab = context -> 'a
 
-type ('a, 'e) elab_err = context -> ('a, 'e) result
+type ('a, 'e) elab_err = ('a, 'e) result elab
 
 let run (elab : 'a elab) : 'a =
-  elab empty
-
-let run_err (elab : ('a, 'e) elab_err) : ('a, 'e) result =
   elab empty
 
 
