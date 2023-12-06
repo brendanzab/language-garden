@@ -180,6 +180,11 @@ type 'e synth_err = (tm * ty, 'e) elab_err
 
 (* Error handling *)
 
+type ty_mismatch = {
+  found_ty : ty;
+  expected_ty : ty;
+}
+
 let fail (e : 'e) : ('a, 'e) elab_err =
   fun _ ->
     Error e
@@ -202,12 +207,12 @@ let ( let* ) = Result.bind
 
 (** Directional rules *)
 
-let conv (elab : synth) : [> `TypeMismatch of ty * ty] check_err =
+let conv (elab : synth) : [> `TypeMismatch of ty_mismatch] check_err =
   fun expected_ty ctx ->
     let tm, found_ty = elab ctx in
     match expected_ty = found_ty with
     | true -> Ok tm
-    | false -> Error (`TypeMismatch (found_ty, expected_ty))
+    | false -> Error (`TypeMismatch { found_ty; expected_ty })
 
 let ann (elab : check) (ty : ty) : synth =
   fun ctx ->
@@ -239,7 +244,7 @@ let let_check (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> 
 
 (** Function rules *)
 
-let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> check) :  [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit of ty] check_err =
+let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> check) :  [> `MismatchedParamTy of ty_mismatch | `UnexpectedFunLit of ty] check_err =
   fun fun_ty ctx ->
     match param_ty, fun_ty with
     | None, FunTy (param_ty, body_ty) ->
@@ -250,7 +255,7 @@ let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> c
           let body_tm = body_elab ctx.size body_ty (add_bind param_ty ctx) in
           Ok (FunLit (param_n, param_ty, body_tm))
         else
-          Error (`MismatchedParamTy (param_ty, param_ty'))
+          Error (`MismatchedParamTy { found_ty = param_ty; expected_ty = param_ty' })
     | _ ->
         Error (`UnexpectedFunLit fun_ty)
 
@@ -259,7 +264,7 @@ let fun_intro_synth (param_n, param_ty : name * ty) (body_elab : var -> synth) :
     let body_tm, body_ty = body_elab ctx.size (add_bind param_ty ctx) in
     FunLit (param_n, param_ty, body_tm), FunTy (param_ty, body_ty)
 
-let fun_elim (head_elab : synth) (arg_elab : synth) : [> `UnexpectedArg of ty  | `TypeMismatch of ty * ty] synth_err =
+let fun_elim (head_elab : synth) (arg_elab : synth) : [> `UnexpectedArg of ty  | `TypeMismatch of ty_mismatch] synth_err =
   fun ctx ->
     match head_elab ctx with
     | head_tm, FunTy (param_ty, body_ty) ->

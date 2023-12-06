@@ -52,7 +52,7 @@ let rec check (ctx : context) (tm : tm) : Core.check =
             error tm.loc
               (Format.asprintf "found function, expected `%a`"
                 Core.pp_ty expected_ty)
-        | `MismatchedParamTy (found_ty, expected_ty) ->
+        | `MismatchedParamTy Core.{ found_ty; expected_ty } ->
             error tm.loc
               (Format.asprintf "mismatched parameter type, found `%a` expected `%a`"
                 Core.pp_ty found_ty
@@ -60,7 +60,7 @@ let rec check (ctx : context) (tm : tm) : Core.check =
   | _ ->
       Core.conv (synth ctx tm)
       |> Core.catch_check (function
-        | `TypeMismatch (found_ty, expected_ty) ->
+        | `TypeMismatch Core.{ found_ty; expected_ty } ->
             error tm.loc
               (Format.asprintf "type mismatch, found `%a` expected `%a`"
                 Core.pp_ty found_ty
@@ -96,11 +96,11 @@ and synth (ctx : context) (tm : tm) : Core.synth =
             error head_tm.loc
               (Format.asprintf "unexpected argument applied to `%a`"
                 Core.pp_ty head_ty)
-        | `TypeMismatch (found_ty, expected_ty) ->
-          error arg_tm.loc
-            (Format.asprintf "mismatched argument type, found `%a` expected `%a`"
-              Core.pp_ty found_ty
-              Core.pp_ty expected_ty))
+        | `TypeMismatch Core.{ found_ty; expected_ty } ->
+            error arg_tm.loc
+              (Format.asprintf "mismatched argument type, found `%a` expected `%a`"
+                Core.pp_ty found_ty
+                Core.pp_ty expected_ty))
 
 let elab_check (tm : tm) (ty : ty) : Core.tm =
   Core.run (check [] tm ty)

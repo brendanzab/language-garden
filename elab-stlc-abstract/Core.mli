@@ -43,6 +43,11 @@ type 'e synth_err = (tm * ty, 'e) elab_err
 
 (** {2 Error handling} *)
 
+type ty_mismatch = {
+  found_ty : ty;
+  expected_ty : ty;
+}
+
 val fail : 'e -> 'e synth_err
 val catch_check : ('e -> check) -> 'e check_err -> check
 val catch_synth : ('e -> synth) -> 'e synth_err -> synth
@@ -70,7 +75,7 @@ val catch_synth : ('e -> synth) -> 'e synth_err -> synth
 
 (** {2 Directional rules} *)
 
-val conv : synth -> [> `TypeMismatch of ty * ty] check_err
+val conv : synth -> [> `TypeMismatch of ty_mismatch] check_err
 val ann : check -> ty -> synth
 
 (** {2 Structural rules} *)
@@ -81,6 +86,6 @@ val let_check : name * ty * check -> (var -> check) -> check
 
 (** {2 Function rules} *)
 
-val fun_intro_check : name * ty option -> (var -> check) -> [> `MismatchedParamTy of ty * ty | `UnexpectedFunLit of ty] check_err
+val fun_intro_check : name * ty option -> (var -> check) -> [> `MismatchedParamTy of ty_mismatch | `UnexpectedFunLit of ty] check_err
 val fun_intro_synth : name * ty -> (var -> synth) -> synth
-val fun_elim : synth -> synth -> [> `UnexpectedArg of ty  | `TypeMismatch of ty * ty] synth_err
+val fun_elim : synth -> synth -> [> `UnexpectedArg of ty  | `TypeMismatch of ty_mismatch] synth_err
