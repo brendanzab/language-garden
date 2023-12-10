@@ -22,11 +22,11 @@ widely applicable as well.
   An elaborator for a small dependently typed lambda calculus with syntactic sugar.
 - [**elab-record-patching**](./elab-record-patching/):
   An elaborator of a dependently typed lambda calculus with singletons and record patching.
-- [**elab-stlc-unification**](./elab-stlc-unification):
-  An elaborator for a simply typed lambda calculus where type annotations can be omitted.
 - [**elab-stlc-abstract**](./elab-stlc-abstract):
   An LCF-style elaborator that moves the construction of well-typed terms behind
   a trusted interface.
+- [**elab-stlc-unification**](./elab-stlc-unification):
+  An elaborator for a simply typed lambda calculus where type annotations can be omitted.
 
 ### Compilation
 
