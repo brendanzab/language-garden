@@ -158,7 +158,8 @@ let fresh_meta : unit -> meta_state ref =
     ref (Unsolved id)
 
 (** Force any solved metavariables on the outermost part of a type. Chains of
-    metavariables will be collapsed to make forcing faster in the future. *)
+    metavariables will be collapsed to make forcing faster in the future. This
+    is sometimes referred to as {i path compression}. *)
 let rec force : ty -> ty =
   function
   | MetaVar m as ty ->
