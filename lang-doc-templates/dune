@@ -1,0 +1,5 @@
+(executable
+  (name Main)
+  (public_name doc-templates)
+  (package lang-doc-templates)
+  (libraries angstrom))

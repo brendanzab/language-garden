@@ -20,6 +20,7 @@
 (package (name elab-record-patching))
 
 (package (name lang-datalog))
+(package (name lang-doc-templates))
 (package (name lang-fractal-growth))
 (package (name lang-lc-interpreters))
 (package (name lang-shader-graphics))

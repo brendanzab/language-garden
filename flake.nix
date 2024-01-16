@@ -91,6 +91,7 @@
         elab-stlc-abstract = [ "stlc-abstract" ];
         elab-stlc-unification = [ "stlc-unification" ];
         lang-datalog = [ "datalog" ];
+        lang-doc-templates = [ "doc-templates" ];
         lang-fractal-growth = [ "fractal-growth" ];
         lang-lc-interpreters = [ "lc-interpreters" ];
         lang-shader-graphics = [ "shader-graphics" ];

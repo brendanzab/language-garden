@@ -50,6 +50,8 @@ Miscellaneous programming language experiments.
 
 - [**lang-datalog**](./lang-datalog/):
   A simple Datalog interpreter.
+- [**lang-doc-templates**](./lang-doc-templates/):
+  A programmable document template language that elaborates to a typed lambda calculus.
 - [**lang-fractal-growth**](./lang-fractal-growth/):
   Experiments with using grammars and rewriting systems to model fractal growth.
 - [**lang-lc-interpreters**](./lang-lc-interpreters/):

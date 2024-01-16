@@ -1,0 +1,14 @@
+${heading1 "Document template language"}
+
+${para "
+  A programmable document template language that elaborates to a typed lambda
+  calculus.
+"}
+
+${heading2 "Thoughts"}
+
+${para "
+  Designing a nice concrete syntax is hard. Trying to make it not too ad-hoc and
+  hard to parse, and extensible over time, while remaining lightweight and
+  pleasant to use.
+"}
