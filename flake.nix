@@ -5,11 +5,11 @@
   #
   # To update all flake inputs:
   #
-  #     $ nix flake update --commit-lockfile
+  #     $ nix flake update --commit-lock-file
   #
   # To update individual flake inputs:
   #
-  #     $ nix flake lock --update-input <input> ... --commit-lockfile
+  #     $ nix flake lock --update-input <input> ... --commit-lock-file
   #
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
