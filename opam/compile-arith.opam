@@ -6,13 +6,13 @@ dev-repo: "git+https://github.com/brendanzab/language-garden.git"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.8"}
-  "alcotest" {>= "1.5" & with-test}
+  "alcotest" {>= "1.7" & with-test}
   "cmdliner" {>= "1.2"}
   "menhir" {build}
   "mdx" {>= "2.3" & with-test}
-  "qcheck" {>= "0.19.1" & with-test}
-  "qcheck-core" {>= "0.19.1" & with-test}
-  "qcheck-alcotest" {>= "0.19.1" & with-test}
+  "qcheck" {>= "0.21.3" & with-test}
+  "qcheck-core" {>= "0.21.3" & with-test}
+  "qcheck-alcotest" {>= "0.21.3" & with-test}
   "odoc" {with-doc}
 ]
 build: [
