@@ -54,18 +54,7 @@
       # Development package versions.
       devPackagesQuery = {
         ocaml-lsp-server = "*";
-        # FIXME: ocamlformat 0.26.0 fails to build with:
-        #
-        #     File "lib/dune", line 39, characters 2-16:
-        #     39 |   ocp-indent.lib
-        #            ^^^^^^^^^^^^^^
-        #     Error: Library "ocp-indent.lib" not found.
-        #     -> required by library "ocamlformat-lib" in _build/default/lib
-        #     -> required by _build/default/META.ocamlformat-lib
-        #     -> required by _build/install/default/lib/ocamlformat-lib/META
-        #     -> required by _build/default/ocamlformat-lib.install
-        #     -> required by alias install
-        ocamlformat = "0.25.1";
+        ocamlformat = "*";
         utop = "*";
       };
 
@@ -73,7 +62,7 @@
       # when building the opam project with `opam-nix`.
       query = devPackagesQuery // {
         # Force the ocaml compiler to be taken from opam-repository:
-        ocaml-base-compiler = "5.0.0"; # Fix for opam-nix choosing 5.0.0~rc1 over 5.0.0
+        ocaml-base-compiler = "5.1.1"; # Fix for opam-nix choosing 5.1.1~rc1 over 5.1.1
       };
 
       # Package-specific derivation overrides.
