@@ -50,6 +50,11 @@ let f : Int -> Int := fun (x : Int) => x; f 3 : Int
 ```
 
 ```sh
+$ stlc-unification <<< "let f (x : Int) := x; f 3"
+let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+```
+
+```sh
 $ stlc-unification <<< "fun x y => if x = 0 then y else 3"
 fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
 ```
@@ -67,6 +72,14 @@ $ stlc-unification <<< "let f x := x + 1; f f"
 <input>:1:20: mismatched types:
   expected: Int
   found: Int -> Int
+[1]
+```
+
+```sh
+$ stlc-unification <<< "let f (x : Bool) := x; f 1"
+<input>:1:25: mismatched types:
+  expected: Bool
+  found: Int
 [1]
 ```
 

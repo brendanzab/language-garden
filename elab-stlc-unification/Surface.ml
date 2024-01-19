@@ -17,6 +17,14 @@ type 'a located = {
   data : 'a;
 }
 
+(** Types in the surface language *)
+type ty =
+  ty_data located
+
+and ty_data =
+  | Name of string
+  | FunType of ty * ty
+
 (** Names that bind definitions or parameters *)
 type binder = string located
 
@@ -26,14 +34,18 @@ type tm =
 
 and tm_data =
   | Name of string
-  | Let of binder * binder list * tm * tm
+  | Let of binder * param list * tm * tm
   | BoolLit of bool
   | IfThenElse of tm * tm * tm
   | IntLit of int
-  | FunLit of binder list * tm
+  | FunLit of param list * tm
   | FunApp of tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
+
+(** Parameters, with optional type annotations *)
+and param =
+  binder * ty option
 
 
 (** {1 Elaboration} *)
@@ -117,6 +129,16 @@ let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
 
 (** {2 Type checking} *)
 
+(** Validate that a type is well-formed. *)
+let rec wf_ty (ty : ty) : Core.ty =
+  match ty.data with
+  | Name "Bool" -> BoolType
+  | Name "Int" -> IntType
+  | Name name ->
+      error ty.loc (Format.asprintf "unbound type `%s`" name)
+  | FunType (ty1, ty2) ->
+      FunType (wf_ty ty1, wf_ty ty2)
+
 (** In this algorithm type checking is mainly unidirectional, relying on the
     [infer] funtion, but a {!check} function is provided for convenience.
 *)
@@ -135,8 +157,8 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       | Some (index, ty) -> Var index, ty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
       end
-  | Let (def_name, param_names, def_body, body) ->
-      let def, def_ty = infer_fun_lit context param_names def_body in
+  | Let (def_name, params, def_body, body) ->
+      let def, def_ty = infer_fun_lit context params def_body in
       let body, body_ty = infer ((def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
   | BoolLit b -> BoolLit b, BoolType
@@ -147,8 +169,8 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let tm1 = check context tm1 ty in
       BoolElim (head, tm0, tm1), ty
   | IntLit i -> IntLit i, IntType
-  | FunLit (param_names, body) ->
-      infer_fun_lit context param_names body
+  | FunLit (params, body) ->
+      infer_fun_lit context params body
   | FunApp (head, arg) ->
       let head_loc = head.loc in
       let head, head_ty = infer context head in
@@ -176,10 +198,13 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       PrimApp (prim, [tm]), IntType
 
 (** Elaborate a function literal, inferring its type. *)
-and infer_fun_lit (context : context) (names : binder list) (body : tm) : Core.tm * Core.ty =
-  match names with
+and infer_fun_lit (context : context) (params : (binder * ty option) list) (body : tm) : Core.tm * Core.ty =
+  match params with
   | [] -> infer context body
-  | name :: names ->
-      let param_ty = fresh_meta (`FunParam name.loc) in
-      let body, body_ty = infer_fun_lit ((name.data, param_ty) :: context) names body in
+  | (name, param_ty) :: params ->
+      let param_ty = match param_ty with
+        | None -> fresh_meta (`FunParam name.loc)
+        | Some ty -> wf_ty ty
+      in
+      let body, body_ty = infer_fun_lit ((name.data, param_ty) :: context) params body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)

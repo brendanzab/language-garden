@@ -23,10 +23,12 @@ rule token = parse
 | name as n     { NAME n }
 | "+"           { ADD }
 | "*"           { ASTERISK }
+| ":"           { COLON }
 | ":="          { COLON_EQUALS }
 | "="           { EQUALS }
 | "=>"          { EQUALS_GREATER }
 | "-"           { HYPHEN }
+| "->"          { HYPHEN_GREATER }
 | ";"           { SEMICOLON }
 | "("           { OPEN_PAREN }
 | ")"           { CLOSE_PAREN }

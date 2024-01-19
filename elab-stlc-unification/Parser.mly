@@ -9,10 +9,12 @@
 %token KEYWORD_TRUE "true"
 %token ADD "+"
 %token ASTERISK "*"
+%token COLON ":"
 %token COLON_EQUALS ":="
 %token EQUALS "="
 %token EQUALS_GREATER "=>"
 %token HYPHEN "-"
+%token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
@@ -33,11 +35,28 @@ let located(X) :=
 let binder :=
 | located(NAME)
 
+let param :=
+| n = binder;
+    { n, None }
+| "("; n = binder; ":"; ty = located(ty); ")";
+    { n, Some ty }
+
+let ty :=
+| ty1 = located(atomic_ty); "->"; ty2 = located(ty);
+    { Surface.FunType (ty1, ty2) }
+| atomic_ty
+
+let atomic_ty :=
+| "("; ty = ty; ")";
+    { ty }
+| n = NAME;
+  { Surface.Name n }
+
 let tm :=
-| "let"; n = binder; ns = list(binder); ":="; tm0 = located(tm); ";"; tm1 = located(tm);
-    { Surface.Let (n, ns, tm0, tm1) }
-| "fun"; ns = nonempty_list(binder); "=>"; t = located(tm);
-    { Surface.FunLit (ns, t) }
+| "let"; n = binder; ps = list(param); ":="; tm0 = located(tm); ";"; tm1 = located(tm);
+    { Surface.Let (n, ps, tm0, tm1) }
+| "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
+    { Surface.FunLit (ps, t) }
 | if_tm
 
 let if_tm :=
@@ -70,8 +89,8 @@ let app_tm :=
 | atomic_tm
 
 let atomic_tm :=
-| "("; t = tm; ")";
-    { t }
+| "("; tm = tm; ")";
+    { tm }
 | n = NAME;
     { Surface.Name n }
 | "true";
