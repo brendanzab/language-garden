@@ -64,28 +64,28 @@ $ stlc-unification <<< "let x := 1; y"
 
 ```sh
 $ stlc-unification <<< "let f x := x + 1; f f"
-<input>:1:18: mismatched types:
-  expected: (Int -> Int) -> ?1
+<input>:1:20: mismatched types:
+  expected: Int
   found: Int -> Int
 [1]
 ```
 
 ```sh
 $ stlc-unification <<< "fun f => f f"
-<input>:1:9: infinite type
+<input>:1:11: infinite type
 [1]
 ```
 
 ```sh
 $ stlc-unification <<< "fun x => x"
-<input>:1:4: ambiguous function parameter
+<input>:1:4: ambiguous function parameter type
 [1]
 ```
 
 ```sh
 $ stlc-unification <<< "fun f x => f x"
-<input>:1:6: ambiguous function parameter
-<input>:1:11: ambiguous function application
+<input>:1:6: ambiguous function parameter type
+<input>:1:11: ambiguous function return type
 [1]
 ```
 

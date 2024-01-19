@@ -51,7 +51,7 @@ and tm_data =
 (** The reason why a metavariable was inserted *)
 type meta_info = [
   | `FunParam of loc
-  | `FunApp of loc
+  | `FunBody of loc
   | `IfBranches of loc
 ]
 
@@ -106,6 +106,14 @@ exception Error of loc * string
 let error loc message =
   raise (Error (loc, message))
 
+let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
+  try Core.unify ty1 ty2 with
+  | Core.InfiniteType _ -> error loc "infinite type"
+  | Core.MismatchedTypes (_, _) ->
+      error loc
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+          Core.pp_ty (Core.zonk_ty ty1)
+          Core.pp_ty (Core.zonk_ty ty2))
 
 (** {2 Type checking} *)
 
@@ -116,13 +124,8 @@ let error loc message =
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   let tm', ty' = infer context tm in
-  try Core.unify ty ty'; tm' with
-  | Core.InfiniteType _ -> error tm.loc "infinite type"
-  | Core.MismatchedTypes (_, _) ->
-      error tm.loc
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty (Core.zonk_ty ty)
-          Core.pp_ty (Core.zonk_ty ty'))
+  unify tm.loc ty ty';
+  tm'
 
 (** Elaborate a surface term into a core term, inferring its type. *)
 and infer (context : context) (tm : tm) : Core.tm * Core.ty =
@@ -147,9 +150,18 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | FunLit (param_names, body) ->
       infer_fun_lit context param_names body
   | FunApp (head, arg) ->
-      let arg, arg_ty = infer context arg in
-      let body_ty = fresh_meta (`FunApp tm.loc) in
-      let head = check context head (FunType (arg_ty, body_ty)) in
+      let head_loc = head.loc in
+      let head, head_ty = infer context head in
+      let param_ty, body_ty =
+        match head_ty with
+        | FunType (param_ty, body_ty) -> param_ty, body_ty
+        | head_ty ->
+            let param_ty = fresh_meta (`FunParam head_loc) in
+            let body_ty = fresh_meta (`FunBody head_loc) in
+            unify head_loc head_ty (FunType (param_ty, body_ty));
+            param_ty, body_ty
+      in
+      let arg = check context arg param_ty in
       FunApp (head, arg), body_ty
   | Op2 ((`Eq) as prim, tm0, tm1) ->
       let tm0 = check context tm0 IntType in
