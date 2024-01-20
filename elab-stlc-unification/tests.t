@@ -22,6 +22,10 @@ Explicit return type
   $ stlc-unification <<< "let f (x : Int) : Int := x; f 3"
   let f : Int -> Int := fun (x : Int) => x; f 3 : Int
 
+Placeholder types
+  $ stlc-unification <<< "let f (x : _) : _ := x; f 3"
+  let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+
 If expressions
   $ stlc-unification <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
@@ -69,6 +73,11 @@ Ambiguous return type
   $ stlc-unification <<< "fun f x => f x"
   <input>:1:6: ambiguous function parameter type
   <input>:1:11: ambiguous function return type
+  [1]
+
+Ambiguous placeholder
+  $ stlc-unification <<< "fun (x : _) => x"
+  <input>:1:9: unsolved placeholder
   [1]
 
 Mismatched if expression branches

@@ -16,6 +16,7 @@
 %token HYPHEN "-"
 %token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
+%token UNDERSCORE "_"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
 %token END
@@ -50,7 +51,9 @@ let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
 | n = NAME;
-  { Surface.Name n }
+    { Surface.Name n }
+| UNDERSCORE;
+    { Surface.Placeholder }
 
 let tm :=
 | "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";

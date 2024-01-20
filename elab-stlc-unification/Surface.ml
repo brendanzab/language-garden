@@ -24,6 +24,7 @@ type ty =
 and ty_data =
   | Name of string
   | FunType of ty * ty
+  | Placeholder
 
 (** Names that bind definitions or parameters *)
 type binder = string located
@@ -66,6 +67,7 @@ type meta_info = [
   | `FunParam of loc
   | `FunBody of loc
   | `IfBranches of loc
+  | `Placeholder of loc
 ]
 
 (** A global list of the metavariables inserted during elaboration. This is used
@@ -139,6 +141,8 @@ let rec wf_ty (ty : ty) : Core.ty =
       error ty.loc (Format.asprintf "unbound type `%s`" name)
   | FunType (ty1, ty2) ->
       FunType (wf_ty ty1, wf_ty ty2)
+  | Placeholder ->
+      fresh_meta (`Placeholder ty.loc)
 
 (** In this algorithm type checking is mainly unidirectional, relying on the
     [infer] funtion, but a {!check} function is provided for convenience.

@@ -46,5 +46,6 @@ let () =
       unsolved_metas |> List.iter (function
         | `FunParam pos -> print_error pos "ambiguous function parameter type"
         | `FunBody pos -> print_error pos "ambiguous function return type"
-        | `IfBranches pos -> print_error pos "ambiguous if expression branches");
+        | `IfBranches pos -> print_error pos "ambiguous if expression branches"
+        | `Placeholder pos -> print_error pos "unsolved placeholder");
       exit 1

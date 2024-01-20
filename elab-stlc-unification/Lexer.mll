@@ -30,6 +30,7 @@ rule token = parse
 | "-"           { HYPHEN }
 | "->"          { HYPHEN_GREATER }
 | ";"           { SEMICOLON }
+| "_"           { UNDERSCORE }
 | "("           { OPEN_PAREN }
 | ")"           { CLOSE_PAREN }
 | eof           { END }
