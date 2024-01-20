@@ -35,6 +35,7 @@ type tm =
 and tm_data =
   | Name of string
   | Let of binder * param list * ty option * tm * tm
+  | Ann of tm * ty
   | BoolLit of bool
   | IfThenElse of tm * tm * tm
   | IntLit of int
@@ -161,6 +162,9 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let def, def_ty = infer_fun_lit context params def_body_ty def_body in
       let body, body_ty = infer ((def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
+  | Ann (tm, ty) ->
+      let ty = wf_ty ty in
+      check context tm ty, ty
   | BoolLit b -> BoolLit b, BoolType
   | IfThenElse (head, tm0, tm1) ->
       let head = check context head BoolType in

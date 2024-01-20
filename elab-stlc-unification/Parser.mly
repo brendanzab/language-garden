@@ -58,11 +58,10 @@ let tm :=
     { Surface.Let (n, ps, ty, tm0, tm1) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
     { Surface.FunLit (ps, t) }
-| if_tm
-
-let if_tm :=
-| "if"; tm0 = located(eq_tm); "then"; tm1 = located(eq_tm); "else"; tm2 = located(if_tm);
+| "if"; tm0 = located(eq_tm); "then"; tm1 = located(tm); "else"; tm2 = located(tm);
     { Surface.IfThenElse (tm0, tm1, tm2) }
+| tm = located(eq_tm); ":"; ty = located(ty);
+    { Surface.Ann (tm, ty) }
 | eq_tm
 
 let eq_tm :=
