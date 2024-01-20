@@ -12,3 +12,7 @@
 (mdx
   (package elab-stlc-unification)
   (deps %{bin:stlc-unification}))
+
+(cram
+  (package elab-stlc-unification)
+  (deps %{bin:stlc-unification}))
