@@ -1,3 +1,3 @@
 (cram
-  (package elab-dependent)
+  (package elab-dependent-sugar)
   (deps %{bin:dependent-sugar}))
