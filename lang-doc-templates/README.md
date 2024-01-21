@@ -3,6 +3,31 @@
 A programmable document template language that elaborates to a typed lambda
 calculus.
 
+## Example
+
+<!-- TODO: use mdx to text the following example -->
+
+Input document:
+
+```text
+${let place := "world"}
+
+Hello ${place}!
+```
+
+Elaborated document:
+
+```
+let place : Text := "world";
+"Hello " + place + "!"
+```
+
+Normalised term:
+
+```
+Hello world!
+```
+
 ## Thoughts
 
 Designing a nice concrete syntax is hard. Trying to make it not too ad-hoc and
@@ -12,8 +37,6 @@ pleasant to use.
 “A Core Calculus for Documents” is very cool, but it might be interesting to use
 an elaborator instead of evaluation rules when translating templates to
 expressions.
-
-It’s extremely hard to search for non-XML based markup languages.
 
 ## Inspiration
 
