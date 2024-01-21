@@ -28,16 +28,6 @@ Normalised term:
 Hello world!
 ```
 
-## Thoughts
-
-Designing a nice concrete syntax is hard. Trying to make it not too ad-hoc and
-hard to parse, and extensible over time, while remaining lightweight and
-pleasant to use.
-
-“A Core Calculus for Documents” is very cool, but it might be interesting to use
-an elaborator instead of evaluation rules when translating templates to
-expressions.
-
 ## Todo List
 
 - [x] Initial concrete syntax
