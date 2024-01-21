@@ -56,13 +56,20 @@ let () =
       |> MenhirLib.Convert.Simplified.traditional2revised Parser.template_main
       |> Surface.elab_template context
     with
-    | Lexer.UnexpectedChar -> print_error (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
-    | Lexer.UnexpectedCloseUnquote -> print_error (Sedlexing.lexing_positions lexbuf) "unexpected close unquote"; exit 1
-    | Lexer.UnexpectedCloseTemplate -> print_error (Sedlexing.lexing_positions lexbuf) "unexpected close template"; exit 1
-    | Lexer.UnclosedBlockComment -> print_error (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1
-    | Lexer.UnclosedTextLiteral -> print_error (Sedlexing.lexing_positions lexbuf) "unclosed text literal"; exit 1
-    | Lexer.UnclosedTemplate -> print_error (Sedlexing.lexing_positions lexbuf) "unclosed template"; exit 1
-    | Lexer.InvalidEscapeCode s -> print_error (Sedlexing.lexing_positions lexbuf) ("invalid escape code `\\" ^ s ^ "`"); exit 1
+    | Lexer.Error error ->
+        let msg =
+          match error with
+          | `UnexpectedChar -> "unexpected character"
+          | `UnexpectedCloseUnquote -> "unexpected close unquote"
+          | `UnexpectedCloseTemplate -> "unexpected close template"
+          | `UnexpectedEndOfFile -> "unexpected end of file"
+          | `UnclosedBlockComment -> "unclosed block comment"
+          | `UnclosedTextLiteral -> "unclosed text literal"
+          | `UnclosedTemplate -> "unclosed template"
+          | `InvalidEscapeCode s -> "invalid escape code `\\" ^ s ^ "`"
+        in
+        print_error (Sedlexing.lexing_positions lexbuf) msg;
+        exit 1
     | Parser.Error -> print_error (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
     | Surface.Error (pos, msg) -> print_error pos msg; exit 1
   in

@@ -1,12 +1,15 @@
 open Parser
 
-exception UnexpectedChar
-exception UnexpectedCloseUnquote
-exception UnexpectedCloseTemplate
-exception UnclosedBlockComment
-exception UnclosedTextLiteral
-exception UnclosedTemplate
-exception InvalidEscapeCode of string
+exception Error of [
+  | `UnexpectedChar
+  | `UnexpectedCloseUnquote
+  | `UnexpectedCloseTemplate
+  | `UnexpectedEndOfFile
+  | `UnclosedBlockComment
+  | `UnclosedTextLiteral
+  | `UnclosedTemplate
+  | `InvalidEscapeCode of string
+]
 
 let dec_digit = [%sedlex.regexp? '0'..'9']
 let hex_digit = [%sedlex.regexp? '0'..'9' | 'A'..'F' | 'a'..'f']
@@ -23,8 +26,8 @@ let rec block_comment (lexbuf : Sedlexing.lexbuf) (level : int) : unit =
   | "/-" -> (block_comment [@tailcall]) lexbuf (level + 1)
   | "-/" -> if level = 0 then () else (block_comment [@tailcall]) lexbuf (level - 1)
   | any -> (block_comment [@tailcall]) lexbuf level
-  | eof -> raise UnclosedBlockComment
-  | _ -> raise UnexpectedChar
+  | eof -> raise (Error `UnclosedBlockComment)
+  | _ -> raise (Error `UnexpectedChar)
 
 let text (lexbuf : Sedlexing.lexbuf) : string =
   let buf = Buffer.create 1 in
@@ -36,12 +39,12 @@ let text (lexbuf : Sedlexing.lexbuf) : string =
         | "\"" -> Buffer.add_string buf "\""; (go [@tailcall]) ()
         | "n" -> Buffer.add_string buf "\n"; (go [@tailcall]) ()
         | "t" -> Buffer.add_string buf "\t"; (go [@tailcall]) ()
-        | _ -> raise (InvalidEscapeCode (Sedlexing.Utf8.lexeme lexbuf))
+        | _ -> raise (Error (`InvalidEscapeCode (Sedlexing.Utf8.lexeme lexbuf)))
     end
     | '"' -> Buffer.contents buf
     | any  -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); (go [@tailcall]) ()
-    | eof -> raise UnclosedTextLiteral
-    | _ -> raise UnexpectedChar
+    | eof -> raise (Error `UnclosedTextLiteral)
+    | _ -> raise (Error `UnexpectedChar)
   in
   go ()
 
@@ -75,9 +78,9 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
       | ";" -> SEMI
       | '(' -> OPEN_PAREN
       | ')' -> CLOSE_PAREN
-      | '}' -> if stack' = [] then raise UnexpectedCloseUnquote else (stack := stack'; (token [@tailcall]) lexbuf stack)
-      | eof -> END
-      | _ -> raise UnexpectedChar
+      | '}' -> if stack' = [] then raise (Error `UnexpectedCloseUnquote) else (stack := stack'; (token [@tailcall]) lexbuf stack)
+      | eof -> if stack' = [] then END else raise (Error `UnexpectedEndOfFile)
+      | _ -> raise (Error `UnexpectedChar)
   end
   | Template :: stack' -> begin
       let buf = Buffer.create 1 in
@@ -90,14 +93,14 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
             | "n" -> Buffer.add_string buf "\n"; (go [@tailcall]) ()
             | "t" -> Buffer.add_string buf "\t"; (go [@tailcall]) ()
             | "$" -> Buffer.add_string buf "$"; (go [@tailcall]) ()
-            | _ -> raise (InvalidEscapeCode (Sedlexing.Utf8.lexeme lexbuf))
+            | _ -> raise (Error (`InvalidEscapeCode (Sedlexing.Utf8.lexeme lexbuf)))
         end
         | "$" -> begin
             match%sedlex lexbuf with
             | "{" -> stack := Term :: !stack; TEMPLATE_TEXT (Buffer.contents buf)
-            | _ -> raise UnexpectedChar
+            | _ -> raise (Error `UnexpectedChar)
         end
-        | "\"" -> if stack' = [] then raise UnexpectedCloseTemplate else (stack := stack'; CLOSE_TEMPLATE)
+        | "\"" -> if stack' = [] then raise (Error `UnexpectedCloseTemplate) else (stack := stack'; CLOSE_TEMPLATE)
         (* TODO: Markdown style elements
 
           For example:
@@ -109,9 +112,9 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
 
           We could possibly defer this to elaboration time, however.
         *)
-        | eof -> if stack' = [] then (stack := stack'; TEMPLATE_TEXT (Buffer.contents buf)) else raise UnclosedTemplate
+        | eof -> if stack' = [] then (stack := stack'; TEMPLATE_TEXT (Buffer.contents buf)) else raise (Error `UnclosedTemplate)
         | any  -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); (go [@tailcall]) ()
-        | _ -> raise UnexpectedChar
+        | _ -> raise (Error `UnexpectedChar)
       in
       go ()
   end
