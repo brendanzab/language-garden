@@ -38,6 +38,19 @@ pleasant to use.
 an elaborator instead of evaluation rules when translating templates to
 expressions.
 
+## Todo List
+
+- [x] Initial concrete syntax
+- [x] String templates
+- [ ] Lists and list combinators
+- [ ] Markdown-inspired syntax
+- [ ] Labelled parameters
+- [ ] Parameterised templates
+- [ ] Metadata fields (for information like title, author, date, tags)
+- [ ] Attributed node templates (with namespaced nodes?)
+- [ ] Improve syntax (perhaps something similar to Scribble?)
+- [ ] Back-ends (HTML, Markdown, TeX)
+
 ## Inspiration
 
 Papers:
