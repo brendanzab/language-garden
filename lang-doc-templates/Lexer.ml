@@ -92,7 +92,11 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
             | "$" -> Buffer.add_string buf "$"; (go [@tailcall]) ()
             | _ -> raise (InvalidEscapeCode (Sedlexing.Utf8.lexeme lexbuf))
         end
-        | "${" -> stack := Term :: !stack; TEMPLATE_TEXT (Buffer.contents buf)
+        | "$" -> begin
+            match%sedlex lexbuf with
+            | "{" -> stack := Term :: !stack; TEMPLATE_TEXT (Buffer.contents buf)
+            | _ -> raise UnexpectedChar
+        end
         | "\"" -> if stack' = [] then raise UnexpectedCloseTemplate else (stack := stack'; CLOSE_TEMPLATE)
         (* TODO: Markdown style elements
 
