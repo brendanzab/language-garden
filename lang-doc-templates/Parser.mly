@@ -25,37 +25,43 @@ let template_main :=
   { t }
 
 let tm_main :=
-| tm = tm; END;
+| tm = located(tm); END;
   { tm }
 
 let template :=
     { [] }
-| s = TEMPLATE_TEXT; t = unquote_template;
-    { Surface.Text s :: t }
+| f = located(text_fragment); t = unquote_template;
+    { f :: t }
 
 let unquote_template :=
     { [] }
-| "let"; n = NAME; ":="; tm = tm; t = template;
-    { Surface.Let (n, tm) :: t }
-// | "if"; tm = tm; "then"; ...; "else"; ...;
-//     { Surface.IfThenElse (tm, ..., ...) :: t }
-| tm = tm; t = template;
-    { Surface.Term tm :: t }
+| f = located(unquote_fragment); t = template;
+    { f :: t }
+
+let text_fragment :=
+| s = TEMPLATE_TEXT;
+    { Surface.TextFragment s }
+
+let unquote_fragment :=
+| "let"; n = located(NAME); ":="; tm = located(tm);
+    { Surface.LetFragment (n, tm) }
+| tm = located(tm);
+    { Surface.TermFragment tm }
 
 let tm :=
-| "let"; n = NAME; ":="; tm1 = tm; ";"; tm2 = tm;
+| "let"; n = located(NAME); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
     { Surface.Let (n, tm1, tm2) }
-| "if"; tm1 = tm; "then"; tm2 = tm; "else"; tm3 = tm;
+| "if"; tm1 = located(tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
     { Surface.IfThenElse (tm1, tm2, tm3) }
 | add_tm
 
 let add_tm :=
-| tm1 = atomic_tm; "+"; tm2 = add_tm;
+| tm1 = located(atomic_tm); "+"; tm2 = located(add_tm);
     { Surface.Add (tm1, tm2) }
 | app_tm
 
 let app_tm :=
-| tm1 = atomic_tm; tm2 = app_tm;
+| tm1 = located(atomic_tm); tm2 = located(app_tm);
     { Surface.App (tm1, tm2) }
 | atomic_tm
 
@@ -70,3 +76,7 @@ let atomic_tm :=
     { Surface.Name n }
 | i = INT;
     { Surface.IntLit i }
+
+let located(X) :=
+| data = X;
+    { Surface.{ loc = $loc; data } }

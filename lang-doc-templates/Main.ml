@@ -1,4 +1,4 @@
-let print_error (start, _ : Lexing.position * Lexing.position) message =
+let print_error (start, _ : Surface.loc) message =
   Printf.eprintf "%s:%d:%d: %s\n"
       start.pos_fname
       start.pos_lnum
@@ -64,6 +64,7 @@ let () =
     | Lexer.UnclosedTemplate -> print_error (Sedlexing.lexing_positions lexbuf) "unclosed template"; exit 1
     | Lexer.InvalidEscapeCode s -> print_error (Sedlexing.lexing_positions lexbuf) ("invalid escape code `\\" ^ s ^ "`"); exit 1
     | Parser.Error -> print_error (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
+    | Surface.Error (pos, msg) -> print_error pos msg; exit 1
   in
 
   match Core.Semantics.eval env tm with
