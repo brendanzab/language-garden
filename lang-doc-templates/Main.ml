@@ -1,3 +1,10 @@
+let print_error (start, _ : Lexing.position * Lexing.position) message =
+  Printf.eprintf "%s:%d:%d: %s\n"
+      start.pos_fname
+      start.pos_lnum
+      (start.pos_cnum - start.pos_bol)
+      message
+
 let context = ref []
 let env = ref []
 
@@ -38,11 +45,25 @@ let env = !env
 let () =
   Printexc.record_backtrace true;
 
+  let lexer = Lexer.template_token () in
+  let lexbuf = Sedlexing.Utf8.from_channel stdin in
+  Sedlexing.set_filename lexbuf "<input>";
+
   let tm =
-    In_channel.input_all stdin
-    |> Surface.Parser.parse_template
-    |> Result.get_ok
-    |> Surface.elab_template context
+    try
+      lexbuf
+      |> Sedlexing.with_tokenizer lexer
+      |> MenhirLib.Convert.Simplified.traditional2revised Parser.template_main
+      |> Surface.elab_template context
+    with
+    | Lexer.UnexpectedChar -> print_error (Sedlexing.lexing_positions lexbuf) "unexpected character"; exit 1
+    | Lexer.UnexpectedCloseUnquote -> print_error (Sedlexing.lexing_positions lexbuf) "unexpected close unquote"; exit 1
+    | Lexer.UnexpectedCloseTemplate -> print_error (Sedlexing.lexing_positions lexbuf) "unexpected close template"; exit 1
+    | Lexer.UnclosedBlockComment -> print_error (Sedlexing.lexing_positions lexbuf) "unclosed block comment"; exit 1
+    | Lexer.UnclosedTextLiteral -> print_error (Sedlexing.lexing_positions lexbuf) "unclosed text literal"; exit 1
+    | Lexer.UnclosedTemplate -> print_error (Sedlexing.lexing_positions lexbuf) "unclosed template"; exit 1
+    | Lexer.InvalidEscapeCode s -> print_error (Sedlexing.lexing_positions lexbuf) ("invalid escape code `\\" ^ s ^ "`"); exit 1
+    | Parser.Error -> print_error (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
   in
 
   match Core.Semantics.eval env tm with

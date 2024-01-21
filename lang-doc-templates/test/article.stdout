@@ -1,0 +1,14 @@
+<h1>Document template language</h1>
+
+<p>
+  A programmable document template language that elaborates to a typed lambda
+  calculus.
+</p>
+
+<h2>Thoughts</h2>
+
+<p>
+  Designing a nice concrete syntax is hard. Trying to make it not too ad-hoc and
+  hard to parse, and extensible over time, while remaining lightweight and
+  pleasant to use.
+</p>
