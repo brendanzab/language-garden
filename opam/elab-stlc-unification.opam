@@ -6,7 +6,7 @@ dev-repo: "git+https://github.com/brendanzab/language-garden.git"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.8"}
-  "menhir" {build}
+  "menhir" {>= "20231231" & build}
   "mdx" {>= "2.3" & with-test}
   "odoc" {with-doc}
 ]
