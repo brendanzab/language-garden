@@ -2,28 +2,16 @@
 
 (** {1 Helper functions} *)
 
-let print_error (pos : Lexing.position) message =
+let print_error (start, _ : Surface.loc) message =
   Printf.eprintf "%s:%d:%d: %s\n"
-      pos.pos_fname
-      pos.pos_lnum
-      (pos.pos_cnum - pos.pos_bol)
+      start.pos_fname
+      start.pos_lnum
+      (start.pos_cnum - start.pos_bol)
       message
 
-let parse_expr filename in_channel =
-  let lexbuf = Lexing.from_channel in_channel in
-  Lexing.set_filename lexbuf filename;
-
-  try
-    Parser.main Lexer.token lexbuf
-  with
-  | Lexer.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "unexpected character";
-      exit 1
-  | Parser.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "syntax error";
-      exit 1
+let lexeme_loc lexbuf =
+  Lexing.lexeme_start_p lexbuf,
+  Lexing.lexeme_end_p lexbuf
 
 
 (** {1 Main entrypoint} *)
@@ -31,12 +19,21 @@ let parse_expr filename in_channel =
 let () =
   Printexc.record_backtrace true;
 
-  let tm = parse_expr "<input>" stdin in
+  let tm =
+    let lexbuf = Lexing.from_channel stdin in
+    Lexing.set_filename lexbuf "<input>";
+
+    try
+      Parser.main Lexer.token lexbuf
+    with
+    | Lexer.Error -> print_error (lexeme_loc lexbuf) "unexpected character"; exit 1
+    | Parser.Error -> print_error (lexeme_loc lexbuf) "syntax error"; exit 1
+  in
 
   let tm, ty =
     try Surface.infer [] tm with
-    | Surface.Error ((start, _), msg) ->
-        print_error start msg;
+    | Surface.Error (pos, msg) ->
+        print_error pos msg;
         exit 1
   in
 
@@ -47,7 +44,7 @@ let () =
         Core.pp_ty (Core.zonk_ty ty)
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
-        | `FunParam (start, _) -> print_error start "ambiguous function parameter type"
-        | `FunBody (start, _) -> print_error start "ambiguous function return type"
-        | `IfBranches (start, _) -> print_error start "ambiguous if expression branches");
+        | `FunParam pos -> print_error pos "ambiguous function parameter type"
+        | `FunBody pos -> print_error pos "ambiguous function return type"
+        | `IfBranches pos -> print_error pos "ambiguous if expression branches");
       exit 1
