@@ -1,0 +1,5 @@
+${let greet (place : Text) :=
+  $"Hello ${place}!"
+}
+
+${greet "world"}

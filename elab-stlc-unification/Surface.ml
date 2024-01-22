@@ -163,7 +163,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
       end
   | Let (def_name, params, def_body_ty, def_body, body) ->
-      let def, def_ty = infer_fun_lit context params def_body_ty def_body in
+      let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
       let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
   | Ann (tm, ty) ->
@@ -178,7 +178,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       BoolElim (head, tm0, tm1), ty
   | IntLit i -> IntLit i, IntType
   | FunLit (params, body) ->
-      infer_fun_lit context params None body
+      elab_infer_fun_lit context params None body
   | FunApp (head, arg) ->
       let head_loc = head.loc in
       let head, head_ty = elab_infer context head in
@@ -206,7 +206,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       PrimApp (prim, [tm]), IntType
 
 (** Elaborate a function literal, inferring its type. *)
-and infer_fun_lit (context : context) (params : (binder * ty option) list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
+and elab_infer_fun_lit (context : context) (params : (binder * ty option) list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
   match params, body_ty with
   | [], Some body_ty ->
       let body_ty = elab_ty body_ty in
@@ -218,5 +218,5 @@ and infer_fun_lit (context : context) (params : (binder * ty option) list) (body
         | None -> fresh_meta name.loc `FunParam
         | Some ty -> elab_ty ty
       in
-      let body, body_ty = infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
+      let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)

@@ -54,6 +54,17 @@
                 unquote-let.stdout.tmp)))
 
 (rule
+  (with-stdin-from unquote-let-params.txt
+    (with-stdout-to unquote-let-params.stdout.tmp
+      (run %{bin:doc-templates} elab))))
+
+(rule
+  (alias runtest)
+  (package lang-doc-templates)
+  (action (diff unquote-let-params.stdout
+                unquote-let-params.stdout.tmp)))
+
+(rule
   (with-stdin-from unquote-term.txt
     (with-stdout-to unquote-term.stdout.tmp
       (run %{bin:doc-templates} elab))))

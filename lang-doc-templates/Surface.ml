@@ -27,7 +27,7 @@ type tm =
 
 and tm_data =
   | Name of string
-  | Let of binder * ty option * tm * tm
+  | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
   | Add of tm * tm
   | Template of template
@@ -47,8 +47,11 @@ and fragment =
 and fragment_data =
   | TextFragment of string
   | TermFragment of tm
-  | LetFragment of binder * ty option * tm
+  | LetFragment of binder * param list * ty option * tm
   | IfThenElseFragment of tm * template * template
+
+and param =
+  binder * ty option
 
 
 (** {1 Elaboration} *)
@@ -97,14 +100,8 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
 and elab_synth (context : context) (tm : tm) : Core.tm * Core.ty =
   match tm.data with
   | Name name -> Var name, List.assoc name context
-  | Let (name, def_ty, def_tm, body_tm) ->
-      let def_tm, def_ty =
-        match def_ty with
-        | None -> elab_synth context def_tm
-        | Some def_ty ->
-            let def_ty = elab_ty def_ty in
-            elab_check context def_tm def_ty, def_ty
-      in
+  | Let (name, params, def_body_ty, def_tm, body_tm) ->
+      let def_tm, def_ty = elab_synth_fun_lit context params def_body_ty def_tm in
       let body_tm, body_ty = elab_synth ((name.data, def_ty) :: context) body_tm in
       Let (name.data, def_ty, def_tm, body_tm), body_ty
   | Ann (tm, ty) ->
@@ -126,6 +123,22 @@ and elab_synth (context : context) (tm : tm) : Core.tm * Core.ty =
   | TextLit s -> TextLit s, Text
   | IntLit n -> IntLit n, Int
 
+(** Elaborate a function literal, inferring its type. *)
+and elab_synth_fun_lit (context : context) (params : (binder * ty option) list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
+  match params, body_ty with
+  | [], Some body_ty ->
+      let body_ty = elab_ty body_ty in
+      elab_check context body body_ty, body_ty
+  | [], None ->
+      elab_synth context body
+  | (name, param_ty) :: params, body_ty ->
+      let param_ty = match param_ty with
+        | None -> error name.loc "type annotations required in function parameters"
+        | Some ty -> elab_ty ty
+      in
+      let body, body_ty = elab_synth_fun_lit ((name.data, param_ty) :: context) params body_ty body in
+      FunLit (name.data, param_ty, body), Fun (param_ty, body_ty)
+
 and[@tail_mod_cons] elab_template (context : context) (template : template) : Core.tm =
   match template with
   | [] -> TextLit ""
@@ -133,14 +146,8 @@ and[@tail_mod_cons] elab_template (context : context) (template : template) : Co
       TextConcat (TextLit s, (elab_template [@tailcall]) context template)
   | { data = TermFragment tm; _ } :: template ->
       TextConcat (elab_check context tm Text, (elab_template [@tailcall]) context template)
-  | { data = LetFragment (name, def_ty, def_tm); _ } :: template ->
-      let def_tm, def_ty =
-        match def_ty with
-        | None -> elab_synth context def_tm
-        | Some def_ty ->
-            let def_ty = elab_ty def_ty in
-            elab_check context def_tm def_ty, def_ty
-      in
+  | { data = LetFragment (name, params, def_body_ty, def_tm); _ } :: template ->
+      let def_tm, def_ty = elab_synth_fun_lit context params def_body_ty def_tm in
       Let (name.data, def_ty, def_tm, (elab_template [@tailcall]) ((name.data, def_ty) :: context) template)
   | { data = IfThenElseFragment (tm, template1, template2); _ } :: template ->
       TextConcat (
