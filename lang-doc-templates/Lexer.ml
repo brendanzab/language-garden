@@ -74,7 +74,9 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
       | "then" -> KEYWORD_THEN
       | name -> NAME (Sedlexing.Latin1.lexeme lexbuf)
       | "+" -> ADD
+      | ":" -> COLON
       | ":=" -> COLON_EQUALS
+      | "->" -> HYPHEN_GREATER
       | ";" -> SEMI
       | '(' -> OPEN_PAREN
       | ')' -> CLOSE_PAREN

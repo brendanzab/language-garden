@@ -9,7 +9,9 @@
 %token KEYWORD_LET "let"
 %token KEYWORD_THEN "then"
 %token ADD "+"
+%token COLON ":"
 %token COLON_EQUALS ":="
+%token HYPHEN_GREATER "->"
 %token SEMI ";"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
@@ -17,6 +19,7 @@
 
 %start <Surface.template> template_main
 %start <Surface.tm> tm_main
+%type <Surface.ty_data> ty
 
 %%
 
@@ -27,6 +30,7 @@ let template_main :=
 let tm_main :=
 | tm = located(tm); END;
   { tm }
+
 
 let template :=
     { [] }
@@ -44,15 +48,34 @@ let text_fragment :=
 
 let unquote_fragment :=
 | "let"; n = located(NAME); ":="; tm = located(tm);
-    { Surface.LetFragment (n, tm) }
+    { Surface.LetFragment (n, None, tm) }
+| "let"; n = located(NAME); ":"; ty = located(ty); ":="; tm = located(tm);
+    { Surface.LetFragment (n, Some ty, tm) }
 | tm = located(tm);
     { Surface.TermFragment tm }
 
+
+let ty :=
+| ty1 = located(atomic_ty); "->"; ty2 = located(ty);
+    { Surface.Fun (ty1, ty2) }
+| atomic_ty
+
+let atomic_ty :=
+| "("; ty = ty; ")";
+    { ty }
+| n = NAME;
+  { Surface.Name n }
+
+
 let tm :=
 | "let"; n = located(NAME); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
-    { Surface.Let (n, tm1, tm2) }
+    { Surface.Let (n, None, tm1, tm2) }
+| "let"; n = located(NAME); ":"; ty = located(ty); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
+    { Surface.Let (n, Some ty, tm1, tm2) }
 | "if"; tm1 = located(tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
     { Surface.IfThenElse (tm1, tm2, tm3) }
+| tm = located(add_tm); ":"; ty = located(ty);
+    { Surface.Ann (tm, ty) }
 | add_tm
 
 let add_tm :=

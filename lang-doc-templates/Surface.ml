@@ -13,12 +13,22 @@ type 'a located = {
 (** Names that bind definitions or parameters *)
 type binder = string located
 
+(** Types in the surface language *)
+type ty =
+  ty_data located
+
+and ty_data =
+  | Name of string
+  | Fun of ty * ty
+
+(** Terms in the surface language *)
 type tm =
   tm_data located
 
 and tm_data =
   | Name of string
-  | Let of binder * tm * tm
+  | Let of binder * ty option * tm * tm
+  | Ann of tm * ty
   | Add of tm * tm
   | Template of template
   | IfThenElse of tm * tm * tm
@@ -26,16 +36,18 @@ and tm_data =
   | TextLit of string
   | IntLit of int
 
+(** Templates *)
 and template =
   fragment list
 
+(** Template fragments *)
 and fragment =
   fragment_data located
 
 and fragment_data =
   | TextFragment of string
   | TermFragment of tm
-  | LetFragment of binder * tm
+  | LetFragment of binder * ty option * tm
   | IfThenElseFragment of tm * template * template
 
 
@@ -57,6 +69,17 @@ let error loc message =
 
 (** {2 Bidirectional elaboration} *)
 
+(** Validate that a type is well-formed. *)
+let rec elab_ty (ty : ty) : Core.ty =
+  match ty.data with
+  | Name "Bool" -> Bool
+  | Name "Int" -> Int
+  | Name name ->
+      error ty.loc (Format.asprintf "unbound type `%s`" name)
+  | Fun (ty1, ty2) ->
+      Fun (elab_ty ty1, elab_ty ty2)
+
+(** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   match tm.data with
   | IfThenElse (tm1, tm2, tm3) ->
@@ -69,13 +92,23 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       if ty = ty' then tm' else
         error tm.loc "type mismatch"
 
+(** Elaborate a surface term into a core term, synthesising its type. *)
 and elab_synth (context : context) (tm : tm) : Core.tm * Core.ty =
   match tm.data with
   | Name name -> Var name, List.assoc name context
-  | Let (name, def_tm, body_tm) ->
-      let def_tm, def_ty = elab_synth context def_tm in
+  | Let (name, def_ty, def_tm, body_tm) ->
+      let def_tm, def_ty =
+        match def_ty with
+        | None -> elab_synth context def_tm
+        | Some def_ty ->
+            let def_ty = elab_ty def_ty in
+            elab_check context def_tm def_ty, def_ty
+      in
       let body_tm, body_ty = elab_synth ((name.data, def_ty) :: context) body_tm in
       Let (name.data, def_ty, def_tm, body_tm), body_ty
+  | Ann (tm, ty) ->
+      let ty = elab_ty ty in
+      elab_check context tm ty, ty
   | Template template -> elab_template context template, Text
   | Add (tm1, tm2) ->
       TextConcat (elab_check context tm1 Text, elab_check context tm2 Text), Text
@@ -99,8 +132,14 @@ and[@tail_mod_cons] elab_template (context : context) (template : template) : Co
       TextConcat (TextLit s, (elab_template [@tailcall]) context template)
   | { data = TermFragment tm; _ } :: template ->
       TextConcat (elab_check context tm Text, (elab_template [@tailcall]) context template)
-  | { data = LetFragment (name, def_tm); _ } :: template ->
-      let def_tm, def_ty = elab_synth context def_tm in
+  | { data = LetFragment (name, def_ty, def_tm); _ } :: template ->
+      let def_tm, def_ty =
+        match def_ty with
+        | None -> elab_synth context def_tm
+        | Some def_ty ->
+            let def_ty = elab_ty def_ty in
+            elab_check context def_tm def_ty, def_ty
+      in
       Let (name.data, def_ty, def_tm, (elab_template [@tailcall]) ((name.data, def_ty) :: context) template)
   | { data = IfThenElseFragment (tm, template1, template2); _ } :: template ->
       TextConcat (
