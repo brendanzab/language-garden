@@ -31,7 +31,7 @@ let () =
   in
 
   let tm, ty =
-    try Surface.infer [] tm with
+    try Surface.elab_infer [] tm with
     | Surface.Error (pos, msg) ->
         print_error pos msg;
         exit 1
