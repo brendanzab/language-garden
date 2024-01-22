@@ -13,8 +13,11 @@
 %token ADD "+"
 %token COLON ":"
 %token COLON_EQUALS ":="
+%token COMMA ","
 %token HYPHEN_GREATER "->"
 %token SEMI ";"
+%token OPEN_BRACKET "["
+%token CLOSE_BRACKET "]"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
 %token END
@@ -37,15 +40,20 @@ let template_main :=
 (* Types *)
 
 let ty :=
-| ty1 = located(atomic_ty); "->"; ty2 = located(ty);
-    { Surface.Fun (ty1, ty2) }
+| ty1 = located(app_ty); "->"; ty2 = located(ty);
+    { Surface.FunTy (ty1, ty2) }
+| app_ty
+
+let app_ty :=
+| n = NAME; tys = nonempty_list(located(atomic_ty));
+    { Surface.Name (n, tys) }
 | atomic_ty
 
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
 | n = NAME;
-  { Surface.Name n }
+    { Surface.Name (n, []) }
 
 
 (* Terms *)
@@ -74,6 +82,8 @@ let atomic_tm :=
     { Surface.Template t }
 | "("; tm = tm; ")";
     { tm }
+| "["; tms = trailing_list(",", located(tm));  "]";
+    { Surface.ListLit tms }
 | s = TEXT;
     { Surface.TextLit s }
 | n = NAME;
@@ -119,3 +129,13 @@ let param :=
 let located(X) :=
 | data = X;
     { Surface.{ loc = $loc; data } }
+
+let trailing_list(Sep, T) :=
+    { [] }
+| trailing_nonempty_list(Sep, T)
+
+let trailing_nonempty_list(Sep, T) :=
+| t = T; option(Sep);
+    { [ t ] }
+| t = T; Sep; ts = trailing_nonempty_list(Sep, T);
+    { t :: ts }

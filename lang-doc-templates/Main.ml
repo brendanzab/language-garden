@@ -28,14 +28,14 @@ let node name body =
 
 let () =
 
-  define "true" Core.Bool Core.(BoolLit true);
-  define "false" Core.Bool Core.(BoolLit false);
+  define "true" Core.BoolTy Core.(BoolLit true);
+  define "false" Core.BoolTy Core.(BoolLit false);
 
-  define "heading1" Core.(Fun (Text, Text)) (fun_lit ("text", Text) (node "h1"));
-  define "heading2" Core.(Fun (Text, Text)) (fun_lit ("text", Text) (node "h2"));
-  define "heading3" Core.(Fun (Text, Text)) (fun_lit ("text", Text) (node "h3"));
-  define "para" Core.(Fun (Text, Text)) (fun_lit ("text", Text) (node "p"));
-  define "link" Core.(Fun (Text, Text)) (fun_lit ("text", Text) (node "a"));
+  define "heading1" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "h1"));
+  define "heading2" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "h2"));
+  define "heading3" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "h3"));
+  define "para" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "p"));
+  define "link" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "a"));
 
   ()
 

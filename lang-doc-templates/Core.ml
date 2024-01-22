@@ -1,8 +1,9 @@
 type ty =
-  | Fun of ty * ty
-  | Text
-  | Bool
-  | Int
+  | ListTy of ty
+  | FunTy of ty * ty
+  | TextTy
+  | BoolTy
+  | IntTy
 
 type tm =
   | Var of string
@@ -11,6 +12,8 @@ type tm =
   | FunApp of tm * tm
   | TextLit of string
   | TextConcat of tm * tm
+  | ListNil
+  | ListCons of tm * tm
   | BoolLit of bool
   | BoolElim of tm * tm * tm
   | IntLit of int
@@ -24,6 +27,8 @@ module Semantics = struct
   type vtm =
     | Neu of ntm
     | FunLit of string * ty * (vtm -> vtm)
+    | ListNil
+    | ListCons of vtm * vtm
     | TextLit of string
     | BoolLit of bool
     | IntLit of int
@@ -77,6 +82,9 @@ module Semantics = struct
         FunLit (name, ty, fun v -> eval ((name, v) :: locals) body)
     | FunApp (head, arg) ->
         fun_app (eval locals head) (eval locals arg)
+    | ListNil -> ListNil
+    | ListCons (tm, tms) ->
+        ListCons (eval locals tm, eval locals tms)
     | TextLit s ->
         TextLit s
     | TextConcat (tm1, tm2) ->
@@ -106,6 +114,9 @@ module Semantics = struct
     | FunLit (x, ty, body) ->
         let x = fresh ns x in
         FunLit (x, ty, quote (x :: ns) (body (Neu (Var x))))
+    | ListNil -> ListNil
+    | ListCons (vtm, vtms) ->
+        ListCons (quote ns vtm, quote ns vtms)
     | TextLit s ->
         TextLit s
     | BoolLit b ->

@@ -18,8 +18,8 @@ type ty =
   ty_data located
 
 and ty_data =
-  | Name of string
-  | Fun of ty * ty
+  | Name of string * ty list
+  | FunTy of ty * ty
 
 (** Terms in the surface language *)
 type tm =
@@ -33,6 +33,7 @@ and tm_data =
   | Template of template
   | IfThenElse of tm * tm * tm
   | App of tm * tm
+  | ListLit of tm list
   | TextLit of string
   | IntLit of int
 
@@ -75,22 +76,33 @@ let error (loc : loc) (message : string) : 'a =
 (** Validate that a type is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
   match ty.data with
-  | Name "Text" -> Text
-  | Name "Bool" -> Bool
-  | Name "Int" -> Int
-  | Name name ->
+  | Name ("List", [ty]) -> ListTy (elab_ty ty)
+  | Name ("Text", []) -> TextTy (* fix arity errors *)
+  | Name ("Bool", []) -> BoolTy (* fix arity errors *)
+  | Name ("Int", []) -> IntTy (* fix arity errors *)
+  (* TODO: App ("List", [ty]) *)
+  | Name (name, _) ->
       error ty.loc (Format.asprintf "unbound type `%s`" name)
-  | Fun (ty1, ty2) ->
-      Fun (elab_ty ty1, elab_ty ty2)
+  | FunTy (ty1, ty2) ->
+      FunTy (elab_ty ty1, elab_ty ty2)
 
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   match tm.data with
   | IfThenElse (tm1, tm2, tm3) ->
       BoolElim (
-        elab_check context tm1 Bool,
+        elab_check context tm1 BoolTy,
         elab_check context tm2 ty,
         elab_check context tm3 ty)
+  | ListLit tms ->
+      let elem_ty =
+        match ty with
+        | ListTy ty -> ty
+        | _ -> error tm.loc "unexpected list literal"
+      in
+      tms |> List.fold_left
+        (fun tms tm -> Core.ListCons (elab_check context tm elem_ty, tms))
+        Core.ListNil
   | _ ->
       let tm', ty' = elab_synth context tm in
       if ty = ty' then tm' else
@@ -107,21 +119,23 @@ and elab_synth (context : context) (tm : tm) : Core.tm * Core.ty =
   | Ann (tm, ty) ->
       let ty = elab_ty ty in
       elab_check context tm ty, ty
-  | Template template -> elab_template context template, Text
+  | Template template -> elab_template context template, TextTy
   | Add (tm1, tm2) ->
-      TextConcat (elab_check context tm1 Text, elab_check context tm2 Text), Text
+      TextConcat (elab_check context tm1 TextTy, elab_check context tm2 TextTy), TextTy
   | IfThenElse (_, _, _) ->
       error tm.loc "ambiguous if expression"
   | App (head_tm, arg_tm) -> begin
       match elab_synth context head_tm with
-      | head_tm, Fun (param_ty, body_ty) ->
+      | head_tm, FunTy (param_ty, body_ty) ->
           let arg_tm = elab_check context arg_tm param_ty in
           FunApp (head_tm, arg_tm), body_ty
       | _ ->
           error head_tm.loc "function expected"
   end
-  | TextLit s -> TextLit s, Text
-  | IntLit n -> IntLit n, Int
+  | ListLit _ ->
+      error tm.loc "ambiguous list literal"
+  | TextLit s -> TextLit s, TextTy
+  | IntLit n -> IntLit n, IntTy
 
 (** Elaborate a function literal, inferring its type. *)
 and elab_synth_fun_lit (context : context) (params : (binder * ty option) list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
@@ -137,7 +151,7 @@ and elab_synth_fun_lit (context : context) (params : (binder * ty option) list) 
         | Some ty -> elab_ty ty
       in
       let body, body_ty = elab_synth_fun_lit ((name.data, param_ty) :: context) params body_ty body in
-      FunLit (name.data, param_ty, body), Fun (param_ty, body_ty)
+      FunLit (name.data, param_ty, body), FunTy (param_ty, body_ty)
 
 (** Elaborate a template into a series of concatened terms. *)
 and[@tail_mod_cons] elab_template (context : context) (template : template) : Core.tm =
@@ -146,14 +160,14 @@ and[@tail_mod_cons] elab_template (context : context) (template : template) : Co
   | { data = TextFragment s; _ } :: template ->
       TextConcat (TextLit s, elab_template context template)
   | { data = TermFragment tm; _ } :: template ->
-      let tm = elab_check context tm Text in
+      let tm = elab_check context tm TextTy in
       TextConcat (tm, elab_template context template)
   | { data = LetFragment (name, params, def_body_ty, def_tm); _ } :: template ->
       let def_tm, def_ty = elab_synth_fun_lit context params def_body_ty def_tm in
       Let (name.data, def_ty, def_tm,
         elab_template ((name.data, def_ty) :: context) template)
   | { data = IfThenElseFragment (tm, template1, template2); _ } :: template ->
-      let tm = elab_check context tm Bool in
+      let tm = elab_check context tm BoolTy in
       let template1 = elab_template context template1 in
       let template2 = elab_template context template2 in
       TextConcat (BoolElim (tm, template1, template2),

@@ -61,6 +61,9 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | "+" -> ADD
     | ":" -> COLON
     | ":=" -> COLON_EQUALS
+    | "," -> COMMA
+    | '[' -> OPEN_BRACKET
+    | ']' -> CLOSE_BRACKET
     | "->" -> HYPHEN_GREATER
     | ";" -> SEMI
     | '(' -> OPEN_PAREN

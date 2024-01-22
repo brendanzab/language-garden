@@ -21,6 +21,17 @@
                 escapes.stdout.tmp)))
 
 (rule
+  (with-stdin-from lists.txt
+    (with-stdout-to lists.stdout.tmp
+      (run %{bin:doc-templates} elab))))
+
+(rule
+  (alias runtest)
+  (package lang-doc-templates)
+  (action (diff lists.stdout
+                lists.stdout.tmp)))
+
+(rule
   (with-stdin-from nested-quotes.txt
     (with-stdout-to nested-quotes.stdout.tmp
       (run %{bin:doc-templates} elab))))

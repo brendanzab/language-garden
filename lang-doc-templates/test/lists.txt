@@ -1,0 +1,4 @@
+${let tags : List Text := [
+  "foo",
+  "bar",
+]}
