@@ -44,8 +44,8 @@ let () =
         Core.pp_ty (Core.zonk_ty ty)
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
-        | `FunParam pos -> print_error pos "ambiguous function parameter type"
-        | `FunBody pos -> print_error pos "ambiguous function return type"
-        | `IfBranches pos -> print_error pos "ambiguous if expression branches"
-        | `Placeholder pos -> print_error pos "unsolved placeholder");
+        | (pos, `FunParam) -> print_error pos "ambiguous function parameter type"
+        | (pos, `FunBody) -> print_error pos "ambiguous function return type"
+        | (pos, `IfBranches) -> print_error pos "ambiguous if expression branches"
+        | (pos, `Placeholder) -> print_error pos "unsolved placeholder");
       exit 1

@@ -64,30 +64,30 @@ and param =
 
 (** The reason why a metavariable was inserted *)
 type meta_info = [
-  | `FunParam of loc
-  | `FunBody of loc
-  | `IfBranches of loc
-  | `Placeholder of loc
+  | `FunParam
+  | `FunBody
+  | `IfBranches
+  | `Placeholder
 ]
 
 (** A global list of the metavariables inserted during elaboration. This is used
     to generate a list of unsolved metavariables at the end of elaboration. *)
-let metas : (meta_info * Core.meta_state ref) list ref = ref []
+let metas : (loc * meta_info * Core.meta_state ref) list ref = ref []
 
 (** Generate a fresh metavariable, recording it in the list of metavariables *)
-let fresh_meta (info : meta_info) : Core.ty =
+let fresh_meta (loc: loc) (info : meta_info) : Core.ty =
   let state = Core.fresh_meta () in
-  metas := (info, state) :: !metas;
+  metas := (loc, info, state) :: !metas;
   MetaVar state
 
 (** Return a list of unsolved metavariables *)
-let unsolved_metas () : meta_info list =
+let unsolved_metas () : (loc * meta_info) list =
   let rec go acc =
     function
     | [] -> acc
-    | (info, m) :: metas ->
+    | (loc, info, m) :: metas ->
         begin match !m with
-        | Core.Unsolved _ -> go (info :: acc) metas
+        | Core.Unsolved _ -> go ((loc, info) :: acc) metas
         | Core.Solved _ -> go acc metas
         end
   in
@@ -142,7 +142,7 @@ let rec wf_ty (ty : ty) : Core.ty =
   | FunType (ty1, ty2) ->
       FunType (wf_ty ty1, wf_ty ty2)
   | Placeholder ->
-      fresh_meta (`Placeholder ty.loc)
+      fresh_meta ty.loc `Placeholder
 
 (** In this algorithm type checking is mainly unidirectional, relying on the
     [infer] funtion, but a {!check} function is provided for convenience.
@@ -172,7 +172,7 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | BoolLit b -> BoolLit b, BoolType
   | IfThenElse (head, tm0, tm1) ->
       let head = check context head BoolType in
-      let ty = fresh_meta (`IfBranches tm.loc) in
+      let ty = fresh_meta tm.loc `IfBranches in
       let tm0 = check context tm0 ty in
       let tm1 = check context tm1 ty in
       BoolElim (head, tm0, tm1), ty
@@ -186,8 +186,8 @@ and infer (context : context) (tm : tm) : Core.tm * Core.ty =
         match head_ty with
         | FunType (param_ty, body_ty) -> param_ty, body_ty
         | head_ty ->
-            let param_ty = fresh_meta (`FunParam head_loc) in
-            let body_ty = fresh_meta (`FunBody head_loc) in
+            let param_ty = fresh_meta head_loc `FunParam in
+            let body_ty = fresh_meta head_loc `FunBody in
             unify head_loc head_ty (FunType (param_ty, body_ty));
             param_ty, body_ty
       in
@@ -215,7 +215,7 @@ and infer_fun_lit (context : context) (params : (binder * ty option) list) (body
       infer context body
   | (name, param_ty) :: params, body_ty ->
       let param_ty = match param_ty with
-        | None -> fresh_meta (`FunParam name.loc)
+        | None -> fresh_meta name.loc `FunParam
         | Some ty -> wf_ty ty
       in
       let body, body_ty = infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
