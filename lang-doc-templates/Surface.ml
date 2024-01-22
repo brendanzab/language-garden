@@ -64,7 +64,7 @@ type context =
 exception Error of loc * string
 
 (** Raises an {!Error} exception *)
-let error loc message =
+let error (loc : loc) (message : string) : 'a =
   raise (Error (loc, message))
 
 (** {2 Bidirectional elaboration} *)
