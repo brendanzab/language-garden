@@ -81,6 +81,7 @@ Template literals and document EDSLs:
 - [Hiccup](https://github.com/weavejester/hiccup)
 - [Elm HTML](https://package.elm-lang.org/packages/elm/html/latest/)
 - [Verso](https://github.com/leanprover/verso/): An Authoring Tool for Lean ([Talk](https://www.youtube.com/watch?v=dv_vmVs3SQQ))
+- [Ur/Web](http://impredicative.com/ur/)
 
 Quasiquoting:
 
