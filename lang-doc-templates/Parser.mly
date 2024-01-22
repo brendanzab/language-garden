@@ -49,10 +49,8 @@ let atomic_ty :=
 (* Terms *)
 
 let tm :=
-| "let"; n = located(NAME); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
-    { Surface.Let (n, None, tm1, tm2) }
-| "let"; n = located(NAME); ":"; ty = located(ty); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
-    { Surface.Let (n, Some ty, tm1, tm2) }
+| "let"; n = located(NAME); ty = ioption(":"; ~ = located(ty); <>); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
+    { Surface.Let (n, ty, tm1, tm2) }
 | "if"; tm1 = located(tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
     { Surface.IfThenElse (tm1, tm2, tm3) }
 | tm = located(add_tm); ":"; ty = located(ty);
@@ -99,10 +97,8 @@ let text_fragment :=
     { Surface.TextFragment s }
 
 let unquote_fragment :=
-| "let"; n = located(NAME); ":="; tm = located(tm);
-    { Surface.LetFragment (n, None, tm) }
-| "let"; n = located(NAME); ":"; ty = located(ty); ":="; tm = located(tm);
-    { Surface.LetFragment (n, Some ty, tm) }
+| "let"; n = located(NAME); ty = ioption(":"; ~ = located(ty); <>); ":="; tm = located(tm);
+    { Surface.LetFragment (n, ty, tm) }
 | tm = located(tm);
     { Surface.TermFragment tm }
 
