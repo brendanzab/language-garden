@@ -23,37 +23,16 @@
 
 %%
 
-let template_main :=
-| t = template; END;
-  { t }
-
 let tm_main :=
 | tm = located(tm); END;
   { tm }
 
+let template_main :=
+| t = template; END;
+  { t }
 
-let template :=
-    { [] }
-| f = located(text_fragment); t = unquote_template;
-    { f :: t }
 
-let unquote_template :=
-    { [] }
-| f = located(unquote_fragment); t = template;
-    { f :: t }
-
-let text_fragment :=
-| s = TEMPLATE_TEXT;
-    { Surface.TextFragment s }
-
-let unquote_fragment :=
-| "let"; n = located(NAME); ":="; tm = located(tm);
-    { Surface.LetFragment (n, None, tm) }
-| "let"; n = located(NAME); ":"; ty = located(ty); ":="; tm = located(tm);
-    { Surface.LetFragment (n, Some ty, tm) }
-| tm = located(tm);
-    { Surface.TermFragment tm }
-
+(* Types *)
 
 let ty :=
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
@@ -66,6 +45,8 @@ let atomic_ty :=
 | n = NAME;
   { Surface.Name n }
 
+
+(* Terms *)
 
 let tm :=
 | "let"; n = located(NAME); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
@@ -99,6 +80,34 @@ let atomic_tm :=
     { Surface.Name n }
 | i = INT;
     { Surface.IntLit i }
+
+
+(* Templates *)
+
+let template :=
+    { [] }
+| f = located(text_fragment); t = unquote_template;
+    { f :: t }
+
+let unquote_template :=
+    { [] }
+| f = located(unquote_fragment); t = template;
+    { f :: t }
+
+let text_fragment :=
+| s = TEMPLATE_TEXT;
+    { Surface.TextFragment s }
+
+let unquote_fragment :=
+| "let"; n = located(NAME); ":="; tm = located(tm);
+    { Surface.LetFragment (n, None, tm) }
+| "let"; n = located(NAME); ":"; ty = located(ty); ":="; tm = located(tm);
+    { Surface.LetFragment (n, Some ty, tm) }
+| tm = located(tm);
+    { Surface.TermFragment tm }
+
+
+(* Utilities *)
 
 let located(X) :=
 | data = X;
