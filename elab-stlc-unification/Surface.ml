@@ -118,7 +118,7 @@ let lookup (context : context) (name : string) : (Core.index * Core.ty) option =
 exception Error of loc * string
 
 (** Raises an {!Error} exception *)
-let error loc message =
+let error (loc : loc) (message : string) : 'a =
   raise (Error (loc, message))
 
 let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
