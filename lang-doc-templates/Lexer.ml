@@ -55,6 +55,7 @@ let text (lexbuf : Sedlexing.lexbuf) : string =
 type mode =
   | Term
   | Template
+  | CloseTemplate
 
 let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
   (* FIXME: Surely we can clean this up somehow? *)
@@ -84,6 +85,9 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
       | eof -> if stack' = [] then END else raise (Error `UnexpectedEndOfFile)
       | _ -> raise (Error `UnexpectedChar)
   end
+  | CloseTemplate :: stack' ->
+      stack := stack';
+      CLOSE_TEMPLATE
   | Template :: stack' -> begin
       let buf = Buffer.create 1 in
       let rec go () =
@@ -102,7 +106,7 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
             | "{" -> stack := Term :: !stack; TEMPLATE_TEXT (Buffer.contents buf)
             | _ -> raise (Error `UnexpectedChar)
         end
-        | "\"" -> if stack' = [] then raise (Error `UnexpectedCloseTemplate) else (stack := stack'; CLOSE_TEMPLATE)
+        | "\"" -> if stack' = [] then raise (Error `UnexpectedCloseTemplate) else (stack := CloseTemplate :: stack'; TEMPLATE_TEXT (Buffer.contents buf))
         (* TODO: Markdown style elements
 
           For example:
