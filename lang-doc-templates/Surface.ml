@@ -72,6 +72,7 @@ let error (loc : loc) (message : string) : 'a =
 (** Validate that a type is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
   match ty.data with
+  | Name "Text" -> Text
   | Name "Bool" -> Bool
   | Name "Int" -> Int
   | Name name ->
