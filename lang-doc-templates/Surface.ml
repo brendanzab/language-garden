@@ -144,16 +144,19 @@ and[@tail_mod_cons] elab_template (context : context) (template : template) : Co
   match template with
   | [] -> TextLit ""
   | { data = TextFragment s; _ } :: template ->
-      TextConcat (TextLit s, (elab_template [@tailcall]) context template)
+      let template = elab_template context template in
+      TextConcat (TextLit s, template)
   | { data = TermFragment tm; _ } :: template ->
-      TextConcat (elab_check context tm Text, (elab_template [@tailcall]) context template)
+      let tm = elab_check context tm Text in
+      let template = elab_template context template in
+      TextConcat (tm, template)
   | { data = LetFragment (name, params, def_body_ty, def_tm); _ } :: template ->
       let def_tm, def_ty = elab_synth_fun_lit context params def_body_ty def_tm in
-      Let (name.data, def_ty, def_tm, (elab_template [@tailcall]) ((name.data, def_ty) :: context) template)
+      let template = elab_template ((name.data, def_ty) :: context) template in
+      Let (name.data, def_ty, def_tm, template)
   | { data = IfThenElseFragment (tm, template1, template2); _ } :: template ->
-      TextConcat (
-        BoolElim (
-          elab_check context tm Bool,
-          elab_template context template1,
-          elab_template context template2),
-        (elab_template [@tailcall]) context template)
+      let tm = elab_check context tm Bool in
+      let template1 = elab_template context template1 in
+      let template2 = elab_template context template2 in
+      let template = elab_template context template in
+      TextConcat (BoolElim (tm, template1, template2), template)
