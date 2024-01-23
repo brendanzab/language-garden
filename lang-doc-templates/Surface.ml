@@ -139,6 +139,7 @@ and elab_synth_fun_lit (context : context) (params : (binder * ty option) list) 
       let body, body_ty = elab_synth_fun_lit ((name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), Fun (param_ty, body_ty)
 
+(** Elaborate a template into a series of concatened terms. *)
 and[@tail_mod_cons] elab_template (context : context) (template : template) : Core.tm =
   match template with
   | [] -> TextLit ""
