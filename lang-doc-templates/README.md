@@ -1,7 +1,15 @@
 # Document template language
 
-A programmable document template language that elaborates to a typed lambda
-calculus.
+A small document authoring language based on a typed lambda calculus.
+
+The language was inspired by [Forester](https://github.com/jonsterling/ocaml-forester)
+and [Mylink](https://github.com/kalyani-tt/mylink) which are dynamically typed,
+and [“A Core Calculus for Documents”](https://blog.brownplt.org/2023/12/28/document-calculus.html)
+which uses evaluation rules for translating templates to other primitives, as
+opposed to elaboration.
+
+The language currently operates by naively concatenating strings together, but
+it might be a good idea to explore using document trees in the future.
 
 ## Example
 
@@ -33,7 +41,8 @@ Hello world!
 - [x] Initial concrete syntax
 - [x] String templates
 - [ ] Lists and list combinators
-- [ ] Markdown-inspired syntax
+- [ ] Imports and cross-document references
+- [ ] Markdown-inspired syntax hooks (headings, links, lists, etc.)
 - [ ] Labelled parameters
 - [ ] Parameterised templates
 - [ ] Metadata fields (for information like title, author, date, tags)
@@ -82,6 +91,9 @@ Template literals and document EDSLs:
 - [Elm HTML](https://package.elm-lang.org/packages/elm/html/latest/)
 - [Verso](https://github.com/leanprover/verso/): An Authoring Tool for Lean ([Talk](https://www.youtube.com/watch?v=dv_vmVs3SQQ))
 - [Ur/Web](http://impredicative.com/ur/)
+- [ASP.NET Razor](https://aspnetcore.readthedocs.io/en/stable/mvc/views/razor.html)
+- [Markdoc](https://markdoc.dev/): Markdown-based document authoring framework.
+- [Svelte](https://svelte.dev/)
 
 Quasiquoting:
 
