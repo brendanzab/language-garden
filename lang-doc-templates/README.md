@@ -1,15 +1,20 @@
 # Document template language
 
-A small document authoring language based on a typed lambda calculus.
+This is a small, statically typed typed document authoring language.
+Templates are type-checked and translated to a simple functional language,
+which means that type errors occur on the templates themselves, as opposed to in
+the generated code, or at runtime.
 
 The language was inspired by [Forester](https://github.com/jonsterling/ocaml-forester)
-and [Mylink](https://github.com/kalyani-tt/mylink) which are dynamically typed,
-and [“A Core Calculus for Documents”](https://blog.brownplt.org/2023/12/28/document-calculus.html)
-which uses evaluation rules for translating templates to other primitives, as
-opposed to elaboration.
+and [Mylink](https://github.com/kalyani-tt/mylink) which use functional
+languages as a basis for document processing, but unlike this language are
+dynamically typed.
+Another source of inspiration was [“A Core Calculus for Documents”](https://blog.brownplt.org/2023/12/28/document-calculus.html),
+which uses evaluation rules to translate templates into other primitives in
+the core language, as opposed to elaboration.
 
-The language currently operates by naively concatenating strings together, but
-it might be a good idea to explore using document trees in the future.
+The language currently naively concatenates strings together, but it might be a
+good idea to explore using document trees in the future.
 
 ## Example
 
@@ -27,7 +32,7 @@ Elaborated document:
 
 ```
 let place : Text := "world";
-"Hello " + place + "!"
+"\n\nHello " + place + "!"
 ```
 
 Normalised term:
@@ -43,7 +48,7 @@ Hello world!
 - [ ] Lists and list combinators
 - [ ] Imports and cross-document references
 - [ ] Markdown-inspired syntax hooks (headings, links, lists, etc.)
-- [ ] Labelled parameters
+- [ ] Labelled function parameters
 - [ ] Parameterised templates
 - [ ] Metadata fields (for information like title, author, date, tags)
 - [ ] Attributed node templates (with namespaced nodes?)
