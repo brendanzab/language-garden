@@ -27,6 +27,10 @@ widely applicable as well.
   a trusted interface.
 - [**elab-stlc-unification**](./elab-stlc-unification):
   An elaborator for a simply typed lambda calculus where type annotations can be omitted.
+- [**elab-variant-unification**](./elab-variant-unification):
+  Elaboration of a simply typed lambda calculus, extended with structural
+  variant types. Annotations are inferred eagerly using constraint based
+  unification.
 
 ### Compilation
 

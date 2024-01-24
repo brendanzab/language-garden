@@ -1,0 +1,18 @@
+(executable
+  (name Main)
+  (public_name variant-unification)
+  (package elab-variant-unification))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(ocamllex Lexer)
+
+(mdx
+  (package elab-variant-unification)
+  (deps %{bin:variant-unification}))
+
+(cram
+  (package elab-variant-unification)
+  (deps %{bin:variant-unification}))

@@ -90,6 +90,7 @@
         elab-record-patching = [ "record-patching" ];
         elab-stlc-abstract = [ "stlc-abstract" ];
         elab-stlc-unification = [ "stlc-unification" ];
+        elab-variant-unification = [ "variant-unification" ];
         lang-datalog = [ "datalog" ];
         lang-doc-templates = [ "doc-templates" ];
         lang-fractal-growth = [ "fractal-growth" ];
