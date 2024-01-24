@@ -69,18 +69,25 @@ module Semantics = struct
   (** {1 Values} *)
 
   type vtm =
-    | Var of level
+    | Neu of ntm
     | BoolLit of bool
     | IntLit of int
     | FunLit of string * ty * (vtm -> vtm)
 
+  and ntm =
+    | Var of level
+    | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
+    | FunApp of ntm * vtm
+    | PrimApp of prim * vtm list
+
 
   (** {1 Eliminators} *)
 
-  let bool_elim head tm0 tm1 =
+  let bool_elim head vtm0 vtm1 =
     match head with
-    | BoolLit true -> tm0 ()
-    | BoolLit false -> tm1 ()
+    | Neu ntm -> Neu (BoolElim (ntm, vtm0, vtm1))
+    | BoolLit true -> Lazy.force vtm0
+    | BoolLit false -> Lazy.force vtm1
     | _ -> invalid_arg "expected boolean"
 
   let prim_app prim args =
@@ -90,10 +97,11 @@ module Semantics = struct
     | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
     | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
     | `Neg, [IntLit t1] -> IntLit (-t1)
-    | _, _ -> invalid_arg "invalid prim application"
+    | prim, args -> Neu (PrimApp (prim, args))
 
   let fun_app head arg =
     match head with
+    | Neu ntm -> Neu (FunApp (ntm, arg))
     | FunLit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
@@ -110,9 +118,9 @@ module Semantics = struct
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
         let head = eval env head in
-        let tm0 () = eval env tm0 in
-        let tm1 () = eval env tm1 in
-        bool_elim head tm0 tm1
+        let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
+        let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
+        bool_elim head vtm0 vtm1
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
@@ -129,13 +137,22 @@ module Semantics = struct
   (** Convert terms from the semantic domain back into syntax. *)
   let rec quote (size : int) (vtm : vtm) : tm =
     match vtm with
-    | Var level -> Var (level_to_index size level)
+    | Neu ntm -> quote_neu size ntm
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Var size)) in
+        let body = quote (size + 1) (body (Neu (Var size))) in
         FunLit (name, param_ty, body)
 
+  and quote_neu (size : int) (ntm : ntm) : tm =
+    match ntm with
+    | Var level -> Var (level_to_index size level)
+    | BoolElim (head, vtm0, vtm1) ->
+        let tm0 = quote size (Lazy.force vtm0) in
+        let tm1 = quote size (Lazy.force vtm1) in
+        BoolElim (quote_neu size head, tm0, tm1)
+    | FunApp (head, arg) -> FunApp (quote_neu size head, quote size arg)
+    | PrimApp (prim, args) -> PrimApp (prim, List.map (quote size) args)
 
   (** {1 Normalisation} *)
 
