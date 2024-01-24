@@ -101,8 +101,8 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) : tm -> vtm =
-    function
+  let rec eval (env : vtm env) (tm : tm) : vtm =
+    match tm with
     | Var index -> List.nth env index
     | Let (_, _, def, body) ->
         let def = eval env def in
@@ -127,8 +127,8 @@ module Semantics = struct
   (** {1 Quotation} *)
 
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote (size : int) : vtm -> tm =
-    function
+  let rec quote (size : int) (vtm : vtm) : tm =
+    match vtm with
     | Var level -> Var (level_to_index size level)
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
@@ -160,16 +160,16 @@ let fresh_meta : unit -> meta_state ref =
 (** Force any solved metavariables on the outermost part of a type. Chains of
     metavariables will be collapsed to make forcing faster in the future. This
     is sometimes referred to as {i path compression}. *)
-let rec force : ty -> ty =
-  function
-  | MetaVar m as ty ->
-      begin match !m with
+let rec force (ty : ty) : ty =
+  match ty with
+  | MetaVar m as ty -> begin
+      match !m with
       | Solved ty ->
           let ty = force ty in
           m := Solved ty;
           ty
       | Unsolved _ -> ty
-      end
+  end
   | ty -> ty
 
 
@@ -182,12 +182,12 @@ exception MismatchedTypes of ty * ty
     that would result in infinite loops during unification. *)
 let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
-  | MetaVar m ->
-      begin match !m with
+  | MetaVar m -> begin
+      match !m with
       | Unsolved id' when id = id' ->
           raise (InfiniteType id)
       | Unsolved _ | Solved _-> ()
-      end
+  end
   | BoolType -> ()
   | IntType -> ()
   | FunType (param_ty, body_ty) ->
@@ -232,8 +232,8 @@ let rec zonk_ty (ty : ty) : ty =
       FunType (zonk_ty param_ty, zonk_ty body_ty)
   | MetaVar _ as ty -> ty
 
-let rec zonk_tm : tm -> tm =
-  function
+let rec zonk_tm (tm : tm) : tm =
+  match tm with
   | Var index -> Var index
   | Let (name, def_ty, def, body) ->
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
@@ -251,23 +251,23 @@ let rec zonk_tm : tm -> tm =
 
 (** {1 Pretty printing} *)
 
-let rec pp_ty (fmt : Format.formatter) : ty -> unit =
-  function
+let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
+  match ty with
   | FunType (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
   | ty ->
       pp_atomic_ty fmt ty
-and pp_atomic_ty fmt =
-  function
+and pp_atomic_ty fmt ty =
+  match ty with
   | BoolType -> Format.fprintf fmt "Bool"
   | IntType -> Format.fprintf fmt "Int"
-  | MetaVar m ->
-      begin match !m with
+  | MetaVar m -> begin
+      match !m with
       | Solved ty -> pp_atomic_ty fmt ty
       | Unsolved id -> Format.fprintf fmt "?%i" id
-      end
+  end
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
 let pp_name_ann fmt (name, ty) =
@@ -276,10 +276,11 @@ let pp_name_ann fmt (name, ty) =
 let pp_param fmt (name, ty) =
   Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
 
-let rec pp_tm (names : string env) (fmt : Format.formatter) : tm -> unit =
-  function
+let rec pp_tm (names : string env) (fmt : Format.formatter) (tm : tm) : unit =
+  match tm with
   | Let _ as tm ->
-      let rec go names fmt = function
+      let rec go names fmt tm =
+        match tm with
         | Let (name, def_ty, def, body) ->
             Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
               pp_name_ann (name, def_ty)
@@ -293,7 +294,8 @@ let rec pp_tm (names : string env) (fmt : Format.formatter) : tm -> unit =
         pp_param (name, param_ty)
         (pp_tm (name :: names)) body
   | tm -> pp_if_tm names fmt tm
-and pp_if_tm names fmt = function
+and pp_if_tm names fmt tm =
+  match tm with
   | BoolElim (head, tm0, tm1) ->
       Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
         (pp_eq_tm names) head
@@ -301,15 +303,16 @@ and pp_if_tm names fmt = function
         (pp_if_tm names) tm1
   | tm ->
       pp_eq_tm names fmt tm
-and pp_eq_tm names fmt = function
+and pp_eq_tm names fmt tm =
+  match tm with
   | PrimApp (`Eq, [arg1; arg2]) ->
       Format.fprintf fmt "@[%a@ =@ %a@]"
         (pp_add_tm names) arg1
         (pp_eq_tm names) arg2
   | tm ->
       pp_add_tm names fmt tm
-and pp_add_tm names fmt =
-  function
+and pp_add_tm names fmt tm =
+  match tm with
   | PrimApp (`Add, [arg1; arg2]) ->
       Format.fprintf fmt "@[%a@ +@ %a@]"
         (pp_mul_tm names) arg1
@@ -320,16 +323,16 @@ and pp_add_tm names fmt =
         (pp_add_tm names) arg2
   | tm ->
       pp_mul_tm names fmt tm
-and pp_mul_tm names fmt =
-  function
+and pp_mul_tm names fmt tm =
+  match tm with
   | PrimApp (`Mul, [arg1; arg2]) ->
       Format.fprintf fmt "@[%a@ *@ %a@]"
         (pp_app_tm names) arg1
         (pp_mul_tm names) arg2
   | tm ->
       pp_app_tm names fmt tm
-and pp_app_tm names fmt =
-  function
+and pp_app_tm names fmt tm =
+  match tm with
   | FunApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
@@ -339,10 +342,9 @@ and pp_app_tm names fmt =
         (pp_atomic_tm names) arg
   | tm ->
       pp_atomic_tm names fmt tm
-and pp_atomic_tm names fmt =
-  function
-  | Var index ->
-      Format.fprintf fmt "%s" (List.nth names index)
+and pp_atomic_tm names fmt tm =
+  match tm with
+  | Var index -> Format.fprintf fmt "%s" (List.nth names index)
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i

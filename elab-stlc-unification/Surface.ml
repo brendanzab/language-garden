@@ -82,14 +82,14 @@ let fresh_meta (loc: loc) (info : meta_info) : Core.ty =
 
 (** Return a list of unsolved metavariables *)
 let unsolved_metas () : (loc * meta_info) list =
-  let rec go acc =
-    function
+  let rec go acc metas =
+    match metas with
     | [] -> acc
-    | (loc, info, m) :: metas ->
-        begin match !m with
+    | (loc, info, m) :: metas -> begin
+        match !m with
         | Core.Unsolved _ -> go ((loc, info) :: acc) metas
         | Core.Solved _ -> go acc metas
-        end
+    end
   in
   go [] !metas
 
@@ -157,11 +157,11 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
 (** Elaborate a surface term into a core term, inferring its type. *)
 and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
   match tm.data with
-  | Name name ->
-      begin match lookup context name with
+  | Name name -> begin
+      match lookup context name with
       | Some (index, ty) -> Var index, ty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
-      end
+  end
   | Let (def_name, params, def_body_ty, def_body, body) ->
       let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
       let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
