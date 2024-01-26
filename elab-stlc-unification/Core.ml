@@ -1,5 +1,12 @@
 (** {0 Core language} *)
 
+(** {1 Names} *)
+
+(** These names are used as hints for pretty printing binders and variables,
+    but don’t impact the equality of terms. *)
+type name = string
+
+
 (** {1 Nameless binding structure} *)
 
 (** The binding structure of terms is represented in the core language by
@@ -55,11 +62,11 @@ type prim = [
 (** Term syntax *)
 type tm =
   | Var of index
-  | Let of string * ty * tm * tm
+  | Let of name * ty * tm * tm
   | BoolLit of bool
   | BoolElim of tm * tm * tm
   | IntLit of int
-  | FunLit of string * ty * tm
+  | FunLit of name * ty * tm
   | FunApp of tm * tm
   | PrimApp of prim * tm list
 
@@ -72,7 +79,7 @@ module Semantics = struct
     | Neu of ntm
     | BoolLit of bool
     | IntLit of int
-    | FunLit of string * ty * (vtm -> vtm)
+    | FunLit of name * ty * (vtm -> vtm)
 
   and ntm =
     | Var of level
@@ -293,7 +300,7 @@ let pp_name_ann fmt (name, ty) =
 let pp_param fmt (name, ty) =
   Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
 
-let rec pp_tm (names : string env) (fmt : Format.formatter) (tm : tm) : unit =
+let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
   match tm with
   | Let _ as tm ->
       let rec go names fmt tm =
