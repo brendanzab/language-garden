@@ -1,6 +1,6 @@
 # Simply typed lambda calculus with unification
 
-Extends [../elab-stlc-unification].
+Extends [**elab-stlc-unification**](../elab-stlc-unification).
 
 This elaborator introduces structural variant types to the simply typed lambda
 calculus. In order to infer types, we introduce variant constraints to unsolved
