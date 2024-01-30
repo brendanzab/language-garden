@@ -296,17 +296,9 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
           | Some ty, None | None, Some ty -> Some ty
           | None, None  -> None)
   in
-  (* Check all cases from a variant type against a list of cases from a variant constraint *)
-  let check_cases (cases : ty LabelMap.t) (constr_cases : ty LabelMap.t) : unit =
-    cases |> LabelMap.iter (fun label ty ->
-      match LabelMap.find_opt label constr_cases with
-      | Some ty' -> unify ty ty'
-      | None -> () (* Variant constraints only specifiy a minimum set of expected cases *)
-    );
-  in
-
   match !m with
-  (* The metavariable unifies with anything, so set it to the type we are unifying against *)
+  (* The metavariable unifies with any type, so set it to the type we are
+     unifying against. *)
   | Unsolved (id, Any) ->
       occurs id ty;
       m := Solved ty;
@@ -317,14 +309,29 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       match ty with
       | MetaVar m' -> begin
           match !m' with
-          | Unsolved (_, Any) -> m' := Solved (MetaVar m)
+          (* Variant-Any: ?{id ~ [constr_cases]} ≡ ?id' *)
+          | Unsolved (_, Any) ->
+              m' := Solved (MetaVar m);
+          (* Variant-Variant: ?{id ~ [constr_cases]} ≡ ?{id' ~ [constr_cases']} *)
           | Unsolved (_, Variant constr_cases') ->
               m := Unsolved (id, Variant (merge_constr_cases constr_cases constr_cases'));
               m' := Solved (MetaVar m);
           | Solved _ -> invalid_arg "expected a forced type"
       end
+      (* Variant-VariantType: ?{id ~ [constr_cases]} ≡ [cases] *)
       | VariantType cases ->
-          check_cases cases constr_cases;
+          (* Check all cases from the known variant type against a list of cases
+             from the variant constraint *)
+          constr_cases |> LabelMap.iter (fun label ty ->
+            match LabelMap.find_opt label cases with
+            (* Unify the types for this case *)
+            | Some ty' -> unify ty ty'
+            (* Variant constraints only specifiy a minimum set of expected cases, so
+              any case in the type, but not in the constraint is permissable. *)
+            | None -> ()
+          );
+          (* All of the cases in the metavaraible’s constraint unify with the
+            cases in the type, so we can update the metavariable. *)
           m := Solved ty;
       | _ -> raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
   end
