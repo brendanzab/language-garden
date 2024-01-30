@@ -40,7 +40,10 @@ apply [incr := 1]
 $ cat ./examples/readme.txt | variant-unification
 let apply : [decr : Int | incr : Int | square : Int] -> Int :=
   fun (x : [decr : Int | incr : Int | square : Int]) =>
-    match x with | [decr := x] => x - 1 | [incr := x] => x + 1
-    | [square := x] => x * x end;
+    match x with
+    | [decr := x] => x - 1
+    | [incr := x] => x + 1
+    | [square := x] => x * x
+    end;
 apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 ```

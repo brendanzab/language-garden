@@ -420,9 +420,10 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       in
       go names fmt tm
   | VariantElim (head, cases) ->
-      Format.fprintf fmt "@[match@ @[%a@]@ with@]@ %aend"
+      Format.fprintf fmt "@[<hv>@[match@ @[%a@]@ with@]@ %aend@]"
         (pp_eq_tm names) head
         (Format.pp_print_seq
+          ~pp_sep:(fun fmt () -> Format.fprintf fmt "")
           (fun fmt (label, (name, body)) ->
             Format.fprintf fmt "@[@[<2>@[|@ [%s@ :=@]@ @[%s@]]@]@ =>@ @[%a@]@]@ "
               label
