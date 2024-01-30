@@ -326,8 +326,8 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
             match LabelMap.find_opt label cases with
             (* Unify the types for this case *)
             | Some ty' -> unify ty ty'
-            (* Variant constraints only specifiy a minimum set of expected cases, so
-               any case in the type, but not in the constraint is permissable. *)
+            (* Constraints specifiy a minimum set of cases, so it’s valid if a
+               case in the type is not also in the constraint’s cases. *)
             | None -> ()
           );
           (* All of the cases in the metavaraible’s constraint unify with the
