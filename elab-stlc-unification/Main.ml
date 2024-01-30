@@ -26,7 +26,8 @@ let () =
     try
       Parser.main Lexer.token lexbuf
     with
-    | Lexer.Error -> print_error (lexeme_loc lexbuf) "unexpected character"; exit 1
+    | Lexer.Error `UnexpectedChar -> print_error (lexeme_loc lexbuf) "unexpected character"; exit 1
+    | Lexer.Error `UnclosedBlockComment -> print_error (lexeme_loc lexbuf) "unclosed block comment"; exit 1
     | Parser.Error -> print_error (lexeme_loc lexbuf) "syntax error"; exit 1
   in
 
