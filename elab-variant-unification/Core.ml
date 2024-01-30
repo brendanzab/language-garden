@@ -309,19 +309,19 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       match ty with
       | MetaVar m' -> begin
           match !m' with
-          (* Variant-Any: ?{id ~ [constr_cases]} ≡ ?id' *)
+          (* Unsolved(id, Variant(constr_cases)) ≡ Unsolved(_, Any) *)
           | Unsolved (_, Any) ->
               m' := Solved (MetaVar m);
-          (* Variant-Variant: ?{id ~ [constr_cases]} ≡ ?{id' ~ [constr_cases']} *)
+          (* Unsolved(id, Variant(constr_cases)) ≡ Unsolved(_, Variant(constr_cases')) *)
           | Unsolved (_, Variant constr_cases') ->
               m := Unsolved (id, Variant (merge_constr_cases constr_cases constr_cases'));
               m' := Solved (MetaVar m);
           | Solved _ -> invalid_arg "expected a forced type"
       end
-      (* Variant-VariantType: ?{id ~ [constr_cases]} ≡ [cases] *)
+      (* Unsolved(id, Variant(constr_cases)) ≡ VariantType(cases) *)
       | VariantType cases ->
           (* Check all cases from the known variant type against a list of cases
-             from the variant constraint *)
+             from the metavariable’s constraint *)
           constr_cases |> LabelMap.iter (fun label ty ->
             match LabelMap.find_opt label cases with
             (* Unify the types for this case *)
