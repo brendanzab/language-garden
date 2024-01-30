@@ -59,7 +59,11 @@ and meta_state =
 (** Constraints on unsolved metavariables *)
 and constr =
   | Any
+  (** Can unify with any type *)
+
   | Variant of ty LabelMap.t
+  (** Can only unify with types that contain {i at least} the cases recorded in
+      the map. *)
 
 (** Primitive operations *)
 type prim = [
