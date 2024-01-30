@@ -297,13 +297,13 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
           | None, None  -> None)
   in
   match !m with
-  (* The metavariable unifies with any type, so set it to the type we are
-     unifying against. *)
+  (* The metavariable has no constraints, so we can set it to point to the type
+     we are unifying against. *)
   | Unsolved (id, Any) ->
       occurs id ty;
       m := Solved ty;
-  (* The metavariable unifies with with a variant type, so check that the type
-     also unifies with a variant type *)
+  (* The metavariable is constrained to be a variant type, so check that the
+     the type we are unifying against also unifies with a variant type *)
   | Unsolved (id, Variant constr_cases) -> begin
       occurs id ty;
       match ty with
@@ -327,11 +327,11 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
             (* Unify the types for this case *)
             | Some ty' -> unify ty ty'
             (* Variant constraints only specifiy a minimum set of expected cases, so
-              any case in the type, but not in the constraint is permissable. *)
+               any case in the type, but not in the constraint is permissable. *)
             | None -> ()
           );
           (* All of the cases in the metavaraible’s constraint unify with the
-            cases in the type, so we can update the metavariable. *)
+             cases in the type, so we can update the metavariable. *)
           m := Solved ty;
       | _ -> raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
   end
