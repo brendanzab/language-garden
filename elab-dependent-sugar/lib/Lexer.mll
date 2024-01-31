@@ -4,15 +4,14 @@
   exception Error
 }
 
-let newline = '\n'
-let whitespace = [' ' '\t']
-let comment = "--" [^ '\n']* newline
+let whitespace = [' ' '\t']+
+let newline = '\r' | '\n' | "\r\n"
 let ident = ['a'-'z' 'A'-'Z']['-' '_' 'a'-'z' 'A'-'Z' '0'-'9']*
 
 rule token = parse
 | whitespace    { token lexbuf }
 | newline       { Lexing.new_line lexbuf; token lexbuf }
-| comment       { Lexing.new_line lexbuf; token lexbuf }
+| "--"          { line_comment lexbuf }
 | "_"           { UNDERSCORE }
 | "fun"         { KEYWORD_FUN }
 | "let"         { KEYWORD_LET }
@@ -27,3 +26,8 @@ rule token = parse
 | ')'           { RPAREN }
 | eof           { END }
 | _             { raise Error }
+
+and line_comment = parse
+| newline       { Lexing.new_line lexbuf; token lexbuf }
+| eof           { END }
+| _             { line_comment lexbuf }

@@ -27,9 +27,7 @@ let parse_expr filename in_channel =
       let pos = Lexing.lexeme_start_p lexbuf in
       print_error pos "unexpected character";
       exit 1
-  | TreeLang.UnboundName n ->
-      (* FIXME: Incorrect position *)
-      let pos = Lexing.lexeme_start_p lexbuf in
+  | TreeLang.UnboundName (pos, n) ->
       print_error pos (Format.sprintf "unbound name `%s`" n);
       exit 1
   | TreeLang.Parser.Error ->

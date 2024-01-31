@@ -251,7 +251,7 @@ Weird arithmetic bindings
 
 Something broken
   $ arithcond compile --target=stack <<< "1 + 2 + (3 +"
-  <input>:1:13: syntax error
+  <input>:2:0: syntax error
   [1]
 
 Mismatched negation operands
@@ -311,7 +311,7 @@ Mismatched if branches
 
 Unbound variable
   $ arithcond exec <<< "x"
-  <input>:1:2: unbound name `x`
+  <input>:1:0: unbound name `x`
   [1]
 
 Mismatched let definition

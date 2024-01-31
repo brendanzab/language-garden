@@ -20,7 +20,11 @@ let parse_tm filename in_channel =
   try
     Parser.main Lexer.token lexbuf
   with
-  | Lexer.Error ->
+  | Lexer.Error `UnclosedBlockComment ->
+      let pos = Lexing.lexeme_start_p lexbuf in
+      print_error pos "unclosed block comment";
+      exit 1
+  | Lexer.Error `UnexpectedChar ->
       let pos = Lexing.lexeme_start_p lexbuf in
       print_error pos "unexpected character";
       exit 1

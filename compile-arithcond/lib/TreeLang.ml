@@ -47,7 +47,7 @@ let eq e1 e2 = Eq (e1, e2)
 let if_then_else e1 e2 e3 = IfThenElse (e1, e2, e3)
 
 (** Exception raised during parsing if a name was unbound *)
-exception UnboundName of name
+exception UnboundName of Lexing.position * name
 
 
 (** {1 Pretty printing} *)
