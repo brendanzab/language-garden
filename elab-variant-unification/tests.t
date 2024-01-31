@@ -51,6 +51,29 @@ Absurd match
   fun (x : [|]) => match x with end : [|] -> Int
 
 
+Lexer Errors
+------------
+
+Unexpected character
+  $ variant-unification <<< "1 % 2"
+  <input>:1:2: unexpected character
+  [1]
+
+Unclosed block comment
+  $ variant-unification <<< "/- hellooo"
+  <input>:2:0: unclosed block comment
+  [1]
+
+
+Parse Errors
+------------
+
+Unclosed parenthesis
+  $ variant-unification <<< "1 + (3 "
+  <input>:2:0: syntax error
+  [1]
+
+
 Elaboration Errors
 ------------------
 

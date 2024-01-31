@@ -30,6 +30,31 @@ If expressions
   $ stlc-unification <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
 
+
+Lexer Errors
+------------
+
+Unexpected character
+  $ stlc-unification <<< "1 % 2"
+  <input>:1:2: unexpected character
+  [1]
+
+Unclosed block comment
+  $ stlc-unification <<< "/- hellooo"
+  <input>:2:0: unclosed block comment
+  [1]
+
+
+Parse Errors
+------------
+
+Unclosed parenthesis
+  $ stlc-unification <<< "1 + (3 "
+  <input>:2:0: syntax error
+  [1]
+
+
+
 Elaboration Errors
 ------------------
 
