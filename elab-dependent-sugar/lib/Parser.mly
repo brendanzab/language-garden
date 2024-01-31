@@ -5,6 +5,7 @@
 %token <string> NAME
 %token COLON ":"
 %token COLON_EQUALS ":="
+%token EQUALS_GREATER "=>"
 %token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
 
@@ -31,7 +32,7 @@ let tm :=
     { Surface.FunArrow (t1, t2) }
 | "fun"; ps = nonempty_list(param); "->"; t = tm;
     { Surface.FunType (ps, t) }
-| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = tm; { t1 }); ":="; t2 = tm;
+| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = tm; { t1 }); "=>"; t2 = tm;
     { Surface.FunLit (ps, t1, t2) }
 | app_tm
 

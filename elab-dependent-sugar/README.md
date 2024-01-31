@@ -9,11 +9,11 @@ README for more details and resources.
 <!-- $MDX file=test/readme/bools.txt -->
 ```
 let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
-let true : Bool := fun Out true false := true;
-let false : Bool := fun Out true false := false;
+let true : Bool := fun Out true false => true;
+let false : Bool := fun Out true false => false;
 
 let not (b : Bool) : Bool :=
-  fun (Out : Type) (true : Out) (false : Out) := b Out false true;
+  fun (Out : Type) (true : Out) (false : Out) => b Out false true;
 
 true Bool false
 ```
@@ -23,5 +23,5 @@ $ cat ./test/readme/bools.txt | dependent-sugar norm
 <input> :
   fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
       (Out : Type) (true : Out) (false : Out) -> Out
-:= fun false Out true false := false
+:= fun false Out true false => false
 ```

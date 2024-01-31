@@ -20,6 +20,7 @@ rule token = parse
 | ident as n    { NAME n }
 | ":"           { COLON }
 | ":="          { COLON_EQUALS }
+| "=>"          { EQUALS_GREATER }
 | "->"          { HYPHEN_GREATER }
 | ";"           { SEMICOLON }
 | '('           { LPAREN }
