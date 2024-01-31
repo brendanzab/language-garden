@@ -43,3 +43,5 @@ fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
 $ stlc-unification <<< "fun x y => if x = 0 then y else 3"
 fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
 ```
+
+More examples can be found in [`tests.t`](tests.t).

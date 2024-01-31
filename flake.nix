@@ -89,6 +89,7 @@
         elab-dependent-sugar = [ "dependent-sugar" ];
         elab-record-patching = [ "record-patching" ];
         elab-stlc-abstract = [ "stlc-abstract" ];
+        elab-stlc-bidirectional = [ "stlc-bidirectional" ];
         elab-stlc-unification = [ "stlc-unification" ];
         elab-variant-unification = [ "variant-unification" ];
         lang-datalog = [ "datalog" ];

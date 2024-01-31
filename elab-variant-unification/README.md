@@ -36,8 +36,10 @@ let apply x :=
 apply [incr := 1]
 ```
 
+Elaborated program:
+
+<!-- $MDX file=examples/readme.stdout -->
 ```sh
-$ cat ./examples/readme.txt | variant-unification
 let apply : [decr : Int | incr : Int | square : Int] -> Int :=
   fun (x : [decr : Int | incr : Int | square : Int]) =>
     match x with
@@ -47,3 +49,5 @@ let apply : [decr : Int | incr : Int | square : Int] -> Int :=
     end;
 apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 ```
+
+More examples can be found in [`tests.t`](tests.t).

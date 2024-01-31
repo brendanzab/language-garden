@@ -1,0 +1,10 @@
+(rule
+  (with-stdin-from readme.txt
+    (with-stdout-to readme.stdout.tmp
+      (run %{bin:variant-unification} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-variant-unification)
+  (action (diff readme.stdout
+                readme.stdout.tmp)))

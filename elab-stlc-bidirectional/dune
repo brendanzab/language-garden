@@ -1,0 +1,18 @@
+(executable
+  (name Main)
+  (public_name stlc-bidirectional)
+  (package elab-stlc-bidirectional))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(ocamllex Lexer)
+
+(mdx
+  (package elab-stlc-bidirectional)
+  (deps %{bin:stlc-bidirectional}))
+
+(cram
+  (package elab-stlc-bidirectional)
+  (deps %{bin:stlc-bidirectional}))

@@ -1,0 +1,260 @@
+(** {0 Core language} *)
+
+(** {1 Names} *)
+
+(** These names are used as hints for pretty printing binders and variables,
+    but don’t impact the equality of terms. *)
+type name = string
+
+
+(** {1 Nameless binding structure} *)
+
+(** The binding structure of terms is represented in the core language by
+    using numbers that represent the distance to a binder, instead of by the
+    names attached to those binders. *)
+
+(** {i De Bruijn index} that represents a variable occurance by the number of
+    binders between the occurance and the binder it refers to. *)
+type index = int
+
+(** {i De Bruijn level} that represents a variable occurance by the number of
+    binders from the top of the environment to the binder that the ocurrance
+    refers to. These do not change their meaning as new bindings are added to
+    the environment. *)
+type level = int
+
+(** Converts a {!level} to an {!index} that is bound in an environment of the
+    supplied size. Assumes that [ size > level ]. *)
+let level_to_index size level =
+  size - level - 1
+
+(** An environment of bindings that can be looked up directly using a
+    {!index}, or by inverting a {!level} using {!level_to_index}. *)
+type 'a env = 'a list
+
+
+(** {1 Syntax} *)
+
+(** Type syntax *)
+type ty =
+  | BoolType
+  | IntType
+  | FunType of ty * ty
+
+(** Primitive operations *)
+type prim = [
+  | `Eq   (** [Int -> Int -> Bool] *)
+  | `Add  (** [Int -> Int -> Int] *)
+  | `Sub  (** [Int -> Int -> Int] *)
+  | `Mul  (** [Int -> Int -> Int] *)
+  | `Neg  (** [Int -> Int] *)
+]
+
+(** Term syntax *)
+type tm =
+  | Var of index
+  | Let of name * ty * tm * tm
+  | BoolLit of bool
+  | BoolElim of tm * tm * tm
+  | IntLit of int
+  | FunLit of name * ty * tm
+  | FunApp of tm * tm
+  | PrimApp of prim * tm list
+
+
+module Semantics = struct
+
+  (** {1 Values} *)
+
+  type vtm =
+    | Neu of ntm
+    | BoolLit of bool
+    | IntLit of int
+    | FunLit of name * ty * (vtm -> vtm)
+
+  and ntm =
+    | Var of level
+    | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
+    | FunApp of ntm * vtm
+    | PrimApp of prim * vtm list
+
+
+  (** {1 Eliminators} *)
+
+  let bool_elim head vtm0 vtm1 =
+    match head with
+    | Neu ntm -> Neu (BoolElim (ntm, vtm0, vtm1))
+    | BoolLit true -> Lazy.force vtm0
+    | BoolLit false -> Lazy.force vtm1
+    | _ -> invalid_arg "expected boolean"
+
+  let prim_app prim args =
+    match prim, args with
+    | `Eq, [IntLit t1; IntLit t2] -> BoolLit (t1 = t2)
+    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
+    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
+    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | `Neg, [IntLit t1] -> IntLit (-t1)
+    | prim, args -> Neu (PrimApp (prim, args))
+
+  let fun_app head arg =
+    match head with
+    | Neu ntm -> Neu (FunApp (ntm, arg))
+    | FunLit (_, _, body) -> body arg
+    | _ -> invalid_arg "expected function"
+
+
+  (** {1 Evaluation} *)
+
+  (** Evaluate a term from the syntax into its semantic interpretation *)
+  let rec eval (env : vtm env) (tm : tm) : vtm =
+    match tm with
+    | Var index -> List.nth env index
+    | Let (_, _, def, body) ->
+        let def = eval env def in
+        eval (def :: env) body
+    | BoolLit b -> BoolLit b
+    | BoolElim (head, tm0, tm1) ->
+        let head = eval env head in
+        let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
+        let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
+        bool_elim head vtm0 vtm1
+    | IntLit i -> IntLit i
+    | PrimApp (prim, args) ->
+        prim_app prim (List.map (eval env) args)
+    | FunLit (name, param_ty, body) ->
+        FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
+    | FunApp (head, arg) ->
+        let head = eval env head in
+        let arg = eval env arg in
+        fun_app head arg
+
+
+  (** {1 Quotation} *)
+
+  (** Convert terms from the semantic domain back into syntax. *)
+  let rec quote (size : int) (vtm : vtm) : tm =
+    match vtm with
+    | Neu ntm -> quote_neu size ntm
+    | BoolLit b -> BoolLit b
+    | IntLit i -> IntLit i
+    | FunLit (name, param_ty, body) ->
+        let body = quote (size + 1) (body (Neu (Var size))) in
+        FunLit (name, param_ty, body)
+
+  and quote_neu (size : int) (ntm : ntm) : tm =
+    match ntm with
+    | Var level -> Var (level_to_index size level)
+    | BoolElim (head, vtm0, vtm1) ->
+        let tm0 = quote size (Lazy.force vtm0) in
+        let tm1 = quote size (Lazy.force vtm1) in
+        BoolElim (quote_neu size head, tm0, tm1)
+    | FunApp (head, arg) -> FunApp (quote_neu size head, quote size arg)
+    | PrimApp (prim, args) -> PrimApp (prim, List.map (quote size) args)
+
+  (** {1 Normalisation} *)
+
+  (** By evaluating a term then quoting the result, we can produce a term that
+      is reduced as much as possible in the current environment. *)
+  let normalise (env : vtm list) (tm : tm) : tm =
+    quote (List.length env) (eval env tm)
+
+end
+
+
+(** {1 Pretty printing} *)
+
+let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
+  match ty with
+  | FunType (param_ty, body_ty) ->
+      Format.fprintf fmt "%a -> %a"
+        pp_atomic_ty param_ty
+        pp_ty body_ty
+  | ty ->
+      pp_atomic_ty fmt ty
+and pp_atomic_ty fmt ty =
+  match ty with
+  | BoolType -> Format.fprintf fmt "Bool"
+  | IntType -> Format.fprintf fmt "Int"
+  | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
+
+let pp_name_ann fmt (name, ty) =
+  Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
+
+let pp_param fmt (name, ty) =
+  Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
+
+let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
+  match tm with
+  | Let _ as tm ->
+      let rec go names fmt tm =
+        match tm with
+        | Let (name, def_ty, def, body) ->
+            Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+              pp_name_ann (name, def_ty)
+              (pp_tm names) def
+              (go (name :: names)) body
+        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+      in
+      go names fmt tm
+  | FunLit (name, param_ty, body) ->
+      Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
+        pp_param (name, param_ty)
+        (pp_tm (name :: names)) body
+  | tm -> pp_if_tm names fmt tm
+and pp_if_tm names fmt tm =
+  match tm with
+  | BoolElim (head, tm0, tm1) ->
+      Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
+        (pp_eq_tm names) head
+        (pp_eq_tm names) tm0
+        (pp_if_tm names) tm1
+  | tm ->
+      pp_eq_tm names fmt tm
+and pp_eq_tm names fmt tm =
+  match tm with
+  | PrimApp (`Eq, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ =@ %a@]"
+        (pp_add_tm names) arg1
+        (pp_eq_tm names) arg2
+  | tm ->
+      pp_add_tm names fmt tm
+and pp_add_tm names fmt tm =
+  match tm with
+  | PrimApp (`Add, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ +@ %a@]"
+        (pp_mul_tm names) arg1
+        (pp_add_tm names) arg2
+  | PrimApp (`Sub, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ -@ %a@]"
+        (pp_mul_tm names) arg1
+        (pp_add_tm names) arg2
+  | tm ->
+      pp_mul_tm names fmt tm
+and pp_mul_tm names fmt tm =
+  match tm with
+  | PrimApp (`Mul, [arg1; arg2]) ->
+      Format.fprintf fmt "@[%a@ *@ %a@]"
+        (pp_app_tm names) arg1
+        (pp_mul_tm names) arg2
+  | tm ->
+      pp_app_tm names fmt tm
+and pp_app_tm names fmt tm =
+  match tm with
+  | FunApp (head, arg) ->
+      Format.fprintf fmt "@[%a@ %a@]"
+        (pp_app_tm names) head
+        (pp_atomic_tm names) arg
+  | PrimApp (`Neg, [arg]) ->
+      Format.fprintf fmt "@[-%a@]"
+        (pp_atomic_tm names) arg
+  | tm ->
+      pp_atomic_tm names fmt tm
+and pp_atomic_tm names fmt tm =
+  match tm with
+  | Var index -> Format.fprintf fmt "%s" (List.nth names index)
+  | BoolLit true -> Format.fprintf fmt "true"
+  | BoolLit false -> Format.fprintf fmt "false"
+  | IntLit i -> Format.fprintf fmt "%i" i
+  (* FIXME: Will loop forever on invalid primitive applications *)
+  | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
