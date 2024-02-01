@@ -6,27 +6,6 @@ These projects are mostly my attempt to understand different techniques and
 approaches to implementing programming languages. Perhaps from these seedlings
 something new and interesting might germinate?
 
-## Goals
-
-As I’ve been working in the area of programming languages I’ve often found
-myself in the position of:
-
-- Explaining the same idea or technique over and over, but not having a minimal
-  example I can point to.
-- Re-implementing an existing technique (either from a paper, or based on some
-  other existing code I’ve seen) in my own way, as a way of learning and
-  understanding it more deeply.
-- Wanting a place to testing out an approach before committing to using it in a
-  larger project (which can take time and may amount to nothing).
-- Trying to remember a technique I had spent time learning a long time ago.
-- Having an idea for a small language experiment that does not need to be part
-  of a standalone project, but may require some build system setup.
-
-Inspired by Mark Barbone’s [small, self-contained gists](https://gist.github.com/mb64/)
-implementing small type systems and solvers, I decided to make a repository to
-collect together a bunch of programming language projects that interested me,
-in the hope that they might be useful to others and my future self.
-
 ## Implementations
 
 ### Elaboration
@@ -101,6 +80,27 @@ projects need more work put into them and a more incomplete in comparison.
   language.
 - [**wip-compile-uncurry**](./wip-compile-uncurry/):
   Compiling single-parameter functions to multiparameter functions.
+
+## Background
+
+As I’ve been working in the area of programming languages I’ve often found
+myself in the position of:
+
+- Explaining the same idea or technique over and over, but not having a minimal
+  example I can point to.
+- Re-implementing an existing technique (either from a paper, or based on some
+  other existing code I’ve seen) in my own way, as a way of learning and
+  understanding it more deeply.
+- Wanting a place to testing out an approach before committing to using it in a
+  larger project (which can take time and may amount to nothing).
+- Trying to remember a technique I had spent time learning a long time ago.
+- Having an idea for a small language experiment that does not need to be part
+  of a standalone project, but may require some build system setup.
+
+Inspired by Mark Barbone’s [small, self-contained gists](https://gist.github.com/mb64/)
+implementing small type systems and solvers, I decided to make a repository to
+collect together a bunch of programming language projects that interested me,
+in the hope that they might be useful to others and my future self.
 
 ## Development setup
 
