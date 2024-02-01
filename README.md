@@ -50,8 +50,6 @@ related to compiling functional programming languages.
   Compiling arithmetic expressions to stack machine instructions and A-Normal Form.
 - [**compile-arithcond**](./compile-arithcond/):
   Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
-- [**compile-arith-verified**](./compile-arith-verified/):
-  A formally verified arithmetic expression compiler and decompiler in Lean 4.
 - [**compile-closure-conv**](./compile-closure-conv):
   Typed closure conversion and lambda lifting for a simply typed lambda calculus
   with booleans and integers.
