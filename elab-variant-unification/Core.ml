@@ -2,14 +2,16 @@
 
 (** {1 Names} *)
 
+(** Labels are significant to the equality of terms. They are typically used
+    to distinguish elements in variants, records, etc. *)
+type label = string
+
+(** An unordered row of elements distinguished by label. *)
+module LabelMap = Map.Make (String)
+
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
 type name = string
-
-(** These labels are used to distinguish elements in variants, records, etc. *)
-type label = string
-
-module LabelMap = Map.Make (String)
 
 
 (** {1 Nameless binding structure} *)
