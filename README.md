@@ -16,12 +16,8 @@ _core language_. This approach to type checking is particularly popular and
 useful for implementing dependently typed programming languages, but is more
 widely applicable as well.
 
-- [**elab-dependent**](./elab-dependent/):
-  An elaborator for a small dependently typed lambda calculus.
-- [**elab-dependent-sugar**](./elab-dependent-sugar/):
-  An elaborator for a small dependently typed lambda calculus with syntactic sugar.
-- [**elab-record-patching**](./elab-record-patching/):
-  An elaborator of a dependently typed lambda calculus with singletons and record patching.
+Simply typed:
+
 - [**elab-stlc-bidirectional**](./elab-stlc-bidirectional):
   An elaborator for a simply typed lambda calculus that uses bidirectional
   typing to allow some type annotations to be omitted.
@@ -34,6 +30,15 @@ widely applicable as well.
   Elaboration of a simply typed lambda calculus, extended with structural
   variant types. Annotations are inferred eagerly using constraint based
   unification.
+
+Dependently typed:
+
+- [**elab-dependent**](./elab-dependent/):
+  An elaborator for a small dependently typed lambda calculus.
+- [**elab-dependent-sugar**](./elab-dependent-sugar/):
+  An elaborator for a small dependently typed lambda calculus with syntactic sugar.
+- [**elab-record-patching**](./elab-record-patching/):
+  An elaborator of a dependently typed lambda calculus with singletons and record patching.
 
 ### Compilation
 
