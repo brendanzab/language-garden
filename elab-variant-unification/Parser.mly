@@ -56,7 +56,7 @@ let ty :=
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
-| "["; option("|"); "]";
+| "["; "|"; "]";
     { Surface.VariantType [] }
 | "["; option("|"); cs = separated_nonempty_list("|", l = located(NAME); ":"; ty = located(ty); { l, ty }); "]";
     { Surface.VariantType cs }
