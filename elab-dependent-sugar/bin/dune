@@ -4,7 +4,9 @@
   (package elab-dependent-sugar)
   (libraries
     elab-dependent-sugar
-    cmdliner))
+    cmdliner
+    menhirLib
+    sedlex))
 
 (env
   (dev

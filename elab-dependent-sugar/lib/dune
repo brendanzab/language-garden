@@ -1,12 +1,12 @@
 (library
   (name ElabDependentSugar)
-  (public_name elab-dependent-sugar))
+  (public_name elab-dependent-sugar)
+  (preprocess
+    (pps sedlex.ppx)))
 
 (menhir
   (modules Parser)
   (flags --explain --strict))
-
-(ocamllex Lexer)
 
 (env
   (dev

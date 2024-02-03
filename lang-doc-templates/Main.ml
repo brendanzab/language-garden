@@ -1,9 +1,9 @@
 let print_error (start, _ : Surface.loc) message =
   Printf.eprintf "%s:%d:%d: %s\n"
-      start.pos_fname
-      start.pos_lnum
-      (start.pos_cnum - start.pos_bol)
-      message
+    start.pos_fname
+    start.pos_lnum
+    (start.pos_cnum - start.pos_bol)
+    message
 
 let context = ref []
 let env = ref []
@@ -66,7 +66,7 @@ let () =
           | `UnclosedBlockComment -> "unclosed block comment"
           | `UnclosedTextLiteral -> "unclosed text literal"
           | `UnclosedTemplate -> "unclosed template"
-          | `InvalidEscapeCode s -> "invalid escape code `\\" ^ s ^ "`"
+          | `InvalidEscapeCode s -> Format.sprintf "invalid escape code `\\%s`" s
         in
         print_error (Sedlexing.lexing_positions lexbuf) msg;
         exit 1

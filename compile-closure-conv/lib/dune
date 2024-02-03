@@ -1,8 +1,8 @@
 (library
   (name ClosureConv)
-  (public_name compile-closure-conv))
-
-(ocamllex Lang_Fun_Lexer)
+  (public_name compile-closure-conv)
+  (preprocess
+    (pps sedlex.ppx)))
 
 (menhir
   (modules Lang_Fun_Parser))

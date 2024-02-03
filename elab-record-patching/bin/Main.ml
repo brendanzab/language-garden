@@ -7,30 +7,32 @@ module Parser = ElabRecordPatching.Parser
 
 (** Helper functions *)
 
-let print_error (pos : Lexing.position) message =
+let print_error (start, _ : Lexing.position * Lexing.position) message =
   Printf.eprintf "%s:%d:%d: %s\n"
-      pos.pos_fname
-      pos.pos_lnum
-      (pos.pos_cnum - pos.pos_bol)
-      message
+    start.pos_fname
+    start.pos_lnum
+    (start.pos_cnum - start.pos_bol)
+    message
 
 let parse_tm filename in_channel =
-  let lexbuf = Lexing.from_channel in_channel in
-  Lexing.set_filename lexbuf filename;
+  let lexbuf = Sedlexing.Utf8.from_channel in_channel in
+  Sedlexing.set_filename lexbuf filename;
+
   try
-    Parser.main Lexer.token lexbuf
+    lexbuf
+    |> Sedlexing.with_tokenizer Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
   with
-  | Lexer.Error `UnclosedBlockComment ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "unclosed block comment";
-      exit 1
-  | Lexer.Error `UnexpectedChar ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "unexpected character";
+  | Lexer.Error error ->
+      let msg =
+        match error with
+        | `UnexpectedChar -> "unexpected character"
+        | `UnclosedBlockComment -> "unclosed block comment"
+      in
+      print_error (Sedlexing.lexing_positions lexbuf) msg;
       exit 1
   | Parser.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "syntax error";
+      print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
 let infer context tm =

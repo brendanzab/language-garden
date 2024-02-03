@@ -1,24 +1,30 @@
-let print_error (pos : Lexing.position) message =
+let print_error (start, _ : Lexing.position * Lexing.position) (message : string) =
   Printf.eprintf "%s:%d:%d: %s\n"
-      pos.pos_fname
-      pos.pos_lnum
-      (pos.pos_cnum - pos.pos_bol)
-      message
+    start.pos_fname
+    start.pos_lnum
+    (start.pos_cnum - start.pos_bol)
+    message
 
 let parse_program filename in_channel =
-  let lexbuf = Lexing.from_channel in_channel in
-  Lexing.set_filename lexbuf filename;
+  let lexbuf = Sedlexing.Utf8.from_channel in_channel in
+  Sedlexing.set_filename lexbuf filename;
 
   try
-    Parser.program Lexer.token lexbuf
+    lexbuf
+    |> Sedlexing.with_tokenizer Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.program
   with
-  | Lexer.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "unexpected character";
+  | Lexer.Error error ->
+      let msg =
+        match error with
+        | `UnexpectedChar -> "unexpected character"
+        | `UnclosedStringLiteral -> "unclosed string literal"
+        | `InvalidEscapeCode s -> Format.sprintf "invalid escape code `\\%s`" s
+      in
+      print_error (Sedlexing.lexing_positions lexbuf) msg;
       exit 1
   | Parser.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "syntax error";
+      print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
 let pp_print_binding ppf (var, term) =

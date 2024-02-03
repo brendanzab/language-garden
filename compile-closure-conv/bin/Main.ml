@@ -4,32 +4,30 @@ module Translation = ClosureConv.Translation
 
 (** {1 Helper functions} *)
 
-let print_error (pos : Lexing.position) message =
+let print_error (start, _ : Lexing.position * Lexing.position) message =
   Printf.eprintf "%s:%d:%d: %s\n"
-      pos.pos_fname
-      pos.pos_lnum
-      (pos.pos_cnum - pos.pos_bol)
-      message
+    start.pos_fname
+    start.pos_lnum
+    (start.pos_cnum - start.pos_bol)
+    message
 
 let parse_expr filename in_channel =
-  let lexbuf = Lexing.from_channel in_channel in
-  Lexing.set_filename lexbuf filename;
+  let lexbuf = Sedlexing.Utf8.from_channel in_channel in
+  Sedlexing.set_filename lexbuf filename;
 
   try
-    Lang.Fun.Parser.main Lang.Fun.Lexer.token lexbuf
+    lexbuf
+    |> Sedlexing.with_tokenizer Lang.Fun.Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised Lang.Fun.Parser.main
   with
-  | Lang.Fun.Lexer.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "unexpected character";
+  | Lang.Fun.Lexer.Error `UnexpectedChar ->
+      print_error (Sedlexing.lexing_positions lexbuf) "unexpected character";
       exit 1
-  | Lang.Fun.UnboundName n ->
-      (* FIXME: Incorrect position *)
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos (Format.sprintf "unbound name `%s`" n);
+  | Lang.Fun.Lexer.Error `UnclosedBlockComment ->
+      print_error (Sedlexing.lexing_positions lexbuf) "unclosed block comment";
       exit 1
   | Lang.Fun.Parser.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "syntax error";
+      print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
 

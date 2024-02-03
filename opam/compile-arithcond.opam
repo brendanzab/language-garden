@@ -9,6 +9,8 @@ depends: [
   "alcotest" {>= "1.7" & with-test}
   "cmdliner" {>= "1.2"}
   "menhir" {>= "20231231" & build}
+  "menhirLib" {>= "20231231"}
+  "sedlex" {>= "3.2"}
   "mdx" {>= "2.3" & with-test}
   "qcheck" {>= "0.21.3" & with-test}
   "qcheck-core" {>= "0.21.3" & with-test}

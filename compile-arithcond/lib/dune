@@ -1,8 +1,8 @@
 (library
   (name ArithCond)
-  (public_name compile-arithcond))
+  (public_name compile-arithcond)
+  (preprocess
+    (pps sedlex.ppx)))
 
 (menhir
   (modules TreeLangParser))
-
-(ocamllex TreeLangLexer)

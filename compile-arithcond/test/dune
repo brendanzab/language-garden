@@ -8,6 +8,8 @@
   (libraries
     compile-arithcond
     alcotest
+    menhirLib
     qcheck
     qcheck-core
-    qcheck-alcotest))
+    qcheck-alcotest
+    sedlex))

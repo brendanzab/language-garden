@@ -4,7 +4,9 @@
   (package elab-record-patching)
   (libraries
     elab-record-patching
-    cmdliner))
+    cmdliner
+    menhirLib
+    sedlex))
 
 (env
   (dev

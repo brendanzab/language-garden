@@ -4,7 +4,9 @@
   (package elab-dependent)
   (libraries
     elab-dependent
-    cmdliner))
+    cmdliner
+    menhirLib
+    sedlex))
 
 (env
   (dev

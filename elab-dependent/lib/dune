@@ -1,12 +1,12 @@
 (library
   (name ElabDependent)
-  (public_name elab-dependent))
+  (public_name elab-dependent)
+  (preprocess
+    (pps sedlex.ppx)))
 
 (menhir
   (modules Parser)
   (flags --explain --strict))
-
-(ocamllex Lexer)
 
 (env
   (dev

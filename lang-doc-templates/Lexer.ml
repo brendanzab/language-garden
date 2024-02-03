@@ -67,13 +67,13 @@ let rec token (lexbuf : Sedlexing.lexbuf) (stack : mode list ref) : token =
       | "/-" -> block_comment lexbuf 0; (token [@tailcall]) lexbuf stack
       | '"' -> TEXT (text lexbuf)
       | "$\"" -> stack := Template :: !stack; OPEN_TEMPLATE
-      | dec_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
-      | hex_number -> INT (int_of_string (Sedlexing.Latin1.lexeme lexbuf))
+      | dec_number -> INT (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
+      | hex_number -> INT (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
       | "else" -> KEYWORD_ELSE
       | "if" -> KEYWORD_IF
       | "let" -> KEYWORD_LET
       | "then" -> KEYWORD_THEN
-      | name -> NAME (Sedlexing.Latin1.lexeme lexbuf)
+      | name -> NAME (Sedlexing.Utf8.lexeme lexbuf)
       | "+" -> ADD
       | ":" -> COLON
       | ":=" -> COLON_EQUALS

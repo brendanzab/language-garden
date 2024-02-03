@@ -84,7 +84,11 @@ let compile_anf_correct =
 (** Pretty printed expr can always be parsed back into the same expr. *)
 let pretty_correct =
   let pretty e = Format.asprintf "%a" TreeLang.pp_expr e in
-  let parse source = TreeLang.(Parser.main Lexer.token (Lexing.from_string source)) in
+  let parse source =
+    Sedlexing.Utf8.from_string source
+    |> Sedlexing.with_tokenizer TreeLang.Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised TreeLang.Parser.main
+  in
 
   QCheck.Test.make ~count:1000
     ~name:"pretty_correct"

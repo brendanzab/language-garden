@@ -4,4 +4,6 @@
   (package compile-arith)
   (libraries
     compile-arith
-    cmdliner))
+    cmdliner
+    menhirLib
+    sedlex))

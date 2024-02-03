@@ -1,10 +1,12 @@
 (executable
   (name Main)
   (public_name name-binding-comparison)
-  (package lang-lc-interpreters))
+  (package lang-lc-interpreters)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    menhirLib))
 
 (menhir
   (modules Parser)
   (flags --explain --strict))
-
-(ocamllex Lexer)

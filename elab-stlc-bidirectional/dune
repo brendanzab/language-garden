@@ -1,13 +1,15 @@
 (executable
   (name Main)
   (public_name stlc-bidirectional)
-  (package elab-stlc-bidirectional))
+  (package elab-stlc-bidirectional)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    menhirLib))
 
 (menhir
   (modules Parser)
   (flags --explain --strict))
-
-(ocamllex Lexer)
 
 (mdx
   (package elab-stlc-bidirectional)

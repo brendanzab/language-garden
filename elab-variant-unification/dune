@@ -1,13 +1,15 @@
 (executable
   (name Main)
   (public_name variant-unification)
-  (package elab-variant-unification))
+  (package elab-variant-unification)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    menhirLib))
 
 (menhir
   (modules Parser)
   (flags --explain --strict))
-
-(ocamllex Lexer)
 
 (mdx
   (package elab-variant-unification)

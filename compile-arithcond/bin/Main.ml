@@ -9,30 +9,30 @@ module TreeToAnf = ArithCond.TreeToAnf
 
 (** {1 Helper functions} *)
 
-let print_error (pos : Lexing.position) message =
+let print_error (start, _ : Lexing.position * Lexing.position) message =
   Printf.eprintf "%s:%d:%d: %s\n"
-      pos.pos_fname
-      pos.pos_lnum
-      (pos.pos_cnum - pos.pos_bol)
-      message
+    start.pos_fname
+    start.pos_lnum
+    (start.pos_cnum - start.pos_bol)
+    message
 
 let parse_expr filename in_channel =
-  let lexbuf = Lexing.from_channel in_channel in
-  Lexing.set_filename lexbuf filename;
+  let lexbuf = Sedlexing.Utf8.from_channel in_channel in
+  Sedlexing.set_filename lexbuf filename;
 
   try
-    TreeLang.Parser.main TreeLang.Lexer.token lexbuf
+    lexbuf
+    |> Sedlexing.with_tokenizer TreeLang.Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised TreeLang.Parser.main
   with
   | TreeLang.Lexer.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "unexpected character";
+      print_error (Sedlexing.lexing_positions lexbuf) "unexpected character";
       exit 1
-  | TreeLang.UnboundName (pos, n) ->
-      print_error pos (Format.sprintf "unbound name `%s`" n);
+  | TreeLang.UnboundName (loc, n) ->
+      print_error loc (Format.sprintf "unbound name `%s`" n);
       exit 1
   | TreeLang.Parser.Error ->
-      let pos = Lexing.lexeme_start_p lexbuf in
-      print_error pos "syntax error";
+      print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
 let synth_expr ctx e =

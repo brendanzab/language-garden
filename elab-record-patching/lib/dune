@@ -1,12 +1,12 @@
 (library
   (name ElabRecordPatching)
-  (public_name elab-record-patching))
+  (public_name elab-record-patching)
+  (preprocess
+    (pps sedlex.ppx)))
 
 (menhir
   (modules Parser)
   (flags --explain --strict))
-
-(ocamllex Lexer)
 
 (env
   (dev
