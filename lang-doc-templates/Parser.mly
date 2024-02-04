@@ -1,3 +1,5 @@
+%token OPEN_TERM
+%token CLOSE_TERM
 %token OPEN_TEMPLATE
 %token CLOSE_TEMPLATE
 %token <string> TEMPLATE_TEXT
@@ -89,7 +91,7 @@ let template :=
 
 let unquote_template :=
     { [] }
-| f = located(unquote_fragment); t = template;
+| OPEN_TERM; f = located(unquote_fragment); CLOSE_TERM; t = template;
     { f :: t }
 
 let text_fragment :=

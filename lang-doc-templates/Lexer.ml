@@ -2,12 +2,8 @@ open Parser
 
 exception Error of [
   | `UnexpectedChar
-  | `UnexpectedCloseUnquote
-  | `UnexpectedCloseTemplate
-  | `UnexpectedEndOfFile
   | `UnclosedBlockComment
   | `UnclosedTextLiteral
-  | `UnclosedTemplate
   | `InvalidEscapeCode of string
 ]
 
@@ -33,15 +29,15 @@ type mode =
   | Template
 
 let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
-  let pending = Stack.create () in
-  let stack = Stack.create () in
-  Stack.push initial_mode stack;
+  let mode_stack = Stack.create () in
+  let pending_tokens = Stack.create () in
+  Stack.push initial_mode mode_stack;
 
   let rec token lexbuf : token =
-    match Stack.pop_opt pending with
+    match Stack.pop_opt pending_tokens with
     | Some token -> token
     | None -> begin
-        match Stack.top_opt stack with
+        match Stack.top_opt mode_stack with
         | Some Term -> term_token lexbuf
         | Some Template -> template_token lexbuf
         | None -> END
@@ -53,7 +49,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | "--" -> line_comment lexbuf
     | "/-" -> block_comment lexbuf 0
     | '"' -> text lexbuf
-    | "$\"" ->  Stack.push Template stack; OPEN_TEMPLATE
+    | "$\"" ->  Stack.push Template mode_stack; OPEN_TEMPLATE
     | dec_number -> INT (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
     | hex_number -> INT (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
     | "else" -> KEYWORD_ELSE
@@ -68,16 +64,8 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | ";" -> SEMI
     | '(' -> OPEN_PAREN
     | ')' -> CLOSE_PAREN
-    | '}' ->
-        Stack.drop stack;
-        if Stack.is_empty stack then
-          raise (Error `UnexpectedCloseUnquote);
-        (token [@tailcall]) lexbuf
-    | eof ->
-        Stack.drop stack;
-        if not (Stack.is_empty stack) then
-          raise (Error `UnexpectedEndOfFile);
-        (token [@tailcall]) lexbuf
+    | '}' -> Stack.drop mode_stack; CLOSE_TERM
+    | eof -> Stack.drop mode_stack; END
     | _ -> raise (Error `UnexpectedChar)
 
   and template_token lexbuf : token =
@@ -95,14 +83,15 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
       end
       | "$" -> begin
           match%sedlex lexbuf with
-          | "{" -> Stack.push Term stack; TEMPLATE_TEXT (Buffer.contents buf)
+          | "{" ->
+              Stack.push Term mode_stack;
+              Stack.push OPEN_TERM pending_tokens;
+              TEMPLATE_TEXT (Buffer.contents buf)
           | _ -> raise (Error `UnexpectedChar)
       end
       | "\"" ->
-          Stack.drop stack;
-          if Stack.is_empty stack then
-            raise (Error `UnexpectedCloseTemplate);
-          Stack.push CLOSE_TEMPLATE pending;
+          Stack.drop mode_stack;
+          Stack.push CLOSE_TEMPLATE pending_tokens;
           TEMPLATE_TEXT (Buffer.contents buf)
       (* TODO: Markdown style elements
 
@@ -116,9 +105,8 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
         We could possibly defer this to elaboration time, however.
       *)
       | eof ->
-          Stack.drop stack;
-          if not (Stack.is_empty stack) then
-            raise (Error `UnclosedTemplate);
+          Stack.drop mode_stack;
+          Stack.push END pending_tokens;
           TEMPLATE_TEXT (Buffer.contents buf)
       | any -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); (go [@tailcall]) ()
       | _ -> raise (Error `UnexpectedChar)

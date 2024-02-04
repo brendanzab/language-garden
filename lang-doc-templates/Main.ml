@@ -60,12 +60,8 @@ let () =
         let msg =
           match error with
           | `UnexpectedChar -> "unexpected character"
-          | `UnexpectedCloseUnquote -> "unexpected close unquote"
-          | `UnexpectedCloseTemplate -> "unexpected close template"
-          | `UnexpectedEndOfFile -> "unexpected end of file"
           | `UnclosedBlockComment -> "unclosed block comment"
           | `UnclosedTextLiteral -> "unclosed text literal"
-          | `UnclosedTemplate -> "unclosed template"
           | `InvalidEscapeCode s -> Format.sprintf "invalid escape code `\\%s`" s
         in
         print_error (Sedlexing.lexing_positions lexbuf) msg;
