@@ -46,12 +46,22 @@ quotation.
 
 ## Todo
 
+Infrastructure:
+
+- [ ] Example based tests
+- [ ] Property based tests
+- [ ] Benchmarks
+
+Variable representations:
+
 - [x] Named
 - [x] Unique ids
 - [x] De Bruijn indices
 - [ ] De Bruijn levels
 - [ ] Co-de Bruijn
 - [ ] Locally nameless
+- [ ] NbE with De Bruijn indices and unique IDs (like in [Sixty](https://github.com/ollef/sixty/))
+- [ ] Using [Bindlib](https://ocaml.org/p/bindlib/)
 
 ## Discussion
 
