@@ -31,9 +31,10 @@ type mode =
 let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
   let mode_stack = Stack.create () in
   let pending_tokens = Stack.create () in
+
   Stack.push initial_mode mode_stack;
 
-  let rec token lexbuf : token =
+  let rec token (lexbuf : Sedlexing.lexbuf) : token =
     match Stack.pop_opt pending_tokens with
     | Some token -> token
     | None -> begin
@@ -43,7 +44,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
         | None -> END
     end
 
-  and term_token lexbuf : token =
+  and term_token (lexbuf : Sedlexing.lexbuf) : token =
     match%sedlex lexbuf with
     | whitespace -> (token [@tailcall]) lexbuf
     | "--" -> line_comment lexbuf
@@ -68,7 +69,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | eof -> Stack.drop mode_stack; END
     | _ -> raise (Error `UnexpectedChar)
 
-  and template_token lexbuf : token =
+  and template_token (lexbuf : Sedlexing.lexbuf) : token =
     let buf = Buffer.create 1 in
     let rec go () =
       match%sedlex lexbuf with
