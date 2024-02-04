@@ -68,8 +68,16 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | ";" -> SEMI
     | '(' -> OPEN_PAREN
     | ')' -> CLOSE_PAREN
-    | '}' -> Stack.drop stack; if Stack.is_empty stack then raise (Error `UnexpectedCloseUnquote) else (token [@tailcall]) lexbuf
-    | eof -> Stack.drop stack; if Stack.is_empty stack then (token [@tailcall]) lexbuf else raise (Error `UnexpectedEndOfFile)
+    | '}' ->
+        Stack.drop stack;
+        if Stack.is_empty stack then
+          raise (Error `UnexpectedCloseUnquote);
+        (token [@tailcall]) lexbuf
+    | eof ->
+        Stack.drop stack;
+        if not (Stack.is_empty stack) then
+          raise (Error `UnexpectedEndOfFile);
+        (token [@tailcall]) lexbuf
     | _ -> raise (Error `UnexpectedChar)
 
   and template_token lexbuf : token =
@@ -93,11 +101,9 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
       | "\"" ->
           Stack.drop stack;
           if Stack.is_empty stack then
-            raise (Error `UnexpectedCloseTemplate)
-          else begin
-            Stack.push CLOSE_TEMPLATE pending;
-            TEMPLATE_TEXT (Buffer.contents buf)
-          end
+            raise (Error `UnexpectedCloseTemplate);
+          Stack.push CLOSE_TEMPLATE pending;
+          TEMPLATE_TEXT (Buffer.contents buf)
       (* TODO: Markdown style elements
 
         For example:
@@ -111,10 +117,9 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
       *)
       | eof ->
           Stack.drop stack;
-          if Stack.is_empty stack then
-            TEMPLATE_TEXT (Buffer.contents buf)
-          else
-            raise (Error `UnclosedTemplate)
+          if not (Stack.is_empty stack) then
+            raise (Error `UnclosedTemplate);
+          TEMPLATE_TEXT (Buffer.contents buf)
       | any -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); (go [@tailcall]) ()
       | _ -> raise (Error `UnexpectedChar)
     in
@@ -148,7 +153,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
           | _ -> raise (Error (`InvalidEscapeCode (Sedlexing.Utf8.lexeme lexbuf)))
       end
       | '"' -> Buffer.contents buf
-      | any  -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); (go [@tailcall]) ()
+      | any -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); (go [@tailcall]) ()
       | eof -> raise (Error `UnclosedTextLiteral)
       | _ -> raise (Error `UnexpectedChar)
     in
