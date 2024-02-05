@@ -111,6 +111,10 @@ let rec elab_ty (ty : ty) : Core.ty =
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   match tm.data with
+  | Let (def_name, params, def_body_ty, def_body, body) ->
+      let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
+      let body = elab_check ((def_name.data, def_ty) :: context) body ty in
+      Let (def_name.data, def_ty, def, body)
   | IfThenElse (head, tm0, tm1) ->
       let head = elab_check context head BoolType in
       let tm0 = elab_check context tm0 ty in

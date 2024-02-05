@@ -30,6 +30,21 @@ Explicit return type
   $ stlc-bidirectional <<< "let f (x : Int) : Int := x; f 3"
   let f : Int -> Int := fun (x : Int) => x; f 3 : Int
 
+Check let body type
+  $ stlc-bidirectional <<EOF
+  > let f (x : Int) : Int -> Int :=
+  >   let id (x : Int) : Int := x;
+  >   let incr (x : Int) : Int := x + 1;
+  > 
+  >   if x = 0 then id else incr;
+  > 
+  > f 4 3
+  > EOF
+  let f : Int -> Int -> Int :=
+    fun (x : Int) => let id : Int -> Int := fun (x : Int) => x;
+    let incr : Int -> Int := fun (x : Int) => x + 1; if x = 0 then id else incr;
+  f 4 3 : Int
+
 If expressions
   $ stlc-bidirectional <<EOF
   > let f (x : Int) (y : Int) : Int :=
