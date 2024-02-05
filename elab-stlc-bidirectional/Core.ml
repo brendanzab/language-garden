@@ -196,9 +196,9 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
               (go (name :: names)) body
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
-      go names fmt tm
+      Format.fprintf fmt "@[<hv>%a@]" (go names) tm
   | FunLit (name, param_ty, body) ->
-      Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
+      Format.fprintf fmt "@[<2>@[fun@ %a@ =>@]@ %a@]"
         pp_param (name, param_ty)
         (pp_tm (name :: names)) body
   | tm -> pp_if_tm names fmt tm

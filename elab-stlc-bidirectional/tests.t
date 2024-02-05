@@ -41,8 +41,10 @@ Check let body type
   > f 4 3
   > EOF
   let f : Int -> Int -> Int :=
-    fun (x : Int) => let id : Int -> Int := fun (x : Int) => x;
-    let incr : Int -> Int := fun (x : Int) => x + 1; if x = 0 then id else incr;
+    fun (x : Int) =>
+      let id : Int -> Int := fun (x : Int) => x;
+      let incr : Int -> Int := fun (x : Int) => x + 1;
+      if x = 0 then id else incr;
   f 4 3 : Int
 
 If expressions
