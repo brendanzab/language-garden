@@ -30,12 +30,18 @@ type mode =
 
 let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
   let mode_stack = Stack.create () in
-  let pending_tokens = Stack.create () in
+  let push_mode m = Stack.push m mode_stack in
+  let pop_mode () = Stack.drop mode_stack in
 
-  Stack.push initial_mode mode_stack;
+  (* This should only ever contain one token. Used when opening terms and
+     closing templates. *)
+  let pending_tokens = Queue.create () in
+  let push_token t = Queue.push t pending_tokens in
+
+  push_mode initial_mode;
 
   let rec token (lexbuf : Sedlexing.lexbuf) : token =
-    match Stack.pop_opt pending_tokens with
+    match Queue.take_opt pending_tokens with
     | Some token -> token
     | None -> begin
         match Stack.top_opt mode_stack with
@@ -50,7 +56,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | "--" -> line_comment lexbuf
     | "/-" -> block_comment lexbuf 0
     | '"' -> text lexbuf
-    | "$\"" ->  Stack.push Template mode_stack; OPEN_TEMPLATE
+    | "$\"" ->  push_mode Template; OPEN_TEMPLATE
     | dec_number -> INT (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
     | hex_number -> INT (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
     | "else" -> KEYWORD_ELSE
@@ -68,8 +74,8 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | ";" -> SEMI
     | '(' -> OPEN_PAREN
     | ')' -> CLOSE_PAREN
-    | '}' -> Stack.drop mode_stack; CLOSE_TERM
-    | eof -> Stack.drop mode_stack; END
+    | '}' -> pop_mode (); CLOSE_TERM
+    | eof -> pop_mode (); END
     | _ -> raise (Error `UnexpectedChar)
 
   and template_token (lexbuf : Sedlexing.lexbuf) : token =
@@ -88,14 +94,14 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
       | "$" -> begin
           match%sedlex lexbuf with
           | "{" ->
-              Stack.push Term mode_stack;
-              Stack.push OPEN_TERM pending_tokens;
+              push_mode Term;
+              push_token OPEN_TERM;
               TEMPLATE_TEXT (Buffer.contents buf)
           | _ -> raise (Error `UnexpectedChar)
       end
       | "\"" ->
-          Stack.drop mode_stack;
-          Stack.push CLOSE_TEMPLATE pending_tokens;
+          pop_mode ();
+          push_token CLOSE_TEMPLATE;
           TEMPLATE_TEXT (Buffer.contents buf)
       (* TODO: Markdown style elements
 
@@ -109,8 +115,8 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
         We could possibly defer this to elaboration time, however.
       *)
       | eof ->
-          Stack.drop mode_stack;
-          Stack.push END pending_tokens;
+          pop_mode ();
+          push_token END;
           TEMPLATE_TEXT (Buffer.contents buf)
       | any -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); go ()
       | _ -> raise (Error `UnexpectedChar)
