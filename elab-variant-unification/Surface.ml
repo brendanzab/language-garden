@@ -316,7 +316,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       PrimApp (prim, [tm]), IntType
 
 (** Elaborate a function literal, inferring its type. *)
-and elab_infer_fun_lit (context : context) (params : (binder * ty option) list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
+and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
   match params, body_ty with
   | [], Some body_ty ->
       let body_ty = elab_ty body_ty in
