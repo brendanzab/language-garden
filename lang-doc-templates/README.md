@@ -135,3 +135,11 @@ Configuration languages:
 - [TOML](https://toml.io/)
 - [HCL](https://github.com/hashicorp/hcl)
 - [Pkl](https://pkl-lang.org/)
+
+Type checking XML Papers:
+
+- [XDuce: A Statically Typed XML Processing Language](https://classes.cs.uoregon.edu/04W/cis607dsl/papers/xduce-toit.pdf)
+- [A typed representation for HTML and XML documents in Haskell](https://doi.org/10.1017/S0956796802004392 )
+- [Typing XHTML Web Applications in ML](https://elsman.com/pdf/padl2004.pdf)
+- [The Design Space of Type Checkers for XML Transformation Languages](https://www.cs.au.dk/~amoeller/papers/xmltypes/xmltypes.pdf)
+- [Many holes in Hindley-Milner](https://homepages.inf.ed.ac.uk/slindley/papers/many-holes-draft2008.pdf)
