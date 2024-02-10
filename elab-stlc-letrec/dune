@@ -1,0 +1,20 @@
+(executable
+  (name Main)
+  (public_name stlc-letrec)
+  (package elab-stlc-letrec)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    menhirLib))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(mdx
+  (package elab-stlc-letrec)
+  (deps %{bin:stlc-letrec}))
+
+(cram
+  (package elab-stlc-letrec)
+  (deps %{bin:stlc-letrec}))
