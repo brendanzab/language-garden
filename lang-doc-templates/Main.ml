@@ -54,7 +54,7 @@ let () =
       lexbuf
       |> Sedlexing.with_tokenizer lexer
       |> MenhirLib.Convert.Simplified.traditional2revised Parser.template_main
-      |> Surface.elab_template context
+      |> Surface.Elab.synth_template context
     with
     | Lexer.Error error ->
         let msg =
@@ -67,7 +67,7 @@ let () =
         print_error (Sedlexing.lexing_positions lexbuf) msg;
         exit 1
     | Parser.Error -> print_error (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
-    | Surface.Error (pos, msg) -> print_error pos msg; exit 1
+    | Surface.Elab.Error (pos, msg) -> print_error pos msg; exit 1
   in
 
   match Core.Semantics.eval env tm with
