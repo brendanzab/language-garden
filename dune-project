@@ -17,6 +17,7 @@
 (package (name elab-dependent-sugar))
 (package (name elab-stlc-abstract))
 (package (name elab-stlc-bidirectional))
+(package (name elab-stlc-letrec-unification))
 (package (name elab-stlc-unification))
 (package (name elab-variant-unification))
 (package (name elab-record-patching))
