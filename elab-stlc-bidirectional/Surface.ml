@@ -122,8 +122,9 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       BoolElim (head, tm0, tm1)
   | FunLit (params, body) ->
       elab_check_fun_lit context params body ty
+
+  (* Fall back to type inference *)
   | _ ->
-      (* Fall back to type inference *)
       let tm', ty' = elab_infer context tm in
       if ty = ty' then tm' else
         error tm.loc
@@ -180,22 +181,30 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
 (** Elaborate a function literal into a core term, given an expected type. *)
 and elab_check_fun_lit (context : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
   match params, ty with
+  (* No more parameters, so elaborate the body of the function literal. *)
   | [], ty ->
       elab_check context body ty
-  | (name, param_ty) :: params, FunType (param_ty', body_ty) ->
-      let param_ty = match param_ty with
-        | None -> param_ty'
-        | Some param_ty ->
-            let param_ty_loc = param_ty.loc in
-            let param_ty = elab_ty param_ty in
-            if param_ty = param_ty' then param_ty else
-              error param_ty_loc
-                (Format.asprintf "@[<v 2>@[mismatched parameter types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-                  Core.pp_ty param_ty'
-                  Core.pp_ty param_ty)
-      in
+
+  (* There’s no explicit parameter annotation, so pull it from the expected
+     function type. *)
+  | (name, None) :: params, FunType (param_ty, body_ty) ->
       let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
       FunLit (name.data, param_ty, body)
+
+  (* There’s an explicit parameter annotation, so make sure it matches the
+     expected function type. *)
+  | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
+      let param_ty_loc = param_ty.loc in
+      let param_ty = elab_ty param_ty in
+      if param_ty <> param_ty' then
+        error param_ty_loc
+          (Format.asprintf "@[<v 2>@[mismatched parameter types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+            Core.pp_ty param_ty'
+            Core.pp_ty param_ty);
+      let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
+      FunLit (name.data, param_ty, body)
+
+  (* We weren’t expecting a function type, so this parameter was unexpected *)
   | (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
 
@@ -207,10 +216,9 @@ and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty o
       elab_check context body body_ty, body_ty
   | [], None ->
       elab_infer context body
-  | (name, param_ty) :: params, body_ty ->
-      let param_ty = match param_ty with
-        | None -> error name.loc "ambiguous parameter type"
-        | Some ty -> elab_ty ty
-      in
+  | (name, None) :: _, _ ->
+      error name.loc "ambiguous parameter type"
+  | (name, Some param_ty) :: params, body_ty ->
+      let param_ty = elab_ty param_ty in
       let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
