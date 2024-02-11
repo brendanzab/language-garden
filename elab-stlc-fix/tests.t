@@ -68,6 +68,20 @@ Fix expressions: factorial
        fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
     n
 
+Fix expressions: tail recursive factorial
+  $ stlc-fix <<< "let fact := (fun fact acc n => if n = 0 then acc else fact (acc * n) (n - 1)); fix fact 1"
+  let fact : (Int -> Int -> Int) -> Int -> Int -> Int :=
+    fun (fact : Int -> Int -> Int) =>
+      fun (acc : Int) =>
+        fun (n : Int) => if n = 0 then acc else fact (acc * n) (n - 1);
+  fix fact 1 : Int -> Int
+  fun (n : Int) => if n = 0 then 1 else
+    fix
+    (fun (fact : Int -> Int -> Int) =>
+       fun (acc : Int) =>
+         fun (n : Int) => if n = 0 then acc else fact (acc * n) (n - 1))
+    (1 * n) (n - 1)
+
 Fix expressions: even/odd
   $ stlc-fix <<< "let evenodd := (fun evenodd b => if b then (fun n => if n = 0 then true else evenodd false (n - 1)) else (fun n => if n = 0 then false else evenodd true (n - 1))); fix evenodd true"
   let evenodd : (Bool -> Int -> Bool) -> Bool -> Int -> Bool :=
@@ -111,6 +125,78 @@ Fix expressions: even/odd
         (fun (n : Int) => if n = 0 then false else evenodd true (n - 1));
   fix evenodd true 2 : Bool
   true
+
+Fix expressions: ackermann
+  $ stlc-fix <<< "let ack ack m n := if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1 else ack (m - 1) (ack m (n - 1)); fix ack"
+  let ack : (Int -> Int -> Int) -> Int -> Int -> Int :=
+    fun (ack : Int -> Int -> Int) =>
+      fun (m : Int) =>
+        fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+          else ack (m - 1) (ack m (n - 1));
+  fix ack : Int -> Int -> Int
+  fix
+  (fun (ack : Int -> Int -> Int) =>
+     fun (m : Int) =>
+       fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+         else ack (m - 1) (ack m (n - 1)))
+
+
+  $ stlc-fix <<< "let ack ack m n := if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1 else ack (m - 1) (ack m (n - 1)); fix ack 0 1"
+  let ack : (Int -> Int -> Int) -> Int -> Int -> Int :=
+    fun (ack : Int -> Int -> Int) =>
+      fun (m : Int) =>
+        fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+          else ack (m - 1) (ack m (n - 1));
+  fix ack 0 1 : Int
+  2
+
+
+  $ stlc-fix <<< "let ack ack m n := if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1 else ack (m - 1) (ack m (n - 1)); fix ack 1 0"
+  let ack : (Int -> Int -> Int) -> Int -> Int -> Int :=
+    fun (ack : Int -> Int -> Int) =>
+      fun (m : Int) =>
+        fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+          else ack (m - 1) (ack m (n - 1));
+  fix ack 1 0 : Int
+  2
+
+
+  $ stlc-fix <<< "let ack ack m n := if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1 else ack (m - 1) (ack m (n - 1)); fix ack 0"
+  let ack : (Int -> Int -> Int) -> Int -> Int -> Int :=
+    fun (ack : Int -> Int -> Int) =>
+      fun (m : Int) =>
+        fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+          else ack (m - 1) (ack m (n - 1));
+  fix ack 0 : Int -> Int
+  fun (n : Int) => n + 1
+
+
+  $ stlc-fix <<< "let ack ack m n := if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1 else ack (m - 1) (ack m (n - 1)); fix ack 1"
+  let ack : (Int -> Int -> Int) -> Int -> Int -> Int :=
+    fun (ack : Int -> Int -> Int) =>
+      fun (m : Int) =>
+        fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+          else ack (m - 1) (ack m (n - 1));
+  fix ack 1 : Int -> Int
+  fun (n : Int) => if n = 0 then
+    fix
+    (fun (ack : Int -> Int -> Int) =>
+       fun (m : Int) =>
+         fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+           else ack (m - 1) (ack m (n - 1)))
+    0 1 else
+    fix
+    (fun (ack : Int -> Int -> Int) =>
+       fun (m : Int) =>
+         fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+           else ack (m - 1) (ack m (n - 1)))
+    0
+    (fix
+     (fun (ack : Int -> Int -> Int) =>
+        fun (m : Int) =>
+          fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+            else ack (m - 1) (ack m (n - 1)))
+     1 (n - 1))
 
 
 Lexer Errors
