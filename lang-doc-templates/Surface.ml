@@ -108,7 +108,8 @@ module Elab = struct
   (** Elaborate a surface term into a core term, synthesising its type. *)
   and synth (context : context) (tm : tm) : Core.tm * Core.ty =
     match tm.data with
-    | Name name -> Var name, List.assoc name context
+    | Name name ->
+        Var name, List.assoc name context
     | Let (name, params, def_body_ty, def_tm, body_tm) ->
         let def_tm, def_ty = fun_lit context params def_body_ty def_tm in
         let body_tm, body_ty = synth ((name.data, def_ty) :: context) body_tm in
@@ -122,8 +123,10 @@ module Elab = struct
         synth_template context template, TextTy
     | ListLit _ ->
         error tm.loc "ambiguous list literal"
-    | TextLit s -> TextLit s, TextTy
-    | IntLit n -> IntLit n, IntTy
+    | TextLit s ->
+        TextLit s, TextTy
+    | IntLit n ->
+        IntLit n, IntTy
     | App (head_tm, arg_tm) -> begin
         match synth context head_tm with
         | head_tm, FunTy (param_ty, body_ty) ->
@@ -145,20 +148,18 @@ module Elab = struct
         check context body body_ty, body_ty
     | [], None ->
         synth context body
-    | (name, param_ty) :: params, body_ty ->
-        let param_ty = match param_ty with
-          | None -> error name.loc "type annotations required in function parameters"
-          | Some ty -> check_ty ty
-        in
-        let body, body_ty =
-          fun_lit ((name.data, param_ty) :: context) params body_ty body
-        in
+    | (name, None) :: _, _ ->
+        error name.loc "type annotations required in function parameters"
+    | (name, Some param_ty) :: params, body_ty ->
+        let param_ty = check_ty param_ty in
+        let body, body_ty = fun_lit ((name.data, param_ty) :: context) params body_ty body in
         FunLit (name.data, param_ty, body), FunTy (param_ty, body_ty)
 
   (** Elaborate a list literal. *)
   and[@tail_mod_cons] check_list (context : context) (tms : tm list) (elem_ty : Core.ty) : Core.tm =
     match tms with
-    | [] -> Core.ListNil
+    | [] ->
+        Core.ListNil
     | tm :: tms ->
         let tm = check context tm elem_ty in
         Core.ListCons (tm, check_list context tms elem_ty)
