@@ -1,35 +1,72 @@
 Addition
   $ stlc-fix <<< "1 + 2"
   1 + 2 : Int
+  3
 
 Add two function
   $ stlc-fix <<< "fun x => x + 2"
   fun (x : Int) => x + 2 : Int -> Int
+  fun (x : Int) => x + 2
 
 Function application
   $ stlc-fix <<< "fun x f => f x * x"
   fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
+  fun (x : Int) => fun (f : Int -> Int) => f x * x
 
 Function application
   $ stlc-fix <<< "let f x := x; f 3"
   let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  3
 
 Explicit parameter type
   $ stlc-fix <<< "let f (x : Int) := x; f 3"
   let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  3
 
 Explicit return type
   $ stlc-fix <<< "let f (x : Int) : Int := x; f 3"
   let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  3
 
 Placeholder types
   $ stlc-fix <<< "let f (x : _) : _ := x; f 3"
   let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  3
 
 If expressions
   $ stlc-fix <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
+  fun (x : Int) => fun (y : Int) => if x = 0 then y else 3
 
+Fix expressions: factorial
+  $ stlc-fix <<< "let fact := (fun fact n => if n = 0 then 1 else n * fact (n - 1)); fix fact"
+  let fact : (Int -> Int) -> Int -> Int :=
+    fun (fact : Int -> Int) =>
+      fun (n : Int) => if n = 0 then 1 else n * fact (n - 1);
+  fix fact : Int -> Int
+  fix
+  (fun (fact : Int -> Int) =>
+     fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
+
+
+  $ stlc-fix <<< "let fact := (fun fact n => if n = 0 then 1 else n * fact (n - 1)); fix fact 5"
+  let fact : (Int -> Int) -> Int -> Int :=
+    fun (fact : Int -> Int) =>
+      fun (n : Int) => if n = 0 then 1 else n * fact (n - 1);
+  fix fact 5 : Int
+  120
+
+
+  $ stlc-fix <<< "let fact := (fun fact n => if n = 0 then 1 else n * fact (n - 1)); fun (n: Int) => fix fact n"
+  let fact : (Int -> Int) -> Int -> Int :=
+    fun (fact : Int -> Int) =>
+      fun (n : Int) => if n = 0 then 1 else n * fact (n - 1);
+  fun (n : Int) => fix fact n : Int -> Int
+  fun (n : Int) =>
+    fix
+    (fun (fact : Int -> Int) =>
+       fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
+    n
 
 Lexer Errors
 ------------

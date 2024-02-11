@@ -160,6 +160,11 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | Name name -> begin
       match lookup context name with
       | Some (index, ty) -> Var index, ty
+      | None when name = "fix" ->
+      (* fix: ((a -> b) -> a -> b) -> a -> b *)
+        let loc = tm.loc in
+        let (a, b) = (fresh_meta loc `FunParam, fresh_meta loc `FunParam) in
+        (Prim `Fix), FunType(FunType(FunType(a, b), FunType(a, b)), FunType(a, b))
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
   end
   | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -196,14 +201,14 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | Op2 ((`Eq) as prim, tm0, tm1) ->
       let tm0 = elab_check context tm0 IntType in
       let tm1 = elab_check context tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), BoolType
+      FunApp(FunApp (Prim prim, tm0), tm1), BoolType
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
       let tm0 = elab_check context tm0 IntType in
       let tm1 = elab_check context tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), IntType
+      FunApp(FunApp (Prim prim, tm0), tm1), IntType
   | Op1 ((`Neg) as prim, tm) ->
       let tm = elab_check context tm IntType in
-      PrimApp (prim, [tm]), IntType
+      FunApp (Prim prim, tm), IntType
 
 (** Elaborate a function literal, inferring its type. *)
 and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =

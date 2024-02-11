@@ -46,9 +46,13 @@ let () =
 
   match Surface.unsolved_metas () with
   | [] ->
+      let tm = (Core.zonk_tm tm) in
+      let ty = (Core.zonk_ty ty) in
       Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-        (Core.pp_tm []) (Core.zonk_tm tm)
-        Core.pp_ty (Core.zonk_ty ty)
+        (Core.pp_tm []) tm
+        Core.pp_ty ty;
+      let tm = Core.Semantics.normalise [] tm in
+      Format.printf "%a\n" (Core.pp_tm []) tm;
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
         | (pos, `FunParam) -> print_error pos "ambiguous function parameter type"
