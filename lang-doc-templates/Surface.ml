@@ -29,13 +29,13 @@ and tm_data =
   | Name of string
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
-  | Add of tm * tm
-  | Template of template
   | IfThenElse of tm * tm * tm
-  | App of tm * tm
+  | TemplateLit of template
   | ListLit of tm list
   | TextLit of string
   | IntLit of int
+  | App of tm * tm
+  | Op2 of [`Add] * tm * tm
 
 (** Templates *)
 and template =
@@ -77,10 +77,9 @@ let error (loc : loc) (message : string) : 'a =
 let rec elab_ty (ty : ty) : Core.ty =
   match ty.data with
   | Name ("List", [ty]) -> ListTy (elab_ty ty)
-  | Name ("Text", []) -> TextTy (* fix arity errors *)
-  | Name ("Bool", []) -> BoolTy (* fix arity errors *)
-  | Name ("Int", []) -> IntTy (* fix arity errors *)
-  (* TODO: App ("List", [ty]) *)
+  | Name ("Text", []) -> TextTy (* TODO: improve arity errors *)
+  | Name ("Bool", []) -> BoolTy (* TODO: improve arity errors *)
+  | Name ("Int", []) -> IntTy (* TODO: improve arity errors *)
   | Name (name, _) ->
       error ty.loc (Format.asprintf "unbound type `%s`" name)
   | FunTy (ty1, ty2) ->
@@ -95,14 +94,10 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
         elab_check context tm2 ty,
         elab_check context tm3 ty)
   | ListLit tms ->
-      let elem_ty =
-        match ty with
-        | ListTy ty -> ty
-        | _ -> error tm.loc "unexpected list literal"
-      in
-      tms |> List.fold_left
-        (fun tms tm -> Core.ListCons (elab_check context tm elem_ty, tms))
-        Core.ListNil
+      elab_check_list context tms
+        (match ty with
+          | ListTy ty -> ty
+          | _ -> error tm.loc "unexpected list literal")
   | _ ->
       let tm', ty' = elab_synth context tm in
       if ty = ty' then tm' else
@@ -119,11 +114,14 @@ and elab_synth (context : context) (tm : tm) : Core.tm * Core.ty =
   | Ann (tm, ty) ->
       let ty = elab_ty ty in
       elab_check context tm ty, ty
-  | Template template -> elab_template context template, TextTy
-  | Add (tm1, tm2) ->
-      TextConcat (elab_check context tm1 TextTy, elab_check context tm2 TextTy), TextTy
   | IfThenElse (_, _, _) ->
       error tm.loc "ambiguous if expression"
+  | TemplateLit template ->
+      elab_template context template, TextTy
+  | ListLit _ ->
+      error tm.loc "ambiguous list literal"
+  | TextLit s -> TextLit s, TextTy
+  | IntLit n -> IntLit n, IntTy
   | App (head_tm, arg_tm) -> begin
       match elab_synth context head_tm with
       | head_tm, FunTy (param_ty, body_ty) ->
@@ -132,13 +130,13 @@ and elab_synth (context : context) (tm : tm) : Core.tm * Core.ty =
       | _ ->
           error head_tm.loc "function expected"
   end
-  | ListLit _ ->
-      error tm.loc "ambiguous list literal"
-  | TextLit s -> TextLit s, TextTy
-  | IntLit n -> IntLit n, IntTy
+  | Op2 (`Add, tm1, tm2) ->
+      let tm1 = elab_check context tm1 TextTy in
+      let tm2 = elab_check context tm2 TextTy in
+      TextConcat (tm1, tm2), TextTy
 
 (** Elaborate a function literal, inferring its type. *)
-and elab_synth_fun_lit (context : context) (params : (binder * ty option) list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
+and elab_synth_fun_lit (context : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
   match params, body_ty with
   | [], Some body_ty ->
       let body_ty = elab_ty body_ty in
@@ -150,8 +148,18 @@ and elab_synth_fun_lit (context : context) (params : (binder * ty option) list) 
         | None -> error name.loc "type annotations required in function parameters"
         | Some ty -> elab_ty ty
       in
-      let body, body_ty = elab_synth_fun_lit ((name.data, param_ty) :: context) params body_ty body in
+      let body, body_ty =
+        elab_synth_fun_lit ((name.data, param_ty) :: context) params body_ty body
+      in
       FunLit (name.data, param_ty, body), FunTy (param_ty, body_ty)
+
+(** Elaborate a list literal. *)
+and[@tail_mod_cons] elab_check_list (context : context) (tms : tm list) (elem_ty : Core.ty) : Core.tm =
+  match tms with
+  | [] -> Core.ListNil
+  | tm :: tms ->
+      let tm = elab_check context tm elem_ty in
+      Core.ListCons (tm, elab_check_list context tms elem_ty)
 
 (** Elaborate a template into a series of concatened terms. *)
 and[@tail_mod_cons] elab_template (context : context) (template : template) : Core.tm =

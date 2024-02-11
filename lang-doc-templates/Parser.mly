@@ -69,7 +69,7 @@ let tm :=
 
 let add_tm :=
 | tm1 = located(atomic_tm); "+"; tm2 = located(add_tm);
-    { Surface.Add (tm1, tm2) }
+    { Surface.Op2 (`Add, tm1, tm2) }
 | app_tm
 
 let app_tm :=
@@ -79,7 +79,7 @@ let app_tm :=
 
 let atomic_tm :=
 | OPEN_TEMPLATE; t = template; CLOSE_TEMPLATE;
-    { Surface.Template t }
+    { Surface.TemplateLit t }
 | "("; tm = tm; ")";
     { tm }
 | "["; tms = trailing_list(",", located(tm));  "]";
