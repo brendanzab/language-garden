@@ -1,25 +1,22 @@
-# Simply typed lambda calculus with unification
+# Simply typed lambda calculus with fixpoint
 
 This an elaborator for a simply typed lambda calculus (with booleans and integers)
-that allows programmers to omit type annotations. This is done by inserting
-_metavariables_ that stand-in for unknown types during elaboration. These are
-later updated based on how they are used in other parts of the program.
+enriched with fixpoints for general recursion.
 
-This approach is a stepping-stone to more powerful type checking algorithms,
-such as those for Hindley-Milner type systems. Note that it’s not a highly
-optimised implementation – the goal here is clarity.
-
-This implementation was originally based on [Arad Arbel’s gist](https://gist.github.com/aradarbel10/837aa65d2f06ac6710c6fbe479909b4c).
+This is done by adding a `fix` primitive with typing rule
+`fix : ((a -> b) -> a -> b) -> a -> b`
+and reduction rule
+`fix f x = f (fix f) x`
 
 ## Project overview
 
-| Module        | Description                             |
-| ------------- | --------------------------------------- |
-| [`Main`]      | Command line interface                  |
-| [`Lexer`]     | Lexer for the surface language          |
-| [`Parser`]    | Parser for the surface language         |
-| [`Surface`]   | Surface language, including elaboration |
-| [`Core`]      | Core language, including normalisation, unification, and pretty printing |
+| Module      | Description                                                              |
+| ----------- | ------------------------------------------------------------------------ |
+| [`Main`]    | Command line interface                                                   |
+| [`Lexer`]   | Lexer for the surface language                                           |
+| [`Parser`]  | Parser for the surface language                                          |
+| [`Surface`] | Surface language, including elaboration                                  |
+| [`Core`]    | Core language, including normalisation, unification, and pretty printing |
 
 [`Main`]: ./Main.ml
 [`Lexer`]: ./Lexer.mll
