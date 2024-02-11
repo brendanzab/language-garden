@@ -57,61 +57,78 @@ type prim = [
   | `Sub  (** [Int -> Int -> Int] *)
   | `Mul  (** [Int -> Int -> Int] *)
   | `Neg  (** [Int -> Int] *)
+  | `Fix  (** [((a -> b) -> a -> b) -> a -> b]*)
 ]
+
+let string_of_prim prim: string =
+  match prim with
+  | `Eq -> "eq"
+  | `Add -> "add"
+  | `Sub -> "sub"
+  | `Mul -> "mul"
+  | `Neg -> "neg"
+  | `Fix -> "fix"
 
 (** Term syntax *)
 type tm =
   | Var of index
+  | Prim of prim
   | Let of name * ty * tm * tm
   | BoolLit of bool
   | BoolElim of tm * tm * tm
   | IntLit of int
   | FunLit of name * ty * tm
   | FunApp of tm * tm
-  | PrimApp of prim * tm list
-
 
 module Semantics = struct
 
   (** {1 Values} *)
 
   type vtm =
-    | Neu of ntm
+    | Neu of {head: head; spine: elim list}
     | BoolLit of bool
     | IntLit of int
     | FunLit of name * ty * (vtm -> vtm)
 
-  and ntm =
+  and head =
     | Var of level
-    | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
-    | FunApp of ntm * vtm
-    | PrimApp of prim * vtm list
+    | Prim of prim
 
+  and elim =
+    | FunArg of vtm
+    | BoolElim of vtm Lazy.t * vtm Lazy.t
+
+  let is_canonical vtm = match vtm with
+    | Neu _ -> false
+    | _ -> true
 
   (** {1 Eliminators} *)
 
   let bool_elim head vtm0 vtm1 =
     match head with
-    | Neu ntm -> Neu (BoolElim (ntm, vtm0, vtm1))
+    | Neu {head; spine} -> Neu { head; spine = (spine @ [BoolElim(vtm0, vtm1)]) }
     | BoolLit true -> Lazy.force vtm0
     | BoolLit false -> Lazy.force vtm1
     | _ -> invalid_arg "expected boolean"
 
-  let prim_app prim args =
-    match prim, args with
-    | `Eq, [IntLit t1; IntLit t2] -> BoolLit (t1 = t2)
-    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
-    | `Neg, [IntLit t1] -> IntLit (-t1)
-    | prim, args -> Neu (PrimApp (prim, args))
-
-  let fun_app head arg =
-    match head with
-    | Neu ntm -> Neu (FunApp (ntm, arg))
+  let rec fun_app head arg = match head with
     | FunLit (_, _, body) -> body arg
+    | Neu {head; spine} -> begin match (head, spine @ [FunArg(arg)]) with
+      | (Prim `Eq, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> BoolLit (t1 = t2)
+      | (Prim `Add, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 + t2)
+      | (Prim `Sub, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 - t2)
+      | (Prim `Mul, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 * t2)
+      | (Prim `Neg, [FunArg(IntLit t1)]) -> IntLit (-t1)
+      | (Prim `Fix, [FunArg(f); FunArg(x)]) when (is_canonical x) ->
+        (* fix f x = f (fix f) x *)
+        let fix = Neu {head=Prim(`Fix); spine = []} in
+        let fixf = fun_app fix f in
+        let ffixf = fun_app f fixf in
+        let ffixfx = fun_app ffixf x in
+        ffixfx
+      | (head, spine) -> Neu { head; spine }
+      end
     | _ -> invalid_arg "expected function"
-
 
   (** {1 Evaluation} *)
 
@@ -119,6 +136,7 @@ module Semantics = struct
   let rec eval (env : vtm env) (tm : tm) : vtm =
     match tm with
     | Var index -> List.nth env index
+    | Prim (prim) -> (Neu {head = Prim(prim); spine = []})
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
@@ -129,8 +147,6 @@ module Semantics = struct
         let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
         bool_elim head vtm0 vtm1
     | IntLit i -> IntLit i
-    | PrimApp (prim, args) ->
-        prim_app prim (List.map (eval env) args)
     | FunLit (name, param_ty, body) ->
         FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
     | FunApp (head, arg) ->
@@ -144,22 +160,22 @@ module Semantics = struct
   (** Convert terms from the semantic domain back into syntax. *)
   let rec quote (size : int) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_neu size ntm
+    | Neu { head; spine } ->
+      let head = quote_head size head in
+      ListLabels.fold_left ~init:head ~f:(fun head elim -> match elim with
+        | FunArg arg -> FunApp (head, quote size arg)
+        | BoolElim (vtm0, vtm1) -> BoolElim (head, quote size (Lazy.force vtm0), quote size (Lazy.force vtm1))
+      ) spine
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
+        let body = quote (size + 1) (body (Neu {head=(Var size); spine=[]})) in
         FunLit (name, param_ty, body)
 
-  and quote_neu (size : int) (ntm : ntm) : tm =
-    match ntm with
+  and quote_head (size : int) (head : head) : tm =
+    match head with
     | Var level -> Var (level_to_index size level)
-    | BoolElim (head, vtm0, vtm1) ->
-        let tm0 = quote size (Lazy.force vtm0) in
-        let tm1 = quote size (Lazy.force vtm1) in
-        BoolElim (quote_neu size head, tm0, tm1)
-    | FunApp (head, arg) -> FunApp (quote_neu size head, quote size arg)
-    | PrimApp (prim, args) -> PrimApp (prim, List.map (quote size) args)
+    | Prim prim -> Prim prim
 
   (** {1 Normalisation} *)
 
@@ -259,14 +275,13 @@ let rec zonk_ty (ty : ty) : ty =
 let rec zonk_tm (tm : tm) : tm =
   match tm with
   | Var index -> Var index
+  | Prim prim -> Prim prim
   | Let (name, def_ty, def, body) ->
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
   | BoolLit b -> BoolLit b
   | BoolElim (head, tm0, tm1) ->
       BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
   | IntLit i -> IntLit i
-  | PrimApp (prim, args) ->
-      PrimApp (prim, List.map zonk_tm args)
   | FunLit (name, param_ty, body) ->
       FunLit (name, zonk_ty param_ty, zonk_tm body)
   | FunApp (head, arg) ->
@@ -329,7 +344,7 @@ and pp_if_tm names fmt tm =
       pp_eq_tm names fmt tm
 and pp_eq_tm names fmt tm =
   match tm with
-  | PrimApp (`Eq, [arg1; arg2]) ->
+  | FunApp (FunApp (Prim `Eq, arg1), arg2) ->
       Format.fprintf fmt "@[%a@ =@ %a@]"
         (pp_add_tm names) arg1
         (pp_eq_tm names) arg2
@@ -337,11 +352,11 @@ and pp_eq_tm names fmt tm =
       pp_add_tm names fmt tm
 and pp_add_tm names fmt tm =
   match tm with
-  | PrimApp (`Add, [arg1; arg2]) ->
+  | FunApp (FunApp (Prim `Add, arg1), arg2) ->
       Format.fprintf fmt "@[%a@ +@ %a@]"
         (pp_mul_tm names) arg1
         (pp_add_tm names) arg2
-  | PrimApp (`Sub, [arg1; arg2]) ->
+  | FunApp (FunApp (Prim `Sub, arg1), arg2) ->
       Format.fprintf fmt "@[%a@ -@ %a@]"
         (pp_mul_tm names) arg1
         (pp_add_tm names) arg2
@@ -349,7 +364,7 @@ and pp_add_tm names fmt tm =
       pp_mul_tm names fmt tm
 and pp_mul_tm names fmt tm =
   match tm with
-  | PrimApp (`Mul, [arg1; arg2]) ->
+  | FunApp (FunApp (Prim `Mul, arg1), arg2) ->
       Format.fprintf fmt "@[%a@ *@ %a@]"
         (pp_app_tm names) arg1
         (pp_mul_tm names) arg2
@@ -357,18 +372,19 @@ and pp_mul_tm names fmt tm =
       pp_app_tm names fmt tm
 and pp_app_tm names fmt tm =
   match tm with
+  | FunApp (Prim `Neg, arg) ->
+      Format.fprintf fmt "@[-%a@]"
+        (pp_atomic_tm names) arg
   | FunApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
-        (pp_atomic_tm names) arg
-  | PrimApp (`Neg, [arg]) ->
-      Format.fprintf fmt "@[-%a@]"
         (pp_atomic_tm names) arg
   | tm ->
       pp_atomic_tm names fmt tm
 and pp_atomic_tm names fmt tm =
   match tm with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
+  | Prim prim -> Format.fprintf fmt "%s" (string_of_prim prim)
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i
