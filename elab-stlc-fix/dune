@@ -1,0 +1,19 @@
+(executable
+ (name Main)
+ (public_name stlc-fix)
+ (package elab-stlc-fix)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries menhirLib))
+
+(menhir
+ (modules Parser)
+ (flags --explain --strict))
+
+(mdx
+ (package elab-stlc-fix)
+ (deps %{bin:stlc-fix}))
+
+(cram
+ (package elab-stlc-fix)
+ (deps %{bin:stlc-fix}))
