@@ -88,7 +88,9 @@ module Semantics = struct
     | Neu of {head: head; spine: elim list}
     | BoolLit of bool
     | IntLit of int
-    | FunLit of name * ty * (vtm -> vtm)
+    | FunLit of { name: name; param_ty: ty; closure: closure }
+
+  and closure = { env: vtm env; body: tm }
 
   and head =
     | Var of level
@@ -98,9 +100,9 @@ module Semantics = struct
     | FunArg of vtm
     | BoolElim of vtm Lazy.t * vtm Lazy.t
 
-  let is_canonical vtm = match vtm with
-    | Neu _ -> false
-    | _ -> true
+  type eval_opts = {
+    unfold_fix: bool
+  }
 
   (** {1 Eliminators} *)
 
@@ -111,48 +113,51 @@ module Semantics = struct
     | BoolLit false -> Lazy.force vtm1
     | _ -> invalid_arg "expected boolean"
 
-  let rec fun_app head arg = match head with
-    | FunLit (_, _, body) -> body arg
+  let rec fun_app opts head arg = match head with
+    | FunLit {closure; _} -> apply_closure opts closure arg
     | Neu {head; spine} -> begin match (head, spine @ [FunArg(arg)]) with
       | (Prim `Eq, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> BoolLit (t1 = t2)
       | (Prim `Add, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 + t2)
       | (Prim `Sub, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 - t2)
       | (Prim `Mul, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 * t2)
       | (Prim `Neg, [FunArg(IntLit t1)]) -> IntLit (-t1)
-      | (Prim `Fix, [FunArg(f); FunArg(x)]) when (is_canonical x) ->
+      | (Prim `Fix, [FunArg(f); FunArg(x)]) when opts.unfold_fix ->
         (* fix f x = f (fix f) x *)
         let fix = Neu {head=Prim(`Fix); spine = []} in
-        let fixf = fun_app fix f in
-        let ffixf = fun_app f fixf in
-        let ffixfx = fun_app ffixf x in
+        let fixf = fun_app opts fix f in
+        let ffixf = fun_app opts f fixf in
+        let ffixfx = fun_app opts ffixf x in
         ffixfx
       | (head, spine) -> Neu { head; spine }
       end
     | _ -> invalid_arg "expected function"
 
+  and apply_closure (opts: eval_opts) (closure: closure) (arg:vtm) =
+    let env = arg :: closure.env in
+    eval opts env closure.body
+
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) (tm : tm) : vtm =
+  and eval (opts: eval_opts) (env : vtm env) (tm : tm) : vtm =
     match tm with
     | Var index -> List.nth env index
     | Prim (prim) -> (Neu {head = Prim(prim); spine = []})
     | Let (_, _, def, body) ->
-        let def = eval env def in
-        eval (def :: env) body
+        let def = eval opts env def in
+        eval opts (def :: env) body
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
-        let head = eval env head in
-        let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
-        let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
+        let head = eval opts env head in
+        let vtm0 = Lazy.from_fun (fun () -> eval opts env tm0) in
+        let vtm1 = Lazy.from_fun (fun () -> eval opts env tm1) in
         bool_elim head vtm0 vtm1
     | IntLit i -> IntLit i
-    | FunLit (name, param_ty, body) ->
-        FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
+    | FunLit (name, param_ty, body) -> FunLit {name; param_ty; closure = {env; body}}
     | FunApp (head, arg) ->
-        let head = eval env head in
-        let arg = eval env arg in
-        fun_app head arg
+        let head = eval opts env head in
+        let arg = eval opts env arg in
+        fun_app opts head arg
 
 
   (** {1 Quotation} *)
@@ -168,8 +173,11 @@ module Semantics = struct
       ) spine
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
-    | FunLit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu {head=(Var size); spine=[]})) in
+    | FunLit {name; param_ty; closure} ->
+        let opts = { unfold_fix=false } in
+        let arg = Neu {head=(Var size); spine=[]} in
+        let body = apply_closure opts closure arg in
+        let body = quote (size + 1) body in
         FunLit (name, param_ty, body)
 
   and quote_head (size : int) (head : head) : tm =
@@ -182,7 +190,8 @@ module Semantics = struct
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
   let normalise (env : vtm list) (tm : tm) : tm =
-    quote (List.length env) (eval env tm)
+    let opts = { unfold_fix = true } in
+    quote (List.length env) (eval opts env tm)
 
 end
 

@@ -68,6 +68,51 @@ Fix expressions: factorial
        fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
     n
 
+Fix expressions: even/odd
+  $ stlc-fix <<< "let evenodd := (fun evenodd b => if b then (fun n => if n = 0 then true else evenodd false (n - 1)) else (fun n => if n = 0 then false else evenodd true (n - 1))); fix evenodd true"
+  let evenodd : (Bool -> Int -> Bool) -> Bool -> Int -> Bool :=
+    fun (evenodd : Bool -> Int -> Bool) =>
+      fun (b : Bool) => if b then
+        (fun (n : Int) => if n = 0 then true else evenodd false (n - 1)) else
+        (fun (n : Int) => if n = 0 then false else evenodd true (n - 1));
+  fix evenodd true : Int -> Bool
+  fun (n : Int) => if n = 0 then true else
+    fix
+    (fun (evenodd : Bool -> Int -> Bool) =>
+       fun (b : Bool) => if b then
+         (fun (n : Int) => if n = 0 then true else evenodd false (n - 1)) else
+         (fun (n : Int) => if n = 0 then false else evenodd true (n - 1)))
+    false (n - 1)
+
+
+  $ stlc-fix <<< "let evenodd := (fun evenodd b => if b then (fun n => if n = 0 then true else evenodd false (n - 1)) else (fun n => if n = 0 then false else evenodd true (n - 1))); fix evenodd true 0"
+  let evenodd : (Bool -> Int -> Bool) -> Bool -> Int -> Bool :=
+    fun (evenodd : Bool -> Int -> Bool) =>
+      fun (b : Bool) => if b then
+        (fun (n : Int) => if n = 0 then true else evenodd false (n - 1)) else
+        (fun (n : Int) => if n = 0 then false else evenodd true (n - 1));
+  fix evenodd true 0 : Bool
+  true
+
+  $ stlc-fix <<< "let evenodd := (fun evenodd b => if b then (fun n => if n = 0 then true else evenodd false (n - 1)) else (fun n => if n = 0 then false else evenodd true (n - 1))); fix evenodd true 1"
+  let evenodd : (Bool -> Int -> Bool) -> Bool -> Int -> Bool :=
+    fun (evenodd : Bool -> Int -> Bool) =>
+      fun (b : Bool) => if b then
+        (fun (n : Int) => if n = 0 then true else evenodd false (n - 1)) else
+        (fun (n : Int) => if n = 0 then false else evenodd true (n - 1));
+  fix evenodd true 1 : Bool
+  false
+
+  $ stlc-fix <<< "let evenodd := (fun evenodd b => if b then (fun n => if n = 0 then true else evenodd false (n - 1)) else (fun n => if n = 0 then false else evenodd true (n - 1))); fix evenodd true 2"
+  let evenodd : (Bool -> Int -> Bool) -> Bool -> Int -> Bool :=
+    fun (evenodd : Bool -> Int -> Bool) =>
+      fun (b : Bool) => if b then
+        (fun (n : Int) => if n = 0 then true else evenodd false (n - 1)) else
+        (fun (n : Int) => if n = 0 then false else evenodd true (n - 1));
+  fix evenodd true 2 : Bool
+  true
+
+
 Lexer Errors
 ------------
 
