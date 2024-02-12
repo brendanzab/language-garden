@@ -9,34 +9,28 @@ let print_error (start, _ : Surface.loc) message =
     (start.pos_cnum - start.pos_bol)
     message
 
+let parse_tm (filename : string) (input : in_channel) : Surface.tm =
+  let lexbuf = Sedlexing.Utf8.from_channel input in
+  Sedlexing.set_filename lexbuf filename;
 
-(** {1 Main entrypoint} *)
+  try
+    lexbuf
+    |> Sedlexing.with_tokenizer Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
+  with
+  | Lexer.Error error ->
+      let msg =
+        match error with
+        | `UnexpectedChar -> "unexpected character"
+        | `UnclosedBlockComment -> "unclosed block comment"
+      in
+      print_error (Sedlexing.lexing_positions lexbuf) msg;
+      exit 1
+  | Parser.Error ->
+      print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
+      exit 1
 
-let () =
-  Printexc.record_backtrace true;
-
-  let tm =
-    let lexbuf = Sedlexing.Utf8.from_channel stdin in
-    Sedlexing.set_filename lexbuf "<input>";
-
-    try
-      lexbuf
-      |> Sedlexing.with_tokenizer Lexer.token
-      |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
-    with
-    | Lexer.Error error ->
-        let msg =
-          match error with
-          | `UnexpectedChar -> "unexpected character"
-          | `UnclosedBlockComment -> "unclosed block comment"
-        in
-        print_error (Sedlexing.lexing_positions lexbuf) msg;
-        exit 1
-    | Parser.Error ->
-        print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
-        exit 1
-  in
-
+let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
   let tm, ty =
     try Surface.elab_infer [] tm with
     | Surface.Error (pos, msg) ->
@@ -46,9 +40,8 @@ let () =
 
   match Surface.unsolved_metas () with
   | [] ->
-      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-        (Core.pp_tm []) (Core.zonk_tm tm)
-        Core.pp_ty (Core.zonk_ty ty)
+      Core.zonk_tm tm,
+      Core.zonk_ty ty
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
         | (pos, `FunParam) -> print_error pos "ambiguous function parameter type"
@@ -59,3 +52,16 @@ let () =
         | (pos, `IfBranches) -> print_error pos "ambiguous if expression branches"
         | (pos, `Placeholder) -> print_error pos "unsolved placeholder");
       exit 1
+
+
+(** {1 Main entrypoint} *)
+
+let () =
+  Printexc.record_backtrace true;
+
+  let tm = parse_tm "<input>" stdin in
+  let tm, ty = elab_tm tm in
+
+  Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
+    (Core.pp_tm []) tm
+    Core.pp_ty ty
