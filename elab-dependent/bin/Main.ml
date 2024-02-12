@@ -80,7 +80,7 @@ let cmd =
   Cmd.group (Cmd.info "dependent") [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
       Term.(const elab_cmd $ no_resugar);
-    Cmd.v (Cmd.info "norm" ~doc:"elaborate a term from standard input")
+    Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")
       Term.(const norm_cmd $ no_resugar);
   ]
 
