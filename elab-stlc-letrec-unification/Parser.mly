@@ -7,6 +7,7 @@
 %token KEYWORD_LET "let"
 %token KEYWORD_THEN "then"
 %token KEYWORD_TRUE "true"
+%token KEYWORD_REC "rec"
 %token ADD "+"
 %token ASTERISK "*"
 %token COLON ":"
@@ -59,6 +60,9 @@ let tm :=
 | "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
     tm0 = located(tm); ";"; tm1 = located(tm);
     { Surface.Let (n, ps, ty, tm0, tm1) }
+| "let"; "rec"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
+    tm0 = located(tm); ";"; tm1 = located(tm);
+    { Surface.LetRec (n, ps, ty, tm0, tm1) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
     { Surface.FunLit (ps, t) }
 | "if"; tm0 = located(eq_tm); "then"; tm1 = located(tm); "else"; tm2 = located(tm);

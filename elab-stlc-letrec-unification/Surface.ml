@@ -36,6 +36,7 @@ type tm =
 and tm_data =
   | Name of string
   | Let of binder * param list * ty option * tm * tm
+  | LetRec of binder * param list * ty option * tm * tm
   | Ann of tm * ty
   | BoolLit of bool
   | IfThenElse of tm * tm * tm
@@ -162,10 +163,36 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       | Some (index, ty) -> Var index, ty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
   end
-  | Let (def_name, params, def_body_ty, def_body, body) ->
-      let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
+  | Let (def_name, params, def_ty, def, body) ->
+      let def, def_ty = elab_infer_fun_lit context params def_ty def in
       let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
+
+  | LetRec (def_name, params, def_ty, def, body) ->
+      (* Creates a fresh function type for the definition. *)
+      let rec fresh_fun_ty context loc params body_ty =
+        match params, body_ty with
+        | [], Some body_ty -> elab_ty body_ty
+        | [], None -> fresh_meta loc `FunBody
+        | (name, _) :: params, body_ty ->
+            let param_ty = fresh_meta name.loc `FunParam in
+            FunType (param_ty, fresh_fun_ty ((name.data, param_ty) :: context) loc params body_ty)
+      in
+
+      (* Elaborate the definition to a fixed-point combinator *)
+      let def_ty = fresh_fun_ty context def_name.loc params def_ty in
+      let def_body =
+        match elab_check_fun_lit ((def_name.data, def_ty) :: context) params def def_ty with
+        | FunLit _ as def_body -> def_body
+        | _ -> error tm.loc "expected function literal in recursive let binding"
+      in
+      let def = Core.Fix (def_name.data, def_ty, def_body) in
+
+      (* Elaborate the body of the let just like in the non-recursive case. *)
+      let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
+
+      Let (def_name.data, def_ty, def, body), body_ty
+
   | Ann (tm, ty) ->
       let ty = elab_ty ty in
       elab_check context tm ty, ty
@@ -204,6 +231,32 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | Op1 ((`Neg) as prim, tm) ->
       let tm = elab_check context tm IntType in
       PrimApp (prim, [tm]), IntType
+
+(** Elaborate a function literal into a core term, given an expected type. *)
+and elab_check_fun_lit (context : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
+  match params, ty with
+  (* No more parameters, so elaborate the body of the function literal. *)
+  | [], ty ->
+      elab_check context body ty
+
+  (* There’s no explicit parameter annotation, so pull it from the expected
+     function type. *)
+  | (name, None) :: params, FunType (param_ty, body_ty) ->
+      let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
+      FunLit (name.data, param_ty, body)
+
+  (* There’s an explicit parameter annotation, so make sure it matches the
+     expected function type. *)
+  | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
+      let param_ty_loc = param_ty.loc in
+      let param_ty = elab_ty param_ty in
+      unify param_ty_loc param_ty param_ty';
+      let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
+      FunLit (name.data, param_ty, body)
+
+  (* We weren’t expecting a function type, so this parameter was unexpected *)
+  | (name, _) :: _, _ ->
+      error name.loc "unexpected parameter"
 
 (** Elaborate a function literal, inferring its type. *)
 and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =

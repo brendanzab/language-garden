@@ -1,15 +1,15 @@
-# Simply typed lambda calculus with unification
+# Simply typed lambda calculus with recursive let bindings
 
-This an elaborator for a simply typed lambda calculus (with booleans and integers)
-that allows programmers to omit type annotations. This is done by inserting
-_metavariables_ that stand-in for unknown types during elaboration. These are
-later updated based on how they are used in other parts of the program.
+Extends [**elab-stlc-unification**](../elab-stlc-unification).
 
-This approach is a stepping-stone to more powerful type checking algorithms,
-such as those for Hindley-Milner type systems. Note that it’s not a highly
-optimised implementation – the goal here is clarity.
+This is an implementation of recursive let bindings for the simply typed lambda
+calculus. These are elaborated to applications of a primitive fixed-point
+combinator in the core language.
 
-This implementation was originally based on [Arad Arbel’s gist](https://gist.github.com/aradarbel10/837aa65d2f06ac6710c6fbe479909b4c).
+Mutual recursion sill needs to be implemented.
+
+Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in trying out
+different approaches when implementing this.
 
 ## Project overview
 
@@ -27,21 +27,33 @@ This implementation was originally based on [Arad Arbel’s gist](https://gist.g
 [`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml
 
+## Resources
+
+- [Many faces of the fixed-point combinator](https://okmij.org/ftp/Computation/fixed-point-combinators.html)
+  by Oleg Kiselyov
+- [A simple type-theoretic language: Mini-TT](https://web.archive.org/web/20220208175952/https://www.cse.chalmers.se/~bengt/papers/GKminiTT.pdf)
+  by Thierry Coquand et. al.
+- [Fixed-point combinator](https://en.wikipedia.org/wiki/Fixed-point_combinator) on Wikipedia
+- [Mutual recursion](https://en.wikipedia.org/wiki/Mutual_recursion) on Wikipedia
+
 ## Examples
 
-```sh
-$ stlc-letrec-unification elab <<< "fun x => x + 2"
-fun (x : Int) => x + 2 : Int -> Int
+<!-- $MDX file=examples/readme.txt -->
+```
+let rec fact n :=
+  if n = 0 then 1 else n * fact (n - 1);
+
+fact 5
 ```
 
-```sh
-$ stlc-letrec-unification elab <<< "fun x f => f x * x"
-fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
-```
+Elaborated program:
 
-```sh
-$ stlc-letrec-unification elab <<< "fun x y => if x = 0 then y else 3"
-fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
+<!-- $MDX file=examples/readme.stdout -->
+```
+let fact : Int -> Int :=
+  #fix (fact : Int -> Int) =>
+    fun (n : Int) => if n = 0 then 1 else n * fact (n - 1);
+fact 5 : Int
 ```
 
 More examples can be found in [`tests.t`](tests.t).

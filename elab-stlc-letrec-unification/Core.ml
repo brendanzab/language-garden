@@ -63,6 +63,7 @@ type prim = [
 type tm =
   | Var of index
   | Let of name * ty * tm * tm
+  | Fix of name * ty * tm
   | BoolLit of bool
   | BoolElim of tm * tm * tm
   | IntLit of int
@@ -86,6 +87,10 @@ module Semantics = struct
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | FunApp of ntm * vtm
     | PrimApp of prim * vtm list
+
+  type defn =
+    | Def of vtm
+    | DefRec of defn env * tm
 
 
   (** {1 Eliminators} *)
@@ -116,12 +121,19 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) (tm : tm) : vtm =
+  let rec eval (env : defn env) (tm : tm) : vtm =
     match tm with
-    | Var index -> List.nth env index
+    | Var index -> begin
+        match List.nth env index with
+        | Def vtm -> vtm
+        | DefRec (env, body) ->
+            eval (DefRec (env, body) :: env) body
+    end
     | Let (_, _, def, body) ->
         let def = eval env def in
-        eval (def :: env) body
+        eval (Def def :: env) body
+    | Fix (_, _, body) ->
+        eval (DefRec (env, body) :: env) body
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
         let head = eval env head in
@@ -132,11 +144,12 @@ module Semantics = struct
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
     | FunLit (name, param_ty, body) ->
-        FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
+        FunLit (name, param_ty, fun arg -> eval (Def arg :: env) body)
     | FunApp (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
         fun_app head arg
+
 
 
   (** {1 Quotation} *)
@@ -165,7 +178,7 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (env : vtm list) (tm : tm) : tm =
+  let normalise (env : defn list) (tm : tm) : tm =
     quote (List.length env) (eval env tm)
 
 end
@@ -261,6 +274,8 @@ let rec zonk_tm (tm : tm) : tm =
   | Var index -> Var index
   | Let (name, def_ty, def, body) ->
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
+  | Fix (name, param_ty, body) ->
+      Fix (name, zonk_ty param_ty, zonk_tm body)
   | BoolLit b -> BoolLit b
   | BoolElim (head, tm0, tm1) ->
       BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
@@ -313,6 +328,10 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
       Format.fprintf fmt "@[<hv>%a@]" (go names) tm
+  | Fix (name, param_ty, body) ->
+      Format.fprintf fmt "@[<2>@[#fix@ %a@ =>@]@ %a@]"
+        pp_param (name, param_ty)
+        (pp_tm (name :: names)) body
   | FunLit (name, param_ty, body) ->
       Format.fprintf fmt "@[<2>@[fun@ %a@ =>@]@ %a@]"
         pp_param (name, param_ty)

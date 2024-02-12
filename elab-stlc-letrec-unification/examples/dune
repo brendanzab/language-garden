@@ -1,0 +1,10 @@
+(rule
+  (with-stdin-from readme.txt
+    (with-stdout-to readme.stdout.tmp
+      (run %{bin:stlc-letrec-unification} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-stlc-letrec-unification)
+  (action (diff readme.stdout
+                readme.stdout.tmp)))

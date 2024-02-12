@@ -30,6 +30,77 @@ If expressions
   $ stlc-letrec-unification elab <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
 
+Recursive bindings
+  $ cat >fact.txt <<EOF
+  > let rec fact n :=
+  >   if n = 0 then 1 else n * fact (n - 1);
+  > 
+  > fact 5
+  > EOF
+
+  $ cat fact.txt | stlc-letrec-unification elab
+  let fact : Int -> Int :=
+    #fix (fact : Int -> Int) =>
+      fun (n : Int) => if n = 0 then 1 else n * fact (n - 1);
+  fact 5 : Int
+
+  $ cat fact.txt | stlc-letrec-unification norm
+  120 : Int
+
+Exposing the fixed-point combinator
+  $ cat >fix.txt <<EOF
+  > let rec fix f x :=
+  >   f (fix f) x;
+  > 
+  > let fact n :=
+  >   fix (fun fact n =>
+  >     if n = 0 then 1 else n * fact (n - 1)) n;
+  > 
+  > fact 5
+  > EOF
+
+  $ cat fix.txt | stlc-letrec-unification elab
+  let fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
+    #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
+      fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x;
+  let fact : Int -> Int :=
+    fun (n : Int) =>
+      fix
+      (fun (fact : Int -> Int) =>
+         fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
+      n;
+  fact 5 : Int
+
+  $ cat fix.txt | stlc-letrec-unification norm
+  120 : Int
+
+Under-applying the fixed-point combinator
+  $ cat >fix.txt <<EOF
+  > let rec fix (f : (Int -> Int) -> (Int -> Int)) (x : Int) : Int :=
+  >   f (fix f) x;
+  > 
+  > fix
+  > EOF
+
+  $ cat fix.txt | stlc-letrec-unification elab
+  let fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
+    #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
+      fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x;
+  fix : ((Int -> Int) -> Int -> Int) -> Int -> Int
+
+FIXME: Infinite loop! :O
+#  $ cat fix.txt | stlc-letrec-unification norm
+
+Naive fixed-point (this is useless in call-by-value!)
+  $ stlc-letrec-unification elab <<EOF
+  > let rec fix (f : Int -> Int) : Int :=
+  >   f (fix f);
+  > 
+  > fix
+  > EOF
+  let fix : (Int -> Int) -> Int :=
+    #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f);
+  fix : (Int -> Int) -> Int
 
 Lexer Errors
 ------------
@@ -82,6 +153,11 @@ Mismatched argument
   <input>:1:25: mismatched types:
     expected: Bool
     found: Int
+  [1]
+
+Recursive let bindings
+  $ stlc-letrec-unification elab <<< "let rec x := x; x : Int"
+  <input>:1:0: expected function literal in recursive let binding
   [1]
 
 Infinite type

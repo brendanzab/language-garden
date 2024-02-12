@@ -39,7 +39,7 @@ apply [incr := 1]
 Elaborated program:
 
 <!-- $MDX file=examples/readme.stdout -->
-```sh
+```
 let apply : [decr : Int | incr : Int | square : Int] -> Int :=
   fun (x : [decr : Int | incr : Int | square : Int]) =>
     match x with
