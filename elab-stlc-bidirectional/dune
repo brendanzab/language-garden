@@ -5,6 +5,7 @@
   (preprocess
     (pps sedlex.ppx))
   (libraries
+    cmdliner
     menhirLib))
 
 (menhir

@@ -30,17 +30,17 @@ This implementation was originally based on [Arad Arbel’s gist](https://gist.g
 ## Examples
 
 ```sh
-$ stlc-unification <<< "fun x => x + 2"
+$ stlc-unification elab <<< "fun x => x + 2"
 fun (x : Int) => x + 2 : Int -> Int
 ```
 
 ```sh
-$ stlc-unification <<< "fun x f => f x * x"
+$ stlc-unification elab <<< "fun x f => f x * x"
 fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
 ```
 
 ```sh
-$ stlc-unification <<< "fun x y => if x = 0 then y else 3"
+$ stlc-unification elab <<< "fun x y => if x = 0 then y else 3"
 fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
 ```
 

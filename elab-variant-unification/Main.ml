@@ -54,14 +54,36 @@ let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
       exit 1
 
 
+(** {1 Subcommands} *)
+
+let elab_cmd () : unit =
+  let tm, ty = elab_tm (parse_tm "<input>" stdin) in
+  Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
+    (Core.pp_tm []) tm
+    Core.pp_ty ty
+
+let norm_cmd () : unit =
+  let tm, ty = elab_tm (parse_tm "<input>" stdin) in
+  Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
+    (Core.pp_tm []) (Core.Semantics.normalise [] tm)
+    Core.pp_ty ty
+
+
+(** {1 CLI options} *)
+
+let cmd =
+  let open Cmdliner in
+
+  Cmd.group (Cmd.info "variant-unification") [
+    Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
+      Term.(const elab_cmd $ const ());
+    Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")
+      Term.(const norm_cmd $ const ());
+  ]
+
+
 (** {1 Main entrypoint} *)
 
 let () =
   Printexc.record_backtrace true;
-
-  let tm = parse_tm "<input>" stdin in
-  let tm, ty = elab_tm tm in
-
-  Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm []) tm
-    Core.pp_ty ty
+  exit (Cmdliner.Cmd.eval cmd)

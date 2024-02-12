@@ -48,18 +48,18 @@ complicated type systems with dependent types and subtyping.
 ## Examples
 
 ```sh
-$ stlc-bidirectional <<< "fun x => x + 2"
+$ stlc-bidirectional elab <<< "fun x => x + 2"
 <input>:1:4: ambiguous parameter type
 [1]
 ```
 
 ```sh
-$ stlc-bidirectional <<< "fun (x : Int) => x + 2"
+$ stlc-bidirectional elab <<< "fun (x : Int) => x + 2"
 fun (x : Int) => x + 2 : Int -> Int
 ```
 
 ```sh
-$ stlc-bidirectional <<< "(fun x f => f x * x) : Int -> (Int -> Int) -> Int"
+$ stlc-bidirectional elab <<< "(fun x f => f x * x) : Int -> (Int -> Int) -> Int"
 fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
 ```
 
