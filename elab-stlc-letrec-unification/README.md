@@ -3,10 +3,12 @@
 Extends [**elab-stlc-unification**](../elab-stlc-unification).
 
 This is an implementation of recursive let bindings for the simply typed lambda
-calculus. These are elaborated to applications of a primitive fixed-point
-combinator in the core language.
+calculus. These are elaborated to a primitive fixed-point combinator in the core
+language.
 
-Mutual recursion sill needs to be implemented.
+To prevent infinite unfolding during quotation we introduce a flag that limits
+fixed-point unfolding. This feels like a bit of a bodge, but I’m not sure if
+there’s a better solution to this.
 
 Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in trying out
 different approaches when implementing this.
@@ -26,6 +28,12 @@ different approaches when implementing this.
 [`Parser`]: ./Parser.mly
 [`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml
+
+## Todo list
+
+- [x] singly recursive bindings
+- [ ] mutually recursive bindings
+- [ ] optional fuel/recursion limit
 
 ## Resources
 

@@ -74,23 +74,25 @@ type tm =
 
 module Semantics = struct
 
+  (** Evaluation options *)
+  type eval_opts = {
+    unfold_fix : bool;
+  }
+
   (** {1 Values} *)
 
   type vtm =
     | Neu of ntm
     | BoolLit of bool
     | IntLit of int
-    | FunLit of name * ty * (vtm -> vtm)
+    | FunLit of name * ty * (eval_opts -> vtm -> vtm)
 
   and ntm =
     | Var of level
+    | Fix of string * ty * (eval_opts -> vtm -> vtm)
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | FunApp of ntm * vtm
     | PrimApp of prim * vtm list
-
-  type defn =
-    | Def of vtm
-    | DefRec of defn env * tm
 
 
   (** {1 Eliminators} *)
@@ -111,48 +113,58 @@ module Semantics = struct
     | `Neg, [IntLit t1] -> IntLit (-t1)
     | prim, args -> Neu (PrimApp (prim, args))
 
-  let fun_app head arg =
+  let fun_app opts head arg =
     match head with
     | Neu ntm -> Neu (FunApp (ntm, arg))
-    | FunLit (_, _, body) -> body arg
+    | FunLit (_, _, body) -> body opts arg
     | _ -> invalid_arg "expected function"
 
 
   (** {1 Evaluation} *)
 
+  (** Default options for evaluation *)
+  let default_opts = {
+    unfold_fix = true;
+  }
+
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : defn env) (tm : tm) : vtm =
+  let rec eval ?(opts = default_opts) (env : vtm env) (tm : tm) : vtm =
     match tm with
     | Var index -> begin
         match List.nth env index with
-        | Def vtm -> vtm
-        | DefRec (env, body) ->
-            eval (DefRec (env, body) :: env) body
+        | Neu (Fix (_, _, body)) as self when opts.unfold_fix -> body opts self
+        | vtm -> vtm
     end
     | Let (_, _, def, body) ->
-        let def = eval env def in
-        eval (Def def :: env) body
-    | Fix (_, _, body) ->
-        eval (DefRec (env, body) :: env) body
+        let def = eval ~opts env def in
+        eval ~opts (def :: env) body
+    | Fix (name, self_ty, body) ->
+        let body' opts self = eval ~opts (self :: env) body in
+        body' opts (Neu (Fix (name, self_ty, body')))
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
-        let head = eval env head in
-        let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
-        let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
+        let head = eval ~opts env head in
+        let vtm0 = Lazy.from_fun (fun () -> eval ~opts env tm0) in
+        let vtm1 = Lazy.from_fun (fun () -> eval ~opts env tm1) in
         bool_elim head vtm0 vtm1
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
-        prim_app prim (List.map (eval env) args)
+        prim_app prim (List.map (eval ~opts env) args)
     | FunLit (name, param_ty, body) ->
-        FunLit (name, param_ty, fun arg -> eval (Def arg :: env) body)
+        let body opts arg = eval ~opts (arg :: env) body in
+        FunLit (name, param_ty, body)
     | FunApp (head, arg) ->
-        let head = eval env head in
-        let arg = eval env arg in
-        fun_app head arg
-
+        let head = eval ~opts env head in
+        let arg = eval ~opts env arg in
+        fun_app opts head arg
 
 
   (** {1 Quotation} *)
+
+  (** Options for evaluating under binders during quotation. *)
+  let quote_opts = {
+    unfold_fix = false;
+  }
 
   (** Convert terms from the semantic domain back into syntax. *)
   let rec quote (size : int) (vtm : vtm) : tm =
@@ -161,12 +173,15 @@ module Semantics = struct
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
+        let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
         FunLit (name, param_ty, body)
 
   and quote_neu (size : int) (ntm : ntm) : tm =
     match ntm with
     | Var level -> Var (level_to_index size level)
+    | Fix (name, self_ty, body) ->
+        let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
+        Fix (name, self_ty, body)
     | BoolElim (head, vtm0, vtm1) ->
         let tm0 = quote size (Lazy.force vtm0) in
         let tm1 = quote size (Lazy.force vtm1) in
@@ -174,11 +189,12 @@ module Semantics = struct
     | FunApp (head, arg) -> FunApp (quote_neu size head, quote size arg)
     | PrimApp (prim, args) -> PrimApp (prim, List.map (quote size) args)
 
+
   (** {1 Normalisation} *)
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (env : defn list) (tm : tm) : tm =
+  let normalise (env : vtm list) (tm : tm) : tm =
     quote (List.length env) (eval env tm)
 
 end
@@ -274,8 +290,8 @@ let rec zonk_tm (tm : tm) : tm =
   | Var index -> Var index
   | Let (name, def_ty, def, body) ->
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
-  | Fix (name, param_ty, body) ->
-      Fix (name, zonk_ty param_ty, zonk_tm body)
+  | Fix (name, self_ty, body) ->
+      Fix (name, zonk_ty self_ty, zonk_tm body)
   | BoolLit b -> BoolLit b
   | BoolElim (head, tm0, tm1) ->
       BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
@@ -289,6 +305,11 @@ let rec zonk_tm (tm : tm) : tm =
 
 
 (** {1 Pretty printing} *)
+
+let rec fresh (ns : string env) (n : string) : string =
+  match List.mem n ns with
+  | true -> fresh ns (n ^ "'")
+  | false -> n
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
@@ -321,6 +342,7 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       let rec go names fmt tm =
         match tm with
         | Let (name, def_ty, def, body) ->
+            let name = fresh names name in
             Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
               pp_name_ann (name, def_ty)
               (pp_tm names) def
@@ -328,11 +350,13 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
       Format.fprintf fmt "@[<hv>%a@]" (go names) tm
-  | Fix (name, param_ty, body) ->
+  | Fix (name, self_ty, body) ->
+      let name = fresh names name in
       Format.fprintf fmt "@[<2>@[#fix@ %a@ =>@]@ %a@]"
-        pp_param (name, param_ty)
+        pp_param (name, self_ty)
         (pp_tm (name :: names)) body
   | FunLit (name, param_ty, body) ->
+      let name = fresh names name in
       Format.fprintf fmt "@[<2>@[fun@ %a@ =>@]@ %a@]"
         pp_param (name, param_ty)
         (pp_tm (name :: names)) body

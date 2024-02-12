@@ -67,7 +67,7 @@ Exposing the fixed-point combinator
     fun (n : Int) =>
       fix
       (fun (fact : Int -> Int) =>
-         fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
+         fun (n' : Int) => if n' = 0 then 1 else n' * fact (n' - 1))
       n;
   fact 5 : Int
 
@@ -88,19 +88,37 @@ Under-applying the fixed-point combinator
       fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x;
   fix : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
-FIXME: Infinite loop! :O
-#  $ cat fix.txt | stlc-letrec-unification norm
+  $ cat fix.txt | stlc-letrec-unification norm
+  fun (f : (Int -> Int) -> Int -> Int) =>
+    fun (x : Int) =>
+      f
+      ((#fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
+          fun (f' : (Int -> Int) -> Int -> Int) =>
+            fun (x' : Int) => f' (fix f') x')
+       f)
+      x
+  : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
 Naive fixed-point (this is useless in call-by-value!)
-  $ stlc-letrec-unification elab <<EOF
+  $ cat >fix-naive.txt <<EOF
   > let rec fix (f : Int -> Int) : Int :=
   >   f (fix f);
   > 
   > fix
   > EOF
+
+  $ cat fix-naive.txt | stlc-letrec-unification elab
   let fix : (Int -> Int) -> Int :=
     #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f);
   fix : (Int -> Int) -> Int
+
+  $ cat fix-naive.txt | stlc-letrec-unification norm
+  fun (f : Int -> Int) =>
+    f
+    ((#fix (fix : (Int -> Int) -> Int) => fun (f' : Int -> Int) => f' (fix f'))
+     f)
+  : (Int -> Int) -> Int
+
 
 Lexer Errors
 ------------
