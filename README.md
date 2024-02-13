@@ -101,9 +101,12 @@ myself in the position of:
   of a standalone project, but may require some build system setup.
 
 Inspired by Mark Barbone’s [small, self-contained gists](https://gist.github.com/mb64/)
-implementing small type systems and solvers, I decided to make a repository to
-collect together a bunch of programming language projects that interested me,
-in the hope that they might be useful to others and my future self.
+implementing small type systems and solvers, and Andras Kovacs’ excellent
+[elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/) (which was
+instrumental in helping me get my head around how to implement elaborators),
+I decided to make a repository to collect together a bunch of programming
+language projects that interested me, in the hope that they might be useful to
+others and my future self.
 
 ## Development setup
 
