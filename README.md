@@ -108,8 +108,7 @@ I decided to make a repository to collect together a bunch of programming
 language projects that interested me, in the hope that they might be useful to
 others and my future self.
 
-Here’s a list of some other related projects that you might find interesting if
-you like this repository:
+If you like this repository, you might find these projects interesting as well:
 
 - [andrejbauer/plzoo](https://github.com/andrejbauer/plzoo/):
   Andrej Bauer’s minimnal programming language demonstrations
