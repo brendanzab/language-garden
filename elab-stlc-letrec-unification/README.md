@@ -7,8 +7,9 @@ calculus. These are elaborated to a primitive fixed-point combinator in the core
 language.
 
 To prevent infinite unfolding during quotation we introduce a flag that limits
-fixed-point unfolding. This feels like a bit of a bodge, but I’m not sure if
-there’s a better solution to this.
+fixed-point unfolding. This feels like a bit like an ad-hoc workaround, but I’m
+not sure if there’s a better solution. Perhaps something clever can be done with
+neutrals?
 
 Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in trying out
 different approaches when implementing this.
