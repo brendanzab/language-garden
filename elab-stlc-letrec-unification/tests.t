@@ -30,7 +30,7 @@ If expressions
   $ stlc-letrec-unification elab <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
 
-Recursive bindings
+Recursive bindings: Factorial
   $ cat >fact.txt <<EOF
   > let rec fact n :=
   >   if n = 0 then 1 else n * fact (n - 1);
@@ -47,7 +47,7 @@ Recursive bindings
   $ cat fact.txt | stlc-letrec-unification norm
   120 : Int
 
-Exposing the fixed-point combinator
+Recursive bindings: Factorial in terms of the fixed-point combinator
   $ cat >fix.txt <<EOF
   > let rec fix f x :=
   >   f (fix f) x;
@@ -74,7 +74,7 @@ Exposing the fixed-point combinator
   $ cat fix.txt | stlc-letrec-unification norm
   120 : Int
 
-Under-applying the fixed-point combinator
+Recursive bindings: Under-applying the fixed-point combinator
   $ cat >fix.txt <<EOF
   > let rec fix (f : (Int -> Int) -> (Int -> Int)) (x : Int) : Int :=
   >   f (fix f) x;
@@ -93,7 +93,7 @@ Under-applying the fixed-point combinator
     fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x
   : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
-Naive fixed-point (this is useless in call-by-value!)
+Recursive bindings: Naive fixed-point (this is useless in call-by-value!)
   $ cat >fix-naive.txt <<EOF
   > let rec fix (f : Int -> Int) : Int :=
   >   f (fix f);
@@ -109,6 +109,54 @@ Naive fixed-point (this is useless in call-by-value!)
   $ cat fix-naive.txt | stlc-letrec-unification norm
   #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f) :
     (Int -> Int) -> Int
+
+Recursive bindings: Ackermann function
+  $ cat >ack.txt <<EOF
+  > let rec ack m n :=
+  >   if m = 0 then
+  >     n + 1
+  >   else if n = 0 then
+  >     ack (m - 1) 1
+  >   else
+  >     ack (m - 1) (ack m (n - 1));
+  > 
+  > ack 1 0
+  > EOF
+
+  $ cat ack.txt | stlc-letrec-unification elab
+  let ack : Int -> Int -> Int :=
+    #fix (ack : Int -> Int -> Int) =>
+      fun (m : Int) =>
+        fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+          else ack (m - 1) (ack m (n - 1));
+  ack 1 0 : Int
+
+  $ cat ack.txt | stlc-letrec-unification norm
+  2 : Int
+
+Recursive bindings: Ackermann function (partially applied)
+  $ cat >ack-partial-app.txt <<EOF
+  > let rec ack m n :=
+  >   if m = 0 then
+  >     n + 1
+  >   else if n = 0 then
+  >     ack (m - 1) 1
+  >   else
+  >     ack (m - 1) (ack m (n - 1));
+  > 
+  > ack 0
+  > EOF
+
+  $ cat ack-partial-app.txt | stlc-letrec-unification elab
+  let ack : Int -> Int -> Int :=
+    #fix (ack : Int -> Int -> Int) =>
+      fun (m : Int) =>
+        fun (n : Int) => if m = 0 then n + 1 else if n = 0 then ack (m - 1) 1
+          else ack (m - 1) (ack m (n - 1));
+  ack 0 : Int -> Int
+
+  $ cat ack-partial-app.txt | stlc-letrec-unification norm
+  fun (n : Int) => n + 1 : Int -> Int
 
 
 Lexer Errors
@@ -132,7 +180,6 @@ Unclosed parenthesis
   $ stlc-letrec-unification elab <<< "1 + (3 "
   <input>:2:0: syntax error
   [1]
-
 
 
 Elaboration Errors
