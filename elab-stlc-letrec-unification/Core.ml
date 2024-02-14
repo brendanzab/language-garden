@@ -42,6 +42,7 @@ type meta_id = int
 type ty =
   | MetaVar of meta_state ref
   | FunType of ty * ty
+  | TupleType of ty list
   | IntType
   | BoolType
 
@@ -66,6 +67,8 @@ type tm =
   | Fix of name * ty * tm
   | FunLit of name * ty * tm
   | FunApp of tm * tm
+  | TupleLit of tm list
+  | TupleProj of tm * int
   | IntLit of int
   | BoolLit of bool
   | BoolElim of tm * tm * tm
@@ -84,6 +87,7 @@ module Semantics = struct
   type vtm =
     | Neu of ntm
     | FunLit of name * ty * (eval_opts -> vtm -> vtm)
+    | TupleLit of vtm list
     | BoolLit of bool
     | IntLit of int
 
@@ -91,6 +95,7 @@ module Semantics = struct
     | Var of level
     | Fix of name * ty * (eval_opts -> vtm -> vtm)
     | FunApp of ntm * vtm
+    | TupleProj of ntm * int
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | PrimApp of prim * vtm list
 
@@ -107,6 +112,14 @@ module Semantics = struct
     | Neu ntm -> Neu (FunApp (ntm, arg))
     | FunLit (_, _, body) -> body opts arg
     | _ -> invalid_arg "expected function"
+
+  let rec tuple_proj opts head elem_index =
+    match head with
+    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
+        tuple_proj opts (body opts head) elem_index
+    | Neu ntm -> Neu (TupleProj (ntm, elem_index))
+    | TupleLit elems -> List.nth elems elem_index
+    | _ -> invalid_arg "expected tuple"
 
   let bool_elim head vtm0 vtm1 =
     match head with
@@ -149,6 +162,11 @@ module Semantics = struct
         let head = eval ~opts env head in
         let arg = eval ~opts env arg in
         fun_app opts head arg
+    | TupleLit elems ->
+        TupleLit (List.map (eval ~opts env) elems)
+    | TupleProj (head, elem_index) ->
+        let head = eval ~opts env head in
+        tuple_proj opts head elem_index
     | IntLit i -> IntLit i
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
@@ -174,6 +192,8 @@ module Semantics = struct
     | FunLit (name, param_ty, body) ->
         let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
         FunLit (name, param_ty, body)
+    | TupleLit elems ->
+        TupleLit (List.map (quote size) elems)
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
 
@@ -185,6 +205,8 @@ module Semantics = struct
         Fix (name, self_ty, body)
     | FunApp (head, arg) ->
         FunApp (quote_neu size head, quote size arg)
+    | TupleProj (head, elem_index) ->
+        TupleProj (quote_neu size head, elem_index)
     | BoolElim (head, vtm0, vtm1) ->
         let tm0 = quote size (Lazy.force vtm0) in
         let tm1 = quote size (Lazy.force vtm1) in
@@ -247,6 +269,8 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty
+  | TupleType elem_tys ->
+      List.iter (occurs id) elem_tys
   | IntType -> ()
   | BoolType -> ()
 
@@ -259,6 +283,11 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
   | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
       unify param_ty0 param_ty1;
       unify body_ty0 body_ty1;
+  | TupleType elem_tys0, TupleType elem_tys1  -> begin
+      try List.iter2 unify elem_tys0 elem_tys1 with
+      | Invalid_argument _ ->
+          raise (MismatchedTypes (ty0, ty1))
+  end
   | IntType, IntType -> ()
   | BoolType, BoolType -> ()
   | ty1, ty2 ->
@@ -285,6 +314,8 @@ let rec zonk_ty (ty : ty) : ty =
   | MetaVar _ as ty -> ty
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
+  | TupleType elem_tys ->
+      TupleType (List.map zonk_ty elem_tys)
   | IntType -> IntType
   | BoolType -> BoolType
 
@@ -299,6 +330,10 @@ let rec zonk_tm (tm : tm) : tm =
       FunLit (name, zonk_ty param_ty, zonk_tm body)
   | FunApp (head, arg) ->
       FunApp (zonk_tm head, zonk_tm arg)
+  | TupleLit elems ->
+      TupleLit (List.map zonk_tm elems)
+  | TupleProj (head, elem_index) ->
+      TupleProj (zonk_tm head, elem_index)
   | IntLit i -> IntLit i
   | BoolLit b -> BoolLit b
   | BoolElim (head, tm0, tm1) ->
@@ -329,6 +364,15 @@ and pp_atomic_ty fmt ty =
       | Solved ty -> pp_atomic_ty fmt ty
       | Unsolved id -> Format.fprintf fmt "?%i" id
   end
+  | TupleType [elem_ty] ->
+      Format.fprintf fmt "(%a,)"
+        pp_ty elem_ty
+  | TupleType elem_tys ->
+      Format.fprintf fmt "(%a)"
+        (Format.pp_print_list
+          ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")
+          pp_ty)
+        elem_tys
   | IntType -> Format.fprintf fmt "Int"
   | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
@@ -406,15 +450,32 @@ and pp_app_tm names fmt tm =
   | FunApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
-        (pp_atomic_tm names) arg
+        (pp_proj_tm names) arg
   | PrimApp (`Neg, [arg]) ->
       Format.fprintf fmt "@[-%a@]"
-        (pp_atomic_tm names) arg
+        (pp_proj_tm names) arg
+  | tm ->
+      pp_proj_tm names fmt tm
+and pp_proj_tm names fmt tm =
+  match tm with
+  | TupleProj (head, elem_index) ->
+      Format.fprintf fmt "%a.%i"
+        (pp_proj_tm names) head
+        elem_index
   | tm ->
       pp_atomic_tm names fmt tm
 and pp_atomic_tm names fmt tm =
   match tm with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
+  | TupleLit [elem] ->
+      Format.fprintf fmt "(%a,)"
+        (pp_tm names) elem
+  | TupleLit elems ->
+      Format.fprintf fmt "(%a)"
+        (Format.pp_print_list
+          ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")
+          (pp_tm names))
+        elems
   | IntLit i -> Format.fprintf fmt "%i" i
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"

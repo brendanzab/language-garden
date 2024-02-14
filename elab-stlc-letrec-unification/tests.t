@@ -218,6 +218,53 @@ Recursive bindings: Even/odd (partially applied)
   : Int -> Bool
 
 
+Mutually recursive bindings: Even/odd
+  $ cat >even-odd.txt <<EOF
+  > let rec is-even n :=
+  >       if n = 0 then true else is-odd (n - 1);
+  >     rec is-odd n :=
+  >       if n = 0 then false else is-even (n - 1);
+  > 
+  > is-even 6
+  > EOF
+
+  $ cat even-odd.txt | stlc-letrec-unification elab
+  let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
+    #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+      (fun (n : Int) => if n = 0 then true else $is-even-is-odd.1 (n - 1),
+      fun (n : Int) => if n = 0 then false else $is-even-is-odd.0 (n - 1));
+  $is-even-is-odd.0 6 : Bool
+
+  $ cat even-odd.txt | stlc-letrec-unification norm
+  true : Bool
+
+
+Mutually recursive bindings: Even/odd (partially applied)
+  $ cat >even-odd.txt <<EOF
+  > let rec is-even n :=
+  >       if n = 0 then true else is-odd (n - 1);
+  >     rec is-odd n :=
+  >       if n = 0 then false else is-even (n - 1);
+  > 
+  > is-even
+  > EOF
+
+  $ cat even-odd.txt | stlc-letrec-unification elab
+  let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
+    #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+      (fun (n : Int) => if n = 0 then true else $is-even-is-odd.1 (n - 1),
+      fun (n : Int) => if n = 0 then false else $is-even-is-odd.0 (n - 1));
+  $is-even-is-odd.0 : Int -> Bool
+
+  $ cat even-odd.txt | stlc-letrec-unification norm
+  fun (n : Int) => if n = 0 then true else
+    (#fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+       (fun (n' : Int) => if n' = 0 then true else $is-even-is-odd.1 (n' - 1),
+       fun (n' : Int) => if n' = 0 then false else $is-even-is-odd.0 (n' - 1))).1
+    (n - 1)
+  : Int -> Bool
+
+
 Lexer Errors
 ------------
 

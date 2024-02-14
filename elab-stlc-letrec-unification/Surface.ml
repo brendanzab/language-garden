@@ -35,8 +35,8 @@ type tm =
 
 and tm_data =
   | Name of string
-  | Let of binder * param list * ty option * tm * tm
-  | LetRec of binder * param list * ty option * tm * tm
+  | Let of defn * tm
+  | LetRec of defn list * tm
   | Ann of tm * ty
   | FunLit of param list * tm
   | IntLit of int
@@ -49,6 +49,10 @@ and tm_data =
 (** Parameters, with optional type annotations *)
 and param =
   binder * ty option
+
+(** Definitions *)
+and defn =
+  binder * param list * ty option * tm
 
 
 (** {1 Elaboration} *)
@@ -97,18 +101,32 @@ let unsolved_metas () : (loc * meta_info) list =
 
 (** {2 Local bindings} *)
 
+(** An entry in the context *)
+type entry =
+  | Def of string * Core.ty
+  | MutualDef of (string * Core.ty) list
+
 (** A stack of bindings currently in scope *)
-type context = (string * Core.ty) Core.env
+type context = entry Core.env
 
 (** Lookup a name in the context *)
-let lookup (context : context) (name : string) : (Core.index * Core.ty) option =
-  let rec go index context =
-    match context with
-    | (name', ty) :: _ when name = name' -> Some (index, ty)
-    | (_, _) :: context -> go (index + 1) context
-    | [] -> None
+let lookup (context : context) (name : string) : (Core.tm * Core.ty) option =
+  let lookup_mutual =
+    List.find_mapi (fun elem_index (name', ty) ->
+      if name = name' then Some (elem_index, ty) else None)
   in
-  go 0 context
+
+  context |> List.find_mapi (fun index entry ->
+    match entry with
+    | Def (name', ty) when name = name' ->
+        Some (Core.Var index, ty)
+    | MutualDef entries -> begin
+        match lookup_mutual entries with
+        | Some (elem_index, ty) -> Some (TupleProj (Var index, elem_index), ty)
+        | None -> None
+    end
+    | _ -> None
+  )
 
 
 (** {2 Elaboration errors} *)
@@ -157,9 +175,9 @@ let rec elab_ty (ty : ty) : Core.ty =
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   match tm.data with
-  | Let (def_name, params, def_body_ty, def_body, body) ->
-      let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
-      let body = elab_check ((def_name.data, def_ty) :: context) body ty in
+  | Let ((def_name, params, def_ty, def), body) ->
+      let def, def_ty = elab_infer_fun_lit context params def_ty def in
+      let body = elab_check (Def (def_name.data, def_ty) :: context) body ty in
       Let (def_name.data, def_ty, def, body)
 
   | FunLit (params, body) ->
@@ -182,39 +200,85 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
   match tm.data with
   | Name name -> begin
       match lookup context name with
-      | Some (index, ty) -> Var index, ty
+      | Some (tm, ty) -> tm, ty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
   end
 
-  | Let (def_name, params, def_ty, def, body) ->
+  | Let ((def_name, params, def_ty, def), body) ->
       let def, def_ty = elab_infer_fun_lit context params def_ty def in
-      let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
+      let body, body_ty = elab_infer (Def (def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
 
-  | LetRec (def_name, params, def_ty, def, body) ->
-      (* Creates a fresh function type for the definition. *)
+  (* Singly recursive definitions *)
+  | LetRec ([(def_name, params, def_ty, def)], body) ->
+      (* Creates a fresh function type for a definition. *)
       let rec fresh_fun_ty context loc params body_ty =
         match params, body_ty with
         | [], Some body_ty -> elab_ty body_ty
         | [], None -> fresh_meta loc `FunBody
         | (name, _) :: params, body_ty ->
             let param_ty = fresh_meta name.loc `FunParam in
-            FunType (param_ty, fresh_fun_ty ((name.data, param_ty) :: context) loc params body_ty)
+            FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
       in
 
       (* Elaborate the definition to a fixed-point combinator *)
       let def_ty = fresh_fun_ty context def_name.loc params def_ty in
       let def_body =
-        match elab_check_fun_lit ((def_name.data, def_ty) :: context) params def def_ty with
+        match elab_check_fun_lit (Def (def_name.data, def_ty) :: context) params def def_ty with
         | FunLit _ as def_body -> def_body
         | _ -> error tm.loc "expected function literal in recursive let binding"
       in
       let def = Core.Fix (def_name.data, def_ty, def_body) in
 
       (* Elaborate the body of the let just like in the non-recursive case. *)
-      let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
+      let body, body_ty = elab_infer (Def (def_name.data, def_ty) :: context) body in
 
       Let (def_name.data, def_ty, def, body), body_ty
+
+  (* Mutually recursive definitions *)
+  | LetRec (defs, body) ->
+      (* Creates a fresh function type for a definition. *)
+      let rec fresh_fun_ty context loc params body_ty =
+        match params, body_ty with
+        | [], Some body_ty -> elab_ty body_ty
+        | [], None -> fresh_meta loc `FunBody
+        | (name, _) :: params, body_ty ->
+            let param_ty = fresh_meta name.loc `FunParam in
+            FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
+      in
+
+      (* Create fresh function types for each definition, then elaborate the
+         mutually recursive definitions, assuming the other recursive
+         definitions are in scope *)
+      let def_tys = defs |> List.map (fun (def_name, params, def_ty, _) ->
+        def_name.data, fresh_fun_ty context def_name.loc params def_ty)
+      in
+      let defs =
+        List.map2
+          (fun (_, def_ty) (_, params, _, def) ->
+            match elab_check_fun_lit (MutualDef def_tys :: context) params def def_ty with
+            | FunLit _ as def_body -> def_body
+            | _ -> error tm.loc "expected function literal in recursive let binding"
+          )
+          def_tys
+          defs
+      in
+
+      (* Build the fixed-point combinator to use as the definition *)
+      let def_name =
+        Format.asprintf "$%a"
+          (Format.pp_print_list
+            ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
+            Format.pp_print_string)
+          (List.map fst def_tys)
+      in
+      let def_ty = Core.TupleType (List.map snd def_tys) in
+      let def = Core.Fix (def_name, def_ty, TupleLit defs) in
+
+      (* Elaborate the body with the mutually recusive definitions in scope *)
+      let body, body_ty = elab_infer (MutualDef def_tys :: context) body in
+
+      Let (def_name, def_ty, def, body), body_ty
 
   | Ann (tm, ty) ->
       let ty = elab_ty ty in
@@ -271,13 +335,13 @@ and elab_check_fun_lit (context : context) (params : param list) (body : tm) (ty
   | [], ty ->
       elab_check context body ty
   | (name, None) :: params, FunType (param_ty, body_ty) ->
-      let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
+      let body = elab_check_fun_lit (Def (name.data, param_ty) :: context) params body body_ty in
       FunLit (name.data, param_ty, body)
   | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
       let param_ty_loc = param_ty.loc in
       let param_ty = elab_ty param_ty in
       unify param_ty_loc param_ty param_ty';
-      let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
+      let body = elab_check_fun_lit (Def (name.data, param_ty) :: context) params body body_ty in
       FunLit (name.data, param_ty, body)
   | (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
@@ -292,9 +356,9 @@ and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty o
       elab_infer context body
   | (name, None) :: params, body_ty ->
       let param_ty = fresh_meta name.loc `FunParam in
-      let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
+      let body, body_ty = elab_infer_fun_lit (Def (name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
   | (name, Some param_ty) :: params, body_ty ->
       let param_ty = elab_ty param_ty in
-      let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
+      let body, body_ty = elab_infer_fun_lit (Def (name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)

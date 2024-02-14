@@ -43,6 +43,10 @@ let param :=
 | "("; n = binder; ":"; ty = located(ty); ")";
     { n, Some ty }
 
+let defn :=
+| n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":="; tm = located(tm);
+    { n, ps, ty, tm }
+
 let ty :=
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
     { Surface.FunType (ty1, ty2) }
@@ -57,12 +61,10 @@ let atomic_ty :=
     { Surface.Placeholder }
 
 let tm :=
-| "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
-    tm0 = located(tm); ";"; tm1 = located(tm);
-    { Surface.Let (n, ps, ty, tm0, tm1) }
-| "let"; "rec"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
-    tm0 = located(tm); ";"; tm1 = located(tm);
-    { Surface.LetRec (n, ps, ty, tm0, tm1) }
+| "let"; d = defn; ";"; tm = located(tm);
+    { Surface.Let (d, tm) }
+| "let"; ds = nonempty_list("rec"; ~ = defn; ";"; <>); tm = located(tm);
+    { Surface.LetRec (ds, tm) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
     { Surface.FunLit (ps, t) }
 | "if"; tm0 = located(eq_tm); "then"; tm1 = located(tm); "else"; tm2 = located(tm);

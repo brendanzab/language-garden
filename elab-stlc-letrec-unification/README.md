@@ -31,7 +31,7 @@ different approaches and pointing out bugs when implementing this.
 ## Todo list
 
 - [x] singly recursive bindings
-- [ ] mutually recursive bindings
+- [x] mutually recursive bindings
 - [ ] optional fuel/recursion limit
 
 ## Resources
