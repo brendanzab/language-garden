@@ -89,14 +89,8 @@ Under-applying the fixed-point combinator
   fix : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
   $ cat fix.txt | stlc-letrec-unification norm
-  fun (f : (Int -> Int) -> Int -> Int) =>
-    fun (x : Int) =>
-      f
-      ((#fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
-          fun (f' : (Int -> Int) -> Int -> Int) =>
-            fun (x' : Int) => f' (fix f') x')
-       f)
-      x
+  #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
+    fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x
   : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
 Naive fixed-point (this is useless in call-by-value!)
@@ -113,11 +107,8 @@ Naive fixed-point (this is useless in call-by-value!)
   fix : (Int -> Int) -> Int
 
   $ cat fix-naive.txt | stlc-letrec-unification norm
-  fun (f : Int -> Int) =>
-    f
-    ((#fix (fix : (Int -> Int) -> Int) => fun (f' : Int -> Int) => f' (fix f'))
-     f)
-  : (Int -> Int) -> Int
+  #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f) :
+    (Int -> Int) -> Int
 
 
 Lexer Errors

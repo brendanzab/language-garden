@@ -4,12 +4,9 @@ Extends [**elab-stlc-unification**](../elab-stlc-unification).
 
 This is an implementation of recursive let bindings for the simply typed lambda
 calculus. These are elaborated to a primitive fixed-point combinator in the core
-language.
-
-To prevent infinite unfolding during quotation we introduce a flag that limits
-fixed-point unfolding. This feels like a bit like an ad-hoc workaround, but I’m
-not sure if there’s a better solution. Perhaps something clever can be done with
-neutrals?
+language. Normalisation-by-evaluation for fixed-points follows a similar
+approach to the one described by Grégoire and Leroy in [A Compiled
+Implementation of Strong Reduction](https://xavierleroy.org/publi/strong-reduction.pdf).
 
 Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in trying out
 different approaches when implementing this.
@@ -39,7 +36,9 @@ different approaches when implementing this.
 ## Resources
 
 - [Many faces of the fixed-point combinator](https://okmij.org/ftp/Computation/fixed-point-combinators.html)
-  by Oleg Kiselyov
+  by Oleg Kiselyov.
+- [A Compiled Implementation of Strong Reduction](https://xavierleroy.org/publi/strong-reduction.pdf)
+  by Benjamin Grégoire and Xavier Leroy.
 - [A simple type-theoretic language: Mini-TT](https://web.archive.org/web/20220208175952/https://www.cse.chalmers.se/~bengt/papers/GKminiTT.pdf)
   by Thierry Coquand et. al.
 - [Fixed-point combinator](https://en.wikipedia.org/wiki/Fixed-point_combinator) on Wikipedia
