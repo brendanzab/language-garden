@@ -100,15 +100,14 @@ myself in the position of:
 - Having an idea for a small language experiment that does not need to be part
   of a standalone project, but may require some build system setup.
 
-Inspired by Mark Barbone’s [small, self-contained gists](https://gist.github.com/mb64/)
+My hope is that by collecting some of these projects and experiments together
+into a single repository they might be useful to others and my future self. I’ve
+been particularly inspired by Mark Barbone’s [small, self-contained gists](https://gist.github.com/mb64/)
 implementing small type systems and solvers, and Andras Kovacs’ excellent
 [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/) (which was
-instrumental in helping me get my head around how to implement elaborators),
-I decided to make a repository to collect together a bunch of programming
-language projects that interested me, in the hope that they might be useful to
-others and my future self.
+instrumental in helping me get my head around how to implement elaborators).
 
-If you like this repository, you might find these projects interesting as well:
+If you like this repository, you might find these interesting as well:
 
 - [andrejbauer/plzoo](https://github.com/andrejbauer/plzoo/):
   Andrej Bauer’s minimnal programming language demonstrations
