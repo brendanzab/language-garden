@@ -78,14 +78,14 @@ module Semantics = struct
 
   type vtm =
     | Neu of ntm
-    | Fix of string * ty * (vtm -> vtm)
+    | Fix of name * ty * (vtm -> vtm)
     | BoolLit of bool
     | IntLit of int
     | FunLit of name * ty * (vtm -> vtm)
 
   and ntm =
     | Var of level
-    | FixApp of string * ty * (vtm -> vtm) * ntm
+    | FixApp of name * ty * (vtm -> vtm) * ntm
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | FunApp of ntm * vtm
     | PrimApp of prim * vtm list
