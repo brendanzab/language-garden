@@ -20,6 +20,7 @@
 (package (name elab-stlc-letrec-unification))
 (package (name elab-stlc-unification))
 (package (name elab-stlc-fix))
+(package (name elab-stlc-letrec))
 (package (name elab-variant-unification))
 (package (name elab-record-patching))
 
