@@ -27,18 +27,21 @@ and reduction rule
 ## Examples
 
 ```sh
-$ stlc-unification <<< "fun x => x + 2"
+$ stlc-fix <<< "fun x => x + 2"
 fun (x : Int) => x + 2 : Int -> Int
+fun (x : Int) => x + 2
 ```
 
 ```sh
-$ stlc-unification <<< "fun x f => f x * x"
+$ stlc-fix <<< "fun x f => f x * x"
 fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
+fun (x : Int) => fun (f : Int -> Int) => f x * x
 ```
 
 ```sh
-$ stlc-unification <<< "fun x y => if x = 0 then y else 3"
+$ stlc-fix <<< "fun x y => if x = 0 then y else 3"
 fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
+fun (x : Int) => fun (y : Int) => if x = 0 then y else 3
 ```
 
 More examples can be found in [`tests.t`](tests.t).

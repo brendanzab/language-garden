@@ -19,6 +19,9 @@
 %token UNDERSCORE "_"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
+%token OPEN_CURLY "{"
+%token CLOSE_CURLY "}"
+%token DOT "."
 %token END
 
 %start <Surface.tm> main
@@ -28,6 +31,10 @@
 let main :=
 | tm = located(tm); END;
     { tm }
+
+let sep_list(elem, sep) :=
+| { [] }
+| first = elem; rest = list(sep; e = elem; {e}); {first :: rest}
 
 let located(X) :=
 | data = X;
@@ -50,6 +57,8 @@ let ty :=
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
+| "{"; fields = sep_list(record_type_field, ";"); "}";
+    { Surface.RecordType fields }
 | n = NAME;
     { Surface.Name n }
 | UNDERSCORE;
@@ -89,11 +98,18 @@ let app_tm :=
     { Surface.FunApp (tm0, tm1) }
 | "-"; tm = located(atomic_tm);
     { Surface.Op1 (`Neg, tm) }
+| proj_tm
+
+let proj_tm :=
+| tm0 = located(proj_tm); "."; field = binder;
+    { Surface.RecordProj (tm0, field) }
 | atomic_tm
 
 let atomic_tm :=
 | "("; tm = tm; ")";
     { tm }
+| "{"; fields = sep_list(record_lit_field, ";"); "}";
+    { RecordLit fields }
 | n = NAME;
     { Surface.Name n }
 | "true";
@@ -102,3 +118,9 @@ let atomic_tm :=
     { Surface.BoolLit false }
 | i = NUMBER;
     { Surface.IntLit i }
+
+let record_lit_field :=
+| binder = binder; ":="; tm = located(tm); {binder, tm}
+
+let record_type_field :=
+| binder = NAME; ":"; ty = located(ty); {binder, ty}

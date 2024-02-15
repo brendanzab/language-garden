@@ -43,6 +43,7 @@ type ty =
   | BoolType
   | IntType
   | FunType of ty * ty
+  | RecordType of (string * ty) list
   | MetaVar of meta_state ref
 
 (** The state of a metavariable, updated during unification *)
@@ -79,6 +80,8 @@ type tm =
   | IntLit of int
   | FunLit of name * ty * tm
   | FunApp of tm * tm
+  | RecordLit of (string * tm) list
+  | RecordProj of tm * string
 
 module Semantics = struct
 
@@ -89,6 +92,7 @@ module Semantics = struct
     | BoolLit of bool
     | IntLit of int
     | FunLit of { name: name; param_ty: ty; closure: closure }
+    | RecordLit of (string * vtm) list
 
   and closure = { env: vtm env; body: tm }
 
@@ -98,6 +102,7 @@ module Semantics = struct
 
   and elim =
     | FunArg of vtm
+    | RecordProj of string
     | BoolElim of vtm Lazy.t * vtm Lazy.t
 
   type eval_opts = {
@@ -112,6 +117,15 @@ module Semantics = struct
     | BoolLit true -> Lazy.force vtm0
     | BoolLit false -> Lazy.force vtm1
     | _ -> invalid_arg "expected boolean"
+
+  let record_proj (head: vtm) (name:string) =
+    match head with
+    | RecordLit fields -> begin match List.assoc_opt name fields with
+      | Some vtm -> vtm
+      | None -> invalid_arg "field not found"
+      end
+    | Neu {head; spine} -> Neu {head; spine = spine @ [RecordProj(name)]}
+    | _ -> invalid_arg "expected record literal"
 
   let rec fun_app opts head arg = match head with
     | FunLit {closure; _} -> apply_closure opts closure arg
@@ -158,6 +172,12 @@ module Semantics = struct
         let head = eval opts env head in
         let arg = eval opts env arg in
         fun_app opts head arg
+    | RecordLit fields ->
+        let fields = ListLabels.map fields ~f:(fun (name, tm) -> (name, eval opts env tm)) in
+        RecordLit fields
+    | RecordProj(head, name) ->
+        let head = eval opts env head in
+        record_proj head name
 
 
   (** {1 Quotation} *)
@@ -169,6 +189,7 @@ module Semantics = struct
       let head = quote_head size head in
       ListLabels.fold_left ~init:head ~f:(fun head elim -> match elim with
         | FunArg arg -> FunApp (head, quote size arg)
+        | RecordProj name -> RecordProj (head, name)
         | BoolElim (vtm0, vtm1) -> BoolElim (head, quote size (Lazy.force vtm0), quote size (Lazy.force vtm1))
       ) spine
     | BoolLit b -> BoolLit b
@@ -179,6 +200,7 @@ module Semantics = struct
         let body = apply_closure opts closure arg in
         let body = quote (size + 1) body in
         FunLit (name, param_ty, body)
+    | RecordLit fields -> RecordLit (ListLabels.map fields ~f:(fun (name, vtm) -> (name, quote size vtm)))
 
   and quote_head (size : int) (head : head) : tm =
     match head with
@@ -242,6 +264,7 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty
+  | RecordType fields -> ListLabels.iter fields ~f:(fun (_, ty) -> occurs id ty)
 
 (** Check if two types are the same, updating unsolved metavaribles in one
     type with known information from the other type if possible. *)
@@ -279,6 +302,7 @@ let rec zonk_ty (ty : ty) : ty =
   | IntType -> IntType
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
+  | RecordType fields -> RecordType (ListLabels.map fields ~f:(fun (name, ty) -> (name, zonk_ty ty)))
   | MetaVar _ as ty -> ty
 
 let rec zonk_tm (tm : tm) : tm =
@@ -295,6 +319,8 @@ let rec zonk_tm (tm : tm) : tm =
       FunLit (name, zonk_ty param_ty, zonk_tm body)
   | FunApp (head, arg) ->
       FunApp (zonk_tm head, zonk_tm arg)
+  | RecordLit fields -> RecordLit (ListLabels.map fields ~f:(fun (name, tm) -> (name, zonk_tm tm)))
+  | RecordProj(head, name) -> RecordProj(zonk_tm head, name)
 
 
 (** {1 Pretty printing} *)
@@ -311,6 +337,14 @@ and pp_atomic_ty fmt ty =
   match ty with
   | BoolType -> Format.fprintf fmt "Bool"
   | IntType -> Format.fprintf fmt "Int"
+  | RecordType fields -> (match fields with
+      | [] -> Format.fprintf fmt "{}";
+      | field :: fields ->
+        Format.fprintf fmt "{ ";
+        Format.fprintf fmt "%s : %a" (fst field) (pp_ty) (snd field);
+        ListLabels.iter fields ~f:(fun (name, tm) -> Format.fprintf fmt "; %s : %a" name (pp_ty) tm);
+        Format.fprintf fmt " }";
+      )
   | MetaVar m -> begin
       match !m with
       | Solved ty -> pp_atomic_ty fmt ty
@@ -389,7 +423,11 @@ and pp_app_tm names fmt tm =
         (pp_app_tm names) head
         (pp_atomic_tm names) arg
   | tm ->
-      pp_atomic_tm names fmt tm
+      pp_proj_tm names fmt tm
+and pp_proj_tm names fmt tm =
+  match tm with
+  | RecordProj(head, name) -> Format.fprintf fmt "@[%a.%s@]" (pp_proj_tm names) head name
+  | tm -> pp_atomic_tm names fmt tm
 and pp_atomic_tm names fmt tm =
   match tm with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
@@ -397,5 +435,13 @@ and pp_atomic_tm names fmt tm =
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i
+  | RecordLit fields -> (match fields with
+      | [] -> Format.fprintf fmt "{}";
+      | field :: fields ->
+        Format.fprintf fmt "{ ";
+        Format.fprintf fmt "%s := %a" (fst field) (pp_tm names) (snd field);
+        ListLabels.iter fields ~f:(fun (name, tm) -> Format.fprintf fmt "; %s := %a" name (pp_tm names) tm);
+        Format.fprintf fmt " }";
+      )
   (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm

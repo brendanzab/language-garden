@@ -24,6 +24,7 @@ type ty =
 and ty_data =
   | Name of string
   | FunType of ty * ty
+  | RecordType of (string * ty) list
   | Placeholder
 
 (** Names that bind definitions or parameters *)
@@ -42,6 +43,8 @@ and tm_data =
   | IntLit of int
   | FunLit of param list * tm
   | FunApp of tm * tm
+  | RecordLit of (binder * tm) list
+  | RecordProj of tm * binder
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
@@ -141,6 +144,8 @@ let rec elab_ty (ty : ty) : Core.ty =
       error ty.loc (Format.asprintf "unbound type `%s`" name)
   | FunType (ty1, ty2) ->
       FunType (elab_ty ty1, elab_ty ty2)
+  | RecordType fields ->
+      RecordType (ListLabels.map fields ~f:(fun (name, ty) -> (name, elab_ty ty)))
   | Placeholder ->
       fresh_meta ty.loc `Placeholder
 
@@ -215,6 +220,23 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       in
       let arg = elab_check context arg param_ty in
       FunApp (head, arg), body_ty
+  | RecordLit fields ->
+      let (term_fields, type_fields) = List.split (ListLabels.map fields ~f:(fun (name, tm) -> begin
+        let tm, ty = elab_infer context tm in
+        (name.data, tm), (name.data, ty)
+      end)) in
+      RecordLit term_fields, RecordType type_fields
+  | RecordProj (head, name) ->
+      let head_tm, head_ty = elab_infer context head in
+      let type_fields = match head_ty with
+        | RecordType type_fields -> type_fields
+        | _ -> error head.loc "cannot project non-record"
+      in
+      let proj_ty = match List.assoc_opt name.data type_fields with
+        | Some ty -> ty
+        | None -> error name.loc "field not found"
+      in
+      RecordProj (head_tm, name.data), proj_ty
   | Op2 ((`Eq) as prim, tm0, tm1) ->
       let tm0 = elab_check context tm0 IntType in
       let tm1 = elab_check context tm1 IntType in
