@@ -30,6 +30,7 @@ If expressions
   $ stlc-letrec-unification elab <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
 
+
 Recursive bindings: Factorial
   $ cat >fact.txt <<EOF
   > let rec fact n :=
@@ -46,6 +47,7 @@ Recursive bindings: Factorial
 
   $ cat fact.txt | stlc-letrec-unification norm
   120 : Int
+
 
 Recursive bindings: Factorial in terms of the fixed-point combinator
   $ cat >fix.txt <<EOF
@@ -74,6 +76,7 @@ Recursive bindings: Factorial in terms of the fixed-point combinator
   $ cat fix.txt | stlc-letrec-unification norm
   120 : Int
 
+
 Recursive bindings: Under-applying the fixed-point combinator
   $ cat >fix.txt <<EOF
   > let rec fix (f : (Int -> Int) -> (Int -> Int)) (x : Int) : Int :=
@@ -93,6 +96,7 @@ Recursive bindings: Under-applying the fixed-point combinator
     fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x
   : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
+
 Recursive bindings: Naive fixed-point (this is useless in call-by-value!)
   $ cat >fix-naive.txt <<EOF
   > let rec fix (f : Int -> Int) : Int :=
@@ -109,6 +113,7 @@ Recursive bindings: Naive fixed-point (this is useless in call-by-value!)
   $ cat fix-naive.txt | stlc-letrec-unification norm
   #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f) :
     (Int -> Int) -> Int
+
 
 Recursive bindings: Ackermann function
   $ cat >ack.txt <<EOF
@@ -134,6 +139,7 @@ Recursive bindings: Ackermann function
   $ cat ack.txt | stlc-letrec-unification norm
   2 : Int
 
+
 Recursive bindings: Ackermann function (partially applied)
   $ cat >ack-partial-app.txt <<EOF
   > let rec ack m n :=
@@ -157,6 +163,47 @@ Recursive bindings: Ackermann function (partially applied)
 
   $ cat ack-partial-app.txt | stlc-letrec-unification norm
   fun (n : Int) => n + 1 : Int -> Int
+
+
+Recursive bindings: Count-down (partially applied)
+  $ cat >count-down.txt <<EOF
+  > let rec count-down x n :=
+  >   if n = 0 then x else count-down x (n - 1);
+  > 
+  > count-down true
+  > EOF
+
+  $ cat count-down.txt | stlc-letrec-unification elab
+  let count-down : Bool -> Int -> Bool :=
+    #fix (count-down : Bool -> Int -> Bool) =>
+      fun (x : Bool) =>
+        fun (n : Int) => if n = 0 then x else count-down x (n - 1);
+  count-down true : Int -> Bool
+
+FIXME: Infinite loop
+$ cat count-down.txt | stlc-letrec-unification norm
+
+
+Recursive bindings: Even/odd (partially applied)
+  $ cat >even-odd-partial-app.txt <<EOF
+  > let rec even-odd b n :=
+  >   if b then (if n = 0 then true else even-odd false (n - 1))
+  >        else (if n = 0 then false else even-odd true (n - 1));
+  > 
+  > even-odd true
+  > EOF
+
+  $ cat even-odd-partial-app.txt | stlc-letrec-unification elab
+  let even-odd : Bool -> Int -> Bool :=
+    #fix (even-odd : Bool -> Int -> Bool) =>
+      fun (b : Bool) =>
+        fun (n : Int) => if b then
+          (if n = 0 then true else even-odd false (n - 1)) else if n = 0 then
+          false else even-odd true (n - 1);
+  even-odd true : Int -> Bool
+
+FIXME: Infinite loop
+$ cat even-odd-partial-app.txt | stlc-letrec-unification norm
 
 
 Lexer Errors

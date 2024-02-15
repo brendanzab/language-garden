@@ -11,6 +11,24 @@ Implementation of Strong Reduction](https://xavierleroy.org/publi/strong-reducti
 Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in trying out
 different approaches when implementing this.
 
+> [!WARNING]
+> It’s come to my attention (thanks Karl) that this approach breaks if you
+> under-apply a recursive binding _before_ applying the parameter that guards
+> the recursion. For example, the following program loops forever under the
+> current implementation:
+>
+> ```
+> let rec count-down x n :=
+>   if n = 0 then x else count-down x (n - 1);
+>
+> count-down true
+> ```
+>
+> It seems this is why they have a multiple arguments on fixed points in the
+> strong reduction paper. This seems like it would require detecting the guard
+> parameter during elaboration, or just conservatively binding all of the
+> parameters in the elaborated function as part of fixed point elaboration.
+
 ## Project overview
 
 | Module        | Description                             |
