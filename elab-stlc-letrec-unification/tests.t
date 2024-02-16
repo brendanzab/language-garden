@@ -180,8 +180,13 @@ Recursive bindings: Count-down (partially applied)
         fun (n : Int) => if n = 0 then x else count-down x (n - 1);
   count-down true : Int -> Bool
 
-FIXME: Infinite loop
-$ cat count-down.txt | stlc-letrec-unification norm
+  $ cat count-down.txt | stlc-letrec-unification norm
+  fun (n : Int) => if n = 0 then true else
+    (#fix (count-down : Bool -> Int -> Bool) =>
+       fun (x : Bool) =>
+         fun (n' : Int) => if n' = 0 then x else count-down x (n' - 1))
+    true (n - 1)
+  : Int -> Bool
 
 
 Recursive bindings: Even/odd (partially applied)
@@ -202,8 +207,15 @@ Recursive bindings: Even/odd (partially applied)
           false else even-odd true (n - 1);
   even-odd true : Int -> Bool
 
-FIXME: Infinite loop
-$ cat even-odd-partial-app.txt | stlc-letrec-unification norm
+  $ cat even-odd-partial-app.txt | stlc-letrec-unification norm
+  fun (n : Int) => if n = 0 then true else
+    (#fix (even-odd : Bool -> Int -> Bool) =>
+       fun (b : Bool) =>
+         fun (n' : Int) => if b then
+           (if n' = 0 then true else even-odd false (n' - 1)) else
+           if n' = 0 then false else even-odd true (n' - 1))
+    false (n - 1)
+  : Int -> Bool
 
 
 Lexer Errors

@@ -74,18 +74,22 @@ type tm =
 
 module Semantics = struct
 
+  (** Evaluation options *)
+  type eval_opts = {
+    unfold_fix : bool;
+  }
+
   (** {1 Values} *)
 
   type vtm =
     | Neu of ntm
-    | Fix of name * ty * (vtm -> vtm)
     | BoolLit of bool
     | IntLit of int
-    | FunLit of name * ty * (vtm -> vtm)
+    | FunLit of name * ty * (eval_opts -> vtm -> vtm)
 
   and ntm =
     | Var of level
-    | FixApp of name * ty * (vtm -> vtm) * ntm
+    | Fix of name * ty * (eval_opts -> vtm -> vtm)
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | FunApp of ntm * vtm
     | PrimApp of prim * vtm list
@@ -109,68 +113,76 @@ module Semantics = struct
     | `Neg, [IntLit t1] -> IntLit (-t1)
     | prim, args -> Neu (PrimApp (prim, args))
 
-  let rec fun_app head arg =
-    match head, arg with
-    | Neu ntm, arg -> Neu (FunApp (ntm, arg))
-    | FunLit (_, _, body), arg -> body arg
-    | Fix (name, ty, body), Neu ntm -> Neu (FixApp (name, ty, body, ntm))
-    | Fix (_, _, body), arg -> fun_app (body head) arg
+  let rec fun_app opts head arg =
+    match head with
+    (* Unfold fixed-points on function application (fixed-points are assumed to
+       always evaluate to functions). This unfolding can be disabled to prevent
+       evaluation from diverging during quotation. *)
+    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
+        fun_app opts (body opts head) arg
+    | Neu ntm -> Neu (FunApp (ntm, arg))
+    | FunLit (_, _, body) -> body opts arg
     | _ -> invalid_arg "expected function"
 
 
   (** {1 Evaluation} *)
 
+  (** Default options for evaluation *)
+  let default_opts = {
+    unfold_fix = true;
+  }
+
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) (tm : tm) : vtm =
+  let rec eval ?(opts = default_opts) (env : vtm env) (tm : tm) : vtm =
     match tm with
-    | Var index ->
-        List.nth env index
+    | Var index -> List.nth env index
     | Let (_, _, def, body) ->
-        let def = eval env def in
-        eval (def :: env) body
+        let def = eval ~opts env def in
+        eval ~opts (def :: env) body
     | Fix (name, self_ty, body) ->
-        let body' self = eval (self :: env) body in
-        Fix (name, self_ty, body')
+        let body' opts self = eval ~opts (self :: env) body in
+        Neu (Fix (name, self_ty, body'))
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
-        let head = eval env head in
-        let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
-        let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
+        let head = eval ~opts env head in
+        let vtm0 = Lazy.from_fun (fun () -> eval ~opts env tm0) in
+        let vtm1 = Lazy.from_fun (fun () -> eval ~opts env tm1) in
         bool_elim head vtm0 vtm1
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
-        prim_app prim (List.map (eval env) args)
+        prim_app prim (List.map (eval ~opts env) args)
     | FunLit (name, param_ty, body) ->
-        let body arg = eval (arg :: env) body in
+        let body opts arg = eval ~opts (arg :: env) body in
         FunLit (name, param_ty, body)
     | FunApp (head, arg) ->
-        let head = eval env head in
-        let arg = eval env arg in
-        fun_app head arg
+        let head = eval ~opts env head in
+        let arg = eval ~opts env arg in
+        fun_app opts head arg
 
 
   (** {1 Quotation} *)
+
+  (** Options for evaluating under binders during quotation. *)
+  let quote_opts = {
+    unfold_fix = false;
+  }
 
   (** Convert terms from the semantic domain back into syntax. *)
   let rec quote (size : int) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_neu size ntm
-    | Fix (name, self_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
-        Fix (name, self_ty, body)
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
+        let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
         FunLit (name, param_ty, body)
 
   and quote_neu (size : int) (ntm : ntm) : tm =
     match ntm with
     | Var level -> Var (level_to_index size level)
-    | FixApp (name, self_ty, body, arg) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
-        let arg = quote_neu size arg in
-        FunApp (Fix (name, self_ty, body), arg)
+    | Fix (name, self_ty, body) ->
+        let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
+        Fix (name, self_ty, body)
     | BoolElim (head, vtm0, vtm1) ->
         let tm0 = quote size (Lazy.force vtm0) in
         let tm1 = quote size (Lazy.force vtm1) in
