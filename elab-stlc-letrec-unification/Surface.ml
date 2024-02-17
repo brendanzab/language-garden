@@ -131,7 +131,15 @@ let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
           Core.pp_ty (Core.zonk_ty ty1)
           Core.pp_ty (Core.zonk_ty ty2))
 
-(** {2 Type checking} *)
+
+(** {2 Bidirectional type checking} *)
+
+(** The algorithm is structured {i bidirectionally}, divided into mutually
+    recursive {i checking} and {i inference} modes. By supplying type
+    annotations as early as possible using the checking mode, we can improve
+    the locality of type errors. It also allows us to extend the type system
+    advanced features like dependent types, higher rank types, and subtyping
+    while maintaining decidability. *)
 
 (** Elaborate a type, checking that it is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
@@ -145,15 +153,26 @@ let rec elab_ty (ty : ty) : Core.ty =
   | Placeholder ->
       fresh_meta ty.loc `Placeholder
 
-(** In this algorithm type checking is mainly unidirectional, relying on the
-    [infer] funtion, but a {!check} function is provided for convenience.
-*)
-
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
-  let tm', ty' = elab_infer context tm in
-  unify tm.loc ty ty';
-  tm'
+  match tm.data with
+  | Let (def_name, params, def_body_ty, def_body, body) ->
+      let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
+      let body = elab_check ((def_name.data, def_ty) :: context) body ty in
+      Let (def_name.data, def_ty, def, body)
+  | IfThenElse (head, tm0, tm1) ->
+      let head = elab_check context head BoolType in
+      let tm0 = elab_check context tm0 ty in
+      let tm1 = elab_check context tm1 ty in
+      BoolElim (head, tm0, tm1)
+  | FunLit (params, body) ->
+      elab_check_fun_lit context params body ty
+
+  (* Fall back to type inference *)
+  | _ ->
+      let tm', ty' = elab_infer context tm in
+      unify tm.loc ty ty';
+      tm'
 
 (** Elaborate a surface term into a core term, inferring its type. *)
 and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
@@ -234,7 +253,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
 
 (** Elaborate a function literal into a core term, given an expected type. *)
 and elab_check_fun_lit (context : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
-  match params, ty with
+  match params, Core.force ty with
   | [], ty ->
       elab_check context body ty
   | (name, None) :: params, FunType (param_ty, body_ty) ->

@@ -93,10 +93,9 @@ let error (loc : loc) (message : string) : 'a =
 (** The algorithm is structured {i bidirectionally}, divided into mutually
     recursive {i checking} and {i inference} modes. By supplying type
     annotations as early as possible using the checking mode, we can improve
-    the locality of type errors, and provide enough {i control} to the
-    algorithm, allowing us to extend the type system while keeping type
-    inference deciable even in the presence of ‘fancy’ types, for example
-    dependent types, higher rank types, and subtyping. *)
+    the locality of type errors. It also allows us to extend the type system
+    advanced features like dependent types, higher rank types, and subtyping
+    while maintaining decidability. *)
 
 (** Elaborate a type, checking that it is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
