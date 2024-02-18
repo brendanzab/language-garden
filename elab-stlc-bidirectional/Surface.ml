@@ -100,9 +100,10 @@ let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
 (** The algorithm is structured {i bidirectionally}, divided into mutually
     recursive {i checking} and {i inference} modes. By supplying type
     annotations as early as possible using the checking mode, we can improve
-    the locality of type errors. It also allows us to extend the type system
+    the locality of type errors. We can also extend the type system with
     advanced features like dependent types, higher rank types, and subtyping
-    while maintaining decidability. *)
+    while maintaining decidability by allowing the programmer to supply
+    annotations where necessary. *)
 
 (** Elaborate a type, checking that it is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
