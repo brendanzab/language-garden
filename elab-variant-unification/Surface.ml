@@ -247,7 +247,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let head, head_ty = elab_infer context head in
       let body_ty = fresh_meta tm.loc `MatchClauses Any in
       (* TDOD: Proper match compilation *)
-      match head_ty with
+      match Core.force head_ty with
       | VariantType ty_cases ->
           (* iterate through clauses, accumulating term cases *)
           let tm_cases =
@@ -282,6 +282,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
                   ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
                   (fun fmt (label, _) -> Format.fprintf fmt "`%s`" label))
                 missing_cases)
+
       | head_ty ->
           (* Build up the labelled types and and term cases from the clauses *)
           let tm_cases, ty_cases =
