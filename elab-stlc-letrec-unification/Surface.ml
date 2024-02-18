@@ -160,11 +160,13 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
       let body = elab_check ((def_name.data, def_ty) :: context) body ty in
       Let (def_name.data, def_ty, def, body)
+
   | IfThenElse (head, tm0, tm1) ->
       let head = elab_check context head BoolType in
       let tm0 = elab_check context tm0 ty in
       let tm1 = elab_check context tm1 ty in
       BoolElim (head, tm0, tm1)
+
   | FunLit (params, body) ->
       elab_check_fun_lit context params body ty
 
@@ -182,6 +184,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       | Some (index, ty) -> Var index, ty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
   end
+
   | Let (def_name, params, def_ty, def, body) ->
       let def, def_ty = elab_infer_fun_lit context params def_ty def in
       let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
@@ -215,16 +218,23 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | Ann (tm, ty) ->
       let ty = elab_ty ty in
       elab_check context tm ty, ty
-  | BoolLit b -> BoolLit b, BoolType
+
+  | BoolLit b ->
+      BoolLit b, BoolType
+
   | IfThenElse (head, tm0, tm1) ->
       let head = elab_check context head BoolType in
       let ty = fresh_meta tm.loc `IfBranches in
       let tm0 = elab_check context tm0 ty in
       let tm1 = elab_check context tm1 ty in
       BoolElim (head, tm0, tm1), ty
-  | IntLit i -> IntLit i, IntType
+
+  | IntLit i ->
+      IntLit i, IntType
+
   | FunLit (params, body) ->
       elab_infer_fun_lit context params None body
+
   | FunApp (head, arg) ->
       let head_loc = head.loc in
       let head, head_ty = elab_infer context head in
@@ -239,14 +249,17 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       in
       let arg = elab_check context arg param_ty in
       FunApp (head, arg), body_ty
+
   | Op2 ((`Eq) as prim, tm0, tm1) ->
       let tm0 = elab_check context tm0 IntType in
       let tm1 = elab_check context tm1 IntType in
       PrimApp (prim, [tm0; tm1]), BoolType
+
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
       let tm0 = elab_check context tm0 IntType in
       let tm1 = elab_check context tm1 IntType in
       PrimApp (prim, [tm0; tm1]), IntType
+
   | Op1 ((`Neg) as prim, tm) ->
       let tm = elab_check context tm IntType in
       PrimApp (prim, [tm]), IntType
