@@ -65,9 +65,8 @@ let atomic_ty :=
     { Surface.Placeholder }
 
 let tm :=
-| "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
-    tm0 = located(tm); ";"; tm1 = located(tm);
-    { Surface.Let (n, ps, ty, tm0, tm1) }
+| "let"; def = let_def; ";"; body = located(tm);
+    { Surface.Let (def, body) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
     { Surface.FunLit (ps, t) }
 | "if"; tm0 = located(eq_tm); "then"; tm1 = located(tm); "else"; tm2 = located(tm);
@@ -118,6 +117,10 @@ let atomic_tm :=
     { Surface.BoolLit false }
 | i = NUMBER;
     { Surface.IntLit i }
+
+let let_def :=
+| name = binder; params = list(param); ty = option(":"; ty = located(ty); { ty }); ":="; value = located(tm);
+    { name, params, ty, value }
 
 let record_lit_field :=
 | binder = binder; ":="; tm = located(tm); {binder, tm}

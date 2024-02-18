@@ -58,7 +58,8 @@ type prim = [
   | `Sub  (** [Int -> Int -> Int] *)
   | `Mul  (** [Int -> Int -> Int] *)
   | `Neg  (** [Int -> Int] *)
-  | `Fix  (** [((a -> b) -> a -> b) -> a -> b]*)
+  | `Fix1  (** [((a -> b) -> a -> b) -> a -> b]*)
+  | `Fix2  (** [({ _1 : a1 -> b1; _2 : a2 -> b2; } -> { _1 : a1 -> b1; _2 : a2 -> b2; }) -> { _1 : a1 -> b1; _2 : a2 -> b2; }]*)
 ]
 
 let string_of_prim prim: string =
@@ -68,7 +69,8 @@ let string_of_prim prim: string =
   | `Sub -> "sub"
   | `Mul -> "mul"
   | `Neg -> "neg"
-  | `Fix -> "fix"
+  | `Fix1 -> "fix"
+  | `Fix2 -> "fix2"
 
 (** Term syntax *)
 type tm =
@@ -125,7 +127,9 @@ module Semantics = struct
       | None -> invalid_arg "field not found"
       end
     | Neu {head; spine} -> Neu {head; spine = spine @ [RecordProj(name)]}
-    | _ -> invalid_arg "expected record literal"
+    | BoolLit _ -> invalid_arg "expected record literal, got bool literal"
+    | IntLit _ -> invalid_arg "expected record literal, got int literal"
+    | FunLit _ -> invalid_arg "expected record literal, got function literal"
 
   let rec fun_app opts head arg = match head with
     | FunLit {closure; _} -> apply_closure opts closure arg
@@ -135,13 +139,21 @@ module Semantics = struct
       | (Prim `Sub, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 - t2)
       | (Prim `Mul, [FunArg(IntLit t1); FunArg(IntLit t2)]) -> IntLit (t1 * t2)
       | (Prim `Neg, [FunArg(IntLit t1)]) -> IntLit (-t1)
-      | (Prim `Fix, [FunArg(f); FunArg(x)]) when opts.unfold_fix ->
-        (* fix f x = f (fix f) x *)
-        let fix = Neu {head=Prim(`Fix); spine = []} in
-        let fixf = fun_app opts fix f in
-        let ffixf = fun_app opts f fixf in
-        let ffixfx = fun_app opts ffixf x in
-        ffixfx
+      | (Prim `Fix1, [FunArg(f); FunArg(x)]) when opts.unfold_fix ->
+        (* fix1 f x = f (fix1 f) x *)
+        let fix1 = Neu {head=Prim(`Fix1); spine = []} in
+        let fix1f = fun_app opts fix1 f in
+        let ffix1f = fun_app opts f fix1f in
+        let ffix1fx = fun_app opts ffix1f x in
+        ffix1fx
+      | (Prim `Fix2, [FunArg(f); RecordProj(l); FunArg(x)]) when opts.unfold_fix ->
+        (* (fix2 f).l x = (f (fix2 f)).l x *)
+        let fix2 = Neu {head=Prim(`Fix2); spine = []} in
+        let fix2f = fun_app opts fix2 f in
+        let ffix2f = fun_app opts f fix2f in
+        let ffix2fl = record_proj ffix2f l in
+        let ffix2flx = fun_app opts ffix2fl x in
+        ffix2flx
       | (head, spine) -> Neu { head; spine }
       end
     | _ -> invalid_arg "expected function"

@@ -34,9 +34,11 @@ type binder = string located
 type tm =
   tm_data located
 
+and let_def = binder * param list * ty option * tm
+
 and tm_data =
   | Name of string
-  | Let of binder * param list * ty option * tm * tm
+  | Let of let_def * tm
   | Ann of tm * ty
   | BoolLit of bool
   | IfThenElse of tm * tm * tm
@@ -156,7 +158,7 @@ let rec elab_ty (ty : ty) : Core.ty =
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   match tm.data with
-  | Let (def_name, params, def_body_ty, def_body, body) ->
+  | Let ((def_name, params, def_body_ty, def_body), body) ->
       let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
       let body = elab_check ((def_name.data, def_ty) :: context) body ty in
       Let (def_name.data, def_ty, def, body)
@@ -182,14 +184,21 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
   | Name name -> begin
       match lookup context name with
       | Some (index, ty) -> Var index, ty
-      | None when name = "fix" ->
-      (* fix: ((a -> b) -> a -> b) -> a -> b *)
+      | None when name = "fix1" ->
+      (* fix1: ((a -> b) -> a -> b) -> a -> b *)
         let loc = tm.loc in
         let (a, b) = (fresh_meta loc `FunParam, fresh_meta loc `FunParam) in
-        (Prim `Fix), FunType(FunType(FunType(a, b), FunType(a, b)), FunType(a, b))
+        (Prim `Fix1), FunType(FunType(FunType(a, b), FunType(a, b)), FunType(a, b))
+      | None when name = "fix2" ->
+      (** fix2: ({ f1 : a1 -> b1; f2 : a2 -> b2; } -> { f1 : a1 -> b1; f2 : a2 -> b2; }) -> { f1 : a1 -> b1; f2 : a2 -> b2; } *)
+        let loc = tm.loc in
+        let (a1, b1) = (fresh_meta loc `FunParam, fresh_meta loc `FunParam) in
+        let (a2, b2) = (fresh_meta loc `FunParam, fresh_meta loc `FunParam) in
+        let r = Core.RecordType [("f1", Core.FunType(a1, b1)); ("f2", Core.FunType(a2, b2))] in
+        (Prim `Fix2), FunType(FunType(r, r), r)
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
   end
-  | Let (def_name, params, def_body_ty, def_body, body) ->
+  | Let ((def_name, params, def_body_ty, def_body), body) ->
       let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
       let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
@@ -281,3 +290,19 @@ and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty o
       in
       let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+
+(** Elaborate a function signature, inferring its type. *)
+and elab_infer_fun_sig (context : context) (loc : loc) (params : param list) (body_ty : ty option) : Core.ty =
+  match params, body_ty with
+  | [], Some body_ty ->
+      let body_ty = elab_ty body_ty in
+      body_ty
+  | [], None ->
+      fresh_meta loc `FunBody
+  | (name, param_ty) :: params, body_ty ->
+      let param_ty = match param_ty with
+        | None -> fresh_meta name.loc `FunParam
+        | Some ty -> elab_ty ty
+      in
+      let body_ty = elab_infer_fun_sig ((name.data, param_ty) :: context) loc params body_ty in
+      FunType (param_ty, body_ty)

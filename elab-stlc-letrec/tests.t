@@ -48,6 +48,67 @@ Record projection
   { x := 1; y := false }.x : Int
   1
 
+Fix1: factorial
+  $ cat >fact.txt <<EOF
+  > fix1 (fun fact n => if n = 0 then 1 else n * fact (n - 1))
+  > EOF
+  $ cat fact.txt | stlc-letrec
+  fix
+  (fun (fact : Int -> Int) =>
+     fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
+  : Int -> Int
+  fix
+  (fun (fact : Int -> Int) =>
+     fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
+
+
+  $ echo '5' >> fact.txt
+  $ cat fact.txt | stlc-letrec
+  fix
+  (fun (fact : Int -> Int) =>
+     fun (n : Int) => if n = 0 then 1 else n * fact (n - 1))
+  5 : Int
+  120
+
+Fix2: even/odd
+  $ cat >even-odd.txt <<EOF
+  > (fix2 (fun group => {
+  >   f1 := fun n => if n = 0 then true  else group.f2 (n - 1);
+  >   f2 := fun n => if n = 0 then false else group.f1 (n - 1)
+  > }))
+  > EOF
+  $ cat even-odd.txt | stlc-letrec
+  fix2
+  (fun (group : { f1 : Int -> Bool; f2 : Int -> Bool }) =>
+     { f1 := fun (n : Int) => if n = 0 then true else group.f2 (n - 1); f2 := 
+     fun (n : Int) => if n = 0 then false else group.f1 (n - 1) })
+  : { f1 : Int -> Bool; f2 : Int -> Bool }
+  fix2
+  (fun (group : { f1 : Int -> Bool; f2 : Int -> Bool }) =>
+     { f1 := fun (n : Int) => if n = 0 then true else group.f2 (n - 1); f2 := 
+     fun (n : Int) => if n = 0 then false else group.f1 (n - 1) })
+
+  $ echo '.f1' >> even-odd.txt
+  $ cat even-odd.txt | stlc-letrec
+  (fix2
+   (fun (group : { f1 : Int -> Bool; f2 : Int -> Bool }) =>
+      { f1 := fun (n : Int) => if n = 0 then true else group.f2 (n - 1); f2 := 
+      fun (n : Int) => if n = 0 then false else group.f1 (n - 1) })).f1
+  : Int -> Bool
+  (fix2
+   (fun (group : { f1 : Int -> Bool; f2 : Int -> Bool }) =>
+      { f1 := fun (n : Int) => if n = 0 then true else group.f2 (n - 1); f2 := 
+      fun (n : Int) => if n = 0 then false else group.f1 (n - 1) })).f1
+
+  $ echo '3' >> even-odd.txt
+  $ cat even-odd.txt | stlc-letrec
+  (fix2
+   (fun (group : { f1 : Int -> Bool; f2 : Int -> Bool }) =>
+      { f1 := fun (n : Int) => if n = 0 then true else group.f2 (n - 1); f2 := 
+      fun (n : Int) => if n = 0 then false else group.f1 (n - 1) })).f1
+  3 : Bool
+  false
+
 Lexer Errors
 ------------
 
