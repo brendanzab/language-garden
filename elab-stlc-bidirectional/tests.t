@@ -112,9 +112,9 @@ Mismatched parameter
   > 
   > f true
   > EOF
-  <input>:2:11: mismatched parameter types:
-    expected: Bool
-    found: Int
+  <input>:2:11: mismatched types:
+    expected: Int
+    found: Bool
   [1]
 
 Too many parameters

@@ -87,6 +87,13 @@ exception Error of loc * string
 let error (loc : loc) (message : string) : 'a =
   raise (Error (loc, message))
 
+let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
+  if ty1 = ty2 then () else
+    error loc
+      (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
+        Core.pp_ty ty1
+        Core.pp_ty ty2)
+
 
 (** {2 Bidirectional type checking} *)
 
@@ -125,11 +132,8 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   (* Fall back to type inference *)
   | _ ->
       let tm', ty' = elab_infer context tm in
-      if ty = ty' then tm' else
-        error tm.loc
-          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            Core.pp_ty ty
-            Core.pp_ty ty')
+      equate_ty tm.loc ty ty';
+      tm'
 
 (** Elaborate a surface term into a core term, inferring its type. *)
 and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
@@ -180,30 +184,17 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
 (** Elaborate a function literal into a core term, given an expected type. *)
 and elab_check_fun_lit (context : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
   match params, ty with
-  (* No more parameters, so elaborate the body of the function literal. *)
   | [], ty ->
       elab_check context body ty
-
-  (* There’s no explicit parameter annotation, so pull it from the expected
-     function type. *)
   | (name, None) :: params, FunType (param_ty, body_ty) ->
       let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
       FunLit (name.data, param_ty, body)
-
-  (* There’s an explicit parameter annotation, so make sure it matches the
-     expected function type. *)
   | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
       let param_ty_loc = param_ty.loc in
       let param_ty = elab_ty param_ty in
-      if param_ty <> param_ty' then
-        error param_ty_loc
-          (Format.asprintf "@[<v 2>@[mismatched parameter types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            Core.pp_ty param_ty'
-            Core.pp_ty param_ty);
+      equate_ty param_ty_loc param_ty param_ty';
       let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
       FunLit (name.data, param_ty, body)
-
-  (* We weren’t expecting a function type, so this parameter was unexpected *)
   | (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
 
