@@ -50,7 +50,7 @@ Some other approaches to combining fixed points with normalisation-by-evaluation
 
 More examples can be found in [`tests.t`](tests.t).
 
-### Single recursion: Factorial function
+### Factorial function
 
 Singly recursive functions are elaborated to fixed-points in the core language.
 
@@ -74,7 +74,7 @@ let fact : Int -> Int :=
 fact 5 : Int
 ```
 
-### Mutual recursion: Even and odd functions
+### Even and odd functions
 
 Mutually recursive functions are elaborated to fixed-points using tuples:
 
