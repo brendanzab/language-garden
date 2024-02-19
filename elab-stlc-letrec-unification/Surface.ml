@@ -324,7 +324,7 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
         | _ -> error def_name.loc "expected function literal in recursive let binding"
       in
 
-      (* Build the fixed-point combinator *)
+      (* Create the definition with the fixed-point combinator *)
       let def_entry = Def (def_name.data, def_ty) in
       let def = Core.Fix (def_name.data, def_ty, def_body) in
 
@@ -346,16 +346,8 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
           defs
       in
 
-      (* Create a name for the combined definition *)
-      let def_name =
-        Format.asprintf "$%a"
-          (Format.pp_print_list
-            ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
-            Format.pp_print_string)
-          (List.map fst def_tys)
-      in
-
-      (* Build the fixed-point combinator *)
+      (* Create the combined definition with the fixed-point combinator *)
+      let def_name = "$" ^ String.concat "-" (List.map fst def_tys) in
       let defs_entry = MutualDef def_tys in
       let def_ty = Core.TupleType (List.map snd def_tys) in
       let def = Core.Fix (def_name, def_ty, TupleLit elab_defs) in
