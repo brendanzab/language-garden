@@ -50,13 +50,13 @@ and tm_data =
   | Name of string
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
-  | VariantLit of label * tm
-  | Match of tm * (pattern * tm) list
-  | BoolLit of bool
-  | IfThenElse of tm * tm * tm
-  | IntLit of int
   | FunLit of param list * tm
-  | FunApp of tm * tm
+  | VariantLit of label * tm
+  | IntLit of int
+  | BoolLit of bool
+  | App of tm * tm
+  | Match of tm * (pattern * tm) list
+  | IfThenElse of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
@@ -193,6 +193,9 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let body = elab_check ((def_name.data, def_ty) :: context) body ty in
       Let (def_name.data, def_ty, def, body)
 
+  | FunLit (params, body), ty ->
+      elab_check_fun_lit context params body ty
+
   | VariantLit (label, tm), VariantType cases -> begin
       match Core.LabelMap.find_opt label.data cases with
       | Some elem_ty -> VariantLit (label.data, elab_check context tm elem_ty, ty)
@@ -208,9 +211,6 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let tm0 = elab_check context tm0 ty in
       let tm1 = elab_check context tm1 ty in
       BoolElim (head, tm0, tm1)
-
-  | FunLit (params, body), ty ->
-      elab_check_fun_lit context params body ty
 
   (* Fall back to type inference *)
   | _ ->
@@ -237,11 +237,35 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let ty = elab_ty ty in
       elab_check context tm ty, ty
 
+  | FunLit (params, body) ->
+      elab_infer_fun_lit context params None body
+
   | VariantLit (label, elem_tm) ->
       let elem_tm, elem_ty = elab_infer context elem_tm in
       let cases = Core.LabelMap.singleton label.data elem_ty in
       let ty = fresh_meta tm.loc `VariantLit (Variant cases) in
       VariantLit (label.data, elem_tm, ty), ty
+
+  | IntLit i ->
+      IntLit i, IntType
+
+  | BoolLit b ->
+      BoolLit b, BoolType
+
+  | App (head, arg) ->
+      let head_loc = head.loc in
+      let head, head_ty = elab_infer context head in
+      let param_ty, body_ty =
+        match head_ty with
+        | FunType (param_ty, body_ty) -> param_ty, body_ty
+        | head_ty ->
+            let param_ty = fresh_meta head_loc `FunParam Any in
+            let body_ty = fresh_meta head_loc `FunBody Any in
+            unify head_loc head_ty (FunType (param_ty, body_ty));
+            param_ty, body_ty
+      in
+      let arg = elab_check context arg param_ty in
+      FunApp (head, arg), body_ty
 
   | Match (head, clauses) -> begin
       let head_loc = head.loc in
@@ -306,36 +330,12 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
           VariantElim (head, tm_cases), body_ty
   end
 
-  | BoolLit b ->
-      BoolLit b, BoolType
-
   | IfThenElse (head, tm0, tm1) ->
       let head = elab_check context head BoolType in
       let ty = fresh_meta tm.loc `IfBranches Any in
       let tm0 = elab_check context tm0 ty in
       let tm1 = elab_check context tm1 ty in
       BoolElim (head, tm0, tm1), ty
-
-  | IntLit i ->
-      IntLit i, IntType
-
-  | FunLit (params, body) ->
-      elab_infer_fun_lit context params None body
-
-  | FunApp (head, arg) ->
-      let head_loc = head.loc in
-      let head, head_ty = elab_infer context head in
-      let param_ty, body_ty =
-        match head_ty with
-        | FunType (param_ty, body_ty) -> param_ty, body_ty
-        | head_ty ->
-            let param_ty = fresh_meta head_loc `FunParam Any in
-            let body_ty = fresh_meta head_loc `FunBody Any in
-            unify head_loc head_ty (FunType (param_ty, body_ty));
-            param_ty, body_ty
-      in
-      let arg = elab_check context arg param_ty in
-      FunApp (head, arg), body_ty
 
   | Op2 ((`Eq) as prim, tm0, tm1) ->
       let tm0 = elab_check context tm0 IntType in

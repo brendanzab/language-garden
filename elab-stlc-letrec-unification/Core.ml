@@ -40,10 +40,10 @@ type meta_id = int
 
 (** Type syntax *)
 type ty =
-  | BoolType
-  | IntType
-  | FunType of ty * ty
   | MetaVar of meta_state ref
+  | FunType of ty * ty
+  | IntType
+  | BoolType
 
 (** The state of a metavariable, updated during unification *)
 and meta_state =
@@ -64,11 +64,11 @@ type tm =
   | Var of index
   | Let of name * ty * tm * tm
   | Fix of name * ty * tm
-  | BoolLit of bool
-  | BoolElim of tm * tm * tm
-  | IntLit of int
   | FunLit of name * ty * tm
   | FunApp of tm * tm
+  | IntLit of int
+  | BoolLit of bool
+  | BoolElim of tm * tm * tm
   | PrimApp of prim * tm list
 
 
@@ -83,19 +83,30 @@ module Semantics = struct
 
   type vtm =
     | Neu of ntm
+    | FunLit of name * ty * (eval_opts -> vtm -> vtm)
     | BoolLit of bool
     | IntLit of int
-    | FunLit of name * ty * (eval_opts -> vtm -> vtm)
 
   and ntm =
     | Var of level
     | Fix of name * ty * (eval_opts -> vtm -> vtm)
-    | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | FunApp of ntm * vtm
+    | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | PrimApp of prim * vtm list
 
 
   (** {1 Eliminators} *)
+
+  let rec fun_app opts head arg =
+    match head with
+    (* Unfold fixed-points on function application (fixed-points are assumed to
+       always evaluate to functions). This unfolding can be disabled to prevent
+       evaluation from diverging during quotation. *)
+    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
+        fun_app opts (body opts head) arg
+    | Neu ntm -> Neu (FunApp (ntm, arg))
+    | FunLit (_, _, body) -> body opts arg
+    | _ -> invalid_arg "expected function"
 
   let bool_elim head vtm0 vtm1 =
     match head with
@@ -112,17 +123,6 @@ module Semantics = struct
     | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
     | `Neg, [IntLit t1] -> IntLit (-t1)
     | prim, args -> Neu (PrimApp (prim, args))
-
-  let rec fun_app opts head arg =
-    match head with
-    (* Unfold fixed-points on function application (fixed-points are assumed to
-       always evaluate to functions). This unfolding can be disabled to prevent
-       evaluation from diverging during quotation. *)
-    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
-        fun_app opts (body opts head) arg
-    | Neu ntm -> Neu (FunApp (ntm, arg))
-    | FunLit (_, _, body) -> body opts arg
-    | _ -> invalid_arg "expected function"
 
 
   (** {1 Evaluation} *)
@@ -142,15 +142,6 @@ module Semantics = struct
     | Fix (name, self_ty, body) ->
         let body' opts self = eval ~opts (self :: env) body in
         Neu (Fix (name, self_ty, body'))
-    | BoolLit b -> BoolLit b
-    | BoolElim (head, tm0, tm1) ->
-        let head = eval ~opts env head in
-        let vtm0 = Lazy.from_fun (fun () -> eval ~opts env tm0) in
-        let vtm1 = Lazy.from_fun (fun () -> eval ~opts env tm1) in
-        bool_elim head vtm0 vtm1
-    | IntLit i -> IntLit i
-    | PrimApp (prim, args) ->
-        prim_app prim (List.map (eval ~opts env) args)
     | FunLit (name, param_ty, body) ->
         let body opts arg = eval ~opts (arg :: env) body in
         FunLit (name, param_ty, body)
@@ -158,6 +149,15 @@ module Semantics = struct
         let head = eval ~opts env head in
         let arg = eval ~opts env arg in
         fun_app opts head arg
+    | IntLit i -> IntLit i
+    | BoolLit b -> BoolLit b
+    | BoolElim (head, tm0, tm1) ->
+        let head = eval ~opts env head in
+        let vtm0 = Lazy.from_fun (fun () -> eval ~opts env tm0) in
+        let vtm1 = Lazy.from_fun (fun () -> eval ~opts env tm1) in
+        bool_elim head vtm0 vtm1
+    | PrimApp (prim, args) ->
+        prim_app prim (List.map (eval ~opts env) args)
 
 
   (** {1 Quotation} *)
@@ -171,11 +171,11 @@ module Semantics = struct
   let rec quote (size : int) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_neu size ntm
-    | BoolLit b -> BoolLit b
-    | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
         let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
         FunLit (name, param_ty, body)
+    | BoolLit b -> BoolLit b
+    | IntLit i -> IntLit i
 
   and quote_neu (size : int) (ntm : ntm) : tm =
     match ntm with
@@ -183,12 +183,14 @@ module Semantics = struct
     | Fix (name, self_ty, body) ->
         let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
         Fix (name, self_ty, body)
+    | FunApp (head, arg) ->
+        FunApp (quote_neu size head, quote size arg)
     | BoolElim (head, vtm0, vtm1) ->
         let tm0 = quote size (Lazy.force vtm0) in
         let tm1 = quote size (Lazy.force vtm1) in
         BoolElim (quote_neu size head, tm0, tm1)
-    | FunApp (head, arg) -> FunApp (quote_neu size head, quote size arg)
-    | PrimApp (prim, args) -> PrimApp (prim, List.map (quote size) args)
+    | PrimApp (prim, args) ->
+        PrimApp (prim, List.map (quote size) args)
 
 
   (** {1 Normalisation} *)
@@ -242,11 +244,11 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
           raise (InfiniteType id)
       | Unsolved _ | Solved _-> ()
   end
-  | BoolType -> ()
-  | IntType -> ()
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty
+  | IntType -> ()
+  | BoolType -> ()
 
 (** Check if two types are the same, updating unsolved metavaribles in one
     type with known information from the other type if possible. *)
@@ -254,11 +256,11 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
   match force ty0, force ty1 with
   | ty0, ty1 when ty0 = ty1 -> ()
   | MetaVar m, ty | ty, MetaVar m -> unify_meta m ty
-  | BoolType, BoolType -> ()
-  | IntType, IntType -> ()
   | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
       unify param_ty0 param_ty1;
       unify body_ty0 body_ty1;
+  | IntType, IntType -> ()
+  | BoolType, BoolType -> ()
   | ty1, ty2 ->
       raise (MismatchedTypes (ty1, ty2))
 
@@ -280,11 +282,11 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
 
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
-  | BoolType -> BoolType
-  | IntType -> IntType
+  | MetaVar _ as ty -> ty
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
-  | MetaVar _ as ty -> ty
+  | IntType -> IntType
+  | BoolType -> BoolType
 
 let rec zonk_tm (tm : tm) : tm =
   match tm with
@@ -293,16 +295,16 @@ let rec zonk_tm (tm : tm) : tm =
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
   | Fix (name, self_ty, body) ->
       Fix (name, zonk_ty self_ty, zonk_tm body)
-  | BoolLit b -> BoolLit b
-  | BoolElim (head, tm0, tm1) ->
-      BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
-  | IntLit i -> IntLit i
-  | PrimApp (prim, args) ->
-      PrimApp (prim, List.map zonk_tm args)
   | FunLit (name, param_ty, body) ->
       FunLit (name, zonk_ty param_ty, zonk_tm body)
   | FunApp (head, arg) ->
       FunApp (zonk_tm head, zonk_tm arg)
+  | IntLit i -> IntLit i
+  | BoolLit b -> BoolLit b
+  | BoolElim (head, tm0, tm1) ->
+      BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
+  | PrimApp (prim, args) ->
+      PrimApp (prim, List.map zonk_tm args)
 
 
 (** {1 Pretty printing} *)
@@ -322,13 +324,13 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
-  | BoolType -> Format.fprintf fmt "Bool"
-  | IntType -> Format.fprintf fmt "Int"
   | MetaVar m -> begin
       match !m with
       | Solved ty -> pp_atomic_ty fmt ty
       | Unsolved id -> Format.fprintf fmt "?%i" id
   end
+  | IntType -> Format.fprintf fmt "Int"
+  | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
 let pp_name_ann fmt (name, ty) =
@@ -413,8 +415,8 @@ and pp_app_tm names fmt tm =
 and pp_atomic_tm names fmt tm =
   match tm with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
+  | IntLit i -> Format.fprintf fmt "%i" i
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
-  | IntLit i -> Format.fprintf fmt "%i" i
   (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm

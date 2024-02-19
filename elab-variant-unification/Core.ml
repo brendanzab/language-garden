@@ -47,11 +47,11 @@ type meta_id = int
 
 (** Type syntax *)
 type ty =
-  | BoolType
-  | IntType
+  | MetaVar of meta_state ref
   | FunType of ty * ty
   | VariantType of ty LabelMap.t
-  | MetaVar of meta_state ref
+  | IntType
+  | BoolType
 
 (** The state of a metavariable, updated during unification *)
 and meta_state =
@@ -80,13 +80,13 @@ type prim = [
 type tm =
   | Var of index
   | Let of name * ty * tm * tm
-  | VariantLit of label * tm * ty
-  | VariantElim of tm * (name * tm) LabelMap.t
-  | BoolLit of bool
-  | BoolElim of tm * tm * tm
-  | IntLit of int
   | FunLit of name * ty * tm
   | FunApp of tm * tm
+  | VariantLit of label * tm * ty
+  | VariantElim of tm * (name * tm) LabelMap.t
+  | IntLit of int
+  | BoolLit of bool
+  | BoolElim of tm * tm * tm
   | PrimApp of prim * tm list
 
 
@@ -96,20 +96,26 @@ module Semantics = struct
 
   type vtm =
     | Neu of ntm
+    | FunLit of name * ty * (vtm -> vtm)
     | VariantLit of label * vtm * ty
     | BoolLit of bool
     | IntLit of int
-    | FunLit of name * ty * (vtm -> vtm)
 
   and ntm =
     | Var of level
+    | FunApp of ntm * vtm
     | VariantElim of ntm * (name * (vtm -> vtm)) LabelMap.t
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
-    | FunApp of ntm * vtm
     | PrimApp of prim * vtm list
 
 
   (** {1 Eliminators} *)
+
+  let fun_app head arg =
+    match head with
+    | Neu ntm -> Neu (FunApp (ntm, arg))
+    | FunLit (_, _, body) -> body arg
+    | _ -> invalid_arg "expected function"
 
   let variant_elim head cases =
     match head with
@@ -135,12 +141,6 @@ module Semantics = struct
     | `Neg, [IntLit t1] -> IntLit (-t1)
     | prim, args -> Neu (PrimApp (prim, args))
 
-  let fun_app head arg =
-    match head with
-    | Neu ntm -> Neu (FunApp (ntm, arg))
-    | FunLit (_, _, body) -> body arg
-    | _ -> invalid_arg "expected function"
-
 
   (** {1 Evaluation} *)
 
@@ -151,7 +151,14 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
-    | VariantLit (label, tm, ty) -> VariantLit (label, eval env tm, ty)
+    | FunLit (name, param_ty, body) ->
+        FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
+    | FunApp (head, arg) ->
+        let head = eval env head in
+        let arg = eval env arg in
+        fun_app head arg
+    | VariantLit (label, tm, ty) ->
+        VariantLit (label, eval env tm, ty)
     | VariantElim (head, cases) ->
         let head = eval env head in
         let cases =
@@ -159,21 +166,15 @@ module Semantics = struct
             name, fun arg -> eval (arg :: env) body)
         in
         variant_elim head cases
+    | IntLit i -> IntLit i
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
         let head = eval env head in
         let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
         let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
         bool_elim head vtm0 vtm1
-    | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
-    | FunLit (name, param_ty, body) ->
-        FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
-    | FunApp (head, arg) ->
-        let head = eval env head in
-        let arg = eval env arg in
-        fun_app head arg
 
 
   (** {1 Quotation} *)
@@ -182,17 +183,20 @@ module Semantics = struct
   let rec quote (size : int) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_neu size ntm
-    | VariantLit (label, vtm, ty) ->
-        VariantLit (label, quote size vtm, ty)
-    | BoolLit b -> BoolLit b
-    | IntLit i -> IntLit i
     | FunLit (name, param_ty, body) ->
         let body = quote (size + 1) (body (Neu (Var size))) in
         FunLit (name, param_ty, body)
+    | VariantLit (label, vtm, ty) ->
+        VariantLit (label, quote size vtm, ty)
+    | IntLit i -> IntLit i
+    | BoolLit b -> BoolLit b
 
   and quote_neu (size : int) (ntm : ntm) : tm =
     match ntm with
-    | Var level -> Var (level_to_index size level)
+    | Var level ->
+        Var (level_to_index size level)
+    | FunApp (head, arg) ->
+        FunApp (quote_neu size head, quote size arg)
     | VariantElim (head, cases) ->
         let head = quote_neu size head in
         let cases =
@@ -204,8 +208,8 @@ module Semantics = struct
         let tm0 = quote size (Lazy.force vtm0) in
         let tm1 = quote size (Lazy.force vtm1) in
         BoolElim (quote_neu size head, tm0, tm1)
-    | FunApp (head, arg) -> FunApp (quote_neu size head, quote size arg)
-    | PrimApp (prim, args) -> PrimApp (prim, List.map (quote size) args)
+    | PrimApp (prim, args) ->
+        PrimApp (prim, List.map (quote size) args)
 
   (** {1 Normalisation} *)
 
@@ -253,13 +257,13 @@ exception MismatchedTypes of ty * ty
 let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
   | MetaVar m -> occurs_meta id m
-  | BoolType -> ()
-  | IntType -> ()
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty;
   | VariantType cases ->
       cases |> LabelMap.iter (fun _ ty -> occurs id ty)
+  | IntType -> ()
+  | BoolType -> ()
 
 and occurs_meta (id : meta_id) (m : meta_state ref) : unit =
   match !m with
@@ -276,14 +280,14 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
   match force ty0, force ty1 with
   | ty0, ty1 when ty0 = ty1 -> ()
   | MetaVar m, ty | ty, MetaVar m -> unify_meta m ty
-  | VariantType cases0, VariantType cases1 ->
-      if LabelMap.equal (fun ty0 ty1 -> unify ty0 ty1; true) cases0 cases1 then () else
-        raise (MismatchedTypes (ty0, ty1))
-  | BoolType, BoolType -> ()
-  | IntType, IntType -> ()
   | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
       unify param_ty0 param_ty1;
       unify body_ty0 body_ty1;
+  | VariantType cases0, VariantType cases1 ->
+      if LabelMap.equal (fun ty0 ty1 -> unify ty0 ty1; true) cases0 cases1 then () else
+        raise (MismatchedTypes (ty0, ty1))
+  | IntType, IntType -> ()
+  | BoolType, BoolType -> ()
   | ty1, ty2 ->
       raise (MismatchedTypes (ty1, ty2))
 
@@ -350,34 +354,34 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
 
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
-  | BoolType -> BoolType
-  | IntType -> IntType
+  | MetaVar _ as ty -> ty
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
   | VariantType cases ->
       VariantType (cases |> LabelMap.map (fun ty -> zonk_ty ty))
-  | MetaVar _ as ty -> ty
+  | IntType -> IntType
+  | BoolType -> BoolType
 
 let rec zonk_tm (tm : tm) : tm =
   match tm with
   | Var index -> Var index
   | Let (name, def_ty, def, body) ->
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
+  | FunLit (name, param_ty, body) ->
+      FunLit (name, zonk_ty param_ty, zonk_tm body)
+  | FunApp (head, arg) ->
+      FunApp (zonk_tm head, zonk_tm arg)
   | VariantLit (label, tm, ty) -> VariantLit (label, zonk_tm tm, zonk_ty ty)
   | VariantElim (head, cases) ->
       let head = zonk_tm head in
       let cases = cases |> LabelMap.map (fun (binder, body) -> binder, zonk_tm body) in
       VariantElim (head, cases)
+  | IntLit i -> IntLit i
   | BoolLit b -> BoolLit b
   | BoolElim (head, tm0, tm1) ->
       BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
-  | IntLit i -> IntLit i
   | PrimApp (prim, args) ->
       PrimApp (prim, List.map zonk_tm args)
-  | FunLit (name, param_ty, body) ->
-      FunLit (name, zonk_ty param_ty, zonk_tm body)
-  | FunApp (head, arg) ->
-      FunApp (zonk_tm head, zonk_tm arg)
 
 
 (** {1 Pretty printing} *)
@@ -392,6 +396,14 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
+  | MetaVar m -> begin
+      match !m with
+      | Solved ty -> pp_atomic_ty fmt ty
+      | Unsolved (id, Any) -> Format.fprintf fmt "?%i" id
+      | Unsolved (id, Variant cases) ->
+          Format.fprintf fmt "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
+            id pp_ty (VariantType cases)
+  end
   | VariantType cases when LabelMap.is_empty cases ->
       Format.fprintf fmt "[|]"
   | VariantType cases ->
@@ -401,16 +413,8 @@ and pp_atomic_ty fmt ty =
           (fun fmt (label, ty) ->
             Format.fprintf fmt "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty))
         (LabelMap.to_seq cases)
-  | BoolType -> Format.fprintf fmt "Bool"
   | IntType -> Format.fprintf fmt "Int"
-  | MetaVar m -> begin
-      match !m with
-      | Solved ty -> pp_atomic_ty fmt ty
-      | Unsolved (id, Any) -> Format.fprintf fmt "?%i" id
-      | Unsolved (id, Variant cases) ->
-          Format.fprintf fmt "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
-            id pp_ty (VariantType cases)
-  end
+  | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
 let pp_name_ann fmt (name, ty) =
@@ -504,8 +508,8 @@ and pp_app_tm names fmt tm =
 and pp_atomic_tm names fmt tm =
   match tm with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
+  | IntLit i -> Format.fprintf fmt "%i" i
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
-  | IntLit i -> Format.fprintf fmt "%i" i
   (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm

@@ -38,11 +38,11 @@ and tm_data =
   | Let of binder * param list * ty option * tm * tm
   | LetRec of binder * param list * ty option * tm * tm
   | Ann of tm * ty
-  | BoolLit of bool
-  | IfThenElse of tm * tm * tm
-  | IntLit of int
   | FunLit of param list * tm
-  | FunApp of tm * tm
+  | IntLit of int
+  | BoolLit of bool
+  | App of tm * tm
+  | IfThenElse of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
@@ -162,14 +162,14 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let body = elab_check ((def_name.data, def_ty) :: context) body ty in
       Let (def_name.data, def_ty, def, body)
 
+  | FunLit (params, body) ->
+      elab_check_fun_lit context params body ty
+
   | IfThenElse (head, tm0, tm1) ->
       let head = elab_check context head BoolType in
       let tm0 = elab_check context tm0 ty in
       let tm1 = elab_check context tm1 ty in
       BoolElim (head, tm0, tm1)
-
-  | FunLit (params, body) ->
-      elab_check_fun_lit context params body ty
 
   (* Fall back to type inference *)
   | _ ->
@@ -220,23 +220,16 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let ty = elab_ty ty in
       elab_check context tm ty, ty
 
-  | BoolLit b ->
-      BoolLit b, BoolType
-
-  | IfThenElse (head, tm0, tm1) ->
-      let head = elab_check context head BoolType in
-      let ty = fresh_meta tm.loc `IfBranches in
-      let tm0 = elab_check context tm0 ty in
-      let tm1 = elab_check context tm1 ty in
-      BoolElim (head, tm0, tm1), ty
+  | FunLit (params, body) ->
+      elab_infer_fun_lit context params None body
 
   | IntLit i ->
       IntLit i, IntType
 
-  | FunLit (params, body) ->
-      elab_infer_fun_lit context params None body
+  | BoolLit b ->
+      BoolLit b, BoolType
 
-  | FunApp (head, arg) ->
+  | App (head, arg) ->
       let head_loc = head.loc in
       let head, head_ty = elab_infer context head in
       let param_ty, body_ty =
@@ -250,6 +243,13 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       in
       let arg = elab_check context arg param_ty in
       FunApp (head, arg), body_ty
+
+  | IfThenElse (head, tm0, tm1) ->
+      let head = elab_check context head BoolType in
+      let ty = fresh_meta tm.loc `IfBranches in
+      let tm0 = elab_check context tm0 ty in
+      let tm1 = elab_check context tm1 ty in
+      BoolElim (head, tm0, tm1), ty
 
   | Op2 ((`Eq) as prim, tm0, tm1) ->
       let tm0 = elab_check context tm0 IntType in

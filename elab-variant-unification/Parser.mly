@@ -105,7 +105,7 @@ let mul_tm :=
 
 let app_tm :=
 | tm0 = located(app_tm); tm1 = located(atomic_tm);
-    { Surface.FunApp (tm0, tm1) }
+    { Surface.App (tm0, tm1) }
 | "-"; tm = located(atomic_tm);
     { Surface.Op1 (`Neg, tm) }
 | atomic_tm
