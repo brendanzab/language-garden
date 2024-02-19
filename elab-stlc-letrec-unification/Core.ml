@@ -82,6 +82,11 @@ module Semantics = struct
     unfold_fix : bool;
   }
 
+  (** Default options for evaluation *)
+  let default_opts = {
+    unfold_fix = true;
+  }
+
   (** {1 Values} *)
 
   type vtm =
@@ -137,11 +142,6 @@ module Semantics = struct
 
   (** {1 Evaluation} *)
 
-  (** Default options for evaluation *)
-  let default_opts = {
-    unfold_fix = true;
-  }
-
   (** Evaluate a term from the syntax into its semantic interpretation *)
   let rec eval ?(opts = default_opts) (env : vtm env) (tm : tm) : vtm =
     match tm with
@@ -177,49 +177,46 @@ module Semantics = struct
 
   (** {1 Quotation} *)
 
-  (** Options for evaluating under binders during quotation. *)
-  let quote_opts = {
-    unfold_fix = false;
-    (* Set to false to prevent evaluation from diverging when quoting
-       partially-applied fixed-points. *)
-  }
-
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote (size : int) (vtm : vtm) : tm =
+  let rec quote ~opts (size : int) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_neu size ntm
+    | Neu ntm -> quote_neu ~opts size ntm
     | FunLit (name, param_ty, body) ->
-        let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
+        let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
         FunLit (name, param_ty, body)
     | TupleLit elems ->
-        TupleLit (List.map (quote size) elems)
+        TupleLit (List.map (quote ~opts size) elems)
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
 
-  and quote_neu (size : int) (ntm : ntm) : tm =
+  and quote_neu ~opts (size : int) (ntm : ntm) : tm =
     match ntm with
     | Var level -> Var (level_to_index size level)
     | Fix (name, self_ty, body) ->
-        let body = quote (size + 1) (body quote_opts (Neu (Var size))) in
+        let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
         Fix (name, self_ty, body)
     | FunApp (head, arg) ->
-        FunApp (quote_neu size head, quote size arg)
+        FunApp (quote_neu ~opts size head, quote ~opts size arg)
     | TupleProj (head, elem_index) ->
-        TupleProj (quote_neu size head, elem_index)
+        TupleProj (quote_neu ~opts size head, elem_index)
     | BoolElim (head, vtm0, vtm1) ->
-        let tm0 = quote size (Lazy.force vtm0) in
-        let tm1 = quote size (Lazy.force vtm1) in
-        BoolElim (quote_neu size head, tm0, tm1)
+        let tm0 = quote ~opts size (Lazy.force vtm0) in
+        let tm1 = quote ~opts size (Lazy.force vtm1) in
+        BoolElim (quote_neu ~opts size head, tm0, tm1)
     | PrimApp (prim, args) ->
-        PrimApp (prim, List.map (quote size) args)
+        PrimApp (prim, List.map (quote ~opts size) args)
 
 
   (** {1 Normalisation} *)
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (env : vtm list) (tm : tm) : tm =
-    quote (List.length env) (eval env tm)
+  let normalise ?(opts = default_opts) (env : vtm list) (tm : tm) : tm =
+    quote (List.length env) (eval ~opts env tm) ~opts:{
+      opts with unfold_fix = false;
+      (* Limit recursive unfoldings. This prevents infinite loops when quoting
+         partially-applied fixed-points. *)
+    } [@warning "-useless-record-with"]
 
 end
 
