@@ -180,8 +180,8 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let body = elab_check (Def (def_name.data, def_ty) :: context) body ty in
       Let (def_name.data, def_ty, def, body)
 
-  | LetRec (defs, body) ->
-      let def_name, defs_entry, def_ty, def = elab_let_rec_def context defs in
+  | LetRec (defns, body) ->
+      let def_name, defs_entry, def_ty, def = elab_let_rec_defns context defns in
       let body = elab_check (defs_entry :: context) body ty in
       Let (def_name, def_ty, def, body)
 
@@ -214,8 +214,8 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let body, body_ty = elab_infer (Def (def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
 
-  | LetRec (defs, body) ->
-      let def_name, defs_entry, def_ty, def = elab_let_rec_def context defs in
+  | LetRec (defns, body) ->
+      let def_name, defs_entry, def_ty, def = elab_let_rec_defns context defns in
       let body, body_ty = elab_infer (defs_entry :: context) body in
       Let (def_name, def_ty, def, body), body_ty
 
@@ -302,8 +302,8 @@ and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty o
       let body, body_ty = elab_infer_fun_lit (Def (name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
 
-(** Elaborate the definition of a recursive let binding. *)
-and elab_let_rec_def (context : context) (defs : defn list) : string * entry * Core.ty * Core.tm =
+(** Elaborate the definitions of a recursive let binding. *)
+and elab_let_rec_defns (context : context) (defns : defn list) : string * entry * Core.ty * Core.tm =
   (* Creates a fresh function type for a definition. *)
   let rec fresh_fun_ty context loc params body_ty =
     match params, body_ty with
@@ -314,7 +314,7 @@ and elab_let_rec_def (context : context) (defs : defn list) : string * entry * C
         FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
   in
 
-  match defs with
+  match defns with
   (* Singly recursive definitions *)
   | [(def_name, params, def_ty, def)] ->
       let def_ty = fresh_fun_ty context def_name.loc params def_ty in
