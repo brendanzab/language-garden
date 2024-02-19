@@ -180,6 +180,11 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let body = elab_check (Def (def_name.data, def_ty) :: context) body ty in
       Let (def_name.data, def_ty, def, body)
 
+  | LetRec (defs, body) ->
+      let def_name, defs_entry, def_ty, def = elab_let_rec_def context defs in
+      let body = elab_check (defs_entry :: context) body ty in
+      Let (def_name, def_ty, def, body)
+
   | FunLit (params, body) ->
       elab_check_fun_lit context params body ty
 
@@ -209,75 +214,9 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let body, body_ty = elab_infer (Def (def_name.data, def_ty) :: context) body in
       Let (def_name.data, def_ty, def, body), body_ty
 
-  (* Singly recursive definitions *)
-  | LetRec ([(def_name, params, def_ty, def)], body) ->
-      (* Creates a fresh function type for a definition. *)
-      let rec fresh_fun_ty context loc params body_ty =
-        match params, body_ty with
-        | [], Some body_ty -> elab_ty body_ty
-        | [], None -> fresh_meta loc `FunBody
-        | (name, _) :: params, body_ty ->
-            let param_ty = fresh_meta name.loc `FunParam in
-            FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
-      in
-
-      (* Elaborate the definition to a fixed-point combinator *)
-      let def_ty = fresh_fun_ty context def_name.loc params def_ty in
-      let def_body =
-        match elab_check_fun_lit (Def (def_name.data, def_ty) :: context) params def def_ty with
-        | FunLit _ as def_body -> def_body
-        | _ -> error tm.loc "expected function literal in recursive let binding"
-      in
-      let def = Core.Fix (def_name.data, def_ty, def_body) in
-
-      (* Elaborate the body of the let just like in the non-recursive case. *)
-      let body, body_ty = elab_infer (Def (def_name.data, def_ty) :: context) body in
-
-      Let (def_name.data, def_ty, def, body), body_ty
-
-  (* Mutually recursive definitions *)
   | LetRec (defs, body) ->
-      (* Creates a fresh function type for a definition. *)
-      let rec fresh_fun_ty context loc params body_ty =
-        match params, body_ty with
-        | [], Some body_ty -> elab_ty body_ty
-        | [], None -> fresh_meta loc `FunBody
-        | (name, _) :: params, body_ty ->
-            let param_ty = fresh_meta name.loc `FunParam in
-            FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
-      in
-
-      (* Create fresh function types for each definition, then elaborate the
-         mutually recursive definitions, assuming the other recursive
-         definitions are in scope *)
-      let def_tys = defs |> List.map (fun (def_name, params, def_ty, _) ->
-        def_name.data, fresh_fun_ty context def_name.loc params def_ty)
-      in
-      let defs =
-        List.map2
-          (fun (_, def_ty) (_, params, _, def) ->
-            match elab_check_fun_lit (MutualDef def_tys :: context) params def def_ty with
-            | FunLit _ as def_body -> def_body
-            | _ -> error tm.loc "expected function literal in recursive let binding"
-          )
-          def_tys
-          defs
-      in
-
-      (* Build the fixed-point combinator to use as the definition *)
-      let def_name =
-        Format.asprintf "$%a"
-          (Format.pp_print_list
-            ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
-            Format.pp_print_string)
-          (List.map fst def_tys)
-      in
-      let def_ty = Core.TupleType (List.map snd def_tys) in
-      let def = Core.Fix (def_name, def_ty, TupleLit defs) in
-
-      (* Elaborate the body with the mutually recusive definitions in scope *)
-      let body, body_ty = elab_infer (MutualDef def_tys :: context) body in
-
+      let def_name, defs_entry, def_ty, def = elab_let_rec_def context defs in
+      let body, body_ty = elab_infer (defs_entry :: context) body in
       Let (def_name, def_ty, def, body), body_ty
 
   | Ann (tm, ty) ->
@@ -362,3 +301,63 @@ and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty o
       let param_ty = elab_ty param_ty in
       let body, body_ty = elab_infer_fun_lit (Def (name.data, param_ty) :: context) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+
+(** Elaborate the definition of a recursive let binding. *)
+and elab_let_rec_def (context : context) (defs : defn list) : string * entry * Core.ty * Core.tm =
+  (* Creates a fresh function type for a definition. *)
+  let rec fresh_fun_ty context loc params body_ty =
+    match params, body_ty with
+    | [], Some body_ty -> elab_ty body_ty
+    | [], None -> fresh_meta loc `FunBody
+    | (name, _) :: params, body_ty ->
+        let param_ty = fresh_meta name.loc `FunParam in
+        FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
+  in
+
+  match defs with
+  (* Singly recursive definitions *)
+  | [(def_name, params, def_ty, def)] ->
+      let def_ty = fresh_fun_ty context def_name.loc params def_ty in
+      let def_body =
+        match elab_check_fun_lit (Def (def_name.data, def_ty) :: context) params def def_ty with
+        | FunLit _ as def_body -> def_body
+        | _ -> error def_name.loc "expected function literal in recursive let binding"
+      in
+
+      (* Build the fixed-point combinator *)
+      let def_entry = Def (def_name.data, def_ty) in
+      let def = Core.Fix (def_name.data, def_ty, def_body) in
+
+      def_name.data, def_entry, def_ty, def
+
+  (* Mutually recursive definitions *)
+  | defs ->
+      let def_tys = defs |> List.map (fun (def_name, params, def_ty, _) ->
+        def_name.data, fresh_fun_ty context def_name.loc params def_ty)
+      in
+      let elab_defs =
+        List.map2
+          (fun (_, def_ty) (def_name, params, _, def) ->
+            match elab_check_fun_lit (MutualDef def_tys :: context) params def def_ty with
+            | FunLit _ as def_body -> def_body
+            | _ -> error def_name.loc "expected function literal in recursive let binding"
+          )
+          def_tys
+          defs
+      in
+
+      (* Create a name for the combined definition *)
+      let def_name =
+        Format.asprintf "$%a"
+          (Format.pp_print_list
+            ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
+            Format.pp_print_string)
+          (List.map fst def_tys)
+      in
+
+      (* Build the fixed-point combinator *)
+      let defs_entry = MutualDef def_tys in
+      let def_ty = Core.TupleType (List.map snd def_tys) in
+      let def = Core.Fix (def_name, def_ty, TupleLit elab_defs) in
+
+      def_name, defs_entry, def_ty, def

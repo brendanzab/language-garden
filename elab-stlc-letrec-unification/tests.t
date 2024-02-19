@@ -319,7 +319,7 @@ Mismatched argument
 
 Recursive let bindings
   $ stlc-letrec-unification elab <<< "let rec x := x; x : Int"
-  <input>:1:0: expected function literal in recursive let binding
+  <input>:1:8: expected function literal in recursive let binding
   [1]
 
 Infinite type
