@@ -51,8 +51,16 @@ Some other approaches to combining fixed points with normalisation-by-evaluation
 
 ## Examples
 
-<!-- $MDX file=examples/readme.txt -->
+More examples can be found in [`tests.t`](tests.t).
+
+### Single recursion: Factorial function
+
+Singly recursive functions are elaborated to fixed-points in the core language.
+
+<!-- $MDX file=examples/fact.txt -->
 ```
+-- An example of a singly recursive definition
+
 let rec fact n :=
   if n = 0 then 1 else n * fact (n - 1);
 
@@ -61,7 +69,7 @@ fact 5
 
 Elaborated program:
 
-<!-- $MDX file=examples/readme.stdout -->
+<!-- $MDX file=examples/fact.stdout -->
 ```
 let fact : Int -> Int :=
   #fix (fact : Int -> Int) =>
@@ -69,4 +77,29 @@ let fact : Int -> Int :=
 fact 5 : Int
 ```
 
-More examples can be found in [`tests.t`](tests.t).
+### Mutual recursion: Even and odd functions
+
+Mutually recursive functions are elaborated to fixed-points using tuples:
+
+<!-- $MDX file=examples/even-odd.txt -->
+```
+-- An example of mutually recursive definitions
+
+let rec is-even n :=
+      if n = 0 then true else is-odd (n - 1);
+    rec is-odd n :=
+      if n = 0 then false else is-even (n - 1);
+
+is-even 6
+```
+
+Elaborated program:
+
+<!-- $MDX file=examples/even-odd.stdout -->
+```
+let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
+  #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+    (fun (n : Int) => if n = 0 then true else $is-even-is-odd.1 (n - 1),
+    fun (n : Int) => if n = 0 then false else $is-even-is-odd.0 (n - 1));
+$is-even-is-odd.0 6 : Bool
+```

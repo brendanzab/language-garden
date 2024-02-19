@@ -1,10 +1,21 @@
 (rule
-  (with-stdin-from readme.txt
-    (with-stdout-to readme.stdout.tmp
+  (with-stdin-from fact.txt
+    (with-stdout-to fact.stdout.tmp
       (run %{bin:stlc-letrec-unification} elab))))
 
 (rule
   (alias runtest)
   (package elab-stlc-letrec-unification)
-  (action (diff readme.stdout
-                readme.stdout.tmp)))
+  (action (diff fact.stdout
+                fact.stdout.tmp)))
+
+(rule
+  (with-stdin-from even-odd.txt
+    (with-stdout-to even-odd.stdout.tmp
+      (run %{bin:stlc-letrec-unification} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-stlc-letrec-unification)
+  (action (diff even-odd.stdout
+                even-odd.stdout.tmp)))
