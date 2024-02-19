@@ -104,9 +104,6 @@ module Semantics = struct
 
   let rec fun_app opts head arg =
     match head with
-    (* Unfold fixed-points on function application (fixed-points are assumed to
-       always evaluate to functions). This unfolding can be disabled to prevent
-       evaluation from diverging during quotation. *)
     | Neu (Fix (_, _, body)) when opts.unfold_fix ->
         fun_app opts (body opts head) arg
     | Neu ntm -> Neu (FunApp (ntm, arg))
@@ -183,6 +180,8 @@ module Semantics = struct
   (** Options for evaluating under binders during quotation. *)
   let quote_opts = {
     unfold_fix = false;
+    (* Set to false to prevent evaluation from diverging when quoting
+       partially-applied fixed-points. *)
   }
 
   (** Convert terms from the semantic domain back into syntax. *)

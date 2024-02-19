@@ -4,10 +4,7 @@ Extends [**elab-stlc-unification**](../elab-stlc-unification).
 
 This is an implementation of recursive let bindings for the simply typed lambda
 calculus. These are elaborated to a primitive fixed-point combinator in the core
-language. Implementing normalisation-by-evaluation with general recursion can be
-challenging, and can result in evaluation diverging when quoting under
-fixed-points. To prevent this this we avoid unfolding fixed-points during
-quotation.
+language.
 
 Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in trying out
 different approaches and pointing out bugs when implementing this.
