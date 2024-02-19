@@ -335,7 +335,7 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
       let def_tys = defs |> List.map (fun (def_name, params, def_ty, _) ->
         def_name.data, fresh_fun_ty context def_name.loc params def_ty)
       in
-      let elab_defs =
+      let defs =
         List.map2
           (fun (_, def_ty) (def_name, params, _, def) ->
             match elab_check_fun_lit (MutualDef def_tys :: context) params def def_ty with
@@ -350,6 +350,6 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
       let def_name = "$" ^ String.concat "-" (List.map fst def_tys) in
       let defs_entry = MutualDef def_tys in
       let def_ty = Core.TupleType (List.map snd def_tys) in
-      let def = Core.Fix (def_name, def_ty, TupleLit elab_defs) in
+      let def = Core.Fix (def_name, def_ty, TupleLit defs) in
 
       def_name, defs_entry, def_ty, def
