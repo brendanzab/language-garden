@@ -188,9 +188,9 @@ let rec elab_ty (ty : ty) : Core.ty =
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
   match tm.data, Core.force ty with
-  | Let (def_name, params, def_body_ty, def_body, body), ty ->
+  | Let (def_name, params, def_body_ty, def_body, body), body_ty ->
       let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
-      let body = elab_check ((def_name.data, def_ty) :: context) body ty in
+      let body = elab_check ((def_name.data, def_ty) :: context) body body_ty in
       Let (def_name.data, def_ty, def, body)
 
   | FunLit (params, body), ty ->
@@ -198,12 +198,75 @@ let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
 
   | VariantLit (label, tm), VariantType cases -> begin
       match Core.LabelMap.find_opt label.data cases with
-      | Some elem_ty -> VariantLit (label.data, elab_check context tm elem_ty, ty)
+      | Some elem_ty ->
+          VariantLit (label.data, elab_check context tm elem_ty, ty)
       | None ->
           error label.loc
             (Format.asprintf "unexpected variant `%s` in type `%a`"
               label.data
               Core.pp_ty (Core.zonk_ty ty))
+  end
+
+  | Match (head, clauses), body_ty -> begin
+      let head_loc = head.loc in
+      let head, head_ty = elab_infer context head in
+      (* TDOD: Proper match compilation *)
+      match Core.force head_ty with
+      | VariantType ty_cases ->
+          (* iterate through clauses, accumulating term cases *)
+          let tm_cases =
+            List.fold_left
+              (fun tm_cases ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
+                if Core.LabelMap.mem label.data tm_cases then
+                  (* TODO: should be a warning *)
+                  error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
+                else
+                  match Core.LabelMap.find_opt label.data ty_cases with
+                  | Some case_ty ->
+                      let body_tm = elab_check ((name.data, case_ty) :: context) body_tm body_ty in
+                      Core.LabelMap.add label.data (name.data, body_tm) tm_cases
+                  | None ->
+                      error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
+              Core.LabelMap.empty
+              clauses
+          in
+          (* check that labels in term cases match type cases *)
+          let missing_cases =
+            Core.LabelMap.to_seq ty_cases
+            |> Seq.filter (fun (label, _) -> not (Core.LabelMap.mem label tm_cases))
+            |> List.of_seq
+          in
+          if List.is_empty missing_cases then
+            (* return term cases *)
+            VariantElim (head, tm_cases)
+          else
+            error tm.loc
+              (Format.asprintf "non-exhaustive match, missing %a"
+                (Format.pp_print_list
+                  ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
+                  (fun fmt (label, _) -> Format.fprintf fmt "`%s`" label))
+                missing_cases)
+
+      | head_ty ->
+          (* Build up the labelled types and and term cases from the clauses *)
+          let tm_cases, ty_cases =
+            List.fold_left
+              (fun (tm_cases, ty_cases) ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
+                if Core.LabelMap.mem label.data tm_cases then
+                  (* TODO: should be a warning? *)
+                  error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
+                else
+                  let case_ty = fresh_meta name.loc `PatternBinder Any in
+                  let body_tm = elab_check ((name.data, case_ty) :: context) body_tm body_ty in
+                  Core.LabelMap.add label.data (name.data, body_tm) tm_cases,
+                  Core.LabelMap.add label.data case_ty ty_cases)
+              (Core.LabelMap.empty, Core.LabelMap.empty)
+              clauses
+          in
+          (* Unify head type with variant type *)
+          unify head_loc head_ty (VariantType ty_cases);
+          (* return term cases *)
+          VariantElim (head, tm_cases)
   end
 
   | IfThenElse (head, tm0, tm1), ty ->
@@ -267,68 +330,9 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let arg = elab_check context arg param_ty in
       FunApp (head, arg), body_ty
 
-  | Match (head, clauses) -> begin
-      let head_loc = head.loc in
-      let head, head_ty = elab_infer context head in
+  | Match (_, _) ->
       let body_ty = fresh_meta tm.loc `MatchClauses Any in
-      (* TDOD: Proper match compilation *)
-      match Core.force head_ty with
-      | VariantType ty_cases ->
-          (* iterate through clauses, accumulating term cases *)
-          let tm_cases =
-            List.fold_left
-              (fun tm_cases ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
-                if Core.LabelMap.mem label.data tm_cases then
-                  (* TODO: should be a warning *)
-                  error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
-                else
-                  match Core.LabelMap.find_opt label.data ty_cases with
-                  | Some case_ty ->
-                      let body_tm = elab_check ((name.data, case_ty) :: context) body_tm body_ty in
-                      Core.LabelMap.add label.data (name.data, body_tm) tm_cases
-                  | None ->
-                      error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
-              Core.LabelMap.empty
-              clauses
-          in
-          (* check that labels in term cases match type cases *)
-          let missing_cases =
-            Core.LabelMap.to_seq ty_cases
-            |> Seq.filter (fun (label, _) -> not (Core.LabelMap.mem label tm_cases))
-            |> List.of_seq
-          in
-          if List.is_empty missing_cases then
-            (* return term cases *)
-            VariantElim (head, tm_cases), body_ty
-          else
-            error tm.loc
-              (Format.asprintf "non-exhaustive match, missing %a"
-                (Format.pp_print_list
-                  ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
-                  (fun fmt (label, _) -> Format.fprintf fmt "`%s`" label))
-                missing_cases)
-
-      | head_ty ->
-          (* Build up the labelled types and and term cases from the clauses *)
-          let tm_cases, ty_cases =
-            List.fold_left
-              (fun (tm_cases, ty_cases) ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
-                if Core.LabelMap.mem label.data tm_cases then
-                  (* TODO: should be a warning? *)
-                  error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
-                else
-                  let case_ty = fresh_meta name.loc `PatternBinder Any in
-                  let body_tm = elab_check ((name.data, case_ty) :: context) body_tm body_ty in
-                  Core.LabelMap.add label.data (name.data, body_tm) tm_cases,
-                  Core.LabelMap.add label.data case_ty ty_cases)
-              (Core.LabelMap.empty, Core.LabelMap.empty)
-              clauses
-          in
-          (* Unify head type with variant type *)
-          unify head_loc head_ty (VariantType ty_cases);
-          (* return term cases *)
-          VariantElim (head, tm_cases), body_ty
-  end
+      elab_check context tm body_ty, body_ty
 
   | IfThenElse (head, tm0, tm1) ->
       let head = elab_check context head BoolType in
