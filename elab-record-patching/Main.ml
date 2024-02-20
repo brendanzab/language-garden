@@ -1,11 +1,6 @@
 (** {0 Elaborator CLI} *)
 
-module Surface = ElabDependentSugar.Surface
-module Lexer = ElabDependentSugar.Lexer
-module Parser = ElabDependentSugar.Parser
-
-
-(** Helper functions *)
+(** {1 Helper functions} *)
 
 let print_error (start, _ : Lexing.position * Lexing.position) message =
   Printf.eprintf "%s:%d:%d: %s\n"
@@ -57,13 +52,13 @@ let elab_cmd (no_resugar : bool) : unit =
   let context = Surface.initial_context in
   let (tm, ty) = infer context (parse_tm "<input>" stdin) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
-    ("<input>", Surface.quote context ty, tm)
+    ("<input>", Surface.quote context ty Core.Semantics.Univ, tm)
 
 let norm_cmd (no_resugar : bool) : unit =
   let context = Surface.initial_context in
   let (tm, ty) = infer context (parse_tm "<input>" stdin) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
-    ("<input>", Surface.quote context ty, Surface.normalise context tm)
+    ("<input>", Surface.quote context ty Core.Semantics.Univ, Surface.normalise context tm ty)
 
 
 (** {1 CLI options} *)
@@ -77,7 +72,7 @@ let cmd =
           ~doc:"disable resugaring in pretty printed terms")
   in
 
-  Cmd.group (Cmd.info "dependent-sugar") [
+  Cmd.group (Cmd.info "record-patching") [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
       Term.(const elab_cmd $ no_resugar);
     Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")

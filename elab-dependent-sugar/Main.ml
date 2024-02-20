@@ -1,11 +1,6 @@
 (** {0 Elaborator CLI} *)
 
-module Surface = ElabDependent.Surface
-module Lexer = ElabDependent.Lexer
-module Parser = ElabDependent.Parser
-
-
-(** Helper functions *)
+(** {1 Helper functions} *)
 
 let print_error (start, _ : Lexing.position * Lexing.position) message =
   Printf.eprintf "%s:%d:%d: %s\n"
@@ -77,7 +72,7 @@ let cmd =
           ~doc:"disable resugaring in pretty printed terms")
   in
 
-  Cmd.group (Cmd.info "dependent") [
+  Cmd.group (Cmd.info "dependent-sugar") [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
       Term.(const elab_cmd $ no_resugar);
     Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")

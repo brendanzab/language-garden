@@ -1,7 +1,7 @@
 (executable
   (name main)
-  (public_name dependent)
-  (package elab-dependent)
+  (public_name record-patching)
+  (package elab-record-patching)
   (preprocess
     (pps sedlex.ppx))
   (libraries
@@ -12,7 +12,3 @@
 (menhir
   (modules Parser)
   (flags --explain --strict))
-
-(mdx
-  (package elab-dependent)
-  (deps %{bin:dependent}))
