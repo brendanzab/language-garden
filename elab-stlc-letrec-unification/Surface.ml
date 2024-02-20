@@ -111,20 +111,16 @@ type context = entry Core.env
 
 (** Lookup a name in the context *)
 let lookup (context : context) (name : string) : (Core.tm * Core.ty) option =
-  let lookup_mutual =
-    List.find_mapi (fun elem_index (name', ty) ->
-      if name = name' then Some (elem_index, ty) else None)
-  in
-
   context |> List.find_mapi (fun index entry ->
     match entry with
     | Def (name', ty) when name = name' ->
         Some (Core.Var index, ty)
-    | MutualDef entries -> begin
-        match lookup_mutual entries with
-        | Some (elem_index, ty) -> Some (TupleProj (Var index, elem_index), ty)
-        | None -> None
-    end
+    | MutualDef entries ->
+        entries |> List.find_mapi (fun elem_index (name', ty) ->
+          match name = name' with
+          | true -> Some (Core.TupleProj (Var index, elem_index), ty)
+          | false -> None
+        )
     | _ -> None
   )
 
