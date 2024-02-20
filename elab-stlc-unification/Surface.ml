@@ -101,13 +101,10 @@ type context = (string * Core.ty) Core.env
 
 (** Lookup a name in the context *)
 let lookup (context : context) (name : string) : (Core.index * Core.ty) option =
-  let rec go index context =
-    match context with
-    | (name', ty) :: _ when name = name' -> Some (index, ty)
-    | (_, _) :: context -> go (index + 1) context
-    | [] -> None
-  in
-  go 0 context
+  context |> List.find_mapi @@ fun index (name', ty) ->
+    match name = name' with
+    | true -> Some (index, ty)
+    | false -> None
 
 
 (** {2 Elaboration errors} *)
