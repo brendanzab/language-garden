@@ -204,7 +204,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
       let head_loc = head.loc in
       let head, head_ty = elab_infer context head in
       let param_ty, body_ty =
-        match head_ty with
+        match Core.force head_ty with
         | FunType (param_ty, body_ty) -> param_ty, body_ty
         | head_ty ->
             let param_ty = fresh_meta head_loc `FunParam in
