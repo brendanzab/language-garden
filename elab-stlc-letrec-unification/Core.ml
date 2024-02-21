@@ -307,7 +307,11 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
 
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
-  | MetaVar _ as ty -> ty
+  | MetaVar m -> begin
+      match !m with
+      | Solved ty -> zonk_ty ty
+      | Unsolved _ -> MetaVar m
+  end
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
   | TupleType elem_tys ->
