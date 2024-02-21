@@ -307,19 +307,25 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
         let param_ty = fresh_meta name.loc `FunParam in
         FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
   in
+  (* Check the body of a definition, ensuring it is a function *)
+  let check_def_body context params def_loc def def_ty =
+    match elab_check_fun_lit context params def def_ty with
+    | FunLit _ as def_body -> def_body
+    | _ -> error def_loc "expected function literal in recursive let binding"
+  in
+  (* Check a series of mutually recursive definitions *)
+  let check_def_bodies context =
+    List.map2
+      (fun (def_name, params, _, def) (_, def_ty) ->
+        check_def_body context params def_name.loc def def_ty)
+  in
 
   match defns with
   (* Singly recursive definitions *)
   | [(def_name, params, def_ty, def)] ->
       let def_ty = fresh_fun_ty context def_name.loc params def_ty in
-      let def_body =
-        match elab_check_fun_lit (Def (def_name.data, def_ty) :: context) params def def_ty with
-        | FunLit _ as def_body -> def_body
-        | _ -> error def_name.loc "expected function literal in recursive let binding"
-      in
-
-      (* Create the definition with the fixed-point combinator *)
       let def_entry = Def (def_name.data, def_ty) in
+      let def_body = check_def_body (def_entry :: context) params def_name.loc def def_ty in
       let def = Core.Fix (def_name.data, def_ty, def_body) in
 
       def_name.data, def_entry, def_ty, def
@@ -329,20 +335,11 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
       let def_tys = defs |> List.map (fun (def_name, params, def_ty, _) ->
         def_name.data, fresh_fun_ty context def_name.loc params def_ty)
       in
-      let defs =
-        List.map2
-          (fun (_, def_ty) (def_name, params, _, def) ->
-            match elab_check_fun_lit (MutualDef def_tys :: context) params def def_ty with
-            | FunLit _ as def_body -> def_body
-            | _ -> error def_name.loc "expected function literal in recursive let binding"
-          )
-          def_tys
-          defs
-      in
+      let defs_entry = MutualDef def_tys in
+      let defs = check_def_bodies (defs_entry :: context) defs def_tys in
 
       (* Create the combined definition with the fixed-point combinator *)
       let def_name = "$" ^ String.concat "-" (List.map fst def_tys) in
-      let defs_entry = MutualDef def_tys in
       let def_ty = Core.TupleType (List.map snd def_tys) in
       let def = Core.Fix (def_name, def_ty, TupleLit defs) in
 
