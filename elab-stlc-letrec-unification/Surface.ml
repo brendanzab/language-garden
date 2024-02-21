@@ -307,12 +307,24 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
         let param_ty = fresh_meta name.loc `FunParam in
         FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: context) loc params body_ty)
   in
+
   (* Check the body of a definition, ensuring it is a function *)
   let check_def_body context params def_loc def def_ty =
+    (* Avoid “vicious circles” with a blunt syntactic check on the elaborated
+       term, ensuring that it is a function literal. This is similar to the
+       approach used in Standard ML. This rules out definitions like:
+
+           let x := x + 1;
+
+       OCaml uses a more complicated check (as of versions 4.06 and 4.08) that
+       admits more valid programs. A detailed description of this check can be
+       found in “A practical mode system for recursive definitions” by Reynaud
+       et. al. https://doi.org/10.1145/3434326. *)
     match elab_check_fun_lit context params def def_ty with
     | FunLit _ as def_body -> def_body
     | _ -> error def_loc "expected function literal in recursive let binding"
   in
+
   (* Check a series of mutually recursive definitions *)
   let check_def_bodies context =
     List.map2
