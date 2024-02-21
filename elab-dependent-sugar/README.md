@@ -1,5 +1,7 @@
 # A small dependently typed language
 
+Extends [**elab-dependent**](../elab-dependent).
+
 This is a variant of the [elab-dependent](../elab-dependent/) project with
 fancier syntactic sugar for functions and let bindings. See that project’s
 README for more details and resources.
