@@ -167,5 +167,5 @@ Missing variant patterns
   > fun (x : [a : Int | b : Bool]) => 
   >   match x with end
   > EOF
-  <input>:2:2: non-exhaustive match, missing `a`, `b`
+  <input>:2:8: non-exhaustive match, missing `a`, `b`
   [1]
