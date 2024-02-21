@@ -4,10 +4,16 @@ Extends [**elab-stlc-unification**](../elab-stlc-unification).
 
 This is an implementation of recursive let bindings for the simply typed lambda
 calculus. These are elaborated to a primitive fixed-point combinator in the core
-language.
+language. Mutually recursive let bindings are elaborated to fixed-points over
+tuples of functions.
 
-Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in trying out
-different approaches and pointing out bugs when implementing this.
+Due to the introduction of general recursion to the language, care must be taken
+when implementing quotation, as the naive approach will lead to infinite loops
+when quoting under-applied recursive definitions. To avoid this, we disable the
+unfolding of recursive definitions during quotation.
+
+Thanks goes to [Karl Meakin](https://github.com/Kmeakin) for help in exploring
+different approaches and pointing out bugs in my initial implementations.
 
 ## Project overview
 
