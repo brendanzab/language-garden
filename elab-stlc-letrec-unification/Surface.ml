@@ -325,13 +325,15 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
     | _ -> error def_loc "expected function literal in recursive let binding"
   in
 
-  (* Check a series of mutually recursive definitions *)
+  (* Check a series of mutually recursive definitions against their types *)
   let check_def_bodies context =
-    List.map2
-      (fun (def_name, params, _, def) (_, def_ty) ->
-        check_def_body context params def_name.loc def def_ty)
+    List.map2 (fun (def_name, params, _, def) (_, def_ty) ->
+      check_def_body context params def_name.loc def def_ty)
   in
 
+  (* Elaborate the recursive definitions, special-casing singly recursive
+     definitions. The special-casing is not exactly necessary, but does reduce
+     indirections during evaluation. *)
   match defns with
   (* Singly recursive definitions *)
   | [(def_name, params, def_ty, def)] ->
@@ -350,7 +352,9 @@ and elab_let_rec_defns (context : context) (defns : defn list) : string * entry 
       let defs_entry = MutualDef def_tys in
       let defs = check_def_bodies (defs_entry :: context) defs def_tys in
 
-      (* Create the combined definition with the fixed-point combinator *)
+      (* Create the combined mutual definition using a tuple and the fixed-point
+         combinator. Alternatively we could use a record here, which could make
+         debugging the elaborated terms a little easier. *)
       let def_name = "$" ^ String.concat "-" (List.map fst def_tys) in
       let def_ty = Core.TupleType (List.map snd def_tys) in
       let def = Core.Fix (def_name, def_ty, TupleLit defs) in
