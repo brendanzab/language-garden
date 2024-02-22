@@ -100,8 +100,8 @@ let unsolved_metas () : (loc * meta_info) list =
 type context = (string * Core.ty) Core.env
 
 (** Lookup a name in the context *)
-let lookup (context : context) (name : string) : (Core.index * Core.ty) option =
-  context |> List.find_mapi @@ fun index (name', ty) ->
+let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
+  ctx |> List.find_mapi @@ fun index (name', ty) ->
     match name = name' with
     | true -> Some (index, ty)
     | false -> None
@@ -151,48 +151,48 @@ let rec elab_ty (ty : ty) : Core.ty =
       fresh_meta ty.loc `Placeholder
 
 (** Elaborate a surface term into a core term, given an expected type. *)
-let rec elab_check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
+let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
   match tm.data with
   | Let (def_name, params, def_body_ty, def_body, body) ->
-      let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
-      let body = elab_check ((def_name.data, def_ty) :: context) body ty in
+      let def, def_ty = elab_infer_fun_lit ctx params def_body_ty def_body in
+      let body = elab_check ((def_name.data, def_ty) :: ctx) body ty in
       Let (def_name.data, def_ty, def, body)
 
   | FunLit (params, body) ->
-      elab_check_fun_lit context params body ty
+      elab_check_fun_lit ctx params body ty
 
   | IfThenElse (head, tm0, tm1) ->
-      let head = elab_check context head BoolType in
-      let tm0 = elab_check context tm0 ty in
-      let tm1 = elab_check context tm1 ty in
+      let head = elab_check ctx head BoolType in
+      let tm0 = elab_check ctx tm0 ty in
+      let tm1 = elab_check ctx tm1 ty in
       BoolElim (head, tm0, tm1)
 
   (* Fall back to type inference *)
   | _ ->
-      let tm', ty' = elab_infer context tm in
+      let tm', ty' = elab_infer ctx tm in
       unify tm.loc ty ty';
       tm'
 
 (** Elaborate a surface term into a core term, inferring its type. *)
-and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
+and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
   match tm.data with
   | Name name -> begin
-      match lookup context name with
+      match lookup ctx name with
       | Some (index, ty) -> Var index, ty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
   end
 
   | Let (def_name, params, def_body_ty, def_body, body) ->
-      let def, def_ty = elab_infer_fun_lit context params def_body_ty def_body in
-      let body, body_ty = elab_infer ((def_name.data, def_ty) :: context) body in
+      let def, def_ty = elab_infer_fun_lit ctx params def_body_ty def_body in
+      let body, body_ty = elab_infer ((def_name.data, def_ty) :: ctx) body in
       Let (def_name.data, def_ty, def, body), body_ty
 
   | Ann (tm, ty) ->
       let ty = elab_ty ty in
-      elab_check context tm ty, ty
+      elab_check ctx tm ty, ty
 
   | FunLit (params, body) ->
-      elab_infer_fun_lit context params None body
+      elab_infer_fun_lit ctx params None body
 
   | IntLit i ->
       IntLit i, IntType
@@ -202,7 +202,7 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
 
   | App (head, arg) ->
       let head_loc = head.loc in
-      let head, head_ty = elab_infer context head in
+      let head, head_ty = elab_infer ctx head in
       let param_ty, body_ty =
         match Core.force head_ty with
         | FunType (param_ty, body_ty) -> param_ty, body_ty
@@ -212,59 +212,59 @@ and elab_infer (context : context) (tm : tm) : Core.tm * Core.ty =
             unify head_loc head_ty (FunType (param_ty, body_ty));
             param_ty, body_ty
       in
-      let arg = elab_check context arg param_ty in
+      let arg = elab_check ctx arg param_ty in
       FunApp (head, arg), body_ty
 
   | IfThenElse (head, tm0, tm1) ->
-      let head = elab_check context head BoolType in
+      let head = elab_check ctx head BoolType in
       let ty = fresh_meta tm.loc `IfBranches in
-      let tm0 = elab_check context tm0 ty in
-      let tm1 = elab_check context tm1 ty in
+      let tm0 = elab_check ctx tm0 ty in
+      let tm1 = elab_check ctx tm1 ty in
       BoolElim (head, tm0, tm1), ty
 
   | Op2 ((`Eq) as prim, tm0, tm1) ->
-      let tm0 = elab_check context tm0 IntType in
-      let tm1 = elab_check context tm1 IntType in
+      let tm0 = elab_check ctx tm0 IntType in
+      let tm1 = elab_check ctx tm1 IntType in
       PrimApp (prim, [tm0; tm1]), BoolType
 
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
-      let tm0 = elab_check context tm0 IntType in
-      let tm1 = elab_check context tm1 IntType in
+      let tm0 = elab_check ctx tm0 IntType in
+      let tm1 = elab_check ctx tm1 IntType in
       PrimApp (prim, [tm0; tm1]), IntType
 
   | Op1 ((`Neg) as prim, tm) ->
-      let tm = elab_check context tm IntType in
+      let tm = elab_check ctx tm IntType in
       PrimApp (prim, [tm]), IntType
 
 (** Elaborate a function literal into a core term, given an expected type. *)
-and elab_check_fun_lit (context : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
+and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
   match params, Core.force ty with
   | [], ty ->
-      elab_check context body ty
+      elab_check ctx body ty
   | (name, None) :: params, FunType (param_ty, body_ty) ->
-      let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
+      let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
       FunLit (name.data, param_ty, body)
   | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
       let param_ty_loc = param_ty.loc in
       let param_ty = elab_ty param_ty in
       unify param_ty_loc param_ty param_ty';
-      let body = elab_check_fun_lit ((name.data, param_ty) :: context) params body body_ty in
+      let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
       FunLit (name.data, param_ty, body)
   | (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
 
 (** Elaborate a function literal, inferring its type. *)
-and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
+and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
   match params, body_ty with
   | [], Some body_ty ->
       let body_ty = elab_ty body_ty in
-      elab_check context body body_ty, body_ty
+      elab_check ctx body body_ty, body_ty
   | [], None ->
-      elab_infer context body
+      elab_infer ctx body
   | (name, param_ty) :: params, body_ty ->
       let param_ty = match param_ty with
         | None -> fresh_meta name.loc `FunParam
         | Some ty -> elab_ty ty
       in
-      let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
+      let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
       FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)

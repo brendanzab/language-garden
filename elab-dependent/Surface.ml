@@ -66,36 +66,36 @@ let initial_context = {
 
 (** Returns the next variable that will be bound in the context after calling
     {!bind_def} or {!bind_param} *)
-let next_var context =
-  Semantics.Neu (Semantics.Var context.size)
+let next_var ctx =
+  Semantics.Neu (Semantics.Var ctx.size)
 
 (** Binds a definition in the context *)
-let bind_def context name ty tm = {
-  size = context.size + 1;
-  names = name :: context.names;
-  tys = ty :: context.tys;
-  tms = tm :: context.tms;
+let bind_def ctx name ty tm = {
+  size = ctx.size + 1;
+  names = name :: ctx.names;
+  tys = ty :: ctx.tys;
+  tms = tm :: ctx.tms;
 }
 
 (** Binds a parameter in the context *)
-let bind_param context name ty =
-  bind_def context name ty (next_var context)
+let bind_param ctx name ty =
+  bind_def ctx name ty (next_var ctx)
 
 (** {3 Functions related to the core semantics} *)
 
 (** These wrapper functions make it easier to call functions from the
     {!Core.Semantics} using state from the elaboration context. *)
 
-let eval context : Syntax.tm -> Semantics.vtm =
-  Semantics.eval context.tms
-let quote context : Semantics.vtm -> Syntax.tm =
-  Semantics.quote context.size
-let normalise context : Syntax.tm -> Syntax.tm =
-  Semantics.normalise context.size context.tms
-let is_convertible context : Semantics.vtm * Semantics.vtm -> bool =
-  Semantics.is_convertible context.size
-let pp ?(resugar = true) context =
-  Syntax.pp context.names ~resugar
+let eval ctx : Syntax.tm -> Semantics.vtm =
+  Semantics.eval ctx.tms
+let quote ctx : Semantics.vtm -> Syntax.tm =
+  Semantics.quote ctx.size
+let normalise ctx : Syntax.tm -> Syntax.tm =
+  Semantics.normalise ctx.size ctx.tms
+let is_convertible ctx : Semantics.vtm * Semantics.vtm -> bool =
+  Semantics.is_convertible ctx.size
+let pp ?(resugar = true) ctx =
+  Syntax.pp ctx.names ~resugar
 
 
 (** {2 Exceptions} *)
@@ -109,10 +109,10 @@ exception Error of string
 let error message =
   raise (Error message)
 
-let type_mismatch context ~expected ~found =
+let type_mismatch ctx ~expected ~found =
   Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]@]"
-    (pp context) expected
-    (pp context) found
+    (pp ctx) expected
+    (pp ctx) found
 
 let not_bound name =
   Format.asprintf "`%s` is not bound in the current scope" name
@@ -129,31 +129,31 @@ let not_bound name =
 
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
-let rec check context tm expected_ty : Syntax.tm =
+let rec check ctx tm expected_ty : Syntax.tm =
   match tm, expected_ty with
   (* Let expressions *)
   | Let (name, def_ty, def, body), expected_ty ->
-      let def_ty = check context def_ty Semantics.Univ in
-      let def_ty' = eval context def_ty in
-      let def = check context def def_ty' in
-      let context = bind_def context name def_ty' (eval context def) in
-      Syntax.Let (name, def, check context body expected_ty)
+      let def_ty = check ctx def_ty Semantics.Univ in
+      let def_ty' = eval ctx def_ty in
+      let def = check ctx def def_ty' in
+      let ctx = bind_def ctx name def_ty' (eval ctx def) in
+      Syntax.Let (name, def, check ctx body expected_ty)
 
   (* Function literals *)
   | FunLit (names, body), expected_ty ->
-      let rec go context names body_ty =
+      let rec go ctx names body_ty =
         match names with
-        | [] -> check context body body_ty
+        | [] -> check ctx body body_ty
         | name :: names ->
             begin match body_ty with
             | Semantics.FunType (_, param_ty, body_ty) ->
-                let var = next_var context in
-                let context = bind_def context name (Lazy.force param_ty) var in
-                Syntax.FunLit (name, go context names (body_ty var))
+                let var = next_var ctx in
+                let ctx = bind_def ctx name (Lazy.force param_ty) var in
+                Syntax.FunLit (name, go ctx names (body_ty var))
             | _ -> error "too many parameters in function literal"
             end
       in
-      go context names expected_ty
+      go ctx names expected_ty
 
   (* For anything else, try inferring the type of the term, then checking to
       see if the inferred type is the same as the expected type.
@@ -162,22 +162,22 @@ let rec check context tm expected_ty : Syntax.tm =
       could trigger unification or try to coerce the term to the expected
       type here. *)
   | tm, expected_ty ->
-      let tm, ty' = infer context tm in
-      if is_convertible context (ty', expected_ty) then tm else
-        error (type_mismatch context
-          ~expected:(quote context expected_ty)
-          ~found:(quote context ty'))
+      let tm, ty' = infer ctx tm in
+      if is_convertible ctx (ty', expected_ty) then tm else
+        error (type_mismatch ctx
+          ~expected:(quote ctx expected_ty)
+          ~found:(quote ctx ty'))
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
-and infer context : tm -> Syntax.tm * Semantics.vty = function
+and infer ctx : tm -> Syntax.tm * Semantics.vty = function
   (* Let expressions *)
   | Let (name, def_ty, def, body) ->
-      let def_ty = check context def_ty Semantics.Univ in
-      let def_ty' = eval context def_ty in
-      let def = check context def def_ty' in
-      let context = bind_def context name def_ty' (eval context def) in
-      let body, body_ty = infer context body in
+      let def_ty = check ctx def_ty Semantics.Univ in
+      let def_ty' = eval ctx def_ty in
+      let def = check ctx def def_ty' in
+      let ctx = bind_def ctx name def_ty' (eval ctx def) in
+      let body, body_ty = infer ctx body in
       Syntax.Let (name, def, body), body_ty
 
   (* Named terms *)
@@ -185,16 +185,16 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
       (* Find the index of most recent binding in the context identified by
           [name], starting from the most recent binding. This gives us the
           corresponding de Bruijn index of the variable. *)
-      begin match elem_index (Some name) context.names with
-      | Some (index) -> (Syntax.Var index, List.nth context.tys index)
+      begin match elem_index (Some name) ctx.names with
+      | Some (index) -> (Syntax.Var index, List.nth ctx.tys index)
       | None -> error (not_bound name)
       end
 
   (* Annotated terms *)
   | Ann (tm, ty) ->
-      let ty = check context ty Semantics.Univ in
-      let ty' = eval context ty in
-      let tm = check context tm ty' in
+      let ty = check ctx ty Semantics.Univ in
+      let ty' = eval ctx ty in
+      let tm = check ctx tm ty' in
       Syntax.Ann (tm, ty), ty'
 
   (* Universes *)
@@ -206,22 +206,22 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
 
   (* Function types *)
   | FunType (params, body_ty) ->
-      let rec go context params =
+      let rec go ctx params =
         match params with
-        | [] -> check context body_ty Semantics.Univ
+        | [] -> check ctx body_ty Semantics.Univ
         | (name, param_ty) :: params ->
-            let param_ty = check context param_ty Semantics.Univ in
-            let context = bind_param context name (eval context param_ty) in
-            Syntax.FunType (name, param_ty, go context params)
+            let param_ty = check ctx param_ty Semantics.Univ in
+            let ctx = bind_param ctx name (eval ctx param_ty) in
+            Syntax.FunType (name, param_ty, go ctx params)
       in
-      go context params, Semantics.Univ
+      go ctx params, Semantics.Univ
 
   (* Arrow types. These are implemented as syntactic sugar for non-dependent
       function types. *)
   | FunArrow (param_ty, body_ty) ->
-      let param_ty = check context param_ty Semantics.Univ in
-      let context = bind_param context None (eval context param_ty) in
-      let body_ty = check context body_ty Semantics.Univ in
+      let param_ty = check ctx param_ty Semantics.Univ in
+      let ctx = bind_param ctx None (eval ctx param_ty) in
+      let body_ty = check ctx body_ty Semantics.Univ in
       Syntax.FunType (None, param_ty, body_ty), Semantics.Univ
 
   (* Function literals *)
@@ -234,8 +234,8 @@ and infer context : tm -> Syntax.tm * Semantics.vty = function
         (fun (head, head_ty) arg ->
           match head_ty with
           | Semantics.FunType (_, param_ty, body_ty) ->
-              let arg = check context arg (Lazy.force param_ty) in
-              Syntax.FunApp (head, arg), body_ty (eval context arg)
+              let arg = check ctx arg (Lazy.force param_ty) in
+              Syntax.FunApp (head, arg), body_ty (eval ctx arg)
           | _ -> error "not a function")
-        (infer context head)
+        (infer ctx head)
         args
