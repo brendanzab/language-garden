@@ -88,39 +88,39 @@ module Elab = struct
         FunTy (check_ty ty1, check_ty ty2)
 
   (** Elaborate a surface term into a core term, given an expected type. *)
-  let rec check (context : context) (tm : tm) (ty : Core.ty) : Core.tm =
+  let rec check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
     match tm.data with
     | IfThenElse (tm1, tm2, tm3) ->
         BoolElim (
-          check context tm1 BoolTy,
-          check context tm2 ty,
-          check context tm3 ty)
+          check ctx tm1 BoolTy,
+          check ctx tm2 ty,
+          check ctx tm3 ty)
     | ListLit tms ->
-        check_list context tms
+        check_list ctx tms
           (match ty with
             | ListTy ty -> ty
             | _ -> error tm.loc "unexpected list literal")
     | _ ->
-        let tm', ty' = synth context tm in
+        let tm', ty' = synth ctx tm in
         if ty = ty' then tm' else
           error tm.loc "type mismatch"
 
   (** Elaborate a surface term into a core term, synthesising its type. *)
-  and synth (context : context) (tm : tm) : Core.tm * Core.ty =
+  and synth (ctx : context) (tm : tm) : Core.tm * Core.ty =
     match tm.data with
     | Name name ->
-        Var name, List.assoc name context
+        Var name, List.assoc name ctx
     | Let (name, params, def_body_ty, def_tm, body_tm) ->
-        let def_tm, def_ty = fun_lit context params def_body_ty def_tm in
-        let body_tm, body_ty = synth ((name.data, def_ty) :: context) body_tm in
+        let def_tm, def_ty = fun_lit ctx params def_body_ty def_tm in
+        let body_tm, body_ty = synth ((name.data, def_ty) :: ctx) body_tm in
         Let (name.data, def_ty, def_tm, body_tm), body_ty
     | Ann (tm, ty) ->
         let ty = check_ty ty in
-        check context tm ty, ty
+        check ctx tm ty, ty
     | IfThenElse (_, _, _) ->
         error tm.loc "ambiguous if expression"
     | TemplateLit template ->
-        synth_template context template, TextTy
+        synth_template ctx template, TextTy
     | ListLit _ ->
         error tm.loc "ambiguous list literal"
     | TextLit s ->
@@ -128,60 +128,60 @@ module Elab = struct
     | IntLit n ->
         IntLit n, IntTy
     | App (head_tm, arg_tm) -> begin
-        match synth context head_tm with
+        match synth ctx head_tm with
         | head_tm, FunTy (param_ty, body_ty) ->
-            let arg_tm = check context arg_tm param_ty in
+            let arg_tm = check ctx arg_tm param_ty in
             FunApp (head_tm, arg_tm), body_ty
         | _ ->
             error head_tm.loc "function expected"
     end
     | Op2 (`Add, tm1, tm2) ->
-        let tm1 = check context tm1 TextTy in
-        let tm2 = check context tm2 TextTy in
+        let tm1 = check ctx tm1 TextTy in
+        let tm2 = check ctx tm2 TextTy in
         TextConcat (tm1, tm2), TextTy
 
   (** Elaborate a function literal, inferring its type. *)
-  and fun_lit (context : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
+  and fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
     match params, body_ty with
     | [], Some body_ty ->
         let body_ty = check_ty body_ty in
-        check context body body_ty, body_ty
+        check ctx body body_ty, body_ty
     | [], None ->
-        synth context body
+        synth ctx body
     | (name, None) :: _, _ ->
         error name.loc "type annotations required in function parameters"
     | (name, Some param_ty) :: params, body_ty ->
         let param_ty = check_ty param_ty in
-        let body, body_ty = fun_lit ((name.data, param_ty) :: context) params body_ty body in
+        let body, body_ty = fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
         FunLit (name.data, param_ty, body), FunTy (param_ty, body_ty)
 
   (** Elaborate a list literal. *)
-  and[@tail_mod_cons] check_list (context : context) (tms : tm list) (elem_ty : Core.ty) : Core.tm =
+  and[@tail_mod_cons] check_list (ctx : context) (tms : tm list) (elem_ty : Core.ty) : Core.tm =
     match tms with
     | [] ->
         Core.ListNil
     | tm :: tms ->
-        let tm = check context tm elem_ty in
-        Core.ListCons (tm, check_list context tms elem_ty)
+        let tm = check ctx tm elem_ty in
+        Core.ListCons (tm, check_list ctx tms elem_ty)
 
   (** Elaborate a template into a series of concatened terms. *)
-  and[@tail_mod_cons] synth_template (context : context) (template : template) : Core.tm =
+  and[@tail_mod_cons] synth_template (ctx : context) (template : template) : Core.tm =
     match template with
     | [] -> TextLit ""
     | { data = TextFragment s; _ } :: template ->
-        TextConcat (TextLit s, synth_template context template)
+        TextConcat (TextLit s, synth_template ctx template)
     | { data = TermFragment tm; _ } :: template ->
-        let tm = check context tm TextTy in
-        TextConcat (tm, synth_template context template)
+        let tm = check ctx tm TextTy in
+        TextConcat (tm, synth_template ctx template)
     | { data = LetFragment (name, params, def_body_ty, def_tm); _ } :: template ->
-        let def_tm, def_ty = fun_lit context params def_body_ty def_tm in
+        let def_tm, def_ty = fun_lit ctx params def_body_ty def_tm in
         Let (name.data, def_ty, def_tm,
-          synth_template ((name.data, def_ty) :: context) template)
+          synth_template ((name.data, def_ty) :: ctx) template)
     | { data = IfThenElseFragment (tm, template1, template2); _ } :: template ->
-        let tm = check context tm BoolTy in
-        let template1 = synth_template context template1 in
-        let template2 = synth_template context template2 in
+        let tm = check ctx tm BoolTy in
+        let template1 = synth_template ctx template1 in
+        let template2 = synth_template ctx template2 in
         TextConcat (BoolElim (tm, template1, template2),
-          synth_template context template)
+          synth_template ctx template)
 
 end
