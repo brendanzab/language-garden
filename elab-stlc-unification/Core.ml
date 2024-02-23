@@ -213,7 +213,7 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
       match !m with
       | Unsolved id' when id = id' ->
           raise (InfiniteType id)
-      | Unsolved _ | Solved _-> ()
+      | Unsolved _ | Solved _ -> ()
   end
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
