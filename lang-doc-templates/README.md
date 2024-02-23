@@ -87,13 +87,17 @@ Template languages:
 - [Slim](https://slim-template.github.io/) ([Docs](https://rubydoc.info/gems/slim/frames))
 - [ESH](https://github.com/jirutka/esh): Simple templating engine based on shell
 
-Template literals and document EDSLs:
+String/Node/Document Literals:
 
-- [Unison documentation literals](https://www.unison-lang.org/docs/usage-topics/documentation/)
-- [Javascript template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals)
 - [JSX](https://facebook.github.io/jsx/)
 - [Hiccup](https://github.com/weavejester/hiccup)
 - [Elm HTML](https://package.elm-lang.org/packages/elm/html/latest/)
+- [ScalaTags](https://com-lihaoyi.github.io/scalatags/)
+- [Unison documentation literals](https://www.unison-lang.org/docs/usage-topics/documentation/)
+- [Javascript template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals)
+
+Document DSLs:
+
 - [Verso](https://github.com/leanprover/verso/): An Authoring Tool for Lean ([Talk](https://www.youtube.com/watch?v=dv_vmVs3SQQ))
 - [Ur/Web](http://impredicative.com/ur/)
 - [ASP.NET Razor](https://aspnetcore.readthedocs.io/en/stable/mvc/views/razor.html)
