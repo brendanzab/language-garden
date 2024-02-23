@@ -118,6 +118,8 @@ If you like this repository, you might find these interesting as well:
   implementations from Benjamin Pierce's “Types and Programming Languages”
 - [pigworker/Samizdat](https://github.com/pigworker/Samizdat):
   Conor McBride’s programming scrapbook
+- [RiscInside/LanguageEtudes](https://github.com/RiscInside/LanguageEtudes/):
+  Single-file typechecker/interpreter/compiler implementations
 
 ## Development setup
 
