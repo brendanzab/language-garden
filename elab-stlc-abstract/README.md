@@ -10,7 +10,7 @@ Idris and Coq.
 Unfortunately elaborators can get rather complicated because type checking,
 desugaring and error reporting are all fused together.
 This project explores a way to alleviate this burden on the elaborator by
-taking an LCF-inspired approach.
+taking an LCF-inspired approach for the core language.
 Instead of type checking and constructing core terms within the elaborator, we
 instead move this behind trusted inference rules defined in the core
 (see [`Core.mli`]).
@@ -29,6 +29,8 @@ instead focus on desugaring and error reporting (see [`Surface.ml`]).
 
 ## Resources
 
+- [LCF architecture](https://www.pls-lab.org/en/LCF_architecture) on PLS Lab
+
 Presentations:
 
 - Robert Atkey, “An Algebraic Approach to Typechecking and Elaboration”
@@ -37,6 +39,8 @@ Presentations:
   ([Video](https://www.youtube.com/watch?v=YZqOVsuyQyQ))
   ([URL](https://math.andrej.com/2019/08/21/derivations-as-computations/))
   ([Slides](https://math.andrej.com/wp-content/uploads/2019/08/derivations-as-computations-icfp-2019.pdf))
+- John Harrison, “The LCF Approach to Theorem Proving”
+  ([Slides](https://www.cl.cam.ac.uk/~jrh13/slides/manchester-12sep01/slides.pdf))
 
 Related projects:
 
