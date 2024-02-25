@@ -120,6 +120,7 @@ Attributed node languages:
 - [Sofu](https://sofu.sourceforge.net)
 - [SDLang: Simple Declarative Language](https://sdlang.org/)
 - [KDL Document Language](https://kdl.dev/)
+- [RELAX NG compact syntax](https://relaxng.org/compact-tutorial-20030326.html)
 
 Data serialisation languages:
 
