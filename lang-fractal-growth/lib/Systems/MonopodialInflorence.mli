@@ -8,7 +8,7 @@ module Flower : sig
   (** Alphabet of symbols for this system *)
   type symbol
 
-  include FractalGrowth.LSystem.Grammar
+  include System.Grammar
     with type symbol := symbol
     (** @open *)
 
@@ -30,7 +30,7 @@ type symbol
 (** Convert a flower to a symbol *)
 val symbol_of_flower : Flower.symbol -> symbol
 
-include FractalGrowth.LSystem.Grammar
+include System.Grammar
   with type symbol := symbol
   (** @open *)
 

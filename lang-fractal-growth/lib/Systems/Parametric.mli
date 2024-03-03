@@ -1,9 +1,9 @@
-(** A fractal binary tree *)
+(** An example of a simple, parametric L-System *)
 
 (** Alphabet of symbols for this system *)
 type symbol
 
-include FractalGrowth.LSystem.Grammar
+include System.Grammar
   with type symbol := symbol
   (** @open *)
 

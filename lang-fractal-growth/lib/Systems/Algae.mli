@@ -1,12 +1,11 @@
-(** {0 Model of Anabaena catenula}*)
+(** {0 Model of the growth of Algae} *)
 
-(** Development of a multicelluar filament in the blue-green bactieria,
-    {{: https://en.wikipedia.org/wiki/Anabaena} Anabaena catenula}. *)
+(** Lindenmayer's original L-system for modelling the growth of algae. *)
 
 (** Alphabet of symbols for this system *)
 type symbol
 
-include FractalGrowth.LSystem.Grammar
+include System.Grammar
   with type symbol := symbol
   (** @open *)
 

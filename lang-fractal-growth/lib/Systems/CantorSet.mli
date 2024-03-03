@@ -3,7 +3,7 @@
 (** Alphabet of symbols for this system *)
 type symbol
 
-include FractalGrowth.LSystem.Grammar
+include System.Grammar
   with type symbol := symbol
   (** @open *)
 
