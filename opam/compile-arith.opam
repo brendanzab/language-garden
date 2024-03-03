@@ -5,7 +5,7 @@ homepage: "https://github.com/brendanzab/language-garden"
 dev-repo: "git+https://github.com/brendanzab/language-garden.git"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
-  "dune" {>= "3.8"}
+  "dune" {>= "3.14"}
   "alcotest" {>= "1.7" & with-test}
   "cmdliner" {>= "1.2"}
   "menhir" {>= "20231231" & build}
