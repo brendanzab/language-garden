@@ -7,7 +7,7 @@ bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.14"}
   "cmdliner" {>= "1.2"}
-  "mdx" {>= "2.3" & with-test}
+  "mdx" {>= "2.3" & < "2.4.0" & with-test}
   "odoc" {with-doc}
 ]
 build: [

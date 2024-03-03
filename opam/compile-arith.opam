@@ -11,7 +11,7 @@ depends: [
   "menhir" {>= "20231231" & build}
   "menhirLib" {>= "20231231"}
   "sedlex" {>= "3.2"}
-  "mdx" {>= "2.3" & with-test}
+  "mdx" {>= "2.3" & < "2.4.0" & with-test}
   "qcheck" {>= "0.21.3" & with-test}
   "qcheck-core" {>= "0.21.3" & with-test}
   "qcheck-alcotest" {>= "0.21.3" & with-test}
