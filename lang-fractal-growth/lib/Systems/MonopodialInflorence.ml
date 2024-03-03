@@ -38,7 +38,7 @@ end
 
 (** The state of a stem *)
 type symbol =
-  | Bud                       (** The apex, or terminal bud *)
+  | Apex                      (** The apex, or terminal bud *)
   | Stem                      (** An internode/stem in the inflorence *)
   (* TODO: Sub-L-systems *)
   | Flower of Flower.symbol
@@ -48,11 +48,11 @@ let symbol_of_flower s =
 
 
 let axiom =
-  [Bud]
+  [Apex]
 
 let rules =
   function
-  | Bud -> [Stem; Flower Bud; Bud]
+  | Apex -> [Stem; Flower Bud; Apex]
   (* TODO: Sub-L-systems *)
   | Flower s -> List.map symbol_of_flower (Flower.rules s)
   (* TODO: Terminal symbols *)
@@ -61,7 +61,7 @@ let rules =
 
 let string_of_symbol =
   function
-  | Bud -> "A"
+  | Apex -> "A"
   | Stem -> "I"
   | Flower s -> String.concat "" ["["; Flower.string_of_symbol s; "]"]
 

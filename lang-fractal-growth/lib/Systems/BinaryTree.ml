@@ -3,24 +3,24 @@
 
 
 type symbol =
-  | Bud
+  | Apex
   | Branch
   | Push
   | Pop
 
-let axiom = [Bud]
+let axiom = [Apex]
 
 let rules =
   function
-  | Branch -> [Branch; Branch]            (* Grow the branch *)
-  | Bud -> [Branch; Push; Bud; Pop; Bud]  (* Split a bud into a branch and two buds *)
+  | Branch -> [Branch; Branch]                 (* Grow the branch *)
+  | Apex   -> [Branch; Push; Apex; Pop; Apex]  (* Split a bud into a branch and two buds *)
   (* TODO: Terminal symbols *)
   | s -> [s]
 
 
 let string_of_symbol =
   function
-  | Bud -> "0"
+  | Apex -> "0"
   | Branch -> "1"
   | Push -> "["
   | Pop -> "]"

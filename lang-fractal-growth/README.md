@@ -21,8 +21,8 @@ In the future is would be nice to produce graphical output for these systems.
 ```ocaml
 (** Cytological state of a cell *)
 type symbol =
-  | A             (** Large cell, ready to divide *)
-  | B             (** Small cell *)
+  | A             (** Long cell, ready to divide *)
+  | B             (** Short cell *)
 
 let axiom =
   [B]             (* Seed with a small cell *)
