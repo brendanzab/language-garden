@@ -1,0 +1,21 @@
+(executable
+  (name Main)
+  (public_name stlc-bidirectional-stratify)
+  (package elab-stlc-bidirectional-stratify)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    cmdliner
+    menhirLib))
+
+(menhir
+  (modules Parser)
+  (flags --explain --strict))
+
+(mdx
+  (package elab-stlc-bidirectional-stratify)
+  (deps %{bin:stlc-bidirectional-stratify}))
+
+(cram
+  (package elab-stlc-bidirectional-stratify)
+  (deps %{bin:stlc-bidirectional-stratify}))
