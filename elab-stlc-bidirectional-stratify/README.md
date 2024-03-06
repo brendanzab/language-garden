@@ -4,12 +4,14 @@ Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
 
 Statically typed languages tend to evolve dependently typed features over time,
 and if the surface syntax is not prepared to handle it, this can lead to awkward
-compromises to avoid syntactic ambiguities.
+compromises to avoid syntactic ambiguities. For examples of such workarounds,
+see the braces in Rust’s generic constant arguments, first class modules in
+OCaml, and the various challenges in preparing GHC to support dependent types.
 
 This elaborator takes a surface language that appears to be a full-spectrum
 dependently typed language and stratifies it into a simply typed lambda
-calculus. A more advanced version of this could be used to implement a 1ML-style
-language that looks dependently typed, but in reality is not.
+calculus. The idea is that this could retain space in the surface language to
+add dependently typed features in the future.
 
 We achieve this using the following GADTs:
 
