@@ -11,6 +11,30 @@ dependently typed language and stratifies it into a simply typed lambda
 calculus. A more advanced version of this could be used to implement a 1ML-style
 language that looks dependently typed, but in reality is not.
 
+We achieve this using the following GADTs:
+
+<!-- $MDX file=Surface.ml,part=elab-types -->
+```ocaml
+  (* An elaborated type *)
+  type _ elab_ty =
+    | Univ1 : [`Univ1] elab_ty
+    | Univ0 : [`Univ0] elab_ty
+    | Type : Core.ty -> Core.ty elab_ty
+
+  (* An elaborated term *)
+  type _ elab_tm =
+    | Univ0 : [`Univ1] elab_tm
+    | Type : Core.ty -> [`Univ0] elab_tm
+    | Expr : Core.expr -> Core.ty elab_tm
+
+  type ann_tm =
+    | AnnTm : 'ann elab_tm * 'ann elab_ty -> ann_tm
+```
+
+These types allow us to define a bidirectional type checking algorithm that
+works over multiple levels of our core language. Universes only exist as part of
+the elaboration process.
+
 In the future it would be interesting try to extend this to support type
 parameters and metavariable unification.
 

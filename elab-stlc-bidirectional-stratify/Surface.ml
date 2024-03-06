@@ -52,6 +52,7 @@ module Elab = struct
       messages that are more relevant to what the programmer originally wrote.
   *)
 
+  (* $MDX part-begin=elab-types *)
   (* An elaborated type *)
   type _ elab_ty =
     | Univ1 : [`Univ1] elab_ty
@@ -66,6 +67,7 @@ module Elab = struct
 
   type ann_tm =
     | AnnTm : 'ann elab_tm * 'ann elab_ty -> ann_tm
+  (* $MDX part-end *)
 
 
   (** {2 Local bindings} *)
