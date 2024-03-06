@@ -37,8 +37,14 @@ These types allow us to define a bidirectional type checking algorithm that
 works over multiple levels of our core language. Universes only exist as part of
 the elaboration process.
 
-In the future it would be interesting try to extend this to support type
-parameters and metavariable unification.
+Some possible downsides to this approach are:
+
+- It requires contextual information to decide if something is a type or not,
+  which could make language tooling more challenging to implement.
+- Some programmers might be confused that types and expressions use the same
+  syntax, disambiguated based on context.
+- A single namespace is used for types and expressions, so the same name can no
+  longer be reused for both types and expressions.
 
 ## Project overview
 
