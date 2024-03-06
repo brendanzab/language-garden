@@ -32,9 +32,10 @@ parameters and metavariable unification.
 
 ## Todo list
 
-- [ ] Local type bindings
-- [ ] Type parameters
-- [ ] Metavariables and unification
+- [ ] Local type bindings (e.g. `let Foo : Type := Int; 1 : Foo`)
+- [ ] Type parameters (e.g. `let Id (A : Type) : Type := A; 1 : Id Int`)
+- [ ] Metavariables and unification (e.g. `let id (A : _) (x : A) : A := x; id _ 1`)
+- [ ] Implicit type parameters (e.g. `let id {A : Type} (x : A) : A := x; id 1`)
 
 ## Examples
 
