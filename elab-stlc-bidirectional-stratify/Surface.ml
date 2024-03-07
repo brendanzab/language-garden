@@ -52,6 +52,13 @@ module Elab = struct
       messages that are more relevant to what the programmer originally wrote.
   *)
 
+
+  (** {2 Helper types} *)
+
+  (** These types allow us to define a bidirectional type checking algorithm
+      that works over multiple levels of our core language. Universes only exist
+      as part of the elaboration process. *)
+
   (* $MDX part-begin=elab-types *)
   (* An elaborated type *)
   type _ elab_ty =
@@ -72,15 +79,24 @@ module Elab = struct
 
   (** {2 Local bindings} *)
 
+  type entry =
+    | Univ0Def of string
+    | TypeDef of string * Core.ty
+    | ExprDef of string * Core.ty
+
   (** A stack of bindings currently in scope *)
-  type context = (string * Core.ty) Core.env
+  type context = entry Core.env
 
   (** Lookup a name in the context *)
   let lookup (ctx : context) (name : string) : ann_tm option =
-    ctx |> List.find_mapi @@ fun i (name', ty) ->
-      match name = name' with
-      | true -> Some (AnnTm (Expr (Var i), Type ty))
-      | false -> None
+    let rec go ctx i =
+      match ctx with
+      | (Univ0Def name') :: ctx -> if name = name' then Some (AnnTm (Univ0, Univ1)) else go ctx i
+      | (TypeDef (name', t)) :: ctx -> if name = name' then Some (AnnTm (Type t, Univ0)) else go ctx i
+      | (ExprDef (name', t)) :: ctx -> if name = name' then Some (AnnTm (Expr (Var i), Type t)) else go ctx (i + 1)
+      | [] -> None
+    in
+    go ctx 0
 
 
   (** {2 Elaboration errors} *)
@@ -116,6 +132,18 @@ module Elab = struct
   let rec check : type ann. context -> tm -> ann elab_ty -> ann elab_tm =
     fun ctx tm ty ->
       match tm.data, ty with
+      | Let (def_name, params, def_body_t, def_body, body), ty -> begin
+        match infer_fun_lit ctx params def_body_t def_body with
+        | AnnTm (Univ0, Univ1) -> check (Univ0Def def_name.data :: ctx) body ty
+        | AnnTm (Type def, Univ0) -> check (TypeDef (def_name.data, def) :: ctx) body ty
+        | AnnTm (Expr def, Type def_t) -> begin
+          match check (ExprDef (def_name.data, def_t) :: ctx) body ty with
+          | Univ0 -> Univ0
+          | Type t -> Type t
+          | Expr body -> Expr (Let (def_name.data, def_t, def, body))
+        end
+      end
+
       | _, Univ1 -> begin
         match infer ctx tm with
         | AnnTm (Expr _, Type _) -> error tm.loc "expected universe, found expression"
@@ -129,11 +157,6 @@ module Elab = struct
         | AnnTm (Type t, Univ0) -> Type t
         | AnnTm (Univ0, Univ1) -> error tm.loc "expected type, found universe"
       end
-
-      | Let (def_name, params, def_body_t, def_body, body), Type t ->
-        let def, def_t = infer_fun_lit ctx params def_body_t def_body in
-        let body = check_expr ((def_name.data, def_t) :: ctx) body t in
-        Expr (Let (def_name.data, def_t, def, body))
 
       | FunLit (params, body), Type t ->
         Expr (check_fun_lit ctx params body t)
@@ -161,24 +184,30 @@ module Elab = struct
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" n)
     end
 
-    | Let (def_name, params, def_body_t, def_body, body) ->
-      let def, def_t = infer_fun_lit ctx params def_body_t def_body in
-      let body, body_t = infer_expr ((def_name.data, def_t) :: ctx) body in
-      AnnTm (Expr (Let (def_name.data, def_t, def, body)), Type body_t)
+    | Let (def_name, params, def_body_t, def_body, body) -> begin
+      match infer_fun_lit ctx params def_body_t def_body with
+      | AnnTm (Univ0, Univ1) -> infer (Univ0Def def_name.data :: ctx) body
+      | AnnTm (Type def, Univ0) -> infer (TypeDef (def_name.data, def) :: ctx) body
+      | AnnTm (Expr def, Type def_t) -> begin
+        match infer (ExprDef (def_name.data, def_t) :: ctx) body with
+        | AnnTm ((Univ0 | Type _), _) as ann_tm -> ann_tm
+        | AnnTm (Expr body, Type body_t) ->
+          AnnTm (Expr (Let (def_name.data, def_t, def, body)), Type body_t)
+      end
+    end
 
     | Ann (tm, ty) -> begin
       match infer ctx ty with
-      | AnnTm (Expr _, Type _) -> error tm.loc "expected type, found expression"
-      | AnnTm (Type t, Univ0) -> AnnTm (check ctx tm (Type t), Type t)
       | AnnTm (Univ0, Univ1) -> AnnTm (check ctx tm Univ0, Univ0)
+      | AnnTm (Type t, Univ0) -> AnnTm (check ctx tm (Type t), Type t)
+      | AnnTm (Expr _, Type _) -> error tm.loc "expected type or universe, found expression"
     end
 
     | BoolLit b -> AnnTm (Expr (BoolLit b), Type BoolType)
     | IntLit i -> AnnTm (Expr (IntLit i), Type IntType)
 
     | FunLit (params, body) ->
-      let e, t = infer_fun_lit ctx params None body in
-      AnnTm (Expr e, Type t)
+      infer_fun_lit ctx params None body
 
     | App (head, arg) ->
       let head_loc = head.loc in
@@ -239,35 +268,43 @@ module Elab = struct
       check_expr ctx body ty
 
     | (name, None) :: params, FunType (param_t, body_t) ->
-      let body = check_fun_lit ((name.data, param_t) :: ctx) params body body_t in
+      let body = check_fun_lit (ExprDef (name.data, param_t) :: ctx) params body body_t in
         FunLit (name.data, param_t, body)
 
     | (name, Some param_t) :: params, FunType (param_t', body_t) ->
       let param_t_loc = param_t.loc in
       let param_t = check_type ctx param_t in
       equate_ty param_t_loc param_t param_t';
-      let body = check_fun_lit ((name.data, param_t) :: ctx) params body body_t in
+      let body = check_fun_lit (ExprDef (name.data, param_t) :: ctx) params body body_t in
       FunLit (name.data, param_t, body)
 
     | (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
 
   (** Elaborate a function literal into a core term, inferring its type. *)
-  and infer_fun_lit (ctx : context) (params : param list) (body_t : tm option) (body : tm) : Core.expr * Core.ty =
+  and infer_fun_lit (ctx : context) (params : param list) (body_t : tm option) (body : tm) : ann_tm =
     match params, body_t with
-    | [], Some body_t ->
-      let body_t = check_type ctx body_t in
-      check_expr ctx body body_t, body_t
-
     | [], None ->
-      infer_expr ctx body
+      infer ctx body
+
+    | [], Some body_t -> begin
+      match infer ctx body_t with
+      | AnnTm (Univ0, Univ1) -> AnnTm (check ctx body Univ0, Univ0)
+      | AnnTm (Type body_t, Univ0) -> AnnTm (check ctx body (Type body_t), Type body_t)
+      | AnnTm (Expr _, _) -> error body_t.loc "expected type or universe, found expression"
+    end
 
     | (name, None) :: _, _ ->
       error name.loc "ambiguous parameter type"
 
     | (name, Some param_t) :: params, body_t ->
       let param_t = check_type ctx param_t in
-      let body, body_t = infer_fun_lit ((name.data, param_t) :: ctx) params body_t body in
-      FunLit (name.data, param_t, body), FunType (param_t, body_t)
+      let body, body_t =
+        match infer_fun_lit (ExprDef (name.data, param_t) :: ctx) params body_t body with
+        | AnnTm (Expr e, Type t) -> e, t
+        | AnnTm (Type _, Univ0) -> error body.loc "expected expression, found type"
+        | AnnTm (Univ0, Univ1) -> error body.loc "expected expression, found universe"
+      in
+      AnnTm (Expr (FunLit (name.data, param_t, body)), Type (FunType (param_t, body_t)))
 
 end
