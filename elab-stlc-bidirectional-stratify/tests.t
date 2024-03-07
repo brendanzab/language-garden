@@ -59,7 +59,6 @@ If expressions
   f 4 : Int -> Int
 
 Type expressions
-
   $ stlc-bidirectional-stratify elab <<< "Int"
   Int : Type
 
@@ -80,6 +79,20 @@ Type expressions
   > EOF
   let x : Int := 1; x + 2 : Int
 
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let Kind := Type;
+  > let x : Int := 1;
+  > Kind
+  > EOF
+  Type : Type 1
+
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let Kind := Type;
+  > let x : Int := 1;
+  > let Number : Kind := Int; 
+  > Number
+  > EOF
+  Int : Type
 
 Lexer Errors
 ------------
@@ -160,7 +173,6 @@ Ambiguous if expression
   [1]
 
 Type expressions
-
   $ stlc-bidirectional-stratify elab <<< "1 : Type"
   <input>:1:0: expected type, found expression
   [1]
@@ -171,4 +183,48 @@ Type expressions
 
   $ stlc-bidirectional-stratify elab <<< "Type : Type"
   <input>:1:0: expected type, found universe
+  [1]
+
+Local bindings
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let x : 42 := 1;
+  > x
+  > EOF
+  <input>:1:8: expected type or universe, found expression
+  [1]
+
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let x : Int := Int;
+  > x
+  > EOF
+  <input>:1:15: expected expression, found type
+  [1]
+
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let x : Int := Type;
+  > x
+  > EOF
+  <input>:1:15: expected expression, found universe
+  [1]
+
+Parameterised bindings
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let id (A : Type) (x : A) : A := x;
+  > id Int 1
+  > EOF
+  <input>:1:12: expected type, found universe
+  [1]
+
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let Foo (x : Int) : Type := Int;
+  > 33 : Foo 42
+  > EOF
+  <input>:1:28: expected expression, found type
+  [1]
+
+  $ stlc-bidirectional-stratify elab <<EOF
+  > let Foo (x : Int) : Type := Type;
+  > Int : Foo 42
+  > EOF
+  <input>:1:28: expected type, found universe
   [1]
