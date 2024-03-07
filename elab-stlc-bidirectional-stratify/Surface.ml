@@ -76,10 +76,10 @@ module Elab = struct
   type context = (string * Core.ty) Core.env
 
   (** Lookup a name in the context *)
-  let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
-    ctx |> List.find_mapi @@ fun index (name', ty) ->
+  let lookup (ctx : context) (name : string) : ann_tm option =
+    ctx |> List.find_mapi @@ fun i (name', ty) ->
       match name = name' with
-      | true -> Some (index, ty)
+      | true -> Some (AnnTm (Expr (Var i), Type ty))
       | false -> None
 
 
@@ -154,7 +154,7 @@ module Elab = struct
     match tm.data with
     | Name n -> begin
       match lookup ctx n with
-      | Some (i, ty) -> AnnTm (Expr (Var i), Type ty)
+      | Some ann_tm -> ann_tm
       | None when n = "Type" -> AnnTm (Univ0, Univ1)
       | None when n = "Bool" -> AnnTm (Type BoolType, Univ0)
       | None when n = "Int" -> AnnTm (Type IntType, Univ0)
