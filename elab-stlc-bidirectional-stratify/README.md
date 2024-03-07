@@ -11,7 +11,7 @@ OCaml, and the various challenges in preparing GHC to support dependent types.
 This elaborator takes a surface language that appears to be a full-spectrum
 dependently typed language and stratifies it into a simply typed lambda
 calculus. The idea is that this could retain space in the surface language to
-add dependently typed features in the future.
+allow for dependently typed features to be added in the future.
 
 We achieve this using the following GADTs:
 
