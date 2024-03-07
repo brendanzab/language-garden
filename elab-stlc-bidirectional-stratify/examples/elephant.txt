@@ -1,0 +1,3 @@
+let Elephant : Type := Int;
+let grow (e : Elephant) : Elephant := e + 1;
+grow 4

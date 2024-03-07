@@ -1,0 +1,2 @@
+let grow : Int -> Int := fun (e : Int) => e + 1;
+grow 4 : Int

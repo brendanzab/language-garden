@@ -1,4 +1,4 @@
-# Stratifying a surface language into simply typed terms
+# Future proofing the simply typed lambda calculus for fancy types
 
 Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
 
@@ -10,10 +10,38 @@ OCaml, and the various challenges in preparing GHC to support dependent types.
 
 This elaborator takes a surface language that appears to be a full-spectrum
 dependently typed language and stratifies it into a simply typed lambda
-calculus. The idea is that this could retain space in the surface language to
-allow for dependently typed features to be added in the future.
+calculus. The idea is that this could retain syntactic room in the surface
+language to allow language features like dependent types to be added later on.
+It also has the benefit of using a consistent syntax for types and expressions,
+which some programmers prefer.
 
-We achieve this using the following GADTs:
+For example the following program:
+
+<!-- $MDX file=examples/elephant.txt -->
+```
+let Elephant : Type := Int;
+let grow (e : Elephant) : Elephant := e + 1;
+grow 4
+```
+
+Will be elaborated to:
+
+<!-- $MDX file=examples/elephant.stdout -->
+```
+let grow : Int -> Int := fun (e : Int) => e + 1;
+grow 4 : Int
+```
+
+Attempting to use features like type parameters will result in an elaboration
+error, for example:
+
+```sh
+$ stlc-bidirectional-stratify elab <<< "fun (A : Type) (x : A) => x"
+<input>:1:9: expected type, found universe
+[1]
+```
+
+We achieve this using the following GADTs in our elaborator:
 
 <!-- $MDX file=Surface.ml,part=elab-types -->
 ```ocaml
@@ -47,6 +75,10 @@ Some possible downsides to this approach are:
   might find this insightful).
 - A single namespace is used for types and expressions, so the same name can no
   longer be reused for both types and expressions.
+- We can no longer overload the syntax of types and terms as easily, for example
+  when overloading the syntax for tuple types and tuple literals.
+- When introducing fancier types we might want to make staging of types explicit
+  for performance reasons, which could be a breaking change.
 
 ## Project overview
 
@@ -96,16 +128,6 @@ Type : Type 1
 ```sh
 $ stlc-bidirectional-stratify elab <<< "let Univ := Type; let Number : Univ := Int; 1 + 2 : Number"
 1 + 2 : Int
-```
-
-```sh
-$ stlc-bidirectional-stratify elab <<< "fun (x : Int) => x + 2"
-fun (x : Int) => x + 2 : Int -> Int
-```
-
-```sh
-$ stlc-bidirectional-stratify elab <<< "(fun x f => f x * x) : Int -> (Int -> Int) -> Int"
-fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
 ```
 
 More examples can be found in [`tests.t`](tests.t).

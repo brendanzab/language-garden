@@ -1,0 +1,10 @@
+(rule
+  (with-stdin-from elephant.txt
+    (with-stdout-to elephant.stdout.tmp
+      (run %{bin:stlc-bidirectional-stratify} elab))))
+
+(rule
+  (alias runtest)
+  (package elab-stlc-bidirectional-stratify)
+  (action (diff elephant.stdout
+                elephant.stdout.tmp)))

@@ -22,8 +22,8 @@ Simply typed:
   An elaborator for a simply typed lambda calculus that uses bidirectional
   typing to allow some type annotations to be omitted.
 - [**elab-stlc-bidirectional-stratify**](./elab-stlc-bidirectional):
-  An elaborator that stratifies a combined type and term language into a
-  simply typed core language.
+  An elaborator that partially stratifies a combined type and term language into
+  a simply typed core language.
 - [**elab-stlc-abstract**](./elab-stlc-abstract):
   An LCF-style elaborator that moves the construction of well-typed terms behind
   a trusted interface.

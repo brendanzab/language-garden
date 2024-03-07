@@ -20,15 +20,18 @@ Function application
   > 
   > f 3
   > EOF
-  let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  let f : Int -> Int := fun (x : Int) => x;
+  f 3 : Int
 
 Explicit parameter type
   $ stlc-bidirectional-stratify elab <<< "let f (x : Int) := x; f 3"
-  let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  let f : Int -> Int := fun (x : Int) => x;
+  f 3 : Int
 
 Explicit return type
   $ stlc-bidirectional-stratify elab <<< "let f (x : Int) : Int := x; f 3"
-  let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  let f : Int -> Int := fun (x : Int) => x;
+  f 3 : Int
 
 Check let body type
   $ stlc-bidirectional-stratify elab <<EOF
@@ -77,14 +80,16 @@ Type expressions
   > let Number : Univ := Int; 
   > x + 2 : Number
   > EOF
-  let x : Int := 1; x + 2 : Int
+  let x : Int := 1;
+  x + 2 : Int
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let x := 1;
   > let Number := Int; 
   > x + 2 : Number
   > EOF
-  let x : Int := 1; x + 2 : Int
+  let x : Int := 1;
+  x + 2 : Int
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let Univ := Type;
