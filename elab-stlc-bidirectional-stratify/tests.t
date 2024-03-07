@@ -72,9 +72,9 @@ Type expressions
   Type : Type 1
 
   $ stlc-bidirectional-stratify elab <<EOF
-  > let Kind := Type;
+  > let Univ := Type;
   > let x : Int := 1;
-  > let Number : Kind := Int; 
+  > let Number : Univ := Int; 
   > x + 2 : Number
   > EOF
   let x : Int := 1; x + 2 : Int
@@ -87,16 +87,16 @@ Type expressions
   let x : Int := 1; x + 2 : Int
 
   $ stlc-bidirectional-stratify elab <<EOF
-  > let Kind := Type;
+  > let Univ := Type;
   > let x : Int := 1;
-  > Kind
+  > Univ
   > EOF
   Type : Type 1
 
   $ stlc-bidirectional-stratify elab <<EOF
-  > let Kind := Type;
+  > let Univ := Type;
   > let x : Int := 1;
-  > let Number : Kind := Int; 
+  > let Number : Univ := Int; 
   > Number
   > EOF
   Int : Type

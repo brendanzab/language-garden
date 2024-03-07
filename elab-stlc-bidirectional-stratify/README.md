@@ -94,7 +94,7 @@ Type : Type 1
 ```
 
 ```sh
-$ stlc-bidirectional-stratify elab <<< "let Kind := Type; let Number : Kind := Int; 1 + 2 : Number"
+$ stlc-bidirectional-stratify elab <<< "let Univ := Type; let Number : Univ := Int; 1 + 2 : Number"
 1 + 2 : Int
 ```
 
