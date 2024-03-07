@@ -1,0 +1,21 @@
+opam-version: "2.0"
+authors: ["Brendan Zabarauskas"]
+license: "Apache-2.0"
+homepage: "https://github.com/brendanzab/language-garden"
+dev-repo: "git+https://github.com/brendanzab/language-garden.git"
+bug-reports: "https://github.com/brendanzab/language-garden/issues"
+depends: [
+  "dune" {>= "3.14"}
+  "cmdliner" {>= "1.2"}
+  "menhir" {>= "20231231" & build}
+  "menhirLib" {>= "20231231"}
+  "sedlex" {>= "3.2"}
+  "mdx" {>= "2.3" & < "2.4.0" & with-test}
+  "odoc" {with-doc}
+]
+build: [
+  ["dune" "subst"] {dev}
+  ["dune" "build" "-p" name "-j" jobs "@install"]
+  ["dune" "build" "-p" name "-j" jobs "@runtest"] {with-test}
+  ["dune" "build" "-p" name "-j" jobs "@doc"] {with-doc}
+]
