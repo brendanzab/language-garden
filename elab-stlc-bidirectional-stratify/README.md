@@ -4,16 +4,13 @@ Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
 
 Statically typed languages tend to evolve dependently typed features over time,
 and if the surface syntax is not prepared to handle it, this can lead to awkward
-compromises to avoid syntactic ambiguities. For examples of such workarounds,
-see the braces in Rust’s generic constant arguments, first class modules in
-OCaml, and the various challenges in preparing GHC to support dependent types.
+compromises to avoid syntactic ambiguities. Examples of such workarounds are the
+braces in Rust’s generic constant arguments, the syntax for first class modules
+in OCaml, and the various challenges in preparing GHC to support dependent types.
 
-This elaborator takes a surface language that appears to be a full-spectrum
-dependently typed language and stratifies it into a simply typed lambda
-calculus. The idea is that this could retain syntactic room in the surface
-language to allow language features like dependent types to be added later on.
-It also has the benefit of using a consistent syntax for types and expressions,
-which some programmers prefer.
+This elaborator takes a combined type and expression language and stratifies it
+into a simply typed lambda calculus. This retains syntactic room in the surface
+language for language features like dependent types to be added later on.
 
 For example the following program:
 
@@ -32,8 +29,9 @@ let grow : Int -> Int := fun (e : Int) => e + 1;
 grow 4 : Int
 ```
 
-Attempting to use features like type parameters will result in an elaboration
-error, for example:
+Local type definitions are currently inlined into type annotations during
+elaboration, as they do not exist in the core language. Attempting to use
+features like type parameters will result in elaboration errors, for example:
 
 ```sh
 $ stlc-bidirectional-stratify elab <<< "fun (A : Type) (x : A) => x"
@@ -41,7 +39,9 @@ $ stlc-bidirectional-stratify elab <<< "fun (A : Type) (x : A) => x"
 [1]
 ```
 
-We achieve this using the following GADTs in our elaborator:
+In order to to define a bidirectional type checking algorithm that works over
+multiple levels of the core language we use the following GADTs in our
+elaborator:
 
 <!-- $MDX file=Surface.ml,part=elab-types -->
 ```ocaml
@@ -61,9 +61,7 @@ We achieve this using the following GADTs in our elaborator:
     | AnnTm : 'ann elab_tm * 'ann elab_ty -> ann_tm
 ```
 
-These types allow us to define a bidirectional type checking algorithm that
-works over multiple levels of our core language. Universes only exist as part of
-the elaboration process.
+Universes are erased during the elaboration process.
 
 Some possible downsides to this approach are:
 
