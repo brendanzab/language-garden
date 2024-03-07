@@ -40,9 +40,11 @@ the elaboration process.
 Some possible downsides to this approach are:
 
 - It requires contextual information to decide if something is a type or not,
-  which could make language tooling more challenging to implement.
+  which could make some language tooling more challenging to implement without
+  also implementing a similar form of elaboration.
 - Some programmers might be confused that types and expressions use the same
-  syntax, disambiguated based on context.
+  syntax, disambiguated based on context (on the other hand, other programmers
+  might find this insightful).
 - A single namespace is used for types and expressions, so the same name can no
   longer be reused for both types and expressions.
 
