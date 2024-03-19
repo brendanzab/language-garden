@@ -39,30 +39,6 @@ $ stlc-bidirectional-stratify elab <<< "fun (A : Type) (x : A) => x"
 [1]
 ```
 
-In order to to define a bidirectional type checking algorithm that works over
-multiple levels of the core language we use the following GADTs in our
-elaborator:
-
-<!-- $MDX file=Surface.ml,part=elab-types -->
-```ocaml
-  (* An elaborated type *)
-  type _ elab_ty =
-    | Univ1 : [`Univ1] elab_ty
-    | Univ0 : [`Univ0] elab_ty
-    | Type : Core.ty -> Core.ty elab_ty
-
-  (* An elaborated term *)
-  type _ elab_tm =
-    | Univ0 : [`Univ1] elab_tm
-    | Type : Core.ty -> [`Univ0] elab_tm
-    | Expr : Core.expr -> Core.ty elab_tm
-
-  type ann_tm =
-    | AnnTm : 'ann elab_tm * 'ann elab_ty -> ann_tm
-```
-
-Universes are erased during the elaboration process.
-
 Some possible downsides to this approach are:
 
 - It requires contextual information to decide if something is a type or not,

@@ -41,17 +41,17 @@ let elab_cmd () : unit =
         exit 1
   in
   match infer_tm with
-  | AnnTm (Univ0, Univ1) ->
+  | Univ ->
     Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
       Format.pp_print_string "Type"
       Format.pp_print_string "Type 1"
 
-  | AnnTm (Type t, Univ0) ->
+  | Type t ->
     Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
       Core.pp_ty t
       Format.pp_print_string "Type"
 
-  | AnnTm (Expr e, Type t) ->
+  | Expr (e, t) ->
     Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
       (Core.pp_expr []) e
       Core.pp_ty t
