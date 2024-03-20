@@ -8,8 +8,6 @@ language:
 
 <!-- $MDX file=examples/fact.txt -->
 ```
--- An example of a singly recursive definition
-
 let rec fact n :=
   if n = 0 then 1 else n * fact (n - 1);
 
@@ -31,8 +29,6 @@ functions:
 
 <!-- $MDX file=examples/even-odd.txt -->
 ```
--- An example of mutually recursive definitions
-
 let rec is-even n :=
       if n = 0 then true else is-odd (n - 1);
     rec is-odd n :=
