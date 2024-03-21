@@ -26,6 +26,11 @@ Placeholder types
   $ stlc-letrec-unification elab <<< "let f (x : _) : _ := x; f 3"
   let f : Int -> Int := fun (x : Int) => x; f 3 : Int
 
+Placeholder return type
+  $ stlc-unification elab <<< "let f : Int -> _ := fun x y => x; f 3 true"
+  let f : Int -> Bool -> Int := fun (x : Int) => fun (y : Bool) => x; f 3 true
+  : Int
+
 If expressions
   $ stlc-letrec-unification elab <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
@@ -325,6 +330,11 @@ Recursive let bindings
 Infinite type
   $ stlc-letrec-unification elab <<< "fun f => f f"
   <input>:1:11: infinite type
+  [1]
+
+Unexpected parameter
+  $ stlc-unification elab <<< "(fun x y => x) : Int -> Int"
+  <input>:1:7: unexpected parameter
   [1]
 
 Ambiguous parameter type

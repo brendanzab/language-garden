@@ -307,6 +307,10 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : C
       unify param_ty_loc param_ty param_ty';
       let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
       FunLit (name.data, param_ty, body)
+  | (name, _) :: _, MetaVar _ ->
+      let tm', ty' = elab_infer_fun_lit ctx params None body in
+      unify name.loc ty ty';
+      tm'
   | (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
 
