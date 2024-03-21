@@ -60,6 +60,8 @@ Hello world!
 Papers:
 
 - [A Core Calculus for Documents – Or, Lambda: The Ultimate Document](https://blog.brownplt.org/2023/12/28/document-calculus.html)
+  ([Paper](https://doi.org/10.1145/3632865))
+  ([Talk](https://www.youtube.com/watch?v=yC4ja0Zines))
   ([Code](https://github.com/cognitive-engineering-lab/document-calculus))
 
 Lightweight markup languages:
