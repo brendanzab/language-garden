@@ -58,8 +58,8 @@ let atomic_ty :=
     { ty }
 | "["; "|"; "]";
     { Surface.VariantType [] }
-| "["; option("|"); cs = separated_nonempty_list("|", l = located(NAME); ":"; ty = located(ty); { l, ty }); "]";
-    { Surface.VariantType cs }
+| "["; option("|"); r = separated_nonempty_list("|", l = located(NAME); ":"; ty = located(ty); { l, ty }); "]";
+    { Surface.VariantType r }
 | n = NAME;
     { Surface.Name n }
 | UNDERSCORE;
@@ -74,38 +74,38 @@ let clause :=
 
 let tm :=
 | "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
-    tm0 = located(tm); ";"; tm1 = located(tm);
-    { Surface.Let (n, ps, ty, tm0, tm1) }
+    tm1 = located(tm); ";"; tm2 = located(tm);
+    { Surface.Let (n, ps, ty, tm1, tm2) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
     { Surface.FunLit (ps, t) }
-| "if"; tm0 = located(eq_tm); "then"; tm1 = located(tm); "else"; tm2 = located(tm);
-    { Surface.IfThenElse (tm0, tm1, tm2) }
-| "match"; tm0 = located(eq_tm); "with"; option("|"); clauses = separated_list("|", clause); "end";
-    { Surface.Match (tm0, clauses) }
+| "if"; tm1 = located(eq_tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
+    { Surface.IfThenElse (tm1, tm2, tm3) }
+| "match"; tm1 = located(eq_tm); "with"; option("|"); clauses = separated_list("|", clause); "end";
+    { Surface.Match (tm1, clauses) }
 | tm = located(eq_tm); ":"; ty = located(ty);
     { Surface.Ann (tm, ty) }
 | eq_tm
 
 let eq_tm :=
-| tm0 = located(add_tm); "="; tm1 = located(eq_tm);
-    { Surface.Op2 (`Eq, tm0, tm1) }
+| tm1 = located(add_tm); "="; tm2 = located(eq_tm);
+    { Surface.Op2 (`Eq, tm1, tm2) }
 | add_tm
 
 let add_tm :=
-| tm0 = located(mul_tm); "+"; tm1 = located(add_tm);
-    { Surface.Op2 (`Add, tm0, tm1) }
-| tm0 = located(mul_tm); "-"; tm1 = located(add_tm);
-    { Surface.Op2 (`Sub, tm0, tm1) }
+| tm1 = located(mul_tm); "+"; tm2 = located(add_tm);
+    { Surface.Op2 (`Add, tm1, tm2) }
+| tm1 = located(mul_tm); "-"; tm2 = located(add_tm);
+    { Surface.Op2 (`Sub, tm1, tm2) }
 | mul_tm
 
 let mul_tm :=
-| tm0 = located(app_tm); "*"; tm1 = located(mul_tm);
-    { Surface.Op2 (`Mul, tm0, tm1) }
+| tm1 = located(app_tm); "*"; tm2 = located(mul_tm);
+    { Surface.Op2 (`Mul, tm1, tm2) }
 | app_tm
 
 let app_tm :=
-| tm0 = located(app_tm); tm1 = located(atomic_tm);
-    { Surface.App (tm0, tm1) }
+| tm1 = located(app_tm); tm2 = located(atomic_tm);
+    { Surface.App (tm1, tm2) }
 | "-"; tm = located(atomic_tm);
     { Surface.Op1 (`Neg, tm) }
 | atomic_tm

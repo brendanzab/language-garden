@@ -106,9 +106,9 @@ let unsolved_metas () : (loc * meta_info) list =
     | (loc, info, m) :: metas -> begin
         match !m with
         | Core.Unsolved (_, Any) -> go ((loc, info) :: acc) metas
-        | Core.Unsolved (_, Variant cases) ->
+        | Core.Unsolved (_, Variant row) ->
             (* Default to a concrete variant type *)
-            m := Solved (VariantType cases);
+            m := Solved (VariantType row);
             go acc metas
         | Core.Solved _ -> go acc metas
     end
@@ -169,7 +169,7 @@ let rec elab_ty (ty : ty) : Core.ty =
       error ty.loc (Format.asprintf "unbound type `%s`" name)
   | FunType (ty1, ty2) ->
       FunType (elab_ty ty1, elab_ty ty2)
-  | VariantType cases ->
+  | VariantType row ->
       VariantType
         (List.fold_left
           (fun acc (label, ty) ->
@@ -178,7 +178,7 @@ let rec elab_ty (ty : ty) : Core.ty =
             else
               Core.LabelMap.add label.data (elab_ty ty) acc)
           Core.LabelMap.empty
-          cases)
+          row)
   | Placeholder ->
       fresh_meta ty.loc `Placeholder Any
 
@@ -193,8 +193,8 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
   | FunLit (params, body), ty ->
       elab_check_fun_lit ctx params body ty
 
-  | VariantLit (label, tm), VariantType cases -> begin
-      match Core.LabelMap.find_opt label.data cases with
+  | VariantLit (label, tm), VariantType row -> begin
+      match Core.LabelMap.find_opt label.data row with
       | Some elem_ty ->
           VariantLit (label.data, elab_check ctx tm elem_ty, ty)
       | None ->
@@ -207,11 +207,11 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
   | Match (head, clauses), body_ty ->
       elab_check_match ctx head clauses body_ty
 
-  | IfThenElse (head, tm0, tm1), ty ->
+  | IfThenElse (head, tm1, tm2), ty ->
       let head = elab_check ctx head BoolType in
-      let tm0 = elab_check ctx tm0 ty in
       let tm1 = elab_check ctx tm1 ty in
-      BoolElim (head, tm0, tm1)
+      let tm2 = elab_check ctx tm2 ty in
+      BoolElim (head, tm1, tm2)
 
   (* Fall back to type inference *)
   | _ ->
@@ -243,8 +243,8 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
 
   | VariantLit (label, elem_tm) ->
       let elem_tm, elem_ty = elab_infer ctx elem_tm in
-      let cases = Core.LabelMap.singleton label.data elem_ty in
-      let ty = fresh_meta tm.loc `VariantLit (Variant cases) in
+      let row = Core.LabelMap.singleton label.data elem_ty in
+      let ty = fresh_meta tm.loc `VariantLit (Variant row) in
       VariantLit (label.data, elem_tm, ty), ty
 
   | IntLit i ->
@@ -272,22 +272,22 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let body_ty = fresh_meta tm.loc `MatchClauses Any in
       elab_check_match ctx head clauses body_ty, body_ty
 
-  | IfThenElse (head, tm0, tm1) ->
+  | IfThenElse (head, tm1, tm2) ->
       let head = elab_check ctx head BoolType in
       let ty = fresh_meta tm.loc `IfBranches Any in
-      let tm0 = elab_check ctx tm0 ty in
       let tm1 = elab_check ctx tm1 ty in
-      BoolElim (head, tm0, tm1), ty
+      let tm2 = elab_check ctx tm2 ty in
+      BoolElim (head, tm1, tm2), ty
 
-  | Op2 ((`Eq) as prim, tm0, tm1) ->
-      let tm0 = elab_check ctx tm0 IntType in
+  | Op2 ((`Eq) as prim, tm1, tm2) ->
       let tm1 = elab_check ctx tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), BoolType
+      let tm2 = elab_check ctx tm2 IntType in
+      PrimApp (prim, [tm1; tm2]), BoolType
 
-  | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
-      let tm0 = elab_check ctx tm0 IntType in
+  | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
       let tm1 = elab_check ctx tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), IntType
+      let tm2 = elab_check ctx tm2 IntType in
+      PrimApp (prim, [tm1; tm2]), IntType
 
   | Op1 ((`Neg) as prim, tm) ->
       let tm = elab_check ctx tm IntType in
@@ -336,33 +336,33 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
   let head, head_ty = elab_infer ctx head in
   (* TDOD: Proper match compilation *)
   match Core.force head_ty with
-  | VariantType ty_cases ->
-      (* iterate through clauses, accumulating term cases *)
-      let tm_cases =
+  | VariantType row ->
+      (* iterate through clauses, accumulating cases *)
+      let cases =
         List.fold_left
-          (fun tm_cases ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
-            if Core.LabelMap.mem label.data tm_cases then
+          (fun cases ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
+            if Core.LabelMap.mem label.data cases then
               (* TODO: should be a warning *)
               error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
             else
-              match Core.LabelMap.find_opt label.data ty_cases with
+              match Core.LabelMap.find_opt label.data row with
               | Some case_ty ->
                   let body_tm = elab_check ((name.data, case_ty) :: ctx) body_tm body_ty in
-                  Core.LabelMap.add label.data (name.data, body_tm) tm_cases
+                  Core.LabelMap.add label.data (name.data, body_tm) cases
               | None ->
                   error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
           Core.LabelMap.empty
           clauses
       in
-      (* check that labels in term cases match type cases *)
+      (* check that labels in the cases match the labels in the row *)
       let missing_cases =
-        Core.LabelMap.to_seq ty_cases
-        |> Seq.filter (fun (label, _) -> not (Core.LabelMap.mem label tm_cases))
+        Core.LabelMap.to_seq row
+        |> Seq.filter (fun (label, _) -> not (Core.LabelMap.mem label cases))
         |> List.of_seq
       in
       if List.is_empty missing_cases then
-        (* return term cases *)
-        VariantElim (head, tm_cases)
+        (* return cases *)
+        VariantElim (head, cases)
       else
         error head_loc
           (Format.asprintf "non-exhaustive match, missing %a"
@@ -372,22 +372,22 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
             missing_cases)
 
   | head_ty ->
-      (* Build up the labelled types and and term cases from the clauses *)
-      let tm_cases, ty_cases =
+      (* Build up the cases and the row from the clauses *)
+      let cases, row =
         List.fold_left
-          (fun (tm_cases, ty_cases) ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
-            if Core.LabelMap.mem label.data tm_cases then
+          (fun (cases, row) ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
+            if Core.LabelMap.mem label.data cases then
               (* TODO: should be a warning? *)
               error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
             else
               let case_ty = fresh_meta name.loc `PatternBinder Any in
               let body_tm = elab_check ((name.data, case_ty) :: ctx) body_tm body_ty in
-              Core.LabelMap.add label.data (name.data, body_tm) tm_cases,
-              Core.LabelMap.add label.data case_ty ty_cases)
+              Core.LabelMap.add label.data (name.data, body_tm) cases,
+              Core.LabelMap.add label.data case_ty row)
           (Core.LabelMap.empty, Core.LabelMap.empty)
           clauses
       in
       (* Unify head type with variant type *)
-      unify head_loc head_ty (VariantType ty_cases);
-      (* return term cases *)
-      VariantElim (head, tm_cases)
+      unify head_loc head_ty (VariantType row);
+      (* return cases *)
+      VariantElim (head, cases)

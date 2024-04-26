@@ -64,7 +64,7 @@ and constr =
   (** Unifies with any type *)
 
   | Variant of ty LabelMap.t
-  (** Unifies with variant types that contain {i at least} all of the cases
+  (** Unifies with variant types that contain {i at least} all of the entries
       recorded in the map. *)
 
 (** Primitive operations *)
@@ -125,11 +125,11 @@ module Semantics = struct
         body vtm
     | _ -> invalid_arg "expected variant"
 
-  let bool_elim head vtm0 vtm1 =
+  let bool_elim head vtm1 vtm2 =
     match head with
-    | Neu ntm -> Neu (BoolElim (ntm, vtm0, vtm1))
-    | BoolLit true -> Lazy.force vtm0
-    | BoolLit false -> Lazy.force vtm1
+    | Neu ntm -> Neu (BoolElim (ntm, vtm1, vtm2))
+    | BoolLit true -> Lazy.force vtm1
+    | BoolLit false -> Lazy.force vtm2
     | _ -> invalid_arg "expected boolean"
 
   let prim_app prim args =
@@ -170,9 +170,9 @@ module Semantics = struct
     | BoolLit b -> BoolLit b
     | BoolElim (head, tm0, tm1) ->
         let head = eval env head in
-        let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
-        let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
-        bool_elim head vtm0 vtm1
+        let vtm1 = Lazy.from_fun (fun () -> eval env tm0) in
+        let vtm2 = Lazy.from_fun (fun () -> eval env tm1) in
+        bool_elim head vtm1 vtm2
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
 
@@ -204,9 +204,9 @@ module Semantics = struct
             name, quote (size + 1) (body (Neu (Var size))))
         in
         VariantElim (head, cases)
-    | BoolElim (head, vtm0, vtm1) ->
-        let tm0 = quote size (Lazy.force vtm0) in
-        let tm1 = quote size (Lazy.force vtm1) in
+    | BoolElim (head, vtm1, vtm2) ->
+        let tm0 = quote size (Lazy.force vtm1) in
+        let tm1 = quote size (Lazy.force vtm2) in
         BoolElim (quote_neu size head, tm0, tm1)
     | PrimApp (prim, args) ->
         PrimApp (prim, List.map (quote size) args)
@@ -258,32 +258,30 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
   | MetaVar m -> begin
       match !m with
-      | Unsolved (id', _) when id = id' ->
-          raise (InfiniteType id)
-      | Unsolved (_, Variant cases) ->
-          cases |> LabelMap.iter (fun _ -> occurs id)
+      | Unsolved (id', _) when id = id' -> raise (InfiniteType id)
+      | Unsolved (_, Variant row) -> row |> LabelMap.iter (fun _ -> occurs id)
       | Unsolved (_, Any) | Solved _ -> ()
   end
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty;
-  | VariantType cases ->
-      cases |> LabelMap.iter (fun _ ty -> occurs id ty)
+  | VariantType row ->
+      row |> LabelMap.iter (fun _ ty -> occurs id ty)
   | IntType -> ()
   | BoolType -> ()
 
 (** Check if two types are the same, updating unsolved metavaribles in one
     type with known information from the other type if possible. *)
-let rec unify (ty0 : ty) (ty1 : ty) : unit =
-  match force ty0, force ty1 with
-  | ty0, ty1 when ty0 = ty1 -> ()
+let rec unify (ty1 : ty) (ty2 : ty) : unit =
+  match force ty1, force ty2 with
+  | ty1, ty2 when ty1 = ty2 -> ()
   | MetaVar m, ty | ty, MetaVar m -> unify_meta m ty
-  | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
-      unify param_ty0 param_ty1;
-      unify body_ty0 body_ty1;
-  | VariantType cases0, VariantType cases1 ->
-      if LabelMap.equal (fun ty0 ty1 -> unify ty0 ty1; true) cases0 cases1 then () else
-        raise (MismatchedTypes (ty0, ty1))
+  | FunType (param_ty1, body_ty1), FunType (param_ty2, body_ty2) ->
+      unify param_ty1 param_ty2;
+      unify body_ty1 body_ty2;
+  | VariantType row1, VariantType row2 ->
+      if LabelMap.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2 then () else
+        raise (MismatchedTypes (ty1, ty2))
   | IntType, IntType -> ()
   | BoolType, BoolType -> ()
   | ty1, ty2 ->
@@ -299,20 +297,22 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       m := Solved ty
   (* The metavariable is constrained to be a variant type, so check that the
      the type we are unifying against also unifies with a variant type *)
-  | Unsolved (id, (Variant cases as c)) ->
+  | Unsolved (id, (Variant row as c)) ->
       occurs id ty;
       begin
         match ty with
+        (* Update metavariables with the variant constraint *)
         | MetaVar m' -> begin
             match !m' with
             | Unsolved (_, c') -> m' := Unsolved (id, unify_constrs c c')
             | Solved _ -> invalid_arg "expected a forced type"
         end
-        | VariantType exact_cases ->
-            let cases = unify_cases exact_cases cases in
-            (* The number of cases in the unified cases must not exceed the
-                cases given in explicit type annotations. *)
-            if LabelMap.cardinal exact_cases < LabelMap.cardinal cases then
+        (* Unify the constraint against concrete types *)
+        | VariantType exact_row ->
+            let row = unify_row exact_row row in
+            (* The length of the unified row must not exceed the length of the
+               row in concrete types. *)
+            if LabelMap.cardinal exact_row < LabelMap.cardinal row then
               raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
         | _ -> ()
       end;
@@ -325,19 +325,19 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
 and unify_constrs (c1 : constr) (c2 : constr) : constr =
   match c1, c2 with
   | Any, Any -> Any
-  | Variant cases, Any | Any, Variant cases -> Variant cases
-  | Variant cases1, Variant cases2 -> Variant (unify_cases cases1 cases2)
+  | Variant row, Any | Any, Variant row -> Variant row
+  | Variant row1, Variant row2 -> Variant (unify_row row1 row2)
 
-(** Unify two lists of cases *)
-and unify_cases (cases1 : ty LabelMap.t) (cases2 : ty LabelMap.t) : ty LabelMap.t =
+(** Unify two rows *)
+and unify_row (row1 : ty LabelMap.t) (row2 : ty LabelMap.t) : ty LabelMap.t =
   LabelMap.merge
     (fun _ ty1 ty2 ->
         match ty1, ty2 with
         | Some ty1, Some ty2 -> unify ty1 ty2; Some ty1
         | Some ty, None | None, Some ty -> Some ty
         | None, None  -> None)
-    cases1
-    cases2
+    row1
+    row2
 
 
 (** {1 Zonking} *)
@@ -355,8 +355,8 @@ let rec zonk_ty (ty : ty) : ty =
   end
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
-  | VariantType cases ->
-      VariantType (cases |> LabelMap.map (fun ty -> zonk_ty ty))
+  | VariantType row ->
+      VariantType (row |> LabelMap.map (fun ty -> zonk_ty ty))
   | IntType -> IntType
   | BoolType -> BoolType
 
@@ -404,13 +404,13 @@ and pp_atomic_ty fmt ty =
   end
   | VariantType cases when LabelMap.is_empty cases ->
       Format.fprintf fmt "[|]"
-  | VariantType cases ->
+  | VariantType row ->
       Format.fprintf fmt "[%a]"
         (Format.pp_print_seq
           ~pp_sep:(fun fmt () -> Format.fprintf fmt "@ |@ ")
           (fun fmt (label, ty) ->
             Format.fprintf fmt "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty))
-        (LabelMap.to_seq cases)
+        (LabelMap.to_seq row)
   | IntType -> Format.fprintf fmt "Int"
   | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
