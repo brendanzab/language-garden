@@ -130,12 +130,12 @@ theorem Program.decompile.correctness (e : Expr) :
   := by
     induction e with
       | nat => rfl
-      | add e₁ e₂ ih₁ ih₂ =>
+      | add e₁ e₂ =>
           simp [Expr.compile]
           repeat rw [List.append_assoc]
           repeat rw [Program.decompile.compile_append]
           rfl
-      | sub e₁ e₂ ih₁ ih₂ =>
+      | sub e₁ e₂ =>
           simp [Expr.compile]
           repeat rw [List.append_assoc]
           repeat rw [Program.decompile.compile_append]
