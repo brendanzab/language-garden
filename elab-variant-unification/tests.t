@@ -157,6 +157,21 @@ Mismatched variant constraint and smaller variant type
     found: ?{4 ~ [no : Bool | yes : Int]}
   [1]
 
+Mismatched variant constraint and non-variant type
+  $ variant-unification elab <<EOF
+  > let choose b y n :=
+  >   if b then [yes := y] else [no := n];
+  > 
+  > let result : Bool := 
+  >   choose true 3 false;
+  > 
+  > result
+  > EOF
+  <input>:5:2: mismatched types:
+    expected: Bool
+    found: ?{4 ~ [no : Bool | yes : Int]}
+  [1]
+
 Infinite type
   $ variant-unification elab <<< "fun f => f f"
   <input>:1:11: infinite type
