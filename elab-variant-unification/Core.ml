@@ -289,34 +289,35 @@ let rec unify (ty1 : ty) (ty2 : ty) : unit =
 
 (** Unify a metavariable with a forced type *)
 and unify_meta (m : meta_state ref) (ty : ty) : unit =
-  match !m with
-  | Unsolved (id, c) ->
-      (* Guard against cyclic metavariable occurances *)
+  match !m, ty with
+  (* Unify with any type *)
+  | Unsolved (id, Any), ty ->
       occurs id ty;
-      begin
-        match c, ty with
-        | Any, _ -> ()
-        (* Unify metavariable constraints *)
-        | _, MetaVar m' -> begin
-            match !m' with
-            | Unsolved (_, c') -> m' := Unsolved (id, unify_constrs c c')
-            | Solved _ -> invalid_arg "expected a forced type"
-        end
-        (* Unify variant constraints against concrete variant rows *)
-        | Variant row, VariantType exact_row ->
-            let row = unify_row exact_row row in
-            (* The length of the unified row must not exceed the length of the
-              row in the concrete type. *)
-            if LabelMap.cardinal exact_row < LabelMap.cardinal row then
-              raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
-        (* The type does not match the constraint, so throw an error *)
-        | Variant _, ty ->
-            raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
-      end;
-      (* Update the metavariable *)
       m := Solved ty
+  (* Unify metavariable constraints *)
+  | Unsolved (id, c), MetaVar m' -> begin
+      match !m' with
+      | Unsolved (_, c') ->
+          occurs id ty;
+          m' := Unsolved (id, unify_constrs c c');
+          m := Solved ty
+      | Solved _ -> invalid_arg "expected a forced type"
+  end
+  (* Unify a variant constraint against a concrete variant type *)
+  | Unsolved (id, Variant row), VariantType exact_row ->
+      occurs id ty;
+      let row = unify_row exact_row row in
+      (* The length of the unified row must not exceed the length of the
+         row in the concrete type. *)
+      if LabelMap.cardinal exact_row < LabelMap.cardinal row then
+        raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
+      else
+        m := Solved ty
+  (* The type does not match the constraint, so raise an error *)
+  | Unsolved (_, Variant _), ty ->
+      raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
   (* The metavariable has a known type, so fall back to regular unification. *)
-  | Solved mty ->
+  | Solved mty, ty ->
       unify ty mty
 
 (** Unify two constraints *)
