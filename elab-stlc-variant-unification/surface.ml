@@ -30,6 +30,7 @@ type ty =
 and ty_data =
   | Name of string
   | Fun_type of ty * ty
+  | Record_type of (label * ty) list
   | Variant_type of (label * ty) list
   | Placeholder
 
@@ -51,10 +52,12 @@ and tm_data =
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
   | Fun_lit of param list * tm
+  | Record_lit of (label * tm) list
   | Variant_lit of label * tm
   | Int_lit of int
   | Bool_lit of bool
   | App of tm * tm
+  | Proj of tm * label
   | Match of tm * (pattern * tm) list
   | If_then_else of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
@@ -82,6 +85,8 @@ module Elab = struct
   type meta_info = [
     | `Fun_param
     | `Fun_body
+    | `Record_field
+    | `Record_lit
     | `Variant_lit
     | `Match_clauses
     | `Pattern_binder
@@ -105,6 +110,10 @@ module Elab = struct
     let go (loc, info, m) acc =
       match !m with
       | Core.Unsolved (_, Any) -> (loc, info) :: acc
+      | Core.Unsolved (_, Record row) ->
+          (* Default to a concrete record type *)
+          m := Solved (Record_type row);
+          acc
       | Core.Unsolved (_, Variant row) ->
           (* Default to a concrete variant type *)
           m := Solved (Variant_type row);
@@ -141,7 +150,8 @@ module Elab = struct
   let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     try Core.unify ty1 ty2 with
     | Core.Infinite_type _ -> error loc "infinite type"
-    | Core.Mismatched_types (_, _) ->
+    | Core.Mismatched_types (_, _)
+    | Core.Mismatched_constraints (_, _) ->
         error loc
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
             Core.pp_ty ty1
@@ -163,22 +173,22 @@ module Elab = struct
     match ty.data with
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
-    | Name name ->
-        error ty.loc (Format.asprintf "unbound type `%s`" name)
-    | Fun_type (ty1, ty2) ->
-        Fun_type (check_ty ty1, check_ty ty2)
-    | Variant_type row ->
-        Variant_type
-          (List.fold_left
-            (fun acc (label, ty) ->
-              if Core.Label_map.mem label.data acc then
-                error label.loc (Format.asprintf "duplicate label `%s`" label.data)
-              else
-                Core.Label_map.add label.data (check_ty ty) acc)
-            Core.Label_map.empty
-            row)
-    | Placeholder ->
-        fresh_meta ty.loc `Placeholder Any
+    | Name name -> error ty.loc (Format.asprintf "unbound type `%s`" name)
+    | Fun_type (ty1, ty2) -> Fun_type (check_ty ty1, check_ty ty2)
+    | Record_type entries -> Record_type (check_ty_entries entries)
+    | Variant_type entries -> Variant_type (check_ty_entries entries)
+    | Placeholder -> fresh_meta ty.loc `Placeholder Any
+
+  and check_ty_entries entries =
+    let rec go acc entries =
+      match entries with
+      | [] -> acc
+      | (label, ty) :: entries ->
+          match Core.Label_map.mem label.data acc with
+          | true -> error label.loc (Format.asprintf "duplicate label `%s`" label.data)
+          | false -> go (Core.Label_map.add label.data (check_ty ty) acc) entries
+    in
+    go Core.Label_map.empty entries
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
@@ -239,6 +249,19 @@ module Elab = struct
     | Fun_lit (params, body) ->
         infer_fun_lit ctx params None body
 
+    | Record_lit entries ->
+        let rec go acc entries =
+          match entries with
+          | [] -> acc
+          | (label, tm) :: entries ->
+              match Core.Label_map.mem label.data acc with
+              | true -> error label.loc (Format.asprintf "duplicate label `%s`" label.data)
+              | false -> go (Core.Label_map.add label.data (infer_tm ctx tm) acc) entries
+        in
+        let entries = go Core.Label_map.empty entries in
+        Record_lit (Core.Label_map.map fst entries),
+        Record_type (Core.Label_map.map snd entries)
+
     | Variant_lit (label, elem_tm) ->
         let elem_tm, elem_ty = infer_tm ctx elem_tm in
         let row = Core.Label_map.singleton label.data elem_ty in
@@ -269,6 +292,23 @@ module Elab = struct
     | Match (head, clauses) ->
         let body_ty = fresh_meta tm.loc `Match_clauses Any in
         check_tm_match ctx head clauses body_ty, body_ty
+
+    | Proj (head, label) -> begin
+        let head_loc = head.loc in
+        let head, head_ty = infer_tm ctx head in
+        match Core.force head_ty with
+        | Record_type row -> begin
+            match Core.Label_map.find_opt label.data row with
+            | Some ty -> Record_proj (head, label.data), ty
+            | None -> error head_loc (Format.asprintf "unknown field `%s`" label.data)
+        end
+        | head_ty ->
+            let field_ty = fresh_meta head_loc `Record_field Any in
+            let row = Core.Label_map.singleton label.data field_ty in
+            let record_ty = fresh_meta head_loc `Record_lit (Record row) in
+            unify head_loc head_ty record_ty;
+            Record_proj (head, label.data), field_ty
+    end
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in

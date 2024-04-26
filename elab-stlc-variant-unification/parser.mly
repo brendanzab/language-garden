@@ -14,6 +14,7 @@
 %token ASTERISK "*"
 %token COLON ":"
 %token COLON_EQUALS ":="
+%token DOT "."
 %token EQUALS "="
 %token EQUALS_GREATER "=>"
 %token HYPHEN "-"
@@ -23,6 +24,8 @@
 %token VERTICAL_LINE "|"
 %token OPEN_BRACE "["
 %token CLOSE_BRACE "]"
+%token OPEN_BRACKET "{"
+%token CLOSE_BRACKET "}"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
 %token END
@@ -34,10 +37,6 @@
 let main :=
 | tm = located(tm); END;
     { tm }
-
-let located(X) :=
-| data = X;
-    { Surface.{ loc = $loc; data } }
 
 let binder :=
 | n = NAME;
@@ -59,6 +58,8 @@ let ty :=
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
+| "{"; fs = trailing_list(";", ~ = located(NAME); ":"; ~ = located(ty); <>); "}";
+    { Surface.Record_type fs  }
 | "["; "|"; "]";
     { Surface.Variant_type [] }
 | "["; option("|"); r = separated_nonempty_list("|", l = located(NAME); ":"; ty = located(ty); { l, ty }); "]";
@@ -107,10 +108,15 @@ let mul_tm :=
 | app_tm
 
 let app_tm :=
-| tm1 = located(app_tm); tm2 = located(atomic_tm);
+| tm1 = located(app_tm); tm2 = located(proj_tm);
     { Surface.App (tm1, tm2) }
-| "-"; tm = located(atomic_tm);
+| "-"; tm = located(proj_tm);
     { Surface.Op1 (`Neg, tm) }
+| proj_tm
+
+let proj_tm :=
+| tm = located(proj_tm); "."; l = located(NAME);
+    { Surface.Proj (tm, l) }
 | atomic_tm
 
 let atomic_tm :=
@@ -118,6 +124,8 @@ let atomic_tm :=
     { tm }
 | n = NAME;
     { Surface.Name n }
+| "{"; fs = trailing_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";
+    { Surface.Record_lit fs  }
 | "["; l = located(NAME); ":="; tm = located(tm); "]";
     { Surface.Variant_lit (l, tm) }
 | "true";
@@ -126,3 +134,19 @@ let atomic_tm :=
     { Surface.Bool_lit false }
 | i = NUMBER;
     { Surface.Int_lit i }
+
+// Utilities
+
+let located(X) :=
+  | data = X;
+      { Surface.{ loc = $loc; data } }
+
+let trailing_list(Sep, T) :=
+  | { [] }
+  | trailing_nonempty_list(Sep, T)
+
+let trailing_nonempty_list(Sep, T) :=
+  | t = T; option(Sep);
+      { [ t ] }
+  | t = T; Sep; ts = trailing_nonempty_list(Sep, T);
+      { t :: ts }

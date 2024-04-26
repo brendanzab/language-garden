@@ -45,6 +45,8 @@ let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
       unsolved_metas |> List.iter (function
         | (pos, `Fun_param) -> print_error pos "ambiguous function parameter type"
         | (pos, `Fun_body) -> print_error pos "ambiguous function return type"
+        | (pos, `Record_field) -> print_error pos "ambiguous record field"
+        | (pos, `Record_lit) -> print_error pos "ambiguous record literal"
         | (pos, `Variant_lit) -> print_error pos "ambiguous variant literal"
         | (pos, `Match_clauses) -> print_error pos "ambiguous match clauses"
         | (pos, `Pattern_binder) -> print_error pos "ambiguous pattern binder"

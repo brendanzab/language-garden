@@ -1,3 +1,16 @@
+let point : Int -> Int -> { x : Int; y : Int } :=
+  fun (x : Int) => fun (y : Int) => { x := x; y := y };
+let add :
+      { x : Int; y : Int } -> { x : Int; y : Int } -> { x : Int; y : Int }
+:=
+  fun (p1 : { x : Int; y : Int }) => fun (p2 : { x : Int; y : Int }) =>
+    point (#int-add p1.x p2.x) (#int-add p1.y p2.y);
+let sub :
+      { x : Int; y : Int } -> { x : Int; y : Int } -> { x : Int; y : Int }
+:=
+  fun (p1 : { x : Int; y : Int }) => fun (p2 : { x : Int; y : Int }) =>
+    point (#int-sub p1.x p2.x) (#int-sub p1.y p2.y);
+let _ : { x : Int; y : Int } := add (point 1 2) (point 3 4);
 let apply : [decr : Int | incr : Int | square : Int] -> Int :=
   fun (x : [decr : Int | incr : Int | square : Int]) =>
     match x with

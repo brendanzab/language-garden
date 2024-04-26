@@ -53,6 +53,7 @@ type meta_id = int
 type ty =
   | Meta_var of meta_state ref
   | Fun_type of ty * ty
+  | Record_type of ty Label_map.t
   | Variant_type of ty Label_map.t
   | Int_type
   | Bool_type
@@ -67,6 +68,10 @@ and constr =
   | Any
   (** Unifies with any type *)
 
+  | Record of ty Label_map.t
+  (** Unifies with record types that contain {i at least} all of the entries
+      recorded in the map. *)
+
   | Variant of ty Label_map.t
   (** Unifies with variant types that contain {i at least} all of the entries
       recorded in the map. *)
@@ -77,6 +82,8 @@ type tm =
   | Let of name * ty * tm * tm
   | Fun_lit of name * ty * tm
   | Fun_app of tm * tm
+  | Record_lit of tm Label_map.t
+  | Record_proj of tm * label
   | Variant_lit of label * tm * ty
   | Variant_elim of tm * (name * tm) Label_map.t
   | Int_lit of int
@@ -93,6 +100,7 @@ module Semantics = struct
   type vtm =
     | Neu of ntm
     | Fun_lit of name * ty * (vtm -> vtm)
+    | Record_lit of vtm Label_map.t
     | Variant_lit of label * vtm * ty
     | Bool_lit of bool
     | Int_lit of int
@@ -107,6 +115,7 @@ module Semantics = struct
   and ntm =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | Fun_app of ntm * vtm
+    | Record_proj of ntm * label
     | Variant_elim of ntm * (name * (vtm -> vtm)) Label_map.t
     | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
     | Prim_app of Prim.t * vtm list
@@ -119,6 +128,12 @@ module Semantics = struct
     | Neu ntm -> Neu (Fun_app (ntm, arg))
     | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
+
+  let record_proj head label =
+    match head with
+    | Neu ntm -> Neu (Record_proj (ntm, label))
+    | Record_lit fields -> Label_map.find label fields
+    | _ -> invalid_arg "expected record"
 
   let variant_elim head cases =
     match head with
@@ -164,6 +179,11 @@ module Semantics = struct
         let head = eval env head in
         let arg = eval env arg in
         fun_app head arg
+    | Record_lit fields ->
+        Record_lit (fields |> Label_map.map (eval env))
+    | Record_proj (head, label) ->
+        let head = eval env head in
+        record_proj head label
     | Variant_lit (label, tm, ty) ->
         Variant_lit (label, eval env tm, ty)
     | Variant_elim (head, cases) ->
@@ -193,6 +213,8 @@ module Semantics = struct
     | Fun_lit (name, param_ty, body) ->
         let body = quote (size + 1) (body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
+    | Record_lit fields ->
+        Record_lit (fields |> Label_map.map (quote size))
     | Variant_lit (label, vtm, ty) ->
         Variant_lit (label, quote size vtm, ty)
     | Int_lit i -> Int_lit i
@@ -204,6 +226,8 @@ module Semantics = struct
         Var (level_to_index size level)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
+    | Record_proj (head, label) ->
+        Record_proj (quote_neu size head, label)
     | Variant_elim (head, cases) ->
         let head = quote_neu size head in
         let cases =
@@ -265,6 +289,7 @@ let expect_forced (m : meta_state ref) : meta_id * constr =
 
 exception Infinite_type of meta_id
 exception Mismatched_types of ty * ty
+exception Mismatched_constraints of constr * constr
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
@@ -274,6 +299,7 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
   | Fun_type (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty
+  | Record_type row -> occurs_row id row
   | Variant_type row -> occurs_row id row
   | Int_type -> ()
   | Bool_type -> ()
@@ -281,6 +307,7 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
 and occurs_meta (id : meta_id) (m : meta_state ref) : unit =
   match !m with
   | Unsolved (id', _) when id = id' -> raise (Infinite_type id)
+  | Unsolved (_, Record row) -> occurs_row id row
   | Unsolved (_, Variant row) -> occurs_row id row
   | Unsolved (_, Any) | Solved _ -> ()
 
@@ -297,6 +324,7 @@ let rec unify (ty1 : ty) (ty2 : ty) : unit =
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
       unify param_ty1 param_ty2;
       unify body_ty1 body_ty2
+  | Record_type row1, Record_type row2
   | Variant_type row1, Variant_type row2 ->
       if not (Label_map.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2) then
         raise (Mismatched_types (ty1, ty2))
@@ -318,7 +346,8 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       let _, c' = expect_forced m' in
       m' := Unsolved (id, unify_constrs c c');
       m := Solved ty
-  (* Unify a variant constraint against a concrete variant type *)
+  (* Unify a record/variant constraint against a concrete record/variant type *)
+  | (id, Record row), Record_type exact_row
   | (id, Variant row), Variant_type exact_row ->
       occurs_row id exact_row;
       (* Unify the entries in the contraint row against the entries in the
@@ -330,6 +359,7 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       end;
       m := Solved ty
   (* The type does not match the constraint, so raise an error *)
+  | (_, Record _), ty
   | (_, Variant _), ty ->
       raise (Mismatched_types (Meta_var m, ty))
 
@@ -344,8 +374,14 @@ and unify_constrs (c1 : constr) (c2 : constr) : constr =
   in
   match c1, c2 with
   | Any, Any -> Any
-  | Variant row, Any | Any, Variant row -> Variant row
   | Variant row1, Variant row2 -> Variant (unify_rows row1 row2)
+  | Record row1, Record row2 -> Record (unify_rows row1 row2)
+
+  | Variant row, Any | Any, Variant row -> Variant row
+  | Record row, Any | Any, Record row -> Record row
+
+  | Variant _, Record _ | Record _, Variant _ ->
+      raise (Mismatched_constraints (c1, c2))
 
 
 (** {1 Pretty printing} *)
@@ -361,6 +397,15 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) : unit =
 and pp_atomic_ty ppf ty =
   match ty with
   | Meta_var m -> pp_meta ppf m
+  | Record_type row when Label_map.is_empty row ->
+      Format.fprintf ppf "{}"
+  | Record_type row ->
+      Format.fprintf ppf "@[{@ %a@ }@]"
+        (Format.pp_print_seq
+          ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
+          (fun ppf (label, ty) ->
+            Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty))
+        (Label_map.to_seq row)
   | Variant_type cases when Label_map.is_empty cases ->
       Format.fprintf ppf "[|]"
   | Variant_type row ->
@@ -377,6 +422,9 @@ and pp_meta ppf m =
   match !m with
   | Solved ty -> pp_atomic_ty ppf ty
   | Unsolved (id, Any) -> Format.fprintf ppf "?%i" id
+  | Unsolved (id, Record row) ->
+      Format.fprintf ppf "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
+        id pp_ty (Record_type row)
   | Unsolved (id, Variant cases) ->
       Format.fprintf ppf "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
         id pp_ty (Variant_type cases)
@@ -445,17 +493,34 @@ and pp_app_tm names ppf tm =
   | Fun_app (head, arg) ->
       Format.fprintf ppf "@[%a@ %a@]"
         (pp_app_tm names) head
-        (pp_atomic_tm names) arg
+        (pp_proj_tm names) arg
   | Prim_app (prim, args) ->
       let pp_sep ppf () = Format.fprintf ppf "@ " in
       Format.fprintf ppf "@[#%s@ %a@]"
         (Prim.name prim)
-        (Format.pp_print_list ~pp_sep (pp_atomic_tm names)) args
+        (Format.pp_print_list ~pp_sep (pp_proj_tm names)) args
+  | tm ->
+      pp_proj_tm names ppf tm
+and pp_proj_tm names ppf tm =
+  match tm with
+  | Record_proj (head, label) ->
+      Format.fprintf ppf "%a.%s"
+        (pp_proj_tm names) head
+        label
   | tm ->
       pp_atomic_tm names ppf tm
 and pp_atomic_tm names ppf tm =
   match tm with
   | Var index -> Format.fprintf ppf "%a" pp_name (List.nth names index)
+  | Record_lit fields when Label_map.is_empty fields ->
+      Format.fprintf ppf "{}"
+  | Record_lit fields ->
+      Format.fprintf ppf "@[{@ %a@ }@]"
+        (Format.pp_print_seq
+          ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
+          (fun ppf (label, tm) ->
+            Format.fprintf ppf "@[<2>@[%s@ :=@]@ @[%a@]@]" label (pp_tm names) tm))
+        (Label_map.to_seq fields)
   | Int_lit i -> Format.fprintf ppf "%i" i
   | Bool_lit true -> Format.fprintf ppf "true"
   | Bool_lit false -> Format.fprintf ppf "false"

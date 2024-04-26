@@ -32,6 +32,7 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "*"           -> ASTERISK
   | ":"           -> COLON
   | ":="          -> COLON_EQUALS
+  | "."           -> DOT
   | "="           -> EQUALS
   | "=>"          -> EQUALS_GREATER
   | "-"           -> HYPHEN
@@ -41,6 +42,8 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "|"           -> VERTICAL_LINE
   | "["           -> OPEN_BRACE
   | "]"           -> CLOSE_BRACE
+  | "{"           -> OPEN_BRACKET
+  | "}"           -> CLOSE_BRACKET
   | "("           -> OPEN_PAREN
   | ")"           -> CLOSE_PAREN
   | eof           -> END

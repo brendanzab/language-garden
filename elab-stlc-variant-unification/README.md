@@ -1,15 +1,24 @@
-# Simply typed lambda calculus with unification
+# Simply typed lambda calculus with structural record and variant types
 
-- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ structural variant types)
+- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ structural records, structural variants)
 
 ---
 
-This elaborator introduces structural variant types to the simply typed lambda
-calculus. In order to infer types, we introduce variant constraints to unsolved
-metavariables, that accumulate maps of labelled cases as the program is checked.
+This elaborator introduces structural record and variant types to a simply
+typed lambda calculus. In order to infer types, we introduce row constraints
+that accumulate maps of labelled types as the program is elaborated.
 
 <!-- $MDX file=examples/readme.txt -->
 ```
+let point x y :=
+  { x := x; y := y };
+
+let add p1 p2 := point (p1.x + p2.x) (p1.y + p2.y);
+let sub p1 p2 := point (p1.x - p2.x) (p1.y - p2.y);
+
+let _ :=
+  add (point 1 2) (point 3 4);
+
 let apply x :=
   match x with
   | [incr := x] => x + 1
@@ -25,6 +34,19 @@ apply [incr := 1]
 
 <!-- $MDX file=examples/readme.stdout -->
 ```
+let point : Int -> Int -> { x : Int; y : Int } :=
+  fun (x : Int) => fun (y : Int) => { x := x; y := y };
+let add :
+      { x : Int; y : Int } -> { x : Int; y : Int } -> { x : Int; y : Int }
+:=
+  fun (p1 : { x : Int; y : Int }) => fun (p2 : { x : Int; y : Int }) =>
+    point (#int-add p1.x p2.x) (#int-add p1.y p2.y);
+let sub :
+      { x : Int; y : Int } -> { x : Int; y : Int } -> { x : Int; y : Int }
+:=
+  fun (p1 : { x : Int; y : Int }) => fun (p2 : { x : Int; y : Int }) =>
+    point (#int-sub p1.x p2.x) (#int-sub p1.y p2.y);
+let _ : { x : Int; y : Int } := add (point 1 2) (point 3 4);
 let apply : [decr : Int | incr : Int | square : Int] -> Int :=
   fun (x : [decr : Int | incr : Int | square : Int]) =>
     match x with

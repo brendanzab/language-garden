@@ -54,6 +54,17 @@ If expressions
   fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3 :
     Int -> Int -> Int
 
+Record literal
+  $ stlc-variant-unification elab <<< "{ x := 1; y := 2; foo := { bar := true } }"
+  { foo := { bar := true }; x := 1; y := 2 } :
+    { foo : { bar : Bool }; x : Int; y : Int }
+
+Record projection
+  $ stlc-variant-unification elab <<< "fun (r : { foo : { bar : Bool }; x : Int; y : Int }) => { fst := r.foo.bar; snd := r.x }"
+  fun (r : { foo : { bar : Bool }; x : Int; y : Int }) =>
+    { fst := r.foo.bar; snd := r.x }
+  : { foo : { bar : Bool }; x : Int; y : Int } -> { fst : Bool; snd : Int }
+
 Variant literal
   $ stlc-variant-unification elab <<< "[some := 1]"
   [some := 1] : [some : Int] : [some : Int]
@@ -222,6 +233,16 @@ Mismatched if expression branches
   <input>:1:29: mismatched types:
     expected: Bool
     found: Int
+  [1]
+
+Unknown field
+  $ stlc-variant-unification elab <<< "{ x := 42 }.y"
+  <input>:1:0: unknown field `y`
+  [1]
+
+Duplicate label
+  $ stlc-variant-unification elab <<< "{ x := 42; x := 2 }"
+  <input>:1:11: duplicate label `x`
   [1]
 
 Duplicate labels
