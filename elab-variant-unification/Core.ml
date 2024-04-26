@@ -246,6 +246,12 @@ let rec force (ty : ty) : ty =
   end
   | ty -> ty
 
+(** Extract the identifier and constraint from a forced metavariable. *)
+let expect_forced (m : meta_state ref) : meta_id * constr =
+  match !m with
+  | Unsolved (id, c) -> id, c
+  | Solved _ -> invalid_arg "unforced meta"
+
 
 (** {1 Unification} *)
 
@@ -287,25 +293,21 @@ let rec unify (ty1 : ty) (ty2 : ty) : unit =
   | ty1, ty2 ->
       raise (MismatchedTypes (ty1, ty2))
 
-(** Unify a metavariable with a forced type *)
+(** Unify a forced metavariable with a forced type *)
 and unify_meta (m : meta_state ref) (ty : ty) : unit =
-  match !m, ty with
+  match expect_forced m, ty with
   (* Unify with any type *)
-  | Unsolved (id, Any), ty ->
+  | (id, Any), ty ->
       occurs id ty;
       m := Solved ty
   (* Unify metavariable constraints *)
-  | Unsolved (id, c), MetaVar m' -> begin
-      match !m' with
-      | Unsolved (_, c') ->
-          occurs id ty;
-          m' := Unsolved (id, unify_constrs c c');
-          m := Solved ty
-      | Solved _ ->
-          invalid_arg "expected a forced type"
-  end
+  | (id, c), MetaVar m' ->
+      occurs id ty;
+      let _, c' = expect_forced m' in
+      m' := Unsolved (id, unify_constrs c c');
+      m := Solved ty
   (* Unify a variant constraint against a concrete variant type *)
-  | Unsolved (id, Variant row), VariantType exact_row ->
+  | (id, Variant row), VariantType exact_row ->
       occurs id ty;
       (* Unify the entries in the contraint row against the entries in the
          concrete type row, failing if any are missing. *)
@@ -316,11 +318,8 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       end;
       m := Solved ty
   (* The type does not match the constraint, so raise an error *)
-  | Unsolved (_, Variant _), ty ->
+  | (_, Variant _), ty ->
       raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
-  (* The metavariable has a known type, so fall back to regular unification. *)
-  | Solved mty, ty ->
-      unify ty mty
 
 (** Unify two constraints *)
 and unify_constrs (c1 : constr) (c2 : constr) : constr =
@@ -347,13 +346,10 @@ and unify_row (row1 : ty LabelMap.t) (row2 : ty LabelMap.t) : ty LabelMap.t =
     for pretty printing types, as we want to be able to ‘see through’
     metavariables to properly associate function types. *)
 
+(* Deeply force a type, leaving only unsolved metavariables remaining *)
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
-  | MetaVar m -> begin
-      match !m with
-      | Solved ty -> zonk_ty ty
-      | Unsolved _ -> MetaVar m
-  end
+  | MetaVar m -> MetaVar m
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
   | VariantType row ->
@@ -361,6 +357,7 @@ let rec zonk_ty (ty : ty) : ty =
   | IntType -> IntType
   | BoolType -> BoolType
 
+(** Flatten all metavariables in a term *)
 let rec zonk_tm (tm : tm) : tm =
   match tm with
   | Var index -> Var index
