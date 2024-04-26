@@ -301,18 +301,20 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
           occurs id ty;
           m' := Unsolved (id, unify_constrs c c');
           m := Solved ty
-      | Solved _ -> invalid_arg "expected a forced type"
+      | Solved _ ->
+          invalid_arg "expected a forced type"
   end
   (* Unify a variant constraint against a concrete variant type *)
   | Unsolved (id, Variant row), VariantType exact_row ->
       occurs id ty;
-      let row = unify_row exact_row row in
-      (* The length of the unified row must not exceed the length of the
-         row in the concrete type. *)
-      if LabelMap.cardinal exact_row < LabelMap.cardinal row then
-        raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
-      else
-        m := Solved ty
+      (* Unify the entries in the contraint row against the entries in the
+         concrete type row, failing if any are missing. *)
+      row |> LabelMap.iter begin fun label row_ty ->
+        match LabelMap.find_opt label exact_row with
+        | Some exact_row_ty -> unify row_ty exact_row_ty
+        | None -> raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
+      end;
+      m := Solved ty
   (* The type does not match the constraint, so raise an error *)
   | Unsolved (_, Variant _), ty ->
       raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
