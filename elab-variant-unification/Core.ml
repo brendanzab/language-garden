@@ -291,57 +291,53 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
 
 (** Unify a metavariable with a forced type *)
 and unify_meta (m : meta_state ref) (ty : ty) : unit =
-  (* Merge two variant constraints *)
-  let merge_constr_cases : ty LabelMap.t -> ty LabelMap.t -> ty LabelMap.t =
-    LabelMap.merge
-      (fun _ ty1 ty2 ->
-          match ty1, ty2 with
-          | Some ty1, Some ty2 -> unify ty1 ty2; Some ty1
-          | Some ty, None | None, Some ty -> Some ty
-          | None, None  -> None)
-  in
   match !m with
   (* The metavariable has no constraints, so we can set it to point to the type
      we are unifying against. *)
   | Unsolved (id, Any) ->
       occurs id ty;
-      m := Solved ty;
+      m := Solved ty
   (* The metavariable is constrained to be a variant type, so check that the
      the type we are unifying against also unifies with a variant type *)
-  | Unsolved (id, Variant constr_cases) -> begin
+  | Unsolved (id, (Variant cases as c)) ->
       occurs id ty;
-      match ty with
-      | MetaVar m' -> begin
-          match !m' with
-          (* Unsolved(id, Variant(constr_cases)) ≡ Unsolved(_, Any) *)
-          | Unsolved (_, Any) ->
-              m' := Solved (MetaVar m);
-          (* Unsolved(id, Variant(constr_cases)) ≡ Unsolved(_, Variant(constr_cases')) *)
-          | Unsolved (_, Variant constr_cases') ->
-              m := Unsolved (id, Variant (merge_constr_cases constr_cases constr_cases'));
-              m' := Solved (MetaVar m);
-          | Solved _ -> invalid_arg "expected a forced type"
-      end
-      (* Unsolved(id, Variant(constr_cases)) ≡ VariantType(cases) *)
-      | VariantType cases ->
-          (* Check all cases from the known variant type against a list of cases
-             from the metavariable’s constraint *)
-          constr_cases |> LabelMap.iter (fun label ty ->
-            match LabelMap.find_opt label cases with
-            (* Unify the types for this case *)
-            | Some ty' -> unify ty ty'
-            (* Constraints specifiy a minimum set of cases, so it’s valid if a
-               case in the type is not also in the constraint’s cases. *)
-            | None -> ()
-          );
-          (* All of the cases in the metavaraible’s constraint unify with the
-             cases in the type, so we can update the metavariable. *)
-          m := Solved ty;
-      | _ -> raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
-  end
+      begin
+        match ty with
+        | MetaVar m' -> begin
+            match !m' with
+            | Unsolved (_, c') -> m' := Unsolved (id, unify_constrs c c')
+            | Solved _ -> invalid_arg "expected a forced type"
+        end
+        | VariantType exact_cases ->
+            let cases = unify_cases exact_cases cases in
+            (* The number of cases in the unified cases must not exceed the
+                cases given in explicit type annotations. *)
+            if LabelMap.cardinal exact_cases < LabelMap.cardinal cases then
+              raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
+        | _ -> ()
+      end;
+      m := Solved ty;
   (* The metavariable has a known type, so fall back to regular unification. *)
   | Solved mty ->
       unify ty mty
+
+(** Unify two constraints *)
+and unify_constrs (c1 : constr) (c2 : constr) : constr =
+  match c1, c2 with
+  | Any, Any -> Any
+  | Variant cases, Any | Any, Variant cases -> Variant cases
+  | Variant cases1, Variant cases2 -> Variant (unify_cases cases1 cases2)
+
+(** Unify two lists of cases *)
+and unify_cases (cases1 : ty LabelMap.t) (cases2 : ty LabelMap.t) : ty LabelMap.t =
+  LabelMap.merge
+    (fun _ ty1 ty2 ->
+        match ty1, ty2 with
+        | Some ty1, Some ty2 -> unify ty1 ty2; Some ty1
+        | Some ty, None | None, Some ty -> Some ty
+        | None, None  -> None)
+    cases1
+    cases2
 
 
 (** {1 Zonking} *)

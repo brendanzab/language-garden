@@ -55,6 +55,25 @@ Absurd match
   $ variant-unification elab <<< "(fun x => match x with end) : _ -> Int "
   fun (x : [|]) => match x with end : [|] -> Int
 
+Variant constraint and variant type
+  $ variant-unification elab <<EOF
+  > let choose b y n :=
+  >   if b then [yes := y] else [no := n];
+  > 
+  > let result : [yes : Int | no : Bool | maybe : Int] := 
+  >   choose true 3 false;
+  > 
+  > result
+  > EOF
+  let choose : Bool -> Int -> Bool -> [maybe : Int | no : Bool | yes : Int] :=
+    fun (b : Bool) =>
+      fun (y : Int) =>
+        fun (n : Bool) => if b then
+          ([yes := y] : [maybe : Int | no : Bool | yes : Int]) else
+          ([no := n] : [maybe : Int | no : Bool | yes : Int]);
+  let result : [maybe : Int | no : Bool | yes : Int] := choose true 3 false;
+  result : [maybe : Int | no : Bool | yes : Int]
+
 
 Lexer Errors
 ------------
@@ -106,6 +125,36 @@ Mismatched argument
   <input>:1:25: mismatched types:
     expected: Bool
     found: Int
+  [1]
+
+Mismatched variant constraint and variant type
+  $ variant-unification elab <<EOF
+  > let choose b y n :=
+  >   if b then [yes := y] else [no := n];
+  > 
+  > let result : [yes : Int | no : Int] := 
+  >   choose true 3 false;
+  > 
+  > result
+  > EOF
+  <input>:5:2: mismatched types:
+    expected: [no : Int | yes : Int]
+    found: ?{4 ~ [no : Bool | yes : Int]}
+  [1]
+
+Mismatched variant constraint and smaller variant type
+  $ variant-unification elab <<EOF
+  > let choose b y n :=
+  >   if b then [yes := y] else [no := n];
+  > 
+  > let result : [yes : Int] := 
+  >   choose true 3 false;
+  > 
+  > result
+  > EOF
+  <input>:5:2: mismatched types:
+    expected: [yes : Int]
+    found: ?{4 ~ [no : Bool | yes : Int]}
   [1]
 
 Infinite type
