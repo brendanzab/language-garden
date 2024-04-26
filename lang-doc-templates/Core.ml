@@ -1,9 +1,10 @@
 type ty =
-  | ListTy of ty
   | FunTy of ty * ty
   | TextTy
+  | ListTy of ty
   | BoolTy
   | IntTy
+  (* | NodeTy (* TODO: More precise node types *) *)
 
 type tm =
   | Var of string
@@ -14,11 +15,13 @@ type tm =
   | TextConcat of tm * tm
   | ListNil
   | ListCons of tm * tm
+  (* | ListElim of tm * tm * (string * string * tm) *)
   | BoolLit of bool
   | BoolElim of tm * tm * tm
   | IntLit of int
   | IntAdd of tm * tm
   (* | NodeLit of (string * tm) list * tm list *)
+  (* | NodeElim of ... *)
 
 module Semantics = struct
 
@@ -38,8 +41,10 @@ module Semantics = struct
     | Var of string
     | FunApp of ntm * vtm
     | TextConcat of ntm * vtm
+    (* | ListElim of ntm * vtm Lazy.t * ((string * string) * (vtm -> vtm -> vtm)) *)
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | IntAdd of ntm * vtm
+    (* | NodeElim of ... *)
 
   type env = (string * vtm) list
 
