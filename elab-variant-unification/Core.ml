@@ -290,33 +290,31 @@ let rec unify (ty1 : ty) (ty2 : ty) : unit =
 (** Unify a metavariable with a forced type *)
 and unify_meta (m : meta_state ref) (ty : ty) : unit =
   match !m with
-  (* The metavariable has no constraints, so we can set it to point to the type
-     we are unifying against. *)
-  | Unsolved (id, Any) ->
-      occurs id ty;
-      m := Solved ty
-  (* The metavariable is constrained to be a variant type, so check that the
-     the type we are unifying against also unifies with a variant type *)
-  | Unsolved (id, (Variant row as c)) ->
+  | Unsolved (id, c) ->
+      (* Guard against cyclic metavariable occurances *)
       occurs id ty;
       begin
-        match ty with
-        (* Update metavariables with the variant constraint *)
-        | MetaVar m' -> begin
+        match c, ty with
+        | Any, _ -> ()
+        (* Unify metavariable constraints *)
+        | _, MetaVar m' -> begin
             match !m' with
             | Unsolved (_, c') -> m' := Unsolved (id, unify_constrs c c')
             | Solved _ -> invalid_arg "expected a forced type"
         end
-        (* Unify the constraint against concrete types *)
-        | VariantType exact_row ->
+        (* Unify variant constraints against concrete variant rows *)
+        | Variant row, VariantType exact_row ->
             let row = unify_row exact_row row in
             (* The length of the unified row must not exceed the length of the
-               row in concrete types. *)
+              row in the concrete type. *)
             if LabelMap.cardinal exact_row < LabelMap.cardinal row then
               raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
-        | _ -> ()
+        (* The type does not match the constraint, so throw an error *)
+        | Variant _, ty ->
+            raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant-specific mismatch error *)
       end;
-      m := Solved ty;
+      (* Update the metavariable *)
+      m := Solved ty
   (* The metavariable has a known type, so fall back to regular unification. *)
   | Solved mty ->
       unify ty mty
