@@ -115,7 +115,7 @@ Wiki markup and personal knowledge management:
 
 - [Oscean](https://wiki.xxiivv.com/site/oscean.html)
 - [Forester](https://github.com/jonsterling/ocaml-forester)
-- [Mylink](https://github.com/kalyani-tt/mylink) ([Example](https://github.com/kalyani-tt/kalyani-tt.github.io))
+- [Mylink](https://github.com/kalyani-tt/mylink)
 
 Attributed node languages:
 
@@ -123,6 +123,8 @@ Attributed node languages:
 - [SDLang: Simple Declarative Language](https://sdlang.org/)
 - [KDL Document Language](https://kdl.dev/)
 - [RELAX NG compact syntax](https://relaxng.org/compact-tutorial-20030326.html)
+- [XDuce](https://xduce.sourceforge.net/) ([Github mirror](https://github.com/ozzymcduff/XDuce))
+- [svg, idk](https://x.nas.sr/svg-editor/) ([Mastodon thread](https://merveilles.town/@nasser/112300138172061442))
 
 Data serialisation languages:
 
