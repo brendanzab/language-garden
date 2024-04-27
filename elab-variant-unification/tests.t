@@ -60,7 +60,7 @@ Variant constraint and variant type
   > let choose b y n :=
   >   if b then [yes := y] else [no := n];
   > 
-  > let result : [yes : Int | no : Bool | maybe : Int] := 
+  > let result : [yes : Int | no : Bool | maybe : Int] :=
   >   choose true 3 false;
   > 
   > result
@@ -132,7 +132,7 @@ Mismatched variant constraint and variant type
   > let choose b y n :=
   >   if b then [yes := y] else [no := n];
   > 
-  > let result : [yes : Int | no : Int] := 
+  > let result : [yes : Int | no : Int] :=
   >   choose true 3 false;
   > 
   > result
@@ -147,7 +147,7 @@ Mismatched variant constraint and smaller variant type
   > let choose b y n :=
   >   if b then [yes := y] else [no := n];
   > 
-  > let result : [yes : Int] := 
+  > let result : [yes : Int] :=
   >   choose true 3 false;
   > 
   > result
@@ -162,7 +162,7 @@ Mismatched variant constraint and non-variant type
   > let choose b y n :=
   >   if b then [yes := y] else [no := n];
   > 
-  > let result : Bool := 
+  > let result : Bool :=
   >   choose true 3 false;
   > 
   > result
@@ -217,7 +217,7 @@ Unexpected variant
 
 Redundant variant pattern
   $ variant-unification elab <<EOF
-  > fun (x : [some : Int]) => 
+  > fun (x : [some : Int]) =>
   >   match x with
   >   | [some := x] => x + 1
   >   | [some := x] => x
@@ -228,7 +228,7 @@ Redundant variant pattern
 
 Unexpected variant pattern
   $ variant-unification elab <<EOF
-  > fun (x : [some : Int]) => 
+  > fun (x : [some : Int]) =>
   >   match x with
   >   | [a := x] => x + 1
   >   end
@@ -238,7 +238,7 @@ Unexpected variant pattern
 
 Missing variant patterns
   $ variant-unification elab <<EOF
-  > fun (x : [a : Int | b : Bool]) => 
+  > fun (x : [a : Int | b : Bool]) =>
   >   match x with end
   > EOF
   <input>:2:8: non-exhaustive match, missing `a`, `b`
