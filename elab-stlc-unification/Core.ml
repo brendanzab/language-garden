@@ -96,11 +96,11 @@ module Semantics = struct
     | FunLit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim head vtm0 vtm1 =
+  let bool_elim head vtm1 vtm2 =
     match head with
-    | Neu ntm -> Neu (BoolElim (ntm, vtm0, vtm1))
-    | BoolLit true -> Lazy.force vtm0
-    | BoolLit false -> Lazy.force vtm1
+    | Neu ntm -> Neu (BoolElim (ntm, vtm1, vtm2))
+    | BoolLit true -> Lazy.force vtm1
+    | BoolLit false -> Lazy.force vtm2
     | _ -> invalid_arg "expected boolean"
 
   let prim_app prim args =
@@ -130,11 +130,11 @@ module Semantics = struct
         fun_app head arg
     | IntLit i -> IntLit i
     | BoolLit b -> BoolLit b
-    | BoolElim (head, tm0, tm1) ->
+    | BoolElim (head, tm1, tm2) ->
         let head = eval env head in
-        let vtm0 = Lazy.from_fun (fun () -> eval env tm0) in
         let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
-        bool_elim head vtm0 vtm1
+        let vtm2 = Lazy.from_fun (fun () -> eval env tm2) in
+        bool_elim head vtm1 vtm2
     | PrimApp (prim, args) ->
         prim_app prim (List.map (eval env) args)
 
@@ -157,10 +157,10 @@ module Semantics = struct
         Var (level_to_index size level)
     | FunApp (head, arg) ->
         FunApp (quote_neu size head, quote size arg)
-    | BoolElim (head, vtm0, vtm1) ->
-        let tm0 = quote size (Lazy.force vtm0) in
+    | BoolElim (head, vtm1, vtm2) ->
         let tm1 = quote size (Lazy.force vtm1) in
-        BoolElim (quote_neu size head, tm0, tm1)
+        let tm2 = quote size (Lazy.force vtm2) in
+        BoolElim (quote_neu size head, tm1, tm2)
     | PrimApp (prim, args) ->
         PrimApp (prim, List.map (quote size) args)
 
@@ -226,15 +226,15 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
 
 (** Check if two types are the same, updating unsolved metavaribles in one
     type with known information from the other type if possible. *)
-let rec unify (ty0 : ty) (ty1 : ty) : unit =
-  match force ty0, force ty1 with
-  | ty0, ty1 when ty0 = ty1 -> ()
+let rec unify (ty1 : ty) (ty2 : ty) : unit =
+  match force ty1, force ty2 with
+  | ty1, ty2 when ty1 = ty2 -> ()
   | MetaVar m, ty | ty, MetaVar m ->
       occurs (expect_forced m) ty;
       m := Solved ty
-  | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
-      unify param_ty0 param_ty1;
-      unify body_ty0 body_ty1
+  | FunType (param_ty1, body_ty1), FunType (param_ty2, body_ty2) ->
+      unify param_ty1 param_ty2;
+      unify body_ty1 body_ty2
   | IntType, IntType -> ()
   | BoolType, BoolType -> ()
   | ty1, ty2 ->
@@ -268,8 +268,8 @@ let rec zonk_tm (tm : tm) : tm =
       FunApp (zonk_tm head, zonk_tm arg)
   | IntLit i -> IntLit i
   | BoolLit b -> BoolLit b
-  | BoolElim (head, tm0, tm1) ->
-      BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
+  | BoolElim (head, tm1, tm2) ->
+      BoolElim (zonk_tm head, zonk_tm tm1, zonk_tm tm2)
   | PrimApp (prim, args) ->
       PrimApp (prim, List.map zonk_tm args)
 
@@ -321,11 +321,11 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
   | tm -> pp_if_tm names fmt tm
 and pp_if_tm names fmt tm =
   match tm with
-  | BoolElim (head, tm0, tm1) ->
+  | BoolElim (head, tm1, tm2) ->
       Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
         (pp_eq_tm names) head
-        (pp_eq_tm names) tm0
-        (pp_if_tm names) tm1
+        (pp_eq_tm names) tm1
+        (pp_if_tm names) tm2
   | tm ->
       pp_eq_tm names fmt tm
 and pp_eq_tm names fmt tm =

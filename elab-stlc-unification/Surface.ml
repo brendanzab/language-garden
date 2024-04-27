@@ -161,11 +161,11 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
   | FunLit (params, body) ->
       elab_check_fun_lit ctx params body ty
 
-  | IfThenElse (head, tm0, tm1) ->
+  | IfThenElse (head, tm1, tm2) ->
       let head = elab_check ctx head BoolType in
-      let tm0 = elab_check ctx tm0 ty in
       let tm1 = elab_check ctx tm1 ty in
-      BoolElim (head, tm0, tm1)
+      let tm2 = elab_check ctx tm2 ty in
+      BoolElim (head, tm1, tm2)
 
   (* Fall back to type inference *)
   | _ ->
@@ -215,22 +215,22 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let arg = elab_check ctx arg param_ty in
       FunApp (head, arg), body_ty
 
-  | IfThenElse (head, tm0, tm1) ->
+  | IfThenElse (head, tm1, tm2) ->
       let head = elab_check ctx head BoolType in
       let ty = fresh_meta tm.loc `IfBranches in
-      let tm0 = elab_check ctx tm0 ty in
       let tm1 = elab_check ctx tm1 ty in
-      BoolElim (head, tm0, tm1), ty
+      let tm2 = elab_check ctx tm2 ty in
+      BoolElim (head, tm1, tm2), ty
 
-  | Op2 ((`Eq) as prim, tm0, tm1) ->
-      let tm0 = elab_check ctx tm0 IntType in
+  | Op2 ((`Eq) as prim, tm1, tm2) ->
       let tm1 = elab_check ctx tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), BoolType
+      let tm2 = elab_check ctx tm2 IntType in
+      PrimApp (prim, [tm1; tm2]), BoolType
 
-  | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
-      let tm0 = elab_check ctx tm0 IntType in
+  | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
       let tm1 = elab_check ctx tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), IntType
+      let tm2 = elab_check ctx tm2 IntType in
+      PrimApp (prim, [tm1; tm2]), IntType
 
   | Op1 ((`Neg) as prim, tm) ->
       let tm = elab_check ctx tm IntType in
