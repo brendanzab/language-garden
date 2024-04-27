@@ -262,19 +262,22 @@ exception MismatchedTypes of ty * ty
     that would result in infinite loops during unification. *)
 let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
-  | MetaVar m -> begin
-      match !m with
-      | Unsolved (id', _) when id = id' -> raise (InfiniteType id)
-      | Unsolved (_, Variant row) -> row |> LabelMap.iter (fun _ -> occurs id)
-      | Unsolved (_, Any) | Solved _ -> ()
-  end
+  | MetaVar m -> occurs_meta id m
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty;
-  | VariantType row ->
-      row |> LabelMap.iter (fun _ ty -> occurs id ty)
+  | VariantType row -> occurs_row id row
   | IntType -> ()
   | BoolType -> ()
+
+and occurs_meta (id : meta_id) (m : meta_state ref) : unit =
+  match !m with
+  | Unsolved (id', _) when id = id' -> raise (InfiniteType id)
+  | Unsolved (_, Variant row) -> occurs_row id row
+  | Unsolved (_, Any) | Solved _ -> ()
+
+and occurs_row (id : meta_id) (row : ty LabelMap.t) : unit =
+  row |> LabelMap.iter (fun _ -> occurs id)
 
 (** Check if two types are the same, updating unsolved metavaribles in one
     type with known information from the other type if possible. *)
@@ -302,13 +305,13 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       m := Solved ty
   (* Unify metavariable constraints *)
   | (id, c), MetaVar m' ->
-      occurs id ty;
+      occurs_meta id m';
       let _, c' = expect_forced m' in
       m' := Unsolved (id, unify_constrs c c');
       m := Solved ty
   (* Unify a variant constraint against a concrete variant type *)
   | (id, Variant row), VariantType exact_row ->
-      occurs id ty;
+      occurs_row id exact_row;
       (* Unify the entries in the contraint row against the entries in the
          concrete type row, failing if any are missing. *)
       row |> LabelMap.iter begin fun label row_ty ->
