@@ -286,14 +286,14 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
-  | MetaVar m -> begin
-      match !m with
-      | Solved ty -> pp_atomic_ty fmt ty
-      | Unsolved id -> Format.fprintf fmt "?%i" id
-  end
+  | MetaVar m -> pp_meta fmt m
   | IntType -> Format.fprintf fmt "Int"
   | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
+and pp_meta fmt m =
+  match !m with
+  | Solved ty -> pp_atomic_ty fmt ty
+  | Unsolved id -> Format.fprintf fmt "?%i" id
 
 let pp_name_ann fmt (name, ty) =
   Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty

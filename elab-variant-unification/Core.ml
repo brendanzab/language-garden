@@ -395,14 +395,7 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
-  | MetaVar m -> begin
-      match !m with
-      | Solved ty -> pp_atomic_ty fmt ty
-      | Unsolved (id, Any) -> Format.fprintf fmt "?%i" id
-      | Unsolved (id, Variant cases) ->
-          Format.fprintf fmt "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
-            id pp_ty (VariantType cases)
-  end
+  | MetaVar m -> pp_meta fmt m
   | VariantType cases when LabelMap.is_empty cases ->
       Format.fprintf fmt "[|]"
   | VariantType row ->
@@ -415,6 +408,13 @@ and pp_atomic_ty fmt ty =
   | IntType -> Format.fprintf fmt "Int"
   | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
+and pp_meta fmt m =
+  match !m with
+  | Solved ty -> pp_atomic_ty fmt ty
+  | Unsolved (id, Any) -> Format.fprintf fmt "?%i" id
+  | Unsolved (id, Variant cases) ->
+      Format.fprintf fmt "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
+        id pp_ty (VariantType cases)
 
 let pp_name_ann fmt (name, ty) =
   Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
