@@ -265,7 +265,7 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
   | MetaVar m -> occurs_meta id m
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
-      occurs id body_ty;
+      occurs id body_ty
   | VariantType row -> occurs_row id row
   | IntType -> ()
   | BoolType -> ()
@@ -284,10 +284,11 @@ and occurs_row (id : meta_id) (row : ty LabelMap.t) : unit =
 let rec unify (ty1 : ty) (ty2 : ty) : unit =
   match force ty1, force ty2 with
   | MetaVar m1, MetaVar m2 when m1 = m2 -> ()
-  | MetaVar m, ty | ty, MetaVar m -> unify_meta m ty
+  | MetaVar m, ty | ty, MetaVar m ->
+      unify_meta m ty
   | FunType (param_ty1, body_ty1), FunType (param_ty2, body_ty2) ->
       unify param_ty1 param_ty2;
-      unify body_ty1 body_ty2;
+      unify body_ty1 body_ty2
   | VariantType row1, VariantType row2 ->
       if LabelMap.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2 then () else
         raise (MismatchedTypes (ty1, ty2))
