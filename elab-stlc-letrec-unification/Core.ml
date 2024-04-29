@@ -246,6 +246,12 @@ let rec force (ty : ty) : ty =
   end
   | ty -> ty
 
+(** Extract the identifier from a forced metavariable. *)
+let expect_forced (m : meta_state ref) : meta_id =
+  match !m with
+  | Unsolved id -> id
+  | Solved _ -> invalid_arg "unforced meta"
+
 
 (** {1 Unification} *)
 
@@ -256,12 +262,9 @@ exception MismatchedTypes of ty * ty
     that would result in infinite loops during unification. *)
 let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
-  | MetaVar m -> begin
-      match !m with
-      | Unsolved id' when id = id' ->
-          raise (InfiniteType id)
-      | Unsolved _ | Solved _ -> ()
-  end
+  | MetaVar m ->
+      if expect_forced m = id then
+        raise (InfiniteType id)
   | FunType (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty
@@ -274,8 +277,10 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
     type with known information from the other type if possible. *)
 let rec unify (ty0 : ty) (ty1 : ty) : unit =
   match force ty0, force ty1 with
-  | ty0, ty1 when ty0 = ty1 -> ()
-  | MetaVar m, ty | ty, MetaVar m -> unify_meta m ty
+  | MetaVar m1, MetaVar m2 when m1 = m2 -> ()
+  | MetaVar m, ty | ty, MetaVar m ->
+      occurs (expect_forced m) ty;
+      m := Solved ty
   | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
       unify param_ty0 param_ty1;
       unify body_ty0 body_ty1;
@@ -289,15 +294,6 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
   | ty1, ty2 ->
       raise (MismatchedTypes (ty1, ty2))
 
-(** Unify a metavariable with a type *)
-and unify_meta (m : meta_state ref) (ty : ty) : unit =
-  match !m with
-  | Unsolved id ->
-      occurs id ty;
-      m := Solved ty;
-  | Solved mty ->
-      unify ty mty
-
 
 (** {1 Zonking} *)
 
@@ -305,13 +301,10 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
     for pretty printing types, as we want to be able to ‘see through’
     metavariables to properly associate function types. *)
 
+(* Deeply force a type, leaving only unsolved metavariables remaining *)
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
-  | MetaVar m -> begin
-      match !m with
-      | Solved ty -> zonk_ty ty
-      | Unsolved _ -> MetaVar m
-  end
+  | MetaVar m -> MetaVar m
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
   | TupleType elem_tys ->
@@ -319,6 +312,7 @@ let rec zonk_ty (ty : ty) : ty =
   | IntType -> IntType
   | BoolType -> BoolType
 
+(** Flatten all metavariables in a term *)
 let rec zonk_tm (tm : tm) : tm =
   match tm with
   | Var index -> Var index
@@ -359,11 +353,7 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
-  | MetaVar m -> begin
-      match !m with
-      | Solved ty -> pp_atomic_ty fmt ty
-      | Unsolved id -> Format.fprintf fmt "?%i" id
-  end
+  | MetaVar m -> pp_meta fmt m
   | TupleType [elem_ty] ->
       Format.fprintf fmt "(%a,)"
         pp_ty elem_ty
@@ -376,6 +366,10 @@ and pp_atomic_ty fmt ty =
   | IntType -> Format.fprintf fmt "Int"
   | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
+and pp_meta fmt m =
+  match !m with
+  | Solved ty -> pp_atomic_ty fmt ty
+  | Unsolved id -> Format.fprintf fmt "?%i" id
 
 let pp_name_ann fmt (name, ty) =
   Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
