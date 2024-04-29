@@ -317,30 +317,26 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       row |> LabelMap.iter begin fun label row_ty ->
         match LabelMap.find_opt label exact_row with
         | Some exact_row_ty -> unify row_ty exact_row_ty
-        | None -> raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
+        | None -> raise (MismatchedTypes (MetaVar m, ty))
       end;
       m := Solved ty
   (* The type does not match the constraint, so raise an error *)
   | (_, Variant _), ty ->
-      raise (MismatchedTypes (MetaVar m, ty)) (* TODO: variant constraint mismatch error *)
+      raise (MismatchedTypes (MetaVar m, ty))
 
-(** Unify two constraints *)
+(** Unify two constraints, returning the combined constraint if successful. *)
 and unify_constrs (c1 : constr) (c2 : constr) : constr =
+  let unify_rows =
+    LabelMap.merge @@ fun _ ty1 ty2 ->
+      match ty1, ty2 with
+      | Some ty1, Some ty2 -> unify ty1 ty2; Some ty1
+      | Some ty, None | None, Some ty -> Some ty
+      | None, None  -> None
+  in
   match c1, c2 with
   | Any, Any -> Any
   | Variant row, Any | Any, Variant row -> Variant row
-  | Variant row1, Variant row2 -> Variant (unify_row row1 row2)
-
-(** Unify two rows *)
-and unify_row (row1 : ty LabelMap.t) (row2 : ty LabelMap.t) : ty LabelMap.t =
-  LabelMap.merge
-    (fun _ ty1 ty2 ->
-        match ty1, ty2 with
-        | Some ty1, Some ty2 -> unify ty1 ty2; Some ty1
-        | Some ty, None | None, Some ty -> Some ty
-        | None, None  -> None)
-    row1
-    row2
+  | Variant row1, Variant row2 -> Variant (unify_rows row1 row2)
 
 
 (** {1 Zonking} *)
