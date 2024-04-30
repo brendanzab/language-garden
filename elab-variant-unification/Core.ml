@@ -290,7 +290,7 @@ let rec unify (ty1 : ty) (ty2 : ty) : unit =
       unify param_ty1 param_ty2;
       unify body_ty1 body_ty2
   | VariantType row1, VariantType row2 ->
-      if LabelMap.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2 then () else
+      if not (LabelMap.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2) then
         raise (MismatchedTypes (ty1, ty2))
   | IntType, IntType -> ()
   | BoolType, BoolType -> ()
