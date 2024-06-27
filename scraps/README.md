@@ -13,3 +13,6 @@ build system support and are untested for now.
   A demo of translating inference rules for the STLC into a type inference algorithm
 - [**check-dependent.pl**](./check-dependent.pl):
   A small dependent type system, implemented in SWI-Prolog using normalisation-by-evaluation.
+- [**elab-stlc-bidir.rs**](./elab-stlc-bidir.rs):
+  Bidirectional elaborator for a simple functional language
+  (compare with [check-stlc-bidir.rs](./check-stlc-bidir.rs)).
