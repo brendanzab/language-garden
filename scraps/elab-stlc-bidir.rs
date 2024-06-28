@@ -102,10 +102,13 @@ fn elab_check(
             ))
         }
         // Switch to synthesis mode
-        (term, _) => match elab_synth(context, term)? {
-            (term, r#type) if r#type == *expected_type => Ok(term),
-            _ => Err("mismatched types"),
-        },
+        (term, _) => {
+            let (term, r#type) = elab_synth(context, term)?;
+            match r#type == *expected_type {
+                true => Ok(term),
+                false => Err("mismatched types"),
+            }
+        }
     }
 }
 
@@ -156,7 +159,7 @@ fn elab_synth(
                 Rc::new(core::Type::Fun(param_type, body_type)),
             ))
         }
-        Term::FunLit(_, None, _) => Err("ambiguous function literal"),
+        Term::FunLit(_, None, _) => Err("ambiguous parameter type"),
         Term::FunApp(head, arg) => {
             let (head, head_type) = elab_synth(context, head)?;
             match head_type.as_ref() {
