@@ -143,8 +143,8 @@ fn elab_synth(
                 body_type,
             ))
         }
-        Term::BoolLit(b) => Ok((core::Term::BoolLit(*b), (Rc::new(core::Type::Bool)))),
-        Term::IntLit(i) => Ok((core::Term::IntLit(*i), (Rc::new(core::Type::Int)))),
+        Term::BoolLit(b) => Ok((core::Term::BoolLit(*b), Rc::new(core::Type::Bool))),
+        Term::IntLit(i) => Ok((core::Term::IntLit(*i), Rc::new(core::Type::Int))),
         Term::FunLit(name, Some(param_type), body) => {
             let param_type = elab_type(param_type)?;
 
