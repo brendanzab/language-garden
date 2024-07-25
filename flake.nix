@@ -38,7 +38,7 @@
     };
   };
 
-  outputs = { self, systems, opam-nix, nixpkgs, ... }@inputs:
+  outputs = { systems, opam-nix, nixpkgs, ... }:
     let
       # Iterate over each system, configured via the `systems` input.
       eachSystem = nixpkgs.lib.genAttrs (import systems);
