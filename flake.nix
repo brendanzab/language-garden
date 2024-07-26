@@ -40,15 +40,18 @@
 
   outputs = { systems, opam-nix, nixpkgs, ... }:
     let
+      # Nixpkgs library functions.
+      lib = nixpkgs.lib;
+
       # Iterate over each system, configured via the `systems` input.
-      eachSystem = nixpkgs.lib.genAttrs (import systems);
+      eachSystem = lib.genAttrs (import systems);
 
       # Local packages, detected from the package definition files in `./opam/`.
       localPackagesQuery = eachSystem (system:
         let
           opam-lib = opam-nix.lib.${system};
         in
-        nixpkgs.lib.mapAttrs (_: nixpkgs.lib.last)
+        lib.mapAttrs (_: lib.last)
           (opam-lib.listRepo (opam-lib.makeOpamRepo ./.)));
 
       # Development package versions.
@@ -109,14 +112,12 @@
       legacyPackages = eachSystem (system:
         buildOpamProject system { });
 
-      packages = eachSystem (system:
-        nixpkgs.lib.getAttrs
-          (nixpkgs.lib.attrNames localPackagesQuery.${system})
+      packages = eachSystem (system: lib.getAttrs
+          (lib.attrNames localPackagesQuery.${system})
           legacyPackages.${system});
 
-      devPackages = eachSystem (system:
-        nixpkgs.lib.getAttrs
-          (nixpkgs.lib.attrNames devPackagesQuery)
+      devPackages = eachSystem (system: lib.getAttrs
+          (lib.attrNames devPackagesQuery)
           legacyPackages.${system});
     in
     {
@@ -141,9 +142,9 @@
       #     $ nix run .#<name> -- <args>
       #
       apps = eachSystem (system:
-        nixpkgs.lib.foldlAttrs
+        lib.foldlAttrs
           (apps: package: names:
-            apps // nixpkgs.lib.genAttrs names (name: {
+            apps // lib.genAttrs names (name: {
               type = "app";
               program = "${packages.${system}.${package}}/bin/${name}";
             }))
@@ -167,8 +168,8 @@
 
           # Packages with development dependencies enabled
           packages =
-            nixpkgs.lib.getAttrs
-              (nixpkgs.lib.attrNames localPackagesQuery.${system})
+            lib.getAttrs
+              (lib.attrNames localPackagesQuery.${system})
               (buildOpamProject system {
                 resolveArgs.dev = true;
                 resolveArgs.with-doc = true;
@@ -177,8 +178,8 @@
         in
         {
           default = pkgs.mkShell {
-            inputsFrom = nixpkgs.lib.attrValues packages;
-            buildInputs = nixpkgs.lib.attrValues devPackages.${system} ++ [
+            inputsFrom = lib.attrValues packages;
+            buildInputs = lib.attrValues devPackages.${system} ++ [
               # Packages from NixPkgs can be added here
               pkgs.nixpkgs-fmt
             ];
