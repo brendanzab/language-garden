@@ -1,10 +1,12 @@
-(rule
-  (with-stdin-from elephant.txt
-    (with-stdout-to elephant.stdout.tmp
-      (run %{bin:stlc-bidirectional-stratify} elab))))
+(executable
+ (name dune_inc))
 
-(rule
-  (alias runtest)
-  (package elab-stlc-bidirectional-stratify)
-  (action (diff elephant.stdout
-                elephant.stdout.tmp)))
+(subdir run
+ (dynamic_include ../generate/dune.inc))
+
+(subdir generate
+ (rule
+  (deps (glob_files ../*.stdout))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))

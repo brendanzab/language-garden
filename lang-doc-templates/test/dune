@@ -1,87 +1,12 @@
-(rule
-  (with-stdin-from article.txt
-    (with-stdout-to article.stdout.tmp
-      (run %{bin:doc-templates} elab))))
+(executable
+ (name dune_inc))
 
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff article.stdout
-                article.stdout.tmp)))
+(subdir run
+ (dynamic_include ../generate/dune.inc))
 
-(rule
-  (with-stdin-from escapes.txt
-    (with-stdout-to escapes.stdout.tmp
-      (run %{bin:doc-templates} elab))))
-
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff escapes.stdout
-                escapes.stdout.tmp)))
-
-(rule
-  (with-stdin-from lists.txt
-    (with-stdout-to lists.stdout.tmp
-      (run %{bin:doc-templates} elab))))
-
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff lists.stdout
-                lists.stdout.tmp)))
-
-(rule
-  (with-stdin-from nested-quotes.txt
-    (with-stdout-to nested-quotes.stdout.tmp
-      (run %{bin:doc-templates} elab))))
-
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff nested-quotes.stdout
-                nested-quotes.stdout.tmp)))
-
-(rule
-  (with-stdin-from text.txt
-    (with-stdout-to text.stdout.tmp
-      (run %{bin:doc-templates} elab))))
-
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff text.stdout
-                text.stdout.tmp)))
-
-(rule
-  (with-stdin-from unquote-let.txt
-    (with-stdout-to unquote-let.stdout.tmp
-      (run %{bin:doc-templates} elab))))
-
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff unquote-let.stdout
-                unquote-let.stdout.tmp)))
-
-(rule
-  (with-stdin-from unquote-let-params.txt
-    (with-stdout-to unquote-let-params.stdout.tmp
-      (run %{bin:doc-templates} elab))))
-
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff unquote-let-params.stdout
-                unquote-let-params.stdout.tmp)))
-
-(rule
-  (with-stdin-from unquote-term.txt
-    (with-stdout-to unquote-term.stdout.tmp
-      (run %{bin:doc-templates} elab))))
-
-(rule
-  (alias runtest)
-  (package lang-doc-templates)
-  (action (diff unquote-term.stdout
-                unquote-term.stdout.tmp)))
+(subdir generate
+ (rule
+  (deps (glob_files ../*.stdout))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))

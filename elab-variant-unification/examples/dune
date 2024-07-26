@@ -1,10 +1,12 @@
-(rule
-  (with-stdin-from readme.txt
-    (with-stdout-to readme.stdout.tmp
-      (run %{bin:variant-unification} elab))))
+(executable
+ (name dune_inc))
 
-(rule
-  (alias runtest)
-  (package elab-variant-unification)
-  (action (diff readme.stdout
-                readme.stdout.tmp)))
+(subdir run
+ (dynamic_include ../generate/dune.inc))
+
+(subdir generate
+ (rule
+  (deps (glob_files ../*.stdout))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))

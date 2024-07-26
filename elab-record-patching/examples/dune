@@ -1,21 +1,12 @@
-(rule
-  (with-stdin-from categories.txt
-    (with-stdout-to categories.stdout.tmp
-      (run %{bin:record-patching} elab))))
+(executable
+ (name dune_inc))
 
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff categories.stdout
-                categories.stdout.tmp)))
+(subdir run
+ (dynamic_include ../generate/dune.inc))
 
-(rule
-  (with-stdin-from map.txt
-    (with-stdout-to map.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff map.stdout
-                map.stdout.tmp)))
+(subdir generate
+ (rule
+  (deps (glob_files ../*.stdout))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))

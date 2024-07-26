@@ -1,21 +1,12 @@
-(rule
-  (with-stdin-from fact.txt
-    (with-stdout-to fact.stdout.tmp
-      (run %{bin:stlc-letrec-unification} elab))))
+(executable
+ (name dune_inc))
 
-(rule
-  (alias runtest)
-  (package elab-stlc-letrec-unification)
-  (action (diff fact.stdout
-                fact.stdout.tmp)))
+(subdir run
+ (dynamic_include ../generate/dune.inc))
 
-(rule
-  (with-stdin-from even-odd.txt
-    (with-stdout-to even-odd.stdout.tmp
-      (run %{bin:stlc-letrec-unification} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-stlc-letrec-unification)
-  (action (diff even-odd.stdout
-                even-odd.stdout.tmp)))
+(subdir generate
+ (rule
+  (deps (glob_files ../*.stdout))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))
