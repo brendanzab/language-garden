@@ -1,0 +1,4 @@
+(executable
+  (name Main)
+  (public_name stlc)
+  (package wip-compile-stlc))

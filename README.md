@@ -82,6 +82,8 @@ projects need more work put into them and a more incomplete in comparison.
 
 - [**wip-elab-builtins**](./wip-elab-builtins/):
   An elaborator that supports built-in types and operations.
+- [**wip-compile-stlc**](./wip-compile-stlc):
+  A type preserving compiler for the simply typed lambda calculus.
 - [**wip-compile-stratify**](./wip-compile-stratify/):
   Compiling a dependently typed lambda calculus into a stratified intermediate
   language.

@@ -29,6 +29,7 @@
 (package (name lang-lc-interpreters))
 (package (name lang-shader-graphics))
 
+(package (name wip-compile-stlc))
 (package (name wip-compile-stratify))
 (package (name wip-compile-uncurry))
 (package (name wip-elab-builtins))
