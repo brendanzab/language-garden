@@ -146,7 +146,7 @@ module Elab = struct
       check_fun_lit ctx params body t
 
     | IfThenElse (head, tm0, tm1) ->
-      let head = check_expr ctx head Core.BoolType in
+      let head = check_expr ctx head BoolType in
       let e0 = check_expr ctx tm0 t in
       let e1 = check_expr ctx tm1 t in
       BoolElim (head, e0, e1)
@@ -215,13 +215,13 @@ module Elab = struct
       Type (FunType (param_t, body_t))
 
     | Op2 ((`Eq) as prim, tm0, tm1) ->
-      let e0 = check_expr ctx tm0 Core.IntType in
-      let e1 = check_expr ctx tm1 Core.IntType in
+      let e0 = check_expr ctx tm0 IntType in
+      let e1 = check_expr ctx tm1 IntType in
       Expr (PrimApp (prim, [e0; e1]), BoolType)
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
-      let e0 = check_expr ctx tm0 Core.IntType in
-      let e1 = check_expr ctx tm1 Core.IntType in
+      let e0 = check_expr ctx tm0 IntType in
+      let e1 = check_expr ctx tm1 IntType in
       Expr (PrimApp (prim, [e0; e1]), IntType)
 
     | Op1 ((`Neg) as prim, tm) ->
