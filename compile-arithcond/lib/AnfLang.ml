@@ -12,8 +12,8 @@ type id = int
 
 (** Expressions in A-Normal Form *)
 type expr =
-  | Let of id * comp * expr
-  | LetJoin of id * id * expr * expr
+  | Let of string * id * comp * expr
+  | LetJoin of string * id * (string * id) * expr * expr
   | JoinApp of id * atom
   | IfThenElse of atom * expr * expr
   | Comp of comp
@@ -42,37 +42,37 @@ let atom a = Atom a
 
 (** {1 Pretty printing} *)
 
-let rec pp_expr fmt = function
-  | Let (n, c, e) ->
-      let n = Format.sprintf "e%i" n in
+let rec pp_expr names fmt = function
+  | Let (n, x, c, e) ->
+      let n = Format.sprintf "%s%i" n x in
       Format.fprintf fmt "@[<2>@[let@ %s@ :=@]@ %a;@]@ %a" n
-        pp_comp c
-        pp_expr e
-  | LetJoin (n, pn, e1, e2) ->
-      let n = Format.sprintf "j%i" n in
-      let pn = Format.sprintf "e%i" pn in
+        (pp_comp names) c
+        (pp_expr ((x, n) :: names)) e
+  | LetJoin (n, x, (pn, px), e1, e2) ->
+      let n = Format.sprintf "%s%i" n x in
+      let pn = Format.sprintf "%s%i" pn px in
       Format.fprintf fmt "@[<2>@[let join@ %s@ %s@ :=@]@ %a;@]@ %a" n pn
-        pp_expr e1
-        pp_expr e2
+        (pp_expr ((px, pn) :: names)) e1
+        (pp_expr ((x, n) :: names)) e2
   | JoinApp (n, a) ->
-      Format.fprintf fmt "@[jump@ j%i@ %a@]" n pp_atom a
+      Format.fprintf fmt "@[jump@ j%i@ %a@]" n (pp_atom names) a
   | IfThenElse (a, e1, e2) ->
       Format.fprintf fmt "@[<v 2>@[if@ %a@ then@]@ @[<v>%a@]@]@ @[<v 2>else@ @[<v>%a@]@]"
-        pp_atom a
-        pp_expr e1
-        pp_expr e2
+        (pp_atom names) a
+        (pp_expr names) e1
+        (pp_expr names) e2
   | Comp c ->
-      Format.fprintf fmt "@[%a@]" pp_comp c
-and pp_comp fmt = function
-  | Atom a -> pp_atom fmt a
-  | Neg a -> Format.fprintf fmt "neg %a" pp_atom a
-  | Add (a1, a2) -> Format.fprintf fmt "add@ %a@ %a" pp_atom a1 pp_atom a2
-  | Sub (a1, a2) -> Format.fprintf fmt "sub@ %a@ %a" pp_atom a1 pp_atom a2
-  | Mul (a1, a2) -> Format.fprintf fmt "mul@ %a@ %a" pp_atom a1 pp_atom a2
-  | Div (a1, a2) -> Format.fprintf fmt "div@ %a@ %a" pp_atom a1 pp_atom a2
-  | Eq (a1, a2) -> Format.fprintf fmt "eq@ %a@ %a" pp_atom a1 pp_atom a2
-and pp_atom fmt = function
-  | Var n -> Format.fprintf fmt "e%i" n
+      Format.fprintf fmt "@[%a@]" (pp_comp names) c
+and pp_comp names fmt = function
+  | Atom a -> pp_atom names fmt a
+  | Neg a -> Format.fprintf fmt "neg %a" (pp_atom names) a
+  | Add (a1, a2) -> Format.fprintf fmt "add@ %a@ %a" (pp_atom names) a1 (pp_atom names) a2
+  | Sub (a1, a2) -> Format.fprintf fmt "sub@ %a@ %a" (pp_atom names) a1 (pp_atom names) a2
+  | Mul (a1, a2) -> Format.fprintf fmt "mul@ %a@ %a" (pp_atom names) a1 (pp_atom names) a2
+  | Div (a1, a2) -> Format.fprintf fmt "div@ %a@ %a" (pp_atom names) a1 (pp_atom names) a2
+  | Eq (a1, a2) -> Format.fprintf fmt "eq@ %a@ %a" (pp_atom names) a1 (pp_atom names) a2
+and pp_atom names fmt = function
+  | Var x -> Format.fprintf fmt "%s" (List.assoc x names)
   | Int i -> Format.pp_print_int fmt i
   | Bool true -> Format.fprintf fmt "true"
   | Bool false -> Format.fprintf fmt "false"
@@ -93,8 +93,8 @@ module Semantics = struct
 
   let eval_atom env : atom -> value =
     function
-    | Var id ->
-        begin match Env.find id env with
+    | Var x ->
+        begin match Env.find x env with
         | Value e -> e
         | _ -> failwith "not a value"
         end
@@ -113,8 +113,8 @@ module Semantics = struct
 
   let rec eval env : expr -> value =
     function
-    | Let (n, c, e) -> eval (Env.add n (Value (eval_comp env c)) env) e
-    | LetJoin (n, pn, e1, e2) -> eval (Env.add n (Join (pn, e1)) env) e2
+    | Let (_, x, c, e) -> eval (Env.add x (Value (eval_comp env c)) env) e
+    | LetJoin (_, x, (_, px), e1, e2) -> eval (Env.add x (Join (px, e1)) env) e2
     | JoinApp (n, a) ->
         begin match Env.find n env with
         | Join (pn, e) -> eval (Env.add pn (Value (eval_atom env a)) env) e

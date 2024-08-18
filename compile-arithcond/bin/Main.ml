@@ -62,7 +62,7 @@ let compile : compile_target -> unit =
       let e = parse_expr "<input>" stdin in
       let _ = synth_expr [] e in
       let e = TreeToAnf.translate e in
-      Format.printf "@[<v>%a@]" AnfLang.pp_expr e
+      Format.printf "@[<v>%a@]" (AnfLang.pp_expr []) e
 
 let exec : exec_target -> unit =
   function
@@ -83,7 +83,7 @@ let exec : exec_target -> unit =
       let t = synth_expr [] e in
       let e = TreeToAnf.translate e in
       Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-        AnfLang.pp_expr AnfLang.Semantics.(normalise Env.empty e)
+        (AnfLang.pp_expr []) AnfLang.Semantics.(normalise Env.empty e)
         TreeLang.pp_ty t
 
 

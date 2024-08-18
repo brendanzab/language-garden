@@ -61,17 +61,17 @@ the [three-address code] found in many optimising compilers.
 
 ```sh
 $ arithcond compile --target=anf <<< "let x := 3 * 4; 42 * (if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8)"
-let e0 := mul 3 4;
-let e1 := eq e0 5;
-let join j2 e3 := mul 42 e3;
-if e1 then
-  let e5 := add 3 e0;
-  let e6 := div e5 4;
-  let e7 := sub 8 e6;
-  jump j2 e7
+let x0 := mul 3 4;
+let b1 := eq x0 5;
+let join j2 p3 := mul 42 p3;
+if b1 then
+  let y5 := add 3 x0;
+  let y6 := div y5 4;
+  let true7 := sub 8 y6;
+  jump j2 true7
 else
-  let e4 := add e0 8;
-  jump j2 e4
+  let false4 := add x0 8;
+  jump j2 false4
 ```
 
 [Forth]: https://en.wikipedia.org/wiki/Forth_(programming_language)

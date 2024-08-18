@@ -98,12 +98,12 @@ Complicated stuff
   sub;
   add;
   $ cat test-complicated | arithcond compile --target=anf
-  let e0 := neg 2;
-  let e1 := mul 1 e0;
-  let e2 := add 3 4;
-  let e3 := div 8 4;
-  let e4 := sub e2 e3;
-  add e1 e4
+  let y0 := neg 2;
+  let x1 := mul 1 y0;
+  let x2 := add 3 4;
+  let y3 := div 8 4;
+  let y4 := sub x2 y3;
+  add x1 y4
   $ cat test-complicated | arithcond exec --target=tree
   3 : Int
   $ cat test-complicated | arithcond exec --target=stack
@@ -111,9 +111,9 @@ Complicated stuff
 
 If expressions
   $ arithcond compile --target=anf <<< "(if 3 = 4 then 3 else 7) + 1"
-  let e0 := eq 3 4;
-  let join j1 e2 := add e2 1;
-  if e0 then
+  let b0 := eq 3 4;
+  let join j1 p2 := add p2 1;
+  if b0 then
     jump j1 3
   else
     jump j1 7
@@ -135,19 +135,19 @@ If expressions
   code [ int 7; int 8; add; ];
   if;
   $ cat test-if | arithcond compile --target=anf
-  let e0 := neg 2;
-  let e1 := mul 1 e0;
-  let e2 := mul 3 4;
-  let e3 := eq e1 e2;
-  let join j4 e5 := e5;
-  if e3 then
-    let e7 := add 3 4;
-    let e8 := div 8 4;
-    let e9 := sub e7 e8;
-    jump j4 e9
+  let y0 := neg 2;
+  let x1 := mul 1 y0;
+  let y2 := mul 3 4;
+  let b3 := eq x1 y2;
+  let join j4 p5 := p5;
+  if b3 then
+    let x7 := add 3 4;
+    let y8 := div 8 4;
+    let true9 := sub x7 y8;
+    jump j4 true9
   else
-    let e6 := add 7 8;
-    jump j4 e6
+    let false6 := add 7 8;
+    jump j4 false6
   $ cat test-if | arithcond exec --target=tree
   15 : Int
   $ cat test-if | arithcond exec --target=stack
@@ -169,13 +169,13 @@ Nested if expressions
   int 3;
   add;
   $ cat test-if-nested | arithcond compile --target=anf
-  let e0 := eq 1 3;
-  let join j1 e2 := let e4 := mul 1 e2; add e4 3;
-  if e0 then
+  let b0 := eq 1 3;
+  let join j1 p2 := let x4 := mul 1 p2; add x4 3;
+  if b0 then
     jump j1 42
   else
-    let e3 := add 7 8;
-    jump j1 e3
+    let false3 := add 7 8;
+    jump j1 false3
   $ cat test-if-nested | arithcond exec --target=tree
   18 : Int
   $ cat test-if-nested | arithcond exec --target=stack
@@ -217,17 +217,17 @@ Let expressions
   if;
   end-let;
   $ cat test-let | arithcond compile --target=anf
-  let e0 := mul 3 4;
-  let e1 := eq e0 5;
-  let join j2 e3 := e3;
-  if e1 then
-    let e5 := add 3 e0;
-    let e6 := div e5 4;
-    let e7 := sub 8 e6;
-    jump j2 e7
+  let x0 := mul 3 4;
+  let b1 := eq x0 5;
+  let join j2 p3 := p3;
+  if b1 then
+    let y5 := add 3 x0;
+    let y6 := div y5 4;
+    let true7 := sub 8 y6;
+    jump j2 true7
   else
-    let e4 := add e0 8;
-    jump j2 e4
+    let false4 := add x0 8;
+    jump j2 false4
   $ cat test-let | arithcond exec --target=tree
   20 : Int
   $ cat test-let | arithcond exec --target=stack
@@ -249,7 +249,7 @@ Wierd binding
   if;
   end-let;
   $ cat test-weird-let-if | arithcond compile --target=anf
-  let join j0 e1 := e1;
+  let join j0 p1 := p1;
   if false then
     jump j0 true
   else
