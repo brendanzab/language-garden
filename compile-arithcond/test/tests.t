@@ -153,6 +153,35 @@ If expressions
   $ cat test-if | arithcond exec --target=anf
   15 : Int
 
+Nested if expressions
+  $ cat >test-if-nested <<< "1 * (if 1 = 3 then 42 else 7 + 8) + 3"
+  $ cat test-if-nested | arithcond compile --target=stack
+  int 1;
+  int 1;
+  int 3;
+  eq;
+  code [ int 42; ];
+  code [ int 7; int 8; add; ];
+  if;
+  mul;
+  int 3;
+  add;
+  $ cat test-if-nested | arithcond compile --target=anf
+  let e0 := eq 1 3;
+  let e1 :=
+    if e0 then
+      42
+    else
+      add 7 8;
+  let e2 := mul 1 e1;
+  add e2 3
+  $ cat test-if-nested | arithcond exec --target=tree
+  18 : Int
+  $ cat test-if-nested | arithcond exec --target=stack
+  int 18;
+  $ cat test-if-nested | arithcond exec --target=anf
+  18 : Int
+
 Simple let expressions
   $ cat >test-let-simple <<< "let x := 3; x * 4"
   $ cat test-let-simple | arithcond compile --target=stack
