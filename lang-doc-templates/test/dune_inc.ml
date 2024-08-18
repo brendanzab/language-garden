@@ -8,14 +8,17 @@ let generate_rules base =
        (with-stdin-from ../%s.txt
         (with-stdout-to %s.stdout.tmp
          (run %%{bin:%s}))))
-
+    |}
+    base base bin;
+  Printf.printf
+    {|
       (rule
        (alias runtest)
        (package %s)
        (action
         (diff ../%s.stdout %s.stdout.tmp)))
     |}
-    base base bin package base base
+    package base base
 
 let () =
   Sys.readdir ".."
