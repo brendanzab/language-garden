@@ -6,7 +6,7 @@
 
 (subdir generate
  (rule
-  (deps (glob_files ../*.stdout))
+  (deps (glob_files ../*.txt))
   (action
    (with-stdout-to dune.inc
     (run ../dune_inc.exe)))))
