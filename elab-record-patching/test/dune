@@ -1,85 +1,12 @@
-; Let expressions
+(executable
+ (name dune_inc))
 
-(rule
-  (with-stdin-from let-ann-check.txt
-    (with-stdout-to let-ann-check.stdout.tmp
-      (run %{bin:record-patching} elab))))
+(subdir run
+ (dynamic_include ../generate/dune.inc))
 
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff let-ann-check.stdout
-                let-ann-check.stdout.tmp)))
-
-(rule
-  (with-stdin-from let-ann-infer.txt
-    (with-stdout-to let-ann-infer.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff let-ann-infer.stdout
-                let-ann-infer.stdout.tmp)))
-
-; Records
-
-(rule
-  (with-stdin-from record-field-puns.txt
-    (with-stdout-to record-field-puns.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff record-field-puns.stdout
-                record-field-puns.stdout.tmp)))
-
-(rule
-  (with-stdin-from record-proj-singleton.txt
-    (with-stdout-to record-proj-singleton.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff record-proj-singleton.stdout
-                record-proj-singleton.stdout.tmp)))
-
-(rule
-  (with-stdin-from records.txt
-    (with-stdout-to records.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff records.stdout
-                records.stdout.tmp)))
-
-; Singletons
-
-(rule
-  (with-stdin-from singleton-check-elim.txt
-    (with-stdout-to singleton-check-elim.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff singleton-check-elim.stdout
-                singleton-check-elim.stdout.tmp)))
-
-(rule
-  (with-stdin-from singleton-check-intro.txt
-    (with-stdout-to singleton-check-intro.stdout.tmp
-      (run %{bin:record-patching} elab))))
-
-(rule
-  (alias runtest)
-  (package elab-record-patching)
-  (action (diff singleton-check-intro.stdout
-                singleton-check-intro.stdout.tmp)))
-
-; TODO: Tests for singleton introduction coercions
-; TODO: Tests for singleton elimination coercions
+(subdir generate
+ (rule
+  (deps (glob_files ../*.txt))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))
