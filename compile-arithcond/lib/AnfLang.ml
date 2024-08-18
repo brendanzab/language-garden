@@ -36,6 +36,7 @@ and atom =
 
 (** {2 Constructor functions} *)
 
+let join_app x a = JoinApp (x, a)
 let comp c = Comp c
 let atom a = Atom a
 

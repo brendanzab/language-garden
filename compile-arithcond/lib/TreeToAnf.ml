@@ -62,7 +62,7 @@ module Env = struct
         pure (AnfLang.Atom e)
     | TreeLang.Let (n, e1, e2) ->
         let* e1 = translate_name n e1 in
-        scope_env (fun env -> e1 :: env) (translate e2)
+        scope_env (List.cons e1) (translate e2)
     | TreeLang.Int i ->
         pure (AnfLang.Atom (AnfLang.Int i))
     | TreeLang.Bool i ->
@@ -92,13 +92,13 @@ module Env = struct
         pure (AnfLang.Eq (e1, e2))
     | TreeLang.IfThenElse (e1, e2, e3) ->
         let* e1 = translate_name "b" e1 in
-        let jx = fresh_id () in
-        let px = fresh_id () in
         fun env cont ->
+          let jx = fresh_id () in
+          let px = fresh_id () in
           AnfLang.LetJoin ("j", jx, ("p", px), cont env (AnfLang.Atom (Var px)),
             AnfLang.IfThenElse (e1,
-              translate_name "true" e2 env (fun _ e -> JoinApp (jx, e)),
-              translate_name "false" e3 env (fun _ e -> JoinApp (jx, e))))
+              translate_name "true" e2 env (Fun.const (AnfLang.join_app jx)),
+              translate_name "false" e3 env (Fun.const (AnfLang.join_app jx))))
 
   (** Translate an expression to ANF, binding the resulting computation to an
       intermediate definition (so long as it’s not an atomic computation). *)
