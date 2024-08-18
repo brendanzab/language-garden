@@ -92,11 +92,13 @@ module Env = struct
         pure (AnfLang.Eq (e1, e2))
     | TreeLang.IfThenElse (e1, e2, e3) ->
         let* e1 = translate_name e1 in
-        let* env = get_env in
-        (* TODO: Join points? *)
-        let e2 = translate e2 env (Fun.const AnfLang.comp) in
-        let e3 = translate e3 env (Fun.const AnfLang.comp) in
-        pure (AnfLang.IfThenElse (e1, e2, e3))
+        let jn = fresh_id () in
+        let pn = fresh_id () in
+        fun env cont ->
+          AnfLang.LetJoin (jn, pn, cont env (AnfLang.Atom (Var pn)),
+            AnfLang.IfThenElse (e1,
+              translate_name e2 env (fun _ e -> JoinApp (jn, e)),
+              translate_name e3 env (fun _ e -> JoinApp (jn, e))))
 
   (** Translate an expression to ANF, binding the resulting computation to an
       intermediate definition (so long as it’s not an atomic computation). *)

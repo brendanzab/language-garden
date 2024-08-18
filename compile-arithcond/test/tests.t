@@ -112,12 +112,11 @@ Complicated stuff
 If expressions
   $ arithcond compile --target=anf <<< "(if 3 = 4 then 3 else 7) + 1"
   let e0 := eq 3 4;
-  let e1 :=
-    if e0 then
-      3
-    else
-      7;
-  add e1 1
+  let join j1 e2 := add e2 1;
+  if e0 then
+    jump j1 3
+  else
+    jump j1 7
   $ arithcond exec --target=anf <<< "(if false then 0 else 0) + 1"
   1 : Int
 
@@ -140,12 +139,15 @@ If expressions
   let e1 := mul 1 e0;
   let e2 := mul 3 4;
   let e3 := eq e1 e2;
+  let join j4 e5 := e5;
   if e3 then
-    let e4 := add 3 4;
-    let e5 := div 8 4;
-    sub e4 e5
+    let e7 := add 3 4;
+    let e8 := div 8 4;
+    let e9 := sub e7 e8;
+    jump j4 e9
   else
-    add 7 8
+    let e6 := add 7 8;
+    jump j4 e6
   $ cat test-if | arithcond exec --target=tree
   15 : Int
   $ cat test-if | arithcond exec --target=stack
@@ -168,13 +170,12 @@ Nested if expressions
   add;
   $ cat test-if-nested | arithcond compile --target=anf
   let e0 := eq 1 3;
-  let e1 :=
-    if e0 then
-      42
-    else
-      add 7 8;
-  let e2 := mul 1 e1;
-  add e2 3
+  let join j1 e2 := let e4 := mul 1 e2; add e4 3;
+  if e0 then
+    jump j1 42
+  else
+    let e3 := add 7 8;
+    jump j1 e3
   $ cat test-if-nested | arithcond exec --target=tree
   18 : Int
   $ cat test-if-nested | arithcond exec --target=stack
@@ -218,12 +219,15 @@ Let expressions
   $ cat test-let | arithcond compile --target=anf
   let e0 := mul 3 4;
   let e1 := eq e0 5;
+  let join j2 e3 := e3;
   if e1 then
-    let e2 := add 3 e0;
-    let e3 := div e2 4;
-    sub 8 e3
+    let e5 := add 3 e0;
+    let e6 := div e5 4;
+    let e7 := sub 8 e6;
+    jump j2 e7
   else
-    add e0 8
+    let e4 := add e0 8;
+    jump j2 e4
   $ cat test-let | arithcond exec --target=tree
   20 : Int
   $ cat test-let | arithcond exec --target=stack
@@ -245,10 +249,11 @@ Wierd binding
   if;
   end-let;
   $ cat test-weird-let-if | arithcond compile --target=anf
+  let join j0 e1 := e1;
   if false then
-    true
+    jump j0 true
   else
-    true
+    jump j0 true
   $ cat test-weird-let-if | arithcond exec --target=tree
   true : Bool
   $ cat test-weird-let-if | arithcond exec --target=stack

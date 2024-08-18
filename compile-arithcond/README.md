@@ -37,11 +37,12 @@ This is similar to what can be found in stack based languages like [Forth] and
 [Java bytecode]:
 
 ```sh
-$ arithcond compile --target=stack <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
+$ arithcond compile --target=stack <<< "let x := 3 * 4; 42 * (if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8)"
 int 3;
 int 4;
 mul;
 begin-let;
+int 42;
 access 0;
 int 5;
 eq;
@@ -49,6 +50,7 @@ code [ int 3; access 0; add; begin-let; int 8; access 0; int 4; div; sub;
      end-let; ];
 code [ access 0; int 8; add; ];
 if;
+mul;
 end-let;
 ```
 
@@ -58,15 +60,18 @@ This defines an intermediate binding for each computation. This is close to
 the [three-address code] found in many optimising compilers.
 
 ```sh
-$ arithcond compile --target=anf <<< "let x := 3 * 4; if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8"
+$ arithcond compile --target=anf <<< "let x := 3 * 4; 42 * (if x = 5 then (let y := 3 + x; 8 - y / 4) else x + 8)"
 let e0 := mul 3 4;
 let e1 := eq e0 5;
+let join j2 e3 := mul 42 e3;
 if e1 then
-  let e2 := add 3 e0;
-  let e3 := div e2 4;
-  sub 8 e3
+  let e5 := add 3 e0;
+  let e6 := div e5 4;
+  let e7 := sub 8 e6;
+  jump j2 e7
 else
-  add e0 8
+  let e4 := add e0 8;
+  jump j2 e4
 ```
 
 [Forth]: https://en.wikipedia.org/wiki/Forth_(programming_language)
