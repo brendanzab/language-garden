@@ -25,10 +25,10 @@ module Functor = struct
 
     open F
 
-    let void_left : 'a -> 'b t -> 'a t =
+    let void_left : type a b. a -> b t -> a t =
       fun x f -> map (Fun.const x) f
 
-    let void_right : 'b t -> 'a -> 'a t =
+    let void_right : type a b. b t -> a -> a t =
       fun f x -> map (Fun.const x) f
 
   end

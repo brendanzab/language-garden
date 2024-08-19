@@ -69,7 +69,7 @@ module Elab = struct
   exception Error of loc * string
 
   (** Raises an {!Error} exception *)
-  let error (loc : loc) (message : string) : 'a =
+  let error (type a) (loc : loc) (message : string) : a =
     raise (Error (loc, message))
 
 

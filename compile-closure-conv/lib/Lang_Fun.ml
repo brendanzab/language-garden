@@ -244,11 +244,11 @@ module Build = struct
     fun size ->
       Var (size - level - 1)
 
-  let bind_var (cont : int -> 'a m) : 'a m =
+  let bind_var (type a) (cont : int -> a m) : a m =
     fun size ->
       cont size (size + 1)
 
-  let scope (cont : tm m -> 'a m) : 'a m =
+  let scope (type a) (cont : tm m -> a m) : a m =
     bind_var (fun level -> cont (var level))
 
 

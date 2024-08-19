@@ -80,26 +80,26 @@ type _ component =
 
 (* TODO: Use numeric indexing instead *)
 
-let get (type n) (c : n component) (v : ('a, n) vec) : 'a =
+let get (type a n) (c : n component) (v : (a, n) vec) : a =
   match c, v with
   | X, Cons (s, _) -> s
   | Y, Cons (_, Cons (s, _)) -> s
   | Z, Cons (_, Cons (_, Cons (s, _))) -> s
   | W, Cons (_, Cons (_, Cons (_, Cons (s, _)))) -> s
 
-let rec swizzle : type n m. (n component, m) vec -> ('a, n) vec -> ('a, m) vec =
+let rec swizzle : type a n m. (n component, m) vec -> (a, n) vec -> (a, m) vec =
   fun cv v ->
     match cv with
     | Nil -> Nil
     | Cons (c, cv) -> Cons (get c v, swizzle cv v)
 
-let get2 (c1, c2 : 'n component * 'n component) (v : ('a, 'n) vec) : 'a vec2 =
+let get2 (type a n) (c1, c2 : n component * n component) (v : (a, n) vec) : a vec2 =
   swizzle (vec2 c1 c2) v
 
-let get3 (c1, c2, c3 : 'n component * 'n component * 'n component) (v : ('a, 'n) vec) : 'a vec3 =
+let get3 (type a n) (c1, c2, c3 : n component * n component * n component) (v : (a, n) vec) : a vec3 =
   swizzle (vec3 c1 c2 c3) v
 
-let get4 (c1, c2, c3, c4 : 'n component * 'n component * 'n component * 'n component) (v : ('a, 'n) vec) : 'a vec4 =
+let get4 (type a n) (c1, c2, c3, c4 : n component * n component * n component * n component) (v : (a, n) vec) : a vec4 =
   swizzle (vec4 c1 c2 c3 c4) v
 
 let set (type n) (c : n component) (s : float) (v : n vecf) : n vecf =
@@ -111,24 +111,24 @@ let set (type n) (c : n component) (s : float) (v : n vecf) : n vecf =
 
 (** {2 Vector combinators} *)
 
-let rec map_vec : type n. ('a -> 'b) -> ('a, n) vec -> ('b, n) vec =
+let rec map_vec : type a b n. (a -> b) -> (a, n) vec -> (b, n) vec =
   fun f -> function
     | Nil -> Nil
     | Cons (s, v) -> Cons (f s, map_vec f v)
 
-let rec fold_left_vec : type n. ('a -> 'b -> 'a) -> 'a -> ('b, n) vec -> 'a =
+let rec fold_left_vec : type a b n. (a -> b -> a) -> a -> (b, n) vec -> a =
   fun f acc -> function
     | Nil -> acc
     | Cons (s, v) -> fold_left_vec f (f acc s) v
 
-let rec zip_with_vec : type n. ('a -> 'b -> 'c) -> ('a, n) vec -> ('b, n) vec -> ('c, n) vec =
+let rec zip_with_vec : type a b c n. (a -> b -> c) -> (a, n) vec -> (b, n) vec -> (c, n) vec =
   fun f v1 v2 ->
     match v1, v2 with
     | Nil, Nil -> Nil
     | Cons (s1, v1), Cons (s2, v2) ->
         Cons (f s1 s2, zip_with_vec f v1 v2)
 
-let rec zip_with3_vec : type n. ('a -> 'b -> 'c -> 'd) -> ('a, n) vec -> ('b, n) vec -> ('c, n) vec -> ('d, n) vec =
+let rec zip_with3_vec : type a b c d n. (a -> b -> c -> d) -> (a, n) vec -> (b, n) vec -> (c, n) vec -> (d, n) vec =
   fun f v1 v2 v3 ->
     match v1, v2, v3 with
     | Nil, Nil, Nil -> Nil

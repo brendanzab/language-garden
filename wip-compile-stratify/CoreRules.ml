@@ -42,12 +42,12 @@ module Context = struct
 
 
   (** Run a continuation with a definition added to the context *)
-  let define (ctx : t) (name : Core.name) (ty : Semantics.vty) (tm : Semantics.vtm) (body : t -> var -> 'a) : 'a =
+  let define (type a) (ctx : t) (name : Core.name) (ty : Semantics.vty) (tm : Semantics.vtm) (body : t -> var -> a) : a =
     let level = Env.next_level ctx.size in
     body (extend ctx name ty tm) { ty; level }
 
   (** Run a continuation with an assumption added to the context *)
-  let assume (ctx : t) (name : Core.name) (ty : Semantics.vty) (body : t -> var -> 'a) : 'a =
+  let assume (type a) (ctx : t) (name : Core.name) (ty : Semantics.vty) (body : t -> var -> a) : a =
     let level = Env.next_level ctx.size in
     body (extend ctx name ty (Neu (Var level))) { ty; level }
 

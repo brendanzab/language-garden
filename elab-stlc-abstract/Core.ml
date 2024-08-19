@@ -163,7 +163,7 @@ type 'a elab = context -> 'a
 
 type ('a, 'e) elab_err = ('a, 'e) result elab
 
-let run (elab : 'a elab) : 'a =
+let run (type a) (elab : a elab) : a =
   elab empty
 
 
@@ -185,17 +185,17 @@ type ty_mismatch = {
   expected_ty : ty;
 }
 
-let fail (e : 'e) : ('a, 'e) elab_err =
+let fail (type a e) (e : e) : (a, e) elab_err =
   fun _ ->
     Error e
 
-let catch_check (f : 'e -> check) (elab : 'e check_err) : check =
+let catch_check (type e) (f : e -> check) (elab : e check_err) : check =
   fun ty ctx ->
     match elab ty ctx with
     | Ok x -> x
     | Error e -> f e ty ctx
 
-let catch_synth (f : 'e -> synth) (elab : 'e synth_err) : synth =
+let catch_synth (type e) (f : e -> synth) (elab : e synth_err) : synth =
   fun ctx ->
     match elab ctx with
     | Ok x -> x

@@ -1,5 +1,5 @@
 (** Split the list at a given index  *)
-let split_at (n : int) (xs : 'a list) : ('a list * 'a list) option =
+let split_at (type a) (n : int) (xs : a list) : (a list * a list) option =
   if n < 0 then invalid_arg "split_at" else
   let rec go n xs =
     match n, xs with

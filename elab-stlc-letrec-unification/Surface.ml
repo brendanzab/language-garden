@@ -131,7 +131,7 @@ let lookup (ctx : context) (name : string) : (Core.tm * Core.ty) option =
 exception Error of loc * string
 
 (** Raises an {!Error} exception *)
-let error (loc : loc) (message : string) : 'a =
+let error (type a) (loc : loc) (message : string) : a =
   raise (Error (loc, message))
 
 let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =

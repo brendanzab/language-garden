@@ -12,14 +12,14 @@ module Env = struct
 
   type 'a t = 'a cont cont
 
-  let pure (x : 'a) : 'a t =
+  let pure (type a) (x : a) : a t =
     fun cont -> cont x
 
-  let bind (x : 'a t) (f : 'a -> 'b t) : 'b t =
+  let bind (type a b) (x : a t) (f : a -> b t) : b t =
     fun cont -> x (fun x -> f x cont)
 
-  let embed = fun cont -> cont
-  let run x = fun cont -> x cont
+  let embed : type a. a cont cont -> a t = Fun.id
+  let run : type a. a t -> a cont cont = Fun.id
 
 
   (* ANF Translation *)

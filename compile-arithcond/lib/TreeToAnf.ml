@@ -17,18 +17,18 @@ module Env = struct
 
   type 'a t = 'a cont cont
 
-  let pure (x : 'a) : 'a t =
+  let pure (type a) (x : a) : a t =
     fun env cont -> cont env x
 
-  let bind (x : 'a t) (f : 'a -> 'b t) : 'b t =
+  let bind (type a b) (x : a t) (f : a -> b t) : b t =
     fun env cont ->
       x env (fun _ x -> f x env cont)
 
 
-  let embed : 'a cont cont -> 'a t = Fun.id
-  let run : 'a t -> 'a cont cont = Fun.id
+  let embed : type a. a cont cont -> a t = Fun.id
+  let run : type a. a t -> a cont cont = Fun.id
 
-  let scope_env (f : env -> env) (x : 'a t) : 'a t=
+  let scope_env (type a) (f : env -> env) (x : a t) : a t=
     fun env cont -> x (f env) cont
 
   let get_env : env t =

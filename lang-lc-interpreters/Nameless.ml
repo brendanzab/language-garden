@@ -10,7 +10,7 @@
 *)
 
 (** [elem_index x xs] returns the index of the first occurance of [x] in [xs]. *)
-let elem_index (a : 'a) (xs : 'a list) =
+let elem_index (type a) (a : a) (xs : a list) =
   let rec go i = function
     | [] -> None
     | x :: xs -> if x = a then Some i else go (i + 1) xs in

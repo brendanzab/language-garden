@@ -91,7 +91,7 @@ module Elab = struct
   exception Error of loc * string
 
   (** Raises an {!Error} exception *)
-  let error (loc : loc) (message : string) : 'a =
+  let error (type a) (loc : loc) (message : string) : a =
     raise (Error (loc, message))
 
   let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =

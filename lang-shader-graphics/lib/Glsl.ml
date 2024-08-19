@@ -74,7 +74,7 @@ module Locals = struct
       else if equal_expr expr expr' then Some { expr with def = name }
       else None)
 
-  let define (expr : 'a expr) (locals : t) : 'a expr * t =
+  let define (type a) (expr : a expr) (locals : t) : a expr * t =
     match find_expr expr locals with
     | Some expr -> expr, locals
     | None ->
@@ -210,19 +210,19 @@ let field_name (type n) : n component -> string =
   | Z -> "z"
   | W -> "w"
 
-let get (c : 'n component) (v : ('n vecf) repr) : float repr =
+let get (type n) (c : n component) (v : (n vecf) repr) : float repr =
   post Float (Format.sprintf ".%s" (field_name c)) v
 
-let get2 (c1, c2 : 'n component * 'n component) (v : ('n vecf) repr) : vec2f repr =
+let get2 (type n) (c1, c2 : n component * n component) (v : (n vecf) repr) : vec2f repr =
   post Vec2 (Format.sprintf ".%s%s" (field_name c1) (field_name c2)) v
 
-let get3 (c1, c2, c3 : 'n component * 'n component * 'n component) (v : ('n vecf) repr) : vec3f repr =
+let get3 (type n) (c1, c2, c3 : n component * n component * n component) (v : (n vecf) repr) : vec3f repr =
   post Vec3 (Format.sprintf ".%s%s%s" (field_name c1) (field_name c2) (field_name c3)) v
 
-let get4 (c1, c2, c3, c4 : 'n component * 'n component * 'n component * 'n component) (v : ('n vecf) repr) : vec4f repr =
+let get4 (type n) (c1, c2, c3, c4 : n component * n component * n component * n component) (v : (n vecf) repr) : vec4f repr =
   post Vec4 (Format.sprintf ".%s%s%s%s" (field_name c1) (field_name c2) (field_name c3) (field_name c4)) v
 
-let set (c : 'n component) (s : float repr) (v : ('n vecf) repr) : ('n vecf) repr =
+let set (type n) (c : n component) (s : float repr) (v : (n vecf) repr) : (n vecf) repr =
   let go (type n) (c : n component) s (v : (n vecf) expr) : (n vecf) repr =
     match c, v with
     | X, { ty = Vec2; _ } -> vec2 s (pure v |> get Y)
@@ -248,7 +248,7 @@ let map_vec f v =
   bind v (go f)
 
 let fold_left_vec f acc v =
-  let go (type n) f (acc : 'a repr) (v : (n vecf) expr) : 'a repr =
+  let go (type a n) f (acc : a repr) (v : (n vecf) expr) : a repr =
     match v with
     | { ty = Vec2; _ } ->
         let acc = pure v |> get Y |> f acc in
