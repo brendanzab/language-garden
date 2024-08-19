@@ -20,7 +20,7 @@
 (package (name elab-stlc-bidirectional-stratify))
 (package (name elab-stlc-letrec-unification))
 (package (name elab-stlc-unification))
-(package (name elab-variant-unification))
+(package (name elab-stlc-variant-unification))
 (package (name elab-record-patching))
 
 (package (name lang-datalog))

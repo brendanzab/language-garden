@@ -95,7 +95,7 @@
         elab-stlc-bidirectional = [ "stlc-bidirectional" ];
         elab-stlc-bidirectional-stratify = [ "stlc-bidirectional-stratify" ];
         elab-stlc-unification = [ "stlc-unification" ];
-        elab-variant-unification = [ "variant-unification" ];
+        elab-stlc-variant-unification = [ "stlc-variant-unification" ];
         lang-datalog = [ "datalog" ];
         lang-doc-templates = [ "doc-templates" ];
         lang-fractal-growth = [ "fractal-growth" ];
