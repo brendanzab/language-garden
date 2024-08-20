@@ -46,3 +46,20 @@ Xavier Leroy’s commentary on this work in [these slides][zam-kazam05].
 [compfun-2011-lecture6]: https://www.cse.chalmers.se/edu/year/2011/course/CompFun/lecture6.pdf
 [fast-curry]: https://doi.org/10.1017/S0956796806005995
 [zam-kazam05]: https://xavierleroy.org/talks/zam-kazam05.pdf
+
+### Update as of 2024-08-20
+
+I’ve found some more resources on arity analysis:
+
+- [“Cheap deforestation for non-strict functional languages”](https://eleanor.lib.gla.ac.uk/record=b1558987),
+  Section 4.4
+- [“Arity Analysis”](https://gallium.inria.fr/~naxu/research/arity.pdf):
+  Describes arity analysis based on function definitions
+- [“Call Arity”](https://www.joachim-breitner.de/publications/CallArity-TFP.pdf):
+  Describes arity analysis based on how functions are called
+- [“Kinds are calling conventions”](https://doi.org/10.1145/3408986): Describes
+  a typed intermediate language to be used as a target for arity analysis
+- Andras Kovacs seems to think call-by-push-value might help for determining
+  arities in [this reddit post](https://old.reddit.com/r/ProgrammingLanguages/comments/1bam7bd/im_betting_on_callbypushvalue/ku4yel3/).
+- [Wasm ML]( https://github.com/WebAssembly/gc/blob/waml/proposals/gc/waml)
+  tracks arities in the types, updating them during unification.
