@@ -53,12 +53,12 @@ Translation.FunToClos     Translation.FunToFunA
 [`Lang.ClosA`]: ./lib/Lang_ClosA.ml
 [`Lang.LiftedA`]: ./lib/Lang_LiftedA.ml
 
-| Translation                   | Source          | Target           | Description
-| ----------------------------- | --------------- | ---------------- | ---------------------------------
-| [`Translation.FunToClos`]     | [`Lang.Fun`]    | [`Lang.Clos`]    | Typed closure conversion
-| [`Translation.FunToFunA`]     | [`Lang.Fun`]    | [`Lang.FunA`]    | Alpha renaming translation
-| [`Translation.FunAToClosA`]   | [`Lang.FunA`]   | [`Lang.ClosA`]   | Typed closure conversion (alpha renamed)
-| [`Translation.FunAToLiftedA`] | [`Lang.FunA`]   | [`Lang.LiftedA`] | Typed lambda lifting (alpha renamed)
+| Translation                   |   | Source          |   | Target           | Description
+| ----------------------------- | - | --------------- | - | ---------------- | ---------------------------------
+| [`Translation.FunToClos`]     | : | [`Lang.Fun`]    | → | [`Lang.Clos`]    | Closure conversion
+| [`Translation.FunToFunA`]     | : | [`Lang.Fun`]    | → | [`Lang.FunA`]    | Alpha renaming
+| [`Translation.FunAToClosA`]   | : | [`Lang.FunA`]   | → | [`Lang.ClosA`]   | Closure conversion (alpha renamed)
+| [`Translation.FunAToLiftedA`] | : | [`Lang.FunA`]   | → | [`Lang.LiftedA`] | Lambda lifting (alpha renamed)
 
 [`Translation.FunToClos`]: ./lib/Translation_FunToClos.ml
 [`Translation.FunToFunA`]: ./lib/Translation_FunToFunA.ml
