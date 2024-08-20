@@ -36,26 +36,26 @@ type tm =
 
 (** {1 Pretty printing} *)
 
-let pp_comma_sep (fmt : Format.formatter) () : unit =
+let pp_comma_sep (fmt : Format.formatter) () =
   Format.fprintf fmt ",@ "
 
-let pp_tuple_elems (pp_elem : Format.formatter -> 'a -> unit) (fmt : Format.formatter) (elems : 'a list) : unit =
+let pp_tuple_elems (type a) (pp_elem : Format.formatter -> a -> unit) (fmt : Format.formatter) (elems : a list) =
   match elems with
   | [elem] -> Format.fprintf fmt "%a," pp_elem elem
   | elems ->
       Format.fprintf fmt "%a"
         (Format.pp_print_list pp_elem ~pp_sep:pp_comma_sep) elems
 
-let rec pp_ty fmt =
-  function
+let rec pp_ty (fmt : Format.formatter) (ty : ty) =
+  match ty with
   | ClosType (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
   | ty ->
       pp_atomic_ty fmt ty
-and pp_atomic_ty fmt =
-  function
+and pp_atomic_ty (fmt : Format.formatter) (ty : ty) =
+  match ty with
   | BoolType -> Format.fprintf fmt "Bool"
   | IntType -> Format.fprintf fmt "Int"
   | CodeType (env_ty, param_ty, body_ty) ->
@@ -68,24 +68,26 @@ and pp_atomic_ty fmt =
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
-let pp_var fmt var =
+let pp_var (fmt : Format.formatter) (var : Var.t) =
   Format.fprintf fmt "%s%i"
     (Var.name var)
     (Var.to_int var)
 
-let pp_name_ann fmt (var, ty) =
+let pp_name_ann (fmt : Format.formatter) (var, ty) =
   Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
     pp_var var
     pp_ty ty
 
-let pp_param fmt (var, ty) =
+let pp_param (fmt : Format.formatter) (var, ty) =
   Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]"
     pp_var var
     pp_ty ty
 
-let rec pp_tm fmt = function
+let rec pp_tm (fmt : Format.formatter) (tm : tm) =
+  match tm with
   | Let _ as tm ->
-      let rec go fmt = function
+      let rec go (fmt : Format.formatter) (tm : tm) =
+        match tm with
         | Let (def_var, def_ty, def, body) ->
             Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
               pp_name_ann (def_var, def_ty)
@@ -101,7 +103,8 @@ let rec pp_tm fmt = function
         pp_tm body
   | tm ->
       pp_add_tm fmt tm
-and pp_add_tm fmt = function
+and pp_add_tm (fmt : Format.formatter) (tm : tm) =
+  match tm with
   | PrimApp (`Add, [arg1; arg2]) ->
       Format.fprintf fmt "@[%a@ +@ %a@]"
         pp_mul_tm arg1
@@ -112,14 +115,16 @@ and pp_add_tm fmt = function
         pp_add_tm arg2
   | tm ->
       pp_mul_tm fmt tm
-and pp_mul_tm fmt = function
+and pp_mul_tm (fmt : Format.formatter) (tm : tm) =
+  match tm with
   | PrimApp (`Mul, [arg1; arg2]) ->
       Format.fprintf fmt "@[%a@ *@ %a@]"
         pp_app_tm arg1
         pp_mul_tm arg2
   | tm ->
       pp_app_tm fmt tm
-and pp_app_tm fmt = function
+and pp_app_tm (fmt : Format.formatter) (tm : tm) =
+  match tm with
   | ClosApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         pp_app_tm head
@@ -129,14 +134,16 @@ and pp_app_tm fmt = function
         pp_atomic_tm arg
   | tm ->
       pp_proj_tm fmt tm
-and pp_proj_tm fmt = function
+and pp_proj_tm (fmt : Format.formatter) (tm : tm) =
+  match tm with
   | TupleProj (head, label) ->
       Format.fprintf fmt "@[%a.%i@]"
         pp_proj_tm head
         label
   | tm ->
       pp_atomic_tm fmt tm
-and pp_atomic_tm fmt = function
+and pp_atomic_tm (fmt : Format.formatter) (tm : tm) =
+  match tm with
   | Var var -> pp_var fmt var
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
