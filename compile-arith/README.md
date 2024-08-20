@@ -18,10 +18,10 @@ library.
 [`AnfLang`]: ./lib/AnfLang.ml
 [`StackLang`]: ./lib/StackLang.ml
 
-| Translation     | Source       |   | Target        |
-| --------------- | ------------ | - | ------------- |
-| [`TreeToAnf`]   | [`TreeLang`] | → | [`AnfLang`]   |
-| [`TreeToStack`] | [`TreeLang`] | → | [`StackLang`] |
+| Translation     |   | Source       |   | Target        |
+| --------------- | - | ------------ | - | ------------- |
+| [`TreeToAnf`]   | : | [`TreeLang`] | → | [`AnfLang`]   |
+| [`TreeToStack`] | : | [`TreeLang`] | → | [`StackLang`] |
 
 [`TreeToAnf`]: ./lib/TreeToAnf.ml
 [`TreeToStack`]: ./lib/TreeToStack.ml
