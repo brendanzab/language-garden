@@ -36,6 +36,16 @@ type tm =
 
 (** {1 Pretty printing} *)
 
+let pp_comma_sep (fmt : Format.formatter) () : unit =
+  Format.fprintf fmt ",@ "
+
+let pp_tuple_elems (pp_elem : Format.formatter -> 'a -> unit) (fmt : Format.formatter) (elems : 'a list) : unit =
+  match elems with
+  | [elem] -> Format.fprintf fmt "%a," pp_elem elem
+  | elems ->
+      Format.fprintf fmt "%a"
+        (Format.pp_print_list pp_elem ~pp_sep:pp_comma_sep) elems
+
 let rec pp_ty fmt =
   function
   | ClosType (param_ty, body_ty) ->
@@ -54,8 +64,7 @@ and pp_atomic_ty fmt =
         pp_ty param_ty
         pp_ty body_ty
   | TupleType tys ->
-      Format.fprintf fmt "@[{%a}@]"
-        (Format.pp_print_list pp_ty ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")) tys
+      Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems pp_ty) tys
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
@@ -137,8 +146,7 @@ and pp_atomic_tm fmt = function
         pp_tm code
         pp_tm env
   | TupleLit tms ->
-      Format.fprintf fmt "@[{%a}@]"
-        (Format.pp_print_list pp_tm ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")) tms
+      Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems pp_tm) tms
   (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" pp_tm tm
 

@@ -1,9 +1,9 @@
 let h : (Int -> Int) -> Int :=
-  clos(fun (env : {}) (x : Int -> Int) => x 7, {});
+  clos(fun (env : ()) (x : Int -> Int) => x 7, ());
 let g : Int :=
-  clos(fun (env : {(Int -> Int) -> Int}) (a : Int) =>
+  clos(fun (env : ((Int -> Int) -> Int,)) (a : Int) =>
        let f : Int -> Int :=
-         clos(fun (env : {Int}) (b : Int) => env.0 + b, {a});
+         clos(fun (env : (Int,)) (b : Int) => env.0 + b, (a,));
        env.0 f,
-    {h});
+    (h,));
 g
