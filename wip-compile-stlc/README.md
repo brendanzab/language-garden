@@ -8,11 +8,13 @@ types as long as possible, up to code-generation time.
 
 | Language      | Description                                                     |
 | ------------- | --------------------------------------------------------------- |
-| [`Core`]      | Simply typed lambda calculus with booleans and integers         |
+| [`Surface`]   | User-friendly surface language                                  |
+| [`Core`]      | Simple, minimal core language                                   |
 | [`Anf`]       | STLC with an explicit evaluation order (A-normal form)          |
 | [`Clos`]      | STLC in A-normal form with explicit closures                    |
 | [`Monadic`]   | STLC with a separation between values and effectful expressions |
 
+[`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml
 [`Anf`]: ./Anf.ml
 [`Clos`]: ./Clos.ml
@@ -30,7 +32,7 @@ types as long as possible, up to code-generation time.
 
 Intermediate languages:
 
-- [ ] Surface language
+- [x] Surface language ([`Surface`])
 - [x] Core language ([`Core`])
 - [x] ANF language ([`Anf`])
 - [x] ANF + CC language ([`Clos`])
@@ -40,11 +42,11 @@ Intermediate languages:
 
 Translations:
 
-- [ ] Lexer
-- [ ] Parser
-- [ ] Elaboration
-- [x] ANF-translation ([`CoreToAnf`](CoreToAnf.ml))
-- [x] Monadic translation ([`CoreToMonadic`](CoreToMonadic.ml))
+- [x] Lexer
+- [x] Parser
+- [x] Elaboration to core ([`Surface`])
+- [x] ANF-translation ([`CoreToAnf`])
+- [x] Monadic translation ([`CoreToMonadic`])
 - [ ] Closure conversion
 - [ ] Hoisting
 - [ ] Single static assignment
@@ -65,18 +67,18 @@ Other features:
 ## Proposed compiler pipeline
 
 ```text
-    ╭────────────────╮
-    │  Surface.expr  │
-    ╰────────────────╯
-            │
-    Surface.Elab.synth
-            │
-            ▼
-    ╭────────────────╮
-    │   Core.expr    │
-    ╰────────────────╯
-            │
-            ├─────────────────────────────╮
+                  ╭────────────────╮
+                  │  Surface.expr  │
+                  ╰────────────────╯
+                          │
+                  Surface.Elab.synth
+                          │
+                          ▼
+                  ╭────────────────╮
+                  │   Core.expr    │
+                  ╰────────────────╯
+                          │
+            ╭─────────────┴───────────────╮
             │                             │
    Core.ToAnf.translate         Core.ToMonadic.translate
             │                             │
@@ -85,7 +87,7 @@ Other features:
     │    Anf.expr    │            │  Monadic.expr  │
     ╰────────────────╯            ╰────────────────╯
             │
-  Anf.ToAnfClos.translate
+   Anf.ToClos.translate
             │
             │     ╭───────────────╮
             ▼     ▼               │

@@ -1,4 +1,12 @@
 (executable
   (name Main)
   (public_name stlc)
-  (package wip-compile-stlc))
+  (package wip-compile-stlc)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    menhirLib))
+
+(menhir
+  (modules SurfaceParser)
+  (flags --explain --strict))
