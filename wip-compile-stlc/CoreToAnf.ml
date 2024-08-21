@@ -58,17 +58,14 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
           let def_id = Anf.Id.fresh () in
           let body = translate body (SrcEnv.extend def_id def_ty env) k in
           LetComp (def_name, def_id, def, body)
-    | PrimApp (prim, args) ->
-        translate_names "arg" args env @@ fun env args ->
-          k env (PrimApp (prim, args))
-    | FunApp (head, arg) ->
-        translate_name "head" head env @@ fun env head ->
-          translate_name "arg" arg env @@ fun env arg ->
-            k env (FunApp (head, arg))
     | FunLit (param_name, param_ty, body) ->
         let param_id = Anf.Id.fresh () in
         let body = translate body (SrcEnv.extend param_id param_ty env) comp in
         k env (Atom (FunLit (param_name, param_id, param_ty, body)))
+    | FunApp (head, arg) ->
+        translate_name "head" head env @@ fun env head ->
+          translate_name "arg" arg env @@ fun env arg ->
+            k env (FunApp (head, arg))
     | TupleLit args ->
         translate_names "elem" args env @@ fun env args ->
           k env (Atom (TupleLit args))
@@ -92,6 +89,9 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
               translate_name "on-false" on_false env (join_app def_id)))
     | IntLit i ->
         k env (Atom (IntLit i))
+    | PrimApp (prim, args) ->
+        translate_names "arg" args env @@ fun env args ->
+          k env (PrimApp (prim, args))
 
 (** Translate an expression to ANF, binding it to an intermediate definition
     if needed. *)

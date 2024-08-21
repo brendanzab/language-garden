@@ -13,14 +13,14 @@ type ty =
 type expr =
   | Var of index                                  (* x *)
   | Let of name * ty * expr * expr                (* let x : t := e1; e2 *)
-  | PrimApp of Prim.t * expr list                 (* p e1 ... en *)
-  | FunApp of expr * expr                         (* e1 e2 *)
   | FunLit of name * ty * expr                    (* fun (x : t) => e *)
+  | FunApp of expr * expr                         (* e1 e2 *)
   | TupleLit of expr list                         (* (e1, ..., en) *)
   | TupleProj of expr * int                       (* e.n *)
   | BoolLit of bool                               (* true | false *)
   | BoolElim of expr * expr * expr                (* if e1 then e2 else e3 *)
   | IntLit of int                                 (* ... | -1 | 0 | 1 | ... *)
+  | PrimApp of Prim.t * expr list                 (* p e1 ... en *)
 
 (** {1 Pretty printing} *)
 
@@ -172,18 +172,13 @@ let rec type_of (local_tys : ty list) (expr : expr) : ty =
   match expr with
   | Var index -> List.nth local_tys index
   | Let (_, def_ty, _, body) -> type_of (def_ty :: local_tys) body
-  | PrimApp (prim, _) ->
-      begin match prim with
-      | BoolEq | BoolNot | IntEq -> BoolTy
-      | IntAdd | IntSub | IntMul | IntNeg -> IntTy
-      end
+  | FunLit (_, param_ty, body) ->
+      FunTy (param_ty, type_of (param_ty :: local_tys) body)
   | FunApp (head, _) ->
       begin match type_of local_tys head with
       | FunTy (_, body_ty) -> body_ty
       | _ -> invalid_arg "expected function type"
       end
-  | FunLit (_, param_ty, body) ->
-      FunTy (param_ty, type_of (param_ty :: local_tys) body)
   | TupleLit exprs -> TupleTy (List.map (type_of local_tys) exprs)
   | TupleProj (head, label) ->
       begin match type_of local_tys head with
@@ -193,3 +188,8 @@ let rec type_of (local_tys : ty list) (expr : expr) : ty =
   | BoolLit _ -> BoolTy
   | BoolElim (_, on_true, _) -> type_of local_tys on_true
   | IntLit _ -> IntTy
+  | PrimApp (prim, _) ->
+      begin match prim with
+      | BoolEq | BoolNot | IntEq -> BoolTy
+      | IntAdd | IntSub | IntMul | IntNeg -> IntTy
+      end

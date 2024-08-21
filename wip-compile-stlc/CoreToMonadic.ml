@@ -46,17 +46,14 @@ let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
       let def_id = Monadic.Id.fresh () in
       Let (def_name, def_id, def_ty, translate env def,
         translate (SrcEnv.extend def_id def_ty env) body)
-  | PrimApp (prim, args) ->
-      let@ args = translate_names env "arg" args in
-      Monadic.PrimApp (prim, args)
-  | FunApp (head, arg) ->
-      let@ head = translate_name env "head" head in
-      let@ arg = translate_name env "arg" arg in
-      Monadic.FunApp (head, arg)
   | FunLit (param_name, param_ty, body) ->
       let param_id = Monadic.Id.fresh () in
       Atom (FunLit (param_name, param_id, param_ty,
         translate (SrcEnv.extend param_id param_ty env) body))
+  | FunApp (head, arg) ->
+      let@ head = translate_name env "head" head in
+      let@ arg = translate_name env "arg" arg in
+      Monadic.FunApp (head, arg)
   | TupleLit elems ->
       let@ elems = translate_names env "elem" elems in
       Monadic.Atom (TupleLit elems)
@@ -70,6 +67,9 @@ let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
       Monadic.BoolElim (head, translate env on_true, translate env on_false)
   | IntLit i ->
       Atom (IntLit i)
+  | PrimApp (prim, args) ->
+      let@ args = translate_names env "arg" args in
+      Monadic.PrimApp (prim, args)
 
 and translate_name (env : SrcEnv.t) (name : string) (expr : Core.expr) (k : Monadic.aexpr -> Monadic.expr) : Monadic.expr =
   let expr_id = Monadic.Id.fresh () in

@@ -20,10 +20,10 @@ type ty = Core.ty =
 (** Computation expressions *)
 and expr =
   | Let of name * id * ty * expr * expr                   (* let x : t := e; e *)
-  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | FunApp of aexpr * aexpr                               (* ae1 ae2 *)
   | TupleProj of aexpr * int                              (* ae.n *)
   | BoolElim of aexpr * expr * expr                       (* if ae then e1 else e2 *)
+  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | Atom of aexpr                                         (* ae *)
 
 (** Atomic expressions *)
@@ -49,8 +49,6 @@ module Semantics = struct
     | Let(_, def_id, _, def, body) ->
         let def = eval env def in
         eval ((def_id, def) :: env) body
-    | PrimApp (prim, args) ->
-        Core.Semantics.eval_prim prim (List.map (eval_atom env) args)
     | FunApp (head, arg) ->
         begin match eval_atom env head with
         | FunLit body -> body (eval_atom env arg)
@@ -67,6 +65,8 @@ module Semantics = struct
         | BoolLit false -> eval env on_false
         | _ -> invalid_arg "expected boolean"
         end
+    | PrimApp (prim, args) ->
+        Core.Semantics.eval_prim prim (List.map (eval_atom env) args)
     | Atom expr ->
         eval_atom env expr
 

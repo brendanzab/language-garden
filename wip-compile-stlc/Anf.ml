@@ -36,9 +36,9 @@ type expr =
     approach.
 *)
 and cexpr =
-  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | FunApp of aexpr * aexpr                               (* ae1 ae2 *)
   | TupleProj of aexpr * int                              (* ae.n *)
+  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | Atom of aexpr                                         (* ae *)
 
 (** Atomic expressions *)
@@ -89,8 +89,6 @@ module Semantics = struct
 
   and eval_comp (env : env) (expr : cexpr) : vexpr =
     match expr with
-    | PrimApp (prim, args) ->
-        Core.Semantics.eval_prim prim (List.map (eval_atom env) args)
     | FunApp (head, arg) ->
         begin match eval_atom env head with
         | FunLit body -> body (eval_atom env arg)
@@ -101,6 +99,8 @@ module Semantics = struct
         | TupleLit evs -> List.nth evs label
         | _ -> invalid_arg "expected tuple"
         end
+    | PrimApp (prim, args) ->
+        Core.Semantics.eval_prim prim (List.map (eval_atom env) args)
     | Atom expr ->
         eval_atom env expr
 

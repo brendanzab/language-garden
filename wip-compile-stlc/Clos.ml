@@ -26,9 +26,9 @@ type expr =
 
 (** Computation expressions *)
 and cexpr =
-  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | FunApp of aexpr * aexpr                               (* ae1 ae2 *)
   | TupleProj of aexpr * int                              (* ae.n *)
+  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | Atom of aexpr                                         (* ae *)
 
 (** Atomic expressions *)
