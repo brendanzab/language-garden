@@ -1,0 +1,6 @@
+def anon0↑ (env4 : (Int, Int)) (x5 : Int) := env4.0 * x5 + env4.1;
+let a0 : Int := 2;
+let b1 : Int := 4;
+let c2 : Int := 7;
+let d3 : Int := 8;
+clos(anon0↑, (a0, c2))

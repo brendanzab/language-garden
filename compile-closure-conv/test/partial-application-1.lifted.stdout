@@ -1,0 +1,5 @@
+def h0↑ (env0 : ()) (x1 : Int -> Int) := x1 7;
+def f1↑ (env4 : (Int,)) (b5 : Int) := env4.0 + b5;
+def g2↑ (env2 : ((Int -> Int) -> Int,)) (a3 : Int) :=
+  env2.0 clos(f1↑, (a3,));
+clos(g2↑, (clos(h0↑, ()),))

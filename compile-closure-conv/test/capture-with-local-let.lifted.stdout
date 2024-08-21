@@ -1,0 +1,3 @@
+def f0↑ (env1 : (Int,)) (x2 : Int) := let y3 : Int := x2 + env1.0; y3 + 3;
+let a0 : Int := 1;
+f0↑ (a0,) 100

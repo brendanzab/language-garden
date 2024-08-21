@@ -1,0 +1,3 @@
+def f0↑ (env1 : ()) (x2 : Int) := x2;
+let a0 : Int := 1;
+f0↑ () 100
