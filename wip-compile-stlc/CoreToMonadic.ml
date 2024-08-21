@@ -1,6 +1,16 @@
 (** Translation from the core language into monadic form. *)
 
-module SrcEnv = struct
+module SrcEnv : sig
+
+  type t
+
+  val empty : t
+  val extend : Monadic.id -> Core.ty -> t -> t
+
+  val lookup_id : int -> t -> Monadic.id
+  val type_of : Core.expr -> t -> Monadic.ty
+
+end = struct
 
   type t = {
     ids : Monadic.id list;  (* mapping from source variables to target ids *)
@@ -17,6 +27,12 @@ module SrcEnv = struct
     tys = ty :: env.tys;
   }
 
+  let lookup_id (index : Core.index) (env : t) : Monadic.id =
+    List.nth env.ids index
+
+  let type_of (expr : Core.expr) (env : t) : Anf.ty =
+    Core.type_of env.tys expr
+
 end
 
 let ( let@ ) : type a b. (a -> b) -> a -> b =
@@ -25,7 +41,7 @@ let ( let@ ) : type a b. (a -> b) -> a -> b =
 let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
   match expr with
   | Var index ->
-      Atom (Var (List.nth env.ids index))
+      Atom (Var (SrcEnv.lookup_id index env))
   | Let (def_name, def_ty, def, body) ->
       let def_id = Monadic.Id.fresh () in
       Let (def_name, def_id, def_ty, translate env def,
@@ -57,7 +73,7 @@ let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
 
 and translate_name (env : SrcEnv.t) (name : string) (expr : Core.expr) (k : Monadic.aexpr -> Monadic.expr) : Monadic.expr =
   let expr_id = Monadic.Id.fresh () in
-  let expr_ty = Core.type_of env.tys expr in
+  let expr_ty = SrcEnv.type_of expr env in
   match translate env expr with
   | Atom expr -> k expr
   | expr -> Let (Machine name, expr_id, expr_ty, expr, k (Var expr_id))

@@ -1,7 +1,17 @@
 (** A translation that normalises the core language into A-normal form, making
     the evaluation order explicit. *)
 
-module SrcEnv = struct
+module SrcEnv : sig
+
+  type t
+
+  val empty : t
+  val extend : Anf.id -> Core.ty -> t -> t
+
+  val lookup_id : int -> t -> Anf.id
+  val type_of : Core.expr -> t -> Anf.ty
+
+end = struct
 
   type t = {
     ids : Anf.id list;    (* mapping from source variables to target ids *)
@@ -17,6 +27,12 @@ module SrcEnv = struct
     ids = id :: env.ids;
     tys = ty :: env.tys;
   }
+
+  let lookup_id (index : Core.index) (env : t) : Anf.id =
+    List.nth env.ids index
+
+  let type_of (expr : Core.expr) (env : t) : Anf.ty =
+    Core.type_of env.tys expr
 
 end
 
@@ -36,7 +52,7 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
   fun env k ->
     match expr with
     | Var index ->
-        k env (Atom (Var (List.nth env.ids index)))
+        k env (Atom (Var (SrcEnv.lookup_id index env)))
     | Let (def_name, def_ty, def, body) ->
         translate def env @@ fun env def ->
           let def_id = Anf.Id.fresh () in
@@ -65,7 +81,7 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
         translate_name "head" head env @@ fun env head ->
           let def_id = Anf.Id.fresh () in
           let param_id = Anf.Id.fresh () in
-          let expr_ty = Core.type_of env.tys expr in
+          let expr_ty = SrcEnv.type_of expr env in
           LetJoin (
             Machine "cont",
             def_id,
