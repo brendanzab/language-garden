@@ -1,4 +1,4 @@
-(** {1 Typed shader language expressions *)
+(** {1 Typed shader language expressions} *)
 
 open ShaderTypes
 
@@ -27,101 +27,101 @@ module type S = sig
   (** {1 Arithemetic operators} *)
 
   val neg : float repr -> float repr
-  val neg_vec : ('n vecf) repr -> ('n vecf) repr
+  val neg_vec : 'n. ('n vecf) repr -> ('n vecf) repr
 
   val add : float repr -> float repr -> float repr
-  val add_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val add_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val add_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val add_scalar : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val sub : float repr -> float repr -> float repr
-  val sub_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val sub_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val sub_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val sub_scalar : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val mul : float repr -> float repr -> float repr
-  val mul_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val mul_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val mul_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val mul_scalar : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val div : float repr -> float repr -> float repr
-  val div_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val div_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val div_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val div_scalar : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val mod_ : float repr -> float repr -> float repr
-  val mod_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val mod_scalar : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val mod_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val mod_scalar : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
 
   (** {1 Other functions on scalars and vectors} *)
 
   val abs : float repr -> float repr
-  val abs_vec : ('n vecf) repr -> ('n vecf) repr
+  val abs_vec : 'n. ('n vecf) repr -> ('n vecf) repr
 
   val clamp : float repr -> min:float repr -> max:float repr -> float repr
-  val clamp_vec : ('n vecf) repr -> min:('n vecf) repr -> max:('n vecf) repr -> ('n vecf) repr
-  val clamp_scalar : ('n vecf) repr -> min:float repr -> max:float repr -> ('n vecf) repr
+  val clamp_vec : 'n. ('n vecf) repr -> min:('n vecf) repr -> max:('n vecf) repr -> ('n vecf) repr
+  val clamp_scalar : 'n. ('n vecf) repr -> min:float repr -> max:float repr -> ('n vecf) repr
 
   val cos : float repr -> float repr
-  val cos_vec : ('n vecf) repr -> ('n vecf) repr
+  val cos_vec : 'n. ('n vecf) repr -> ('n vecf) repr
 
-  val dot : ('n vecf) repr -> ('n vecf) repr -> float repr
+  val dot : 'n. ('n vecf) repr -> ('n vecf) repr -> float repr
 
-  val length : ('n vecf) repr -> float repr
+  val length : 'n. ('n vecf) repr -> float repr
 
   val lerp : float repr -> float repr -> float repr -> float repr
-  val lerp_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val lerp_scalar : ('n vecf) repr -> ('n vecf) repr -> float repr -> ('n vecf) repr
+  val lerp_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val lerp_scalar : 'n. ('n vecf) repr -> ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val max : float repr -> float repr -> float repr
-  val max_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val max_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
   val min : float repr -> float repr -> float repr
-  val min_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val min_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
   val pow : float repr -> float repr -> float repr
-  val pow_vec : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val pow_vec : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
 
   val round : float repr -> float repr
-  val round_vec : ('n vecf) repr -> ('n vecf) repr
+  val round_vec : 'n. ('n vecf) repr -> ('n vecf) repr
 
   val sin : float repr -> float repr
-  val sin_vec : ('n vecf) repr -> ('n vecf) repr
+  val sin_vec : 'n. ('n vecf) repr -> ('n vecf) repr
 
   val smooth_step : lower:float repr -> upper:float repr -> float repr -> float repr
-  val smooth_step_vec : lower:('n vecf) repr -> upper:('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val smooth_step_scalar : lower:float repr -> upper:float repr -> ('n vecf) repr -> ('n vecf) repr
+  val smooth_step_vec : 'n. lower:('n vecf) repr -> upper:('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val smooth_step_scalar : 'n. lower:float repr -> upper:float repr -> ('n vecf) repr -> ('n vecf) repr
 
   val sqrt : float repr -> float repr
-  val sqrt_vec : ('n vecf) repr -> ('n vecf) repr
+  val sqrt_vec : 'n. ('n vecf) repr -> ('n vecf) repr
 
   val step : edge:float repr -> float repr -> float repr
-  val step_vec : edge:('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val step_scalar : edge:float repr -> ('n vecf) repr -> ('n vecf) repr
+  val step_vec : 'n. edge:('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val step_scalar : 'n. edge:float repr -> ('n vecf) repr -> ('n vecf) repr
 
   val tan : float repr -> float repr
-  val tan_vec : ('n vecf) repr -> ('n vecf) repr
+  val tan_vec : 'n. ('n vecf) repr -> ('n vecf) repr
 
 
   (** {1 Vector combinators} *)
 
-  val map_vec : (float repr -> float repr) -> ('n vecf) repr -> ('n vecf) repr
+  val map_vec : 'n. (float repr -> float repr) -> ('n vecf) repr -> ('n vecf) repr
 
-  val fold_left_vec : ('a repr -> float repr -> 'a repr) -> 'a repr -> ('n vecf) repr -> 'a repr
+  val fold_left_vec : 'a 'n. ('a repr -> float repr -> 'a repr) -> 'a repr -> ('n vecf) repr -> 'a repr
 
 
   (** {1 Vector component operations} *)
 
   (** {2 Component projections} *)
 
-  val get : 'n component -> ('n vecf) repr -> float repr
+  val get : 'n. 'n component -> ('n vecf) repr -> float repr
 
   (** {2 Swizzle operators} *)
 
-  val get2 : 'n component * 'n component -> ('n vecf) repr -> vec2f repr
-  val get3 : 'n component * 'n component * 'n component -> ('n vecf) repr -> vec3f repr
-  val get4 : 'n component * 'n component * 'n component * 'n component -> ('n vecf) repr -> vec4f repr
+  val get2 : 'n. 'n component * 'n component -> ('n vecf) repr -> vec2f repr
+  val get3 : 'n. 'n component * 'n component * 'n component -> ('n vecf) repr -> vec3f repr
+  val get4 : 'n. 'n component * 'n component * 'n component * 'n component -> ('n vecf) repr -> vec4f repr
 
   (** {2 Component updates} *)
 
-  val set : 'n component ->  float repr -> ('n vecf) repr -> ('n vecf) repr
+  val set : 'n. 'n component ->  float repr -> ('n vecf) repr -> ('n vecf) repr
 
 end
 
@@ -140,27 +140,27 @@ module type Notation = sig
   val ( !! ) : float -> float repr
 
   val ( + ) : float repr -> float repr -> float repr
-  val ( |+| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val ( |+ ) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( |+| ) : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |+ ) : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val ( - ) : float repr -> float repr -> float repr
-  val ( |-| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val ( |- ) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( |-| ) : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |- ) : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val (  *  ) : float repr -> float repr -> float repr
-  val ( |*| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val ( |* ) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( |*| ) : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |* ) : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val ( / ) : float repr -> float repr -> float repr
-  val ( |/| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val ( |/ ) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( |/| ) : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |/ ) : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
   val ( % ) : float repr -> float repr -> float repr
-  val ( |%| ) : ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
-  val ( |% ) : ('n vecf) repr -> float repr -> ('n vecf) repr
+  val ( |%| ) : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
+  val ( |% ) : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
-  val ( .%{ } ) : ('n vecf) repr -> 'n component -> float repr
-  val ( .%{ }<- ) : ('n vecf) repr -> 'n component ->  float repr -> ('n vecf) repr
+  val ( .%{ } ) : 'n. ('n vecf) repr -> 'n component -> float repr
+  val ( .%{ }<- ) : 'n. ('n vecf) repr -> 'n component ->  float repr -> ('n vecf) repr
 
 end
 
@@ -220,7 +220,7 @@ module Util (S : S) : sig
   val saturate : float S.repr -> float S.repr
 
   (** Clamp a vector to the range [[0.0, 1.0]] *)
-  val saturate_vec : ('n vecf) S.repr -> ('n vecf) S.repr
+  val saturate_vec : 'n. ('n vecf) S.repr -> ('n vecf) S.repr
 
 
   (** {1 Coordinate systems} **)
@@ -234,11 +234,11 @@ module Util (S : S) : sig
 
   (** Remap UV coordinates from normalised corner coordintes [[0.0, 1.0]] to
       centered cordinates [[-0.5, 0.5]] *)
-  val center_coords : ('n vecf) S.repr -> ('n vecf) S.repr
+  val center_coords : 'n. ('n vecf) S.repr -> ('n vecf) S.repr
 
   (** Remap UV coordinates from centered coordinates to [[-0.5, 0.5]] to corner
       coordinates [[0.0, 1.0]] *)
-  val corner_coords : ('n vecf) S.repr -> ('n vecf) S.repr
+  val corner_coords : 'n. ('n vecf) S.repr -> ('n vecf) S.repr
 
 end = struct
 

@@ -9,7 +9,7 @@ module Functor = struct
 
     (** Turn a function of type ['a -> 'b] into a function of type
         ['a t -> 'b t]. *)
-    val map : ('a -> 'b) -> ('a t -> 'b t)
+    val map : 'a 'b. ('a -> 'b) -> ('a t -> 'b t)
 
     (** {1 Laws}
 
@@ -39,11 +39,11 @@ module Functor = struct
 
     type 'a t
 
-    val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t
-    val ( >|= ) : 'a t -> ('a -> 'b) -> 'b t
-    val ( <$> ) : ('a -> 'b) -> 'a t -> 'b t
-    val ( <$ ) : 'a -> 'b t -> 'a t
-    val ( $> ) : 'b t -> 'a -> 'a t
+    val ( let+ ) : 'a 'b. 'a t -> ('a -> 'b) -> 'b t
+    val ( >|= ) : 'a 'b. 'a t -> ('a -> 'b) -> 'b t
+    val ( <$> ) : 'a 'b. ('a -> 'b) -> 'a t -> 'b t
+    val ( <$ ) : 'a 'b. 'a -> 'b t -> 'a t
+    val ( $> ) : 'a 'b. 'b t -> 'a -> 'a t
 
   end
 
@@ -95,10 +95,10 @@ module Applicative = struct
     include Functor.S with type 'a t := 'a t
 
     (** Embed a pure value in [t] *)
-    val pure : 'a -> 'a t
+    val pure : 'a. 'a -> 'a t
 
     (** Apply a function embedded in [t] to a value embedded in [t] *)
-    val apply : ('a -> 'b) t -> 'a t -> 'b t
+    val apply : 'a 'b. ('a -> 'b) t -> 'a t -> 'b t
 
   end
 
@@ -110,7 +110,7 @@ module Applicative = struct
 
     include Functor.Notation with type 'a t := 'a t
 
-    val ( <*> ) : ('a -> 'b) t -> 'a t -> 'b t
+    val ( <*> ) : 'a 'b. ('a -> 'b) t -> 'a t -> 'b t
 
   end
 
@@ -154,7 +154,7 @@ module Monad = struct
 
     include Applicative.S with type 'a t := 'a t
 
-    val bind : 'a t -> ('a -> 'b t) -> 'b t
+    val bind : 'a 'b. 'a t -> ('a -> 'b t) -> 'b t
 
   end
 
@@ -166,9 +166,9 @@ module Monad = struct
 
     include Applicative.Notation with type 'a t := 'a t
 
-    val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t
-    val ( and* ) : 'a t -> 'b t -> ('a * 'b) t
-    val ( and+ ) : 'a t -> 'b t -> ('a * 'b) t
+    val ( let* ) : 'a 'b. 'a t -> ('a -> 'b t) -> 'b t
+    val ( and* ) : 'a 'b. 'a t -> 'b t -> ('a * 'b) t
+    val ( and+ ) : 'a 'b. 'a t -> 'b t -> ('a * 'b) t
 
   end
 
@@ -231,10 +231,10 @@ module Monad = struct
     val read : value t
 
     (** Execute a computation in an environment that has been altered by a function *)
-    val scope : (value -> value) -> 'a t -> 'a t
+    val scope : 'a. (value -> value) -> 'a t -> 'a t
 
     (** Run a computation with the value *)
-    val run : value -> 'a t -> 'a
+    val run : 'a. value -> 'a t -> 'a
 
   end
 
@@ -283,11 +283,11 @@ module Monad = struct
     val put : state -> unit t
 
     (** Embed a state action in the environment *)
-    val embed : (state -> 'a * state) -> 'a t
+    val embed : 'a. (state -> 'a * state) -> 'a t
 
     (** Run a stateful computation using an initial state.
         This is the inverse of the {!state} function. *)
-    val run : 'a t -> state -> 'a * state
+    val run : 'a. 'a t -> state -> 'a * state
 
   end
 

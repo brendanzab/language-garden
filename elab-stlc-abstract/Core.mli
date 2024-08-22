@@ -28,7 +28,7 @@ val pp_tm : Format.formatter -> tm -> unit
 type 'a elab
 type ('a, 'e) elab_err = ('a, 'e) result elab
 
-val run : 'a elab -> 'a
+val run : 'a. 'a elab -> 'a
 
 
 (** {1 Forms of judgement} *)
@@ -48,9 +48,9 @@ type ty_mismatch = {
   expected_ty : ty;
 }
 
-val fail : 'e -> 'e synth_err
-val catch_check : ('e -> check) -> 'e check_err -> check
-val catch_synth : ('e -> synth) -> 'e synth_err -> synth
+val fail : 'e. 'e -> 'e synth_err
+val catch_check : 'e. ('e -> check) -> 'e check_err -> check
+val catch_synth : 'e. ('e -> synth) -> 'e synth_err -> synth
 
 
 (** {1 Inference rules} *)

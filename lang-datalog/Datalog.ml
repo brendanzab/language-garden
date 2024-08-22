@@ -87,10 +87,10 @@ module List : sig
 
   include module type of List
 
-  val remove_dupes : 'a list -> 'a list
+  val remove_dupes : 'a. 'a list -> 'a list
   (** [remove_dupes xs] removes all the duplicate elements from [xs]. *)
 
-  val subset : 'a list -> 'a list -> bool
+  val subset : 'a. 'a list -> 'a list -> bool
   (** [subset xs ys] returns [true] if all the elements of [xs] appear somewhere
       in [ys]. *)
 

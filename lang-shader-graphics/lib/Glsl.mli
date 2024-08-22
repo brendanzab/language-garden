@@ -14,30 +14,30 @@ type _ ty =
   | Mat4 : mat4f ty
 
 (** Compare two GLSL types for equality *)
-val equal_ty : 'a ty -> 'b ty -> bool
+val equal_ty : 'a 'b. 'a ty -> 'b ty -> bool
 
 (** Compile a GLSL type to a string *)
-val string_of_ty : 'a ty -> string
+val string_of_ty : 'a. 'a ty -> string
 
 
 (** A typed GLSL expression *)
 type 'a expr
 
 (** Unsafely construct a GLSL expression from a string. *)
-val unsafe_expr : string -> 'a ty -> 'a expr
+val unsafe_expr : 'a. string -> 'a ty -> 'a expr
 
 (** Compare two GLSL expressions for equality *)
-val equal_expr : 'a expr -> 'b expr -> bool
+val equal_expr : 'a 'b. 'a expr -> 'b expr -> bool
 
 (** Compile a GLSL expression to a string *)
-val string_of_expr : 'a expr -> string
+val string_of_expr : 'a. 'a expr -> string
 
 (** Return the type of a GLSL expression *)
-val ty_of_expr : 'a expr -> 'a ty
+val ty_of_expr : 'a. 'a expr -> 'a ty
 
 (** A GLSL expression of any type *)
 type any_expr =
-  | AnyExpr : 'a expr -> any_expr
+  | AnyExpr : 'a. 'a expr -> any_expr
 
 
 (** A collection of shared GLSL expressions. This is useful for compiling GLSL,
@@ -57,7 +57,7 @@ module Locals : sig
 
   (** Add a shared definition, avoiding the introduction of common
       sub-expressions. *)
-  val define : 'a expr -> t -> 'a expr * t
+  val define : 'a. 'a expr -> t -> 'a expr * t
 
 end
 
@@ -68,7 +68,7 @@ module Env : sig
   include Control.Monad.State with type state = Locals.t
 
   (** Define a new local definition *)
-  val define_local : 'a expr -> ('a expr) t
+  val define_local : 'a. 'a expr -> ('a expr) t
 
 end
 

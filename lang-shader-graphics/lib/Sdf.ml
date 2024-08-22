@@ -42,10 +42,10 @@ module type S = sig
   val rectangle : vec2f repr -> sdf2
 
   (* Line segments between two points *)
-  val segment : ?radius:float repr -> ('n vecf) repr -> ('n vecf) repr -> 'n sdf
+  val segment : 'n. ?radius:float repr -> ('n vecf) repr -> ('n vecf) repr -> 'n sdf
 
   (* Line from the origin, up to a length in the y axis *)
-  val segment_y : ?radius:float repr -> float repr -> ('n ge2) sdf
+  val segment_y : 'n. ?radius:float repr -> float repr -> ('n ge2) sdf
 
   (** {2 3D shapes} *)
 
@@ -92,10 +92,10 @@ module type S = sig
   (** {1 Position operations} *)
 
   (** Move a distance function by the supplied vector *)
-  val move : ('n vecf) repr -> 'n sdf -> 'n sdf
+  val move : 'n. ('n vecf) repr -> 'n sdf -> 'n sdf
 
   (** Uniformly scale a distance function by an amount *)
-  val scale : float repr -> 'n sdf -> 'n sdf
+  val scale : 'n. float repr -> 'n sdf -> 'n sdf
 
   (* TODO: rotate *)
 
@@ -103,13 +103,13 @@ module type S = sig
   (** {1 Reflection operations} *)
 
   (** Reflect a copy of the distance function in each axis *)
-  val reflect : 'n sdf -> 'n sdf
+  val reflect : 'n. 'n sdf -> 'n sdf
 
   (** Reflect a copy of the distance function in the x axis *)
-  val reflect_x : ('n ge1) sdf -> ('n ge1) sdf
+  val reflect_x : 'n. ('n ge1) sdf -> ('n ge1) sdf
 
   (** Reflect a copy of the distance function in the y axis *)
-  val reflect_y : ('n ge2) sdf -> ('n ge2) sdf
+  val reflect_y : 'n. ('n ge2) sdf -> ('n ge2) sdf
 
   (** Reflect a copy of the distance function in the z axis *)
   val reflect_z : ('n ge3) sdf -> ('n ge3) sdf
@@ -119,13 +119,13 @@ module type S = sig
 
   (** Repeat a distance function with the given spacing vector. The repetition
       can be optionally limited to a bounding volume. *)
-  val repeat : spacing:('n vecf) repr -> ?limit:('n vecf) repr -> 'n sdf -> 'n sdf
+  val repeat : 'n. spacing:('n vecf) repr -> ?limit:('n vecf) repr -> 'n sdf -> 'n sdf
 
 
   (** {1 Deformations and distortions} *)
 
   (** Displace an SDF with the supplied function *)
-  val displace : (('n vecf) repr -> dist) -> 'n sdf -> 'n sdf
+  val displace : 'n. (('n vecf) repr -> dist) -> 'n sdf -> 'n sdf
 
 
   (** {1 Compositing operations} *)

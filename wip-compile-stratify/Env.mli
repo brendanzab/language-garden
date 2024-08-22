@@ -22,16 +22,16 @@ type 'ns level
 type ('ns, 'entry) t
 
 (** Initial, empty environment *)
-val empty : ('ns, 'entry) t
+val empty : 'ns 'entry. ('ns, 'entry) t
 
 (** Bind a new entry in the environment *)
-val bind_entry : 'entry -> ('ns, 'entry) t -> ('ns, 'entry) t
+val bind_entry : 'ns 'entry. 'entry -> ('ns, 'entry) t -> ('ns, 'entry) t
 
 (** Get an entry in the environment using an index *)
-val lookup : 'ns index -> ('ns, 'entry) t -> 'entry
+val lookup : 'ns 'entry. 'ns index -> ('ns, 'entry) t -> 'entry
 
 (** Return the index of an entry in the environment *)
-val entry_index : 'entry -> ('ns, 'entry) t -> 'ns index option
+val entry_index : 'ns 'entry. 'entry -> ('ns, 'entry) t -> 'ns index option
 
 
 (** {1 Erased environments } *)
@@ -40,17 +40,17 @@ val entry_index : 'entry -> ('ns, 'entry) t -> 'ns index option
 type 'ns size
 
 (** Return the size of an environment *)
-val size : ('ns, 'entry) t -> 'ns size
+val size : 'ns 'entry. ('ns, 'entry) t -> 'ns size
 
 (** The size of an initial, empty environment *)
-val empty_size : 'ns size
+val empty_size : 'ns. 'ns size
 
 (** Bind a new level *)
-val bind_level : 'ns size -> 'ns size
+val bind_level : 'ns. 'ns size -> 'ns size
 
 (** Return a level that will point to the entry bound in the environment *)
-val next_level : 'ns size -> 'ns level
+val next_level : 'ns. 'ns size -> 'ns level
 
 (** Converts a {!level} to an {!index} that is bound in an environment of the
     supplied size. Assumes that [ size > level ]. *)
-val level_to_index : 'ns size -> 'ns level -> 'ns index
+val level_to_index : 'ns. 'ns size -> 'ns level -> 'ns index
