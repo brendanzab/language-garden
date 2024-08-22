@@ -1,5 +1,5 @@
 def anon0↑ (env4 : (Int, Int, Int)) (y5 : Int) :=
-  env4.0 * env4.2 + env4.1 * y5;
+  #add (#mul env4.0 env4.2) (#mul env4.1 y5);
 def f1↑ (env2 : (Int, Int)) (x3 : Int) :=
   clos(anon0↑, (env2.0, env2.1, x3));
 let a0 : Int := 2;

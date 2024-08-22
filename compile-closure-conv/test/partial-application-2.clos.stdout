@@ -1,6 +1,6 @@
 let add-captured : Int -> Int :=
   let x : Int := 5;
   let add-x : Int -> Int :=
-    clos(fun (env : (Int,)) (y : Int) => env.0 + y, (x,));
+    clos(fun (env : (Int,)) (y : Int) => #add env.0 y, (x,));
   add-x;
-add-captured 3 + 4
+#add (add-captured 3) 4

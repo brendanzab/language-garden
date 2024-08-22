@@ -78,35 +78,16 @@ let rec pp_tm (fmt : Format.formatter) (tm : tm) =
         pp_param (param_var, param_ty)
         pp_tm body
   | tm ->
-      pp_add_tm fmt tm
-and pp_add_tm (fmt : Format.formatter) (tm : tm) =
-  match tm with
-  | PrimApp (`Add, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ +@ %a@]"
-        pp_mul_tm arg1
-        pp_add_tm arg2
-  | PrimApp (`Sub, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ -@ %a@]"
-        pp_mul_tm arg1
-        pp_add_tm arg2
-  | tm ->
-      pp_mul_tm fmt tm
-and pp_mul_tm (fmt : Format.formatter) (tm : tm) =
-  match tm with
-  | PrimApp (`Mul, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ *@ %a@]"
-        pp_app_tm arg1
-        pp_mul_tm arg2
-  | tm ->
       pp_app_tm fmt tm
 and pp_app_tm (fmt : Format.formatter) (tm : tm) =
   match tm with
+  | PrimApp (head, args) ->
+      Format.fprintf fmt "@[#%s@ %a@]"
+        (Prim.to_string head)
+        (Format.pp_print_list pp_atomic_tm ~pp_sep:Format.pp_print_space) args
   | FunApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         pp_app_tm head
-        pp_atomic_tm arg
-  | PrimApp (`Neg, [arg]) ->
-      Format.fprintf fmt "@[-%a@]"
         pp_atomic_tm arg
   | tm ->
       pp_atomic_tm fmt tm

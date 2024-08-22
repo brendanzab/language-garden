@@ -92,7 +92,7 @@ let b : Int := 5;
 let f : Int -> Int -> Int :=
   clos(fun (env : (Int, Int)) (x : Int) =>
        clos(fun (env : (Int, Int, Int)) (y : Int) =>
-            env.0 * env.2 + env.1 * y,
+            #add (#mul env.0 env.2) (#mul env.1 y),
          (env.0, env.1, x)),
     (a, b));
 f 7 3
@@ -103,7 +103,7 @@ Lambda lifted term:
 <!-- $MDX file=test/multiple-captures-3.lifted.stdout -->
 ```text
 def anon0↑ (env4 : (Int, Int, Int)) (y5 : Int) :=
-  env4.0 * env4.2 + env4.1 * y5;
+  #add (#mul env4.0 env4.2) (#mul env4.1 y5);
 def f1↑ (env2 : (Int, Int)) (x3 : Int) :=
   clos(anon0↑, (env2.0, env2.1, x3));
 let a0 : Int := 2;

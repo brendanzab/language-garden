@@ -86,36 +86,17 @@ let rec pp_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
         pp_param (name, param_ty)
         (pp_tm [name; "env"]) body
   | tm ->
-      pp_add_tm names fmt tm
-and pp_add_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
-  match tm with
-  | PrimApp (`Add, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ +@ %a@]"
-        (pp_mul_tm names) arg1
-        (pp_add_tm names) arg2
-  | PrimApp (`Sub, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ -@ %a@]"
-        (pp_mul_tm names) arg1
-        (pp_add_tm names) arg2
-  | tm ->
-      pp_mul_tm names fmt tm
-and pp_mul_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
-  match tm with
-  | PrimApp (`Mul, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ *@ %a@]"
-        (pp_app_tm names) arg1
-        (pp_mul_tm names) arg2
-  | tm ->
       pp_app_tm names fmt tm
 and pp_app_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
   match tm with
+  | PrimApp (head, args) ->
+      Format.fprintf fmt "@[#%s@ %a@]"
+        (Prim.to_string head)
+        (Format.pp_print_list (pp_proj_tm names) ~pp_sep:Format.pp_print_space) args
   | ClosApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
         (pp_proj_tm names) arg
-  | PrimApp (`Neg, [arg]) ->
-      Format.fprintf fmt "@[-%a@]"
-        (pp_atomic_tm names) arg
   | tm ->
       pp_proj_tm names fmt tm
 and pp_proj_tm (names : string list) (fmt : Format.formatter) (tm : tm) =

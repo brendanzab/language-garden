@@ -88,7 +88,7 @@ and pp_app_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
   | PrimApp (head, args) ->
       Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.to_string head)
-        (Format.pp_print_list (pp_expr names) ~pp_sep:Format.pp_print_space) args
+        (Format.pp_print_list (pp_proj_expr names) ~pp_sep:Format.pp_print_space) args
   | FunApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_expr names) head

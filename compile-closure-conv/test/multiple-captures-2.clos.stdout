@@ -2,4 +2,4 @@ let a : Int := 2;
 let b : Int := 4;
 let c : Int := 7;
 let d : Int := 8;
-clos(fun (env : (Int, Int)) (x : Int) => env.0 * x + env.1, (a, c))
+clos(fun (env : (Int, Int)) (x : Int) => #add (#mul env.0 x) env.1, (a, c))

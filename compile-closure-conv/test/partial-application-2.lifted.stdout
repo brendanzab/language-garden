@@ -1,3 +1,3 @@
-def add-x0↑ (env1 : (Int,)) (y2 : Int) := env1.0 + y2;
+def add-x0↑ (env1 : (Int,)) (y2 : Int) := #add env1.0 y2;
 let add-captured3 : Int -> Int := let x0 : Int := 5; clos(add-x0↑, (x0,));
-add-captured3 3 + 4
+#add (add-captured3 3) 4
