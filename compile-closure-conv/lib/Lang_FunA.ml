@@ -63,7 +63,7 @@ let pp_param (fmt : Format.formatter) (var, ty) =
 let rec pp_tm (fmt : Format.formatter) (tm : tm) =
   match tm with
   | Let _ as tm ->
-      let rec go (fmt : Format.formatter) (tm : tm) =
+      let rec go fmt tm =
         match tm with
         | Let (def_var, def_ty, def, body) ->
             Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
