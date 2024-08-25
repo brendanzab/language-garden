@@ -26,6 +26,9 @@ module ExtensibleVariants = struct
 
   end
 
+
+  (* Language extensions *)
+
   module Bool = struct
 
     type expr +=
@@ -123,6 +126,7 @@ module ExtensibleVariants = struct
 
   end
 
+
   (* Wiring it all together! *)
 
   let ( let@ ) = ( @@ )
@@ -134,6 +138,21 @@ module ExtensibleVariants = struct
     let@ () = Var.eval env e in
     let@ () = Let.eval eval env e in
     failwith "expression not covered"
+
+
+  (* Tests *)
+
+  let () = begin
+
+    let e : expr =
+      Let.Let ("y", Int.Lit 3,
+        Fun.App (Fun.Lit ("x",
+          Int.Add (Var.Var "x", Int.Lit 1)), Var.Var "y"))
+    in
+
+    assert (eval Env.empty e = Int.Value 4);
+
+  end
 
 end
 
@@ -151,6 +170,9 @@ module PolymorphicVariants = struct
       fun x' -> if x = x' then value else env x
 
   end
+
+
+  (* Language extensions *)
 
   module Int = struct
 
@@ -258,6 +280,7 @@ module PolymorphicVariants = struct
 
   end
 
+
   (* Wiring it all together! *)
 
   type expr = expr Var.expr Let.expr Fun.expr Bool.expr Int.expr
@@ -273,32 +296,19 @@ module PolymorphicVariants = struct
     let@ () = Let.eval eval env e in
     failwith "expression not covered"
 
-end
 
-let () = begin
+  (* Tests *)
 
-  let open ExtensibleVariants in
+  let () = begin
 
-  let e : expr =
-    Let.Let ("y", Int.Lit 3,
-      Fun.App (Fun.Lit ("x",
-        Int.Add (Var.Var "x", Int.Lit 1)), Var.Var "y"))
-  in
+    let e : expr =
+      `Let ("y", `IntLit 3,
+        `FunApp (`FunLit ("x",
+          `IntAdd (`Var "x", `IntLit 1)), `Var "y"))
+    in
 
-  assert (eval Env.empty e = Int.Value 4);
+    assert (eval Env.empty e = `IntLit 4);
 
-end
-
-let () = begin
-
-  let open PolymorphicVariants in
-
-  let e : expr =
-    `Let ("y", `IntLit 3,
-      `FunApp (`FunLit ("x",
-        `IntAdd (`Var "x", `IntLit 1)), `Var "y"))
-  in
-
-  assert (eval Env.empty e = `IntLit 4);
+  end
 
 end
