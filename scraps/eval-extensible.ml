@@ -40,9 +40,9 @@ module ExtensibleVariants = struct
 
     let eval (eval : expr -> value) (e : expr) (default : unit -> value) : value =
       match e with
-      | Lit i -> Value i
-      | Elim (b, body1, body2) ->
-          begin match eval b with
+      | Lit b -> Value b
+      | Elim (head, body1, body2) ->
+          begin match eval head with
           | Value true -> eval body1
           | Value false -> eval body2
           | _ -> failwith "expected boolean"
@@ -92,10 +92,10 @@ module ExtensibleVariants = struct
 
     let eval (eval : Env.t -> expr -> value) (env : Env.t) (e : expr) (default : unit -> value) : value =
       match e with
-      | Lit (x, b) -> Value (fun arg -> eval (Env.extend x arg env) b)
-      | App (f, arg) ->
-          begin match eval env f with
-          | Value f -> f (eval env arg)
+      | Lit (x, body) -> Value (fun arg -> eval (Env.extend x arg env) body)
+      | App (head, arg) ->
+          begin match eval env head with
+          | Value body -> body (eval env arg)
           | _ -> failwith "expected function"
           end
       | _ -> default ()
@@ -121,7 +121,7 @@ module ExtensibleVariants = struct
 
     let eval (eval : Env.t -> expr -> value) (env : Env.t) (e : expr) (default : unit -> value) : value =
       match e with
-      | Let (x, e, b) -> eval (Env.extend x (eval env e) env) b
+      | Let (x, def, body) -> eval (Env.extend x (eval env def) env) body
       | _ -> default ()
 
   end
@@ -220,9 +220,9 @@ module PolymorphicVariants = struct
 
     let eval (eval : 'e -> 'v) (e : 'e expr) (default : unit -> 'v) : 'v value =
       match e with
-      | `BoolLit i -> `BoolLit i
-      | `BoolElim (b, body1, body2) ->
-          begin match eval b with
+      | `BoolLit b -> `BoolLit b
+      | `BoolElim (head, body1, body2) ->
+          begin match eval head with
           | `BoolValue true -> eval body1
           | `BoolValue false -> eval body2
           | _ -> failwith "expected boolean"
@@ -244,10 +244,10 @@ module PolymorphicVariants = struct
 
     let eval (eval : 'v Env.t -> 'e -> 'v) (env : 'v Env.t) (e : 'e expr) (default : unit -> 'v) : 'v value =
       match e with
-      | `FunLit (x, b) -> `FunLit (fun arg -> eval (Env.extend x arg env) b)
-      | `FunApp (f, arg) ->
-          begin match eval env f with
-          | `FunLit f -> f (eval env arg)
+      | `FunLit (x, body) -> `FunLit (fun arg -> eval (Env.extend x arg env) body)
+      | `FunApp (head, arg) ->
+          begin match eval env head with
+          | `FunLit body -> body (eval env arg)
           | _ -> failwith "expected function"
           end
       | _ -> default ()
@@ -275,7 +275,7 @@ module PolymorphicVariants = struct
 
     let eval (eval : 'v Env.t -> 'e -> 'v) (env : 'v Env.t) (e : 'e expr) (default : unit -> 'v) : 'v =
       match e with
-      | `Let (x, e, b) -> eval (Env.extend x (eval env e) env) b
+      | `Let (x, def, body) -> eval (Env.extend x (eval env def) env) body
       | _ -> default ()
 
   end
