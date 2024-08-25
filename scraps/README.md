@@ -16,3 +16,5 @@ build system support and are untested for now.
 - [**elab-stlc-bidir.rs**](./elab-stlc-bidir.rs):
   Bidirectional elaborator for a simple functional language
   (compare with [check-stlc-bidir.rs](./check-stlc-bidir.rs)).
+- [**eval-extensible**](./eval-extensible.ml): Extensible interpreters for
+  lambda calculus and arithmetic expressions.
