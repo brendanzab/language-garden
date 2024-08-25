@@ -26,12 +26,35 @@ module ExtensibleVariants = struct
 
   end
 
+  module Bool = struct
+
+    type expr +=
+      | Lit of bool
+      | Elim of expr * expr * expr
+
+    type value +=
+      | Value of bool
+
+    let eval (eval : expr -> value) (e : expr) (default : unit -> value) : value =
+      match e with
+      | Lit i -> Value i
+      | Elim (b, body1, body2) ->
+          begin match eval b with
+          | Value true -> eval body1
+          | Value false -> eval body2
+          | _ -> failwith "expected boolean"
+          end
+      | _ -> default ()
+
+  end
+
   module Int = struct
 
     type expr +=
       | Lit of int
       | Add of expr * expr
       | Mul of expr * expr
+      | Eq of expr * expr
 
     type value +=
       | Value of int
@@ -46,6 +69,11 @@ module ExtensibleVariants = struct
       | Lit i -> Value i
       | Add (x, y) -> apply2 ( + ) (eval x) (eval y)
       | Mul (x, y) -> apply2 ( * ) (eval x) (eval y)
+      | Eq (x, y) ->
+          begin match eval x, eval y with
+          | Value x, Value y -> Bool.Value (x = y)
+          | _ -> failwith "expected integers"
+          end
       | _ -> default ()
 
   end
@@ -101,6 +129,7 @@ module ExtensibleVariants = struct
 
   let rec eval (env : Env.t) (e : expr) : value =
     let@ () = Int.eval (eval env) e in
+    let@ () = Bool.eval (eval env) e in
     let@ () = Fun.eval eval env e in
     let@ () = Var.eval env e in
     let@ () = Let.eval eval env e in
@@ -129,10 +158,12 @@ module PolymorphicVariants = struct
       | `IntLit of int
       | `IntAdd of 'e expr * 'e expr
       | `IntMul of 'e expr * 'e expr
+      | `IntEq of 'e expr * 'e expr
     ] as 'e
 
     type 'v value = [>
       | `IntLit of int
+      | `BoolLit of bool
     ] as 'v
 
     let eval (eval : 'e -> 'v) (e : 'e expr) (default : unit -> 'v) : 'v value =
@@ -145,6 +176,35 @@ module PolymorphicVariants = struct
       | `IntLit i -> `IntLit i
       | `IntAdd (x, y) -> apply2 ( + ) (eval x) (eval y)
       | `IntMul (x, y) -> apply2 ( * ) (eval x) (eval y)
+      | `IntEq (x, y) ->
+          begin match eval x, eval y with
+          | `IntLit x, `IntLit y -> `BoolValue (x = y)
+          | _ -> failwith "expected integers"
+          end
+      | _ -> default ()
+
+  end
+
+  module Bool = struct
+
+    type 'e expr = [>
+      | `BoolLit of bool
+      | `Elim of 'e expr * 'e expr * 'e expr
+    ] as 'e
+
+    type 'v value = [>
+      | `BoolLit of bool
+    ] as 'v
+
+    let eval (eval : 'e -> 'v) (e : 'e expr) (default : unit -> 'v) : 'v value =
+      match e with
+      | `BoolLit i -> `BoolLit i
+      | `BoolElim (b, body1, body2) ->
+          begin match eval b with
+          | `BoolValue true -> eval body1
+          | `BoolValue false -> eval body2
+          | _ -> failwith "expected boolean"
+          end
       | _ -> default ()
 
   end
@@ -200,13 +260,14 @@ module PolymorphicVariants = struct
 
   (* Wiring it all together! *)
 
-  type expr = expr Var.expr Let.expr Fun.expr Int.expr
-  type value = value Fun.value Int.value
+  type expr = expr Var.expr Let.expr Fun.expr Bool.expr Int.expr
+  type value = value Fun.value Bool.value Int.value
 
   let ( let@ ) = ( @@ )
 
   let rec eval (env : value Env.t) (e : expr) : value =
     let@ () = Int.eval (eval env) e in
+    let@ () = Bool.eval (eval env) e in
     let@ () = Fun.eval eval env e in
     let@ () = Var.eval env e in
     let@ () = Let.eval eval env e in
