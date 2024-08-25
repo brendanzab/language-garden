@@ -11,9 +11,14 @@
 
 module ExtensibleVariants = struct
 
+  (** Type of expressions *)
   type expr = ..
+
+  (** Type of values *)
   type value = ..
 
+
+  (** Environments, as mappings from strings to value *)
   module Env = struct
 
     type t = string -> value
@@ -63,20 +68,16 @@ module ExtensibleVariants = struct
       | Value of int
 
     let eval (eval : expr -> value) (e : expr) (default : unit -> value) : value =
-      let apply2 f v1 v2 =
-        match v1, v2 with
-        | Value x, Value y -> Value (f x y)
-        | _ -> failwith "expected integers"
+      let eval_int e =
+        match eval e with
+        | Value x -> x
+        | _ -> failwith "expected integer"
       in
       match e with
       | Lit i -> Value i
-      | Add (x, y) -> apply2 ( + ) (eval x) (eval y)
-      | Mul (x, y) -> apply2 ( * ) (eval x) (eval y)
-      | Eq (x, y) ->
-          begin match eval x, eval y with
-          | Value x, Value y -> Bool.Value (x = y)
-          | _ -> failwith "expected integers"
-          end
+      | Add (x, y) -> Value (eval_int x + eval_int y)
+      | Mul (x, y) -> Value (eval_int x * eval_int y)
+      | Eq (x, y) -> Bool.Value (eval_int x = eval_int y)
       | _ -> default ()
 
   end
@@ -189,20 +190,16 @@ module PolymorphicVariants = struct
     ] as 'v
 
     let eval (eval : 'e -> 'v) (e : 'e expr) (default : unit -> 'v) : 'v value =
-      let apply2 f v1 v2 =
-        match v1, v2 with
-        | `IntLit x, `IntLit y -> `IntLit (f x y)
-        | _ -> failwith "expected integers"
+      let eval_int e =
+        match eval e with
+        | `IntLit x -> x
+        | _ -> failwith "expected integer"
       in
       match e with
       | `IntLit i -> `IntLit i
-      | `IntAdd (x, y) -> apply2 ( + ) (eval x) (eval y)
-      | `IntMul (x, y) -> apply2 ( * ) (eval x) (eval y)
-      | `IntEq (x, y) ->
-          begin match eval x, eval y with
-          | `IntLit x, `IntLit y -> `BoolValue (x = y)
-          | _ -> failwith "expected integers"
-          end
+      | `IntAdd (x, y) -> `IntLit (eval_int x + eval_int y)
+      | `IntMul (x, y) -> `IntLit (eval_int x * eval_int y)
+      | `IntEq (x, y) -> `BoolLit (eval_int x = eval_int y)
       | _ -> default ()
 
   end
