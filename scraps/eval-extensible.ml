@@ -9,6 +9,10 @@
     Records, sums, cases, and exceptions: Row-polymorphism at work}.
 *)
 
+
+(** An extensible interpreter implemented using OCaml’s extensible variant
+    types. See the {{:https://ocaml.org/manual/5.2/extensiblevariants.html}
+    OCaml manual}. for more information on this feature. *)
 module ExtensibleVariants = struct
 
   (** Type of expressions *)
@@ -18,7 +22,7 @@ module ExtensibleVariants = struct
   type value = ..
 
 
-  (** Environments, as mappings from strings to value *)
+  (** Environments, as mappings from strings to values *)
   module Env = struct
 
     type t = string -> value
@@ -158,8 +162,12 @@ module ExtensibleVariants = struct
 end
 
 
+(** An extensible interpreter implemented using OCaml’s polymorphic variants.
+    See the {{:https://ocaml.org/manual/5.2/polyvariant.html} OCaml manual}.
+    for more information on this feature. *)
 module PolymorphicVariants = struct
 
+  (** Environments, as mappings from strings to values *)
   module Env = struct
 
     type 'v t = string -> 'v
