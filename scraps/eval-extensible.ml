@@ -1,9 +1,8 @@
 (** This is a demonstration of implementing interpreters in an extensible way
     that offers a partial solution to the expression problem. The idea is that
     the language can be extended with more features after the fact, without
-    altering previous definitions. It also has the benefit of grouping the
-    related extensions to the syntax and semantic domains together with the
-    relevant evaluation rules in a per-feature way.
+    altering previous definitions. It also has the benefit of grouping together
+    related extensions to the syntax and semantics in a per-feature way.
 
     This approach used is similar to the one described by Matthias Blume in
     {{:https://www.microsoft.com/en-us/research/video/records-sums-cases-and-exceptions-row-polymorphism-at-work/}
