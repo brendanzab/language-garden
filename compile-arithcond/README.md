@@ -1,5 +1,7 @@
 # Arithmetic expression compiler
 
+Extends [**compile-arith**](../compile-arith).
+
 An interpreter and compiler for a language of arithmetic expressions, extended
 with booleans, let bindings and conditional expressions.
 
