@@ -82,29 +82,6 @@
           });
         });
 
-      # Executables that don’t have the same name as the package they were
-      # defined in can be listed here to register them with `nix run`.
-      executables = {
-        compile-arith = [ "arith" ];
-        compile-arithcond = [ "arithcond" ];
-        compile-closure-conv = [ "closure-conv" ];
-        elab-dependent = [ "dependent" ];
-        elab-dependent-sugar = [ "dependent-sugar" ];
-        elab-record-patching = [ "record-patching" ];
-        elab-stlc-abstract = [ "stlc-abstract" ];
-        elab-stlc-bidirectional = [ "stlc-bidirectional" ];
-        elab-stlc-bidirectional-stratify = [ "stlc-bidirectional-stratify" ];
-        elab-stlc-unification = [ "stlc-unification" ];
-        elab-stlc-variant-unification = [ "stlc-variant-unification" ];
-        lang-datalog = [ "datalog" ];
-        lang-doc-templates = [ "doc-templates" ];
-        lang-fractal-growth = [ "fractal-growth" ];
-        lang-lc-interpreters = [ "lc-interpreters" ];
-        lang-shader-graphics = [ "shader-graphics" ];
-        wip-compile-stratify = [ "stratify" ];
-        wip-elab-builtins = [ "builtins" ];
-      };
-
       buildOpamProject = system: options:
         (opam-nix.lib.${system}.buildOpamProject' options ./. query).overrideScope
           overlay.${system};
@@ -135,21 +112,6 @@
       #     $ nix build .#<name>
       #
       inherit legacyPackages;
-
-      # Exposed executables than can be executed with `nix run`:
-      #
-      #     $ nix run .#<name>
-      #     $ nix run .#<name> -- <args>
-      #
-      apps = eachSystem (system:
-        lib.foldlAttrs
-          (apps: package: names:
-            apps // lib.genAttrs names (name: {
-              type = "app";
-              program = "${packages.${system}.${package}}/bin/${name}";
-            }))
-          { }
-          executables);
 
       # Development shells
       #
