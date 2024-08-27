@@ -57,6 +57,18 @@ let e1 := mul e0 7;
 add 1 e1
 ```
 
+### A-Normal Form
+
+This defines an intermediate binding for each computation. This is close to
+the [three-address code] found in many optimising compilers.
+
+```sh
+$ arith compile --target=anf <<< "1 + -2 * 7"
+let e0 := neg 2;
+let e1 := mul e0 7;
+add 1 e1
+```
+
 This implementation is extended with conditionals and let expressions in the
 [compile-arithcond](../compile-arithcond) project.
 
