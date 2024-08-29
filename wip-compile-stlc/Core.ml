@@ -12,6 +12,7 @@ type ty =
 
 type expr =
   | Var of index                                  (* x *)
+  | Prim of Prim.t                                (* #p *)
   | Let of name * ty * expr * expr                (* let x : t := e1; e2 *)
   | FunLit of name * ty * expr                    (* fun (x : t) => e *)
   | FunApp of expr * expr                         (* e1 e2 *)
@@ -20,7 +21,6 @@ type expr =
   | BoolLit of bool                               (* true | false *)
   | BoolElim of expr * expr * expr                (* if e1 then e2 else e3 *)
   | IntLit of int                                 (* ... | -1 | 0 | 1 | ... *)
-  | PrimApp of Prim.t * expr list                 (* p e1 ... en *)
 
 (** {1 Pretty printing} *)
 
@@ -85,10 +85,6 @@ and pp_if_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
       pp_app_expr names fmt expr
 and pp_app_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
   match expr with
-  | PrimApp (head, args) ->
-      Format.fprintf fmt "@[#%s@ %a@]"
-        (Prim.to_string head)
-        (Format.pp_print_list (pp_proj_expr names) ~pp_sep:Format.pp_print_space) args
   | FunApp (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_expr names) head
@@ -106,6 +102,7 @@ and pp_proj_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
 and pp_atomic_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
   match expr with
   | Var index -> Name.pp fmt (List.nth names index)
+  | Prim prim -> Format.fprintf fmt "#%s" (Prim.name prim)
   | TupleLit exprs -> Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems (pp_expr names)) exprs
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
@@ -115,6 +112,7 @@ and pp_atomic_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) 
 module Semantics = struct
 
   type vexpr =
+    | Prim of Prim.t
     | IntLit of int
     | BoolLit of bool
     | FunLit of (vexpr -> vexpr)
@@ -122,21 +120,26 @@ module Semantics = struct
 
   type env = vexpr list
 
-  (* TODO: Figure out how to move to Prim module *)
-  let eval_prim (prim : Prim.t) (args : vexpr list) : vexpr =
-    match prim, args with
-    | BoolEq, [BoolLit e1; BoolLit e2] -> BoolLit (Bool.equal e1 e2)
-    | BoolNot, [BoolLit e1] -> BoolLit (Bool.not e1)
-    | IntEq, [IntLit e1; IntLit e2] -> BoolLit (Int.equal e1 e2)
-    | IntAdd, [IntLit e1; IntLit e2] -> IntLit (Int.add e1 e2)
-    | IntSub, [IntLit e1; IntLit e2] -> IntLit (Int.sub e1 e2)
-    | IntMul, [IntLit e1; IntLit e2] -> IntLit (Int.mul e1 e2)
-    | IntNeg, [IntLit t1] -> IntLit (Int.neg t1)
-    | _ -> invalid_arg "unexpected primitive appliction"
+  let prim_of_vexpr (vexpr : vexpr) : Prim.value =
+    match vexpr with
+    | BoolLit b -> BoolLit b
+    | IntLit i -> IntLit i
+    | _ -> failwith "invalid primitive"
+
+  let vexpr_of_prim (v : Prim.value) : vexpr =
+    match v with
+    | BoolLit b -> BoolLit b
+    | IntLit i -> IntLit i
+
+  let prim_app (prim : Prim.t) (arg : vexpr) : vexpr =
+    match arg with
+    | TupleLit args -> vexpr_of_prim (Prim.app prim (List.map prim_of_vexpr args))
+    | _ -> invalid_arg "invalid prim app"
 
   let rec eval (env : env) (expr : expr) : vexpr =
     match expr with
     | Var index -> List.nth env index
+    | Prim prim -> Prim prim
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
@@ -144,6 +147,7 @@ module Semantics = struct
         FunLit (fun arg -> eval (arg :: env) body)
     | FunApp (head, arg) ->
         begin match eval env head with
+        | Prim prim -> prim_app prim (eval env arg)
         | FunLit body -> body (eval env arg)
         | _ -> invalid_arg "expected function"
         end
@@ -162,8 +166,6 @@ module Semantics = struct
         | BoolLit false -> eval env on_false
         | _ -> invalid_arg "expected boolean"
         end
-    | PrimApp (prim, args) ->
-        eval_prim prim (List.map (eval env) args)
 
 end
 
@@ -171,6 +173,9 @@ end
 let rec type_of (local_tys : ty list) (expr : expr) : ty =
   match expr with
   | Var index -> List.nth local_tys index
+  | Prim prim ->
+      let param_tys, body_ty = Prim.ty prim in
+      FunTy (TupleTy (List.map type_of_prim param_tys), type_of_prim body_ty)
   | Let (_, def_ty, _, body) -> type_of (def_ty :: local_tys) body
   | FunLit (_, param_ty, body) ->
       FunTy (param_ty, type_of (param_ty :: local_tys) body)
@@ -188,8 +193,7 @@ let rec type_of (local_tys : ty list) (expr : expr) : ty =
   | BoolLit _ -> BoolTy
   | BoolElim (_, on_true, _) -> type_of local_tys on_true
   | IntLit _ -> IntTy
-  | PrimApp (prim, _) ->
-      begin match prim with
-      | BoolEq | BoolNot | IntEq -> BoolTy
-      | IntAdd | IntSub | IntMul | IntNeg -> IntTy
-      end
+and type_of_prim (prim_ty : Prim.ty) : ty =
+  match prim_ty with
+  | BoolTy -> BoolTy
+  | IntTy -> IntTy

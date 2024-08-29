@@ -181,8 +181,8 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
 
   | Op2 (`Eq, expr0, expr1) ->
       begin match elab_infer ctx expr0, elab_infer ctx expr1 with
-      | (expr0, BoolTy), (expr1, BoolTy) -> PrimApp (BoolEq, [expr0; expr1]), BoolTy
-      | (expr0, IntTy), (expr1, IntTy) -> PrimApp (IntEq, [expr0; expr1]), BoolTy
+      | (expr0, BoolTy), (expr1, BoolTy) -> FunApp (Prim BoolEq, TupleLit [expr0; expr1]), BoolTy
+      | (expr0, IntTy), (expr1, IntTy) -> FunApp (Prim IntEq, TupleLit [expr0; expr1]), BoolTy
       | (_, lhs_ty), (_, rhs_ty) when lhs_ty = rhs_ty ->
           error expr.loc
             (Format.asprintf "@[<v 2>@[unsupported operand types:@]@ @[left: %a@]@ @[right: %a@]@]"
@@ -204,7 +204,7 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
         | `Sub -> Prim.IntSub
         | `Mul -> Prim.IntMul
       in
-      PrimApp (prim, [expr0; expr1]), IntTy
+      FunApp (Prim prim, TupleLit [expr0; expr1]), IntTy
 
   | Op2 (`And, expr0, expr1) ->
       let expr0 = elab_check ctx expr0 BoolTy in
@@ -218,11 +218,11 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
 
   | Op1 (`Neg, expr) ->
       let expr = elab_check ctx expr IntTy in
-      PrimApp (IntNeg, [expr]), IntTy
+      FunApp (Prim IntNeg, TupleLit [expr]), IntTy
 
   | Op1 (`Not, expr) ->
       let expr = elab_check ctx expr BoolTy in
-      PrimApp (BoolNot, [expr]), BoolTy
+      FunApp (Prim BoolNot, TupleLit [expr]), BoolTy
 
 
 (** Elaborate a function literal into a core term, given an expected type. *)

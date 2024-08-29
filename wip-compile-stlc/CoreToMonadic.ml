@@ -42,6 +42,8 @@ let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
   match expr with
   | Var index ->
       Atom (Var (SrcEnv.lookup_id index env))
+  | Prim prim ->
+      Atom (Prim prim)
   | Let (def_name, def_ty, def, body) ->
       let def_id = Monadic.Id.fresh () in
       Let (def_name, def_id, def_ty, translate env def,
@@ -67,9 +69,6 @@ let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
       Monadic.BoolElim (head, translate env on_true, translate env on_false)
   | IntLit i ->
       Atom (IntLit i)
-  | PrimApp (prim, args) ->
-      let@ args = translate_names env "arg" args in
-      Monadic.PrimApp (prim, args)
 
 and translate_name (env : SrcEnv.t) (name : string) (expr : Core.expr) (k : Monadic.aexpr -> Monadic.expr) : Monadic.expr =
   let expr_id = Monadic.Id.fresh () in

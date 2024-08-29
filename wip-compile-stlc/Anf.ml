@@ -38,12 +38,12 @@ type expr =
 and cexpr =
   | FunApp of aexpr * aexpr                               (* ae1 ae2 *)
   | TupleProj of aexpr * int                              (* ae.n *)
-  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | Atom of aexpr                                         (* ae *)
 
 (** Atomic expressions *)
 and aexpr =
   | Var of id                                             (* x *)
+  | Prim of Prim.t                                        (* #p *)
   | FunLit of name * id * ty * expr                       (* fun (x : t) => e *)
   | TupleLit of aexpr list                                (* (ae1, ..., aen) *)
   | BoolLit of bool                                       (* true | false *)
@@ -52,6 +52,7 @@ and aexpr =
 module Semantics = struct
 
   type vexpr = Core.Semantics.vexpr =
+    | Prim of Prim.t
     | IntLit of int
     | BoolLit of bool
     | FunLit of (vexpr -> vexpr)
@@ -91,6 +92,7 @@ module Semantics = struct
     match expr with
     | FunApp (head, arg) ->
         begin match eval_atom env head with
+        | Prim prim -> Core.Semantics.prim_app prim (eval_atom env arg)
         | FunLit body -> body (eval_atom env arg)
         | _ -> invalid_arg "expected function"
         end
@@ -99,8 +101,6 @@ module Semantics = struct
         | TupleLit evs -> List.nth evs label
         | _ -> invalid_arg "expected tuple"
         end
-    | PrimApp (prim, args) ->
-        Core.Semantics.eval_prim prim (List.map (eval_atom env) args)
     | Atom expr ->
         eval_atom env expr
 
@@ -111,6 +111,7 @@ module Semantics = struct
         | Value expr -> expr
         | _ -> invalid_arg "expected value"
         end
+    | Prim prim -> Prim prim
     | FunLit (_, param_id, _, body) ->
         FunLit (fun arg -> eval ((param_id, Value arg) :: env) body)
     | TupleLit exprs ->

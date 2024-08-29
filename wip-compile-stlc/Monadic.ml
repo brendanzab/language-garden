@@ -23,12 +23,12 @@ and expr =
   | FunApp of aexpr * aexpr                               (* ae1 ae2 *)
   | TupleProj of aexpr * int                              (* ae.n *)
   | BoolElim of aexpr * expr * expr                       (* if ae then e1 else e2 *)
-  | PrimApp of Prim.t * aexpr list                        (* p ae1 ... aen *)
   | Atom of aexpr                                         (* ae *)
 
 (** Atomic expressions *)
 and aexpr =
   | Var of id                                             (* x *)
+  | Prim of Prim.t                                        (* #p *)
   | FunLit of name * id * ty * expr                       (* fun (x : t) => e *)
   | TupleLit of aexpr list                                (* (ae1, ..., aen) *)
   | BoolLit of bool                                       (* true | false *)
@@ -37,6 +37,7 @@ and aexpr =
 module Semantics = struct
 
   type vexpr = Core.Semantics.vexpr =
+    | Prim of Prim.t
     | IntLit of int
     | BoolLit of bool
     | FunLit of (vexpr -> vexpr)
@@ -51,6 +52,7 @@ module Semantics = struct
         eval ((def_id, def) :: env) body
     | FunApp (head, arg) ->
         begin match eval_atom env head with
+        | Prim prim -> Core.Semantics.prim_app prim (eval_atom env arg)
         | FunLit body -> body (eval_atom env arg)
         | _ -> invalid_arg "expected function"
         end
@@ -65,14 +67,13 @@ module Semantics = struct
         | BoolLit false -> eval env on_false
         | _ -> invalid_arg "expected boolean"
         end
-    | PrimApp (prim, args) ->
-        Core.Semantics.eval_prim prim (List.map (eval_atom env) args)
     | Atom expr ->
         eval_atom env expr
 
   and eval_atom (env : env) (expr : aexpr) : vexpr =
     match expr with
     | Var name -> List.assoc name env
+    | Prim prim -> Prim prim
     | FunLit (_, param_id, _, body) ->
         FunLit (fun arg -> eval ((param_id, arg) :: env) body)
     | TupleLit exprs ->

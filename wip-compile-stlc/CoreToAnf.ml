@@ -53,6 +53,8 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
     match expr with
     | Var index ->
         k env (Atom (Var (SrcEnv.lookup_id index env)))
+    | Prim prim ->
+        k env (Atom (Anf.Prim prim))
     | Let (def_name, def_ty, def, body) ->
         translate def env @@ fun env def ->
           let def_id = Anf.Id.fresh () in
@@ -89,9 +91,6 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
               translate_name "on-false" on_false env (join_app def_id)))
     | IntLit i ->
         k env (Atom (IntLit i))
-    | PrimApp (prim, args) ->
-        translate_names "arg" args env @@ fun env args ->
-          k env (PrimApp (prim, args))
 
 (** Translate an expression to ANF, binding it to an intermediate definition
     if needed. *)
