@@ -180,19 +180,13 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
       error expr.loc "ambiguous if expression"
 
   | Op2 (`Eq, expr0, expr1) ->
-      begin match elab_infer ctx expr0, elab_infer ctx expr1 with
-      | (expr0, BoolTy), (expr1, BoolTy) -> FunApp (Prim BoolEq, TupleLit [expr0; expr1]), BoolTy
-      | (expr0, IntTy), (expr1, IntTy) -> FunApp (Prim IntEq, TupleLit [expr0; expr1]), BoolTy
-      | (_, lhs_ty), (_, rhs_ty) when lhs_ty = rhs_ty ->
-          error expr.loc
-            (Format.asprintf "@[<v 2>@[unsupported operand types:@]@ @[left: %a@]@ @[right: %a@]@]"
-              Core.pp_ty lhs_ty
-              Core.pp_ty rhs_ty)
-      | (_, lhs_ty), (_, rhs_ty) ->
-          error expr.loc
-            (Format.asprintf "@[<v 2>@[mismatched operand types:@]@ @[left: %a@]@ @[right: %a@]@]"
-              Core.pp_ty lhs_ty
-              Core.pp_ty rhs_ty)
+      let expr0, ty0 = elab_infer ctx expr0 in
+      let expr1, ty1 = elab_infer ctx expr1 in
+      equate_ty expr.loc ty0 ty1;
+      begin match ty0 with
+      | BoolTy -> FunApp (Prim BoolEq, TupleLit [expr0; expr1]), BoolTy
+      | IntTy -> FunApp (Prim IntEq, TupleLit [expr0; expr1]), BoolTy
+      | ty -> error expr.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
       end
 
   | Op2 ((`Add | `Sub | `Mul) as prim, expr0, expr1) ->
