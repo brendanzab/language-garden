@@ -190,14 +190,14 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
       end
 
   | Op2 ((`Add | `Sub | `Mul) as prim, expr0, expr1) ->
-      let expr0 = elab_check ctx expr0 IntTy in
-      let expr1 = elab_check ctx expr1 IntTy in
       let prim =
         match prim with
         | `Add -> Prim.IntAdd
         | `Sub -> Prim.IntSub
         | `Mul -> Prim.IntMul
       in
+      let expr0 = elab_check ctx expr0 IntTy in
+      let expr1 = elab_check ctx expr1 IntTy in
       FunApp (Prim prim, TupleLit [expr0; expr1]), IntTy
 
   | Op2 (`And, expr0, expr1) ->
