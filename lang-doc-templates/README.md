@@ -67,6 +67,7 @@ Papers:
 Lightweight markup languages:
 
 - [Djot](https://djot.net/): A simpler alternative to markdown with less ambiguities
+- [Org Mode](https://orgmode.org/): Document editing language for Emacs
 - [Subtext](https://github.com/subconsciousnetwork/subtext): Tiny markup language geared towards index-card note-taking
 - [Cooklang](https://cooklang.org/): Recipe markup language
 
@@ -116,6 +117,8 @@ Wiki markup and personal knowledge management:
 - [Oscean](https://wiki.xxiivv.com/site/oscean.html)
 - [Forester](https://github.com/jonsterling/ocaml-forester)
 - [Mylink](https://github.com/kalyani-tt/mylink)
+- [Org-roam](https://www.orgroam.com/)
+- [yon](https://m15o.ichi.city/yon/): Wiki editor in a standalone HTML file with no dependencies
 
 Attributed node languages:
 
