@@ -26,7 +26,7 @@ let node name body =
     TextLit (Format.sprintf "</%s>" name);
   ])
 
-let () =
+let () = begin
 
   define "true" Core.BoolTy Core.(BoolLit true);
   define "false" Core.BoolTy Core.(BoolLit false);
@@ -37,7 +37,7 @@ let () =
   define "para" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "p"));
   define "link" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "a"));
 
-  ()
+end
 
 let context = !context
 let env = !env
@@ -45,31 +45,31 @@ let env = !env
 let () =
   Printexc.record_backtrace true;
 
-  let lexer = Lexer.template_token () in
   let lexbuf = Sedlexing.Utf8.from_channel stdin in
   Sedlexing.set_filename lexbuf "<input>";
 
-  let tm =
-    try
-      lexbuf
-      |> Sedlexing.with_tokenizer lexer
-      |> MenhirLib.Convert.Simplified.traditional2revised Parser.template_main
-      |> Surface.Elab.synth_template context
-    with
-    | Lexer.Error error ->
-        let msg =
-          match error with
-          | `UnexpectedChar -> "unexpected character"
-          | `UnclosedBlockComment -> "unclosed block comment"
-          | `UnclosedTextLiteral -> "unclosed text literal"
-          | `InvalidEscapeCode s -> Format.sprintf "invalid escape code `\\%s`" s
-        in
-        print_error (Sedlexing.lexing_positions lexbuf) msg;
-        exit 1
-    | Parser.Error -> print_error (Sedlexing.lexing_positions lexbuf) "syntax error"; exit 1
-    | Surface.Elab.Error (pos, msg) -> print_error pos msg; exit 1
-  in
-
-  match Core.Semantics.eval env tm with
+  match
+    lexbuf
+    |> Sedlexing.with_tokenizer (Lexer.template_token ())
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.template_main
+    |> Surface.Elab.synth_template context
+    |> Core.Semantics.eval env
+  with
   | Core.Semantics.TextLit s -> print_string s
-  | _ -> failwith "unexpected value"
+  | _ -> failwith "text literal expected"
+  | exception Lexer.Error error ->
+      let msg =
+        match error with
+        | `UnexpectedChar -> "unexpected character"
+        | `UnclosedBlockComment -> "unclosed block comment"
+        | `UnclosedTextLiteral -> "unclosed text literal"
+        | `InvalidEscapeCode s -> Format.sprintf "invalid escape code `\\%s`" s
+      in
+      print_error (Sedlexing.lexing_positions lexbuf) msg;
+      exit 1
+  | exception Parser.Error ->
+      print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
+      exit 1
+  | exception Surface.Elab.Error (pos, msg) ->
+      print_error pos msg;
+      exit 1
