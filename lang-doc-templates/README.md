@@ -119,6 +119,7 @@ Wiki markup and personal knowledge management:
 - [Mylink](https://github.com/kalyani-tt/mylink)
 - [Org-roam](https://www.orgroam.com/)
 - [yon](https://m15o.ichi.city/yon/): Wiki editor in a standalone HTML file with no dependencies
+- [TiddlyWiki](https://tiddlywiki.com/): a non-linear personal web notebook
 
 Attributed node languages:
 
