@@ -7,7 +7,8 @@ Elaborate test term
 
 Elaborate identity function test
   $ cat id.txt | stlc-abstract
-  let id : A -> A := fun (x : A) => x; fun (x : A) => id x : A -> A
+  let id : A -> A := fun (x : A) => x;
+  fun (x : A) => id x : A -> A
 
 
 Elaboration Errors

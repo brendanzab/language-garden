@@ -53,7 +53,7 @@ let pp_tm (fmt : Format.formatter) (tm : tm) : unit =
                 (go (Env.extend name names)) body
           | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
         in
-        go names fmt tm
+        Format.fprintf fmt "@[<v>%a@]" (go names) tm
   | FunLit _ as tm ->
       let rec go names fmt tm =
         match tm with

@@ -385,7 +385,7 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
               (go (name :: names)) body
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
-      Format.fprintf fmt "@[<hv>%a@]" (go names) tm
+      Format.fprintf fmt "@[<v>%a@]" (go names) tm
   | Fix (name, self_ty, body) ->
       let name = fresh names name in
       Format.fprintf fmt "@[<2>@[#fix@ %a@ =>@]@ %a@]"

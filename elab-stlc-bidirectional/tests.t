@@ -21,15 +21,18 @@ Function application
   > 
   > f 3
   > EOF
-  let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  let f : Int -> Int := fun (x : Int) => x;
+  f 3 : Int
 
 Explicit parameter type
   $ stlc-bidirectional elab <<< "let f (x : Int) := x; f 3"
-  let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  let f : Int -> Int := fun (x : Int) => x;
+  f 3 : Int
 
 Explicit return type
   $ stlc-bidirectional elab <<< "let f (x : Int) : Int := x; f 3"
-  let f : Int -> Int := fun (x : Int) => x; f 3 : Int
+  let f : Int -> Int := fun (x : Int) => x;
+  f 3 : Int
 
 Check let body type
   $ stlc-bidirectional elab <<EOF
