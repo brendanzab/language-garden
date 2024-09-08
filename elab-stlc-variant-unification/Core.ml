@@ -438,20 +438,18 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
               name
               (pp_tm (name :: names)) body))
         (LabelMap.to_seq cases)
-  | FunLit _ as tm ->
+  | FunLit (name, param_ty, body) ->
       let rec go names fmt tm =
         match tm with
-        | FunLit (name, param_ty, (FunLit _ as body)) ->
-            Format.fprintf fmt "@[fun@ %a@ =>@]@ %a"
-              pp_param (name, param_ty)
-              (go (name :: names)) body
         | FunLit (name, param_ty, body) ->
-            Format.fprintf fmt "@[fun@ %a@ =>@]%a"
+            Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
               pp_param (name, param_ty)
               (go (name :: names)) body
         | tm -> Format.fprintf fmt "@]@ @[%a@]@]" (pp_tm names) tm
       in
-      Format.fprintf fmt "@[<hv 2>@[<hv>%a" (go names) tm
+      Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
+        pp_param (name, param_ty)
+        (go (name :: names)) body
   | VariantLit (label, tm, ty) ->
       Format.fprintf fmt "@[<2>@[@[<2>@[[%s@ :=@]@ @[%a@]]@]@ :@]@ @[%a@]@]"
         label
