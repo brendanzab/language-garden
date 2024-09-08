@@ -1,5 +1,7 @@
 let a : Int := 1;
 let f : Int -> Int :=
-  clos(fun (env : (Int,)) (x : Int) => let y : Int := #add x env.0; #add y 3,
-    (a,));
+  clos(
+    fun (env : (Int,)) (x : Int) => let y : Int := #add x env.0; #add y 3,
+    (a,)
+  );
 f 100

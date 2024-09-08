@@ -66,17 +66,25 @@ let rec pp_tm (fmt : Format.formatter) (tm : tm) =
       let rec go fmt tm =
         match tm with
         | Let (def_var, def_ty, def, body) ->
-            Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+            Format.fprintf fmt "@[<hv 2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
               pp_name_ann (def_var, def_ty)
               pp_tm def
               go body
         | tm -> Format.fprintf fmt "@[%a@]" pp_tm tm
       in
       go fmt tm
-  | FunLit (param_var, param_ty, body) ->
-      Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
-        pp_param (param_var, param_ty)
-        pp_tm body
+  | FunLit (name, param_ty, body) ->
+      let rec go fmt tm =
+        match tm with
+        | FunLit (name, param_ty, body) ->
+            Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
+              pp_param (name, param_ty)
+              go body
+        | tm -> Format.fprintf fmt "@]@ @[%a@]@]" pp_tm tm
+      in
+      Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
+        pp_param (name, param_ty)
+        go body
   | tm ->
       pp_app_tm fmt tm
 and pp_app_tm (fmt : Format.formatter) (tm : tm) =

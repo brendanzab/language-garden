@@ -73,7 +73,7 @@ let rec pp_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
       let rec go names fmt tm =
         match tm with
         | Let (name, def_ty, def, body) ->
-            Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+            Format.fprintf fmt "@[<hv 2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
               pp_name_ann (name, def_ty)
               (pp_tm names) def
               (go (name :: names)) body
@@ -81,7 +81,7 @@ let rec pp_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
       in
       go names fmt tm
   | CodeLit (env_ty, (name, param_ty), body) ->
-      Format.fprintf fmt "@[@[fun@ %a@ %a@ =>@]@ %a@]"
+      Format.fprintf fmt "@[<hv 2>@[fun@ %a@ %a@ =>@]@ %a@]"
         pp_param ("env", env_ty)
         pp_param (name, param_ty)
         (pp_tm [name; "env"]) body
@@ -115,7 +115,7 @@ and pp_atomic_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
   | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i
   | ClosLit (code, env) ->
-      Format.fprintf fmt "@[<2>clos(%a,@ %a)@]"
+      Format.fprintf fmt "@[<hv>clos(@;<0 2>%a,@;<1 2>%a@;<0 0>)@]"
         (pp_tm names) code
         (pp_tm names) env
   | TupleLit tms ->

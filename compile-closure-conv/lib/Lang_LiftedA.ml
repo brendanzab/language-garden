@@ -149,7 +149,7 @@ and pp_atomic_tm (fmt : Format.formatter) (tm : tm) =
   | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i
   | ClosLit (code, env) ->
-      Format.fprintf fmt "@[<2>clos(%a,@ %a)@]"
+      Format.fprintf fmt "@[<hv>clos(@;<0 2>%a,@;<1 2>%a@;<0 0>)@]"
         pp_global_var code
         pp_tm env
   | TupleLit tms ->
@@ -161,7 +161,7 @@ let pp_lifted_tm (fmt : Format.formatter) (tm : lifted_tm) =
     match globals with
     | [] -> Format.fprintf fmt ""
     | (var, code) :: globals ->
-        Format.fprintf fmt "%a@[<2>@[def@ %a@ %a@ %a@ :=@]@ %a;@]@ "
+        Format.fprintf fmt "%a@[<hv 2>@[def@ %a@ %a@ %a@ :=@]@ %a;@]@ "
           pp_globals globals
           pp_global_var var
           pp_param code.env
