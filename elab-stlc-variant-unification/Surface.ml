@@ -279,19 +279,30 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let tm2 = elab_check ctx tm2 ty in
       BoolElim (head, tm1, tm2), ty
 
-  | Op2 ((`Eq) as prim, tm1, tm2) ->
-      let tm1 = elab_check ctx tm1 IntType in
-      let tm2 = elab_check ctx tm2 IntType in
-      PrimApp (prim, [tm1; tm2]), BoolType
+  | Op2 (`Eq, tm0, tm1) ->
+      let tm0, ty0 = elab_infer ctx tm0 in
+      let tm1, ty1 = elab_infer ctx tm1 in
+      unify tm.loc ty0 ty1;
+      begin match Core.force ty0 with
+      | BoolType -> PrimApp (BoolEq, [tm0; tm1]), BoolType
+      | IntType -> PrimApp (IntEq, [tm0; tm1]), BoolType
+      | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
+      end
 
-  | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
+  | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
+      let prim =
+        match prim with
+        | `Add -> Prim.IntAdd
+        | `Sub -> Prim.IntSub
+        | `Mul -> Prim.IntMul
+      in
+      let tm0 = elab_check ctx tm0 IntType in
       let tm1 = elab_check ctx tm1 IntType in
-      let tm2 = elab_check ctx tm2 IntType in
-      PrimApp (prim, [tm1; tm2]), IntType
+      PrimApp (prim, [tm0; tm1]), IntType
 
-  | Op1 ((`Neg) as prim, tm) ->
+  | Op1 (`Neg, tm) ->
       let tm = elab_check ctx tm IntType in
-      PrimApp (prim, [tm]), IntType
+      PrimApp (IntNeg, [tm]), IntType
 
 (** Elaborate a function literal into a core term, given an expected type. *)
 and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =

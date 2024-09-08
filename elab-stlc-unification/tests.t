@@ -1,14 +1,15 @@
 Addition
   $ stlc-unification elab <<< "1 + 2"
-  1 + 2 : Int
+  #int-add -1 2 : Int
 
 Add two function
   $ stlc-unification elab <<< "fun x => x + 2"
-  fun (x : Int) => x + 2 : Int -> Int
+  fun (x : Int) => #int-add -x 2 : Int -> Int
 
 Function application
   $ stlc-unification elab <<< "fun x f => f x * x"
-  fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
+  fun (x : Int) => fun (f : Int -> Int) => #int-mul -(f x) x :
+    Int -> (Int -> Int) -> Int
 
 Function application
   $ stlc-unification elab <<< "let f x := x; f 3"
@@ -33,7 +34,8 @@ Placeholder return type
 
 If expressions
   $ stlc-unification elab <<< "fun x y => if x = 0 then y else 3"
-  fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
+  fun (x : Int) => fun (y : Int) => if #int-eq -x 0 then y else 3 :
+    Int -> Int -> Int
 
 
 Lexer Errors

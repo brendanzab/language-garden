@@ -1,17 +1,18 @@
 Addition
   $ stlc-bidirectional-stratify elab <<< "1 + 2"
-  1 + 2 : Int
+  #int-add -1 2 : Int
 
 Add two function
   $ stlc-bidirectional-stratify elab <<< "fun (x : Int) => x + 2"
-  fun (x : Int) => x + 2 : Int -> Int
+  fun (x : Int) => #int-add -x 2 : Int -> Int
 
 Function application
   $ stlc-bidirectional-stratify elab <<EOF
   > fun (x : Int) (f : Int -> Int) =>
   >   f x * x
   > EOF
-  fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
+  fun (x : Int) => fun (f : Int -> Int) => #int-mul -(f x) x :
+    Int -> (Int -> Int) -> Int
 
 Function application
   $ stlc-bidirectional-stratify elab <<EOF
@@ -46,8 +47,8 @@ Check let body type
   let f : Int -> Int -> Int :=
     fun (x : Int) =>
       let id : Int -> Int := fun (x : Int) => x;
-      let incr : Int -> Int := fun (x : Int) => x + 1;
-      if x = 0 then id else incr;
+      let incr : Int -> Int := fun (x : Int) => #int-add -x 1;
+      if #int-eq -x 0 then id else incr;
   f 4 3 : Int
 
 If expressions
@@ -58,7 +59,7 @@ If expressions
   > f 4
   > EOF
   let f : Int -> Int -> Int :=
-    fun (x : Int) => fun (y : Int) => if x = 0 then y else 3;
+    fun (x : Int) => fun (y : Int) => if #int-eq -x 0 then y else 3;
   f 4 : Int -> Int
 
 Type expressions
@@ -81,7 +82,7 @@ Type expressions
   > x + 2 : Number
   > EOF
   let x : Int := 1;
-  x + 2 : Int
+  #int-add -x 2 : Int
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let x := 1;
@@ -89,7 +90,7 @@ Type expressions
   > x + 2 : Number
   > EOF
   let x : Int := 1;
-  x + 2 : Int
+  #int-add -x 2 : Int
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let Univ := Type;

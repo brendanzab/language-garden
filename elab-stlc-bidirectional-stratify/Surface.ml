@@ -214,19 +214,30 @@ module Elab = struct
       let body_t = check_type ctx body_t in
       Type (FunType (param_t, body_t))
 
-    | Op2 ((`Eq) as prim, tm0, tm1) ->
-      let e0 = check_expr ctx tm0 IntType in
-      let e1 = check_expr ctx tm1 IntType in
-      Expr (PrimApp (prim, [e0; e1]), BoolType)
+    | Op2 (`Eq, tm0, tm1) ->
+        let e0, t0 = infer_expr ctx tm0 in
+        let e1, t1 = infer_expr ctx tm1 in
+        equate_ty tm.loc t0 t1;
+        begin match t0 with
+        | BoolType -> Expr (PrimApp (BoolEq, [e0; e1]), BoolType)
+        | IntType -> Expr (PrimApp (IntEq, [e0; e1]), BoolType)
+        | t -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty t)
+        end
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
-      let e0 = check_expr ctx tm0 IntType in
-      let e1 = check_expr ctx tm1 IntType in
-      Expr (PrimApp (prim, [e0; e1]), IntType)
+        let prim =
+          match prim with
+          | `Add -> Prim.IntAdd
+          | `Sub -> Prim.IntSub
+          | `Mul -> Prim.IntMul
+        in
+        let e0 = check_expr ctx tm0 IntType in
+        let e1 = check_expr ctx tm1 IntType in
+        Expr (PrimApp (prim, [e0; e1]), IntType)
 
-    | Op1 ((`Neg) as prim, tm) ->
-      let e = check_expr ctx tm IntType in
-      Expr (PrimApp (prim, [e]), IntType)
+    | Op1 (`Neg, tm) ->
+        let e = check_expr ctx tm IntType in
+        Expr (PrimApp (IntNeg, [e]), IntType)
 
   and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
     match infer ctx tm with

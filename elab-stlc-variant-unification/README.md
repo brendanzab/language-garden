@@ -43,9 +43,9 @@ Elaborated program:
 let apply : [decr : Int | incr : Int | square : Int] -> Int :=
   fun (x : [decr : Int | incr : Int | square : Int]) =>
     match x with
-    | [decr := x] => x - 1
-    | [incr := x] => x + 1
-    | [square := x] => x * x
+    | [decr := x] => #int-sub -x 1
+    | [incr := x] => #int-add -x 1
+    | [square := x] => #int-mul -x x
     end;
 apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 ```

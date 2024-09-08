@@ -1,14 +1,15 @@
 Addition
   $ stlc-variant-unification elab <<< "1 + 2"
-  1 + 2 : Int
+  #int-add -1 2 : Int
 
 Add two function
   $ stlc-variant-unification elab <<< "fun x => x + 2"
-  fun (x : Int) => x + 2 : Int -> Int
+  fun (x : Int) => #int-add -x 2 : Int -> Int
 
 Function application
   $ stlc-variant-unification elab <<< "fun x f => f x * x"
-  fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
+  fun (x : Int) => fun (f : Int -> Int) => #int-mul -(f x) x :
+    Int -> (Int -> Int) -> Int
 
 Function application
   $ stlc-variant-unification elab <<< "let f x := x; f 3"
@@ -33,7 +34,8 @@ Placeholder return type
 
 If expressions
   $ stlc-variant-unification elab <<< "fun x y => if x = 0 then y else 3"
-  fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
+  fun (x : Int) => fun (y : Int) => if #int-eq -x 0 then y else 3 :
+    Int -> Int -> Int
 
 Variant literal
   $ stlc-variant-unification elab <<< "[some := 1]"
@@ -48,7 +50,7 @@ Match expression
   >   end
   > EOF
   fun (x : [a : Int | b : Int]) =>
-    match x with | [a := x] => x + 1 | [b := x] => x end
+    match x with | [a := x] => #int-add -x 1 | [b := x] => x end
   : [a : Int | b : Int] -> Int
 
 Absurd match
@@ -68,8 +70,8 @@ Variant constraint and variant type
   let choose : Bool -> Int -> Bool -> [maybe : Int | no : Bool | yes : Int] :=
     fun (b : Bool) =>
       fun (y : Int) =>
-        fun (n : Bool) => if b then
-          ([yes := y] : [maybe : Int | no : Bool | yes : Int]) else
+        fun (n : Bool) =>
+          if b then ([yes := y] : [maybe : Int | no : Bool | yes : Int]) else
           ([no := n] : [maybe : Int | no : Bool | yes : Int]);
   let result : [maybe : Int | no : Bool | yes : Int] := choose true 3 false;
   result : [maybe : Int | no : Bool | yes : Int]

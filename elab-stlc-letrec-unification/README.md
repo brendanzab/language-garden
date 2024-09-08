@@ -20,7 +20,8 @@ Elaborated program:
 ```
 let fact : Int -> Int :=
   #fix (fact : Int -> Int) =>
-    fun (n : Int) => if n = 0 then 1 else n * fact (n - 1);
+    fun (n : Int) =>
+      if #int-eq -n 0 then 1 else #int-mul -n (fact (#int-sub -n 1));
 fact 5 : Int
 ```
 
@@ -43,8 +44,10 @@ Elaborated program:
 ```
 let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
   #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
-    (fun (n : Int) => if n = 0 then true else $is-even-is-odd.1 (n - 1),
-    fun (n : Int) => if n = 0 then false else $is-even-is-odd.0 (n - 1));
+    (fun (n : Int) =>
+       if #int-eq -n 0 then true else $is-even-is-odd.1 (#int-sub -n 1),
+    fun (n : Int) =>
+      if #int-eq -n 0 then false else $is-even-is-odd.0 (#int-sub -n 1));
 $is-even-is-odd.0 6 : Bool
 ```
 

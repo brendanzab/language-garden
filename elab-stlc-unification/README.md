@@ -32,17 +32,19 @@ This implementation was originally based on [Arad Arbel’s gist](https://gist.g
 
 ```sh
 $ stlc-unification elab <<< "fun x => x + 2"
-fun (x : Int) => x + 2 : Int -> Int
+fun (x : Int) => #int-add -x 2 : Int -> Int
 ```
 
 ```sh
 $ stlc-unification elab <<< "fun x f => f x * x"
-fun (x : Int) => fun (f : Int -> Int) => f x * x : Int -> (Int -> Int) -> Int
+fun (x : Int) => fun (f : Int -> Int) => #int-mul -(f x) x :
+  Int -> (Int -> Int) -> Int
 ```
 
 ```sh
 $ stlc-unification elab <<< "fun x y => if x = 0 then y else 3"
-fun (x : Int) => fun (y : Int) => if x = 0 then y else 3 : Int -> Int -> Int
+fun (x : Int) => fun (y : Int) => if #int-eq -x 0 then y else 3 :
+  Int -> Int -> Int
 ```
 
 More examples can be found in [`tests.t`](tests.t).

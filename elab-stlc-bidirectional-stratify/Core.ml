@@ -41,15 +41,6 @@ type ty =
   | IntType
   | BoolType
 
-(** Primitive operations *)
-type prim = [
-  | `Eq   (** [Int -> Int -> Bool] *)
-  | `Add  (** [Int -> Int -> Int] *)
-  | `Sub  (** [Int -> Int -> Int] *)
-  | `Mul  (** [Int -> Int -> Int] *)
-  | `Neg  (** [Int -> Int] *)
-]
-
 (** Term syntax *)
 type expr =
   | Var of index
@@ -59,7 +50,7 @@ type expr =
   | IntLit of int
   | BoolLit of bool
   | BoolElim of expr * expr * expr
-  | PrimApp of prim * expr list
+  | PrimApp of Prim.t * expr list
 
 
 module Semantics = struct
@@ -76,7 +67,7 @@ module Semantics = struct
     | Var of level
     | FunApp of nexpr * vexpr
     | BoolElim of nexpr * vexpr Lazy.t * vexpr Lazy.t
-    | PrimApp of prim * vexpr list
+    | PrimApp of Prim.t * vexpr list
 
 
   (** {1 Eliminators} *)
@@ -94,14 +85,18 @@ module Semantics = struct
     | BoolLit false -> Lazy.force vexpr1
     | _ -> invalid_arg "expected boolean"
 
-  let prim_app prim args =
-    match prim, args with
-    | `Eq, [IntLit t1; IntLit t2] -> BoolLit (t1 = t2)
-    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
-    | `Neg, [IntLit t1] -> IntLit (-t1)
-    | prim, args -> Neu (PrimApp (prim, args))
+  let prim_app (prim : Prim.t) : vexpr list -> vexpr =
+    let guard f args =
+      try f args with
+      | Match_failure _ -> Neu (PrimApp (prim, args))
+    in
+    match prim with
+    | BoolEq -> guard @@ fun[@warning "-partial-match"] [BoolLit e1; BoolLit e2] -> BoolLit (e1 = e2)
+    | IntEq -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> BoolLit (e1 = e2)
+    | IntAdd -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> IntLit (e1 + e2)
+    | IntSub -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> IntLit (e1 - e2)
+    | IntMul -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> IntLit (e1 * e2)
+    | IntNeg -> guard @@ fun[@warning "-partial-match"] [IntLit e1] -> IntLit (-e1)
 
 
   (** {1 Evaluation} *)
@@ -201,7 +196,7 @@ let rec pp_expr (names : name env) (fmt : Format.formatter) (e : expr) : unit =
       in
       Format.fprintf fmt "@[<v>%a@]" (go names) e
   | FunLit (name, param_ty, body) ->
-      Format.fprintf fmt "@[<2>@[fun@ %a@ =>@]@ %a@]"
+      Format.fprintf fmt "@[<2>@[fun@ %a@ =>@]@ @[%a@]@]"
         pp_param (name, param_ty)
         (pp_expr (name :: names)) body
   | e -> pp_if_expr names fmt e
@@ -209,37 +204,9 @@ and pp_if_expr names fmt e =
   match e with
   | BoolElim (head, e0, e1) ->
       Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
-        (pp_eq_expr names) head
-        (pp_eq_expr names) e0
+        (pp_app_expr names) head
+        (pp_app_expr names) e0
         (pp_if_expr names) e1
-  | e ->
-      pp_eq_expr names fmt e
-and pp_eq_expr names fmt e =
-  match e with
-  | PrimApp (`Eq, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ =@ %a@]"
-        (pp_add_expr names) arg1
-        (pp_eq_expr names) arg2
-  | e ->
-      pp_add_expr names fmt e
-and pp_add_expr names fmt e =
-  match e with
-  | PrimApp (`Add, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ +@ %a@]"
-        (pp_mul_expr names) arg1
-        (pp_add_expr names) arg2
-  | PrimApp (`Sub, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ -@ %a@]"
-        (pp_mul_expr names) arg1
-        (pp_add_expr names) arg2
-  | e ->
-      pp_mul_expr names fmt e
-and pp_mul_expr names fmt e =
-  match e with
-  | PrimApp (`Mul, [arg1; arg2]) ->
-      Format.fprintf fmt "@[%a@ *@ %a@]"
-        (pp_app_expr names) arg1
-        (pp_mul_expr names) arg2
   | e ->
       pp_app_expr names fmt e
 and pp_app_expr names fmt e =
@@ -248,9 +215,11 @@ and pp_app_expr names fmt e =
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_expr names) head
         (pp_atomic_expr names) arg
-  | PrimApp (`Neg, [arg]) ->
-      Format.fprintf fmt "@[-%a@]"
-        (pp_atomic_expr names) arg
+  | PrimApp (prim, args) ->
+      let pp_sep fmt () = Format.fprintf fmt "@ " in
+      Format.fprintf fmt "@[#%s@ -%a@]"
+        (Prim.name prim)
+        (Format.pp_print_list ~pp_sep (pp_atomic_expr names)) args
   | e ->
       pp_atomic_expr names fmt e
 and pp_atomic_expr names fmt e =
