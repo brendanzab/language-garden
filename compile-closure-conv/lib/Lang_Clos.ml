@@ -120,7 +120,6 @@ and pp_atomic_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
         (pp_tm names) env
   | TupleLit tms ->
       Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems (pp_tm names)) tms
-  (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
 
 

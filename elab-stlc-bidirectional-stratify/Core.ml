@@ -233,5 +233,4 @@ and pp_atomic_expr names fmt e =
   | IntLit i -> Format.fprintf fmt "%i" i
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
-  (* FIXME: Will loop forever on invalid primitive applications *)
   | e -> Format.fprintf fmt "@[(%a)@]" (pp_expr names) e

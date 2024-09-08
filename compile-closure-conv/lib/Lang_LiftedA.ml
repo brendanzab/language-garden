@@ -154,7 +154,6 @@ and pp_atomic_tm (fmt : Format.formatter) (tm : tm) =
         pp_tm env
   | TupleLit tms ->
       Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems pp_tm) tms
-  (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" pp_tm tm
 
 let pp_lifted_tm (fmt : Format.formatter) (tm : lifted_tm) =

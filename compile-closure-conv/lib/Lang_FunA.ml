@@ -97,7 +97,6 @@ and pp_atomic_tm (fmt : Format.formatter) (tm : tm) =
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
   | IntLit i -> Format.fprintf fmt "%i" i
-  (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" pp_tm tm
 
 

@@ -448,5 +448,4 @@ and pp_atomic_tm names fmt tm =
   | IntLit i -> Format.fprintf fmt "%i" i
   | BoolLit true -> Format.fprintf fmt "true"
   | BoolLit false -> Format.fprintf fmt "false"
-  (* FIXME: Will loop forever on invalid primitive applications *)
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
