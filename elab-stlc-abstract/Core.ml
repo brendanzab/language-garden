@@ -54,10 +54,20 @@ let pp_tm (fmt : Format.formatter) (tm : tm) : unit =
           | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
         in
         go names fmt tm
-    | FunLit (name, param_ty, body) ->
-        Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
-          pp_param (name, param_ty)
-          (pp_tm (Env.extend name names)) body
+  | FunLit _ as tm ->
+      let rec go names fmt tm =
+        match tm with
+        | FunLit (name, param_ty, (FunLit _ as body)) ->
+            Format.fprintf fmt "@[fun@ %a@ =>@]@ %a"
+              pp_param (name, param_ty)
+              (go (Env.extend name names)) body
+        | FunLit (name, param_ty, body) ->
+            Format.fprintf fmt "@[fun@ %a@ =>@]%a"
+              pp_param (name, param_ty)
+              (go (Env.extend name names)) body
+        | tm -> Format.fprintf fmt "@]@ @[%a@]@]" (pp_tm names) tm
+      in
+      Format.fprintf fmt "@[<hv 2>@[<hv>%a" (go names) tm
     | tm ->
         pp_app_tm names fmt tm
   and pp_app_tm names fmt tm =

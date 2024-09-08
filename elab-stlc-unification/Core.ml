@@ -309,10 +309,20 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
       Format.fprintf fmt "@[<hv>%a@]" (go names) tm
-  | FunLit (name, param_ty, body) ->
-      Format.fprintf fmt "@[<2>@[fun@ %a@ =>@]@ @[%a@]@]"
-        pp_param (name, param_ty)
-        (pp_tm (name :: names)) body
+  | FunLit _ as tm ->
+      let rec go names fmt tm =
+        match tm with
+        | FunLit (name, param_ty, (FunLit _ as body)) ->
+            Format.fprintf fmt "@[fun@ %a@ =>@]@ %a"
+              pp_param (name, param_ty)
+              (go (name :: names)) body
+        | FunLit (name, param_ty, body) ->
+            Format.fprintf fmt "@[fun@ %a@ =>@]%a"
+              pp_param (name, param_ty)
+              (go (name :: names)) body
+        | tm -> Format.fprintf fmt "@]@ @[%a@]@]" (pp_tm names) tm
+      in
+      Format.fprintf fmt "@[<hv 2>@[<hv>%a" (go names) tm
   | BoolElim (head, tm0, tm1) ->
       Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_app_tm names) head

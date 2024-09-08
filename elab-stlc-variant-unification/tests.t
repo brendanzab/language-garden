@@ -68,13 +68,11 @@ Variant constraint and variant type
   > result
   > EOF
   let choose : Bool -> Int -> Bool -> [maybe : Int | no : Bool | yes : Int] :=
-    fun (b : Bool) =>
-      fun (y : Int) =>
-        fun (n : Bool) =>
-          if b then
-            ([yes := y] : [maybe : Int | no : Bool | yes : Int])
-          else
-            [no := n] : [maybe : Int | no : Bool | yes : Int];
+    fun (b : Bool) => fun (y : Int) => fun (n : Bool) =>
+      if b then
+        ([yes := y] : [maybe : Int | no : Bool | yes : Int])
+      else
+        [no := n] : [maybe : Int | no : Bool | yes : Int];
   let result : [maybe : Int | no : Bool | yes : Int] := choose true 3 false;
   result : [maybe : Int | no : Bool | yes : Int]
 
