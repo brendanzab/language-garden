@@ -42,10 +42,7 @@ let main :=
 let expr :=
 | "let"; n = NAME; ":="; e1 = expr; ";"; e2 = expr;
     { fun names -> TreeLang.let_ n (e1 names) (e2 (n :: names)) }
-| if_expr
-
-let if_expr :=
-| "if"; e1 = eq_expr; "then"; e2 = eq_expr; "else"; e3 = if_expr;
+| "if"; e1 = eq_expr; "then"; e2 = eq_expr; "else"; e3 = expr;
     { fun names -> TreeLang.if_then_else (e1 names) (e2 names) (e3 names) }
 | eq_expr
 

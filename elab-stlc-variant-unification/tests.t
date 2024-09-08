@@ -71,8 +71,10 @@ Variant constraint and variant type
     fun (b : Bool) =>
       fun (y : Int) =>
         fun (n : Bool) =>
-          if b then ([yes := y] : [maybe : Int | no : Bool | yes : Int]) else
-          ([no := n] : [maybe : Int | no : Bool | yes : Int]);
+          if b then
+            ([yes := y] : [maybe : Int | no : Bool | yes : Int])
+          else
+            [no := n] : [maybe : Int | no : Bool | yes : Int];
   let result : [maybe : Int | no : Bool | yes : Int] := choose true 3 false;
   result : [maybe : Int | no : Bool | yes : Int]
 

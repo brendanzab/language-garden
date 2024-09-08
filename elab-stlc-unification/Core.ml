@@ -313,14 +313,11 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       Format.fprintf fmt "@[<2>@[fun@ %a@ =>@]@ @[%a@]@]"
         pp_param (name, param_ty)
         (pp_tm (name :: names)) body
-  | tm -> pp_if_tm names fmt tm
-and pp_if_tm names fmt tm =
-  match tm with
   | BoolElim (head, tm0, tm1) ->
-      Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
+      Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_app_tm names) head
         (pp_app_tm names) tm0
-        (pp_if_tm names) tm1
+        (pp_tm names) tm1
   | tm ->
       pp_app_tm names fmt tm
 and pp_app_tm names fmt tm =

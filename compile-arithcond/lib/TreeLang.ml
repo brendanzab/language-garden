@@ -65,13 +65,11 @@ and  pp_let_expr names fmt = function
       Format.fprintf fmt "@[<2>%a@]@ %a"
         (pp_def names) (n, e1)
         (pp_lets (n :: names)) e2
-  | e -> pp_if_expr names fmt e
-and pp_if_expr names fmt = function
   | IfThenElse (e1, e2, e3) ->
-      Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
+      Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_eq_expr names) e1
         (pp_eq_expr names) e2
-        (pp_if_expr names) e3
+        (pp_expr names) e3
   | e -> pp_eq_expr names fmt e
 (* TODO: Let expressions *)
 and pp_eq_expr names fmt = function

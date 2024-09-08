@@ -142,9 +142,13 @@ Recursive bindings: Ackermann function
     #fix (ack : Int -> Int -> Int) =>
       fun (m : Int) =>
         fun (n : Int) =>
-          if #int-eq -m 0 then #int-add -n 1 else if #int-eq -n 0 then
-          ack (#int-sub -m 1) 1 else
-          ack (#int-sub -m 1) (ack m (#int-sub -n 1));
+          if #int-eq -m 0 then
+            #int-add -n 1
+          else
+            if #int-eq -n 0 then
+              ack (#int-sub -m 1) 1
+            else
+              ack (#int-sub -m 1) (ack m (#int-sub -n 1));
   ack 1 0 : Int
 
   $ cat ack.txt | stlc-letrec-unification norm
@@ -169,9 +173,13 @@ Recursive bindings: Ackermann function (partially applied)
     #fix (ack : Int -> Int -> Int) =>
       fun (m : Int) =>
         fun (n : Int) =>
-          if #int-eq -m 0 then #int-add -n 1 else if #int-eq -n 0 then
-          ack (#int-sub -m 1) 1 else
-          ack (#int-sub -m 1) (ack m (#int-sub -n 1));
+          if #int-eq -m 0 then
+            #int-add -n 1
+          else
+            if #int-eq -n 0 then
+              ack (#int-sub -m 1) 1
+            else
+              ack (#int-sub -m 1) (ack m (#int-sub -n 1));
   ack 0 : Int -> Int
 
   $ cat ack-partial-app.txt | stlc-letrec-unification norm
@@ -196,12 +204,14 @@ Recursive bindings: Count-down (partially applied)
 
   $ cat count-down.txt | stlc-letrec-unification norm
   fun (n : Int) =>
-    if #int-eq -n 0 then true else
-    (#fix (count-down : Bool -> Int -> Bool) =>
-       fun (x : Bool) =>
-         fun (n' : Int) =>
-           if #int-eq -n' 0 then x else count-down x (#int-sub -n' 1))
-    true (#int-sub -n 1)
+    if #int-eq -n 0 then
+      true
+    else
+      (#fix (count-down : Bool -> Int -> Bool) =>
+         fun (x : Bool) =>
+           fun (n' : Int) =>
+             if #int-eq -n' 0 then x else count-down x (#int-sub -n' 1))
+      true (#int-sub -n 1)
   : Int -> Bool
 
 
@@ -220,20 +230,24 @@ Recursive bindings: Even/odd (partially applied)
       fun (b : Bool) =>
         fun (n : Int) =>
           if b then
-          (if #int-eq -n 0 then true else even-odd false (#int-sub -n 1)) else
-          if #int-eq -n 0 then false else even-odd true (#int-sub -n 1);
+            (if #int-eq -n 0 then true else even-odd false (#int-sub -n 1))
+          else
+            if #int-eq -n 0 then false else even-odd true (#int-sub -n 1);
   even-odd true : Int -> Bool
 
   $ cat even-odd-partial-app.txt | stlc-letrec-unification norm
   fun (n : Int) =>
-    if #int-eq -n 0 then true else
-    (#fix (even-odd : Bool -> Int -> Bool) =>
-       fun (b : Bool) =>
-         fun (n' : Int) =>
-           if b then
-           (if #int-eq -n' 0 then true else even-odd false (#int-sub -n' 1))
-           else if #int-eq -n' 0 then false else even-odd true (#int-sub -n' 1))
-    false (#int-sub -n 1)
+    if #int-eq -n 0 then
+      true
+    else
+      (#fix (even-odd : Bool -> Int -> Bool) =>
+         fun (b : Bool) =>
+           fun (n' : Int) =>
+             if b then
+               (if #int-eq -n' 0 then true else even-odd false (#int-sub -n' 1))
+             else
+               if #int-eq -n' 0 then false else even-odd true (#int-sub -n' 1))
+      false (#int-sub -n 1)
   : Int -> Bool
 
 
@@ -281,13 +295,15 @@ Mutually recursive bindings: Even/odd (partially applied)
 
   $ cat even-odd.txt | stlc-letrec-unification norm
   fun (n : Int) =>
-    if #int-eq -n 0 then true else
-    (#fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
-       (fun (n' : Int) =>
-          if #int-eq -n' 0 then true else $is-even-is-odd.1 (#int-sub -n' 1),
-       fun (n' : Int) =>
-         if #int-eq -n' 0 then false else $is-even-is-odd.0 (#int-sub -n' 1))).1
-    (#int-sub -n 1)
+    if #int-eq -n 0 then
+      true
+    else
+      (#fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+         (fun (n' : Int) =>
+            if #int-eq -n' 0 then true else $is-even-is-odd.1 (#int-sub -n' 1),
+         fun (n' : Int) =>
+           if #int-eq -n' 0 then false else $is-even-is-odd.0 (#int-sub -n' 1))).1
+      (#int-sub -n 1)
   : Int -> Bool
 
 
