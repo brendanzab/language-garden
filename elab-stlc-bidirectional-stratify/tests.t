@@ -1,4 +1,12 @@
-Addition
+Boolean equality
+  $ stlc-bidirectional-stratify elab <<< "true = false"
+  #bool-eq -true false : Bool
+
+Integer equality
+  $ stlc-bidirectional-stratify elab <<< "1 = 2"
+  #int-eq -1 2 : Bool
+
+Integer Addition
   $ stlc-bidirectional-stratify elab <<< "1 + 2"
   #int-add -1 2 : Int
 
@@ -240,4 +248,16 @@ Parameterised bindings
   > Int : Foo 42
   > EOF
   <input>:1:28: expected type, found universe
+  [1]
+
+Mismatched equality
+  $ stlc-bidirectional-stratify elab <<< "1 = false"
+  <input>:1:0: mismatched types:
+    expected: Int
+    found: Bool
+  [1]
+
+Unsupported equality
+  $ stlc-bidirectional-stratify elab <<< "let f (x : Bool) := x; f = f"
+  <input>:1:23: unsupported type: Bool -> Bool
   [1]

@@ -1,4 +1,12 @@
-Addition
+Boolean equality
+  $ stlc-letrec-unification elab <<< "true = false"
+  #bool-eq -true false : Bool
+
+Integer equality
+  $ stlc-letrec-unification elab <<< "1 = 2"
+  #int-eq -1 2 : Bool
+
+Integer Addition
   $ stlc-letrec-unification elab <<< "1 + 2"
   #int-add -1 2 : Int
 
@@ -392,4 +400,16 @@ Mismatched if expression branches
   <input>:1:29: mismatched types:
     expected: Bool
     found: Int
+  [1]
+
+Mismatched equality
+  $ stlc-letrec-unification elab <<< "1 = false"
+  <input>:1:0: mismatched types:
+    expected: Int
+    found: Bool
+  [1]
+
+Unsupported equality
+  $ stlc-letrec-unification elab <<< "let f (x : Bool) := x; f = f"
+  <input>:1:23: unsupported type: Bool -> Bool
   [1]

@@ -1,4 +1,12 @@
-Addition
+Boolean equality
+  $ stlc-bidirectional elab <<< "true = false"
+  #bool-eq -true false : Bool
+
+Integer equality
+  $ stlc-bidirectional elab <<< "1 = 2"
+  #int-eq -1 2 : Bool
+
+Integer Addition
   $ stlc-bidirectional elab <<< "1 + 2"
   #int-add -1 2 : Int
 
@@ -139,4 +147,16 @@ Ambiguous parameter type
 Ambiguous if expression
   $ stlc-bidirectional elab <<< "fun (x : Bool) => if x then true else 3"
   <input>:1:18: ambiguous if expression
+  [1]
+
+Mismatched equality
+  $ stlc-bidirectional elab <<< "1 = false"
+  <input>:1:0: mismatched types:
+    expected: Int
+    found: Bool
+  [1]
+
+Unsupported equality
+  $ stlc-bidirectional elab <<< "let f (x : Bool) := x; f = f"
+  <input>:1:23: unsupported type: Bool -> Bool
   [1]
