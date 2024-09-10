@@ -6,14 +6,6 @@
 *)
 
 
-(** Returns the index of the given element in the list *)
-let elem_index a =
-  let rec go i = function
-    | [] -> None
-    | x :: xs -> if x = a then Some i else go (i + 1) xs in
-  go 0
-
-
 (** {1 Surface Syntax} *)
 
 type pattern = string option
@@ -83,6 +75,16 @@ let bind_def ctx name ty tm = {
 (** Binds a parameter in the context *)
 let bind_param ctx name ty =
   bind_def ctx name ty (next_var ctx)
+
+(** Lookup a name in the context *)
+let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
+  (* Find the index of most recent binding in the context identified by
+      [name], starting from the most recent binding. This gives us the
+      corresponding de Bruijn index of the variable. *)
+  ctx.names |> List.find_mapi @@ fun index name' ->
+    match Some name = name' with
+    | true -> Some (index, List.nth ctx.tys index)
+    | false -> None
 
 (** {3 Functions related to the core semantics} *)
 
@@ -173,11 +175,8 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
 
   (* Named terms *)
   | Name name ->
-      (* Find the index of most recent binding in the context identified by
-          [name], starting from the most recent binding. This gives us the
-          corresponding de Bruijn index of the variable. *)
-      begin match elem_index (Some name) ctx.names with
-      | Some (index) -> (Syntax.Var index, List.nth ctx.tys index)
+      begin match lookup ctx name with
+      | Some (index, vty) -> (Syntax.Var index, vty)
       | None -> error (not_bound name)
       end
 

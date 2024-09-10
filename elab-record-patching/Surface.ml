@@ -93,6 +93,16 @@ let bind_def ctx name ty tm = {
 let bind_param ctx name ty =
   bind_def ctx name ty (next_var ctx)
 
+(** Lookup a name in the context *)
+let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
+  (* Find the index of most recent binding in the context identified by
+      [name], starting from the most recent binding. This gives us the
+      corresponding de Bruijn index of the variable. *)
+  ctx.names |> List.find_mapi @@ fun index name' ->
+    match Some name = name' with
+    | true -> Some (index, List.nth ctx.tys index)
+    | false -> None
+
 (** {3 Functions related to the core semantics} *)
 
 (** These wrapper functions make it easier to call functions from the
@@ -317,11 +327,8 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
 
   (* Named terms *)
   | Name name ->
-      (* Find the index of most recent binding in the context identified by
-          [name], starting from the most recent binding. This gives us the
-          corresponding de Bruijn index of the variable. *)
-      begin match List.elem_index (Some name) ctx.names with
-      | Some index -> Syntax.Var index, List.nth ctx.tys index
+      begin match lookup ctx name with
+      | Some (index, vty) -> (Syntax.Var index, vty)
       | None -> error (not_bound name)
       end
 
