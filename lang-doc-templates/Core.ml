@@ -67,16 +67,16 @@ module Semantics = struct
         end
     | IntLit n ->
         IntLit n
-    | PrimApp (op, spine) ->
-        let spine =
-          spine |> List.map @@ fun arg : Prim.value ->
+    | PrimApp (prim, args) ->
+        let args =
+          args |> List.map @@ fun arg : Prim.value ->
             match eval locals arg with
             | TextLit s -> TextLit s
             | IntLit n -> IntLit n
             | BoolLit b -> BoolLit b
             | _ -> failwith "expected primitive"
         in
-        begin match Prim.app op spine with
+        begin match Prim.app prim args with
         | TextLit s -> TextLit s
         | IntLit n -> IntLit n
         | BoolLit b -> BoolLit b
