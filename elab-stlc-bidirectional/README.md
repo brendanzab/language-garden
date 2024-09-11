@@ -30,12 +30,14 @@ complicated type systems with dependent types and subtyping.
 | [`Parser`]    | Parser for the surface language         |
 | [`Surface`]   | Surface language, including elaboration |
 | [`Core`]      | Core language, including normalisation, and pretty printing |
+| [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./Main.ml
 [`Lexer`]: ./Lexer.mll
 [`Parser`]: ./Parser.mly
 [`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml
+[`Prim`]: ./Prim.ml
 
 ## Resources
 

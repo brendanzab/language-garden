@@ -21,12 +21,14 @@ This implementation was originally based on [Arad Arbel’s gist](https://gist.g
 | [`Parser`]    | Parser for the surface language         |
 | [`Surface`]   | Surface language, including elaboration |
 | [`Core`]      | Core language, including normalisation, unification, and pretty printing |
+| [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./Main.ml
 [`Lexer`]: ./Lexer.mll
 [`Parser`]: ./Parser.mly
 [`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml
+[`Prim`]: ./Prim.ml
 
 ## Examples
 
