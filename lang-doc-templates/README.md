@@ -95,6 +95,7 @@ String/Node/Document Literals:
 - [JSX](https://facebook.github.io/jsx/)
 - [Hiccup](https://github.com/weavejester/hiccup)
 - [Elm HTML](https://package.elm-lang.org/packages/elm/html/latest/)
+- [kotlinx.html](https://github.com/Kotlin/kotlinx.html)
 - [ScalaTags](https://com-lihaoyi.github.io/scalatags/)
 - [Unison documentation literals](https://www.unison-lang.org/docs/usage-topics/documentation/)
 - [Javascript template literals](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals)
