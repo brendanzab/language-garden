@@ -138,7 +138,7 @@ module Elab = struct
     | Op2 (`Add, tm1, tm2) ->
         let tm1 = check ctx tm1 TextTy in
         let tm2 = check ctx tm2 TextTy in
-        TextConcat (tm1, tm2), TextTy
+        PrimApp (TextConcat, [tm1; tm2]), TextTy
 
   (** Elaborate a function literal, inferring its type. *)
   and fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
@@ -169,10 +169,10 @@ module Elab = struct
     match template with
     | [] -> TextLit ""
     | { data = TextFragment s; _ } :: template ->
-        TextConcat (TextLit s, synth_template ctx template)
+        PrimApp (TextConcat, [TextLit s; synth_template ctx template])
     | { data = TermFragment tm; _ } :: template ->
         let tm = check ctx tm TextTy in
-        TextConcat (tm, synth_template ctx template)
+        PrimApp (TextConcat, [tm; synth_template ctx template])
     | { data = LetFragment (name, params, def_body_ty, def_tm); _ } :: template ->
         let def_tm, def_ty = fun_lit ctx params def_body_ty def_tm in
         Let (name.data, def_ty, def_tm,
@@ -181,7 +181,9 @@ module Elab = struct
         let tm = check ctx tm BoolTy in
         let template1 = synth_template ctx template1 in
         let template2 = synth_template ctx template2 in
-        TextConcat (BoolElim (tm, template1, template2),
-          synth_template ctx template)
+        PrimApp (TextConcat, [
+          BoolElim (tm, template1, template2);
+          synth_template ctx template;
+        ])
 
 end

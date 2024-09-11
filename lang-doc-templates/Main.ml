@@ -17,14 +17,14 @@ let fun_lit (name, ty) body = Core.(FunLit (name, ty, body (Var name)))
 let rec concat = function
   | [] -> Core.TextLit ""
   | [t] -> t
-  | t :: ts -> Core.TextConcat (t, concat ts)
+  | t :: ts -> Core.PrimApp (TextConcat, [t; concat ts])
 
 let node name body =
-  Core.(concat [
+  concat [
     TextLit (Format.sprintf "<%s>" name);
     body;
     TextLit (Format.sprintf "</%s>" name);
-  ])
+  ]
 
 let () = begin
 
