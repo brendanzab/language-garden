@@ -1,8 +1,8 @@
 Testing some escapes:
 
-back-slash: \\
-dollar sign: \$
-quotation mark: \"
+- back-slash: \\.
+- dollar sign: \$.
+- quotation mark: \".
 
-newline:\n...
-tab:\t...
+- newline: \n.
+- tab: \t.

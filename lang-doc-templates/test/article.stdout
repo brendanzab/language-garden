@@ -1,7 +1,13 @@
+
+
 <h1>Document template language</h1>
 
 <p>
-  A programmable document template language that elaborates to a typed lambda
+  Hello ${place}!
+</p>
+
+<p>
+  This is a document template language that elaborates to a typed lambda
   calculus.
 </p>
 

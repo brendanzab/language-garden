@@ -1,9 +1,9 @@
 Testing some escapes:
 
-back-slash: \
-dollar sign: $
-quotation mark: "
+- back-slash: \.
+- dollar sign: $.
+- quotation mark: ".
 
-newline:
-...
-tab:	...
+- newline: 
+.
+- tab: 	.

@@ -1,7 +1,13 @@
+${let place := "world"}
+
 ${heading1 "Document template language"}
 
 ${para "
-  A programmable document template language that elaborates to a typed lambda
+  Hello ${place}!
+"}
+
+${para "
+  This is a document template language that elaborates to a typed lambda
   calculus.
 "}
 
