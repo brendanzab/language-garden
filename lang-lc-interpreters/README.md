@@ -28,12 +28,12 @@ equality comparison.
 
 | Module                      | Variables (Syntax) | Variables (Semantics)  | Closures (Semantics)    |
 | --------------------------- | ------------------ | ---------------------- | ----------------------- |
-| [`NamedClosures`]           | Strings            | Strings                | Defunctionalised        |
-| [`NamedHoas`]               | Strings            | Strings                | Host functions          |
-| [`NamelessClosures`]        | De Bruijn indices  | De Bruijn levels       | Defunctionalised        |
-| [`NamelessHoas`]            | De Bruijn indices  | De Bruijn levels       | Host functions          |
-| [`UniqueClosures`]          | Unique identifiers | Unique identifiers     | Defunctionalised        |
-| [`UniqueHoas`]              | Unique identifiers | Unique identifiers     | Host functions          |
+| [`NamedNbeClosures`]        | Strings            | Strings                | Defunctionalised        |
+| [`NamedNbeHoas`]            | Strings            | Strings                | Host functions          |
+| [`NamelessNbeClosures`]     | De Bruijn indices  | De Bruijn levels       | Defunctionalised        |
+| [`NamelessNbeHoas`]         | De Bruijn indices  | De Bruijn levels       | Host functions          |
+| [`UniqueNbeClosures`]       | Unique identifiers | Unique identifiers     | Defunctionalised        |
+| [`UniqueNbeHoas`]           | Unique identifiers | Unique identifiers     | Host functions          |
 
 Normalisation-by-evaluation (NbE) breaks up normalisation into evaluation and
 quotation.
@@ -65,21 +65,21 @@ Variable representations:
 
 ## Discussion
 
-For implementations I personally prefer [`NamelessClosures`] or
-[`NamelessHoas`] for most things, as it provides a good balance of convenience,
+For implementations I personally prefer [`NamelessNbeClosures`] or
+[`NamelessNbeHoas`] for most things, as it provides a good balance of convenience,
 ease of implementation, and performance. Other constraints might tip the balance
 however, for example unique identifiers can make elaborating pattern matching to
 case trees more straightforward.
 
-[`Named`]:              ./Named.ml
-[`NamedClosures`]:      ./NamedClosures.ml
-[`NamedHoas`]:          ./NamedHoas.ml
-[`Nameless`]:           ./Nameless.ml
-[`NamelessClosures`]:   ./NamelessClosures.ml
-[`NamelessHoas`]:       ./NamelessHoas.ml
-[`Unique`]:             ./Unique.ml
-[`UniqueClosures`]:     ./UniqueClosures.ml
-[`UniqueHoas`]:         ./UniqueHoas.ml
+[`Named`]:                ./Named.ml
+[`NamedNbeClosures`]:     ./NamedNbeClosures.ml
+[`NamedNbeHoas`]:         ./NamedNbeHoas.ml
+[`Nameless`]:             ./Nameless.ml
+[`NamelessNbeClosures`]:  ./NamelessNbeClosures.ml
+[`NamelessNbeHoas`]:      ./NamelessNbeHoas.ml
+[`Unique`]:               ./Unique.ml
+[`UniqueNbeClosures`]:    ./UniqueNbeClosures.ml
+[`UniqueNbeHoas`]:        ./UniqueNbeHoas.ml
 
 ## Resources
 

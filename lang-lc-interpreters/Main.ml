@@ -26,15 +26,15 @@ module Named : Lang
   let of_named = Fun.id
 end
 
-module NamedClosures : Lang = struct
-  include NamedClosures
+module NamedNbeClosures : Lang = struct
+  include NamedNbeClosures
   let to_named = Fun.id
   let of_named = Fun.id
   let normalise = normalise []
 end
 
-module NamedHoas : Lang = struct
-  include NamedHoas
+module NamedNbeHoas : Lang = struct
+  include NamedNbeHoas
   let to_named = Fun.id
   let of_named = Fun.id
   let normalise = normalise []
@@ -43,25 +43,25 @@ end
 
 module Nameless : Lang = Nameless
 
-module NamelessClosures : Lang = struct
-  include NamelessClosures
+module NamelessNbeClosures : Lang = struct
+  include NamelessNbeClosures
   let normalise = normalise []
 end
 
-module NamelessHoas : Lang = struct
-  include NamelessHoas
+module NamelessNbeHoas : Lang = struct
+  include NamelessNbeHoas
   let normalise = normalise []
 end
 
 
 module Unique : Lang = Unique
 
-module UniqueClosures : Lang = struct
-  include UniqueClosures
+module UniqueNbeClosures : Lang = struct
+  include UniqueNbeClosures
   let normalise = normalise Id.Map.empty
 end
 
-module UniqueHoas : Lang = struct
-  include UniqueHoas
+module UniqueNbeHoas : Lang = struct
+  include UniqueNbeHoas
   let normalise = normalise Id.Map.empty
 end
