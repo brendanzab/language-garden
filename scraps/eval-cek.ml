@@ -81,35 +81,36 @@ type state =
 (** Move the execution of the abstract machine forwards by one step. *)
 let step (s : state) : state =
   match s with
-  (* Evaluating a variable? Look it up in the environment and apply it to the continuation. *)
+  (* Evaluating a variable? Lookup the variable in the environment and apply it
+     to the continuation. *)
   | Eval (Var x, env, k) ->
       Cont (k, List.assoc x env)
 
-  (* Evaluating a let expression? First evaluate the definition. *)
+  (* Evaluating a let expression? Evaluate the definition, leaving the
+     evaluation of body until later. *)
   | Eval (Let (x, def, body), env, k) ->
       Eval (def, env, LetBody ((x, (), body), env, k))
 
-  (* Evaluating a function? Convert it to a value and apply it to the continuation. *)
+  (* Evaluating a function literal? Convert it to a value and apply it to the
+     continuation. *)
   | Eval (FunLit (x, body), env, k) ->
       Cont (k, FunLit (Clos (env, x, body)))
 
-  (* Evaluating a function application? First evaluate the function. *)
+  (* Evaluating a function application? Evaluate the head of the application,
+     leaving the evaluation of the argument until later. *)
   | Eval (FunApp (head, arg), env, k) ->
       Eval (head, env, FunArg (((), arg), env, k))
 
 
-  (* Evaluating the body of a let binding? Add the definition to the environment
-     and evaluate the body. *)
+  (* Add the definition to the environment and evaluate the body. *)
   | Cont (LetBody ((x, (), body), env, k), def) ->
       Eval (body, (x, def) :: env, k)
 
-  (* Evaluate the argument of a function application, applying it to the head of
-     the application later on. *)
+  (* Evaluate an argument, leaving the final function application until later. *)
   | Cont (FunArg (((), arg), env, k), head) ->
       Eval (arg, env, FunApp ((head, ()), k))
 
-  (* Continuing a function application? Add the argument to the environment of
-     the closure and evaluate the body. *)
+  (* Add the argument to the environment of the closure and evaluate the body. *)
   | Cont (FunApp ((FunLit (Clos (env, x, body)), ()), k), arg) ->
       Eval (body, (x, arg) :: env, k)
 
