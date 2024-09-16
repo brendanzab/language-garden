@@ -55,13 +55,13 @@ type cont =
   (** The empty continuation *)
 
   | LetBody of (string * unit * expr) * env * cont
-  (** Continue by evaluating the body of a let binding *)
+  (** Evaluating the body of a let binding *)
 
   | FunArg of (unit * expr) * env * cont
-  (** Continue a function application by evaluting the argument *)
+  (** Evalute the argument of a function application *)
 
   | FunApp of (value * unit) * cont
-  (** Continue by applying a function to an argument *)
+  (** Applying a function to an argument *)
 
 
 (** The state of the abstract machine *)
@@ -81,41 +81,41 @@ type state =
 (** Move the execution of the abstract machine forwards by one step. *)
 let step (s : state) : state =
   match s with
-  (* Evaluating a variable? Lookup the variable in the environment and apply it
-     to the continuation. *)
+  (* Evaluate a variable *)
   | Eval (Var x, env, k) ->
       Cont (k, List.nth env x)
 
-  (* Evaluating a let expression? Evaluate the definition, leaving the
-     evaluation of body until later. *)
+  (* Evaluate a let binding *)
   | Eval (Let (x, def, body), env, k) ->
-      Eval (def, env, LetBody ((x, (), body), env, k))
+      Eval (def, env,                       (* evaluate the definition now *)
+        LetBody ((x, (), body), env, k))    (* continue evaluating the body later *)
 
-  (* Evaluating a function literal? Convert it to a value and apply it to the
-     continuation. *)
+  (* Evaluate a function literal *)
   | Eval (FunLit (x, body), env, k) ->
       Cont (k, FunLit (Clos (env, body)))
 
-  (* Evaluating a function application? Evaluate the head of the application,
-     leaving the evaluation of the argument until later. *)
+  (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
-      Eval (head, env, FunArg (((), arg), env, k))
+      Eval (head, env,                      (* evaluate the head of the application now *)
+        FunArg (((), arg), env, k))         (* continue evaluating the argument later *)
 
 
-  (* Add the definition to the environment and evaluate the body. *)
+  (* Continue evaluating the body of a let binding *)
   | Cont (LetBody ((_, (), body), env, k), def) ->
       Eval (body, def :: env, k)
 
-  (* Evaluate an argument, leaving the final function application until later. *)
+  (* Continue evaluating a function argument *)
   | Cont (FunArg (((), arg), env, k), head) ->
-      Eval (arg, env, FunApp ((head, ()), k))
+      Eval (arg, env,                       (* evaluate the argument now *)
+        FunApp ((head, ()), k))             (* continue applying the function later *)
 
-  (* Add the argument to the environment of the closure and evaluate the body. *)
-  | Cont (FunApp ((FunLit (Clos (env, body)), ()), k), arg) ->
-      Eval (body, arg :: env, k)
+  (* Continue applying a function *)
+  | Cont (FunApp ((head, ()), k), arg) ->
+      begin match head with
+      | FunLit (Clos (env, body)) -> Eval (body, arg :: env, k)
+      end
 
-
-  (* Attempted to continue the empty continuation *)
+  (* Continue the empty continuation *)
   | Cont (Done, _) ->
       failwith "cannot step evaluation further"
 
