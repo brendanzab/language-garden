@@ -32,7 +32,7 @@
 (** {1 Syntax} *)
 
 type expr =
-  | Var of string
+  | Var of int                      (* variables, represented with de Bruijn indices *)
   | Let of string * expr * expr
   | FunLit of string * expr
   | FunApp of expr * expr
@@ -44,9 +44,9 @@ type value =
   | FunLit of clos
 
 and clos =
-  | Clos of env * string * expr
+  | Clos of env * expr
 
-and env = (string * value) list
+and env = value list
 
 
 (** Defunctionalised continuation *)
@@ -84,7 +84,7 @@ let step (s : state) : state =
   (* Evaluating a variable? Lookup the variable in the environment and apply it
      to the continuation. *)
   | Eval (Var x, env, k) ->
-      Cont (k, List.assoc x env)
+      Cont (k, List.nth env x)
 
   (* Evaluating a let expression? Evaluate the definition, leaving the
      evaluation of body until later. *)
@@ -94,7 +94,7 @@ let step (s : state) : state =
   (* Evaluating a function literal? Convert it to a value and apply it to the
      continuation. *)
   | Eval (FunLit (x, body), env, k) ->
-      Cont (k, FunLit (Clos (env, x, body)))
+      Cont (k, FunLit (Clos (env, body)))
 
   (* Evaluating a function application? Evaluate the head of the application,
      leaving the evaluation of the argument until later. *)
@@ -103,16 +103,16 @@ let step (s : state) : state =
 
 
   (* Add the definition to the environment and evaluate the body. *)
-  | Cont (LetBody ((x, (), body), env, k), def) ->
-      Eval (body, (x, def) :: env, k)
+  | Cont (LetBody ((_, (), body), env, k), def) ->
+      Eval (body, def :: env, k)
 
   (* Evaluate an argument, leaving the final function application until later. *)
   | Cont (FunArg (((), arg), env, k), head) ->
       Eval (arg, env, FunApp ((head, ()), k))
 
   (* Add the argument to the environment of the closure and evaluate the body. *)
-  | Cont (FunApp ((FunLit (Clos (env, x, body)), ()), k), arg) ->
-      Eval (body, (x, arg) :: env, k)
+  | Cont (FunApp ((FunLit (Clos (env, body)), ()), k), arg) ->
+      Eval (body, arg :: env, k)
 
 
   (* Attempted to continue the empty continuation *)
