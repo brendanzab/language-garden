@@ -55,13 +55,13 @@ type cont =
   (** The empty continuation *)
 
   | LetBody of (string * unit * expr) * env * cont
-  (** Evaluating the body of a let binding *)
+  (** Evaluate the body of a let binding *)
 
   | FunArg of (unit * expr) * env * cont
-  (** Evalute the argument of a function application *)
+  (** Evaluate the argument of a function application *)
 
   | FunApp of (value * unit) * cont
-  (** Applying a function to an argument *)
+  (** Apply a function to an argument *)
 
 
 (** The state of the abstract machine *)
