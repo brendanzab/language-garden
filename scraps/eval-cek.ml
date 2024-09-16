@@ -7,11 +7,11 @@
     ⟨ C, E, K ⟩
       ▲  ▲  ▲
       │  │  │
-      │  │  The continuation
+      │  │  The (K)ontinuation
       │  │
-      │  The environment
+      │  The (E)nvironment
       │
-      The control instruction
+      The (C)ontrol instruction
 
     By structuring evaluation in this way, it means that:
 
