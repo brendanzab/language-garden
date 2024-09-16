@@ -87,7 +87,7 @@ let step (s : state) : state =
 
   (* Evaluate a let binding *)
   | Eval (Let (x, def, body), env, k) ->
-      Eval (def, env,                       (* evaluate the definition now *)
+      Eval (def, env,                       (* evaluate the definition *)
         LetBody ((x, (), body), env, k))    (* continue evaluating the body later *)
 
   (* Evaluate a function literal *)
@@ -96,28 +96,34 @@ let step (s : state) : state =
 
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
-      Eval (head, env,                      (* evaluate the head of the application now *)
+      Eval (head, env,                      (* evaluate the head of the application *)
         FunArg (((), arg), env, k))         (* continue evaluating the argument later *)
 
 
   (* Continue evaluating the body of a let binding *)
   | Cont (LetBody ((_, (), body), env, k), def) ->
+      (*                ▲                   │
+                        └───────────────────┘ *)
       Eval (body, def :: env, k)
 
   (* Continue evaluating a function argument *)
   | Cont (FunArg (((), arg), env, k), head) ->
-      Eval (arg, env,                       (* evaluate the argument now *)
+      (*            ▲                  │
+                    └──────────────────┘ *)
+      Eval (arg, env,                       (* evaluate the argument *)
         FunApp ((head, ()), k))             (* continue applying the function later *)
 
   (* Continue applying a function *)
   | Cont (FunApp ((head, ()), k), arg) ->
+      (*                  ▲        │
+                          └────────┘ *)
       begin match head with
       | FunLit (Clos (env, body)) -> Eval (body, arg :: env, k)
       end
 
   (* Continue the empty continuation *)
   | Cont (Done, _) ->
-      failwith "cannot step evaluation further"
+      invalid_arg "cannot continue the empty continuation"
 
 
 (** Compute the value of an expression tail-recusively *)
