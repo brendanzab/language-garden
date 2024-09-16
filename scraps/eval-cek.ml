@@ -49,7 +49,11 @@ and clos =
 and env = value list
 
 
-(** Defunctionalised continuation *)
+(** Defunctionalised continuation
+
+    The [unit] type is used to mark the “hole” in the continuation, where a
+    value will be substituted when applying the continuation.
+*)
 type cont =
   | Done
   (** The empty continuation *)
