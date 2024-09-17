@@ -76,7 +76,7 @@ type cont =
 (** The state of the abstract machine *)
 type state =
   | Eval of expr * env * cont
-  (** Evaluate an expression, where:
+  (** Evaluate an expression while deferring the continuation until later, where:
 
       - [expr] is the (C)ontrol instruction, to evaluate now
       - [env] is the (E)nvironment, to be used when evaluating the expression
@@ -84,14 +84,13 @@ type state =
   *)
 
   | Cont of cont * value
-  (** Apply a continuation to a value, plugging the “hole” in the
-      continuation with the value
+  (** Plug the “hole” in a continuation with a value.
 
       Some presentations of the CEK machine get by with just the [Eval] state
       (see Matt Might’s post linked above), but I found the transition rules
       were clearer if the application of the continuation was moved into a
-      separate state, as is done in Figure 2 of “The essence of compiling with
-      continuations” (I’m not sure where this approach originated from).
+      separate state, as is done by Felleisen and Friedman in Figure 2 of “The
+      essence of compiling with continuations”.
   *)
 
 
@@ -121,14 +120,14 @@ let step (s : state) : state =
         FunArg (((), arg), env, k))         (* continue evaluating the argument later *)
 
 
-  (* Continue evaluating the body of a let binding now that the definition has
+  (* Continue evaluating the body of a let binding, now that the definition has
      been evaluated *)
   | Cont (LetBody ((_, (), body), env, k), def) ->
       (*                ▲                   │
                         └───────────────────┘ *)
       Eval (body, def :: env, k)
 
-  (* Continue evaluating a function argument now that the head of the
+  (* Continue evaluating a function argument, now that the head of the
      application has been evaluated *)
   | Cont (FunArg (((), arg), env, k), head) ->
       (*            ▲                  │
@@ -138,7 +137,7 @@ let step (s : state) : state =
                        ▼ *)
         FunApp ((head, ()), k))             (* continue applying the function later *)
 
-  (* Continue applying a function now that the head of the application and the
+  (* Continue applying a function, now that the head of the application and the
      argument have been evaluated *)
   | Cont (FunApp ((head, ()), k), arg) ->
       (*                  ▲        │
