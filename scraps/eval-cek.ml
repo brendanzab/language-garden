@@ -85,14 +85,14 @@ type state =
 
   | Cont of cont * value
   (** Apply a continuation to a value, plugging the “hole” in the
-      continuation with the value *)
+      continuation with the value
 
-(** Some presentations of the CEK machine get by with just using a tuple for the
-    state (see Matt Might’s post linked above) but I found the transition rules
-    were clearer if the application of the continuation was moved into a
-    separate state, as is done in Figure 2 of “The essence of compiling with
-    continuations” (I’m not sure where this approach originated from).
-*)
+      Some presentations of the CEK machine get by with just the [Eval] state
+      (see Matt Might’s post linked above), but I found the transition rules
+      were clearer if the application of the continuation was moved into a
+      separate state, as is done in Figure 2 of “The essence of compiling with
+      continuations” (I’m not sure where this approach originated from).
+  *)
 
 
 (** Move the execution of the abstract machine forwards by one step. *)
