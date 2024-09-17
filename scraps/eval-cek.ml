@@ -28,23 +28,28 @@
 
 (** {1 Syntax} *)
 
+(** Lambda calculus expressions, with let bindings *)
 type expr =
-  | Var of int                      (* variables, represented with de Bruijn indices *)
-  | Let of string * expr * expr
-  | FunLit of string * expr
-  | FunApp of expr * expr
+  | Var of int                      (* variable occurences (as de Bruijn indices) *)
+  | Let of string * expr * expr     (* let bindings *)
+  | FunLit of string * expr         (* function literals *)
+  | FunApp of expr * expr           (* function applications *)
 
 
 (** {1 Semantics} *)
 
+(** {2 Semantic domain} *)
+
 type value =
-  | FunLit of clos
+  | FunLit of string * clos         (* function literals *)
 
 and clos =
   | Clos of env * expr
 
 and env = value list
 
+
+(** {2 Abstract machine} *)
 
 (** Defunctionalised continuation
 
@@ -99,7 +104,7 @@ let step (s : state) : state =
 
   (* Evaluate a function literal *)
   | Eval (FunLit (x, body), env, k) ->
-      Cont (k, FunLit (Clos (env, body)))
+      Cont (k, FunLit (x, Clos (env, body)))
 
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
@@ -132,7 +137,7 @@ let step (s : state) : state =
       (*                  ▲        │
                           └────────┘ *)
       begin match head with
-      | FunLit (Clos (env, body)) -> Eval (body, arg :: env, k)
+      | FunLit (_, Clos (env, body)) -> Eval (body, arg :: env, k)
       end
 
   (* Continue the empty continuation *)
@@ -140,7 +145,9 @@ let step (s : state) : state =
       invalid_arg "cannot continue the empty continuation"
 
 
-(** Compute the value of an expression tail-recusively *)
+(** {2 Evaluation} *)
+
+(** Compute the value of an expression *)
 let eval (e : expr) : value =
   (* Step the machine state until we reach the empty continuation *)
   let rec go (s : state) : value =
