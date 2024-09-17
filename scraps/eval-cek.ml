@@ -106,8 +106,6 @@ let step (s : state) : state =
   (* Evaluate a let binding *)
   | Eval (Let (x, def, body), env, k) ->
       Eval (def, env,                       (* evaluate the definition *)
-        (*   └───────┐
-                     ▼ *)
         LetBody ((x, (), body), env, k))    (* continue evaluating the body later *)
 
   (* Evaluate a function literal *)
@@ -117,8 +115,6 @@ let step (s : state) : state =
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
       Eval (head, env,                      (* evaluate the head of the application *)
-        (*   └───┐
-                 ▼ *)
         FunArg (((), arg), env, k))         (* continue evaluating the argument later *)
 
 
@@ -135,8 +131,6 @@ let step (s : state) : state =
       (*            ▲                  │
                     └──────────────────┘ *)
       Eval (arg, env,                       (* evaluate the argument *)
-        (*   └─────────┐
-                       ▼ *)
         FunApp ((head, ()), k))             (* continue applying the function later *)
 
   (* Continue applying a function, now that the head of the application and the
