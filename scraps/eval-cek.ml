@@ -4,14 +4,16 @@
     call-by-value lambda calculus in terms of an abstract machine. The name
     “CEK” is derived from the components of the machine state:
 
-    ⟨ C, E, K ⟩
-      ▲  ▲  ▲
-      │  │  │
-      │  │  The (K)ontinuation
-      │  │
-      │  The (E)nvironment
-      │
-      The (C)ontrol instruction
+    {v
+      ⟨ C, E, K ⟩
+        ▲  ▲  ▲
+        │  │  │
+        │  │  The (K)ontinuation
+        │  │
+        │  The (E)nvironment
+        │
+        The (C)ontrol instruction
+    v}
 
     By structuring evaluation in this way, it means that:
 
