@@ -1,8 +1,8 @@
 (** An interpreter for the lambda calculus, implemented using the CEK machine.
 
-    The CEK machine is an approach for modelling the call-by-value lambda
-    calculus in terms of an abstract machine. The name “CEK” is derived from the
-    components of the machine state:
+    The CEK machine is an approach for modelling the left-to-right,
+    call-by-value lambda calculus in terms of an abstract machine. The name
+    “CEK” is derived from the components of the machine state:
 
     ⟨ C, E, K ⟩
       ▲  ▲  ▲
@@ -17,9 +17,6 @@
 
     - evaluation can be implemented tail-recursively
     - the interpreter can be stepped, which could be useful for debugging
-
-    The CESK machine extends the CEK machine with a store/heap. This is used to
-    model mutable state.
 
     {2 Resources}
 
@@ -51,6 +48,9 @@ and env = value list
 
 (** Defunctionalised continuation
 
+    The continuation is carefully crafted to result in a left-to-right,
+    call-by-value evaluation strategy.
+
     The [unit] type is used to mark the “hole” in the continuation, where a
     value will be substituted when applying the continuation.
 *)
@@ -73,13 +73,14 @@ type state =
   | Eval of expr * env * cont
   (** Evaluate an expression, where:
 
-      - [expr] is the control instruction
-      - [env] is the environment
-      - [cont] is the continuation
+      - [expr] is the (C)ontrol instruction, to evaluate now
+      - [env] is the (E)nvironment, to be used when evaluating the expression
+      - [cont] is the (K)ontinuation, to be continued later with the computed value
   *)
 
   | Cont of cont * value
-  (** Apply a continuation to a value *)
+  (** Apply a continuation to a value, plugging the “hole” in the
+      continuation with the value *)
 
 
 (** Move the execution of the abstract machine forwards by one step. *)
@@ -92,6 +93,8 @@ let step (s : state) : state =
   (* Evaluate a let binding *)
   | Eval (Let (x, def, body), env, k) ->
       Eval (def, env,                       (* evaluate the definition *)
+        (*   └───────┐
+                     ▼ *)
         LetBody ((x, (), body), env, k))    (* continue evaluating the body later *)
 
   (* Evaluate a function literal *)
@@ -101,23 +104,30 @@ let step (s : state) : state =
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
       Eval (head, env,                      (* evaluate the head of the application *)
+        (*   └───┐
+                 ▼ *)
         FunArg (((), arg), env, k))         (* continue evaluating the argument later *)
 
 
-  (* Continue evaluating the body of a let binding *)
+  (* Continue evaluating the body of a let binding now that the definition has
+     been evaluated *)
   | Cont (LetBody ((_, (), body), env, k), def) ->
       (*                ▲                   │
                         └───────────────────┘ *)
       Eval (body, def :: env, k)
 
-  (* Continue evaluating a function argument *)
+  (* Continue evaluating a function argument now that the head of the
+     application has been evaluated *)
   | Cont (FunArg (((), arg), env, k), head) ->
       (*            ▲                  │
                     └──────────────────┘ *)
       Eval (arg, env,                       (* evaluate the argument *)
+        (*   └─────────┐
+                       ▼ *)
         FunApp ((head, ()), k))             (* continue applying the function later *)
 
-  (* Continue applying a function *)
+  (* Continue applying a function now that the head of the application and the
+     argument have been evaluated *)
   | Cont (FunApp ((head, ()), k), arg) ->
       (*                  ▲        │
                           └────────┘ *)
