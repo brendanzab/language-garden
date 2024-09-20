@@ -55,24 +55,26 @@ and env = value list
 
 (** Defunctionalised continuation
 
-    The continuation is carefully crafted to result in a left-to-right,
-    call-by-value evaluation strategy.
+    This is a list of {i evaluation contexts} that represent “what to do next”
+    after evaluating the current expression. The continuation is carefully
+    crafted to result in a left-to-right, call-by-value evaluation strategy.
 
-    The [unit] type is used to mark the “hole” in the continuation, where a
-    value will be substituted when applying the continuation.
+    The [unit] type is used to mark the “hole’ in the continuation, i.e. the
+    place where the resulting value will be substituted when applying the
+    continuation.
 *)
 type cont =
   | Done
   (** The empty continuation *)
 
   | LetBody of (string * unit * expr) * env * cont
-  (** Evaluate the body of a let binding *)
+  (** Resume by evaluating the body of a let binding *)
 
   | FunArg of (unit * expr) * env * cont
-  (** Evaluate the argument of a function application *)
+  (** Resume by evaluating the argument of a function application *)
 
   | FunApp of (value * unit) * cont
-  (** Apply a function to an argument *)
+  (** Resume by applying a function to an argument *)
 
 
 (** The state of the abstract machine *)
@@ -85,8 +87,8 @@ type state =
       - [cont] is the (K)ontinuation, to be continued later with the computed value
   *)
 
-  | Cont of cont * value
-  (** Plug the “hole” in a continuation with a value.
+  | Apply of cont * value
+  (** Resume the continuation, pluging the “hole” with a value.
 
       Some presentations of the CEK machine get by with just the [Eval] state
       (see Matt Might’s post linked above), but I found the transition rules
@@ -101,7 +103,7 @@ let step (s : state) : state =
   match s with
   (* Evaluate a variable *)
   | Eval (Var x, env, k) ->
-      Cont (k, List.nth env x)
+      Apply (k, List.nth env x)
 
   (* Evaluate a let binding *)
   | Eval (Let (x, def, body), env, k) ->
@@ -110,7 +112,7 @@ let step (s : state) : state =
 
   (* Evaluate a function literal *)
   | Eval (FunLit (x, body), env, k) ->
-      Cont (k, FunLit (x, Clos (env, body)))
+      Apply (k, FunLit (x, Clos (env, body)))
 
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
@@ -118,43 +120,45 @@ let step (s : state) : state =
         FunArg (((), arg), env, k))         (* continue evaluating the argument later *)
 
 
-  (* Continue evaluating the body of a let binding, now that the definition has
+  (* Resume evaluating the body of a let binding, now that the definition has
      been evaluated *)
-  | Cont (LetBody ((_, (), body), env, k), def) ->
-      (*                ▲                   │
-                        └───────────────────┘ *)
+  | Apply (LetBody ((_, (), body), env, k), def) ->
+      (*                 ▲                   │
+                         └───────────────────┘ *)
       Eval (body, def :: env, k)
 
-  (* Continue evaluating a function argument, now that the head of the
+  (* Resume evaluating a function argument, now that the head of the
      application has been evaluated *)
-  | Cont (FunArg (((), arg), env, k), head) ->
-      (*            ▲                  │
-                    └──────────────────┘ *)
+  | Apply (FunArg (((), arg), env, k), head) ->
+      (*             ▲                  │
+                     └──────────────────┘ *)
       Eval (arg, env,                       (* evaluate the argument *)
         FunApp ((head, ()), k))             (* continue applying the function later *)
 
-  (* Continue applying a function, now that the head of the application and the
+  (* Resume applying a function, now that the head of the application and the
      argument have been evaluated *)
-  | Cont (FunApp ((head, ()), k), arg) ->
-      (*                  ▲        │
-                          └────────┘ *)
+  | Apply (FunApp ((head, ()), k), arg) ->
+      (*                   ▲        │
+                           └────────┘ *)
       begin match head with
       | FunLit (_, Clos (env, body)) -> Eval (body, arg :: env, k)
       end
 
-  (* Continue the empty continuation *)
-  | Cont (Done, _) ->
-      invalid_arg "cannot continue the empty continuation"
+  (* Resume the empty continuation *)
+  | Apply (Done, _) ->
+      invalid_arg "cannot resume the empty continuation"
 
 
 (** {2 Evaluation} *)
 
 (** Compute the value of an expression *)
 let eval (e : expr) : value =
-  (* Step the machine state until we reach the empty continuation *)
+  (* Step the machine state until we reach the empty continuation.
+     This is tail-recursive, so will not exhaust the stack when evaluating
+     deeply nested expressions! *)
   let rec go (s : state) : value =
     match s with
-    | Cont (Done, v) -> v
+    | Apply (Done, v) -> v
     | s -> (go [@tailcall]) (step s)
   in
   go (Eval (e, [], Done))
