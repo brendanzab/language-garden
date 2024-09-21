@@ -16,7 +16,8 @@ build system support and are untested for now.
 - [**elab-stlc-bidir.rs**](./elab-stlc-bidir.rs):
   Bidirectional elaborator for a simple functional language
   (compare with [check-stlc-bidir.rs](./check-stlc-bidir.rs)).
-- [**eval-cek**](./eval-cek.ml): An interpreter for the lambda calculus,
-  implemented using the CEK machine.
+- [**eval-cek**](./eval-cek.ml): A tree-walking interpreter for the lambda
+  calculus, refactored into continuation-passing-style in the style of the
+  CEK machine.
 - [**eval-extensible**](./eval-extensible.ml): Extensible interpreters for
   lambda calculus and arithmetic expressions.

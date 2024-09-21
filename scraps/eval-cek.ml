@@ -1,8 +1,13 @@
-(** An interpreter for the lambda calculus, implemented using the CEK machine.
+(** A tree-walking interpreter for the lambda calculus, refactored into
+    continuation-passing-style in the style of the CEK machine. By structuring
+    evaluation in this way, it means that:
 
-    The CEK machine is an approach for modelling the left-to-right,
-    call-by-value lambda calculus in terms of an abstract machine. The name
-    “CEK” is derived from the components of the machine state:
+    - evaluation can be implemented tail-recursively
+    - the interpreter can be stepped, which could be useful for debugging
+
+    The CEK machine is an abstract machine that models the left-to-right,
+    call-by-value lambda calculus. The name “CEK” is derived from the components
+    of the machine state:
 
     {v
       ⟨ C, E, K ⟩
@@ -14,11 +19,6 @@
         │
         The (C)ontrol instruction
     v}
-
-    By structuring evaluation in this way, it means that:
-
-    - evaluation can be implemented tail-recursively
-    - the interpreter can be stepped, which could be useful for debugging
 
     {2 Resources}
 
