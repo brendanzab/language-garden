@@ -92,7 +92,7 @@ type state =
   *)
 
   | Apply of cont * value
-  (** Resume the continuation, pluging the “hole” with a value.
+  (** Resume the continuation, plugging the “hole” with a value.
 
       Some presentations of the CEK machine get by with just the [Eval] state
       (see Matt Might’s post linked above), but I found the transition rules
