@@ -106,22 +106,22 @@ type state =
 let step (s : state) : state =
   match s with
   (* Evaluate a variable *)
-  | Eval (Var x, env, k) ->
-      Apply (k, List.nth env x)
+  | Eval (Var index, env, k) ->
+      Apply (k, List.nth env index)
 
   (* Evaluate a let binding *)
-  | Eval (Let (x, def, body), env, k) ->
-      Eval (def, env,                       (* evaluate the definition *)
-        LetBody ((x, (), body), env, k))    (* continue evaluating the body later *)
+  | Eval (Let (name, def, body), env, k) ->
+      Eval (def, env,                         (* evaluate the definition *)
+        LetBody ((name, (), body), env, k))   (* continue evaluating the body later *)
 
   (* Evaluate a function literal *)
-  | Eval (FunLit (x, body), env, k) ->
-      Apply (k, FunLit (x, Clos (env, body)))
+  | Eval (FunLit (name, body), env, k) ->
+      Apply (k, FunLit (name, Clos (env, body)))
 
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
-      Eval (head, env,                      (* evaluate the head of the application *)
-        FunArg (((), arg), env, k))         (* continue evaluating the argument later *)
+      Eval (head, env,                        (* evaluate the head of the application *)
+        FunArg (((), arg), env, k))           (* continue evaluating the argument later *)
 
 
   (* Resume evaluating the body of a let binding, now that the definition has
@@ -136,8 +136,8 @@ let step (s : state) : state =
   | Apply (FunArg (((), arg), env, k), head) ->
       (*             ▲                  │
                      └──────────────────┘ *)
-      Eval (arg, env,                       (* evaluate the argument *)
-        FunApp ((head, ()), k))             (* continue applying the function later *)
+      Eval (arg, env,                         (* evaluate the argument *)
+        FunApp ((head, ()), k))               (* continue applying the function later *)
 
   (* Resume applying a function, now that the head of the application and the
      argument have been evaluated *)
@@ -156,16 +156,16 @@ let step (s : state) : state =
 (** {2 Evaluation} *)
 
 (** Compute the value of an expression *)
-let eval (e : expr) : value =
+let eval (expr : expr) : value =
   (* Step the machine state until we reach the empty continuation.
      This is tail-recursive, so will not exhaust the stack when evaluating
      deeply nested expressions! *)
   let rec go (s : state) : value =
     match s with
-    | Apply (Done, v) -> v
+    | Apply (Done, value) -> value
     | s -> (go [@tailcall]) (step s)
   in
-  go (Eval (e, [], Done))
+  go (Eval (expr, [], Done))
 
 
 (** {1 Tests} *)
