@@ -121,7 +121,8 @@ Wiki markup and personal knowledge management:
 - [Oscean](https://wiki.xxiivv.com/site/oscean.html)
 - [Forester](https://github.com/jonsterling/ocaml-forester)
 - [Mylink](https://github.com/kalyani-tt/mylink)
-- [Org-roam](https://www.orgroam.com/)
+- [Omake](https://rubenerd.com/xmlns-omake/): cardfile format written in XML, presented with an XSL transform
+- [Org-roam](https://www.orgroam.com/): Emacs-based knowledge management with Org Mode
 - [yon](https://m15o.ichi.city/yon/): Wiki editor in a standalone HTML file with no dependencies
 - [TiddlyWiki](https://tiddlywiki.com/): a non-linear personal web notebook
 
