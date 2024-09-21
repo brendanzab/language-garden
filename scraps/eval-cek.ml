@@ -168,7 +168,7 @@ let eval (e : expr) : value =
   go (Eval (e, [], Done))
 
 
-(** {2 Tests} *)
+(** {1 Tests} *)
 
 module Tests = struct
   (** Run with:
@@ -205,11 +205,13 @@ module Tests = struct
 
     let let' (name, def) (body : t -> t) : t =
       fun ~size ->
-        Let (name, def ~size, body (var ~level:size) ~size:(size + 1))
+        Let (name, def ~size,
+          body (var ~level:size) ~size:(size + 1))
 
     let fun' name (body : t -> t) : t =
       fun ~size ->
-        FunLit (name, body (var ~level:size) ~size:(size + 1))
+        FunLit (name,
+          body (var ~level:size) ~size:(size + 1))
 
     let app (head : t) (arg : t) : t =
       fun ~size ->
@@ -218,9 +220,19 @@ module Tests = struct
     let ( let* ) = let'
     let ( $ ) = app
 
-    let fun1 x body = fun' x body
-    let fun2 (x, y) body = fun' x (fun x -> fun' y (fun y -> body x y))
-    let fun3 (x, y, z) body = fun' x (fun x -> fun' y (fun y -> fun' z (fun z -> body x y z)))
+    let fun1 x body =
+      fun' x body
+
+    let fun2 (x, y) body =
+      fun' x @@ fun x ->
+      fun' y @@ fun y ->
+        body x y
+
+    let fun3 (x, y, z) body =
+      fun' x @@ fun x ->
+      fun' y @@ fun y ->
+      fun' z @@ fun z ->
+        body x y z
 
     let run (expr : t) : expr =
       expr ~size:0
@@ -228,6 +240,10 @@ module Tests = struct
   end
 
   let () = begin
+
+    ignore @@ eval Build.(run begin
+      fun1 "x" Fun.id $ fun1 "y" Fun.id
+    end);
 
     ignore @@ eval Build.(run begin
       let* id = "id", fun1 "x" Fun.id in
