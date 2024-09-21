@@ -162,3 +162,75 @@ let eval (e : expr) : value =
     | s -> (go [@tailcall]) (step s)
   in
   go (Eval (e, [], Done))
+
+
+(** {2 Tests} *)
+
+module Tests = struct
+  (** Run with:
+
+      {@command[
+      $ ocaml scraps/eval-cek.ml
+      ]}
+  *)
+
+  module Build : sig
+
+    type t
+
+    val let' : string * t -> (t -> t) -> t
+    val fun' : string -> (t -> t) -> t
+    val app : t -> t -> t
+
+    val ( let* ) : string * t -> (t -> t) -> t
+    val ( $ ) : t -> t -> t
+
+    val fun1 : string -> (t -> t) -> t
+    val fun2 : (string * string) -> (t -> t -> t) -> t
+    val fun3 : (string * string * string) -> (t -> t -> t -> t) -> t
+
+    val run : t -> expr
+
+  end = struct
+
+    type t = size:int -> expr
+
+    let var ~level : t =
+      fun ~size ->
+        Var (size - level - 1)
+
+    let let' (name, def) (body : t -> t) : t =
+      fun ~size ->
+        Let (name, def ~size, body (var ~level:size) ~size:(size + 1))
+
+    let fun' name (body : t -> t) : t =
+      fun ~size ->
+        FunLit (name, body (var ~level:size) ~size:(size + 1))
+
+    let app (head : t) (arg : t) : t =
+      fun ~size ->
+        FunApp (head ~size, arg ~size)
+
+    let ( let* ) = let'
+    let ( $ ) = app
+
+    let fun1 x body = fun' x body
+    let fun2 (x, y) body = fun' x (fun x -> fun' y (fun y -> body x y))
+    let fun3 (x, y, z) body = fun' x (fun x -> fun' y (fun y -> fun' z (fun z -> body x y z)))
+
+    let run (expr : t) : expr =
+      expr ~size:0
+
+  end
+
+  let () = begin
+
+    ignore @@ eval Build.(run begin
+      let* id = "id", fun1 "x" Fun.id in
+      let* const = "const", fun2 ("x", "y") Fun.const in
+      (const $ id) $ id $ id
+    end);
+
+  end
+
+end
