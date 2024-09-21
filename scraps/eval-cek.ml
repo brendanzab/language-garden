@@ -39,12 +39,21 @@ type index = int
     the binder that it refers to. This allows for quick variable lookups in the
     environment without requiring names. *)
 
-(** Lambda calculus expressions, with let bindings *)
+(* Primitive operations *)
+type prim =
+  | IntNeg
+  | IntAdd
+  | IntSub
+  | IntMul
+
+(** Lambda calculus expressions, with let bindings and integers *)
 type expr =
   | Var of index                    (* variable occurences *)
   | Let of string * expr * expr     (* let bindings *)
   | FunLit of string * expr         (* function literals *)
   | FunApp of expr * expr           (* function applications *)
+  | IntLit of int                   (* integer literal *)
+  | PrimApp of prim * expr list     (* primitive applications *)
 
 
 (** {1 Semantics} *)
@@ -53,6 +62,7 @@ type expr =
 
 type value =
   | FunLit of string * clos         (* function literals *)
+  | IntLit of int                   (* integer literal *)
 
 and clos =
   | Clos of env * expr
@@ -85,6 +95,14 @@ type cont =
   | FunApp of (value * unit) * cont
   (** Resume by applying a function to an argument *)
 
+  | PrimApp of (prim * value list * unit * expr list) * env * cont
+  (** Evaluate the next argument in a primitive operation, applying the
+      primitive if there are no arguments left to evaluate.
+
+      Previously evaluated arguments are stored as values in reverse order,
+      which are then provided to {!prim_app} when the primitive is applied.
+  *)
+
 
 (** The state of the abstract machine *)
 type state =
@@ -99,13 +117,21 @@ type state =
   | Apply of cont * value
   (** Resume the continuation, plugging the “hole” with a value.
 
-      Some presentations of the CEK machine get by with just the [Eval] state
+      Some presentations of the CEK machine get by with just the {!Eval} state
       (see Matt Might’s post linked above), but I found the transition rules
       were clearer if the application of the continuation was moved into a
       separate state, as is done by Felleisen and Friedman in Figure 2 of “The
       essence of compiling with continuations”.
   *)
 
+
+(** Evaluate a primitive application, with the arguments in reverse order. *)
+let prim_app (prim : prim) : value list -> value =
+  match prim with
+  | IntNeg -> fun[@warning "-partial-match"] [IntLit x] -> IntLit (-x)
+  | IntAdd -> fun[@warning "-partial-match"] [IntLit y; IntLit x] -> IntLit (x + y)
+  | IntSub -> fun[@warning "-partial-match"] [IntLit y; IntLit x] -> IntLit (x - y)
+  | IntMul -> fun[@warning "-partial-match"] [IntLit y; IntLit x] -> IntLit (x * y)
 
 (** Move the execution of the abstract machine forwards by one step. *)
 let step (s : state) : state =
@@ -116,8 +142,8 @@ let step (s : state) : state =
 
   (* Evaluate a let binding *)
   | Eval (Let (name, def, body), env, k) ->
-      Eval (def, env,                         (* evaluate the definition *)
-        LetBody ((name, (), body), env, k))   (* continue evaluating the body later *)
+      Eval (def, env,                             (* evaluate the definition *)
+        LetBody ((name, (), body), env, k))       (* continue evaluating the body later *)
 
   (* Evaluate a function literal *)
   | Eval (FunLit (name, body), env, k) ->
@@ -125,8 +151,21 @@ let step (s : state) : state =
 
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
-      Eval (head, env,                        (* evaluate the head of the application *)
-        FunArg (((), arg), env, k))           (* continue evaluating the argument later *)
+      Eval (head, env,                            (* evaluate the head of the application *)
+        FunArg (((), arg), env, k))               (* continue evaluating the argument later *)
+
+  (* Evaluate an integer literal *)
+  | Eval (IntLit n, env, k) ->
+      Apply (k, IntLit n)
+
+  (* Evaluate a primitive application with one-or-more arguments *)
+  | Eval (PrimApp (prim, arg :: args), env, k) ->
+      Eval (arg, env,                             (* evaluate the first argument now *)
+        PrimApp ((prim, [], (), args), env, k))   (* evaluate the rest of the arguments later *)
+
+  (* Evaluate a primitive application with zero arguments *)
+  | Eval (PrimApp (prim, []), env, k) ->
+      Apply (k, prim_app prim [])
 
 
   (* Resume evaluating the body of a let binding, now that the definition has
@@ -141,8 +180,8 @@ let step (s : state) : state =
   | Apply (FunArg (((), arg), env, k), head) ->
       (*             ▲                  │
                      └──────────────────┘ *)
-      Eval (arg, env,                         (* evaluate the argument *)
-        FunApp ((head, ()), k))               (* continue applying the function later *)
+      Eval (arg, env,                             (* evaluate the argument *)
+        FunApp ((head, ()), k))                   (* continue applying the function later *)
 
   (* Resume applying a function, now that the head of the application and the
      argument have been evaluated *)
@@ -151,7 +190,21 @@ let step (s : state) : state =
                            └────────┘ *)
       begin match head with
       | FunLit (_, Clos (env, body)) -> Eval (body, arg :: env, k)
+      | _ -> invalid_arg "expected function literal"
       end
+
+  (* Resume evaluating the next argument in a primitive application *)
+  | Apply (PrimApp ((prim, rev_args, (), arg' :: args), env, k), arg) ->
+      (*                             ▲                           │
+                                     └───────────────────────────┘ *)
+      Eval (arg', env,                                        (* evaluate the next argument now *)
+        PrimApp ((prim, arg :: rev_args, (), args), env, k))  (* evaluate the rest of the arguments later *)
+
+  (* Resume applying the primitive operation, now that all the arguments have
+     been evaluated *)
+  | Apply (PrimApp ((prim, rev_args, (), []), _, k), arg) ->
+      Apply (k, prim_app prim (arg :: rev_args))
+
 
   (* Resume the empty continuation *)
   | Apply (Done, _) ->
@@ -190,6 +243,8 @@ module Build : sig
   val let' : string * t -> (t -> t) -> t
   val fun' : string -> (t -> t) -> t
   val app : t -> t -> t
+  val int : int -> t
+  val prim_app : prim -> t list -> t
 
   val run : t -> expr
 
@@ -197,6 +252,7 @@ module Build : sig
 
   val ( let* ) : string * t -> (t -> t) -> t
   val ( $ ) : t -> t -> t
+  val ( #$ ) : prim -> t list -> t
 
   val fun1 : string -> (t -> t) -> t
   val fun2 : (string * string) -> (t -> t -> t) -> t
@@ -230,11 +286,20 @@ end = struct
     fun ~size ->
       FunApp (head ~size, arg ~size)
 
+  let int (i : int) : t =
+    fun ~size ->
+      IntLit i
+
+  let prim_app (prim : prim) (args : t list) : t =
+    fun ~size ->
+      PrimApp (prim, List.map (fun arg -> arg ~size) args)
+
   let run (expr : t) : expr =
     expr ~size:0
 
   let ( let* ) = let'
   let ( $ ) = app
+  let ( #$ ) = prim_app
 
   let fun1 x body =
     fun' x body
