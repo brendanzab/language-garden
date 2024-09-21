@@ -34,9 +34,14 @@
 
 (** {1 Syntax} *)
 
+type index = int
+(** De Bruijn index, i.e. the number of binders between a variable occurance and
+    the binder that it refers to. This allows for quick variable lookups in the
+    environment without requiring names. *)
+
 (** Lambda calculus expressions, with let bindings *)
 type expr =
-  | Var of int                      (* variable occurences (as de Bruijn indices) *)
+  | Var of index                    (* variable occurences *)
   | Let of string * expr * expr     (* let bindings *)
   | FunLit of string * expr         (* function literals *)
   | FunApp of expr * expr           (* function applications *)
