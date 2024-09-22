@@ -5,8 +5,11 @@
 
 (** {1 Syntax} *)
 
+(** De Bruijn index *)
+type index = int
+
 type expr = Nameless.expr =
-  | Var of int (* de Bruijn index *)
+  | Var of index
   | Let of string * expr * expr
   | FunLit of string * expr
   | FunApp of expr * expr
@@ -29,11 +32,14 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
 
 (** {1 Semantics} *)
 
+(** De Bruijn level *)
+type level = int
+
 type value =
   | Neu of neu
   | FunLit of string * clos
 and neu =
-  | Var of int (* de Bruijn level *)
+  | Var of level
   | FunApp of neu * value
 
 and clos = env * expr

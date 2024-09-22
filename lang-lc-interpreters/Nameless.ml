@@ -19,8 +19,11 @@ let elem_index (type a) (a : a) (xs : a list) =
 
 (** {1 Syntax} *)
 
+(**  De Bruijn index *)
+type index = int
+
 type expr =
-  | Var of int (* de Bruijn index *)
+  | Var of index
   | Let of string * expr * expr
   | FunLit of string * expr
   | FunApp of expr * expr
