@@ -64,9 +64,9 @@ and env = value list
 
 (** Defunctionalised continuation
 
-    This is a list of {i evaluation contexts} that represents “what to do next”
-    after evaluating the current expression. The continuation is carefully
-    crafted to result in a left-to-right, call-by-value evaluation strategy.
+    This represents “what to do next” after evaluating the current expression.
+    The continuation is carefully crafted to result in a left-to-right,
+    call-by-value evaluation strategy.
 
     The [unit] type is used to mark the “hole’ in the continuation, i.e. the
     place where the resulting value will be substituted when applying the
