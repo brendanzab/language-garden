@@ -65,6 +65,7 @@ and env = value list
 (** Defunctionalised continuation
 
     This represents “what to do next” after evaluating the current expression.
+    You can think of this as forming a linked list of stack frames.
     The continuation is carefully crafted to result in a left-to-right,
     call-by-value evaluation strategy.
 
@@ -89,15 +90,19 @@ type cont =
 (** The state of the abstract machine *)
 type state =
   | Eval of expr * env * cont
-  (** Evaluate an expression while deferring the continuation until later, where:
+  (** Evaluate a subexpression, deferring the rest of the expression as a
+      continuation that can be resumed later.
 
-      - [expr] is the (C)ontrol instruction, to evaluate now
-      - [env] is the (E)nvironment, to be used when evaluating the expression
-      - [cont] is the (K)ontinuation, to be continued later with the computed value
+      The fields in this variant give the CEK machine its name, where:
+
+      - [expr] is the (C)ontrol instruction, to be evaluated next
+      - [env] is the (E)nvironment, to be used when evaluating the subexpression
+      - [cont] is the (K)ontinuation, to be continued later
   *)
 
   | Apply of cont * value
-  (** Resume the continuation, plugging the “hole” with a value.
+  (** Resume the continuation, plugging the “hole” with the value of the
+      subexpression.
 
       Some presentations of the CEK machine get by with just the [Eval] state
       (see Matt Might’s post linked above), but I found the transition rules
