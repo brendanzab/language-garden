@@ -5,16 +5,16 @@ homepage: "https://github.com/brendanzab/language-garden"
 dev-repo: "git+https://github.com/brendanzab/language-garden.git"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
-  "dune" {>= "3.14"}
-  "alcotest" {>= "1.7" & with-test}
-  "cmdliner" {>= "1.2"}
-  "menhir" {>= "20231231" & build}
-  "menhirLib" {>= "20231231"}
+  "dune" {>= "3.16"}
+  "alcotest" {>= "1.8" & with-test}
+  "cmdliner" {>= "1.3"}
+  "menhir" {>= "20240715" & build}
+  "menhirLib" {>= "20240715"}
   "sedlex" {>= "3.2"}
   "mdx" {>= "2.4.1" & with-test}
-  "qcheck" {>= "0.21.3" & with-test}
-  "qcheck-core" {>= "0.21.3" & with-test}
-  "qcheck-alcotest" {>= "0.21.3" & with-test}
+  "qcheck" {>= "0.22" & with-test}
+  "qcheck-core" {>= "0.22" & with-test}
+  "qcheck-alcotest" {>= "0.22" & with-test}
   "odoc" {with-doc}
 ]
 build: [

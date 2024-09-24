@@ -5,9 +5,9 @@ homepage: "https://github.com/brendanzab/language-garden"
 dev-repo: "git+https://github.com/brendanzab/language-garden.git"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
-  "dune" {>= "3.14"}
-  "cmdliner" {>= "1.2"}
-  "menhir" {>= "20231231" & build}
+  "dune" {>= "3.16"}
+  "cmdliner" {>= "1.3"}
+  "menhir" {>= "20240715" & build}
   "mdx" {>= "2.4.1" & with-test}
   "odoc" {with-doc}
 ]
