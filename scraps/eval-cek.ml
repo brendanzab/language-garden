@@ -62,38 +62,34 @@ and env = value list
 
 (** {2 Abstract machine} *)
 
-(** Defunctionalised continuation
+(** Continuation frame (i.e. a stack frame)
 
-    This represents “what to do next” after evaluating the current expression.
-    You can think of this as forming a linked list of stack frames.
-    The continuation is carefully crafted to result in a left-to-right,
-    call-by-value evaluation strategy.
-
-    The [unit] type is used to mark the “hole’ in the continuation, i.e. the
-    place where the resulting value will be substituted when applying the
-    continuation.
+    This is an expression with a “hole” in it, marked by the [unit] type.
+    It’s carefully crafted to result in a left-to-right, call-by-value
+    evaluation strategy.
 *)
-type cont =
-  | Done
-  (** The empty continuation *)
+type frame =
+  | LetBody of (string * unit * expr) * env     (* let x := [.]; expr *)
+  | FunApp1 of (unit * expr) * env              (* [.] expr *)
+  | FunApp2 of (value * unit)                   (* value [.] *)
 
-  | LetBody of (string * unit * expr) * env * cont
-  (** Resume by evaluating the body of a let binding *)
+(** Continuation (i.e. a call-stack)
 
-  | FunArg of (unit * expr) * env * cont
-  (** Resume by evaluating the argument of a function application *)
-
-  | FunApp of (value * unit) * cont
-  (** Resume by applying a function to an argument *)
+    This records a stack of “what to do next” after evaluating the current
+    subexpression, represented as a linked list of continuation frames starting
+    with the inner-most frame. The empty list signals that the expression has
+    been fully evaluated.
+*)
+type cont = frame list
 
 
 (** The state of the abstract machine *)
 type state =
   | Eval of expr * env * cont
-  (** Evaluate a subexpression, deferring the rest of the expression as a
-      continuation that can be resumed later.
+  (** Evaluate a subexpression in the current environment, deferring the rest of
+      the expression until later by storing it in a continuation.
 
-      The fields in this variant give the CEK machine its name, where:
+      This variant gives the CEK machine its name, where:
 
       - [expr] is the (C)ontrol instruction, to be evaluated next
       - [env] is the (E)nvironment, to be used when evaluating the subexpression
@@ -101,7 +97,7 @@ type state =
   *)
 
   | Apply of cont * value
-  (** Resume the continuation, plugging the “hole” with the value of the
+  (** Resume the continuation, plugging it with the value computed from the
       subexpression.
 
       Some presentations of the CEK machine get by with just the [Eval] state
@@ -122,7 +118,7 @@ let step (s : state) : state =
   (* Evaluate a let binding *)
   | Eval (Let (name, def, body), env, k) ->
       Eval (def, env,                         (* evaluate the definition *)
-        LetBody ((name, (), body), env, k))   (* continue evaluating the body later *)
+        LetBody ((name, (), body), env) :: k) (* continue evaluating the body later *)
 
   (* Evaluate a function literal *)
   | Eval (FunLit (name, body), env, k) ->
@@ -131,35 +127,35 @@ let step (s : state) : state =
   (* Evaluate a function application *)
   | Eval (FunApp (head, arg), env, k) ->
       Eval (head, env,                        (* evaluate the head of the application *)
-        FunArg (((), arg), env, k))           (* continue evaluating the argument later *)
+        FunApp1 (((), arg), env) :: k)        (* continue evaluating the argument later *)
 
 
   (* Resume evaluating the body of a let binding, now that the definition has
      been evaluated *)
-  | Apply (LetBody ((_, (), body), env, k), def) ->
-      (*                 ▲                   │
-                         └───────────────────┘ *)
+  | Apply (LetBody ((_, (), body), env) :: k, def) ->
+      (*                 ▲                     │
+                         └─────────────────────┘ *)
       Eval (body, def :: env, k)
 
   (* Resume evaluating a function argument, now that the head of the
      application has been evaluated *)
-  | Apply (FunArg (((), arg), env, k), head) ->
-      (*             ▲                  │
-                     └──────────────────┘ *)
+  | Apply (FunApp1 (((), arg), env) :: k, head) ->
+      (*              ▲                    │
+                      └────────────────────┘ *)
       Eval (arg, env,                         (* evaluate the argument *)
-        FunApp ((head, ()), k))               (* continue applying the function later *)
+        FunApp2 (head, ()) :: k)              (* continue applying the function later *)
 
   (* Resume applying a function, now that the head of the application and the
      argument have been evaluated *)
-  | Apply (FunApp ((head, ()), k), arg) ->
-      (*                   ▲        │
-                           └────────┘ *)
+  | Apply (FunApp2 (head, ()) :: k, arg) ->
+      (*                   ▲         │
+                           └─────────┘ *)
       begin match head with
       | FunLit (_, Clos (env, body)) -> Eval (body, arg :: env, k)
       end
 
   (* Resume the empty continuation *)
-  | Apply (Done, _) ->
+  | Apply ([], _) ->
       invalid_arg "cannot resume the empty continuation"
 
 
@@ -172,10 +168,10 @@ let eval (expr : expr) : value =
      deeply nested expressions! *)
   let rec go (s : state) : value =
     match s with
-    | Apply (Done, value) -> value
+    | Apply ([], value) -> value
     | s -> (go [@tailcall]) (step s)
   in
-  go (Eval (expr, [], Done))
+  go (Eval (expr, [], []))
 
 
 (** {1 Tests} *)
