@@ -73,6 +73,7 @@ Lightweight markup languages:
 - [Org Mode](https://orgmode.org/): Document editing language for Emacs
 - [Subtext](https://github.com/subconsciousnetwork/subtext): Tiny markup language geared towards index-card note-taking
 - [Cooklang](https://cooklang.org/): Recipe markup language
+- [mexdown](https://github.com/smasher164/mexdown): A markdown-like language that allows commands to generate parts of a document
 
 String interpolation:
 
