@@ -66,7 +66,7 @@ Some possible downsides to this approach are:
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./Main.ml
-[`Lexer`]: ./Lexer.mll
+[`Lexer`]: ./Lexer.ml
 [`Parser`]: ./Parser.mly
 [`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml

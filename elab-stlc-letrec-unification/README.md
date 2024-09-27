@@ -71,7 +71,7 @@ different approaches and pointing out bugs in my initial implementations.
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./Main.ml
-[`Lexer`]: ./Lexer.mll
+[`Lexer`]: ./Lexer.ml
 [`Parser`]: ./Parser.mly
 [`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml

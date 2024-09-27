@@ -33,7 +33,7 @@ complicated type systems with dependent types and subtyping.
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./Main.ml
-[`Lexer`]: ./Lexer.mll
+[`Lexer`]: ./Lexer.ml
 [`Parser`]: ./Parser.mly
 [`Surface`]: ./Surface.ml
 [`Core`]: ./Core.ml
