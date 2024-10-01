@@ -81,7 +81,7 @@ String interpolation:
 - [ppx_string_interpolate](https://github.com/sheijk/ppx_string_interpolate)
 - [ppx_string](https://github.com/janestreet/ppx_string)
 
-Template languages:
+Programmable markup languages:
 
 - [Typst](https://typst.app/)
 - [Scribble](https://docs.racket-lang.org/scribble/):
@@ -89,6 +89,9 @@ Template languages:
 - [Pollen](https://docs.racket-lang.org/pollen/) ([Code](https://git.matthewbutterick.com/mbutterick/pollen)):
   Racket dialect for creating digital books
 - [Papyri](https://kaya3.github.io/papyri/)
+
+Template languages:
+
 - [Haml](https://haml.info/)
 - [ERB](https://docs.ruby-lang.org/en/master/ERB.html) ([Code](https://github.com/ruby/erb))
 - [Slim](https://slim-template.github.io/) ([Docs](https://rubydoc.info/gems/slim/frames))
@@ -119,11 +122,11 @@ Quasiquoting:
 
 Wiki markup and personal knowledge management:
 
-- [Oscean](https://wiki.xxiivv.com/site/oscean.html)
 - [Forester](https://github.com/jonsterling/ocaml-forester)
 - [Mylink](https://github.com/kalyani-tt/mylink)
 - [Omake](https://rubenerd.com/xmlns-omake/): cardfile format written in XML, presented with an XSL transform
 - [Org-roam](https://www.orgroam.com/): Emacs-based knowledge management with Org Mode
+- [Oscean](https://wiki.xxiivv.com/site/oscean.html): Wiki engine written entirely in assembler
 - [yon](https://m15o.ichi.city/yon/): Wiki editor in a standalone HTML file with no dependencies
 - [TiddlyWiki](https://tiddlywiki.com/): a non-linear personal web notebook
 
