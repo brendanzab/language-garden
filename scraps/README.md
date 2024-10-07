@@ -21,3 +21,6 @@ build system support and are untested for now.
   CEK machine.
 - [**eval-extensible**](./eval-extensible.ml): Extensible interpreters for
   lambda calculus and arithmetic expressions.
+- [**eval-landins-knot**](./eval-landins-knot.ml):
+  Demonstration of Landin’s Knot, an approach to encoding general recursion
+  using higher-order references and backpatching.
