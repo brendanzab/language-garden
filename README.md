@@ -35,6 +35,11 @@ Simply typed:
   Extends the simply typed lambda calculus with structural variant types,
   inferring types eagerly using constraint based unification.
 
+Polymorphically typed:
+
+- [**elab-rankn-bidirectional**](./elab-rankn-bidirectional):
+  An elaborator for a rank-n polymorphic lambda calculus.
+
 Dependently typed:
 
 - [**elab-dependent**](./elab-dependent/):
