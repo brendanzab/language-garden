@@ -9,6 +9,8 @@
     Records, sums, cases, and exceptions: Row-polymorphism at work}.
 *)
 
+[@@@warning "-unused-extension"]
+
 
 (** An extensible interpreter implemented using OCaml’s extensible variant
     types. See the {{:https://ocaml.org/manual/5.2/extensiblevariants.html}

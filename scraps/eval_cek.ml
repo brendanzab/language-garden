@@ -186,6 +186,8 @@ let eval (expr : expr) : value =
 (** Interface for building well-scoped expressions *)
 module Build : sig
 
+  [@@@warning "-unused-value-declaration"]
+
   type t
 
   val let' : string * t -> (t -> t) -> t

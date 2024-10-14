@@ -33,3 +33,5 @@
 (package (name wip-compile-stratify))
 (package (name wip-compile-uncurry))
 (package (name wip-elab-builtins))
+
+(package (name scraps))

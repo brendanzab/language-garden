@@ -4,6 +4,8 @@
     {{:https://doi.org/10.1093/comjnl/6.4.308} The Mechanical Evaluation of Expressions}
 *)
 
+[@@@warning "-unused-value-declaration"]
+
 let knot (type a b) (f : (a -> b) -> a -> b) : a -> b =
   let recur = ref (fun _ -> assert false) in  (* create a reference to be used inside the recursive function *)
   let fix = f (fun x -> !recur x) in          (* create the recursive function *)

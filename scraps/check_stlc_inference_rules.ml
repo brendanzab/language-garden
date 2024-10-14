@@ -3,6 +3,9 @@
      Originally posted at https://gist.github.com/brendanzab/ebdf8bed6f239d3abbc50a396ce468ae
 *)
 
+[@@@warning "-unused-constructor"]
+[@@@warning "-unused-value-declaration"]
+
 (*
   T ::=
     | Bool

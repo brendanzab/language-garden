@@ -1,0 +1,19 @@
+(executable
+  (name check_stlc_inference_rules)
+  (public_name check-stlc-inference-rules)
+  (package scraps))
+
+(executable
+  (name eval_cek)
+  (public_name eval-cek)
+  (package scraps))
+
+(executable
+  (name eval_extensible)
+  (public_name eval-extensible)
+  (package scraps))
+
+(executable
+  (name eval_landins_knot)
+  (public_name eval-landins-knot)
+  (package scraps))
