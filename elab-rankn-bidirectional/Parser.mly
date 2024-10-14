@@ -18,6 +18,8 @@
 %token SEMICOLON ";"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
+%token OPEN_BRACKET "["
+%token CLOSE_BRACKET "]"
 %token END
 
 %start <Surface.tm> main
@@ -36,12 +38,16 @@ let binder :=
 | located(NAME)
 
 let param :=
+| "["; n = binder; "]";
+    { Surface.TyParam n }
 | n = binder;
-    { n, None }
+    { Surface.Param (n, None) }
 | "("; n = binder; ":"; ty = located(ty); ")";
-    { n, Some ty }
+    { Surface.Param (n, Some ty) }
 
 let ty :=
+| ns = nonempty_list("["; ~ = binder; "]"; <>); "->"; ty = located(ty);
+    { Surface.TyFunType (ns, ty) }
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
     { Surface.FunType (ty1, ty2) }
 | atomic_ty
@@ -82,8 +88,10 @@ let mul_tm :=
 | app_tm
 
 let app_tm :=
+| tm = located(app_tm); "["; ty = located(ty); "]";
+    { Surface.App (tm, TyArg ty) }
 | tm0 = located(app_tm); tm1 = located(atomic_tm);
-    { Surface.App (tm0, tm1) }
+    { Surface.App (tm0, Arg tm1) }
 | "-"; tm = located(atomic_tm);
     { Surface.Op1 (`Neg, tm) }
 | atomic_tm

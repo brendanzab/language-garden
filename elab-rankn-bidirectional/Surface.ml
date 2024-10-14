@@ -17,16 +17,17 @@ type 'a located = {
   data : 'a;
 }
 
+(** Names that bind definitions or parameters *)
+type binder = string located
+
 (** Types in the surface language *)
 type ty =
   ty_data located
 
 and ty_data =
   | Name of string
+  | TyFunType of binder list * ty
   | FunType of ty * ty
-
-(** Names that bind definitions or parameters *)
-type binder = string located
 
 (** Terms in the surface language *)
 type tm =
@@ -39,14 +40,19 @@ and tm_data =
   | FunLit of param list * tm
   | BoolLit of bool
   | IntLit of int
-  | App of tm * tm
+  | App of tm * arg
   | IfThenElse of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
 (** Parameters, with optional type annotations *)
 and param =
-  binder * ty option
+  | TyParam of binder
+  | Param of binder * ty option
+
+and arg =
+  | TyArg of ty
+  | Arg of tm
 
 
 (** {1 Elaboration} *)
@@ -62,15 +68,61 @@ and param =
 
 (** {2 Local bindings} *)
 
-(** A stack of bindings currently in scope *)
-type context = (string * Core.ty) Core.env
+(** The elaboration context, that keeps track of type and term bindings in
+    separate namespaces. *)
+type context = {
+  ty_size : int;
+  ty_names : string Core.env;
+  ty_env : Core.Semantics.vty Core.env;
+  tm_tys : (string * Core.Semantics.vty) Core.env;
+}
 
-(** Lookup a name in the context *)
-let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
-  ctx |> List.find_mapi @@ fun index (name', ty) ->
+(** The empty context *)
+let empty : context = {
+  ty_size = 0;
+  ty_names = [];
+  ty_env = [];
+  tm_tys = [];
+}
+
+(** The type variable that will be bound after calling {!extend_ty} *)
+let next_ty_var (ctx : context) : Core.Semantics.vty =
+  Var ctx.ty_size
+
+(** Extend the context with a type binding *)
+let extend_ty (ctx : context) (name : binder) : context = {
+  ctx with
+  ty_size = ctx.ty_size + 1;
+  ty_names = name.data :: ctx.ty_names;
+  ty_env = Var ctx.ty_size :: ctx.ty_env;
+}
+
+(** Extend the context with a term binding *)
+let extend_tm (ctx : context) (name : binder) (vty : Core.Semantics.vty) : context = {
+  ctx with
+  tm_tys = (name.data, vty) :: ctx.tm_tys;
+}
+
+(** Lookup a type name in the context *)
+let lookup_ty (ctx : context) (name : string) : Core.index option =
+  ctx.ty_names |> List.find_mapi @@ fun index name' ->
+    match name = name' with
+    | true -> Some index
+    | false -> None
+
+(** Lookup a term name in the context *)
+let lookup_tm (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
+  ctx.tm_tys |> List.find_mapi @@ fun index (name', ty) ->
     match name = name' with
     | true -> Some (index, ty)
     | false -> None
+
+let eval_ty (ctx : context) (ty : Core.ty) : Core.Semantics.vty =
+  Core.Semantics.eval_ty ctx.ty_env ty
+let quote_vty (ctx : context) (vty : Core.Semantics.vty) : Core.ty =
+  Core.Semantics.quote_vty ctx.ty_size vty
+let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Core.ty) : unit =
+  Core.pp_ty ctx.ty_names fmt ty
 
 
 (** {2 Elaboration errors} *)
@@ -84,12 +136,12 @@ exception Error of loc * string
 let error (type a) (loc : loc) (message : string) : a =
   raise (Error (loc, message))
 
-let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
-  if ty1 = ty2 then () else
+let equate_vtys (ctx : context) (loc : loc) (vty1 : Core.Semantics.vty) (vty2 : Core.Semantics.vty) =
+  if Core.Semantics.is_convertible ctx.ty_size vty1 vty2 then () else
     error loc
       (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-        Core.pp_ty ty1
-        Core.pp_ty ty2)
+        (pp_ty ctx) (quote_vty ctx vty1)
+        (pp_ty ctx) (quote_vty ctx vty2))
 
 
 (** {2 Bidirectional type checking} *)
@@ -103,55 +155,66 @@ let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     annotations where necessary. *)
 
 (** Elaborate a type, checking that it is well-formed. *)
-let rec elab_ty (ty : ty) : Core.ty =
+let rec elab_ty (ctx : context) (ty : ty) : Core.ty =
   match ty.data with
-  | Name "Bool" -> BoolType
-  | Name "Int" -> IntType
   | Name name ->
-      error ty.loc (Format.asprintf "unbound type `%s`" name)
+      begin match lookup_ty ctx name with
+      | Some index -> Var index
+      | None when name = "Bool" -> BoolType
+      | None when name = "Int" -> IntType
+      | None -> error ty.loc (Format.asprintf "unbound type `%s`" name)
+      end
+  | TyFunType (names, body_ty) ->
+      let rec go ctx names : Core.ty =
+        match names with
+        | [] -> elab_ty ctx body_ty
+        | name :: names -> TyFunType (name.data, go (extend_ty ctx name) names)
+      in
+      go ctx names
   | FunType (ty1, ty2) ->
-      FunType (elab_ty ty1, elab_ty ty2)
+      FunType (elab_ty ctx ty1, elab_ty ctx ty2)
 
 (** Elaborate a surface term into a core term, given an expected type. *)
-let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
+let rec elab_check (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.tm =
   match tm.data with
   | Let (def_name, params, def_body_ty, def_body, body) ->
-      let def, def_ty = elab_infer_fun_lit ctx params def_body_ty def_body in
-      let body = elab_check ((def_name.data, def_ty) :: ctx) body ty in
-      Let (def_name.data, def_ty, def, body)
+      let def, def_vty = elab_infer_fun_lit ctx params def_body_ty def_body in
+      let body = elab_check (extend_tm ctx def_name def_vty) body vty in
+      Let (def_name.data, quote_vty ctx def_vty, def, body)
 
   | FunLit (params, body) ->
-      elab_check_fun_lit ctx params body ty
+      elab_check_fun_lit ctx params body vty
 
   | IfThenElse (head, tm0, tm1) ->
       let head = elab_check ctx head BoolType in
-      let tm0 = elab_check ctx tm0 ty in
-      let tm1 = elab_check ctx tm1 ty in
+      let tm0 = elab_check ctx tm0 vty in
+      let tm1 = elab_check ctx tm1 vty in
       BoolElim (head, tm0, tm1)
 
   (* Fall back to type inference *)
   | _ ->
-      let tm', ty' = elab_infer ctx tm in
-      equate_ty tm.loc ty ty';
+      let tm', vty' = elab_infer ctx tm in
+      equate_vtys ctx tm.loc vty vty';
       tm'
 
 (** Elaborate a surface term into a core term, inferring its type. *)
-and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
+and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
   match tm.data with
   | Name name -> begin
-      match lookup ctx name with
-      | Some (index, ty) -> Var index, ty
+      match lookup_tm ctx name with
+      | Some (index, vty) -> Var index, vty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
   end
 
   | Let (def_name, params, def_body_ty, def_body, body) ->
-      let def, def_ty = elab_infer_fun_lit ctx params def_body_ty def_body in
-      let body, body_ty = elab_infer ((def_name.data, def_ty) :: ctx) body in
-      Let (def_name.data, def_ty, def, body), body_ty
+      let def, def_vty = elab_infer_fun_lit ctx params def_body_ty def_body in
+      let body, body_ty = elab_infer (extend_tm ctx def_name def_vty) body in
+      Let (def_name.data, quote_vty ctx def_vty, def, body), body_ty
 
   | Ann (tm, ty) ->
-      let ty = elab_ty ty in
-      elab_check ctx tm ty, ty
+      let ty = elab_ty ctx ty in
+      let vty = eval_ty ctx ty in
+      elab_check ctx tm vty, vty
 
   | BoolLit b ->
       BoolLit b, BoolType
@@ -162,16 +225,30 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
   | FunLit (params, body) ->
       elab_infer_fun_lit ctx params None body
 
-  | App (head, arg) ->
+  | App (head, TyArg arg) ->
+      let head_loc = head.loc in
+      let head, head_ty = elab_infer ctx head in
+      let body_ty =
+        match head_ty with
+        | TyFunType (_, body_ty) -> body_ty
+        | head_vty ->
+            error head_loc
+              (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: type function@]@ @[found: %a@]@]"
+                (pp_ty ctx) (quote_vty ctx head_vty))
+      in
+      let arg = elab_ty ctx arg in
+      TyFunApp (head, arg), body_ty (eval_ty ctx arg)
+
+  | App (head, Arg arg) ->
       let head_loc = head.loc in
       let head, head_ty = elab_infer ctx head in
       let param_ty, body_ty =
         match head_ty with
         | FunType (param_ty, body_ty) -> param_ty, body_ty
-        | head_ty ->
+        | head_vty ->
             error head_loc
               (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %a@]@]"
-                Core.pp_ty head_ty)
+                (pp_ty ctx) (quote_vty ctx head_vty))
       in
       let arg = elab_check ctx arg param_ty in
       FunApp (head, arg), body_ty
@@ -180,13 +257,13 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       error tm.loc "ambiguous if expression"
 
   | Op2 (`Eq, tm0, tm1) ->
-      let tm0, ty0 = elab_infer ctx tm0 in
-      let tm1, ty1 = elab_infer ctx tm1 in
-      equate_ty tm.loc ty0 ty1;
-      begin match ty0 with
+      let tm0, vty0 = elab_infer ctx tm0 in
+      let tm1, vty1 = elab_infer ctx tm1 in
+      equate_vtys ctx tm.loc vty0 vty1;
+      begin match vty0 with
       | BoolType -> PrimApp (BoolEq, [tm0; tm1]), BoolType
       | IntType -> PrimApp (IntEq, [tm0; tm1]), BoolType
-      | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
+      | vty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" (pp_ty ctx) (quote_vty ctx vty))
       end
 
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
@@ -205,33 +282,60 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       PrimApp (IntNeg, [tm]), IntType
 
 (** Elaborate a function literal into a core term, given an expected type. *)
-and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
-  match params, ty with
-  | [], ty ->
-      elab_check ctx body ty
-  | (name, None) :: params, FunType (param_ty, body_ty) ->
-      let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
-  | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
+and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : Core.Semantics.vty) : Core.tm =
+  match params, vty with
+  | [], vty ->
+      elab_check ctx body vty
+
+  | TyParam name :: params, TyFunType (_, body_vty) ->
+      let ty_var = next_ty_var ctx in
+      let body_tm = elab_check_fun_lit (extend_ty ctx name) params body (body_vty ty_var) in
+      TyFunLit (name.data, body_tm)
+
+  | Param (name, None) :: params, FunType (param_vty, body_vty) ->
+      let body_tm = elab_check_fun_lit (extend_tm ctx name param_vty) params body body_vty in
+      FunLit (name.data, quote_vty ctx param_vty, body_tm)
+
+  | Param (name, Some param_ty) :: params, FunType (param_vty', body_vty) ->
       let param_ty_loc = param_ty.loc in
-      let param_ty = elab_ty param_ty in
-      equate_ty param_ty_loc param_ty param_ty';
-      let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
-  | (name, _) :: _, _ ->
+      let param_ty = elab_ty ctx param_ty in
+      let param_vty = eval_ty ctx param_ty in
+      equate_vtys ctx param_ty_loc param_vty param_vty';
+      FunLit (name.data, param_ty,
+        elab_check_fun_lit (extend_tm ctx name param_vty) params body body_vty)
+
+  | TyParam name :: _, _ ->
+      error name.loc "unexpected type parameter"
+
+  | Param (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
 
 (** Elaborate a function literal into a core term, inferring its type. *)
-and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
-  match params, body_ty with
-  | [], Some body_ty ->
-      let body_ty = elab_ty body_ty in
-      elab_check ctx body body_ty, body_ty
-  | [], None ->
-      elab_infer ctx body
-  | (name, None) :: _, _ ->
-      error name.loc "ambiguous parameter type"
-  | (name, Some param_ty) :: params, body_ty ->
-      let param_ty = elab_ty param_ty in
-      let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
-      FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.Semantics.vty =
+  let rec go ctx params body_ty body =
+    match params, body_ty with
+    | [], Some body_ty ->
+        let body_ty = elab_ty ctx body_ty in
+        let body_vty = eval_ty ctx body_ty in
+        elab_check ctx body body_vty, body_ty
+
+    | [], None ->
+        let body, body_vty = elab_infer ctx body in
+        body, quote_vty ctx body_vty
+
+    | TyParam name :: params, body_ty ->
+        let body, body_ty = go (extend_ty ctx name) params body_ty body in
+        TyFunLit (name.data, body), TyFunType (name.data, body_ty)
+
+    | Param (name, None) :: _, _ ->
+        error name.loc "ambiguous parameter type"
+
+    | Param (name, Some param_ty) :: params, body_ty ->
+        let param_ty = elab_ty ctx param_ty in
+        let param_vty = eval_ty ctx param_ty in
+        let body, body_ty = go (extend_tm ctx name param_vty) params body_ty body in
+        FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+  in
+
+  let body, body_ty = go ctx params body_ty body in
+  body, eval_ty ctx body_ty

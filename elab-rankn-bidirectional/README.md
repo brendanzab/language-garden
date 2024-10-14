@@ -1,8 +1,30 @@
-# Bidirectional type checking for System F
+# Bidirectional type checking for higher-rank polymorphism
 
 Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
 
-This implements a bidirectional elaborator for a rank-n polymorphic lambda calculus.
+This implements a bidirectional elaborator for a
+[higher-rank polymorphic](https://en.wikipedia.org/wiki/Parametric_polymorphism#Higher-rank_polymorphism)
+lambda calculus (i.e. [System F](https://en.wikipedia.org/wiki/System_F)),
+adding type functions to the simply typed lambda calculus.
+This allows us to express polymorphic terms,
+for example:
+
+```text
+let id [a] (x : a) := x;
+let always [a] (x : a) [b] (y : b) := x;
+
+always [Int -> Int] (id [Int])
+```
+
+Note that polymorphic terms _must_ be explicitly instantiated in this language,
+as we do not implement metavariables and pattern unification.
+
+The elaborator uses normalisation-by-evaluation (NbE) when comparing types,
+similar to [elab-dependent](../elab-dependent/).
+This handles the substitution of type variables,
+and could be extended to computing type-level functions in an implementation of System Fω.
+Type values are used in the type environment and typing context
+to avoid having to shift de Bruijn indices in an error-prone way.
 
 ## Project overview
 
@@ -22,23 +44,34 @@ This implements a bidirectional elaborator for a rank-n polymorphic lambda calcu
 [`Core`]: ./Core.ml
 [`Prim`]: ./Prim.ml
 
+## Resources
+
+- [fullpoly](https://github.com/mspertus/TAPL/blob/main/fullpoly) from
+  Benjamin Pierce’s [Types and Programming Languages](https://www.cis.upenn.edu/~bcpierce/tapl/).
+  Uses de Bruijn index shifting heavily,
+  which can be difficult to implement correctly without introducing bugs.
+- [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/):
+  Examples of implementing elaborators for dependently typed programming languages.
+  Similar techniques are used in this implementation.
+- [sfpl](https://github.com/balint99/sfpl/):
+  A higher ranked functional language that uses NbE in types,
+  and implements pattern unification for instantiating polymorphic types.
+
 ## Examples
 
 ```sh
-$ rankn-bidirectional elab <<< "fun x => x + 2"
-<input>:1:4: ambiguous parameter type
-[1]
+$ rankn-bidirectional elab <<< "fun [a] (x : a) => x"
+fun [a] => fun (x : a) => x : [a] -> a -> a
 ```
 
 ```sh
-$ rankn-bidirectional elab <<< "fun (x : Int) => x + 2"
-fun (x : Int) => #int-add -x 2 : Int -> Int
+$ rankn-bidirectional elab <<< "(fun [a] (x : a) => x) [Int] 3"
+(fun [a] => fun (x : a) => x) [Int] 3 : Int
 ```
 
 ```sh
-$ rankn-bidirectional elab <<< "(fun x f => f x * x) : Int -> (Int -> Int) -> Int"
-fun (x : Int) => fun (f : Int -> Int) => #int-mul -(f x) x :
-  Int -> (Int -> Int) -> Int
+$ rankn-bidirectional norm <<< "(fun [a] (x : a) [b] (y : b) => x) [Int] 3 [Bool]"
+fun (y : Bool) => 3 : Bool -> Int
 ```
 
 More examples can be found in [`tests.t`](tests.t).

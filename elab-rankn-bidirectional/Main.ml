@@ -30,8 +30,8 @@ let parse_tm (filename : string) (input : in_channel) : Surface.tm =
       print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
-let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
-  try Surface.elab_infer [] tm with
+let elab_tm (tm : Surface.tm) : Core.tm * Core.Semantics.vty =
+  try Surface.elab_infer Surface.empty tm with
   | Surface.Error (pos, msg) ->
       print_error pos msg;
       exit 1
@@ -40,16 +40,16 @@ let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
-  let tm, ty = elab_tm (parse_tm "<input>" stdin) in
+  let tm, vty = elab_tm (parse_tm "<input>" stdin) in
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm []) tm
-    Core.pp_ty ty
+    (Core.pp_tm [] []) tm
+    (Core.pp_ty []) (Core.Semantics.quote_vty 0 vty)
 
 let norm_cmd () : unit =
-  let tm, ty = elab_tm (parse_tm "<input>" stdin) in
+  let tm, vty = elab_tm (parse_tm "<input>" stdin) in
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm []) (Core.Semantics.normalise [] tm)
-    Core.pp_ty ty
+    (Core.pp_tm [] []) (Core.Semantics.normalise_tm [] [] tm)
+    (Core.pp_ty []) (Core.Semantics.quote_vty 0 vty)
 
 
 (** {1 CLI options} *)

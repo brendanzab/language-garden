@@ -70,6 +70,23 @@ If expressions
     fun (x : Int) => fun (y : Int) => if #int-eq -x 0 then y else 3;
   f 4 : Int -> Int
 
+Polymorphic functions
+  $ rankn-bidirectional elab <<< "(fun [a] [b] x y => x) : [a] [b] -> a -> b -> a"
+  fun [a] => fun [b] => fun (x : a) => fun (y : b) => x :
+    [a] -> [b] -> a -> b -> a
+
+Polymorphic identity and constant functions
+  $ rankn-bidirectional elab <<EOF
+  > let id [a] (x : a) := x;
+  > let always [a] (x : a) [b] (y : b) := x;
+  > 
+  > always [Int -> Int] (id [Int])
+  > EOF
+  let id : [a] -> a -> a := fun [a] => fun (x : a) => x;
+  let always : [a] -> a -> [b] -> b -> a :=
+    fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
+  always [Int -> Int] (id [Int]) : [b] -> b -> Int -> Int
+
 
 Lexer Errors
 ------------
@@ -137,6 +154,16 @@ Too many parameters
   > f true
   > EOF
   <input>:2:18: unexpected parameter
+  [1]
+
+Too many type parameters
+  $ rankn-bidirectional elab <<EOF
+  > let f : Bool -> Bool :=
+  >   fun [a] (x : Bool) => x;
+  > 
+  > f true
+  > EOF
+  <input>:2:7: unexpected type parameter
   [1]
 
 Ambiguous parameter type

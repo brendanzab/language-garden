@@ -36,6 +36,8 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | ";"           -> SEMICOLON
   | "("           -> OPEN_PAREN
   | ")"           -> CLOSE_PAREN
+  | "["           -> OPEN_BRACKET
+  | "]"           -> CLOSE_BRACKET
   | eof           -> END
   | _             -> raise (Error `UnexpectedChar)
 
