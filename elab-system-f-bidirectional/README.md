@@ -23,8 +23,7 @@ The elaborator uses normalisation-by-evaluation (NbE) when comparing types,
 similar to [elab-dependent](../elab-dependent/).
 This handles the substitution of type variables,
 and could be extended to support type-level functions in an implementation of System Fω.
-Type values are used in the type environment and elaboration context
-to avoid constantly shifting de Bruijn indices in an error-prone way.
+Type values are used throughout the elaborator to avoid the error-prone shifting of de Bruijn indices.
 
 ## Project overview
 
