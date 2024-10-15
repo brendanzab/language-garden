@@ -60,17 +60,17 @@ to avoid having to shift de Bruijn indices in an error-prone way.
 ## Examples
 
 ```sh
-$ rankn-bidirectional elab <<< "fun [a] (x : a) => x"
+$ system-f-bidirectional elab <<< "fun [a] (x : a) => x"
 fun [a] => fun (x : a) => x : [a] -> a -> a
 ```
 
 ```sh
-$ rankn-bidirectional elab <<< "(fun [a] (x : a) => x) [Int] 3"
+$ system-f-bidirectional elab <<< "(fun [a] (x : a) => x) [Int] 3"
 (fun [a] => fun (x : a) => x) [Int] 3 : Int
 ```
 
 ```sh
-$ rankn-bidirectional norm <<< "(fun [a] (x : a) [b] (y : b) => x) [Int] 3 [Bool]"
+$ system-f-bidirectional norm <<< "(fun [a] (x : a) [b] (y : b) => x) [Int] 3 [Bool]"
 fun (y : Bool) => 3 : Bool -> Int
 ```
 

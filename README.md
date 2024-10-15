@@ -37,7 +37,7 @@ Simply typed:
 
 Polymorphically typed:
 
-- [**elab-rankn-bidirectional**](./elab-rankn-bidirectional):
+- [**elab-system-f-bidirectional**](./elab-system-f-bidirectional):
   An elaborator for a higher-rank polymorphic lambda calculus.
 
 Dependently typed:

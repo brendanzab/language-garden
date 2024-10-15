@@ -21,7 +21,7 @@
 (package (name elab-stlc-letrec-unification))
 (package (name elab-stlc-unification))
 (package (name elab-stlc-variant-unification))
-(package (name elab-rankn-bidirectional))
+(package (name elab-system-f-bidirectional))
 (package (name elab-record-patching))
 
 (package (name lang-datalog))
