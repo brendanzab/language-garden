@@ -52,10 +52,12 @@ to avoid constantly shifting de Bruijn indices in an error-prone way.
   which can be difficult to implement correctly without introducing bugs.
 - [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/):
   Examples of implementing elaborators for dependently typed programming languages.
-  Similar techniques are used in this implementation.
+  Similar techniques are used in these implementations (i.e. bidirectional elaboration and NbE),
+  and examples of pattern unification implicit instantiation are also provided.
 - [sfpl](https://github.com/balint99/sfpl/):
   A higher ranked functional language that uses NbE in types,
-  and implements pattern unification for instantiating polymorphic types.
+  and implements pattern unification for instantiating polymorphic types
+  in a similar way to the elaboration-zoo.
 
 ## Examples
 
