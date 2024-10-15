@@ -22,9 +22,9 @@ as we do not implement metavariables and pattern unification.
 The elaborator uses normalisation-by-evaluation (NbE) when comparing types,
 similar to [elab-dependent](../elab-dependent/).
 This handles the substitution of type variables,
-and could be extended to computing type-level functions in an implementation of System Fω.
-Type values are used in the type environment and typing context
-to avoid having to shift de Bruijn indices in an error-prone way.
+and could be extended to support type-level functions in an implementation of System Fω.
+Type values are used in the type environment and elaboration context
+to avoid constantly shifting de Bruijn indices in an error-prone way.
 
 ## Project overview
 
