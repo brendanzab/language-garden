@@ -87,6 +87,17 @@ Polymorphic identity and constant functions
     fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
   always [Int -> Int] (id [Int]) : [b] -> b -> Int -> Int
 
+  $ system-f-bidirectional elab <<EOF
+  > let id : [a] -> a -> a := fun [a] x => x;
+  > let always := fun [a] (x : a) [b] (y : b) => x;
+  > 
+  > always [[a] -> a -> a] id
+  > EOF
+  let id : [a] -> a -> a := fun [a] => fun (x : a) => x;
+  let always : [a] -> a -> [b] -> b -> a :=
+    fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
+  always [[a] -> a -> a] id : [b] -> b -> [a] -> a -> a
+
 
 Lexer Errors
 ------------
