@@ -24,3 +24,5 @@ build system support and are untested for now.
 - [**eval_landins_knot.ml**](./eval_landins_knot.ml):
   Demonstration of Landin’s Knot, an approach to encoding general recursion
   using higher-order references and backpatching.
+- [**eval_triple_store.ml**](./eval_triple_store.ml):
+  Example of inferring facts from a triple store.

@@ -17,3 +17,8 @@
   (name eval_landins_knot)
   (public_name eval-landins-knot)
   (package scraps))
+
+(executable
+  (name eval_triple_store)
+  (public_name eval-triple-store)
+  (package scraps))
