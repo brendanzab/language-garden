@@ -105,15 +105,25 @@ myself in the position of:
 - Re-implementing an existing technique (either from a paper, or based on some
   other existing code I’ve seen) in my own way, as a way of learning and
   understanding it more deeply.
-- Wanting a place to testing out an approach before committing to using it in a
-  larger project (which can take time and may amount to nothing).
-- Trying to remember a technique I had spent time learning a long time ago.
+- Wanting a place to experiment with an approach before committing to using it
+  in a larger project, which can take time and may amount to nothing.
+- Trying to recall a technique I’d spent time learning a long ago.
 - Having an idea for a small language experiment that does not need to be part
   of a standalone project, but may require some build system setup.
 
 My hope is that by collecting some of these projects and experiments together
-into a single repository they might be useful to others and my future self. I’ve
-been particularly inspired by Mark Barbone’s [small, self-contained gists](https://gist.github.com/mb64/)
+into a single repository they might be useful to others and my future self.
+
+The metaphor of a “garden” as related to knowledge work was inspired by the rising
+popularity of “digital gardening” (which apparently originates from
+[Hypertext Gardens](https://www.eastgate.com/garden/Enter.html)).
+While this project is less directly interconnected than other digital gardens,
+I still like the idea of each project being a “seedling” that can be nurtured
+and tended to over an extended period of time,
+with the learning from one project being transferred to the others.
+Perhaps a “language nursery” would have been a more fitting name.
+
+I’ve also been particularly inspired by Mark Barbone’s [small, self-contained gists](https://gist.github.com/mb64/)
 implementing small type systems and solvers, and Andras Kovacs’ excellent
 [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/) (which was
 instrumental in helping me get my head around how to implement elaborators).
