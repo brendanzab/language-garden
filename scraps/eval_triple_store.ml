@@ -62,6 +62,11 @@ let () = begin
 
 end
 
+(*
+Socrates is_a:
+- mortal
+*)
+
 let knowledge_base = [
   { subject = `Berlin;  predicate = `is_a;    object_ = `city };
   { subject = `Berlin;  predicate = `part_of; object_ = `Germany  };
@@ -98,6 +103,14 @@ let () = begin
 
 end
 
+(*
+Berlin is part_of:
+- Germany
+- EU
+- Eurasia
+- Earth
+*)
+
 let knowledge_base = [
   { subject = `Berlin;        predicate = `is_a;      object_ = `city };
   { subject = `Berlin;        predicate = `part_of;   object_ = `Germany };
@@ -130,3 +143,15 @@ let () = begin
   Format.printf "\n";
 
 end
+
+(*
+Berlin is a member_of:
+- EU
+- NATO
+
+Berlin is part_of:
+- Germany
+- Mitteleuropa
+- Eurasia
+- Earth
+*)
