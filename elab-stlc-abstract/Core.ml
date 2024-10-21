@@ -90,11 +90,20 @@ let pp_tm (fmt : Format.formatter) (tm : tm) : unit =
 
 module Semantics = struct
 
+  (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
     | FunLit of name * ty * (vtm -> vtm)
+
+  (** Neutral values that could not be reduced to a normal form as a result of
+      being stuck on something else that would not reduce further.
+
+      For simple (non-dependent) type systems these are not actually required,
+      however they allow us to {!quote} terms back to syntax, which is useful
+      for pretty printing under binders.
+  *)
   and ntm =
-    | Var of Level.t
+    | Var of Level.t              (* A fresh variable (used when evaluating under a binder) *)
     | FunApp of ntm * vtm
 
   let rec eval (vtms : vtm Env.t) (tm : tm) : vtm =
@@ -121,7 +130,7 @@ module Semantics = struct
 
   let normalise (vtms : vtm Env.t) (tm : tm) : tm =
     quote (Env.size vtms) (eval vtms tm)
-    [@@ warning "-unused-value-declaration"]
+    [@@warning "-unused-value-declaration"]
 
 end
 

@@ -57,14 +57,22 @@ module Semantics = struct
 
   (** {1 Values} *)
 
+  (** Expressions in weak head normal form (i.e. values) *)
   type vexpr =
     | Neu of nexpr
     | FunLit of name * ty * (vexpr -> vexpr)
     | IntLit of int
     | BoolLit of bool
 
+  (** Neutral values that could not be reduced to a normal form as a result of
+      being stuck on something else that would not reduce further.
+
+      For simple (non-dependent) type systems these are not actually required,
+      however they allow us to {!quote} expressions back to syntax, which is useful
+      for pretty printing under binders.
+  *)
   and nexpr =
-    | Var of level
+    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | FunApp of nexpr * vexpr
     | BoolElim of nexpr * vexpr Lazy.t * vexpr Lazy.t
     | PrimApp of Prim.t * vexpr list

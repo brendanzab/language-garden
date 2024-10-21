@@ -57,14 +57,22 @@ module Semantics = struct
 
   (** {1 Values} *)
 
+  (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
     | FunLit of name * ty * (vtm -> vtm)
     | IntLit of int
     | BoolLit of bool
 
+  (** Neutral values that could not be reduced to a normal form as a result of
+      being stuck on something else that would not reduce further.
+
+      For simple (non-dependent) type systems these are not actually required,
+      however they allow us to {!quote} terms back to syntax, which is useful
+      for pretty printing under binders.
+  *)
   and ntm =
-    | Var of level
+    | Var of level          (* A fresh variable (used when evaluating under a binder) *)
     | FunApp of ntm * vtm
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | PrimApp of Prim.t * vtm list

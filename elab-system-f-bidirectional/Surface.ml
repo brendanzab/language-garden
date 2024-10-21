@@ -87,14 +87,14 @@ let empty : context = {
 
 (** The type variable that will be bound after calling {!extend_ty} *)
 let next_ty_var (ctx : context) : Core.Semantics.vty =
-  Var ctx.ty_size
+  Neu (Var ctx.ty_size)
 
 (** Extend the context with a type binding *)
 let extend_ty (ctx : context) (name : binder) : context = {
   ctx with
   ty_size = ctx.ty_size + 1;
   ty_names = name.data :: ctx.ty_names;
-  ty_env = Var ctx.ty_size :: ctx.ty_env;
+  ty_env = Neu (Var ctx.ty_size) :: ctx.ty_env;
 }
 
 (** Extend the context with a term binding *)

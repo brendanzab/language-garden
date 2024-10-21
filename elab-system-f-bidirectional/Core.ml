@@ -61,13 +61,24 @@ module Semantics = struct
 
   (** {1 Values} *)
 
+  (** Types in weak head normal form (i.e. type values) *)
   type vty =
-    | Var of level
+    | Neu of nty
     | TyFunType of name * (vty -> vty)
     | FunType of vty * vty
     | IntType
     | BoolType
 
+  (** Neutral type values.
+
+      We don’t have eliminators in types in System-F, so type neutrals only
+      consist of variables. This would be extended with type function
+      applications when moving to System-Fω.
+  *)
+  and nty =
+    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
+
+  (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
     | TyFunLit of name * (vty -> vtm)
@@ -75,8 +86,15 @@ module Semantics = struct
     | IntLit of int
     | BoolLit of bool
 
+  (** Neutral values that could not be reduced to a normal form as a result of
+      being stuck on something else that would not reduce further.
+
+      For simple (non-dependent) type systems these are not actually required,
+      however they allow us to {!quote} terms back to syntax, which is useful
+      for pretty printing under binders.
+  *)
   and ntm =
-    | Var of level
+    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | TyFunApp of ntm * vty
     | FunApp of ntm * vtm
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
@@ -169,9 +187,9 @@ module Semantics = struct
   (** Convert types from the semantic domain back into syntax. *)
   let rec quote_vty  (ty_size : int) (vty : vty) : ty =
     match vty with
-    | Var level -> Var (level_to_index ty_size level)
+    | Neu (Var level) -> Var (level_to_index ty_size level)
     | TyFunType (name, body_vty) ->
-        let body = quote_vty (ty_size + 1) (body_vty (Var ty_size)) in
+        let body = quote_vty (ty_size + 1) (body_vty (Neu (Var ty_size))) in
         TyFunType (name, body)
     | FunType (param_vty, body_vty) ->
         let param_ty = quote_vty ty_size param_vty in
@@ -185,7 +203,7 @@ module Semantics = struct
     match vtm with
     | Neu ntm -> quote_ntm ty_size tm_size ntm
     | TyFunLit (name, body) ->
-        let body = quote_vtm (ty_size + 1) tm_size (body (Var ty_size)) in
+        let body = quote_vtm (ty_size + 1) tm_size (body (Neu (Var ty_size))) in
         TyFunLit (name, body)
     | FunLit (name, param_vty, body) ->
         let param_ty = quote_vty ty_size param_vty in
@@ -222,9 +240,9 @@ module Semantics = struct
 
   let rec is_convertible (ty_size : int) (vty1 : vty) (vty2 : vty) : bool =
     match vty1, vty2 with
-    | Var level1, Var level2 -> level1 = level2
+    | Neu (Var level1), Neu (Var level2) -> level1 = level2
     | TyFunType (_, body_ty1), TyFunType (_, body_ty2) ->
-        let x : vty = Var ty_size in
+        let x : vty = Neu (Var ty_size) in
         is_convertible (ty_size + 1) (body_ty1 x) (body_ty2 x)
     | FunType (param_ty1, body_ty1), FunType (param_ty2, body_ty2) ->
         is_convertible ty_size param_ty1 param_ty2
