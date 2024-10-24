@@ -143,6 +143,63 @@ If you like this repository, you might find these interesting as well:
 - [RiscInside/LanguageEtudes](https://github.com/RiscInside/LanguageEtudes/):
   Single-file typechecker/interpreter/compiler implementations
 
+## Conventions and style choices
+
+### Provide lots of type annotations
+
+The predominant style in OCaml of leaving off type annotations
+makes understanding and porting code far more difficult.
+Instead I try to add type annotations to most top-level type signatures.
+
+### Avoid opening modules
+
+When `open` is used I find it hard to figure out where identifiers are coming from without an editor.
+Instead I prefer using an explicitly qualified path where possible.
+
+### Group related variants with a common prefix
+
+In the past I’ve often found it hard to find related nodes in an AST
+when trying to understand other people’s code.
+For example, the following variants might all refer to different parts of a dependent pair type:
+
+```ocaml
+type tm =
+  ...
+  | Sig of string * tm * tm
+  | Pair of tm * tm
+  | Fst of tm
+  | Snd of tm
+```
+
+Instead I prefer to use the following constructors:
+
+```ocaml
+type tm =
+  ...
+  | PairType of string * tm * tm
+  | PairLit of tm * tm
+  | PairFst of tm
+  | PairSnd of tm
+```
+
+### Use types to disambiguate variant names
+
+OCaml’s variant constructors aren’t namespaced under the type like in Rust or Lean,
+so reusing the same variant name will result in ambiguities
+if you are relying on global type inference.
+Generally OCaml programmers will either:
+
+1. Wrap every type in a module
+2. Come up with an ad-hoc prefix for to prevent the conflict
+
+I find the former convention often results in duplicated datatype definitions
+(mutually dependent modules require explicit module signatures),
+and the latter is a little arbitrary and ugly.
+
+Instead I’ve decided to just disambiguate variants using the type.
+I realise this might make the code a more difficult to understand
+and if I come up with a better compromise I might revisit this in the future.
+
 ## Development setup
 
 ### With Nix
