@@ -90,12 +90,12 @@
         buildOpamProject system { });
 
       packages = eachSystem (system: lib.getAttrs
-          (lib.attrNames localPackagesQuery.${system})
-          legacyPackages.${system});
+        (lib.attrNames localPackagesQuery.${system})
+        legacyPackages.${system});
 
       devPackages = eachSystem (system: lib.getAttrs
-          (lib.attrNames devPackagesQuery)
-          legacyPackages.${system});
+        (lib.attrNames devPackagesQuery)
+        legacyPackages.${system});
     in
     {
       # Exposed packages that can be built or run with `nix build` or
