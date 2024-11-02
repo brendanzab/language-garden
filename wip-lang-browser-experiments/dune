@@ -1,0 +1,16 @@
+(alias
+  (name wip-lang-browser-experiments)
+  (package wip-lang-browser-experiments))
+
+(alias
+  (name all)
+  (package wip-lang-browser-experiments)
+  (deps
+    (glob_files *.html)
+    index.bc.js))
+
+(executable
+  (name index)
+  (modes js)
+  (preprocess
+    (pps js_of_ocaml-ppx)))
