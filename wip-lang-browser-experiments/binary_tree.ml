@@ -48,8 +48,15 @@ let rules (rules : tree -> tree) : tree -> tree =
   | Fork (tree1, tree2) -> Fork (rules tree1, rules tree2)
   | Branch tree -> Branch (Branch (rules tree))
 
-let rec step f =
-  rules step f
+let rec step tree =
+  rules step tree
 
-let[@warning "-unused-value-declaration"] generate axiom =
+let grow (iters : int) : tree =
+  let rec go iters tree =
+    if iters < 0 then tree else
+      (go [@tailcall]) (iters - 1) (step tree)
+  in
+  go iters axiom
+
+let generations axiom =
   Seq.unfold (fun t -> Some (t, step t)) axiom

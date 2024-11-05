@@ -9,13 +9,6 @@ let apex_diameter = 3.0
 let branch_len = 6.0
 let fork_angle = 45.0
 
-let init_tree (iters : int) : Binary_tree.tree =
-  let rec go iters tree =
-    if iters < 0 then tree else
-      (go [@tailcall]) (iters - 1) (Binary_tree.step tree)
-  in
-  go iters Binary_tree.axiom
-
 let rec draw (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree.tree) : unit =
   match tree with
   | Apex ->
@@ -81,7 +74,7 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
     ctx##save;
 
     ctx##translate (canvas_width *. 0.5) canvas_height;
-    draw ctx (init_tree 5);
+    draw ctx (Binary_tree.grow 5);
 
     ctx##restore;
   end;
