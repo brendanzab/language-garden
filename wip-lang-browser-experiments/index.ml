@@ -2,6 +2,18 @@ module Dom = Js_of_ocaml.Dom
 module Html = Js_of_ocaml.Dom_html
 module Js = Js_of_ocaml.Js
 
+let get_canvas_by_id (id : string) =
+  Js.Opt.get
+    (Html.getElementById id |> Html.CoerceTo.canvas)
+    (fun () -> failwith "expected canvas")
+
+let init_tree (iters : int) : Binary_tree.tree =
+  let rec go iters tree =
+    if iters < 0 then tree else
+      (go [@tailcall]) (iters - 1) (Binary_tree.step tree)
+  in
+  go iters Binary_tree.axiom
+
 let branch_len = 6.0
 let fork_angle = 45.0
 
@@ -46,18 +58,6 @@ let rec draw (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree.tree
 
         ctx##restore;
       end
-
-let init_tree (iters : int) : Binary_tree.tree =
-  let rec go iters tree =
-    if iters < 0 then tree else
-      (go [@tailcall]) (iters - 1) (Binary_tree.step tree)
-  in
-  go iters Binary_tree.axiom
-
-let get_canvas_by_id (id : string) =
-  Js.Opt.get
-    (Html.getElementById id |> Html.CoerceTo.canvas)
-    (fun () -> failwith "expected canvas")
 
 let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
   let width = 400.0 in
