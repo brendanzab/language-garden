@@ -3,37 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tree example</title>
+  <title>Fractal binary tree</title>
 </head>
 <body>
-  <h1>Tree example</h1>
+  <h1>Fractal binary tree</h1>
   <p>An example of a fractal binary tree, rendered using HTML canvas.</p>
   <pre>
-<b>type</b> <i>tree</i> :=
+<b>type</b> tree :=
   | .apex
-  | .fork(<i>tree</i>, <i>tree</i>)
-  | .branch(<i>tree</i>)
+  | .fork(tree, tree)
+  | .branch(tree)
 
-<b>def</b> <i>axiom</i> :=
+<b>def</b> axiom :=
   .apex
 
-<b>def</b> <i>rules</i> :=
+<b>def</b> rules :=
   | .apex        -> .branch(.fork(.apex, .apex))
   | .branch(...) -> .branch(.branch(...))
 
-<b>def</b> <i>draw</i> :=
-  | .apex -> circle 3.0
-  | .fork(<i>tree1</i>..., <i>tree2</i>...) ->
+<b>def</b> apex-diameter := 3px
+<b>def</b> fork-angle := 45deg
+<b>def</b> branch-length := 6px
+
+<b>def</b> draw :=
+  | .apex ->
+      circle apex-diameter
+  | .fork(tree1..., tree2...) ->
       stack [
-        rotate (+<i>angle</i>) (<i>tree2</i>...),
-        rotate (-<i>angle</i>) (<i>tree2</i>...),
+        rotate (+fork-angle) (tree2...),
+        rotate (-fork-angle) (tree2...),
       ]
   | .branch(...) ->
       stack [
-        line (0.0, 0.0) (0.0, -<i>len</i>),
-        translate-y (-<i>len</i>) ...,
+        line (0.0, 0.0) (0.0, -branch-length),
+        translate-y (-branch-length) ...,
       ]
-  </pre>
+</pre>
   <canvas id="tree-canvas"></canvas>
   <script type="text/javascript" defer="defer" src="index.bc.js"></script>
 </body>

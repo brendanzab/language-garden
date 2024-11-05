@@ -14,18 +14,24 @@
     | .apex        -> .branch(.fork(.apex, .apex))
     | .branch(...) -> .branch(.branch(...))
 
+  def apex-diameter := 3px
+  def fork-angle := 45deg
+  def branch-length := 6px
+
   def draw :=
-    | .apex -> circle 3.0
+    | .apex ->
+        circle apex-diameter
     | .fork(tree1..., tree2...) ->
         stack [
-          rotate (+angle) tree1...,
-          rotate (-angle) tree2...,
+          rotate (+fork-angle) (tree2...),
+          rotate (-fork-angle) (tree2...),
         ]
     | .branch(...) ->
         stack [
-          line (0.0, 0.0) (0.0, -len),
-          translate-y (-len) ...,
+          line (0.0, 0.0) (0.0, -branch-length),
+          translate-y (-branch-length) ...,
         ]
+
 *)
 
 type tree =
