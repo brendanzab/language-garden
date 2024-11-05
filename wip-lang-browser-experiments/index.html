@@ -3,11 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script type="text/javascript" defer="defer" src="index.bc.js"></script>
-  <title>Browser Experiments</title>
+  <title>Tree example</title>
 </head>
 <body>
-  <h1>Test</h1>
-  <p>This is a test, hello!</p>
+  <h1>Tree example</h1>
+  <p>An example of a fractal binary tree, rendered using HTML canvas.</p>
+  <pre>
+<b>type</b> <i>tree</i> :=
+  | .apex
+  | .fork(<i>tree</i>, <i>tree</i>)
+  | .branch(<i>tree</i>)
+
+<b>def</b> <i>axiom</i> :=
+  .apex
+
+<b>def</b> <i>rules</i> :=
+  | .apex        -> .branch(.fork(.apex, .apex))
+  | .branch(...) -> .branch(.branch(...))
+
+<b>def</b> <i>draw</i> :=
+  | .apex -> circle 3.0
+  | .fork(<i>tree1</i>..., <i>tree2</i>...) ->
+      stack [
+        rotate (+<i>angle</i>) (<i>tree2</i>...),
+        rotate (-<i>angle</i>) (<i>tree2</i>...),
+      ]
+  | .branch(...) ->
+      stack [
+        line (0.0, 0.0) (0.0, -<i>len</i>),
+        translate-y (-<i>len</i>) ...,
+      ]
+  </pre>
+  <script type="text/javascript" defer="defer" src="index.bc.js"></script>
 </body>
 </html>
