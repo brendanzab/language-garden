@@ -47,13 +47,12 @@ let rec draw (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree.tree
         ctx##restore;
       end
 
-let init_tree (iters : int) : Binary_tree.tree = begin
-  let tree = ref Binary_tree.axiom in
-  for _ = 0 to iters do
-    tree := Binary_tree.step !tree;
-  done;
-  !tree
-end
+let init_tree (iters : int) : Binary_tree.tree =
+  let rec go iters tree =
+    if iters < 0 then tree else
+      (go [@tailcall]) (iters - 1) (Binary_tree.step tree)
+  in
+  go iters Binary_tree.axiom
 
 let get_canvas_by_id (id : string) =
   Js.Opt.get
