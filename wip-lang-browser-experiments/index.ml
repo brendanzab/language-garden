@@ -9,7 +9,7 @@ let apex_diameter = 3.0
 let branch_len = 6.0
 let fork_angle = 45.0
 
-let rec draw (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree.tree) : unit =
+let rec draw_tree (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree.tree) : unit =
   match tree with
   | Apex ->
       begin
@@ -26,13 +26,13 @@ let rec draw (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree.tree
   | Fork (tree1, tree2) ->
       begin
         ctx##save;
-        ctx##rotate (fork_angle *. Float.pi/.180.0);
-        draw ctx tree1;
+        ctx##rotate (fork_angle *. Float.pi /. 180.0);
+        draw_tree ctx tree1;
         ctx##restore;
 
         ctx##save;
-        ctx##rotate (-.fork_angle *. Float.pi/.180.0);
-        draw ctx tree2;
+        ctx##rotate (-.fork_angle *. Float.pi /. 180.0);
+        draw_tree ctx tree2;
         ctx##restore;
       end
 
@@ -46,7 +46,7 @@ let rec draw (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree.tree
         ctx##stroke;
         ctx##translate 0.0 (-.branch_len);
 
-        draw ctx tree;
+        draw_tree ctx tree;
 
         ctx##restore;
       end
@@ -58,8 +58,8 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
   Dom.appendChild (Html.getElementById "tree") canvas;
 
   (* Set display size in CSS pixels *)
-  canvas##.style##.width := Js.string (Format.sprintf "%.0fpx" canvas_width);
-  canvas##.style##.height := Js.string (Format.sprintf "%.0fpx" canvas_height);
+  canvas##.style##.width := Js.string ((canvas_width |> Float.to_int |> Int.to_string) ^ "px");
+  canvas##.style##.height := Js.string ((canvas_height |> Float.to_int |> Int.to_string) ^ "px");
 
   (* Set the actual size in memory *)
   let scale = Html.window##.devicePixelRatio in
@@ -69,12 +69,15 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
   (* Normalise the coordinate system to CSS pixels *)
   ctx##scale scale scale;
 
-  (* Render the tree *)
+  (* Draw the scene *)
   begin
     ctx##save;
 
+    (* Move to the center of the canvas *)
     ctx##translate (canvas_width *. 0.5) canvas_height;
-    draw ctx (Binary_tree.grow 5);
+
+    (* Draw the tree *)
+    draw_tree ctx (Binary_tree.grow 5);
 
     ctx##restore;
   end;
@@ -83,6 +86,5 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
 end
 
 let () = begin
-  Html.window##.onload :=
-    Html.handler start
+  Html.window##.onload := Html.handler start;
 end
