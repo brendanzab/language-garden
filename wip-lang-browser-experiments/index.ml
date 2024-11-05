@@ -55,19 +55,36 @@ let init_tree (iters : int) : Binary_tree.tree = begin
   !tree
 end
 
+let get_canvas_by_id (id : string) =
+  Js.Opt.get
+    (Html.getElementById id |> Html.CoerceTo.canvas)
+    (fun () -> failwith "expected canvas")
+
 let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
-  (* Initialise canvas *)
-  let canvas = Html.window##.document |> Html.createCanvas in
-  canvas##.width := 400;
-  canvas##.height := 400;
-  Dom.appendChild Html.window##.document##.body canvas;
+  let width = 400.0 in
+  let height = 400.0 in
+
+  (* Initialise canvas and 2D drawing context *)
+  let canvas = get_canvas_by_id "tree-canvas" in
   let ctx = canvas##getContext Html._2d_ in
+
+  (* Set display size in CSS pixels *)
+  canvas##.style##.width := Js.string (Format.sprintf "%.0fpx" width);
+  canvas##.style##.height := Js.string (Format.sprintf "%.0fpx" height);
+
+  (* Set the actual size in memory *)
+  let scale = Html.window##.devicePixelRatio in
+  canvas##.width := int_of_float (width *. scale);
+  canvas##.height := int_of_float (height *. scale);
+
+  (* Normalise the coordinate system to CSS pixels *)
+  ctx##scale scale scale;
 
   (* Render the tree *)
   begin
     ctx##save;
 
-    ctx##translate (400.0 /. 2.0) 400.0;
+    ctx##translate (width /. 2.0) height;
     draw ctx (init_tree 5);
 
     ctx##restore;
