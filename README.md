@@ -130,18 +130,27 @@ instrumental in helping me get my head around how to implement elaborators).
 
 If you like this repository, you might find these interesting as well:
 
-- [andrejbauer/plzoo](https://github.com/andrejbauer/plzoo/):
+- [github:andrejbauer/plzoo](https://github.com/andrejbauer/plzoo/):
   Andrej Bauer’s minimnal programming language demonstrations
-- [AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/):
+- [github:AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/):
   Minimal implementations for dependent type checking and elaboration by Andras Kovacs
-- [mspertus/TAPL](https://github.com/mspertus/TAPL): Updated type system
+- [github:mspertus/TAPL](https://github.com/mspertus/TAPL): Updated type system
   implementations from Benjamin Pierce's “Types and Programming Languages”
-- [pigworker/Samizdat](https://github.com/pigworker/Samizdat):
+- [github:pigworker/Samizdat](https://github.com/pigworker/Samizdat):
   Conor McBride’s programming scrapbook
-- [tomprimozic/type-systems](https://github.com/tomprimozic/type-systems)
+- [github:tomprimozic/type-systems](https://github.com/tomprimozic/type-systems)
   Implementations of various type systems in OCaml
-- [RiscInside/LanguageEtudes](https://github.com/RiscInside/LanguageEtudes/):
+
+Other project gardens:
+
+- [github:jake-87/project-garden](https://github.com/jake-87/project-garden/):
+  A garden for small projects
+- [github:qexat/PLAGE](https://github.com/qexat/PLAGE/):
+  Programming Language Adjacent General Experiments
+- [github:RiscInside/LanguageEtudes](https://github.com/RiscInside/LanguageEtudes/):
   Single-file typechecker/interpreter/compiler implementations
+- [github:yeslogic/fathom-experiments](https://github.com/yeslogic/fathom-experiments/):
+  Fathom related experiments
 
 ## Conventions and style choices
 
