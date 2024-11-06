@@ -213,7 +213,7 @@ and if I come up with a better compromise I might revisit this in the future.
 
 ### With Nix
 
-Using [Nix] is not required, but can be useful for setting up a development
+Using [Lix] (recommended) or [Nix] is not required, but can be useful for setting up a development
 shell with the packages and tools used in this project. With [Nix flakes]
 enabled:
 
@@ -241,6 +241,7 @@ dune exec arith -- compile --target=anf <<< "1 + 2 * 27"
 ```
 
 [dune]: https://dune.build
+[Lix]: https://lix.systems/
 [Nix]: https://nixos.org
 [Nix flakes]: https://nixos.wiki/wiki/Flakes
 [nix-direnv]: https://github.com/nix-community/nix-direnv
