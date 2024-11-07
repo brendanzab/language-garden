@@ -151,6 +151,8 @@ Other project gardens:
   Single-file typechecker/interpreter/compiler implementations
 - [github:yeslogic/fathom-experiments](https://github.com/yeslogic/fathom-experiments/):
   Fathom related experiments
+- [sourcehut:icefox/determination](https://hg.sr.ht/~icefox/determination):
+  Type checkers for System F and System Fω
 
 ## Conventions and style choices
 
