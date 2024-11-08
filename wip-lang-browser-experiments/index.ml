@@ -26,7 +26,7 @@ let rec draw_tree (ctx : Html.canvasRenderingContext2D Js.t) (tree : Binary_tree
   | Fork (tree1, tree2) ->
       begin
         ctx##save;
-        ctx##rotate (fork_angle *. Float.pi /. 180.0);
+        ctx##rotate (+.fork_angle *. Float.pi /. 180.0);
         draw_tree ctx tree1;
         ctx##restore;
 
