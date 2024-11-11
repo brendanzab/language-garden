@@ -63,7 +63,7 @@
 
       # Development package versions, along with the base compiler tools, used
       # when building the opam project with `opam-nix`.
-      query = devPackagesQuery // {
+      allPackagesQuery = devPackagesQuery // {
         # Force the ocaml compiler to be taken from opam-repository:
         ocaml-base-compiler = "5.1.1"; # Fix for opam-nix choosing 5.1.1~rc1 over 5.1.1
       };
@@ -83,7 +83,7 @@
         });
 
       buildOpamProject = system: options:
-        (opam-nix.lib.${system}.buildOpamProject' options ./. query).overrideScope
+        (opam-nix.lib.${system}.buildOpamProject' options ./. allPackagesQuery).overrideScope
           overlay.${system};
 
       legacyPackages = eachSystem (system:
@@ -133,7 +133,6 @@
             lib.getAttrs
               (lib.attrNames localPackagesQuery.${system})
               (buildOpamProject system {
-                resolveArgs.dev = true;
                 resolveArgs.with-doc = true;
                 resolveArgs.with-test = true;
               });
