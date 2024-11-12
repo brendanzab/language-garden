@@ -26,3 +26,6 @@ build system support and are untested for now.
   using higher-order references and backpatching.
 - [**eval_triple_store.ml**](./eval_triple_store.ml):
   Example of inferring facts from a triple store.
+- [**lang_ast_submodules.ml**](./lang_ast_submodules.ml):
+  A pattern for nesting mutually recursive datatypes in submodules without
+  duplicating the datatype definitions.

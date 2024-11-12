@@ -22,3 +22,8 @@
   (name eval_triple_store)
   (public_name eval-triple-store)
   (package scraps))
+
+(executable
+  (name lang_ast_submodules)
+  (public_name lang-ast-submodules)
+  (package scraps))
