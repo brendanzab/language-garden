@@ -1,8 +1,11 @@
-(** A pattern for nesting mutually recursive datatypes in submodules without
-    duplicating the datatype definitions.
+(** OCaml’s mutually recusive modules are often quite tedious to use, requiring
+    explicit module signatures. This can be quite frustrating if you want to
+    define an AST with submodules for each node type.
 
-    - {{:https://blog.janestreet.com/a-trick-recursive-modules-from-recursive-signatures/}
-      A trick: recursive modules from recursive signatures}
+    This file shows a pattern for nesting mutually recursive datatypes in
+    submodules without duplicating the datatype definitions. It is based on
+    {{:https://blog.janestreet.com/a-trick-recursive-modules-from-recursive-signatures/}
+    this blog post}.
 *)
 
 module rec Expr : sig
