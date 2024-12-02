@@ -89,6 +89,8 @@ Programmable markup languages:
 - [Pollen](https://docs.racket-lang.org/pollen/) ([Code](https://git.matthewbutterick.com/mbutterick/pollen)):
   Racket dialect for creating digital books
 - [Papyri](https://kaya3.github.io/papyri/)
+- [Patoline](https://patoline.github.io/) ([Code](https://github.com/patoline/patoline))
+  Typesetting system with embedded OCaml code
 
 Template languages:
 
