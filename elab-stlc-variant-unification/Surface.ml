@@ -90,30 +90,27 @@ type meta_info = [
 
 (** A global list of the metavariables inserted during elaboration. This is used
     to generate a list of unsolved metavariables at the end of elaboration. *)
-let metas : (loc * meta_info * Core.meta_state ref) list ref = ref []
+let metas : (loc * meta_info * Core.meta_state ref) Dynarray.t =
+  Dynarray.create ()
 
 (** Generate a fresh metavariable, recording it in the list of metavariables *)
 let fresh_meta (loc: loc) (info : meta_info) (constr : Core.constr) : Core.ty =
   let state = Core.fresh_meta constr in
-  metas := (loc, info, state) :: !metas;
+  Dynarray.add_last metas (loc, info, state);
   MetaVar state
 
 (** Return a list of unsolved metavariables *)
 let unsolved_metas () : (loc * meta_info) list =
-  let rec go acc metas =
-    match metas with
-    | [] -> acc
-    | (loc, info, m) :: metas -> begin
-        match !m with
-        | Core.Unsolved (_, Any) -> go ((loc, info) :: acc) metas
-        | Core.Unsolved (_, Variant row) ->
-            (* Default to a concrete variant type *)
-            m := Solved (VariantType row);
-            go acc metas
-        | Core.Solved _ -> go acc metas
-    end
+  let go (loc, info, m) acc =
+    match !m with
+    | Core.Unsolved (_, Any) -> (loc, info) :: acc
+    | Core.Unsolved (_, Variant row) ->
+        (* Default to a concrete variant type *)
+        m := Solved (VariantType row);
+        acc
+    | Core.Solved _ -> acc
   in
-  go [] !metas
+  Dynarray.fold_right go metas []
 
 
 (** {2 Local bindings} *)
