@@ -64,8 +64,8 @@
       # Development package versions, along with the base compiler tools, used
       # when building the opam project with `opam-nix`.
       allPackagesQuery = devPackagesQuery // {
-        # Force the ocaml compiler to be taken from opam-repository:
-        ocaml-base-compiler = "5.1.1"; # Fix for opam-nix choosing 5.1.1~rc1 over 5.1.1
+        # Use the OCaml compiler from nixpkgs
+        ocaml-system = "*";
       };
 
       # Package-specific derivation overrides.
