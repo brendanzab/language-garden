@@ -26,7 +26,7 @@
     (qcheck (and (>= "0.22") :with-test))
     (qcheck-core (and (>= "0.22") :with-test))
     (qcheck-alcotest (and (>= "0.22") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name compile-arithcond)
@@ -39,7 +39,7 @@
     (qcheck (and (>= "0.22") :with-test))
     (qcheck-core (and (>= "0.22") :with-test))
     (qcheck-alcotest (and (>= "0.22") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name compile-closure-conv)
@@ -48,7 +48,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 
 ; Elaboration
@@ -60,7 +60,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-dependent-sugar)
@@ -69,7 +69,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-stlc-abstract)
@@ -78,7 +78,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     ; (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-stlc-bidirectional)
@@ -87,7 +87,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-stlc-bidirectional-stratify)
@@ -96,7 +96,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-stlc-letrec-unification)
@@ -105,7 +105,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-stlc-unification)
@@ -114,7 +114,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-stlc-variant-unification)
@@ -123,7 +123,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-system-f-bidirectional)
@@ -132,7 +132,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name elab-record-patching)
@@ -141,7 +141,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 
 ; Languages
@@ -152,7 +152,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name lang-doc-templates)
@@ -160,7 +160,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name lang-fractal-growth)
@@ -173,7 +173,7 @@
   (depends
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name lang-shader-graphics)
@@ -190,7 +190,7 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))
-    (sedlex (>= "3.2"))))
+    (sedlex (>= "3.3"))))
 
 (package
   (name wip-compile-stratify))

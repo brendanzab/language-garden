@@ -13,7 +13,7 @@ depends: [
   "qcheck" {>= "0.22" & with-test}
   "qcheck-core" {>= "0.22" & with-test}
   "qcheck-alcotest" {>= "0.22" & with-test}
-  "sedlex" {>= "3.2"}
+  "sedlex" {>= "3.3"}
   "odoc" {with-doc}
 ]
 build: [
