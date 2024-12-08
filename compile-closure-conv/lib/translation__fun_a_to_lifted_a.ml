@@ -21,10 +21,10 @@ module Var_set = Fun_a.Var_set
 (** Translation to lambda-lifted types *)
 let rec translate_ty : Fun_a.ty -> Lifted_a.ty =
   function
-  | BoolType -> BoolType
-  | IntType -> IntType
-  | FunType (param_ty, body_ty) ->
-      ClosType (translate_ty param_ty, translate_ty body_ty)
+  | Bool_type -> Bool_type
+  | Int_type -> Int_type
+  | Fun_type (param_ty, body_ty) ->
+      Clos_type (translate_ty param_ty, translate_ty body_ty)
 
 (** Translation to lambda lifted terms. The [name] parameter is used when
     naming global definitions, to aid with debugging translated terms. *)
@@ -40,28 +40,28 @@ let rec translate globals locals ?name : Fun_a.tm -> Lifted_a.globals * Lifted_a
       (* Function literals will be lifted to the top level, so there’s no need to
         compile them to intermediate let bindings. *)
       begin match translate globals locals ~name:def_name def with
-      | globals, (ClosLit (_, _) as def) ->
+      | globals, (Clos_lit (_, _) as def) ->
           let body_env = Var_map.add def_var (def, def_ty) locals in
           translate globals body_env body
       | globals, def ->
           let def_var' = Lifted_a.Local_var.fresh def_name in
-          let body_env = Var_map.add def_var (Lifted_a.LocalVar def_var', def_ty) locals in
+          let body_env = Var_map.add def_var (Lifted_a.Local_var def_var', def_ty) locals in
           let globals, body = translate globals body_env body in
           globals, Let (def_var', def_ty, def, body)
       end
 
-  | BoolLit b -> globals, BoolLit b
-  | IntLit i -> globals, IntLit i
+  | Bool_lit b -> globals, Bool_lit b
+  | Int_lit i -> globals, Int_lit i
 
-  | PrimApp (prim, args) ->
+  | Prim_app (prim, args) ->
       let globals, args =
         List.fold_left_map (fun globals arg -> translate globals locals arg)
           globals
           args
       in
-      globals, PrimApp (prim, args)
+      globals, Prim_app (prim, args)
 
-  | FunLit (param_var, param_ty, body) ->
+  | Fun_lit (param_var, param_ty, body) ->
       (* A fresh variable to be used for the environment parameter in the code
         of the closure *)
       let env_var' = Lifted_a.Local_var.fresh "env" in
@@ -70,7 +70,7 @@ let rec translate globals locals ?name : Fun_a.tm -> Lifted_a.globals * Lifted_a
         and then transtlate the parameter *)
       let param_var' = Lifted_a.Local_var.fresh (Fun_a.Var.name param_var) in
       let param_ty = translate_ty param_ty in
-      let param_tm = Lifted_a.LocalVar param_var' in
+      let param_tm = Lifted_a.Local_var param_var' in
 
       (* Construct the list of variable ocurrences captured by the body of the
         function from the surrounding environment *)
@@ -88,7 +88,7 @@ let rec translate globals locals ?name : Fun_a.tm -> Lifted_a.globals * Lifted_a
           List.fold_left
             (fun (label, body_env) id ->
               let ty = snd (Var_map.find id locals) in
-              let tm = Lifted_a.TupleProj (LocalVar env_var', label) in
+              let tm = Lifted_a.Tuple_proj (Local_var env_var', label) in
               label + 1, Var_map.add id (tm, ty) body_env)
             (0, Var_map.singleton param_var (param_tm, param_ty))
             body_fvs
@@ -104,24 +104,24 @@ let rec translate globals locals ?name : Fun_a.tm -> Lifted_a.globals * Lifted_a
       let lifted_name = Option.value name ~default:"anon" in
       let lifted_var = Lifted_a.Global_var.fresh lifted_name in
       let lifted_code = Lifted_a.{
-        env = env_var', TupleType env_tys;
+        env = env_var', Tuple_type env_tys;
         param = param_var', param_ty;
         body;
       } in
 
       (* Add the lifted function to the global and construct a closure *)
       (lifted_var, lifted_code) :: globals,
-      ClosLit (lifted_var, TupleLit env_tms)
+      Clos_lit (lifted_var, Tuple_lit env_tms)
 
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       let globals, head = translate globals locals head in
       let globals, arg = translate globals locals arg in
 
       (* If we are applying an argument directly to a closure we can skip
          constructing one - otherwise we assume it’s a closure. *)
       begin match head with
-      | ClosLit (code, env) -> globals, CodeApp (code, env, arg)
-      | head -> globals, ClosApp (head, arg)
+      | Clos_lit (code, env) -> globals, Code_app (code, env, arg)
+      | head -> globals, Clos_app (head, arg)
       end
 
 (** Translation to lambda lifted terms. *)

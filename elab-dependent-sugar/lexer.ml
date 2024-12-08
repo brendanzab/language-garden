@@ -1,6 +1,6 @@
 exception Error of [
-  | `UnexpectedChar
-  | `UnclosedBlockComment
+  | `Unexpected_char
+  | `Unclosed_block_comment
 ]
 
 let whitespace = [%sedlex.regexp? Plus (' ' | '\t' | '\r' | '\n')]
@@ -28,19 +28,19 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "("           -> LPAREN
   | ")"           -> RPAREN
   | eof           -> END
-  | _             -> raise (Error `UnexpectedChar)
+  | _             -> raise (Error `Unexpected_char)
 
 and line_comment (lexbuf : Sedlexing.lexbuf) : Parser.token =
   match%sedlex lexbuf with
   | newline       -> token lexbuf
   | any           -> line_comment lexbuf
   | eof           -> END
-  | _             -> raise (Error `UnexpectedChar)
+  | _             -> raise (Error `Unexpected_char)
 
 and block_comment (lexbuf : Sedlexing.lexbuf) (level : int) : Parser.token =
   match%sedlex lexbuf with
   | "/-"          -> block_comment lexbuf (level + 1)
   | "-/"          -> if level = 0 then token lexbuf else block_comment lexbuf (level - 1)
   | any           -> block_comment lexbuf level
-  | eof           -> raise (Error `UnclosedBlockComment)
-  | _             -> raise (Error `UnexpectedChar)
+  | eof           -> raise (Error `Unclosed_block_comment)
+  | _             -> raise (Error `Unexpected_char)

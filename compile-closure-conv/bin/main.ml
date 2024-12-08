@@ -20,10 +20,10 @@ let parse_expr filename in_channel =
     |> Sedlexing.with_tokenizer Lang.Fun.Lexer.token
     |> MenhirLib.Convert.Simplified.traditional2revised Lang.Fun.Parser.main
   with
-  | Lang.Fun.Lexer.Error `UnexpectedChar ->
+  | Lang.Fun.Lexer.Error `Unexpected_char ->
       print_error (Sedlexing.lexing_positions lexbuf) "unexpected character";
       exit 1
-  | Lang.Fun.Lexer.Error `UnclosedBlockComment ->
+  | Lang.Fun.Lexer.Error `Unclosed_block_comment ->
       print_error (Sedlexing.lexing_positions lexbuf) "unclosed block comment";
       exit 1
   | Lang.Fun.Parser.Error ->

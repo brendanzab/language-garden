@@ -73,7 +73,7 @@ let atomic_expr :=
         (* Assign a De Bruijn index for the variable *)
         match elem_index n names with
         | Some n -> Tree_lang.var n
-        | None -> raise (Tree_lang.UnboundName ($loc(n), n))
+        | None -> raise (Tree_lang.Unbound_name ($loc(n), n))
     }
 | i = NUMBER;
     { fun _ -> Tree_lang.int i }

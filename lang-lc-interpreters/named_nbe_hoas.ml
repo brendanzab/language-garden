@@ -7,8 +7,8 @@
 type expr = Named.expr =
   | Var of string
   | Let of string * expr * expr
-  | FunLit of string * expr
-  | FunApp of expr * expr
+  | Fun_lit of string * expr
+  | Fun_app of expr * expr
 
 (** {2 Alpha Equivalence} *)
 
@@ -22,10 +22,10 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
 
 type value =
   | Neu of neu
-  | FunLit of string * (value -> value)
+  | Fun_lit of string * (value -> value)
 and neu =
   | Var of string
-  | FunApp of neu * value
+  | Fun_app of neu * value
 
 type env = (string * value) list
 
@@ -35,11 +35,11 @@ let rec eval (vs : env) (e : expr) : value =
   match e with
   | Var x -> List.assoc x vs
   | Let (x, def, body) -> eval ((x, eval vs def) :: vs) body
-  | FunLit (x, body) -> FunLit (x, fun v -> eval ((x, v) :: vs) body)
-  | FunApp (head, arg) -> begin
+  | Fun_lit (x, body) -> Fun_lit (x, fun v -> eval ((x, v) :: vs) body)
+  | Fun_app (head, arg) -> begin
       match eval vs head with
-      | FunLit (_, body) -> body (eval vs arg)
-      | Neu nv -> Neu (FunApp (nv, eval vs arg))
+      | Fun_lit (_, body) -> body (eval vs arg)
+      | Neu nv -> Neu (Fun_app (nv, eval vs arg))
   end
 
 (** {2 Quotation} *)
@@ -52,13 +52,13 @@ let rec fresh (ns : string list) (x : string) : string =
 let rec quote (ns : string list) (v : value) : expr =
   match v with
   | Neu nv -> quote_neu ns nv
-  | FunLit (x, body) ->
+  | Fun_lit (x, body) ->
       let x = fresh ns x in
-      FunLit (x, quote (x :: ns) (body (Neu (Var x))))
+      Fun_lit (x, quote (x :: ns) (body (Neu (Var x))))
 and quote_neu (ns : string list) (nv : neu) : expr =
   match nv with
   | Var x -> Var x
-  | FunApp (head, arg) -> FunApp (quote_neu ns head, quote ns arg)
+  | Fun_app (head, arg) -> Fun_app (quote_neu ns head, quote ns arg)
 
 (** {2 Normalisation-by-evaluation} *)
 

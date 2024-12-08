@@ -42,14 +42,14 @@ let main :=
 
 let ty :=
 | t1 = atomic_ty; "->"; t2 = ty;
-    { Lang__fun.FunType (t1, t2) }
+    { Lang__fun.Fun_type (t1, t2) }
 | atomic_ty
 
 let atomic_ty :=
 | "Bool";
-    { Lang__fun.BoolType }
+    { Lang__fun.Bool_type }
 | "Int";
-    { Lang__fun.IntType }
+    { Lang__fun.Int_type }
 | "("; t = ty; ")";
     { t }
 
@@ -57,26 +57,26 @@ let tm :=
 | "let"; n = NAME; ":"; t = ty; ":="; e1 = tm; ";"; e2 = tm;
     { fun names -> Lang__fun.Let (n, t, e1 names, e2 (n :: names)) }
 | "fun"; "("; n = NAME; ":"; t = ty; ")"; "=>"; e = tm;
-    { fun names -> Lang__fun.FunLit (n, t, e (n :: names)) }
+    { fun names -> Lang__fun.Fun_lit (n, t, e (n :: names)) }
 | add_tm
 
 let add_tm :=
 | e1 = mul_tm; "+"; e2 = add_tm;
-    { fun names -> Lang__fun.PrimApp (`Add, [e1 names; e2 names]) }
+    { fun names -> Lang__fun.Prim_app (`Add, [e1 names; e2 names]) }
 | e1 = mul_tm; "-"; e2 = add_tm;
-    { fun names -> Lang__fun.PrimApp (`Sub, [e1 names; e2 names]) }
+    { fun names -> Lang__fun.Prim_app (`Sub, [e1 names; e2 names]) }
 | mul_tm
 
 let mul_tm :=
 | e1 = app_tm; "*"; e2 = mul_tm;
-    { fun names -> Lang__fun.PrimApp (`Mul, [e1 names; e2 names]) }
+    { fun names -> Lang__fun.Prim_app (`Mul, [e1 names; e2 names]) }
 | app_tm
 
 let app_tm :=
 | e1 = app_tm; e2 = atomic_tm;
-    { fun names -> Lang__fun.FunApp (e1 names, e2 names) }
+    { fun names -> Lang__fun.Fun_app (e1 names, e2 names) }
 | "-"; e = atomic_tm;
-    { fun names -> Lang__fun.PrimApp (`Neg, [e names]) }
+    { fun names -> Lang__fun.Prim_app (`Neg, [e names]) }
 | atomic_tm
 
 let atomic_tm :=
@@ -87,11 +87,11 @@ let atomic_tm :=
         (* Assign a de Bruijn index for the variable *)
         match elem_index n names with
         | Some n -> Lang__fun.Var n
-        | None -> raise (Lang__fun.UnboundName n)
+        | None -> raise (Lang__fun.Unbound_name n)
     }
 | i = NUMBER;
-    { fun _ -> Lang__fun.IntLit i }
+    { fun _ -> Lang__fun.Int_lit i }
 | "true";
-    { fun _ -> Lang__fun.BoolLit true }
+    { fun _ -> Lang__fun.Bool_lit true }
 | "false";
-    { fun _ -> Lang__fun.BoolLit false }
+    { fun _ -> Lang__fun.Bool_lit false }

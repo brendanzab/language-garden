@@ -90,13 +90,13 @@ module Env = struct
         let* e1 = translate_name "x" e1 in
         let* e2 = translate_name "y" e2 in
         pure (Anf_lang.Eq (e1, e2))
-    | Tree_lang.IfThenElse (e1, e2, e3) ->
+    | Tree_lang.If_then_else (e1, e2, e3) ->
         let* e1 = translate_name "b" e1 in
         fun env cont ->
           let jx = fresh_id () in
           let px = fresh_id () in
-          Anf_lang.LetJoin ("j", jx, ("p", px), cont env (Anf_lang.Atom (Var px)),
-            Anf_lang.IfThenElse (e1,
+          Anf_lang.Let_join ("j", jx, ("p", px), cont env (Anf_lang.Atom (Var px)),
+            Anf_lang.If_then_else (e1,
               translate_name "true" e2 env (Fun.const (Anf_lang.join_app jx)),
               translate_name "false" e3 env (Fun.const (Anf_lang.join_app jx))))
 

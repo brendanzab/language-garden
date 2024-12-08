@@ -8,23 +8,23 @@
 (** {1 Syntax} *)
 
 type ty =
-  | BoolType                        (** [ Bool ] *)
-  | IntType                         (** [ Int ] *)
-  | CodeType of ty * ty * ty        (** [ Code(t_env, t1, t2) ] *)
-  | TupleType of ty list            (** [ (t1, ... tn) ] *)
-  | ClosType of ty * ty             (** [ t1 -> t2 ] *)
+  | Bool_type                             (** [ Bool ] *)
+  | Int_type                              (** [ Int ] *)
+  | Code_type of ty * ty * ty             (** [ Code(t_env, t1, t2) ] *)
+  | Tuple_type of ty list                 (** [ (t1, ... tn) ] *)
+  | Clos_type of ty * ty                  (** [ t1 -> t2 ] *)
 
 type tm =
   | Var of int
   | Let of string * ty * tm * tm
-  | BoolLit of bool
-  | IntLit of int
-  | PrimApp of Prim.t * tm list
-  | CodeLit of ty * (string * ty) * tm    (** [ fun env x => e ] *)
-  | TupleLit of tm list                   (** [ (e1, ..., en) ] *)
-  | TupleProj of tm * int                 (** [ e.n ] *)
-  | ClosLit of tm * tm                    (** [ clos(e1, e2) ] *)
-  | ClosApp of tm * tm                    (** [ e1 e2 ] *)
+  | Bool_lit of bool
+  | Int_lit of int
+  | Prim_app of Prim.t * tm list
+  | Code_lit of ty * (string * ty) * tm   (** [ fun env x => e ] *)
+  | Tuple_lit of tm list                  (** [ (e1, ..., en) ] *)
+  | Tuple_proj of tm * int                (** [ e.n ] *)
+  | Clos_lit of tm * tm                   (** [ clos(e1, e2) ] *)
+  | Clos_app of tm * tm                   (** [ e1 e2 ] *)
 
 
 (** {1 Pretty printing} *)
@@ -41,7 +41,7 @@ let pp_tuple_elems (type a) (pp_elem : Format.formatter -> a -> unit) (fmt : For
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | ClosType (param_ty, body_ty) ->
+  | Clos_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
@@ -49,14 +49,14 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) =
       pp_atomic_ty fmt ty
 and pp_atomic_ty (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | BoolType -> Format.fprintf fmt "Bool"
-  | IntType -> Format.fprintf fmt "Int"
-  | CodeType (env_ty, param_ty, body_ty) ->
+  | Bool_type -> Format.fprintf fmt "Bool"
+  | Int_type -> Format.fprintf fmt "Int"
+  | Code_type (env_ty, param_ty, body_ty) ->
       Format.fprintf fmt "@[Code(%a,@ %a,@ %a)@]"
         pp_ty env_ty
         pp_ty param_ty
         pp_ty body_ty
-  | TupleType tys ->
+  | Tuple_type tys ->
       Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems pp_ty) tys
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
@@ -80,7 +80,7 @@ let rec pp_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
       go names fmt tm
-  | CodeLit (env_ty, (name, param_ty), body) ->
+  | Code_lit (env_ty, (name, param_ty), body) ->
       Format.fprintf fmt "@[<hv 2>@[fun@ %a@ %a@ =>@]@ %a@]"
         pp_param ("env", env_ty)
         pp_param (name, param_ty)
@@ -89,11 +89,11 @@ let rec pp_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
       pp_app_tm names fmt tm
 and pp_app_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
   match tm with
-  | PrimApp (head, args) ->
+  | Prim_app (head, args) ->
       Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.to_string head)
         (Format.pp_print_list (pp_proj_tm names) ~pp_sep:Format.pp_print_space) args
-  | ClosApp (head, arg) ->
+  | Clos_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
         (pp_proj_tm names) arg
@@ -101,7 +101,7 @@ and pp_app_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
       pp_proj_tm names fmt tm
 and pp_proj_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
   match tm with
-  | TupleProj (head, label) ->
+  | Tuple_proj (head, label) ->
       Format.fprintf fmt "@[%a.%i@]"
         (pp_proj_tm names) head
         label
@@ -111,14 +111,14 @@ and pp_atomic_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
   match tm with
   | Var index ->
       Format.fprintf fmt "%s" (List.nth names index)
-  | BoolLit true -> Format.fprintf fmt "true"
-  | BoolLit false -> Format.fprintf fmt "false"
-  | IntLit i -> Format.fprintf fmt "%i" i
-  | ClosLit (code, env) ->
+  | Bool_lit true -> Format.fprintf fmt "true"
+  | Bool_lit false -> Format.fprintf fmt "false"
+  | Int_lit i -> Format.fprintf fmt "%i" i
+  | Clos_lit (code, env) ->
       Format.fprintf fmt "@[<hv>clos(@;<0 2>%a,@;<1 2>%a@;<0 0>)@]"
         (pp_tm names) code
         (pp_tm names) env
-  | TupleLit tms ->
+  | Tuple_lit tms ->
       Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems (pp_tm names)) tms
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
 
@@ -128,11 +128,11 @@ module Semantics = struct
   (** {1 Values} *)
 
   type vtm =
-    | BoolLit of bool
-    | IntLit of int
-    | CodeLit of ty * (string * ty) * tm   (** [ fun env x => e ] *)
-    | TupleLit of vtm list                 (** [ (v1, ..., v2) ] *)
-    | ClosLit of vtm * vtm                 (** [ clos(v1, v2)  ] *)
+    | Bool_lit of bool
+    | Int_lit of int
+    | Code_lit of ty * (string * ty) * tm   (** [ fun env x => e ] *)
+    | Tuple_lit of vtm list                 (** [ (v1, ..., v2) ] *)
+    | Clos_lit of vtm * vtm                 (** [ clos(v1, v2)  ] *)
 
 
   (** {1 Evaluation} *)
@@ -143,20 +143,20 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
-    | BoolLit b -> BoolLit b
-    | IntLit i -> IntLit i
-    | PrimApp (prim, args) ->
+    | Bool_lit b -> Bool_lit b
+    | Int_lit i -> Int_lit i
+    | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
-    | CodeLit (env_ty, (name, param_ty), body) ->
-        CodeLit (env_ty, (name, param_ty), body)
-    | TupleLit tms ->
-        TupleLit (List.map (eval env) tms)
-    | TupleProj (head, label) ->
+    | Code_lit (env_ty, (name, param_ty), body) ->
+        Code_lit (env_ty, (name, param_ty), body)
+    | Tuple_lit tms ->
+        Tuple_lit (List.map (eval env) tms)
+    | Tuple_proj (head, label) ->
         let head = eval env head in
         tuple_proj head label
-    | ClosLit (code, env') ->
-        ClosLit (eval env code, eval env env')
-    | ClosApp (head, arg) ->
+    | Clos_lit (code, env') ->
+        Clos_lit (eval env code, eval env env')
+    | Clos_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
         clos_app head arg
@@ -166,20 +166,20 @@ module Semantics = struct
 
   and prim_app prim args =
     match prim, args with
-    | `Neg, [IntLit t1] -> IntLit (-t1)
-    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | `Neg, [Int_lit t1] -> Int_lit (-t1)
+    | `Add, [Int_lit t1; Int_lit t2] -> Int_lit (t1 + t2)
+    | `Sub, [Int_lit t1; Int_lit t2] -> Int_lit (t1 - t2)
+    | `Mul, [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
     | _, _ -> invalid_arg "invalid prim application"
 
   and tuple_proj head label =
     match head with
-    | TupleLit vtms -> List.nth vtms label
+    | Tuple_lit vtms -> List.nth vtms label
     | _ -> invalid_arg "expected tuple"
 
   and clos_app head arg =
     match head with
-    | ClosLit (CodeLit (_, _, body), env) -> eval [arg; env] body
+    | Clos_lit (Code_lit (_, _, body), env) -> eval [arg; env] body
     | _ -> invalid_arg "expected closure"
 
 end
@@ -207,28 +207,28 @@ module Validation = struct
     | Let (_, _, def, body) ->
         let def_ty = synth context def in
         synth (def_ty :: context) body
-    | BoolLit _ -> BoolType
-    | IntLit _ -> IntType
-    | PrimApp (`Neg, [t]) ->
-        check context t IntType;
-        IntType
-    | PrimApp ((`Add | `Sub | `Mul), [t1; t2]) ->
-        check context t1 IntType;
-        check context t2 IntType;
-        IntType
-    | PrimApp _ ->
+    | Bool_lit _ -> Bool_type
+    | Int_lit _ -> Int_type
+    | Prim_app (`Neg, [t]) ->
+        check context t Int_type;
+        Int_type
+    | Prim_app ((`Add | `Sub | `Mul), [t1; t2]) ->
+        check context t1 Int_type;
+        check context t2 Int_type;
+        Int_type
+    | Prim_app _ ->
         invalid_arg "invalid prim application"
-    | CodeLit (env_ty, (_, param_ty), body) ->
+    | Code_lit (env_ty, (_, param_ty), body) ->
         (* Code literals capture no variables from the surrounding context, so
           the body of the closure is synthesised in a new context that assumes
           only the parameter and the environment. *)
         let body_ty = synth [param_ty; env_ty] body in
-        CodeType (env_ty, param_ty, body_ty)
-    | TupleLit tms ->
-        TupleType (List.map (synth context) tms)
-    | TupleProj (head, label) ->
+        Code_type (env_ty, param_ty, body_ty)
+    | Tuple_lit tms ->
+        Tuple_type (List.map (synth context) tms)
+    | Tuple_proj (head, label) ->
         begin match synth context head with
-        | TupleType tys ->
+        | Tuple_type tys ->
             begin match List.nth_opt tys label with
             | Some ty -> ty
             | None ->
@@ -240,18 +240,18 @@ module Validation = struct
             invalid_arg
               (Format.asprintf "expected tuple but found term of type %a" pp_ty ty)
         end
-    | ClosLit (code, env) ->
+    | Clos_lit (code, env) ->
         begin match synth context code with
-        | CodeType (env_ty, param_ty, body_ty) ->
+        | Code_type (env_ty, param_ty, body_ty) ->
             check context env env_ty;
-            ClosType (param_ty, body_ty)
+            Clos_type (param_ty, body_ty)
         | ty ->
             invalid_arg
               (Format.asprintf "expected code but found term of type %a" pp_ty ty)
         end
-    | ClosApp (head, arg) ->
+    | Clos_app (head, arg) ->
         begin match synth context head with
-        | ClosType (param_ty, body_ty) ->
+        | Clos_type (param_ty, body_ty) ->
             check context arg param_ty;
             body_ty
         | ty ->

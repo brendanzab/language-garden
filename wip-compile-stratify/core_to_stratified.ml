@@ -79,36 +79,36 @@ let rec translate ctx : Core.Syntax.tm -> tm =
       end
   | Univ L0 -> `Tm2 Univ0
   | Univ L1 -> raise (Error "bug: universe exceeds size of target language")
-  | FunType (name, param_ty, body_ty) ->
+  | Fun_type (name, param_ty, body_ty) ->
       begin match translate_ty ctx param_ty with
       | `Tm2 param_ty ->
           begin match translate_ty (Context.define1 ctx) body_ty with
-          | `Tm2 body_ty -> `Tm2 (FunType11 (name, param_ty, body_ty))
-          | `Tm1 body_ty -> `Tm2 (FunType10 (name, param_ty, body_ty))
+          | `Tm2 body_ty -> `Tm2 (Fun_type11 (name, param_ty, body_ty))
+          | `Tm1 body_ty -> `Tm2 (Fun_type10 (name, param_ty, body_ty))
           end
       | `Tm1 param_ty ->
           begin match translate_ty (Context.define0 ctx) body_ty with
-          | `Tm2 body_ty -> `Tm2 (FunType01 (name, param_ty, body_ty))
-          | `Tm1 body_ty -> `Tm1 (FunType00 (name, param_ty, body_ty))
+          | `Tm2 body_ty -> `Tm2 (Fun_type01 (name, param_ty, body_ty))
+          | `Tm1 body_ty -> `Tm1 (Fun_type00 (name, param_ty, body_ty))
           end
       end
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       begin match translate_ty ctx param_ty with
       | `Tm2 param_ty ->
           begin match translate_tm (Context.define1 ctx) body with
-          | `Tm1 body -> `Tm1 (FunLit11 (name, param_ty, body))
-          | `Tm0 body -> `Tm1 (FunLit10 (name, param_ty, body))
+          | `Tm1 body -> `Tm1 (Fun_lit11 (name, param_ty, body))
+          | `Tm0 body -> `Tm1 (Fun_lit10 (name, param_ty, body))
           end
       | `Tm1 param_ty ->
           begin match translate_tm (Context.define0 ctx) body with
-          | `Tm1 body -> `Tm1 (FunLit01 (name, param_ty, body))
-          | `Tm0 body -> `Tm0 (FunLit00 (name, param_ty, body))
+          | `Tm1 body -> `Tm1 (Fun_lit01 (name, param_ty, body))
+          | `Tm0 body -> `Tm0 (Fun_lit00 (name, param_ty, body))
           end
       end
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       begin match translate_tm ctx head with
       | `Tm1 _ ->
-          (*  This could either be a [FunApp11], [FunApp01], or [FunApp10], but
+          (*  This could either be a [Fun_app11], [Fun_app01], or [Fun_app10], but
               we can’t tell from the term alone. See [translate1] and
               [translate0] for cases where this is not ambiguous.
 
@@ -117,7 +117,7 @@ let rec translate ctx : Core.Syntax.tm -> tm =
               translation could help make this feel less ad-hoc? Not sure.
           *)
           raise (Error "bug: ambiguous function application")
-      | `Tm0 head -> `Tm0 (FunApp00 (head, translate0 ctx arg))
+      | `Tm0 head -> `Tm0 (Fun_app00 (head, translate0 ctx arg))
       end
 
 
@@ -154,15 +154,15 @@ and translate_ty ctx tm =
 and translate2 ctx : Core.Syntax.tm -> Stratified.Syntax.tm2 =
   function
   | Univ L0 -> Univ0
-  | FunType (name, param_ty, body_ty) ->
+  | Fun_type (name, param_ty, body_ty) ->
       begin match translate_ty ctx param_ty with
       | `Tm2 param_ty ->
           begin match translate_ty (Context.define1 ctx) body_ty with
-          | `Tm2 body_ty -> FunType11 (name, param_ty, body_ty)
-          | `Tm1 body_ty -> FunType10 (name, param_ty, body_ty)
+          | `Tm2 body_ty -> Fun_type11 (name, param_ty, body_ty)
+          | `Tm1 body_ty -> Fun_type10 (name, param_ty, body_ty)
           end
       | `Tm1 param_ty ->
-          FunType01 (name, param_ty, translate2 (Context.define0 ctx) body_ty)
+          Fun_type01 (name, param_ty, translate2 (Context.define0 ctx) body_ty)
       end
   | _ -> raise (Error "bug: expected a level 2 term")
 
@@ -180,24 +180,24 @@ and translate1 ctx : Core.Syntax.tm -> Stratified.Syntax.tm1 =
       | Level1 level -> Var1 (Env.level_to_index ctx.size1 level)
       | Level0 _ -> raise (Error "bug: expected a level 1 term")
       end
-  | FunType (name, param_ty, body_ty) ->
+  | Fun_type (name, param_ty, body_ty) ->
       let param_ty = translate1 ctx param_ty in
       let body_ty = translate1 (Context.define0 ctx) body_ty in
-      FunType00 (name, param_ty, body_ty)
-  | FunLit (name, param_ty, body) ->
+      Fun_type00 (name, param_ty, body_ty)
+  | Fun_lit (name, param_ty, body) ->
       begin match translate_ty ctx param_ty with
       | `Tm2 param_ty ->
           begin match translate_tm (Context.define1 ctx) body with
-          | `Tm1 body -> FunLit11 (name, param_ty, body)
-          | `Tm0 body -> FunLit10 (name, param_ty, body)
+          | `Tm1 body -> Fun_lit11 (name, param_ty, body)
+          | `Tm0 body -> Fun_lit10 (name, param_ty, body)
           end
       | `Tm1 param_ty ->
-          FunLit01 (name, param_ty, translate1 (Context.define0 ctx) body)
+          Fun_lit01 (name, param_ty, translate1 (Context.define0 ctx) body)
       end
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       begin match translate_tm ctx arg with
-      | `Tm1 arg -> FunApp11 (translate1 ctx head, arg)
-      | `Tm0 arg -> FunApp01 (translate1 ctx head, arg)
+      | `Tm1 arg -> Fun_app11 (translate1 ctx head, arg)
+      | `Tm0 arg -> Fun_app01 (translate1 ctx head, arg)
       end
   | _ -> raise (Error "bug: expected a level 1 term")
 
@@ -215,13 +215,13 @@ and translate0 ctx : Core.Syntax.tm -> Stratified.Syntax.tm0 =
       end
   | Ann (expr, ty) ->
       Ann0 (translate0 ctx expr, translate1 ctx ty)
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       let param_ty = translate1 ctx param_ty in
       let body = translate0 (Context.define0 ctx) body in
-      FunLit00 (name, param_ty, body)
-  | FunApp (head, arg) ->
+      Fun_lit00 (name, param_ty, body)
+  | Fun_app (head, arg) ->
       begin match translate_tm ctx head with
-      | `Tm1 head -> FunApp10 (head, translate1 ctx arg)
-      | `Tm0 head -> FunApp00 (head, translate0 ctx arg)
+      | `Tm1 head -> Fun_app10 (head, translate1 ctx arg)
+      | `Tm0 head -> Fun_app00 (head, translate0 ctx arg)
       end
   | _ -> raise (Error "bug: expected a level 0 term")

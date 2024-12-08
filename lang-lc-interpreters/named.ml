@@ -13,8 +13,8 @@
 type expr =
   | Var of string
   | Let of string * expr * expr
-  | FunLit of string * expr
-  | FunApp of expr * expr
+  | Fun_lit of string * expr
+  | Fun_app of expr * expr
 
 (** {2 Alpha Equivalence} *)
 
@@ -37,9 +37,9 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
     | Let (x1, def1, body1), Let (x2, def2, body2) ->
         go size (ns1, def1) (ns2, def2)
           && go (size + 1) ((x1, size) :: ns1, body1) ((x2, size) :: ns2, body2)
-    | FunLit (x1, body1), FunLit (x2, body2) ->
+    | Fun_lit (x1, body1), Fun_lit (x2, body2) ->
         go (size + 1) ((x1, size) :: ns1, body1) ((x2, size) :: ns2, body2)
-    | FunApp (head1, arg1), FunApp (head2, arg2) ->
+    | Fun_app (head1, arg1), Fun_app (head2, arg2) ->
         go size (ns1, head1) (ns2, head2) && go size (ns1, arg1) (ns2, arg2)
     | _, _ -> false
   in
@@ -58,15 +58,15 @@ let rec free_vars (e : expr) : String_set.t =
   match e with
   | Var x -> String_set.singleton x
   | Let (x, def, body) -> String_set.(union (free_vars def) (remove x (free_vars body)))
-  | FunLit (x, body) -> String_set.remove x (free_vars body)
-  | FunApp (head, arg) -> String_set.union (free_vars head) (free_vars arg)
+  | Fun_lit (x, body) -> String_set.remove x (free_vars body)
+  | Fun_app (head, arg) -> String_set.union (free_vars head) (free_vars arg)
 
 let rec all_vars (e : expr) : String_set.t =
   match e with
   | Var x -> String_set.singleton x
   | Let (_, def, body) -> String_set.union (all_vars def) (all_vars body)
-  | FunLit (_, body) -> all_vars body
-  | FunApp (head, arg) -> String_set.union (all_vars head) (all_vars arg)
+  | Fun_lit (_, body) -> all_vars body
+  | Fun_app (head, arg) -> String_set.union (all_vars head) (all_vars arg)
 
 (** {2 Substitution} *)
 
@@ -89,12 +89,12 @@ let rec subst (x, s : string * expr) (e : expr) : expr =
         let y', body' = freshen_body y body in
         Let (y', go def, go body')
     | Let (y, def, body) -> Let (y, def, go body)
-    | FunLit (y, _) when x = y -> e
-    | FunLit (y, body) when String_set.mem y fvs ->
+    | Fun_lit (y, _) when x = y -> e
+    | Fun_lit (y, body) when String_set.mem y fvs ->
         let y', body' = freshen_body y body in
-        FunLit (y', go body')
-    | FunLit (y, body) -> FunLit (y, go body)
-    | FunApp (head, arg) -> FunApp (go head, go arg)
+        Fun_lit (y', go body')
+    | Fun_lit (y, body) -> Fun_lit (y, go body)
+    | Fun_app (head, arg) -> Fun_app (go head, go arg)
   in
   go e
 
@@ -103,7 +103,7 @@ let rec subst (x, s : string * expr) (e : expr) : expr =
 
 let is_val (e : expr) : bool =
   match e with
-  | FunLit _ -> true
+  | Fun_lit _ -> true
   | _ -> false
 
 (** {2 Evaluation} *)
@@ -114,13 +114,13 @@ let rec eval (e : expr) : expr =
   | Let (x, def, body) ->
       let def = if is_val def then def else eval def in
       eval (subst (x, def) body)
-  | FunLit (_, _) -> e
-  | FunApp (head, arg) -> begin
+  | Fun_lit (_, _) -> e
+  | Fun_app (head, arg) -> begin
       let head = if is_val head then head else eval head in
       let arg = if is_val arg then arg else eval arg in
       match head with
-      | FunLit (x, body) -> eval (subst (x, arg) body)
-      | head -> FunApp (head, arg)
+      | Fun_lit (x, body) -> eval (subst (x, arg) body)
+      | head -> Fun_app (head, arg)
   end
 
 (** {2 Normalisation} *)
@@ -130,9 +130,9 @@ let rec normalise (e : expr) : expr =
   match e with
   | Var x -> Var x
   | Let (x, def, body) -> normalise (subst (x, normalise def) body)
-  | FunLit (x, body) -> FunLit (x, normalise body)
-  | FunApp (head, arg) -> begin
+  | Fun_lit (x, body) -> Fun_lit (x, normalise body)
+  | Fun_app (head, arg) -> begin
       match eval head with
-      | FunLit (x, body) -> normalise (subst (x, normalise arg) body)
-      | head -> FunApp (head, normalise arg)
+      | Fun_lit (x, body) -> normalise (subst (x, normalise arg) body)
+      | head -> Fun_app (head, normalise arg)
   end

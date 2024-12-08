@@ -33,13 +33,13 @@ module Clos = Lang.Clos
 *)
 type vtm =
   | Var of int
-  | TupleProj of int * int
+  | Tuple_proj of int * int
 
 (** Quote a value back into a target environment. *)
 let quote size' : vtm -> Clos.tm =
   function
   | Var level -> Var (size' - level - 1)
-  | TupleProj (level, label) -> TupleProj (Var (size' - level - 1), label)
+  | Tuple_proj (level, label) -> Tuple_proj (Var (size' - level - 1), label)
 
 
 (** {1 Environment} *)
@@ -54,10 +54,10 @@ type env = (vtm * Clos.ty) option list
 (** Translation to closure converted types *)
 let rec translate_ty : Fun.ty -> Clos.ty =
   function
-  | BoolType -> BoolType
-  | IntType -> IntType
-  | FunType (param_ty, body_ty) ->
-      ClosType (translate_ty param_ty, translate_ty body_ty)
+  | Bool_type -> Bool_type
+  | Int_type -> Int_type
+  | Fun_type (param_ty, body_ty) ->
+      Clos_type (translate_ty param_ty, translate_ty body_ty)
 
 (** Translation to closure converted terms.
 
@@ -84,14 +84,14 @@ let rec translate env size size' : Fun.tm -> Clos.tm =
 
       Let (name, def_ty, def, body)
 
-  | BoolLit b -> BoolLit b
-  | IntLit i -> IntLit i
+  | Bool_lit b -> Bool_lit b
+  | Int_lit i -> Int_lit i
 
-  | PrimApp (prim, args) ->
+  | Prim_app (prim, args) ->
       let args = List.map (translate env size size') args in
-      PrimApp (prim, args)
+      Prim_app (prim, args)
 
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       let param_ty = translate_ty param_ty in
 
       (* There are only two variables bound in the environment of the compiled
@@ -122,7 +122,7 @@ let rec translate env size size' : Fun.tm -> Clos.tm =
                 it to the environment tuple and map any occurrences in the body
                 of the closure to projections off the environment parameter. *)
               let vtm, ty = Option.get binding in
-              Some (TupleProj (env_level, List.length tms), ty) :: env',
+              Some (Tuple_proj (env_level, List.length tms), ty) :: env',
               quote size' vtm :: tms,
               ty :: tys
             else
@@ -138,11 +138,11 @@ let rec translate env size size' : Fun.tm -> Clos.tm =
       let body_env = Some (Var param_level, param_ty) :: proj_env in
       let body = translate body_env (size + 1) 2 body in
 
-      ClosLit
-        (CodeLit (TupleType (List.rev env_tys), (name, param_ty), body),
-          TupleLit (List.rev env_tms))
+      Clos_lit
+        (Code_lit (Tuple_type (List.rev env_tys), (name, param_ty), body),
+          Tuple_lit (List.rev env_tms))
 
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       let head = translate env size size' head in
       let arg = translate env size size' arg in
-      ClosApp (head, arg)
+      Clos_app (head, arg)

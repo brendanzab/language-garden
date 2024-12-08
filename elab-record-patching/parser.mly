@@ -33,18 +33,18 @@ let tm :=
 | t1 = app_tm; ":"; t2 = tm;
     { Surface.Ann (t1, t2) }
 | t1 =  app_tm; "->"; t2 = tm;
-    { Surface.FunArrow (t1, t2) }
+    { Surface.Fun_arrow (t1, t2) }
 | "fun"; ps = nonempty_list(param); "->"; t = tm;
-    { Surface.FunType (ps, t) }
+    { Surface.Fun_type (ps, t) }
 | "fun"; ps = nonempty_list(pattern); ":="; t = tm;
-    { Surface.FunLit (ps, t) }
+    { Surface.Fun_lit (ps, t) }
 | app_tm
 
 let app_tm :=
 | t = proj_tm; ts = nonempty_list(proj_tm);
     { Surface.App (t, ts) }
 | t1 = app_tm; "["; "="; t2 = tm; "]";
-    { Surface.SingType (t1, t2) }
+    { Surface.Sing_type (t1, t2) }
 | t = app_tm; "["; ps = nonempty_sequence(l = NAME; ":="; t = tm; { l, t }); "]";
     { Surface.Patch (t, ps) }
 | proj_tm
@@ -62,11 +62,11 @@ let atomic_tm :=
 | "Type";
     { Surface.Univ }
 | "{"; "}";
-    { Surface.RecUnit }
+    { Surface.Rec_unit }
 | "{"; ds = nonempty_sequence(l = NAME; ":"; t = tm; { l, t }); "}";
-    { Surface.RecType ds }
+    { Surface.Rec_type ds }
 | "{"; ds = nonempty_sequence(defn); "}";
-    { Surface.RecLit ds }
+    { Surface.Rec_lit ds }
 
 let pattern :=
 | "_";

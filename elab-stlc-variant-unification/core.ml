@@ -47,11 +47,11 @@ type meta_id = int
 
 (** Type syntax *)
 type ty =
-  | MetaVar of meta_state ref
-  | FunType of ty * ty
-  | VariantType of ty Label_map.t
-  | IntType
-  | BoolType
+  | Meta_var of meta_state ref
+  | Fun_type of ty * ty
+  | Variant_type of ty Label_map.t
+  | Int_type
+  | Bool_type
 
 (** The state of a metavariable, updated during unification *)
 and meta_state =
@@ -71,14 +71,14 @@ and constr =
 type tm =
   | Var of index
   | Let of name * ty * tm * tm
-  | FunLit of name * ty * tm
-  | FunApp of tm * tm
-  | VariantLit of label * tm * ty
-  | VariantElim of tm * (name * tm) Label_map.t
-  | IntLit of int
-  | BoolLit of bool
-  | BoolElim of tm * tm * tm
-  | PrimApp of Prim.t * tm list
+  | Fun_lit of name * ty * tm
+  | Fun_app of tm * tm
+  | Variant_lit of label * tm * ty
+  | Variant_elim of tm * (name * tm) Label_map.t
+  | Int_lit of int
+  | Bool_lit of bool
+  | Bool_elim of tm * tm * tm
+  | Prim_app of Prim.t * tm list
 
 
 module Semantics = struct
@@ -88,10 +88,10 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
-    | FunLit of name * ty * (vtm -> vtm)
-    | VariantLit of label * vtm * ty
-    | BoolLit of bool
-    | IntLit of int
+    | Fun_lit of name * ty * (vtm -> vtm)
+    | Variant_lit of label * vtm * ty
+    | Bool_lit of bool
+    | Int_lit of int
 
   (** Neutral values that could not be reduced to a normal form as a result of
       being stuck on something else that would not reduce further.
@@ -102,47 +102,47 @@ module Semantics = struct
   *)
   and ntm =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
-    | FunApp of ntm * vtm
-    | VariantElim of ntm * (name * (vtm -> vtm)) Label_map.t
-    | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
-    | PrimApp of Prim.t * vtm list
+    | Fun_app of ntm * vtm
+    | Variant_elim of ntm * (name * (vtm -> vtm)) Label_map.t
+    | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
+    | Prim_app of Prim.t * vtm list
 
 
   (** {1 Eliminators} *)
 
   let fun_app head arg =
     match head with
-    | Neu ntm -> Neu (FunApp (ntm, arg))
-    | FunLit (_, _, body) -> body arg
+    | Neu ntm -> Neu (Fun_app (ntm, arg))
+    | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
   let variant_elim head cases =
     match head with
-    | Neu ntm -> Neu (VariantElim (ntm, cases))
-    | VariantLit (label, vtm, _) ->
+    | Neu ntm -> Neu (Variant_elim (ntm, cases))
+    | Variant_lit (label, vtm, _) ->
         let _, body = Label_map.find label cases in
         body vtm
     | _ -> invalid_arg "expected variant"
 
   let bool_elim head vtm1 vtm2 =
     match head with
-    | Neu ntm -> Neu (BoolElim (ntm, vtm1, vtm2))
-    | BoolLit true -> Lazy.force vtm1
-    | BoolLit false -> Lazy.force vtm2
+    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
+    | Bool_lit true -> Lazy.force vtm1
+    | Bool_lit false -> Lazy.force vtm2
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
     let guard f args =
       try f args with
-      | Match_failure _ -> Neu (PrimApp (prim, args))
+      | Match_failure _ -> Neu (Prim_app (prim, args))
     in
     match prim with
-    | BoolEq -> guard @@ fun[@warning "-partial-match"] [BoolLit t1; BoolLit t2] -> BoolLit (t1 = t2)
-    | IntEq -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> BoolLit (t1 = t2)
-    | IntAdd -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | IntSub -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | IntMul -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
-    | IntNeg -> guard @@ fun[@warning "-partial-match"] [IntLit t1] -> IntLit (-t1)
+    | Bool_eq -> guard @@ fun[@warning "-partial-match"] [Bool_lit t1; Bool_lit t2] -> Bool_lit (t1 = t2)
+    | Int_eq -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Bool_lit (t1 = t2)
+    | Int_add -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 + t2)
+    | Int_sub -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 - t2)
+    | Int_mul -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
+    | Int_neg -> guard @@ fun[@warning "-partial-match"] [Int_lit t1] -> Int_lit (-t1)
 
 
   (** {1 Evaluation} *)
@@ -154,29 +154,29 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
-    | FunLit (name, param_ty, body) ->
-        FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
-    | FunApp (head, arg) ->
+    | Fun_lit (name, param_ty, body) ->
+        Fun_lit (name, param_ty, fun arg -> eval (arg :: env) body)
+    | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
         fun_app head arg
-    | VariantLit (label, tm, ty) ->
-        VariantLit (label, eval env tm, ty)
-    | VariantElim (head, cases) ->
+    | Variant_lit (label, tm, ty) ->
+        Variant_lit (label, eval env tm, ty)
+    | Variant_elim (head, cases) ->
         let head = eval env head in
         let cases =
           cases |> Label_map.map (fun (name, body) ->
             name, fun arg -> eval (arg :: env) body)
         in
         variant_elim head cases
-    | IntLit i -> IntLit i
-    | BoolLit b -> BoolLit b
-    | BoolElim (head, tm0, tm1) ->
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
+    | Bool_elim (head, tm0, tm1) ->
         let head = eval env head in
         let vtm1 = Lazy.from_fun (fun () -> eval env tm0) in
         let vtm2 = Lazy.from_fun (fun () -> eval env tm1) in
         bool_elim head vtm1 vtm2
-    | PrimApp (prim, args) ->
+    | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
 
 
@@ -186,33 +186,33 @@ module Semantics = struct
   let rec quote (size : int) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_neu size ntm
-    | FunLit (name, param_ty, body) ->
+    | Fun_lit (name, param_ty, body) ->
         let body = quote (size + 1) (body (Neu (Var size))) in
-        FunLit (name, param_ty, body)
-    | VariantLit (label, vtm, ty) ->
-        VariantLit (label, quote size vtm, ty)
-    | IntLit i -> IntLit i
-    | BoolLit b -> BoolLit b
+        Fun_lit (name, param_ty, body)
+    | Variant_lit (label, vtm, ty) ->
+        Variant_lit (label, quote size vtm, ty)
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
 
   and quote_neu (size : int) (ntm : ntm) : tm =
     match ntm with
     | Var level ->
         Var (level_to_index size level)
-    | FunApp (head, arg) ->
-        FunApp (quote_neu size head, quote size arg)
-    | VariantElim (head, cases) ->
+    | Fun_app (head, arg) ->
+        Fun_app (quote_neu size head, quote size arg)
+    | Variant_elim (head, cases) ->
         let head = quote_neu size head in
         let cases =
           cases |> Label_map.map (fun (name, body) ->
             name, quote (size + 1) (body (Neu (Var size))))
         in
-        VariantElim (head, cases)
-    | BoolElim (head, vtm1, vtm2) ->
+        Variant_elim (head, cases)
+    | Bool_elim (head, vtm1, vtm2) ->
         let tm0 = quote size (Lazy.force vtm1) in
         let tm1 = quote size (Lazy.force vtm2) in
-        BoolElim (quote_neu size head, tm0, tm1)
-    | PrimApp (prim, args) ->
-        PrimApp (prim, List.map (quote size) args)
+        Bool_elim (quote_neu size head, tm0, tm1)
+    | Prim_app (prim, args) ->
+        Prim_app (prim, List.map (quote size) args)
 
   (** {1 Normalisation} *)
 
@@ -239,7 +239,7 @@ let fresh_meta : constr -> meta_state ref =
     is sometimes referred to as {i path compression}. *)
 let rec force (ty : ty) : ty =
   match ty with
-  | MetaVar m as ty -> begin
+  | Meta_var m as ty -> begin
       match !m with
       | Solved ty ->
           let ty = force ty in
@@ -258,24 +258,24 @@ let expect_forced (m : meta_state ref) : meta_id * constr =
 
 (** {1 Unification} *)
 
-exception InfiniteType of meta_id
-exception MismatchedTypes of ty * ty
+exception Infinite_type of meta_id
+exception Mismatched_types of ty * ty
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
 let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
-  | MetaVar m -> occurs_meta id m
-  | FunType (param_ty, body_ty) ->
+  | Meta_var m -> occurs_meta id m
+  | Fun_type (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty
-  | VariantType row -> occurs_row id row
-  | IntType -> ()
-  | BoolType -> ()
+  | Variant_type row -> occurs_row id row
+  | Int_type -> ()
+  | Bool_type -> ()
 
 and occurs_meta (id : meta_id) (m : meta_state ref) : unit =
   match !m with
-  | Unsolved (id', _) when id = id' -> raise (InfiniteType id)
+  | Unsolved (id', _) when id = id' -> raise (Infinite_type id)
   | Unsolved (_, Variant row) -> occurs_row id row
   | Unsolved (_, Any) | Solved _ -> ()
 
@@ -286,19 +286,19 @@ and occurs_row (id : meta_id) (row : ty Label_map.t) : unit =
     type with known information from the other type if possible. *)
 let rec unify (ty1 : ty) (ty2 : ty) : unit =
   match force ty1, force ty2 with
-  | MetaVar m1, MetaVar m2 when m1 = m2 -> ()
-  | MetaVar m, ty | ty, MetaVar m ->
+  | Meta_var m1, Meta_var m2 when m1 = m2 -> ()
+  | Meta_var m, ty | ty, Meta_var m ->
       unify_meta m ty
-  | FunType (param_ty1, body_ty1), FunType (param_ty2, body_ty2) ->
+  | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
       unify param_ty1 param_ty2;
       unify body_ty1 body_ty2
-  | VariantType row1, VariantType row2 ->
+  | Variant_type row1, Variant_type row2 ->
       if not (Label_map.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2) then
-        raise (MismatchedTypes (ty1, ty2))
-  | IntType, IntType -> ()
-  | BoolType, BoolType -> ()
+        raise (Mismatched_types (ty1, ty2))
+  | Int_type, Int_type -> ()
+  | Bool_type, Bool_type -> ()
   | ty1, ty2 ->
-      raise (MismatchedTypes (ty1, ty2))
+      raise (Mismatched_types (ty1, ty2))
 
 (** Unify a forced metavariable with a forced type *)
 and unify_meta (m : meta_state ref) (ty : ty) : unit =
@@ -308,25 +308,25 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       occurs id ty;
       m := Solved ty
   (* Unify metavariable constraints *)
-  | (id, c), MetaVar m' ->
+  | (id, c), Meta_var m' ->
       occurs_meta id m';
       let _, c' = expect_forced m' in
       m' := Unsolved (id, unify_constrs c c');
       m := Solved ty
   (* Unify a variant constraint against a concrete variant type *)
-  | (id, Variant row), VariantType exact_row ->
+  | (id, Variant row), Variant_type exact_row ->
       occurs_row id exact_row;
       (* Unify the entries in the contraint row against the entries in the
          concrete type row, failing if any are missing. *)
       row |> Label_map.iter begin fun label row_ty ->
         match Label_map.find_opt label exact_row with
         | Some exact_row_ty -> unify row_ty exact_row_ty
-        | None -> raise (MismatchedTypes (MetaVar m, ty))
+        | None -> raise (Mismatched_types (Meta_var m, ty))
       end;
       m := Solved ty
   (* The type does not match the constraint, so raise an error *)
   | (_, Variant _), ty ->
-      raise (MismatchedTypes (MetaVar m, ty))
+      raise (Mismatched_types (Meta_var m, ty))
 
 (** Unify two constraints, returning the combined constraint if successful. *)
 and unify_constrs (c1 : constr) (c2 : constr) : constr =
@@ -352,13 +352,13 @@ and unify_constrs (c1 : constr) (c2 : constr) : constr =
 (* Deeply force a type, leaving only unsolved metavariables remaining *)
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
-  | MetaVar m -> MetaVar m
-  | FunType (param_ty, body_ty) ->
-      FunType (zonk_ty param_ty, zonk_ty body_ty)
-  | VariantType row ->
-      VariantType (row |> Label_map.map (fun ty -> zonk_ty ty))
-  | IntType -> IntType
-  | BoolType -> BoolType
+  | Meta_var m -> Meta_var m
+  | Fun_type (param_ty, body_ty) ->
+      Fun_type (zonk_ty param_ty, zonk_ty body_ty)
+  | Variant_type row ->
+      Variant_type (row |> Label_map.map (fun ty -> zonk_ty ty))
+  | Int_type -> Int_type
+  | Bool_type -> Bool_type
 
 (** Flatten all metavariables in a term *)
 let rec zonk_tm (tm : tm) : tm =
@@ -366,28 +366,28 @@ let rec zonk_tm (tm : tm) : tm =
   | Var index -> Var index
   | Let (name, def_ty, def, body) ->
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
-  | FunLit (name, param_ty, body) ->
-      FunLit (name, zonk_ty param_ty, zonk_tm body)
-  | FunApp (head, arg) ->
-      FunApp (zonk_tm head, zonk_tm arg)
-  | VariantLit (label, tm, ty) -> VariantLit (label, zonk_tm tm, zonk_ty ty)
-  | VariantElim (head, cases) ->
+  | Fun_lit (name, param_ty, body) ->
+      Fun_lit (name, zonk_ty param_ty, zonk_tm body)
+  | Fun_app (head, arg) ->
+      Fun_app (zonk_tm head, zonk_tm arg)
+  | Variant_lit (label, tm, ty) -> Variant_lit (label, zonk_tm tm, zonk_ty ty)
+  | Variant_elim (head, cases) ->
       let head = zonk_tm head in
       let cases = cases |> Label_map.map (fun (binder, body) -> binder, zonk_tm body) in
-      VariantElim (head, cases)
-  | IntLit i -> IntLit i
-  | BoolLit b -> BoolLit b
-  | BoolElim (head, tm0, tm1) ->
-      BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
-  | PrimApp (prim, args) ->
-      PrimApp (prim, List.map zonk_tm args)
+      Variant_elim (head, cases)
+  | Int_lit i -> Int_lit i
+  | Bool_lit b -> Bool_lit b
+  | Bool_elim (head, tm0, tm1) ->
+      Bool_elim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
+  | Prim_app (prim, args) ->
+      Prim_app (prim, List.map zonk_tm args)
 
 
 (** {1 Pretty printing} *)
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
-  | FunType (param_ty, body_ty) ->
+  | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
@@ -395,18 +395,18 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
-  | MetaVar m -> pp_meta fmt m
-  | VariantType cases when Label_map.is_empty cases ->
+  | Meta_var m -> pp_meta fmt m
+  | Variant_type cases when Label_map.is_empty cases ->
       Format.fprintf fmt "[|]"
-  | VariantType row ->
+  | Variant_type row ->
       Format.fprintf fmt "[%a]"
         (Format.pp_print_seq
           ~pp_sep:(fun fmt () -> Format.fprintf fmt "@ |@ ")
           (fun fmt (label, ty) ->
             Format.fprintf fmt "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty))
         (Label_map.to_seq row)
-  | IntType -> Format.fprintf fmt "Int"
-  | BoolType -> Format.fprintf fmt "Bool"
+  | Int_type -> Format.fprintf fmt "Int"
+  | Bool_type -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
 and pp_meta fmt m =
   match !m with
@@ -414,7 +414,7 @@ and pp_meta fmt m =
   | Unsolved (id, Any) -> Format.fprintf fmt "?%i" id
   | Unsolved (id, Variant cases) ->
       Format.fprintf fmt "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
-        id pp_ty (VariantType cases)
+        id pp_ty (Variant_type cases)
 
 let pp_name_ann fmt (name, ty) =
   Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
@@ -435,7 +435,7 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
       Format.fprintf fmt "@[<v>%a@]" (go names) tm
-  | VariantElim (head, cases) ->
+  | Variant_elim (head, cases) ->
       Format.fprintf fmt "@[<hv>@[match@ @[%a@]@ with@]@ %aend@]"
         (pp_app_tm names) head
         (Format.pp_print_seq
@@ -446,10 +446,10 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
               name
               (pp_tm (name :: names)) body))
         (Label_map.to_seq cases)
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       let rec go names fmt tm =
         match tm with
-        | FunLit (name, param_ty, body) ->
+        | Fun_lit (name, param_ty, body) ->
             Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
               pp_param (name, param_ty)
               (go (name :: names)) body
@@ -458,12 +458,12 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
         pp_param (name, param_ty)
         (go (name :: names)) body
-  | VariantLit (label, tm, ty) ->
+  | Variant_lit (label, tm, ty) ->
       Format.fprintf fmt "@[<2>@[@[<2>@[[%s@ :=@]@ @[%a@]]@]@ :@]@ @[%a@]@]"
         label
         (pp_tm names) tm
         pp_ty ty
-  | BoolElim (head, tm0, tm1) ->
+  | Bool_elim (head, tm0, tm1) ->
       Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_app_tm names) head
         (pp_app_tm names) tm0
@@ -472,11 +472,11 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       pp_app_tm names fmt tm
 and pp_app_tm names fmt tm =
   match tm with
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
         (pp_atomic_tm names) arg
-  | PrimApp (prim, args) ->
+  | Prim_app (prim, args) ->
       let pp_sep fmt () = Format.fprintf fmt "@ " in
       Format.fprintf fmt "@[#%s@ -%a@]"
         (Prim.name prim)
@@ -486,7 +486,7 @@ and pp_app_tm names fmt tm =
 and pp_atomic_tm names fmt tm =
   match tm with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
-  | IntLit i -> Format.fprintf fmt "%i" i
-  | BoolLit true -> Format.fprintf fmt "true"
-  | BoolLit false -> Format.fprintf fmt "false"
+  | Int_lit i -> Format.fprintf fmt "%i" i
+  | Bool_lit true -> Format.fprintf fmt "true"
+  | Bool_lit false -> Format.fprintf fmt "false"
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm

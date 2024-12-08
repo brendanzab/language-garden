@@ -40,11 +40,11 @@ type meta_id = int
 
 (** Type syntax *)
 type ty =
-  | MetaVar of meta_state ref
-  | FunType of ty * ty
-  | TupleType of ty list
-  | IntType
-  | BoolType
+  | Meta_var of meta_state ref
+  | Fun_type of ty * ty
+  | Tuple_type of ty list
+  | Int_type
+  | Bool_type
 
 (** The state of a metavariable, updated during unification *)
 and meta_state =
@@ -56,14 +56,14 @@ type tm =
   | Var of index
   | Let of name * ty * tm * tm
   | Fix of name * ty * tm
-  | FunLit of name * ty * tm
-  | FunApp of tm * tm
-  | TupleLit of tm list
-  | TupleProj of tm * int
-  | IntLit of int
-  | BoolLit of bool
-  | BoolElim of tm * tm * tm
-  | PrimApp of Prim.t * tm list
+  | Fun_lit of name * ty * tm
+  | Fun_app of tm * tm
+  | Tuple_lit of tm list
+  | Tuple_proj of tm * int
+  | Int_lit of int
+  | Bool_lit of bool
+  | Bool_elim of tm * tm * tm
+  | Prim_app of Prim.t * tm list
 
 
 module Semantics = struct
@@ -83,10 +83,10 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
-    | FunLit of name * ty * (eval_opts -> vtm -> vtm)
-    | TupleLit of vtm list
-    | BoolLit of bool
-    | IntLit of int
+    | Fun_lit of name * ty * (eval_opts -> vtm -> vtm)
+    | Tuple_lit of vtm list
+    | Bool_lit of bool
+    | Int_lit of int
 
   (** Neutral values that could not be reduced to a normal form as a result of
       being stuck on something else that would not reduce further.
@@ -98,10 +98,10 @@ module Semantics = struct
   and ntm =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | Fix of name * ty * (eval_opts -> vtm -> vtm)
-    | FunApp of ntm * vtm
-    | TupleProj of ntm * int
-    | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
-    | PrimApp of Prim.t * vtm list
+    | Fun_app of ntm * vtm
+    | Tuple_proj of ntm * int
+    | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
+    | Prim_app of Prim.t * vtm list
 
 
   (** {1 Eliminators} *)
@@ -110,37 +110,37 @@ module Semantics = struct
     match head with
     | Neu (Fix (_, _, body)) when opts.unfold_fix ->
         fun_app opts (body opts head) arg
-    | Neu ntm -> Neu (FunApp (ntm, arg))
-    | FunLit (_, _, body) -> body opts arg
+    | Neu ntm -> Neu (Fun_app (ntm, arg))
+    | Fun_lit (_, _, body) -> body opts arg
     | _ -> invalid_arg "expected function"
 
   let rec tuple_proj opts head elem_index =
     match head with
     | Neu (Fix (_, _, body)) when opts.unfold_fix ->
         tuple_proj opts (body opts head) elem_index
-    | Neu ntm -> Neu (TupleProj (ntm, elem_index))
-    | TupleLit elems -> List.nth elems elem_index
+    | Neu ntm -> Neu (Tuple_proj (ntm, elem_index))
+    | Tuple_lit elems -> List.nth elems elem_index
     | _ -> invalid_arg "expected tuple"
 
   let bool_elim head vtm0 vtm1 =
     match head with
-    | Neu ntm -> Neu (BoolElim (ntm, vtm0, vtm1))
-    | BoolLit true -> Lazy.force vtm0
-    | BoolLit false -> Lazy.force vtm1
+    | Neu ntm -> Neu (Bool_elim (ntm, vtm0, vtm1))
+    | Bool_lit true -> Lazy.force vtm0
+    | Bool_lit false -> Lazy.force vtm1
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
     let guard f args =
       try f args with
-      | Match_failure _ -> Neu (PrimApp (prim, args))
+      | Match_failure _ -> Neu (Prim_app (prim, args))
     in
     match prim with
-    | BoolEq -> guard @@ fun[@warning "-partial-match"] [BoolLit t1; BoolLit t2] -> BoolLit (t1 = t2)
-    | IntEq -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> BoolLit (t1 = t2)
-    | IntAdd -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | IntSub -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | IntMul -> guard @@ fun[@warning "-partial-match"] [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
-    | IntNeg -> guard @@ fun[@warning "-partial-match"] [IntLit t1] -> IntLit (-t1)
+    | Bool_eq -> guard @@ fun[@warning "-partial-match"] [Bool_lit t1; Bool_lit t2] -> Bool_lit (t1 = t2)
+    | Int_eq -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Bool_lit (t1 = t2)
+    | Int_add -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 + t2)
+    | Int_sub -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 - t2)
+    | Int_mul -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
+    | Int_neg -> guard @@ fun[@warning "-partial-match"] [Int_lit t1] -> Int_lit (-t1)
 
 
   (** {1 Evaluation} *)
@@ -155,26 +155,26 @@ module Semantics = struct
     | Fix (name, self_ty, body) ->
         let body' opts self = eval ~opts (self :: env) body in
         Neu (Fix (name, self_ty, body'))
-    | FunLit (name, param_ty, body) ->
+    | Fun_lit (name, param_ty, body) ->
         let body opts arg = eval ~opts (arg :: env) body in
-        FunLit (name, param_ty, body)
-    | FunApp (head, arg) ->
+        Fun_lit (name, param_ty, body)
+    | Fun_app (head, arg) ->
         let head = eval ~opts env head in
         let arg = eval ~opts env arg in
         fun_app opts head arg
-    | TupleLit elems ->
-        TupleLit (List.map (eval ~opts env) elems)
-    | TupleProj (head, elem_index) ->
+    | Tuple_lit elems ->
+        Tuple_lit (List.map (eval ~opts env) elems)
+    | Tuple_proj (head, elem_index) ->
         let head = eval ~opts env head in
         tuple_proj opts head elem_index
-    | IntLit i -> IntLit i
-    | BoolLit b -> BoolLit b
-    | BoolElim (head, tm0, tm1) ->
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
+    | Bool_elim (head, tm0, tm1) ->
         let head = eval ~opts env head in
         let vtm0 = Lazy.from_fun (fun () -> eval ~opts env tm0) in
         let vtm1 = Lazy.from_fun (fun () -> eval ~opts env tm1) in
         bool_elim head vtm0 vtm1
-    | PrimApp (prim, args) ->
+    | Prim_app (prim, args) ->
         prim_app prim (List.map (eval ~opts env) args)
 
 
@@ -184,13 +184,13 @@ module Semantics = struct
   let rec quote ~opts (size : int) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_neu ~opts size ntm
-    | FunLit (name, param_ty, body) ->
+    | Fun_lit (name, param_ty, body) ->
         let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
-        FunLit (name, param_ty, body)
-    | TupleLit elems ->
-        TupleLit (List.map (quote ~opts size) elems)
-    | BoolLit b -> BoolLit b
-    | IntLit i -> IntLit i
+        Fun_lit (name, param_ty, body)
+    | Tuple_lit elems ->
+        Tuple_lit (List.map (quote ~opts size) elems)
+    | Bool_lit b -> Bool_lit b
+    | Int_lit i -> Int_lit i
 
   and quote_neu ~opts (size : int) (ntm : ntm) : tm =
     match ntm with
@@ -198,16 +198,16 @@ module Semantics = struct
     | Fix (name, self_ty, body) ->
         let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
         Fix (name, self_ty, body)
-    | FunApp (head, arg) ->
-        FunApp (quote_neu ~opts size head, quote ~opts size arg)
-    | TupleProj (head, elem_index) ->
-        TupleProj (quote_neu ~opts size head, elem_index)
-    | BoolElim (head, vtm0, vtm1) ->
+    | Fun_app (head, arg) ->
+        Fun_app (quote_neu ~opts size head, quote ~opts size arg)
+    | Tuple_proj (head, elem_index) ->
+        Tuple_proj (quote_neu ~opts size head, elem_index)
+    | Bool_elim (head, vtm0, vtm1) ->
         let tm0 = quote ~opts size (Lazy.force vtm0) in
         let tm1 = quote ~opts size (Lazy.force vtm1) in
-        BoolElim (quote_neu ~opts size head, tm0, tm1)
-    | PrimApp (prim, args) ->
-        PrimApp (prim, List.map (quote ~opts size) args)
+        Bool_elim (quote_neu ~opts size head, tm0, tm1)
+    | Prim_app (prim, args) ->
+        Prim_app (prim, List.map (quote ~opts size) args)
 
 
   (** {1 Normalisation} *)
@@ -239,7 +239,7 @@ let fresh_meta : unit -> meta_state ref =
     is sometimes referred to as {i path compression}. *)
 let rec force (ty : ty) : ty =
   match ty with
-  | MetaVar m as ty -> begin
+  | Meta_var m as ty -> begin
       match !m with
       | Solved ty ->
           let ty = force ty in
@@ -258,44 +258,44 @@ let expect_forced (m : meta_state ref) : meta_id =
 
 (** {1 Unification} *)
 
-exception InfiniteType of meta_id
-exception MismatchedTypes of ty * ty
+exception Infinite_type of meta_id
+exception Mismatched_types of ty * ty
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
 let rec occurs (id : meta_id) (ty : ty) : unit =
   match force ty with
-  | MetaVar m ->
+  | Meta_var m ->
       if expect_forced m = id then
-        raise (InfiniteType id)
-  | FunType (param_ty, body_ty) ->
+        raise (Infinite_type id)
+  | Fun_type (param_ty, body_ty) ->
       occurs id param_ty;
       occurs id body_ty
-  | TupleType elem_tys ->
+  | Tuple_type elem_tys ->
       List.iter (occurs id) elem_tys
-  | IntType -> ()
-  | BoolType -> ()
+  | Int_type -> ()
+  | Bool_type -> ()
 
 (** Check if two types are the same, updating unsolved metavaribles in one
     type with known information from the other type if possible. *)
 let rec unify (ty0 : ty) (ty1 : ty) : unit =
   match force ty0, force ty1 with
-  | MetaVar m1, MetaVar m2 when m1 = m2 -> ()
-  | MetaVar m, ty | ty, MetaVar m ->
+  | Meta_var m1, Meta_var m2 when m1 = m2 -> ()
+  | Meta_var m, ty | ty, Meta_var m ->
       occurs (expect_forced m) ty;
       m := Solved ty
-  | FunType (param_ty0, body_ty0), FunType (param_ty1, body_ty1) ->
+  | Fun_type (param_ty0, body_ty0), Fun_type (param_ty1, body_ty1) ->
       unify param_ty0 param_ty1;
       unify body_ty0 body_ty1;
-  | TupleType elem_tys0, TupleType elem_tys1  -> begin
+  | Tuple_type elem_tys0, Tuple_type elem_tys1  -> begin
       try List.iter2 unify elem_tys0 elem_tys1 with
       | Invalid_argument _ ->
-          raise (MismatchedTypes (ty0, ty1))
+          raise (Mismatched_types (ty0, ty1))
   end
-  | IntType, IntType -> ()
-  | BoolType, BoolType -> ()
+  | Int_type, Int_type -> ()
+  | Bool_type, Bool_type -> ()
   | ty1, ty2 ->
-      raise (MismatchedTypes (ty1, ty2))
+      raise (Mismatched_types (ty1, ty2))
 
 
 (** {1 Zonking} *)
@@ -307,13 +307,13 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
 (* Deeply force a type, leaving only unsolved metavariables remaining *)
 let rec zonk_ty (ty : ty) : ty =
   match force ty with
-  | MetaVar m -> MetaVar m
-  | FunType (param_ty, body_ty) ->
-      FunType (zonk_ty param_ty, zonk_ty body_ty)
-  | TupleType elem_tys ->
-      TupleType (List.map zonk_ty elem_tys)
-  | IntType -> IntType
-  | BoolType -> BoolType
+  | Meta_var m -> Meta_var m
+  | Fun_type (param_ty, body_ty) ->
+      Fun_type (zonk_ty param_ty, zonk_ty body_ty)
+  | Tuple_type elem_tys ->
+      Tuple_type (List.map zonk_ty elem_tys)
+  | Int_type -> Int_type
+  | Bool_type -> Bool_type
 
 (** Flatten all metavariables in a term *)
 let rec zonk_tm (tm : tm) : tm =
@@ -323,20 +323,20 @@ let rec zonk_tm (tm : tm) : tm =
       Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
   | Fix (name, self_ty, body) ->
       Fix (name, zonk_ty self_ty, zonk_tm body)
-  | FunLit (name, param_ty, body) ->
-      FunLit (name, zonk_ty param_ty, zonk_tm body)
-  | FunApp (head, arg) ->
-      FunApp (zonk_tm head, zonk_tm arg)
-  | TupleLit elems ->
-      TupleLit (List.map zonk_tm elems)
-  | TupleProj (head, elem_index) ->
-      TupleProj (zonk_tm head, elem_index)
-  | IntLit i -> IntLit i
-  | BoolLit b -> BoolLit b
-  | BoolElim (head, tm0, tm1) ->
-      BoolElim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
-  | PrimApp (prim, args) ->
-      PrimApp (prim, List.map zonk_tm args)
+  | Fun_lit (name, param_ty, body) ->
+      Fun_lit (name, zonk_ty param_ty, zonk_tm body)
+  | Fun_app (head, arg) ->
+      Fun_app (zonk_tm head, zonk_tm arg)
+  | Tuple_lit elems ->
+      Tuple_lit (List.map zonk_tm elems)
+  | Tuple_proj (head, elem_index) ->
+      Tuple_proj (zonk_tm head, elem_index)
+  | Int_lit i -> Int_lit i
+  | Bool_lit b -> Bool_lit b
+  | Bool_elim (head, tm0, tm1) ->
+      Bool_elim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
+  | Prim_app (prim, args) ->
+      Prim_app (prim, List.map zonk_tm args)
 
 
 (** {1 Pretty printing} *)
@@ -348,7 +348,7 @@ let rec fresh (ns : string env) (n : string) : string =
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
-  | FunType (param_ty, body_ty) ->
+  | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
@@ -356,18 +356,18 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
-  | MetaVar m -> pp_meta fmt m
-  | TupleType [elem_ty] ->
+  | Meta_var m -> pp_meta fmt m
+  | Tuple_type [elem_ty] ->
       Format.fprintf fmt "(%a,)"
         pp_ty elem_ty
-  | TupleType elem_tys ->
+  | Tuple_type elem_tys ->
       Format.fprintf fmt "(%a)"
         (Format.pp_print_list
           ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")
           pp_ty)
         elem_tys
-  | IntType -> Format.fprintf fmt "Int"
-  | BoolType -> Format.fprintf fmt "Bool"
+  | Int_type -> Format.fprintf fmt "Int"
+  | Bool_type -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
 and pp_meta fmt m =
   match !m with
@@ -399,10 +399,10 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       Format.fprintf fmt "@[<2>@[#fix@ %a@ =>@]@ %a@]"
         pp_param (name, self_ty)
         (pp_tm (name :: names)) body
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       let rec go names fmt tm =
         match tm with
-        | FunLit (name, param_ty, body) ->
+        | Fun_lit (name, param_ty, body) ->
             let name = fresh names name in
             Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
               pp_param (name, param_ty)
@@ -413,7 +413,7 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
         pp_param (name, param_ty)
         (go (name :: names)) body
-  | BoolElim (head, tm0, tm1) ->
+  | Bool_elim (head, tm0, tm1) ->
       Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_app_tm names) head
         (pp_app_tm names) tm0
@@ -422,11 +422,11 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
       pp_app_tm names fmt tm
 and pp_app_tm names fmt tm =
   match tm with
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
         (pp_proj_tm names) arg
-  | PrimApp (prim, args) ->
+  | Prim_app (prim, args) ->
       let pp_sep fmt () = Format.fprintf fmt "@ " in
       Format.fprintf fmt "@[#%s@ -%a@]"
         (Prim.name prim)
@@ -435,7 +435,7 @@ and pp_app_tm names fmt tm =
       pp_proj_tm names fmt tm
 and pp_proj_tm names fmt tm =
   match tm with
-  | TupleProj (head, elem_index) ->
+  | Tuple_proj (head, elem_index) ->
       Format.fprintf fmt "%a.%i"
         (pp_proj_tm names) head
         elem_index
@@ -444,16 +444,16 @@ and pp_proj_tm names fmt tm =
 and pp_atomic_tm names fmt tm =
   match tm with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
-  | TupleLit [elem] ->
+  | Tuple_lit [elem] ->
       Format.fprintf fmt "(%a,)"
         (pp_tm names) elem
-  | TupleLit elems ->
+  | Tuple_lit elems ->
       Format.fprintf fmt "(%a)"
         (Format.pp_print_list
           ~pp_sep:(fun fmt () -> Format.fprintf fmt ",@ ")
           (pp_tm names))
         elems
-  | IntLit i -> Format.fprintf fmt "%i" i
-  | BoolLit true -> Format.fprintf fmt "true"
-  | BoolLit false -> Format.fprintf fmt "false"
+  | Int_lit i -> Format.fprintf fmt "%i" i
+  | Bool_lit true -> Format.fprintf fmt "true"
+  | Bool_lit false -> Format.fprintf fmt "false"
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm

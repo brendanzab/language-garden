@@ -16,10 +16,10 @@ type tm =
   | Name of string                        (** References to named things: [ x ] *)
   | Ann of tm * tm                        (** Terms annotated with types: [ x : A ] *)
   | Univ                                  (** Universe of types: [ Type ] *)
-  | FunType of (pattern * tm) list * tm   (** Function types: [ fun (x : A) -> B x ] *)
-  | FunArrow of tm * tm                   (** Function arrow types: [ A -> B ] *)
-  | FunLit of pattern list * tm           (** Function literals: [ fun x => f x ] *)
-  | FunApp of tm * tm list                (** Function applications: [ f x ] *)
+  | Fun_type of (pattern * tm) list * tm  (** Function types: [ fun (x : A) -> B x ] *)
+  | Fun_arrow of tm * tm                  (** Function arrow types: [ A -> B ] *)
+  | Fun_lit of pattern list * tm          (** Function literals: [ fun x => f x ] *)
+  | Fun_app of tm * tm list               (** Function applications: [ f x ] *)
 
 
 (** {1 Elaboration } *)
@@ -142,16 +142,16 @@ let rec check ctx tm expected_ty : Syntax.tm =
       Syntax.Let (name, def, check ctx body expected_ty)
 
   (* Function literals *)
-  | FunLit (names, body), expected_ty ->
+  | Fun_lit (names, body), expected_ty ->
       let rec go ctx names body_ty =
         match names with
         | [] -> check ctx body body_ty
         | name :: names ->
             begin match body_ty with
-            | Semantics.FunType (_, param_ty, body_ty) ->
+            | Semantics.Fun_type (_, param_ty, body_ty) ->
                 let var = next_var ctx in
                 let ctx = bind_def ctx name (Lazy.force param_ty) var in
-                Syntax.FunLit (name, go ctx names (body_ty var))
+                Syntax.Fun_lit (name, go ctx names (body_ty var))
             | _ -> error "too many parameters in function literal"
             end
       in
@@ -204,37 +204,37 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
       Syntax.Univ, Semantics.Univ
 
   (* Function types *)
-  | FunType (params, body_ty) ->
+  | Fun_type (params, body_ty) ->
       let rec go ctx params =
         match params with
         | [] -> check ctx body_ty Semantics.Univ
         | (name, param_ty) :: params ->
             let param_ty = check ctx param_ty Semantics.Univ in
             let ctx = bind_param ctx name (eval ctx param_ty) in
-            Syntax.FunType (name, param_ty, go ctx params)
+            Syntax.Fun_type (name, param_ty, go ctx params)
       in
       go ctx params, Semantics.Univ
 
   (* Arrow types. These are implemented as syntactic sugar for non-dependent
       function types. *)
-  | FunArrow (param_ty, body_ty) ->
+  | Fun_arrow (param_ty, body_ty) ->
       let param_ty = check ctx param_ty Semantics.Univ in
       let ctx = bind_param ctx None (eval ctx param_ty) in
       let body_ty = check ctx body_ty Semantics.Univ in
-      Syntax.FunType (None, param_ty, body_ty), Semantics.Univ
+      Syntax.Fun_type (None, param_ty, body_ty), Semantics.Univ
 
   (* Function literals *)
-  | FunLit (_, _) ->
+  | Fun_lit (_, _) ->
       error "ambiguous function literal"
 
   (* Function application *)
-  | FunApp (head, args) ->
+  | Fun_app (head, args) ->
       List.fold_left
         (fun (head, head_ty) arg ->
           match head_ty with
-          | Semantics.FunType (_, param_ty, body_ty) ->
+          | Semantics.Fun_type (_, param_ty, body_ty) ->
               let arg = check ctx arg (Lazy.force param_ty) in
-              Syntax.FunApp (head, arg), body_ty (eval ctx arg)
+              Syntax.Fun_app (head, arg), body_ty (eval ctx arg)
           | _ -> error "not a function")
         (infer ctx head)
         args

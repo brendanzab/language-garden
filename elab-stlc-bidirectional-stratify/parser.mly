@@ -46,9 +46,9 @@ let tm :=
     tm0 = located(tm); ";"; tm1 = located(tm);
     { Surface.Let (n, ps, ty, tm0, tm1) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
-    { Surface.FunLit (ps, t) }
+    { Surface.Fun_lit (ps, t) }
 | "if"; tm0 = located(eq_tm); "then"; tm1 = located(tm); "else"; tm2 = located(tm);
-    { Surface.IfThenElse (tm0, tm1, tm2) }
+    { Surface.If_then_else (tm0, tm1, tm2) }
 | tm = located(eq_tm); ":"; ty = located(tm);
     { Surface.Ann (tm, ty) }
 | tm0 =  located(eq_tm); "->"; tm1 = located(tm);
@@ -85,8 +85,8 @@ let atomic_tm :=
 | n = NAME;
     { Surface.Name n }
 | "true";
-    { Surface.BoolLit true }
+    { Surface.Bool_lit true }
 | "false";
-    { Surface.BoolLit false }
+    { Surface.Bool_lit false }
 | i = NUMBER;
-    { Surface.IntLit i }
+    { Surface.Int_lit i }

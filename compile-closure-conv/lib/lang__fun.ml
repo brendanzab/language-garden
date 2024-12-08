@@ -10,22 +10,22 @@
 (** {1 Syntax} *)
 
 type ty =
-  | BoolType
-  | IntType
-  | FunType of ty * ty
+  | Bool_type
+  | Int_type
+  | Fun_type of ty * ty
 
 type tm =
   | Var of int
   | Let of string * ty * tm * tm
-  | BoolLit of bool
-  | IntLit of int
-  | PrimApp of Prim.t * tm list
-  | FunLit of string * ty * tm
-  | FunApp of tm * tm
+  | Bool_lit of bool
+  | Int_lit of int
+  | Prim_app of Prim.t * tm list
+  | Fun_lit of string * ty * tm
+  | Fun_app of tm * tm
 
 
 (** Exception raised during parsing if a name was unbound *)
-exception UnboundName of string
+exception Unbound_name of string
 
 
 (** Compute the part of an environment that is used in a term. Returns a bitmask
@@ -38,11 +38,11 @@ let fvs size tm : bool array =
     | Var index when index < offset -> ()
     | Var index -> Array.set mask (size + offset - index - 1) true
     | Let (_, _, def, body) -> go mask offset def; go mask (offset + 1) body
-    | BoolLit _ -> ()
-    | IntLit _ -> ()
-    | PrimApp (_, args) -> List.iter (go mask offset) args
-    | FunLit (_, _, body) -> go mask (offset + 1) body
-    | FunApp (head, arg) -> go mask offset head; go mask offset arg
+    | Bool_lit _ -> ()
+    | Int_lit _ -> ()
+    | Prim_app (_, args) -> List.iter (go mask offset) args
+    | Fun_lit (_, _, body) -> go mask (offset + 1) body
+    | Fun_app (head, arg) -> go mask offset head; go mask offset arg
   in
 
   (* Initialise an array to serve as a bitmask over the environment *)
@@ -57,7 +57,7 @@ let fvs size tm : bool array =
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | FunType (param_ty, body_ty) ->
+  | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
@@ -65,8 +65,8 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) =
       pp_atomic_ty fmt ty
 and pp_atomic_ty (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | BoolType -> Format.fprintf fmt "Bool"
-  | IntType -> Format.fprintf fmt "Int"
+  | Bool_type -> Format.fprintf fmt "Bool"
+  | Int_type -> Format.fprintf fmt "Int"
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
@@ -89,10 +89,10 @@ let rec pp_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
       go names fmt tm
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       let rec go names fmt tm =
         match tm with
-        | FunLit (name, param_ty, body) ->
+        | Fun_lit (name, param_ty, body) ->
             Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
               pp_param (name, param_ty)
               (go (name :: names)) body
@@ -105,11 +105,11 @@ let rec pp_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
       pp_app_tm names fmt tm
 and pp_app_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
   match tm with
-  | PrimApp (head, args) ->
+  | Prim_app (head, args) ->
       Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.to_string head)
         (Format.pp_print_list (pp_atomic_tm names) ~pp_sep:Format.pp_print_space) args
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_tm names) head
         (pp_atomic_tm names) arg
@@ -119,9 +119,9 @@ and pp_atomic_tm (names : string list) (fmt : Format.formatter) (tm : tm) =
   match tm with
   | Var index ->
       Format.fprintf fmt "%s" (List.nth names index)
-  | BoolLit true -> Format.fprintf fmt "true"
-  | BoolLit false -> Format.fprintf fmt "false"
-  | IntLit i -> Format.fprintf fmt "%i" i
+  | Bool_lit true -> Format.fprintf fmt "true"
+  | Bool_lit false -> Format.fprintf fmt "false"
+  | Int_lit i -> Format.fprintf fmt "%i" i
   | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
 
 
@@ -130,9 +130,9 @@ module Semantics = struct
   (** {1 Values} *)
 
   type vtm =
-    | BoolLit of bool
-    | IntLit of int
-    | FunLit of string * ty * clos
+    | Bool_lit of bool
+    | Int_lit of int
+    | Fun_lit of string * ty * clos
 
   and clos = {
     env : vtm list;
@@ -148,16 +148,16 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
-    | BoolLit b -> BoolLit b
-    | IntLit i -> IntLit i
-    | PrimApp (prim, args) ->
+    | Bool_lit b -> Bool_lit b
+    | Int_lit i -> Int_lit i
+    | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
-    | FunLit (name, param_ty, body) ->
+    | Fun_lit (name, param_ty, body) ->
         (* We do a naive form of dynamic closure conversion here, just capturing
           the entire environment along with the code of the body. We’ll do a
           more thorough job in the compiler though. *)
-        FunLit (name, param_ty, { env; body })
-    | FunApp (head, arg) ->
+        Fun_lit (name, param_ty, { env; body })
+    | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
         fun_app head arg
@@ -167,15 +167,15 @@ module Semantics = struct
 
   and prim_app prim args =
     match prim, args with
-    | `Neg, [IntLit t1] -> IntLit (-t1)
-    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | `Neg, [Int_lit t1] -> Int_lit (-t1)
+    | `Add, [Int_lit t1; Int_lit t2] -> Int_lit (t1 + t2)
+    | `Sub, [Int_lit t1; Int_lit t2] -> Int_lit (t1 - t2)
+    | `Mul, [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
     | _, _ -> invalid_arg "invalid prim application"
 
   and fun_app head arg =
     match head with
-    | FunLit (_, _, { env; body }) -> eval (arg :: env) body
+    | Fun_lit (_, _, { env; body }) -> eval (arg :: env) body
     | _ -> invalid_arg "expected function"
 
 end
@@ -203,23 +203,23 @@ module Validation = struct
     | Let (_, _, def, body) ->
         let def_ty = synth context def in
         synth (def_ty :: context) body
-    | BoolLit _ -> BoolType
-    | IntLit _ -> IntType
-    | PrimApp (`Neg, [t]) ->
-        check context t IntType;
-        IntType
-    | PrimApp ((`Add | `Sub | `Mul), [t1; t2]) ->
-        check context t1 IntType;
-        check context t2 IntType;
-        IntType
-    | PrimApp _ ->
+    | Bool_lit _ -> Bool_type
+    | Int_lit _ -> Int_type
+    | Prim_app (`Neg, [t]) ->
+        check context t Int_type;
+        Int_type
+    | Prim_app ((`Add | `Sub | `Mul), [t1; t2]) ->
+        check context t1 Int_type;
+        check context t2 Int_type;
+        Int_type
+    | Prim_app _ ->
         invalid_arg "invalid prim application"
-    | FunLit (_, param_ty, body) ->
+    | Fun_lit (_, param_ty, body) ->
         let body_ty = synth (param_ty :: context) body in
-        FunType (param_ty, body_ty)
-    | FunApp (head, arg) ->
+        Fun_type (param_ty, body_ty)
+    | Fun_app (head, arg) ->
         begin match synth context head with
-        | FunType (param_ty, body_ty) ->
+        | Fun_type (param_ty, body_ty) ->
             check context arg param_ty;
             body_ty
         | ty ->
@@ -248,13 +248,13 @@ module Build = struct
 
   (** {1 Types} *)
 
-  let bool_ty : ty = BoolType
+  let bool_ty : ty = Bool_type
 
-  let int_ty : ty = IntType
+  let int_ty : ty = Int_type
 
   let fun_ty (param_tys : ty list) (body_ty : ty) : ty =
     List.fold_right
-      (fun param_ty acc -> FunType (param_ty, acc))
+      (fun param_ty acc -> Fun_type (param_ty, acc))
       param_tys
       body_ty
 
@@ -269,14 +269,14 @@ module Build = struct
     let_ name ty tm body
 
   let bool_lit (b : bool) : tm m =
-    fun _ -> BoolLit b
+    fun _ -> Bool_lit b
 
   let int_lit (i : int) : tm m =
-    fun _ -> IntLit i
+    fun _ -> Int_lit i
 
   let prim_app (prim : Prim.t) (args : tm m list) : tm m =
     fun env ->
-      PrimApp (prim, List.map (fun arg -> arg env) args)
+      Prim_app (prim, List.map (fun arg -> arg env) args)
 
   let neg x : tm m =
     prim_app `Neg [x]
@@ -292,11 +292,11 @@ module Build = struct
 
   let fun_lit (name : string) (param_ty : ty) (body : tm m -> tm m) : tm m =
     fun env ->
-      FunLit (name, param_ty, scope body env)
+      Fun_lit (name, param_ty, scope body env)
 
   let fun_app (head : tm m) (arg : tm m) : tm m =
     fun env ->
-      FunApp (head env, arg env)
+      Fun_app (head env, arg env)
 
   let fun_apps (head : tm m) (args : tm m list) : tm m =
     List.fold_left fun_app head args

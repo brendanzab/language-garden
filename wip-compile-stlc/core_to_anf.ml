@@ -42,7 +42,7 @@ let comp : Anf.cexpr cont =
   fun _ expr -> Comp expr
 
 let join_app (id : Anf.id) : Anf.aexpr cont =
-  fun _ expr -> JoinApp (id, expr)
+  fun _ expr -> Join_app (id, expr)
 
 (* This could probably be implemented more cleanly with a continuation and
   reader monad transformer stack, but I wanted to keep things more explicit
@@ -59,38 +59,38 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
         translate def env @@ fun env def ->
           let def_id = Anf.Id.fresh () in
           let body = translate body (Src_env.extend def_id def_ty env) k in
-          LetComp (def_name, def_id, def, body)
-    | FunLit (param_name, param_ty, body) ->
+          Let_comp (def_name, def_id, def, body)
+    | Fun_lit (param_name, param_ty, body) ->
         let param_id = Anf.Id.fresh () in
         let body = translate body (Src_env.extend param_id param_ty env) comp in
-        k env (Atom (FunLit (param_name, param_id, param_ty, body)))
-    | FunApp (head, arg) ->
+        k env (Atom (Fun_lit (param_name, param_id, param_ty, body)))
+    | Fun_app (head, arg) ->
         translate_name "head" head env @@ fun env head ->
           translate_name "arg" arg env @@ fun env arg ->
-            k env (FunApp (head, arg))
-    | TupleLit args ->
+            k env (Fun_app (head, arg))
+    | Tuple_lit args ->
         translate_names "elem" args env @@ fun env args ->
-          k env (Atom (TupleLit args))
-    | TupleProj (head, label) ->
+          k env (Atom (Tuple_lit args))
+    | Tuple_proj (head, label) ->
         translate_name "head" head env @@ fun env head ->
-          k env (TupleProj (head, label))
-    | BoolLit b ->
-        k env (Atom (BoolLit b))
-    | BoolElim (head, on_true, on_false) ->
+          k env (Tuple_proj (head, label))
+    | Bool_lit b ->
+        k env (Atom (Bool_lit b))
+    | Bool_elim (head, on_true, on_false) ->
         translate_name "head" head env @@ fun env head ->
           let def_id = Anf.Id.fresh () in
           let param_id = Anf.Id.fresh () in
           let expr_ty = Src_env.type_of expr env in
-          LetJoin (
+          Let_join (
             Machine "cont",
             def_id,
             (Machine "param", param_id, expr_ty),
             k env (Atom (Var param_id)),
-            BoolElim (head,
+            Bool_elim (head,
               translate_name "on-true" on_true env (join_app def_id),
               translate_name "on-false" on_false env (join_app def_id)))
-    | IntLit i ->
-        k env (Atom (IntLit i))
+    | Int_lit i ->
+        k env (Atom (Int_lit i))
 
 (** Translate an expression to ANF, binding it to an intermediate definition
     if needed. *)
@@ -101,7 +101,7 @@ and translate_name (name : string) (expr : Core.expr) : Anf.aexpr cont cont =
       | Anf.Atom expr -> k env expr
       | expr ->
           let def_id = Anf.Id.fresh () in
-          LetComp (Machine name, def_id, expr, k env (Var def_id))
+          Let_comp (Machine name, def_id, expr, k env (Var def_id))
 
 (** Translate a sequence of expressions, binding them to intermediate
     definitions if needed. *)

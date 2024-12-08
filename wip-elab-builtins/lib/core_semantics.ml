@@ -3,37 +3,37 @@ type value =
 
   | Type
 
-  | BoolType
-  | I32Type
-  | I64Type
-  | F64Type
+  | Bool_type
+  | I32_type
+  | I64_type
+  | F64_type
 
-  | BoolLit of bool
-  | I32Lit of int32
-  | I64Lit of int64
-  | F64Lit of float
+  | Bool_lit of bool
+  | I32_lit of int32
+  | I64_lit of int64
+  | F64_lit of float
 
 and head =
-  | ItemVar of string
+  | Item_var of string
 
 and elim = |
 
 
 let eval (items : string -> value) : Core_syntax.tm -> value =
   function
-  | ItemVar name -> items name
+  | Item_var name -> items name
 
   | Type -> Type
 
-  | BoolType -> BoolType
-  | I32Type -> I32Type
-  | I64Type -> I64Type
-  | F64Type -> F64Type
+  | Bool_type -> Bool_type
+  | I32_type -> I32_type
+  | I64_type -> I64_type
+  | F64_type -> F64_type
 
-  | BoolLit x -> BoolLit x
-  | I32Lit x -> I32Lit x
-  | I64Lit x -> I64Lit x
-  | F64Lit x -> F64Lit x
+  | Bool_lit x -> Bool_lit x
+  | I32_lit x -> I32_lit x
+  | I64_lit x -> I64_lit x
+  | F64_lit x -> F64_lit x
 
 
 let rec quote : value -> Core_syntax.tm =
@@ -42,19 +42,19 @@ let rec quote : value -> Core_syntax.tm =
 
   | Type -> Type
 
-  | BoolType -> BoolType
-  | I32Type -> I32Type
-  | I64Type -> I64Type
-  | F64Type -> F64Type
+  | Bool_type -> Bool_type
+  | I32_type -> I32_type
+  | I64_type -> I64_type
+  | F64_type -> F64_type
 
-  | BoolLit x -> BoolLit x
-  | I32Lit x -> I32Lit x
-  | I64Lit x -> I64Lit x
-  | F64Lit x -> F64Lit x
+  | Bool_lit x -> Bool_lit x
+  | I32_lit x -> I32_lit x
+  | I64_lit x -> I64_lit x
+  | F64_lit x -> F64_lit x
 
 and quote_head : head -> Core_syntax.tm =
   function
-  | ItemVar name -> ItemVar name
+  | Item_var name -> Item_var name
 
 and quote_spine head =
   function
@@ -67,18 +67,18 @@ let rec is_convertible (v1 : value) (v2 : value) : bool =
       is_convertible_head h1 h2
 
   | Type, Type
-  | BoolType, BoolType
-  | I32Type, I32Type
-  | I64Type, I64Type
-  | F64Type, F64Type -> true
+  | Bool_type, Bool_type
+  | I32_type, I32_type
+  | I64_type, I64_type
+  | F64_type, F64_type -> true
 
-  | BoolLit x1, BoolLit x2 -> x1 = x2
-  | I32Lit x1, I32Lit x2 -> x1 = x2
-  | I64Lit x1, I64Lit x2 -> x1 = x2
-  | F64Lit x1, F64Lit x2 -> x1 = x2
+  | Bool_lit x1, Bool_lit x2 -> x1 = x2
+  | I32_lit x1, I32_lit x2 -> x1 = x2
+  | I64_lit x1, I64_lit x2 -> x1 = x2
+  | F64_lit x1, F64_lit x2 -> x1 = x2
 
   | _, _ -> false
 
 and is_convertible_head (h1 : head) (h2 : head) : bool =
   match h1, h2 with
-  | ItemVar n1, ItemVar n2 -> n1 = n2
+  | Item_var n1, Item_var n2 -> n1 = n2

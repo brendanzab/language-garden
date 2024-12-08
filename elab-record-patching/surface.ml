@@ -19,13 +19,13 @@ type tm =
   | Name of string                         (** References to named things: [ x ] *)
   | Ann of tm * tm                         (** Terms annotated with types: [ x : A ] *)
   | Univ                                   (** Universe of types: [ Type ] *)
-  | FunType of (pattern * tm) list * tm    (** Function types: [ fun (x : A) -> B x ] *)
-  | FunArrow of tm * tm                    (** Function arrow types: [ A -> B ] *)
-  | FunLit of pattern list * tm            (** Function literals: [ fun x := f x ] *)
-  | RecType of (string * tm) list          (** Record types: [ { x : A; ... } ]*)
-  | RecLit of (string * tm option) list    (** Record literals: [ { x := A; ... } ]*)
-  | RecUnit                                (** Unit records: [ {} ] *)
-  | SingType of tm * tm                    (** Singleton types: [ A [= x ] ] *)
+  | Fun_type of (pattern * tm) list * tm   (** Function types: [ fun (x : A) -> B x ] *)
+  | Fun_arrow of tm * tm                   (** Function arrow types: [ A -> B ] *)
+  | Fun_lit of pattern list * tm           (** Function literals: [ fun x := f x ] *)
+  | Rec_type of (string * tm) list         (** Record types: [ { x : A; ... } ]*)
+  | Rec_lit of (string * tm option) list   (** Record literals: [ { x := A; ... } ]*)
+  | Rec_unit                               (** Unit records: [ {} ] *)
+  | Sing_type of tm * tm                   (** Singleton types: [ A [= x ] ] *)
   | App of tm * tm list                    (** Applications: [ f x ] *)
   | Proj of tm * string list               (** Projections: [ r.l ] *)
   | Patch of tm * (string * tm) list       (** Record patches: [ R [ B := A; ... ] ] *)
@@ -171,23 +171,23 @@ let rec coerce ctx from_ty to_ty tm : Syntax.tm =
   match from_ty, to_ty with
   (* No need to coerce the term if both types are already the same! *)
   | from_ty, to_ty when is_convertible ctx from_ty to_ty Semantics.Univ -> tm
-  (* Coerce the term to a singleton with {!Syntax.SingIntro}, if the term is
+  (* Coerce the term to a singleton with {!Syntax.Sing_intro}, if the term is
     convertible to the term expected by the singleton *)
-  | from_ty, Semantics.SingType (to_ty, sing_tm) ->
+  | from_ty, Semantics.Sing_type (to_ty, sing_tm) ->
       let tm = coerce ctx from_ty to_ty tm in
       let tm' = eval ctx tm in
-      if is_convertible ctx sing_tm tm' to_ty then Syntax.SingIntro tm else
+      if is_convertible ctx sing_tm tm' to_ty then Syntax.Sing_intro tm else
         error (singleton_mismatch ctx
           ~expected:(quote ctx sing_tm to_ty)
           ~found:(quote ctx tm' from_ty)
           ~ty:(quote ctx to_ty Semantics.Univ))
-  (* Coerce the singleton back to its underlying term with {!Syntax.SingElim}
+  (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
     and attempt further coercions from its underlying type *)
-  | Semantics.SingType (from_ty, sing_tm), to_ty ->
-      let tm = Syntax.SingElim (tm, quote ctx sing_tm from_ty) in
+  | Semantics.Sing_type (from_ty, sing_tm), to_ty ->
+      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm from_ty) in
       coerce ctx from_ty to_ty tm
   (* Coerce the fields of a record with record eta expansion *)
-  | Semantics.RecType from_decls, Semantics.RecType to_decls ->
+  | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
       (* TODO: bind [tm] to a local variable to avoid duplicating records *)
       let rec go from_decls to_decls =
         match from_decls, to_decls with
@@ -195,20 +195,20 @@ let rec coerce ctx from_ty to_ty tm : Syntax.tm =
         (* Use eta-expansion to coerce fields that share the same label *)
         | Semantics.Cons (from_label, from_ty, from_decls)
         , Semantics.Cons (to_label, to_ty, to_decls) when from_label = to_label ->
-            let from_tm = eval ctx (Syntax.RecProj (tm, from_label)) in
-            let to_tm = coerce ctx from_ty to_ty (Syntax.RecProj (tm, from_label)) in
+            let from_tm = eval ctx (Syntax.Rec_proj (tm, from_label)) in
+            let to_tm = coerce ctx from_ty to_ty (Syntax.Rec_proj (tm, from_label)) in
             (to_label, to_tm) :: go (from_decls from_tm) (to_decls (eval ctx to_tm))
         (* When the type of the target field is a singleton we can use it to
             fill in the definition of a missing field in the source term. This
             is similar to how we handle missing fields in {!check}. *)
-        | from_decls, Semantics.Cons (to_label, Semantics.SingType (to_ty, sing_tm), to_decls) ->
-            let to_tm = Syntax.SingIntro (quote ctx sing_tm to_ty) in
+        | from_decls, Semantics.Cons (to_label, Semantics.Sing_type (to_ty, sing_tm), to_decls) ->
+            let to_tm = Syntax.Sing_intro (quote ctx sing_tm to_ty) in
             (to_label, to_tm) :: go from_decls (to_decls (eval ctx to_tm))
         | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
             error (field_mismatch ~expected:to_label ~found:from_label)
         | _, _ -> Semantics.error "mismatched telescope length"
       in
-      Syntax.RecLit (go from_decls to_decls)
+      Syntax.Rec_lit (go from_decls to_decls)
   (* TODO: subtyping for functions! *)
   | from_ty, to_ty  ->
       error (type_mismatch ctx
@@ -244,22 +244,22 @@ let rec check ctx tm ty : Syntax.tm =
       Syntax.Let (name, def, check ctx body ty)
 
   (* Function literals *)
-  | FunLit (names, body), ty ->
+  | Fun_lit (names, body), ty ->
       (* Iterate over the parameters of the function literal, constructing a
           function literal in the core language. *)
       let rec go ctx names ty =
         match names, ty with
         | [], body_ty -> check ctx body body_ty
-        | name :: names, Semantics.FunType (_, param_ty, body_ty) ->
+        | name :: names, Semantics.Fun_type (_, param_ty, body_ty) ->
             let var = next_var ctx in
             let ctx = bind_def ctx name param_ty var in
-            Syntax.FunLit (name, go ctx names (body_ty var))
+            Syntax.Fun_lit (name, go ctx names (body_ty var))
         | _, _ -> error "too many parameters in function literal"
       in
       go ctx names ty
 
   (* Record literals *)
-  | RecLit defns, Semantics.RecType decls ->
+  | Rec_lit defns, Semantics.Rec_type decls ->
       (* TODO: elaborate fields out of order? *)
       let rec go defns decls =
         match defns, decls with
@@ -274,27 +274,27 @@ let rec check ctx tm ty : Syntax.tm =
             (label, tm) :: go defns (decls (eval ctx tm))
         (* When the expected type of a field is a singleton we can use it to
             fill in the definition of a missing fields in the record literal. *)
-        | defns, Semantics.Cons (label, Semantics.SingType (ty, sing_tm), decls) ->
-            let tm = Syntax.SingIntro (quote ctx sing_tm ty) in
+        | defns, Semantics.Cons (label, Semantics.Sing_type (ty, sing_tm), decls) ->
+            let tm = Syntax.Sing_intro (quote ctx sing_tm ty) in
             (label, tm) :: go defns (decls (eval ctx tm))
         | _, Semantics.Cons (label, _, _) -> error (missing_field label)
         | (label, _) :: _, Semantics.Nil -> error ("unexpected field `" ^ label ^ "` in record literal")
       in
-      Syntax.RecLit (go defns decls)
+      Syntax.Rec_lit (go defns decls)
 
   (* Records with no entries. These need to be disambiguated with a type
       annotation. *)
-  | RecUnit, Semantics.Univ ->
-      Syntax.RecType Syntax.Nil
-  | RecUnit, Semantics.RecType Semantics.Nil ->
-      Syntax.RecLit []
+  | Rec_unit, Semantics.Univ ->
+      Syntax.Rec_type Syntax.Nil
+  | Rec_unit, Semantics.Rec_type Semantics.Nil ->
+      Syntax.Rec_lit []
 
   (* Singleton introduction. No need for any syntax in the surface language
       here, instead we use the type annotation to drive this. *)
-  | tm, Semantics.SingType (ty, sing_tm) ->
+  | tm, Semantics.Sing_type (ty, sing_tm) ->
       let tm = check ctx tm ty in
       let tm' = eval ctx tm in
-      if is_convertible ctx sing_tm tm' ty then Syntax.SingIntro tm else
+      if is_convertible ctx sing_tm tm' ty then Syntax.Sing_intro tm else
         error (singleton_mismatch ctx
           ~expected:(quote ctx sing_tm ty)
           ~found:(quote ctx tm' ty)
@@ -347,32 +347,32 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
       Syntax.Univ, Semantics.Univ
 
   (* Function types *)
-  | FunType (params, body_ty) ->
+  | Fun_type (params, body_ty) ->
       let rec go ctx = function
         | [] -> check ctx body_ty Semantics.Univ
         | (name, param_ty) :: params ->
             let param_ty = check ctx param_ty Semantics.Univ in
             let ctx = bind_param ctx name (eval ctx param_ty) in
-            Syntax.FunType (name, param_ty, go ctx params)
+            Syntax.Fun_type (name, param_ty, go ctx params)
       in
       go ctx params, Semantics.Univ
 
   (* Arrow types. These are implemented as syntactic sugar for non-dependent
       function types. *)
-  | FunArrow (param_ty, body_ty) ->
+  | Fun_arrow (param_ty, body_ty) ->
       let param_ty = check ctx param_ty Semantics.Univ in
       let ctx = bind_param ctx None (eval ctx param_ty) in
       let body_ty = check ctx body_ty Semantics.Univ in
-      Syntax.FunType (None, param_ty, body_ty), Semantics.Univ
+      Syntax.Fun_type (None, param_ty, body_ty), Semantics.Univ
 
   (* Function literals. These do not have type annotations on their arguments
       and so we don’t know ahead of time what types to use for the arguments
       when adding them to the context. As a result with coose to throw an
       ambiguity error here. *)
-  | FunLit (_, _) -> error "ambiguous function literal"
+  | Fun_lit (_, _) -> error "ambiguous function literal"
 
   (* Function application *)
-  | RecType decls ->
+  | Rec_type decls ->
       let rec go ctx seen_labels = function
         | [] -> (Syntax.Nil)
         | (label, _) :: _ when List.mem label seen_labels ->
@@ -382,28 +382,28 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
             let ctx = bind_param ctx (Some label) (eval ctx ty) in
             Syntax.Cons (label, ty, go ctx (label :: seen_labels) decls)
       in
-      Syntax.RecType (go ctx [] decls), Semantics.Univ
+      Syntax.Rec_type (go ctx [] decls), Semantics.Univ
 
   (* Unit records. These are ambiguous in inference mode. We could default to
       one or the other, and perhaps coerce between them, but we choose just to
       throw an error instead. *)
-  | RecLit _ -> error "ambiguous record literal"
-  | RecUnit -> error "ambiguous unit record"
+  | Rec_lit _ -> error "ambiguous record literal"
+  | Rec_unit -> error "ambiguous unit record"
 
   (* Singleton types *)
-  | SingType (ty, sing_tm) ->
+  | Sing_type (ty, sing_tm) ->
       let ty = check ctx ty Semantics.Univ in
       let sing_tm = check ctx sing_tm (eval ctx ty) in
-      Syntax.SingType (ty, sing_tm), Semantics.Univ
+      Syntax.Sing_type (ty, sing_tm), Semantics.Univ
 
   (* Application *)
   | App (head, args) ->
       List.fold_left
         (fun (head, head_ty) arg ->
           match elim_implicits ctx head head_ty with
-          | head, Semantics.FunType (_, param_ty, body_ty) ->
+          | head, Semantics.Fun_type (_, param_ty, body_ty) ->
               let arg = check ctx arg param_ty in
-              Syntax.FunApp (head, arg), body_ty (eval ctx arg)
+              Syntax.Fun_app (head, arg), body_ty (eval ctx arg)
           | _ -> error "not a function")
         (infer ctx head)
         args
@@ -413,9 +413,9 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
       List.fold_left
         (fun (head, head_ty) label ->
           match elim_implicits ctx head head_ty with
-          | head, Semantics.RecType decls ->
+          | head, Semantics.Rec_type decls ->
               begin match Semantics.proj_ty (eval ctx head) decls label with
-              | Some ty -> Syntax.RecProj (head, label), ty
+              | Some ty -> Syntax.Rec_proj (head, label), ty
               | None -> error (missing_field label)
               end
           | _ -> error "not a record")
@@ -436,9 +436,9 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
             | Some patch_tm ->
                 let tm = check ctx patch_tm ty in
                 let tm' = eval ctx tm in
-                let ctx = bind_def ctx (Some label) (Semantics.SingType (ty, tm')) tm' in
+                let ctx = bind_def ctx (Some label) (Semantics.Sing_type (ty, tm')) tm' in
                 let patches = List.remove_assoc label patches in
-                Syntax.Cons (label, Syntax.SingType (ty', tm), go ctx (tys tm') patches)
+                Syntax.Cons (label, Syntax.Sing_type (ty', tm), go ctx (tys tm') patches)
             | None ->
                 let var = next_var ctx in
                 let ctx = bind_def ctx (Some label) ty var in
@@ -452,9 +452,9 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
       else
         let head = check ctx head Semantics.Univ in
         begin match eval ctx head with
-        | Semantics.RecType decls ->
+        | Semantics.Rec_type decls ->
             let decls = go ctx decls patches in
-            Syntax.RecType decls, Semantics.Univ
+            Syntax.Rec_type decls, Semantics.Univ
         | _ -> error "can only patch record types"
         end
 
@@ -465,9 +465,9 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
     elaborating the head of an elimination. This removes them by adding
     appropriate elimination forms. *)
 and elim_implicits ctx tm = function
-  (* Convert the singleton back to its underlying term using {!Syntax.SingElim} *)
-  | Semantics.SingType (ty, sing_tm) ->
-      let tm = Syntax.SingElim (tm, quote ctx sing_tm ty) in
+  (* Convert the singleton back to its underlying term using {!Syntax.Sing_elim} *)
+  | Semantics.Sing_type (ty, sing_tm) ->
+      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm ty) in
       elim_implicits ctx tm ty
   (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
     for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)

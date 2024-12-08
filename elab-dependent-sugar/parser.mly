@@ -29,16 +29,16 @@ let tm :=
 | t1 = app_tm; ":"; t2 = tm;
     { Surface.Ann (t1, t2) }
 | t1 =  app_tm; "->"; t2 = tm;
-    { Surface.FunArrow (t1, t2) }
+    { Surface.Fun_arrow (t1, t2) }
 | "fun"; ps = nonempty_list(param); "->"; t = tm;
-    { Surface.FunType (ps, t) }
+    { Surface.Fun_type (ps, t) }
 | "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = tm; { t1 }); "=>"; t2 = tm;
-    { Surface.FunLit (ps, t1, t2) }
+    { Surface.Fun_lit (ps, t1, t2) }
 | app_tm
 
 let app_tm :=
 | t = atomic_tm; ts = nonempty_list(atomic_tm);
-    { Surface.FunApp (t, ts) }
+    { Surface.Fun_app (t, ts) }
 | atomic_tm
 
 let atomic_tm :=

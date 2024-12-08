@@ -20,12 +20,12 @@ let expr :=
 | "let"; n = NAME; ":="; e1 = expr; ";"; e2 = expr;
     { Named.Let (n, e1, e2) }
 | "fun"; n = NAME; "=>"; e = expr;
-    { Named.FunLit (n, e) }
+    { Named.Fun_lit (n, e) }
 | app_expr
 
 let app_expr :=
 | e1 = app_expr; e2 = atomic_expr;
-    { Named.FunApp (e1, e2) }
+    { Named.Fun_app (e1, e2) }
 | atomic_expr
 
 let atomic_expr :=

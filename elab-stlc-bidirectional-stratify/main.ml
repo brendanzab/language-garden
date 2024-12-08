@@ -21,8 +21,8 @@ let parse_tm (filename : string) (input : in_channel) : Surface.tm =
   | Lexer.Error error ->
       let msg =
         match error with
-        | `UnexpectedChar -> "unexpected character"
-        | `UnclosedBlockComment -> "unclosed block comment"
+        | `Unexpected_char -> "unexpected character"
+        | `Unclosed_block_comment -> "unclosed block comment"
       in
       print_error (Sedlexing.lexing_positions lexbuf) msg;
       exit 1

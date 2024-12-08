@@ -21,7 +21,7 @@ type ty =
 
 and ty_data =
   | Name of string * ty list
-  | FunTy of ty * ty
+  | Fun_ty of ty * ty
 
 (** Terms in the surface language *)
 type tm =
@@ -31,11 +31,11 @@ and tm_data =
   | Name of string
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
-  | IfThenElse of tm * tm * tm
-  | TemplateLit of template
-  | ListLit of tm list
-  | TextLit of string
-  | IntLit of int
+  | If_then_else of tm * tm * tm
+  | Template_lit of template
+  | List_lit of tm list
+  | Text_lit of string
+  | Int_lit of int
   | App of tm * tm
   | Op2 of [`Add] * tm * tm
 
@@ -48,10 +48,10 @@ and fragment =
   fragment_data located
 
 and fragment_data =
-  | TextFragment of string
-  | TermFragment of tm
-  | LetFragment of binder * param list * ty option * tm
-  | IfThenElseFragment of tm * template * template
+  | Text_fragment of string
+  | Term_fragment of tm
+  | Let_fragment of binder * param list * ty option * tm
+  | If_then_else_fragment of tm * template * template
 
 and param =
   binder * ty option
@@ -78,27 +78,27 @@ module Elab = struct
   (** Validate that a type is well-formed. *)
   let rec check_ty (ty : ty) : Core.ty =
     match ty.data with
-    | Name ("List", [ty]) -> ListTy (check_ty ty)
-    | Name ("Text", []) -> TextTy (* TODO: improve arity errors *)
-    | Name ("Bool", []) -> BoolTy (* TODO: improve arity errors *)
-    | Name ("Int", []) -> IntTy (* TODO: improve arity errors *)
+    | Name ("List", [ty]) -> List_ty (check_ty ty)
+    | Name ("Text", []) -> Test_ty (* TODO: improve arity errors *)
+    | Name ("Bool", []) -> Bool_ty (* TODO: improve arity errors *)
+    | Name ("Int", []) -> Int_ty (* TODO: improve arity errors *)
     | Name (name, _) ->
         error ty.loc (Format.asprintf "unbound type `%s`" name)
-    | FunTy (ty1, ty2) ->
-        FunTy (check_ty ty1, check_ty ty2)
+    | Fun_ty (ty1, ty2) ->
+        Fun_ty (check_ty ty1, check_ty ty2)
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
     match tm.data with
-    | IfThenElse (tm1, tm2, tm3) ->
-        BoolElim (
-          check ctx tm1 BoolTy,
+    | If_then_else (tm1, tm2, tm3) ->
+        Bool_elim (
+          check ctx tm1 Bool_ty,
           check ctx tm2 ty,
           check ctx tm3 ty)
-    | ListLit tms ->
+    | List_lit tms ->
         check_list ctx tms
           (match ty with
-            | ListTy ty -> ty
+            | List_ty ty -> ty
             | _ -> error tm.loc "unexpected list literal")
     | _ ->
         let tm', ty' = synth ctx tm in
@@ -117,28 +117,28 @@ module Elab = struct
     | Ann (tm, ty) ->
         let ty = check_ty ty in
         check ctx tm ty, ty
-    | IfThenElse (_, _, _) ->
+    | If_then_else (_, _, _) ->
         error tm.loc "ambiguous if expression"
-    | TemplateLit template ->
-        synth_template ctx template, TextTy
-    | ListLit _ ->
+    | Template_lit template ->
+        synth_template ctx template, Test_ty
+    | List_lit _ ->
         error tm.loc "ambiguous list literal"
-    | TextLit s ->
-        TextLit s, TextTy
-    | IntLit n ->
-        IntLit n, IntTy
+    | Text_lit s ->
+        Text_lit s, Test_ty
+    | Int_lit n ->
+        Int_lit n, Int_ty
     | App (head_tm, arg_tm) -> begin
         match synth ctx head_tm with
-        | head_tm, FunTy (param_ty, body_ty) ->
+        | head_tm, Fun_ty (param_ty, body_ty) ->
             let arg_tm = check ctx arg_tm param_ty in
-            FunApp (head_tm, arg_tm), body_ty
+            Fun_app (head_tm, arg_tm), body_ty
         | _ ->
             error head_tm.loc "function expected"
     end
     | Op2 (`Add, tm1, tm2) ->
-        let tm1 = check ctx tm1 TextTy in
-        let tm2 = check ctx tm2 TextTy in
-        PrimApp (TextConcat, [tm1; tm2]), TextTy
+        let tm1 = check ctx tm1 Test_ty in
+        let tm2 = check ctx tm2 Test_ty in
+        Prim_app (Test_concat, [tm1; tm2]), Test_ty
 
   (** Elaborate a function literal, inferring its type. *)
   and fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
@@ -153,36 +153,36 @@ module Elab = struct
     | (name, Some param_ty) :: params, body_ty ->
         let param_ty = check_ty param_ty in
         let body, body_ty = fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
-        FunLit (name.data, param_ty, body), FunTy (param_ty, body_ty)
+        Fun_lit (name.data, param_ty, body), Fun_ty (param_ty, body_ty)
 
   (** Elaborate a list literal. *)
   and[@tail_mod_cons] check_list (ctx : context) (tms : tm list) (elem_ty : Core.ty) : Core.tm =
     match tms with
     | [] ->
-        Core.ListNil
+        Core.List_nil
     | tm :: tms ->
         let tm = check ctx tm elem_ty in
-        Core.ListCons (tm, check_list ctx tms elem_ty)
+        Core.List_cons (tm, check_list ctx tms elem_ty)
 
   (** Elaborate a template into a series of concatened terms. *)
   and[@tail_mod_cons] synth_template (ctx : context) (template : template) : Core.tm =
     match template with
-    | [] -> TextLit ""
-    | { data = TextFragment s; _ } :: template ->
-        PrimApp (TextConcat, [TextLit s; synth_template ctx template])
-    | { data = TermFragment tm; _ } :: template ->
-        let tm = check ctx tm TextTy in
-        PrimApp (TextConcat, [tm; synth_template ctx template])
-    | { data = LetFragment (name, params, def_body_ty, def_tm); _ } :: template ->
+    | [] -> Text_lit ""
+    | { data = Text_fragment s; _ } :: template ->
+        Prim_app (Test_concat, [Text_lit s; synth_template ctx template])
+    | { data = Term_fragment tm; _ } :: template ->
+        let tm = check ctx tm Test_ty in
+        Prim_app (Test_concat, [tm; synth_template ctx template])
+    | { data = Let_fragment (name, params, def_body_ty, def_tm); _ } :: template ->
         let def_tm, def_ty = fun_lit ctx params def_body_ty def_tm in
         Let (name.data, def_ty, def_tm,
           synth_template ((name.data, def_ty) :: ctx) template)
-    | { data = IfThenElseFragment (tm, template1, template2); _ } :: template ->
-        let tm = check ctx tm BoolTy in
+    | { data = If_then_else_fragment (tm, template1, template2); _ } :: template ->
+        let tm = check ctx tm Bool_ty in
         let template1 = synth_template ctx template1 in
         let template2 = synth_template ctx template2 in
-        PrimApp (TextConcat, [
-          BoolElim (tm, template1, template2);
+        Prim_app (Test_concat, [
+          Bool_elim (tm, template1, template2);
           synth_template ctx template;
         ])
 

@@ -25,12 +25,12 @@ type expr =
   | Mul of expr * expr
   | Div of expr * expr
   | Eq of expr * expr
-  | IfThenElse of expr * expr * expr
+  | If_then_else of expr * expr * expr
 
 (** Types *)
 type ty =
-  | TyInt
-  | TyBool
+  | Ty_int
+  | Ty_bool
 
 (** {2 Constructor functions} *)
 
@@ -44,10 +44,10 @@ let sub e1 e2 = Sub (e1, e2)
 let mul e1 e2 = Mul (e1, e2)
 let div e1 e2 = Div (e1, e2)
 let eq e1 e2 = Eq (e1, e2)
-let if_then_else e1 e2 e3 = IfThenElse (e1, e2, e3)
+let if_then_else e1 e2 e3 = If_then_else (e1, e2, e3)
 
 (** Exception raised during parsing if a name was unbound *)
-exception UnboundName of (Lexing.position * Lexing.position) * name
+exception Unbound_name of (Lexing.position * Lexing.position) * name
 
 
 (** {1 Pretty printing} *)
@@ -65,7 +65,7 @@ and  pp_let_expr names fmt = function
       Format.fprintf fmt "@[<2>%a@]@ %a"
         (pp_def names) (n, e1)
         (pp_lets (n :: names)) e2
-  | IfThenElse (e1, e2, e3) ->
+  | If_then_else (e1, e2, e3) ->
       Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_eq_expr names) e1
         (pp_eq_expr names) e2
@@ -92,8 +92,8 @@ and pp_atomic_expr names fmt = function
   | e -> Format.fprintf fmt "@[<1>(%a)@]" (pp_expr names) e
 
 let pp_ty fmt = function
-  | TyInt -> Format.fprintf fmt "Int"
-  | TyBool -> Format.fprintf fmt "Bool"
+  | Ty_int -> Format.fprintf fmt "Int"
+  | Ty_bool -> Format.fprintf fmt "Bool"
 
 
 (** Semantics of arithmetic expressions *)
@@ -117,7 +117,7 @@ module Semantics = struct
     | Mul (e1, e2) -> Int (eval_int env e1 * eval_int env e2)
     | Div (e1, e2) -> Int (eval_int env e1 / eval_int env e2)
     | Eq (e1, e2) -> Bool (eval env e1 = eval env e2)
-    | IfThenElse (e1, e2, e3) -> if eval_bool env e1 then eval env e2 else eval env e3
+    | If_then_else (e1, e2, e3) -> if eval_bool env e1 then eval env e2 else eval env e3
   and eval_int env expr =
     match eval env expr with
     | Int n ->  n
@@ -154,8 +154,8 @@ module Validation = struct
     match e, t with
     | Let (_, e1, e2), t ->
         let t' = synth ctx e1 in check (t' :: ctx) e2 t
-    | IfThenElse (e1, e2, e3), t ->
-        check ctx e1 TyBool; check ctx e2 t; check ctx e3 t
+    | If_then_else (e1, e2, e3), t ->
+        check ctx e1 Ty_bool; check ctx e2 t; check ctx e3 t
     | e, t ->
       let t' = synth ctx e in
       if t != t' then
@@ -168,18 +168,18 @@ module Validation = struct
     | Var n -> List.nth ctx n
     | Let (_, e1, e2) ->
         let t = synth ctx e1 in synth (t :: ctx) e2
-    | Int _ -> TyInt
-    | Bool _ -> TyBool
-    | Neg e -> check ctx e TyInt; TyInt
-    | Add (e1, e2) -> check ctx e1 TyInt; check ctx e2 TyInt; TyInt
-    | Sub (e1, e2) -> check ctx e1 TyInt; check ctx e2 TyInt; TyInt
-    | Mul (e1, e2) -> check ctx e1 TyInt; check ctx e2 TyInt; TyInt
-    | Div (e1, e2) -> check ctx e1 TyInt; check ctx e2 TyInt; TyInt
+    | Int _ -> Ty_int
+    | Bool _ -> Ty_bool
+    | Neg e -> check ctx e Ty_int; Ty_int
+    | Add (e1, e2) -> check ctx e1 Ty_int; check ctx e2 Ty_int; Ty_int
+    | Sub (e1, e2) -> check ctx e1 Ty_int; check ctx e2 Ty_int; Ty_int
+    | Mul (e1, e2) -> check ctx e1 Ty_int; check ctx e2 Ty_int; Ty_int
+    | Div (e1, e2) -> check ctx e1 Ty_int; check ctx e2 Ty_int; Ty_int
     | Eq (e1, e2) ->
         (* TODO: Unify e1 and e2 *)
-        let t1 = synth ctx e1 in check ctx e2 t1; TyBool
-    | IfThenElse (e1, e2, e3) ->
+        let t1 = synth ctx e1 in check ctx e2 t1; Ty_bool
+    | If_then_else (e1, e2, e3) ->
         (* TODO: Unify e2 and e3 *)
-        check ctx e1 TyBool; let t2 = synth ctx e2; in check ctx e3 t2; t2
+        check ctx e1 Ty_bool; let t2 = synth ctx e2; in check ctx e3 t2; t2
 
 end

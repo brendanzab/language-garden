@@ -41,7 +41,7 @@ let template_main :=
 
 let ty :=
 | ty1 = located(app_ty); "->"; ty2 = located(ty);
-    { Surface.FunTy (ty1, ty2) }
+    { Surface.Fun_ty (ty1, ty2) }
 | app_ty
 
 let app_ty :=
@@ -62,7 +62,7 @@ let tm :=
 | "let"; n = located(NAME); ps = list(param); ty = ioption(":"; ~ = located(ty); <>); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
     { Surface.Let (n, ps, ty, tm1, tm2) }
 | "if"; tm1 = located(tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
-    { Surface.IfThenElse (tm1, tm2, tm3) }
+    { Surface.If_then_else (tm1, tm2, tm3) }
 | tm = located(add_tm); ":"; ty = located(ty);
     { Surface.Ann (tm, ty) }
 | add_tm
@@ -79,17 +79,17 @@ let app_tm :=
 
 let atomic_tm :=
 | OPEN_TEMPLATE; t = template; CLOSE_TEMPLATE;
-    { Surface.TemplateLit t }
+    { Surface.Template_lit t }
 | "("; tm = tm; ")";
     { tm }
 | "["; tms = trailing_list(",", located(tm));  "]";
-    { Surface.ListLit tms }
+    { Surface.List_lit tms }
 | s = TEXT;
-    { Surface.TextLit s }
+    { Surface.Text_lit s }
 | n = NAME;
     { Surface.Name n }
 | i = INT;
-    { Surface.IntLit i }
+    { Surface.Int_lit i }
 
 
 (* Templates *)
@@ -106,13 +106,13 @@ let unquote_template :=
 
 let text_fragment :=
 | s = TEMPLATE_TEXT;
-    { Surface.TextFragment s }
+    { Surface.Text_fragment s }
 
 let unquote_fragment :=
 | "let"; n = located(NAME); ps = list(param); ty = ioption(":"; ~ = located(ty); <>); ":="; tm = located(tm);
-    { Surface.LetFragment (n, ps, ty, tm) }
+    { Surface.Let_fragment (n, ps, ty, tm) }
 | tm = located(tm);
-    { Surface.TermFragment tm }
+    { Surface.Term_fragment tm }
 
 
 (* Utilities *)

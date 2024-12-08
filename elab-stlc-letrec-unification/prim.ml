@@ -1,16 +1,16 @@
 type t =
-  | BoolEq
-  | IntEq
-  | IntAdd
-  | IntSub
-  | IntMul
-  | IntNeg
+  | Bool_eq
+  | Int_eq
+  | Int_add
+  | Int_sub
+  | Int_mul
+  | Int_neg
 
 let name (prim : t) : string =
   match prim with
-  | BoolEq -> "bool-eq"
-  | IntEq -> "int-eq"
-  | IntAdd -> "int-add"
-  | IntSub -> "int-sub"
-  | IntMul -> "int-mul"
-  | IntNeg -> "int-neg"
+  | Bool_eq -> "bool-eq"
+  | Int_eq -> "int-eq"
+  | Int_add -> "int-add"
+  | Int_sub -> "int-sub"
+  | Int_mul -> "int-mul"
+  | Int_neg -> "int-neg"

@@ -188,28 +188,28 @@ module Polymorphic_variants = struct
   module Int = struct
 
     type 'e expr = [>
-      | `IntLit of int
-      | `IntAdd of 'e expr * 'e expr
-      | `IntMul of 'e expr * 'e expr
-      | `IntEq of 'e expr * 'e expr
+      | `Int_lit of int
+      | `Int_add of 'e expr * 'e expr
+      | `Int_mul of 'e expr * 'e expr
+      | `Int_eq of 'e expr * 'e expr
     ] as 'e
 
     type 'v value = [>
-      | `IntLit of int
-      | `BoolLit of bool
+      | `Int_lit of int
+      | `Bool_lit of bool
     ] as 'v
 
     let eval (eval : 'e -> 'v) (e : 'e expr) (default : unit -> 'v) : 'v value =
       let eval_int e =
         match eval e with
-        | `IntLit x -> x
+        | `Int_lit x -> x
         | _ -> failwith "expected integer"
       in
       match e with
-      | `IntLit i -> `IntLit i
-      | `IntAdd (x, y) -> `IntLit (eval_int x + eval_int y)
-      | `IntMul (x, y) -> `IntLit (eval_int x * eval_int y)
-      | `IntEq (x, y) -> `BoolLit (eval_int x = eval_int y)
+      | `Int_lit i -> `Int_lit i
+      | `Int_add (x, y) -> `Int_lit (eval_int x + eval_int y)
+      | `Int_mul (x, y) -> `Int_lit (eval_int x * eval_int y)
+      | `Int_eq (x, y) -> `Bool_lit (eval_int x = eval_int y)
       | _ -> default ()
 
   end
@@ -217,21 +217,21 @@ module Polymorphic_variants = struct
   module Bool = struct
 
     type 'e expr = [>
-      | `BoolLit of bool
+      | `Bool_lit of bool
       | `Elim of 'e expr * 'e expr * 'e expr
     ] as 'e
 
     type 'v value = [>
-      | `BoolLit of bool
+      | `Bool_lit of bool
     ] as 'v
 
     let eval (eval : 'e -> 'v) (e : 'e expr) (default : unit -> 'v) : 'v value =
       match e with
-      | `BoolLit b -> `BoolLit b
-      | `BoolElim (head, body1, body2) ->
+      | `Bool_lit b -> `Bool_lit b
+      | `Bool_elim (head, body1, body2) ->
           begin match eval head with
-          | `BoolValue true -> eval body1
-          | `BoolValue false -> eval body2
+          | `Bool_value true -> eval body1
+          | `Bool_value false -> eval body2
           | _ -> failwith "expected boolean"
           end
       | _ -> default ()
@@ -241,20 +241,20 @@ module Polymorphic_variants = struct
   module Fun = struct
 
     type 'e expr = [>
-      | `FunLit of string * 'e expr
-      | `FunApp of 'e expr * 'e expr
+      | `Fun_lit of string * 'e expr
+      | `Fun_app of 'e expr * 'e expr
     ] as 'e
 
     type 'v value = [>
-      | `FunLit of ('v -> 'v)
+      | `Fun_lit of ('v -> 'v)
     ] as 'v
 
     let eval (eval : 'v Env.t -> 'e -> 'v) (env : 'v Env.t) (e : 'e expr) (default : unit -> 'v) : 'v value =
       match e with
-      | `FunLit (x, body) -> `FunLit (fun arg -> eval (Env.extend x arg env) body)
-      | `FunApp (head, arg) ->
+      | `Fun_lit (x, body) -> `Fun_lit (fun arg -> eval (Env.extend x arg env) body)
+      | `Fun_app (head, arg) ->
           begin match eval env head with
-          | `FunLit body -> body (eval env arg)
+          | `Fun_lit body -> body (eval env arg)
           | _ -> failwith "expected function"
           end
       | _ -> default ()
@@ -309,12 +309,12 @@ module Polymorphic_variants = struct
   let () = begin
 
     let e : expr =
-      `Let ("y", `IntLit 3,
-        `FunApp (`FunLit ("x",
-          `IntAdd (`Var "x", `IntLit 1)), `Var "y"))
+      `Let ("y", `Int_lit 3,
+        `Fun_app (`Fun_lit ("x",
+          `Int_add (`Var "x", `Int_lit 1)), `Var "y"))
     in
 
-    assert (eval Env.empty e = `IntLit 4);
+    assert (eval Env.empty e = `Int_lit 4);
 
   end
 

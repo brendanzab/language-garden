@@ -25,8 +25,8 @@ type index = int
 type expr =
   | Var of index
   | Let of string * expr * expr
-  | FunLit of string * expr
-  | FunApp of expr * expr
+  | Fun_lit of string * expr
+  | Fun_app of expr * expr
 
 (** {2 Conversions} *)
 
@@ -35,8 +35,8 @@ let of_named (e : Named.expr) : expr =
     match e with
     | Var x -> Var (elem_index x ns |> Option.get)
     | Let (x, def, body) -> Let (x, go ns def, go (x :: ns) body)
-    | FunLit (x, body) -> FunLit (x, go (x :: ns) body)
-    | FunApp (head, arg) -> FunApp (go ns head, go ns arg)
+    | Fun_lit (x, body) -> Fun_lit (x, go (x :: ns) body)
+    | Fun_app (head, arg) -> Fun_app (go ns head, go ns arg)
   in
   go [] e
 
@@ -50,8 +50,8 @@ let to_named (e : expr) : Named.expr =
     match e with
     | Var i -> Var (List.nth ns i)
     | Let (x, def, body) -> let x = fresh ns x in Let (x, go ns def, go (x :: ns) body)
-    | FunLit (x, body) -> let x = fresh ns x in FunLit (x, go (x :: ns) body)
-    | FunApp (head, arg) -> FunApp (go ns head, go ns arg)
+    | Fun_lit (x, body) -> let x = fresh ns x in Fun_lit (x, go (x :: ns) body)
+    | Fun_app (head, arg) -> Fun_app (go ns head, go ns arg)
   in
   go [] e
 
@@ -64,9 +64,9 @@ let rec alpha_equiv (e1 : expr) (e2 : expr) =
   | Var i1, Var i2 -> i1 = i2
   | Let (_, def1, body1), Let (_, def2, body2) ->
       alpha_equiv def1 def2 && alpha_equiv body1 body2
-  | FunLit (_, body1), FunLit (_, body2) ->
+  | Fun_lit (_, body1), Fun_lit (_, body2) ->
       alpha_equiv body1 body2
-  | FunApp (head1, arg1), FunApp (head2, arg2) ->
+  | Fun_app (head1, arg1), Fun_app (head2, arg2) ->
       alpha_equiv head1 head2 && alpha_equiv arg1 arg2
   | _, _ -> false
 
@@ -77,8 +77,8 @@ let map_vars (on_var : int -> int -> expr) (size : int) (e : expr) : expr =
     match e with
     | Var i -> on_var size i
     | Let (x, def, body) -> Let (x, go size def, go (size + 1) body)
-    | FunLit (x, body) -> FunLit (x, go (size + 1) body)
-    | FunApp (e1, e2) -> FunApp (go size e1, go size e2)
+    | Fun_lit (x, body) -> Fun_lit (x, go (size + 1) body)
+    | Fun_app (e1, e2) -> Fun_app (go size e1, go size e2)
   in
   go size e
 
@@ -96,7 +96,7 @@ let subst_top (s : expr) (e : expr) : expr =
 
 let is_val (e : expr) : bool =
   match e with
-  | FunLit _ -> true
+  | Fun_lit _ -> true
   | _ -> false
 
 (** {2 Evaluation} *)
@@ -107,13 +107,13 @@ let rec eval (e : expr) : expr =
   | Let (_, def, body) ->
       let def = if is_val def then def else eval def in
       eval (subst_top def body)
-  | FunLit (_, _) -> e
-  | FunApp (head, arg) -> begin
+  | Fun_lit (_, _) -> e
+  | Fun_app (head, arg) -> begin
       let head = if is_val head then head else eval head in
       let arg = if is_val arg then arg else eval arg in
       match head with
-      | FunLit (_, body) -> eval (subst_top arg body)
-      | head -> FunApp (head, arg)
+      | Fun_lit (_, body) -> eval (subst_top arg body)
+      | head -> Fun_app (head, arg)
   end
 
 (** {2 Normalisation} *)
@@ -123,9 +123,9 @@ let rec normalise (e : expr) : expr =
   match e with
   | Var i -> Var i
   | Let (_, def, body) -> normalise (subst_top (normalise def) body)
-  | FunLit (x, body) -> FunLit (x, normalise body)
-  | FunApp (head, arg) -> begin
+  | Fun_lit (x, body) -> Fun_lit (x, normalise body)
+  | Fun_app (head, arg) -> begin
       match eval head with
-      | FunLit (_, body) -> normalise (subst_top (normalise arg) body)
-      | head -> FunApp (head, normalise arg)
+      | Fun_lit (_, body) -> normalise (subst_top (normalise arg) body)
+      | head -> Fun_app (head, normalise arg)
   end

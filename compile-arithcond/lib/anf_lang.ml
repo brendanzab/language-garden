@@ -13,9 +13,9 @@ type id = int
 (** Expressions in A-Normal Form *)
 type expr =
   | Let of string * id * comp * expr
-  | LetJoin of string * id * (string * id) * expr * expr
-  | JoinApp of id * atom
-  | IfThenElse of atom * expr * expr
+  | Let_join of string * id * (string * id) * expr * expr
+  | Join_app of id * atom
+  | If_then_else of atom * expr * expr
   | Comp of comp
 
 (** Computation expressions *)
@@ -36,7 +36,7 @@ and atom =
 
 (** {2 Constructor functions} *)
 
-let join_app x a = JoinApp (x, a)
+let join_app x a = Join_app (x, a)
 let comp c = Comp c
 let atom a = Atom a
 
@@ -49,15 +49,15 @@ let rec pp_expr names fmt = function
       Format.fprintf fmt "@[<2>@[let@ %s@ :=@]@ %a;@]@ %a" n
         (pp_comp names) c
         (pp_expr ((x, n) :: names)) e
-  | LetJoin (n, x, (pn, px), e1, e2) ->
+  | Let_join (n, x, (pn, px), e1, e2) ->
       let n = Format.sprintf "%s%i" n x in
       let pn = Format.sprintf "%s%i" pn px in
       Format.fprintf fmt "@[<2>@[let join@ %s@ %s@ :=@]@ %a;@]@ %a" n pn
         (pp_expr ((px, pn) :: names)) e1
         (pp_expr ((x, n) :: names)) e2
-  | JoinApp (n, a) ->
+  | Join_app (n, a) ->
       Format.fprintf fmt "@[jump@ j%i@ %a@]" n (pp_atom names) a
-  | IfThenElse (a, e1, e2) ->
+  | If_then_else (a, e1, e2) ->
       Format.fprintf fmt "@[<v 2>@[if@ %a@ then@]@ @[<v>%a@]@]@ @[<v 2>else@ @[<v>%a@]@]"
         (pp_atom names) a
         (pp_expr names) e1
@@ -115,13 +115,13 @@ module Semantics = struct
   let rec eval env : expr -> value =
     function
     | Let (_, x, c, e) -> eval (Env.add x (Value (eval_comp env c)) env) e
-    | LetJoin (_, x, (_, px), e1, e2) -> eval (Env.add x (Join (px, e1)) env) e2
-    | JoinApp (n, a) ->
+    | Let_join (_, x, (_, px), e1, e2) -> eval (Env.add x (Join (px, e1)) env) e2
+    | Join_app (n, a) ->
         begin match Env.find n env with
         | Join (pn, e) -> eval (Env.add pn (Value (eval_atom env a)) env) e
         | _ -> failwith "not a value"
         end
-    | IfThenElse (a, e1, e2) ->
+    | If_then_else (a, e1, e2) ->
         if eval_bool env a then eval env e1 else eval env e2
     | Comp c -> eval_comp env c
   and eval_comp env : comp -> value =

@@ -37,7 +37,7 @@ val ty_of_expr : 'a. 'a expr -> 'a ty
 
 (** A GLSL expression of any type *)
 type any_expr =
-  | AnyExpr : 'a. 'a expr -> any_expr
+  | Any_expr : 'a. 'a expr -> any_expr
 
 
 (** A collection of shared GLSL expressions. This is useful for compiling GLSL,

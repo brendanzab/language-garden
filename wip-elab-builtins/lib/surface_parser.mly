@@ -42,4 +42,4 @@ let atomic_tm :=
 | path = separated_nonempty_list(".", NAME);
     { Surface_syntax.Path path }
 | num = NUMBER;
-    { Surface_syntax.NumLit num }
+    { Surface_syntax.Num_lit num }

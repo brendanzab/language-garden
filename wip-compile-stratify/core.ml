@@ -59,9 +59,9 @@ module Syntax = struct
     | Ann of tm * ty              (** Terms annotated with types *)
     | Var of Ns.tm Env.index      (** Variables *)
     | Univ of Level.t             (** Universe (i.e. the type of types) *)
-    | FunType of name * ty * ty   (** Dependent function types *)
-    | FunLit of name * ty * tm    (** Function literals (i.e. lambda expressions) *)
-    | FunApp of tm * tm           (** Function application *)
+    | Fun_type of name * ty * ty  (** Dependent function types *)
+    | Fun_lit of name * ty * tm   (** Function literals (i.e. lambda expressions) *)
+    | Fun_app of tm * tm          (** Function application *)
 
 end
 
@@ -78,13 +78,13 @@ module Semantics = struct
   and vtm =
     | Neu of neu
     | Univ of Level.t
-    | FunType of name * vty Lazy.t * (vtm -> vty)
-    | FunLit of name * vty Lazy.t * (vtm -> vtm)
+    | Fun_type of name * vty Lazy.t * (vtm -> vty)
+    | Fun_lit of name * vty Lazy.t * (vtm -> vtm)
 
   (** Neutral terms *)
   and neu =
     | Var of Ns.tm Env.level
-    | FunApp of neu * vtm Lazy.t
+    | Fun_app of neu * vtm Lazy.t
 
 
   (** {1 Exceptions} *)
@@ -98,8 +98,8 @@ module Semantics = struct
 
   let app (head : vtm) (arg : vtm) : vtm =
     match head with
-    | Neu neu -> Neu (FunApp (neu, Lazy.from_val arg))
-    | FunLit (_, _, body) -> body arg
+    | Neu neu -> Neu (Fun_app (neu, Lazy.from_val arg))
+    | Fun_lit (_, _, body) -> body arg
     | _ -> raise (Error "invalid application")
 
 
@@ -110,15 +110,15 @@ module Semantics = struct
     | Syntax.Ann (tm, _) -> eval env tm
     | Syntax.Var x -> Env.lookup x env
     | Syntax.Univ l ->  Univ l
-    | Syntax.FunType (name, param_ty, body_ty) ->
+    | Syntax.Fun_type (name, param_ty, body_ty) ->
         let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
         let body_ty x = eval (Env.bind_entry x env) body_ty in
-        FunType (name, param_ty, body_ty)
-    | Syntax.FunLit (name, param_ty, body) ->
+        Fun_type (name, param_ty, body_ty)
+    | Syntax.Fun_lit (name, param_ty, body) ->
         let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
         let body x = eval (Env.bind_entry x env) body in
-        FunLit (name, param_ty, body)
-    | Syntax.FunApp (head, arg) -> app (eval env head) (eval env arg)
+        Fun_lit (name, param_ty, body)
+    | Syntax.Fun_app (head, arg) -> app (eval env head) (eval env arg)
 
 
   (** {1 Quotation} *)
@@ -126,19 +126,19 @@ module Semantics = struct
   let rec quote size : vtm -> Syntax.tm = function
     | Neu neu -> quote_neu size neu
     | Univ l -> Syntax.Univ l
-    | FunType (name, param_ty, body_ty) ->
+    | Fun_type (name, param_ty, body_ty) ->
         let x = Neu (Var (Env.next_level size)) in
         let param_ty = quote size (Lazy.force param_ty) in
         let body_ty = quote (Env.bind_level size) (body_ty x) in
-        Syntax.FunType (name, param_ty, body_ty)
-    | FunLit (name, param_ty, body) ->
+        Syntax.Fun_type (name, param_ty, body_ty)
+    | Fun_lit (name, param_ty, body) ->
         let x = Neu (Var (Env.next_level size)) in
         let param_ty = quote size (Lazy.force param_ty) in
         let body = quote (Env.bind_level size) (body x) in
-        Syntax.FunLit (name, param_ty, body)
+        Syntax.Fun_lit (name, param_ty, body)
   and quote_neu size : neu -> Syntax.tm = function
     | Var level -> Syntax.Var (Env.level_to_index size level)
-    | FunApp (neu, arg) -> Syntax.FunApp (quote_neu size neu, quote size (Lazy.force arg))
+    | Fun_app (neu, arg) -> Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
 
 
   (** {1 Normalisation} *)
@@ -152,22 +152,22 @@ module Semantics = struct
   let rec is_convertible size : vty * vty -> bool = function
     | Neu neu1, Neu neu2 -> is_convertible_neu size (neu1, neu2)
     | Univ l1, Univ l2 -> l1 = l2
-    | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
+    | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
         let x = Neu (Var (Env.next_level size)) in
         is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
           && is_convertible (Env.bind_level size) (body_ty1 x, body_ty2 x)
-    | FunLit (_, param_ty1, body1), FunLit (_, param_ty2, body2) ->
+    | Fun_lit (_, param_ty1, body1), Fun_lit (_, param_ty2, body2) ->
         let x = Neu (Var (Env.next_level size)) in
         is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
           && is_convertible (Env.bind_level size) (body1 x, body2 x)
     (* Eta for functions *)
-    | FunLit (_, _, body), fun_tm | fun_tm, FunLit (_, _, body)  ->
+    | Fun_lit (_, _, body), fun_tm | fun_tm, Fun_lit (_, _, body)  ->
         let x = Neu (Var (Env.next_level size)) in
         is_convertible size (body x, app fun_tm x)
     | _, _ -> false
   and is_convertible_neu size : neu * neu -> bool = function
     | Var level1, Var level2 -> level1 = level2
-    | FunApp (neu1, arg1), FunApp (neu2, arg2)  ->
+    | Fun_app (neu1, arg1), Fun_app (neu2, arg2)  ->
         is_convertible_neu size (neu1, neu2)
           && is_convertible size (Lazy.force arg1, Lazy.force arg2)
     | _, _ -> false
@@ -234,12 +234,12 @@ module Validation = struct
     (* There’s no type large enough to contain large universes in the core
        language, so raise an error here *)
     | Univ L1 -> failwith "cannot synthesize the type of large universes"
-    | FunType (_, param_ty, body_ty) ->
+    | Fun_type (_, param_ty, body_ty) ->
         let l1 = is_ty ctx param_ty in
         let param_ty' = Semantics.eval ctx.tms param_ty in
         let l2 = is_ty (ctx |> Context.assume param_ty') body_ty in
         Univ (Level.max l1 l2)
-    | FunLit (name, param_ty, body) ->
+    | Fun_lit (name, param_ty, body) ->
         let _ = is_ty ctx param_ty in
         let param_ty' = Semantics.eval ctx.tms param_ty in
         let body_ty =
@@ -247,11 +247,11 @@ module Validation = struct
           let body_ty = synth ctx body in
           Semantics.quote ctx.size body_ty
         in
-        Semantics.eval ctx.tms (Syntax.FunType (name, param_ty, body_ty))
+        Semantics.eval ctx.tms (Syntax.Fun_type (name, param_ty, body_ty))
     (* Elimination rule for functions *)
-    | FunApp (head, arg) ->
+    | Fun_app (head, arg) ->
         match synth ctx head with
-        | FunType (_, param_ty, body_ty) ->
+        | Fun_type (_, param_ty, body_ty) ->
             check ctx arg (Lazy.force param_ty);
             body_ty (Semantics.eval ctx.tms arg)
         | _ -> raise (Error "expected a function type")

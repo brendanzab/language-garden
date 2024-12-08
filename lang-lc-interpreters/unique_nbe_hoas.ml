@@ -11,8 +11,8 @@ module Id = Unique.Id
 type expr = Unique.expr =
   | Var of Id.t
   | Let of string * Id.t * expr * expr
-  | FunLit of string * Id.t * expr
-  | FunApp of expr * expr
+  | Fun_lit of string * Id.t * expr
+  | Fun_app of expr * expr
 
 (** {2 Conversions} *)
 
@@ -34,10 +34,10 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
 
 type value =
   | Neu of neu
-  | FunLit of string * (value -> value)
+  | Fun_lit of string * (value -> value)
 and neu =
   | Var of Id.t
-  | FunApp of neu * value
+  | Fun_app of neu * value
 
 and clos = Id.t * env * expr
 
@@ -49,11 +49,11 @@ let rec eval (vs : env) (e : expr) : value =
   match e with
   | Var x -> Id.Map.find x vs
   | Let (_, i, def, body) -> eval (Id.Map.add i (eval vs def) vs) body
-  | FunLit (x, i, body) -> FunLit (x, fun v -> eval (Id.Map.add i v vs) body)
-  | FunApp (head, arg) -> begin
+  | Fun_lit (x, i, body) -> Fun_lit (x, fun v -> eval (Id.Map.add i v vs) body)
+  | Fun_app (head, arg) -> begin
       match eval vs head with
-      | FunLit (_, cl) -> cl (eval vs arg)
-      | Neu nv -> Neu (FunApp (nv, eval vs arg))
+      | Fun_lit (_, cl) -> cl (eval vs arg)
+      | Neu nv -> Neu (Fun_app (nv, eval vs arg))
   end
 
 (** {2 Quotation} *)
@@ -61,13 +61,13 @@ let rec eval (vs : env) (e : expr) : value =
 let rec quote (v : value) : expr =
   match v with
   | Neu nv -> quote_neu nv
-  | FunLit (x, cl) ->
+  | Fun_lit (x, cl) ->
       let i = Id.fresh () in
-      FunLit (x, i, quote (cl (Neu (Var i))))
+      Fun_lit (x, i, quote (cl (Neu (Var i))))
 and quote_neu (nv : neu) : expr =
   match nv with
   | Var x -> Var x
-  | FunApp (head, arg) -> FunApp (quote_neu head, quote arg)
+  | Fun_app (head, arg) -> Fun_app (quote_neu head, quote arg)
 
 (** {2 Normalisation-by-evaluation} *)
 

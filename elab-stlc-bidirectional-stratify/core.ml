@@ -37,20 +37,20 @@ type 'a env = 'a list
 
 (** Type syntax *)
 type ty =
-  | FunType of ty * ty
-  | IntType
-  | BoolType
+  | Fun_type of ty * ty
+  | Int_type
+  | Bool_type
 
 (** Term syntax *)
 type expr =
   | Var of index
   | Let of name * ty * expr * expr
-  | FunLit of name * ty * expr
-  | FunApp of expr * expr
-  | IntLit of int
-  | BoolLit of bool
-  | BoolElim of expr * expr * expr
-  | PrimApp of Prim.t * expr list
+  | Fun_lit of name * ty * expr
+  | Fun_app of expr * expr
+  | Int_lit of int
+  | Bool_lit of bool
+  | Bool_elim of expr * expr * expr
+  | Prim_app of Prim.t * expr list
 
 
 module Semantics = struct
@@ -60,9 +60,9 @@ module Semantics = struct
   (** Expressions in weak head normal form (i.e. values) *)
   type vexpr =
     | Neu of nexpr
-    | FunLit of name * ty * (vexpr -> vexpr)
-    | IntLit of int
-    | BoolLit of bool
+    | Fun_lit of name * ty * (vexpr -> vexpr)
+    | Int_lit of int
+    | Bool_lit of bool
 
   (** Neutral values that could not be reduced to a normal form as a result of
       being stuck on something else that would not reduce further.
@@ -73,38 +73,38 @@ module Semantics = struct
   *)
   and nexpr =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
-    | FunApp of nexpr * vexpr
-    | BoolElim of nexpr * vexpr Lazy.t * vexpr Lazy.t
-    | PrimApp of Prim.t * vexpr list
+    | Fun_app of nexpr * vexpr
+    | Bool_elim of nexpr * vexpr Lazy.t * vexpr Lazy.t
+    | Prim_app of Prim.t * vexpr list
 
 
   (** {1 Eliminators} *)
 
   let fun_app head arg =
     match head with
-    | Neu nexpr -> Neu (FunApp (nexpr, arg))
-    | FunLit (_, _, body) -> body arg
+    | Neu nexpr -> Neu (Fun_app (nexpr, arg))
+    | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
   let bool_elim head vexpr0 vexpr1 =
     match head with
-    | Neu nexpr -> Neu (BoolElim (nexpr, vexpr0, vexpr1))
-    | BoolLit true -> Lazy.force vexpr0
-    | BoolLit false -> Lazy.force vexpr1
+    | Neu nexpr -> Neu (Bool_elim (nexpr, vexpr0, vexpr1))
+    | Bool_lit true -> Lazy.force vexpr0
+    | Bool_lit false -> Lazy.force vexpr1
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vexpr list -> vexpr =
     let guard f args =
       try f args with
-      | Match_failure _ -> Neu (PrimApp (prim, args))
+      | Match_failure _ -> Neu (Prim_app (prim, args))
     in
     match prim with
-    | BoolEq -> guard @@ fun[@warning "-partial-match"] [BoolLit e1; BoolLit e2] -> BoolLit (e1 = e2)
-    | IntEq -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> BoolLit (e1 = e2)
-    | IntAdd -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> IntLit (e1 + e2)
-    | IntSub -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> IntLit (e1 - e2)
-    | IntMul -> guard @@ fun[@warning "-partial-match"] [IntLit e1; IntLit e2] -> IntLit (e1 * e2)
-    | IntNeg -> guard @@ fun[@warning "-partial-match"] [IntLit e1] -> IntLit (-e1)
+    | Bool_eq -> guard @@ fun[@warning "-partial-match"] [Bool_lit e1; Bool_lit e2] -> Bool_lit (e1 = e2)
+    | Int_eq -> guard @@ fun[@warning "-partial-match"] [Int_lit e1; Int_lit e2] -> Bool_lit (e1 = e2)
+    | Int_add -> guard @@ fun[@warning "-partial-match"] [Int_lit e1; Int_lit e2] -> Int_lit (e1 + e2)
+    | Int_sub -> guard @@ fun[@warning "-partial-match"] [Int_lit e1; Int_lit e2] -> Int_lit (e1 - e2)
+    | Int_mul -> guard @@ fun[@warning "-partial-match"] [Int_lit e1; Int_lit e2] -> Int_lit (e1 * e2)
+    | Int_neg -> guard @@ fun[@warning "-partial-match"] [Int_lit e1] -> Int_lit (-e1)
 
 
   (** {1 Evaluation} *)
@@ -116,20 +116,20 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
-    | FunLit (name, param_ty, body) ->
-        FunLit (name, param_ty, fun arg -> eval (arg :: env) body)
-    | FunApp (head, arg) ->
+    | Fun_lit (name, param_ty, body) ->
+        Fun_lit (name, param_ty, fun arg -> eval (arg :: env) body)
+    | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
         fun_app head arg
-    | IntLit i -> IntLit i
-    | BoolLit b -> BoolLit b
-    | BoolElim (head, e0, e1) ->
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
+    | Bool_elim (head, e0, e1) ->
         let head = eval env head in
         let ve0 = Lazy.from_fun (fun () -> eval env e0) in
         let ve1 = Lazy.from_fun (fun () -> eval env e1) in
         bool_elim head ve0 ve1
-    | PrimApp (prim, args) ->
+    | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
 
 
@@ -139,24 +139,24 @@ module Semantics = struct
   let rec quote (size : int) (ve : vexpr) : expr =
     match ve with
     | Neu ne -> quote_neu size ne
-    | FunLit (name, param_ty, body) ->
+    | Fun_lit (name, param_ty, body) ->
         let body = quote (size + 1) (body (Neu (Var size))) in
-        FunLit (name, param_ty, body)
-    | IntLit i -> IntLit i
-    | BoolLit b -> BoolLit b
+        Fun_lit (name, param_ty, body)
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
 
   and quote_neu (size : int) (ne : nexpr) : expr =
     match ne with
     | Var level ->
         Var (level_to_index size level)
-    | FunApp (head, arg) ->
-        FunApp (quote_neu size head, quote size arg)
-    | BoolElim (head, vexpr0, vexpr1) ->
+    | Fun_app (head, arg) ->
+        Fun_app (quote_neu size head, quote size arg)
+    | Bool_elim (head, vexpr0, vexpr1) ->
         let e0 = quote size (Lazy.force vexpr0) in
         let e1 = quote size (Lazy.force vexpr1) in
-        BoolElim (quote_neu size head, e0, e1)
-    | PrimApp (prim, args) ->
-        PrimApp (prim, List.map (quote size) args)
+        Bool_elim (quote_neu size head, e0, e1)
+    | Prim_app (prim, args) ->
+        Prim_app (prim, List.map (quote size) args)
 
   (** {1 Normalisation} *)
 
@@ -172,7 +172,7 @@ end
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
-  | FunType (param_ty, body_ty) ->
+  | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
@@ -180,8 +180,8 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty fmt ty
 and pp_atomic_ty fmt ty =
   match ty with
-  | IntType -> Format.fprintf fmt "Int"
-  | BoolType -> Format.fprintf fmt "Bool"
+  | Int_type -> Format.fprintf fmt "Int"
+  | Bool_type -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
 let pp_name_ann fmt (name, ty) =
@@ -203,10 +203,10 @@ let rec pp_expr (names : name env) (fmt : Format.formatter) (e : expr) : unit =
         | e -> Format.fprintf fmt "@[%a@]" (pp_expr names) e
       in
       Format.fprintf fmt "@[<v>%a@]" (go names) e
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       let rec go names fmt e =
         match e with
-        | FunLit (name, param_ty, body) ->
+        | Fun_lit (name, param_ty, body) ->
             Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
               pp_param (name, param_ty)
               (go (name :: names)) body
@@ -215,7 +215,7 @@ let rec pp_expr (names : name env) (fmt : Format.formatter) (e : expr) : unit =
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
         pp_param (name, param_ty)
         (go (name :: names)) body
-  | BoolElim (head, e0, e1) ->
+  | Bool_elim (head, e0, e1) ->
       Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_app_expr names) head
         (pp_app_expr names) e0
@@ -224,11 +224,11 @@ let rec pp_expr (names : name env) (fmt : Format.formatter) (e : expr) : unit =
       pp_app_expr names fmt e
 and pp_app_expr names fmt e =
   match e with
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         (pp_app_expr names) head
         (pp_atomic_expr names) arg
-  | PrimApp (prim, args) ->
+  | Prim_app (prim, args) ->
       let pp_sep fmt () = Format.fprintf fmt "@ " in
       Format.fprintf fmt "@[#%s@ -%a@]"
         (Prim.name prim)
@@ -238,7 +238,7 @@ and pp_app_expr names fmt e =
 and pp_atomic_expr names fmt e =
   match e with
   | Var index -> Format.fprintf fmt "%s" (List.nth names index)
-  | IntLit i -> Format.fprintf fmt "%i" i
-  | BoolLit true -> Format.fprintf fmt "true"
-  | BoolLit false -> Format.fprintf fmt "false"
+  | Int_lit i -> Format.fprintf fmt "%i" i
+  | Bool_lit true -> Format.fprintf fmt "true"
+  | Bool_lit false -> Format.fprintf fmt "false"
   | e -> Format.fprintf fmt "@[(%a)@]" (pp_expr names) e

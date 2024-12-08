@@ -98,9 +98,9 @@ module Syntax = struct
     | Ann of tm * ty              (** Terms annotated with types *)
     | Var of index                (** Variables *)
     | Univ                        (** Universe (i.e. the type of types) *)
-    | FunType of name * ty * ty   (** Dependent function types *)
-    | FunLit of name * tm         (** Function literals (i.e. lambda expressions) *)
-    | FunApp of tm * tm           (** Function application *)
+    | Fun_type of name * ty * ty  (** Dependent function types *)
+    | Fun_lit of name * tm        (** Function literals (i.e. lambda expressions) *)
+    | Fun_app of tm * tm          (** Function application *)
 
   (** Currently our type theory only support one {i connective}: function
       types, along with some structural features like variables and let
@@ -125,20 +125,20 @@ module Syntax = struct
     | Ann (tm, ty) -> is_bound var tm || is_bound var ty
     | Var index -> index = var
     | Univ -> false
-    | FunType (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
-    | FunLit (_, body) -> is_bound (var + 1) body
-    | FunApp (head, arg) -> is_bound var head || is_bound var arg
+    | Fun_type (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
+    | Fun_lit (_, body) -> is_bound (var + 1) body
+    | Fun_app (head, arg) -> is_bound var head || is_bound var arg
 
   let rec fun_lits : tm -> name list * ty =
     function
-    | FunLit (name, body) ->
+    | Fun_lit (name, body) ->
         let names, body = fun_lits body
         in name :: names, body
     | body -> [], body
 
   let fun_apps (tm : tm) : ty * ty list =
     let rec go args = function
-      | FunApp (head, arg) -> go (arg :: args) head
+      | Fun_app (head, arg) -> go (arg :: args) head
       | head -> head, args
     in
     go [] tm
@@ -178,17 +178,17 @@ module Syntax = struct
           Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
             (pp_app_tm names) tm
             (pp_tm names) ty
-      | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
+      | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
           Format.fprintf fmt "@[%a@ ->@]@ %a"
             (pp_app_tm names) param_ty
             (pp_tm (None :: names)) body_ty
-      | FunType (_, _, _) as tm ->
+      | Fun_type (_, _, _) as tm ->
           let rec go names fmt = function
-            | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
+            | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
                 Format.fprintf fmt "@[%a@ ->@]@ %a"
                   (pp_tm names) param_ty
                   (pp_tm (None :: names)) body_ty
-            | FunType (name, param_ty, body_ty) ->
+            | Fun_type (name, param_ty, body_ty) ->
                 Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]@ %a"
                   pp_name name
                   (pp_tm names) param_ty
@@ -198,7 +198,7 @@ module Syntax = struct
                   (pp_tm names) body_ty
           in
           Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
-      | FunLit (_, _) as tm ->
+      | Fun_lit (_, _) as tm ->
           let params, body = fun_lits tm in
           Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
             (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
@@ -207,7 +207,7 @@ module Syntax = struct
           pp_app_tm names fmt tm
 
     and pp_app_tm names fmt = function
-      | FunApp (_, _) as tm ->
+      | Fun_app (_, _) as tm ->
           let head, args = fun_apps tm in
           Format.fprintf fmt "@[<2>%a@ %a@]"
             (pp_atomic_tm names) head
@@ -263,8 +263,8 @@ module Semantics = struct
   and vtm =
     | Neu of neu                            (** Neutral terms *)
     | Univ
-    | FunType of name * vty Lazy.t * (vtm -> vty)
-    | FunLit of name * (vtm -> vtm)
+    | Fun_type of name * vty Lazy.t * (vtm -> vty)
+    | Fun_lit of name * (vtm -> vtm)
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
       result of being stuck on something else that would not reduce further.
@@ -272,7 +272,7 @@ module Semantics = struct
       ambivalent about what they might compute to? *)
   and neu =
     | Var of level                (** Variable that could not be reduced further *)
-    | FunApp of neu * vtm Lazy.t  (** Function application *)
+    | Fun_app of neu * vtm Lazy.t  (** Function application *)
 
 
   (** {1 Exceptions} *)
@@ -291,8 +291,8 @@ module Semantics = struct
   (** Compute a function application *)
   let app (head : vtm) (arg : vtm) : vtm =
     match head with
-    | Neu neu -> Neu (FunApp (neu, Lazy.from_val arg))
-    | FunLit (_, body) -> body arg
+    | Neu neu -> Neu (Fun_app (neu, Lazy.from_val arg))
+    | Fun_lit (_, body) -> body arg
     | _ -> raise (Error "invalid application")
 
 
@@ -305,12 +305,12 @@ module Semantics = struct
     | Syntax.Ann (tm, _) -> eval env tm
     | Syntax.Var index -> List.nth env index
     | Syntax.Univ ->  Univ
-    | Syntax.FunType (name, param_ty, body_ty) ->
+    | Syntax.Fun_type (name, param_ty, body_ty) ->
         let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
         let body_ty = fun x -> eval (x :: env) body_ty in
-        FunType (name, param_ty, body_ty)
-    | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: env) body)
-    | Syntax.FunApp (head, arg) -> app (eval env head) (eval env arg)
+        Fun_type (name, param_ty, body_ty)
+    | Syntax.Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
+    | Syntax.Fun_app (head, arg) -> app (eval env head) (eval env arg)
 
 
   (** {1 Quotation} *)
@@ -328,16 +328,16 @@ module Semantics = struct
     function
     | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
-    | FunType (name, param_ty, body_ty) ->
+    | Fun_type (name, param_ty, body_ty) ->
         let x = Neu (Var size) in
-        Syntax.FunType (name, quote size (Lazy.force param_ty), quote (size + 1) (body_ty x))
-    | FunLit (name, body) ->
+        Syntax.Fun_type (name, quote size (Lazy.force param_ty), quote (size + 1) (body_ty x))
+    | Fun_lit (name, body) ->
         let x = Neu (Var size) in
-        Syntax.FunLit (name, quote (size + 1) (body x))
+        Syntax.Fun_lit (name, quote (size + 1) (body x))
   and quote_neu (size : int) : neu -> Syntax.tm =
     function
     | Var level -> Syntax.Var (level_to_index size level)
-    | FunApp (neu, arg) -> Syntax.FunApp (quote_neu size neu, quote size (Lazy.force arg))
+    | Fun_app (neu, arg) -> Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
 
 
   (** {1 Normalisation} *)
@@ -356,22 +356,22 @@ module Semantics = struct
     function
     | Neu neu1, Neu neu2 -> is_convertible_neu size (neu1, neu2)
     | Univ, Univ -> true
-    | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
+    | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
         let x = Neu (Var size) in
         is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
           && is_convertible (size + 1) (body_ty1 x, body_ty2 x)
-    | FunLit (_, body1), FunLit (_, body2) ->
+    | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Neu (Var size) in
         is_convertible (size + 1) (body1 x, body2 x)
     (* Eta for functions *)
-    | FunLit (_, body), fun_tm | fun_tm, FunLit (_, body)  ->
+    | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
         let x = Neu (Var size) in
         is_convertible size (body x, app fun_tm x)
     | _, _ -> false
   and is_convertible_neu (size : int) : neu * neu -> bool =
     function
     | Var level1, Var level2 -> level1 = level2
-    | FunApp (neu1, arg1), FunApp (neu2, arg2)  ->
+    | Fun_app (neu1, arg1), Fun_app (neu2, arg2)  ->
         is_convertible_neu size (neu1, neu2)
           && is_convertible size (Lazy.force arg1, Lazy.force arg2)
     | _, _ -> false

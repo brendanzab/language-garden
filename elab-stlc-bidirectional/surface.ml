@@ -23,7 +23,7 @@ type ty =
 
 and ty_data =
   | Name of string
-  | FunType of ty * ty
+  | Fun_type of ty * ty
 
 (** Names that bind definitions or parameters *)
 type binder = string located
@@ -36,11 +36,11 @@ and tm_data =
   | Name of string
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
-  | FunLit of param list * tm
-  | BoolLit of bool
-  | IntLit of int
+  | Fun_lit of param list * tm
+  | Bool_lit of bool
+  | Int_lit of int
   | App of tm * tm
-  | IfThenElse of tm * tm * tm
+  | If_then_else of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
@@ -105,12 +105,12 @@ let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
 (** Elaborate a type, checking that it is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
   match ty.data with
-  | Name "Bool" -> BoolType
-  | Name "Int" -> IntType
+  | Name "Bool" -> Bool_type
+  | Name "Int" -> Int_type
   | Name name ->
       error ty.loc (Format.asprintf "unbound type `%s`" name)
-  | FunType (ty1, ty2) ->
-      FunType (elab_ty ty1, elab_ty ty2)
+  | Fun_type (ty1, ty2) ->
+      Fun_type (elab_ty ty1, elab_ty ty2)
 
 (** Elaborate a surface term into a core term, given an expected type. *)
 let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
@@ -120,14 +120,14 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let body = elab_check ((def_name.data, def_ty) :: ctx) body ty in
       Let (def_name.data, def_ty, def, body)
 
-  | FunLit (params, body) ->
+  | Fun_lit (params, body) ->
       elab_check_fun_lit ctx params body ty
 
-  | IfThenElse (head, tm0, tm1) ->
-      let head = elab_check ctx head BoolType in
+  | If_then_else (head, tm0, tm1) ->
+      let head = elab_check ctx head Bool_type in
       let tm0 = elab_check ctx tm0 ty in
       let tm1 = elab_check ctx tm1 ty in
-      BoolElim (head, tm0, tm1)
+      Bool_elim (head, tm0, tm1)
 
   (* Fall back to type inference *)
   | _ ->
@@ -153,13 +153,13 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let ty = elab_ty ty in
       elab_check ctx tm ty, ty
 
-  | BoolLit b ->
-      BoolLit b, BoolType
+  | Bool_lit b ->
+      Bool_lit b, Bool_type
 
-  | IntLit i ->
-      IntLit i, IntType
+  | Int_lit i ->
+      Int_lit i, Int_type
 
-  | FunLit (params, body) ->
+  | Fun_lit (params, body) ->
       elab_infer_fun_lit ctx params None body
 
   | App (head, arg) ->
@@ -167,16 +167,16 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let head, head_ty = elab_infer ctx head in
       let param_ty, body_ty =
         match head_ty with
-        | FunType (param_ty, body_ty) -> param_ty, body_ty
+        | Fun_type (param_ty, body_ty) -> param_ty, body_ty
         | head_ty ->
             error head_loc
               (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %a@]@]"
                 Core.pp_ty head_ty)
       in
       let arg = elab_check ctx arg param_ty in
-      FunApp (head, arg), body_ty
+      Fun_app (head, arg), body_ty
 
-  | IfThenElse (_, _, _) ->
+  | If_then_else (_, _, _) ->
       error tm.loc "ambiguous if expression"
 
   | Op2 (`Eq, tm0, tm1) ->
@@ -184,40 +184,40 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let tm1, ty1 = elab_infer ctx tm1 in
       equate_ty tm.loc ty0 ty1;
       begin match ty0 with
-      | BoolType -> PrimApp (BoolEq, [tm0; tm1]), BoolType
-      | IntType -> PrimApp (IntEq, [tm0; tm1]), BoolType
+      | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
+      | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
       | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
       end
 
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
       let prim =
         match prim with
-        | `Add -> Prim.IntAdd
-        | `Sub -> Prim.IntSub
-        | `Mul -> Prim.IntMul
+        | `Add -> Prim.Int_add
+        | `Sub -> Prim.Int_sub
+        | `Mul -> Prim.Int_mul
       in
-      let tm0 = elab_check ctx tm0 IntType in
-      let tm1 = elab_check ctx tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), IntType
+      let tm0 = elab_check ctx tm0 Int_type in
+      let tm1 = elab_check ctx tm1 Int_type in
+      Prim_app (prim, [tm0; tm1]), Int_type
 
   | Op1 (`Neg, tm) ->
-      let tm = elab_check ctx tm IntType in
-      PrimApp (IntNeg, [tm]), IntType
+      let tm = elab_check ctx tm Int_type in
+      Prim_app (Int_neg, [tm]), Int_type
 
 (** Elaborate a function literal into a core term, given an expected type. *)
 and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
   match params, ty with
   | [], ty ->
       elab_check ctx body ty
-  | (name, None) :: params, FunType (param_ty, body_ty) ->
+  | (name, None) :: params, Fun_type (param_ty, body_ty) ->
       let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
-  | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
+      Fun_lit (name.data, param_ty, body)
+  | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
       let param_ty_loc = param_ty.loc in
       let param_ty = elab_ty param_ty in
       equate_ty param_ty_loc param_ty param_ty';
       let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
+      Fun_lit (name.data, param_ty, body)
   | (name, _) :: _, _ ->
       error name.loc "unexpected parameter"
 
@@ -234,4 +234,4 @@ and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty optio
   | (name, Some param_ty) :: params, body_ty ->
       let param_ty = elab_ty param_ty in
       let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
-      FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+      Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)

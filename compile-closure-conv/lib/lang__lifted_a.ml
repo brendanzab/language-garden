@@ -14,10 +14,10 @@ module Local_var_map = Map.Make (Local_var)
 (** {1 Syntax} *)
 
 type ty =
-  | BoolType                        (** [ Bool ] *)
-  | IntType                         (** [ Int ] *)
-  | TupleType of ty list            (** [ (t1, ... tn) ] *)
-  | ClosType of ty * ty             (** [ t1 -> t2 ] *)
+  | Bool_type                       (** [ Bool ] *)
+  | Int_type                        (** [ Int ] *)
+  | Tuple_type of ty list           (** [ (t1, ... tn) ] *)
+  | Clos_type of ty * ty            (** [ t1 -> t2 ] *)
 
 type code_ty = {
   env_ty : ty;
@@ -28,16 +28,16 @@ type code_ty = {
 type global_tys = (Global_var.t * code_ty) list
 
 type tm =
-  | LocalVar of Local_var.t
+  | Local_var of Local_var.t
   | Let of Local_var.t * ty * tm * tm
-  | BoolLit of bool
-  | IntLit of int
-  | PrimApp of Prim.t * tm list
-  | CodeApp of Global_var.t * tm * tm
-  | TupleLit of tm list
-  | TupleProj of tm * int
-  | ClosLit of Global_var.t * tm
-  | ClosApp of tm * tm
+  | Bool_lit of bool
+  | Int_lit of int
+  | Prim_app of Prim.t * tm list
+  | Code_app of Global_var.t * tm * tm
+  | Tuple_lit of tm list
+  | Tuple_proj of tm * int
+  | Clos_lit of Global_var.t * tm
+  | Clos_app of tm * tm
 
 and code = {
   env : Local_var.t * ty;
@@ -67,7 +67,7 @@ let pp_tuple_elems (type a) (pp_elem : Format.formatter -> a -> unit) (fmt : For
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | ClosType (param_ty, body_ty) ->
+  | Clos_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
@@ -75,9 +75,9 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) =
       pp_atomic_ty fmt ty
 and pp_atomic_ty (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | BoolType -> Format.fprintf fmt "Bool"
-  | IntType -> Format.fprintf fmt "Int"
-  | TupleType tys ->
+  | Bool_type -> Format.fprintf fmt "Bool"
+  | Int_type -> Format.fprintf fmt "Int"
+  | Tuple_type tys ->
       Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems pp_ty) tys
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
@@ -119,16 +119,16 @@ let rec pp_tm (fmt : Format.formatter) (tm : tm) =
       pp_app_tm fmt tm
 and pp_app_tm (fmt : Format.formatter) (tm : tm) =
   match tm with
-  | PrimApp (head, args) ->
+  | Prim_app (head, args) ->
       Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.to_string head)
         (Format.pp_print_list pp_proj_tm ~pp_sep:Format.pp_print_space) args
-  | CodeApp (code, env, arg) ->
+  | Code_app (code, env, arg) ->
       Format.fprintf fmt "@[%a@ %a@ %a@]"
         pp_global_var code
         pp_proj_tm env
         pp_proj_tm arg
-  | ClosApp (head, arg) ->
+  | Clos_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         pp_app_tm head
         pp_proj_tm arg
@@ -136,7 +136,7 @@ and pp_app_tm (fmt : Format.formatter) (tm : tm) =
       pp_proj_tm fmt tm
 and pp_proj_tm (fmt : Format.formatter) (tm : tm) =
   match tm with
-  | TupleProj (head, label) ->
+  | Tuple_proj (head, label) ->
       Format.fprintf fmt "@[%a.%i@]"
         pp_proj_tm head
         label
@@ -144,15 +144,15 @@ and pp_proj_tm (fmt : Format.formatter) (tm : tm) =
       pp_atomic_tm fmt tm
 and pp_atomic_tm (fmt : Format.formatter) (tm : tm) =
   match tm with
-  | LocalVar var -> pp_local_var fmt var
-  | BoolLit true -> Format.fprintf fmt "true"
-  | BoolLit false -> Format.fprintf fmt "false"
-  | IntLit i -> Format.fprintf fmt "%i" i
-  | ClosLit (code, env) ->
+  | Local_var var -> pp_local_var fmt var
+  | Bool_lit true -> Format.fprintf fmt "true"
+  | Bool_lit false -> Format.fprintf fmt "false"
+  | Int_lit i -> Format.fprintf fmt "%i" i
+  | Clos_lit (code, env) ->
       Format.fprintf fmt "@[<hv>clos(@;<0 2>%a,@;<1 2>%a@;<0 0>)@]"
         pp_global_var code
         pp_tm env
-  | TupleLit tms ->
+  | Tuple_lit tms ->
       Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems pp_tm) tms
   | tm -> Format.fprintf fmt "@[(%a)@]" pp_tm tm
 
@@ -178,36 +178,36 @@ module Semantics = struct
   (** {1 Values} *)
 
   type vtm =
-    | BoolLit of bool
-    | IntLit of int
-    | TupleLit of vtm list
-    | ClosLit of Global_var.t * vtm
+    | Bool_lit of bool
+    | Int_lit of int
+    | Tuple_lit of vtm list
+    | Clos_lit of Global_var.t * vtm
 
 
   (** {1 Evaluation} *)
 
   let rec eval globals locals : tm -> vtm =
     function
-    | LocalVar var -> Local_var_map.find var locals
+    | Local_var var -> Local_var_map.find var locals
     | Let (def_var, _, def, body) ->
         let def = eval globals locals def in
         eval globals (Local_var_map.add def_var def locals) body
-    | BoolLit b -> BoolLit b
-    | IntLit i -> IntLit i
-    | PrimApp (prim, args) ->
+    | Bool_lit b -> Bool_lit b
+    | Int_lit i -> Int_lit i
+    | Prim_app (prim, args) ->
         prim_app prim (List.map (eval globals locals) args)
-    | CodeApp (head, env, arg) ->
+    | Code_app (head, env, arg) ->
         let env = eval globals locals env in
         let arg = eval globals locals arg in
         code_app globals head env arg
-    | TupleLit tms ->
-        TupleLit (List.map (eval globals locals) tms)
-    | TupleProj (head, label) ->
+    | Tuple_lit tms ->
+        Tuple_lit (List.map (eval globals locals) tms)
+    | Tuple_proj (head, label) ->
         let head = eval globals locals head in
         tuple_proj head label
-    | ClosLit (code, env') ->
-        ClosLit (code, eval globals locals env')
-    | ClosApp (head, arg) ->
+    | Clos_lit (code, env') ->
+        Clos_lit (code, eval globals locals env')
+    | Clos_app (head, arg) ->
         let head = eval globals locals head in
         let arg = eval globals locals arg in
         clos_app globals head arg
@@ -220,10 +220,10 @@ module Semantics = struct
 
   and prim_app prim args =
     match prim, args with
-    | `Neg, [IntLit t1] -> IntLit (-t1)
-    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | `Neg, [Int_lit t1] -> Int_lit (-t1)
+    | `Add, [Int_lit t1; Int_lit t2] -> Int_lit (t1 + t2)
+    | `Sub, [Int_lit t1; Int_lit t2] -> Int_lit (t1 - t2)
+    | `Mul, [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
     | _, _ -> invalid_arg "invalid prim application"
 
   and code_app globals head env arg =
@@ -237,12 +237,12 @@ module Semantics = struct
 
   and tuple_proj head label =
     match head with
-    | TupleLit vtms -> List.nth vtms label
+    | Tuple_lit vtms -> List.nth vtms label
     | _ -> invalid_arg "expected tuple"
 
   and clos_app globals head arg =
     match head with
-    | ClosLit (code, env) ->
+    | Clos_lit (code, env) ->
         code_app globals code env arg
     | _ -> invalid_arg "expected closure"
 
@@ -263,7 +263,7 @@ module Validation = struct
 
   and synth globals locals (tm : tm) : ty =
     match tm with
-    | LocalVar var ->
+    | Local_var var ->
         begin match Local_var_map.find_opt var locals with
         | Some ty -> ty
         | None -> invalid_arg "unbound variable"
@@ -271,27 +271,27 @@ module Validation = struct
     | Let (def_var, _, def, body) ->
         let def_ty = synth globals locals def in
         synth globals (Local_var_map.add def_var def_ty locals) body
-    | BoolLit _ -> BoolType
-    | IntLit _ -> IntType
-    | PrimApp (`Neg, [t]) ->
-        check globals locals t IntType;
-        IntType
-    | PrimApp ((`Add | `Sub | `Mul), [t1; t2]) ->
-        check globals locals t1 IntType;
-        check globals locals t2 IntType;
-        IntType
-    | PrimApp _ ->
+    | Bool_lit _ -> Bool_type
+    | Int_lit _ -> Int_type
+    | Prim_app (`Neg, [t]) ->
+        check globals locals t Int_type;
+        Int_type
+    | Prim_app ((`Add | `Sub | `Mul), [t1; t2]) ->
+        check globals locals t1 Int_type;
+        check globals locals t2 Int_type;
+        Int_type
+    | Prim_app _ ->
         invalid_arg "invalid prim application"
-    | CodeApp (code, env, arg) ->
+    | Code_app (code, env, arg) ->
         let code_ty = List.assoc code globals in
         check globals locals env code_ty.env_ty;
         check globals locals arg code_ty.param_ty;
         code_ty.body_ty
-    | TupleLit tms ->
-        TupleType (List.map (synth globals locals) tms)
-    | TupleProj (head, label) ->
+    | Tuple_lit tms ->
+        Tuple_type (List.map (synth globals locals) tms)
+    | Tuple_proj (head, label) ->
         begin match synth globals locals head with
-        | TupleType tys ->
+        | Tuple_type tys ->
             begin match List.nth_opt tys label with
             | Some ty -> ty
             | None ->
@@ -303,13 +303,13 @@ module Validation = struct
             invalid_arg
               (Format.asprintf "expected tuple but found term of type %a" pp_ty ty)
         end
-    | ClosLit (code, env) ->
+    | Clos_lit (code, env) ->
         let code_ty = List.assoc code globals in
         check globals locals env code_ty.env_ty;
-        ClosType (code_ty.param_ty, code_ty.body_ty)
-    | ClosApp (head, arg) ->
+        Clos_type (code_ty.param_ty, code_ty.body_ty)
+    | Clos_app (head, arg) ->
         begin match synth globals locals head with
-        | ClosType (param_ty, body_ty) ->
+        | Clos_type (param_ty, body_ty) ->
             check globals locals arg param_ty;
             body_ty
         | ty ->

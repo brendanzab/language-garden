@@ -39,8 +39,8 @@ let gen_name : string QCheck.Gen.t =
 (** Type generation *)
 let gen_ty : Tree_lang.ty QCheck.Gen.t =
   QCheck.Gen.oneofl [
-    Tree_lang.TyInt;
-    Tree_lang.TyBool;
+    Tree_lang.Ty_int;
+    Tree_lang.Ty_bool;
   ]
 
 (** Random term generator (well-scoped, but probably ill-typed) *)
@@ -138,8 +138,8 @@ let gen_expr gen_ty : Tree_lang.expr QCheck.Gen.t =
   let open QCheck.Gen in
 
   let gen_lit = function
-    | Tree_lang.TyInt -> map Tree_lang.int big_nat
-    | Tree_lang.TyBool -> map Tree_lang.bool bool
+    | Tree_lang.Ty_int -> map Tree_lang.int big_nat
+    | Tree_lang.Ty_bool -> map Tree_lang.bool bool
   in
   let gen_let self (env, ty, n) =
     let* def_name = gen_name in
@@ -150,7 +150,7 @@ let gen_expr gen_ty : Tree_lang.expr QCheck.Gen.t =
   in
   let gen_if self (env, ty, n) =
     Tree_lang.if_then_else
-      <$> (self (env, Tree_lang.TyBool, n/2))
+      <$> (self (env, Tree_lang.Ty_bool, n/2))
       <*> (self (env, ty, n/2))
       <*> (self (env, ty, n/2))
   in
@@ -164,25 +164,25 @@ let gen_expr gen_ty : Tree_lang.expr QCheck.Gen.t =
   triple (pure Env.empty) gen_ty nat >>= fix
     (fun self -> function
       | env, ty, 0 -> oneof [ gen_lit ty; gen_var env ty ]
-      | env, Tree_lang.TyInt, n ->
+      | env, Tree_lang.Ty_int, n ->
           frequency [
-            3, gen_let self (env, Tree_lang.TyInt, n);
-            1, gen_lit Tree_lang.TyInt;
-            1, gen_var env Tree_lang.TyInt;
-            2, map Tree_lang.neg (self (env, Tree_lang.TyInt, n/2));
-            3, map2 Tree_lang.add (self (env, Tree_lang.TyInt, n/2)) (self (env, Tree_lang.TyInt, n/2));
-            3, map2 Tree_lang.sub (self (env, Tree_lang.TyInt, n/2)) (self (env, Tree_lang.TyInt, n/2));
-            3, map2 Tree_lang.mul (self (env, Tree_lang.TyInt, n/2)) (self (env, Tree_lang.TyInt, n/2));
-            3, map2 Tree_lang.div (self (env, Tree_lang.TyInt, n/2)) (self (env, Tree_lang.TyInt, n/2));
-            4, gen_if self (env, Tree_lang.TyInt, n);
+            3, gen_let self (env, Tree_lang.Ty_int, n);
+            1, gen_lit Tree_lang.Ty_int;
+            1, gen_var env Tree_lang.Ty_int;
+            2, map Tree_lang.neg (self (env, Tree_lang.Ty_int, n/2));
+            3, map2 Tree_lang.add (self (env, Tree_lang.Ty_int, n/2)) (self (env, Tree_lang.Ty_int, n/2));
+            3, map2 Tree_lang.sub (self (env, Tree_lang.Ty_int, n/2)) (self (env, Tree_lang.Ty_int, n/2));
+            3, map2 Tree_lang.mul (self (env, Tree_lang.Ty_int, n/2)) (self (env, Tree_lang.Ty_int, n/2));
+            3, map2 Tree_lang.div (self (env, Tree_lang.Ty_int, n/2)) (self (env, Tree_lang.Ty_int, n/2));
+            4, gen_if self (env, Tree_lang.Ty_int, n);
           ]
-      | env, Tree_lang.TyBool, n ->
+      | env, Tree_lang.Ty_bool, n ->
           frequency [
-            3, gen_let self (env, Tree_lang.TyBool, n);
-            1, gen_lit Tree_lang.TyBool;
-            1, gen_var env Tree_lang.TyBool;
+            3, gen_let self (env, Tree_lang.Ty_bool, n);
+            1, gen_lit Tree_lang.Ty_bool;
+            1, gen_var env Tree_lang.Ty_bool;
             3, (let* ty = gen_ty in map2 Tree_lang.eq (self (env, ty, n/2)) (self (env, ty, n/2)));
-            4, gen_if self (env, Tree_lang.TyBool, n);
+            4, gen_if self (env, Tree_lang.Ty_bool, n);
           ]
       )
 
@@ -236,7 +236,7 @@ let rec shrink_expr =
       QCheck.Iter.empty (* subexpressions might not be booleans, so don't shrink to them *)
         <+> (let+ e1' = shrink_expr e1 in Tree_lang.eq e1' e2)
         <+> (let+ e2' = shrink_expr e2 in Tree_lang.eq e1 e2')
-  | Tree_lang.IfThenElse (e1, e2, e3) ->
+  | Tree_lang.If_then_else (e1, e2, e3) ->
       (* shrink to either branch of the conditional, but not the boolean expression *)
       QCheck.Iter.of_list [e2; e3]
         <+> (let+ e1' = shrink_expr e1 in Tree_lang.if_then_else e1' e2 e3)

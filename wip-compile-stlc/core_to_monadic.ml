@@ -48,27 +48,27 @@ let rec translate (env : Src_env.t) (expr : Core.expr) : Monadic.expr =
       let def_id = Monadic.Id.fresh () in
       Let (def_name, def_id, def_ty, translate env def,
         translate (Src_env.extend def_id def_ty env) body)
-  | FunLit (param_name, param_ty, body) ->
+  | Fun_lit (param_name, param_ty, body) ->
       let param_id = Monadic.Id.fresh () in
-      Atom (FunLit (param_name, param_id, param_ty,
+      Atom (Fun_lit (param_name, param_id, param_ty,
         translate (Src_env.extend param_id param_ty env) body))
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       let@ head = translate_name env "head" head in
       let@ arg = translate_name env "arg" arg in
-      Monadic.FunApp (head, arg)
-  | TupleLit elems ->
+      Monadic.Fun_app (head, arg)
+  | Tuple_lit elems ->
       let@ elems = translate_names env "elem" elems in
-      Monadic.Atom (TupleLit elems)
-  | TupleProj (head, label) ->
+      Monadic.Atom (Tuple_lit elems)
+  | Tuple_proj (head, label) ->
       let@ head = translate_name env "head" head in
-      Monadic.TupleProj (head, label)
-  | BoolLit b ->
-      Atom (BoolLit b)
-  | BoolElim (head, on_true, on_false) ->
+      Monadic.Tuple_proj (head, label)
+  | Bool_lit b ->
+      Atom (Bool_lit b)
+  | Bool_elim (head, on_true, on_false) ->
       let@ head = translate_name env "head" head in
-      Monadic.BoolElim (head, translate env on_true, translate env on_false)
-  | IntLit i ->
-      Atom (IntLit i)
+      Monadic.Bool_elim (head, translate env on_true, translate env on_false)
+  | Int_lit i ->
+      Atom (Int_lit i)
 
 and translate_name (env : Src_env.t) (name : string) (expr : Core.expr) (k : Monadic.aexpr -> Monadic.expr) : Monadic.expr =
   let expr_id = Monadic.Id.fresh () in

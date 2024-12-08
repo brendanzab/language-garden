@@ -47,7 +47,7 @@ let string_of_expr e = e.def
 let ty_of_expr e = e.ty
 
 type any_expr =
-  | AnyExpr : 'a expr -> any_expr
+  | Any_expr : 'a expr -> any_expr
 
 
 module Locals = struct
@@ -66,7 +66,7 @@ module Locals = struct
   (** If possible, returns and expression that refers to an existing local the
       matches the supplied expression. *)
   let find_expr expr =
-    List.find_map (fun (name, AnyExpr expr') ->
+    List.find_map (fun (name, Any_expr expr') ->
       (* If the definition is the name of a currently bound local, return the
           local as a name without creating a new binding. *)
       if expr.def = name then Some { expr with def = name }
@@ -79,7 +79,7 @@ module Locals = struct
     | Some expr -> expr, locals
     | None ->
         let name = fresh_name locals in
-        { expr with def = name }, (name, AnyExpr expr) :: locals
+        { expr with def = name }, (name, Any_expr expr) :: locals
 
 end
 
@@ -303,7 +303,7 @@ module Shadertoy = struct
     Format.printf "//\n";
     Format.printf "// Copy and paste this into https://www.shadertoy.com/new to see the output.\n";
     Format.printf "void mainImage(out vec4 fragColor, in vec2 fragCoord) {\n";
-    locals |> Locals.iter (fun (name, AnyExpr expr) ->
+    locals |> Locals.iter (fun (name, Any_expr expr) ->
       Format.printf "  %s %s = %s;\n" (string_of_ty expr.ty) name expr.def);
     Format.printf "\n";
     Format.printf "  // Set the color of the current pixel\n";

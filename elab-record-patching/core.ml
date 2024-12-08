@@ -57,15 +57,15 @@ module Syntax = struct
     | Var of index
     | Ann of tm * ty
     | Univ
-    | FunType of name * ty * (ty binds)
-    | FunLit of name * (tm binds)
-    | FunApp of tm * tm
-    | RecType of decls
-    | RecLit of (label * tm) list
-    | RecProj of tm * label
-    | SingType of ty * tm               (** Singleton type former: [ A [= x ] ] *)
-    | SingIntro of tm                   (** Singleton introduction: [ #sing-intro x ] *)
-    | SingElim of tm * tm               (** Singleton elimination: [ #sing-elim x a ] *)
+    | Fun_type of name * ty * (ty binds)
+    | Fun_lit of name * (tm binds)
+    | Fun_app of tm * tm
+    | Rec_type of decls
+    | Rec_lit of (label * tm) list
+    | Rec_proj of tm * label
+    | Sing_type of ty * tm              (** Singleton type former: [ A [= x ] ] *)
+    | Sing_intro of tm                  (** Singleton introduction: [ #sing-intro x ] *)
+    | Sing_elim of tm * tm              (** Singleton elimination: [ #sing-elim x a ] *)
 
   (** Each ‘connective’ in the core language follows a similar pattern, with
       separate variants for:
@@ -90,36 +90,36 @@ module Syntax = struct
     | Ann (tm, ty) -> is_bound var tm || is_bound var ty
     | Var index -> index = var
     | Univ -> false
-    | FunType (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
-    | FunLit (_, body) -> is_bound (var + 1) body
-    | FunApp (head, arg) -> is_bound var head || is_bound var arg
-    | RecType decls -> is_bound_decls var decls
-    | RecLit defns -> List.exists (fun (_, tm) -> is_bound var tm) defns
-    | RecProj (head, _) -> is_bound var head
-    | SingType (ty, sing_tm) -> is_bound var ty || is_bound var sing_tm
-    | SingIntro tm -> is_bound var tm
-    | SingElim (tm, sing_tm) -> is_bound var tm || is_bound var sing_tm
+    | Fun_type (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
+    | Fun_lit (_, body) -> is_bound (var + 1) body
+    | Fun_app (head, arg) -> is_bound var head || is_bound var arg
+    | Rec_type decls -> is_bound_decls var decls
+    | Rec_lit defns -> List.exists (fun (_, tm) -> is_bound var tm) defns
+    | Rec_proj (head, _) -> is_bound var head
+    | Sing_type (ty, sing_tm) -> is_bound var ty || is_bound var sing_tm
+    | Sing_intro tm -> is_bound var tm
+    | Sing_elim (tm, sing_tm) -> is_bound var tm || is_bound var sing_tm
   and is_bound_decls var = function
     | Nil -> false
     | Cons (_, ty, decls) ->
         is_bound var ty || is_bound_decls (var + 1) decls
 
   let rec fun_lits = function
-    | FunLit (name, body) ->
+    | Fun_lit (name, body) ->
         let names, body = fun_lits body
         in name :: names, body
     | body -> [], body
 
   let fun_apps tm =
     let rec go args = function
-      | FunApp (head, arg) -> go (arg :: args) head
+      | Fun_app (head, arg) -> go (arg :: args) head
       | head -> (head, args)
     in
     go [] tm
 
   let rec_projs tm =
     let rec go labels = function
-      | RecProj (head, label) -> go (label :: labels) head
+      | Rec_proj (head, label) -> go (label :: labels) head
       | head -> (head, labels)
     in
     go [] tm
@@ -159,17 +159,17 @@ module Syntax = struct
           Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
             (pp_app_tm names) tm
             (pp_tm names) ty
-      | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
+      | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
           Format.fprintf fmt "@[%a@ ->@]@ %a"
             (pp_app_tm names) param_ty
             (pp_tm (None :: names)) body_ty
-      | FunType (_, _, _) as tm ->
+      | Fun_type (_, _, _) as tm ->
           let rec go names fmt = function
-            | FunType (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
+            | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
                 Format.fprintf fmt "@[%a@ ->@]@ %a"
                   (pp_tm names) param_ty
                   (pp_tm (None :: names)) body_ty
-            | FunType (name, param_ty, body_ty) ->
+            | Fun_type (name, param_ty, body_ty) ->
                 Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]@ %a"
                   pp_name name
                   (pp_tm names) param_ty
@@ -180,7 +180,7 @@ module Syntax = struct
                   (pp_tm names) body_ty
           in
           Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
-      | FunLit (_, _) as tm ->
+      | Fun_lit (_, _) as tm ->
           let params, body = fun_lits tm in
           (* TODO: improve printing of record types and literals *)
           Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
@@ -190,19 +190,19 @@ module Syntax = struct
           pp_app_tm names fmt tm
 
     and pp_app_tm names fmt = function
-      | FunApp (_, _) as tm ->
+      | Fun_app (_, _) as tm ->
           let head, args = fun_apps tm in
           Format.fprintf fmt "@[<2>%a@ %a@]"
             (pp_proj_tm names) head
             (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_proj_tm names)) args
-      | SingType (ty, sing_tm) ->
+      | Sing_type (ty, sing_tm) ->
           Format.fprintf fmt "@[<2>%a@ @[[=@ %a]@]@]"
             (pp_proj_tm names) ty
             (pp_tm names) sing_tm
-      | SingIntro tm ->
+      | Sing_intro tm ->
           Format.fprintf fmt "@[<2>#sing-intro@ %a@]"
             (pp_proj_tm names) tm
-      | SingElim (tm, sing_tm) ->
+      | Sing_elim (tm, sing_tm) ->
           Format.fprintf fmt "@[<2>#sing-elim@ %a@ %a@]"
           (pp_proj_tm names) tm
           (pp_proj_tm names) sing_tm
@@ -210,7 +210,7 @@ module Syntax = struct
           pp_proj_tm names fmt tm
 
     and pp_proj_tm names fmt = function
-      | RecProj (_, _) as tm ->
+      | Rec_proj (_, _) as tm ->
           let head, labels = rec_projs tm in
           Format.fprintf fmt "@[<2>%a@,%a@]"
             (pp_proj_tm names) head
@@ -224,8 +224,8 @@ module Syntax = struct
     and pp_atomic_tm names fmt = function
       | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
       | Univ -> Format.fprintf fmt "Type"
-      | RecType Nil | RecLit [] -> Format.fprintf fmt "{}"
-      | RecType decls ->
+      | Rec_type Nil | Rec_lit [] -> Format.fprintf fmt "{}"
+      | Rec_type decls ->
           let rec go_decls names fmt = function
             | Nil -> Format.fprintf fmt ""
             | Cons (label, ty, Nil) ->
@@ -239,7 +239,7 @@ module Syntax = struct
           in
           Format.fprintf fmt "@[<hv>{%a@ }@]"
             (go_decls names) decls
-      | RecLit defns ->
+      | Rec_lit defns ->
           let rec go_defns fmt = function
             | [] -> Format.fprintf fmt ""
             | (label, ty) :: [] ->
@@ -288,12 +288,12 @@ module Semantics = struct
   and vtm =
     | Neu of neu                          (** Neutral terms *)
     | Univ
-    | FunType of name * vty * (vtm -> vty)
-    | FunLit of name * (vtm -> vtm)
-    | RecType of decls
-    | RecLit of (label * vtm) list
-    | SingType of vty * vtm
-    | SingIntro                           (** Singleton introduction, with term erased *)
+    | Fun_type of name * vty * (vtm -> vty)
+    | Fun_lit of name * (vtm -> vtm)
+    | Rec_type of decls
+    | Rec_lit of (label * vtm) list
+    | Sing_type of vty * vtm
+    | Sing_intro                          (** Singleton introduction, with term erased *)
 
   (** Field declarations *)
   and decls =
@@ -306,8 +306,8 @@ module Semantics = struct
       ambivalent about what they might compute to? *)
   and neu =
     | Var of level                        (** Variable that could not be reduced further *)
-    | FunApp of neu * vtm                 (** Function application *)
-    | RecProj of neu * label              (** Record projection *)
+    | Fun_app of neu * vtm                (** Function application *)
+    | Rec_proj of neu * label             (** Record projection *)
 
 
   (** {1 Error handling} *)
@@ -330,15 +330,15 @@ module Semantics = struct
   (** Compute a function application *)
   let app head arg =
     match head with
-    | Neu neu -> Neu (FunApp (neu, arg))
-    | FunLit (_, body) -> body arg
+    | Neu neu -> Neu (Fun_app (neu, arg))
+    | Fun_lit (_, body) -> body arg
     | _ -> error "invalid application"
 
   (** Compute a record projection *)
   let proj head label =
     match head with
-    | RecLit defns -> defns |> List.find (fun (l, _) -> l = label) |> snd
-    | Neu neu -> Neu (RecProj (neu, label))
+    | Rec_lit defns -> defns |> List.find (fun (l, _) -> l = label) |> snd
+    | Neu neu -> Neu (Rec_proj (neu, label))
     | _ -> error "invalid projection"
 
 
@@ -363,17 +363,17 @@ module Semantics = struct
     | Syntax.Var index -> List.nth tms index
     | Syntax.Ann (tm, _) -> eval tms tm
     | Syntax.Univ -> Univ
-    | Syntax.FunType (name, param_ty, body_ty) ->
-        FunType (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
-    | Syntax.FunLit (name, body) -> FunLit (name, fun x -> eval (x :: tms) body)
-    | Syntax.FunApp (head, arg) -> app (eval tms head) (eval tms arg)
-    | Syntax.RecType decls -> RecType (eval_decls tms decls)
-    | Syntax.RecLit defns ->
-        RecLit (List.map (fun (label, expr) -> (label, eval tms expr)) defns)
-    | Syntax.RecProj (head, label) -> proj (eval tms head) label
-    | Syntax.SingType (ty, sing_tm) -> SingType (eval tms ty, eval tms sing_tm)
-    | Syntax.SingIntro _ -> SingIntro
-    | Syntax.SingElim (_, sing_tm) -> eval tms sing_tm
+    | Syntax.Fun_type (name, param_ty, body_ty) ->
+        Fun_type (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
+    | Syntax.Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: tms) body)
+    | Syntax.Fun_app (head, arg) -> app (eval tms head) (eval tms arg)
+    | Syntax.Rec_type decls -> Rec_type (eval_decls tms decls)
+    | Syntax.Rec_lit defns ->
+        Rec_lit (List.map (fun (label, expr) -> (label, eval tms expr)) defns)
+    | Syntax.Rec_proj (head, label) -> proj (eval tms head) label
+    | Syntax.Sing_type (ty, sing_tm) -> Sing_type (eval tms ty, eval tms sing_tm)
+    | Syntax.Sing_intro _ -> Sing_intro
+    | Syntax.Sing_elim (_, sing_tm) -> eval tms sing_tm
   and eval_decls tms : Syntax.decls -> decls = function
     | Syntax.Nil -> Nil
     | Syntax.Cons (label, ty, decls) ->
@@ -402,22 +402,22 @@ module Semantics = struct
     match tm with
     | Neu neu -> fst (quote_neu size tys neu)
     | Univ -> Syntax.Univ
-    | FunType (name, param_ty, body_ty) ->
+    | Fun_type (name, param_ty, body_ty) ->
         let var = Neu (Var size) in
         let param_ty = quote size tys param_ty Univ in
         let body_ty = quote (size + 1) (Univ :: tys) (body_ty var) Univ in
-        Syntax.FunType (name, param_ty, body_ty)
-    | FunLit (name, body) ->
+        Syntax.Fun_type (name, param_ty, body_ty)
+    | Fun_lit (name, body) ->
         begin match ty with
-        | FunType (_, param_ty, body_ty) ->
+        | Fun_type (_, param_ty, body_ty) ->
             let var = Neu (Var size) in
-            Syntax.FunLit (name, quote (size + 1) (param_ty :: tys) (body var) (body_ty var))
+            Syntax.Fun_lit (name, quote (size + 1) (param_ty :: tys) (body var) (body_ty var))
         | _ -> error "not a function type"
         end
-    | RecType decls -> Syntax.RecType (quote_decls size tys decls)
-    | RecLit defns ->
+    | Rec_type decls -> Syntax.Rec_type (quote_decls size tys decls)
+    | Rec_lit defns ->
         begin match ty with
-        | RecType decls ->
+        | Rec_type decls ->
             let rec go defns decls =
               match defns, decls with
               | [], Nil -> []
@@ -425,32 +425,32 @@ module Semantics = struct
                   (label, quote size tys tm ty) :: go defns (decls tm)
               | _, _ -> error "mismatched fields"
             in
-            Syntax.RecLit (go defns decls)
+            Syntax.Rec_lit (go defns decls)
         | _ -> error "not a record type"
         end
-    | SingType (ty, sing_tm) ->
-        Syntax.SingType (quote size tys ty Univ, quote size tys sing_tm ty)
-    | SingIntro ->
+    | Sing_type (ty, sing_tm) ->
+        Syntax.Sing_type (quote size tys ty Univ, quote size tys sing_tm ty)
+    | Sing_intro ->
         begin match ty with
         (* Restore the erased term from the singleton type *)
-        | SingType (ty, sing_tm) -> Syntax.SingIntro (quote size tys ty sing_tm)
+        | Sing_type (ty, sing_tm) -> Syntax.Sing_intro (quote size tys ty sing_tm)
         | _ -> error "not a singleton type"
         end
   and quote_neu size tys : neu -> Syntax.tm * vty = function
     | Var level ->
         let index = level_to_index size level in
         (Syntax.Var index, List.nth tys index)
-    | FunApp (head, arg) ->
+    | Fun_app (head, arg) ->
         begin match quote_neu size tys head with
-        | head, FunType (_, param_ty, body_ty) ->
-            (Syntax.FunApp (head, (quote size tys arg param_ty)), body_ty arg)
+        | head, Fun_type (_, param_ty, body_ty) ->
+            (Syntax.Fun_app (head, (quote size tys arg param_ty)), body_ty arg)
         | _ -> error "not a function type"
         end
-    | RecProj (head, label) ->
+    | Rec_proj (head, label) ->
         begin match quote_neu size tys head with
-        | head', RecType decls ->
+        | head', Rec_type decls ->
             let ty = proj_ty (Neu head) decls label |> Option.get in
-            (Syntax.RecProj (head', label), ty)
+            (Syntax.Rec_proj (head', label), ty)
         | _ -> error "not a record type"
         end
   and quote_decls size tys : decls -> Syntax.decls = function
@@ -499,22 +499,22 @@ module Semantics = struct
         begin match tm1, tm2 with
         | Univ, Univ -> true
         | Neu neu1, Neu neu2 -> Option.is_some (is_convertible_neu size tys neu1 neu2)
-        | FunType (_, param_ty1, body_ty1), FunType (_, param_ty2, body_ty2) ->
+        | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
             let var = Neu (Var size) in
             is_convertible size tys param_ty1 param_ty2 Univ
               && is_convertible (size + 1) (param_ty1 :: tys) (body_ty1 var) (body_ty2 var) Univ
-        | RecType (decls1), RecType (decls2) ->
+        | Rec_type (decls1), Rec_type (decls2) ->
             is_convertible_decls size tys decls1 decls2
-        | SingType (ty1, sing_tm1), SingType (ty2, sing_tm2) ->
+        | Sing_type (ty1, sing_tm1), Sing_type (ty2, sing_tm2) ->
             is_convertible size tys ty1 ty2 Univ
               && is_convertible size tys sing_tm1 sing_tm2 ty1
         | _, _ -> false
         end
-    | FunType (_, param_ty, body_ty) ->
+    | Fun_type (_, param_ty, body_ty) ->
         (* Eta for functions *)
         let var = Neu (Var size) in
         is_convertible (size + 1) (param_ty :: tys) (app tm1 var) (app tm2 var) (body_ty var)
-    | RecType decls ->
+    | Rec_type decls ->
         (* Eta for records
 
           Record patching introduces subtyping problems that go inside records.
@@ -532,21 +532,21 @@ module Semantics = struct
           | Nil -> true (* Pretty sure eta for units is hidden in here! *)
         in
         go decls
-    | SingType (_, _) -> true
+    | Sing_type (_, _) -> true
     | _ -> error "not a type"
   and is_convertible_neu size tys neu1 neu2 =
     match neu1, neu2 with
     | Var level1, Var level2 when level1 = level2 -> Some (List.nth tys (level_to_index size level1))
-    | FunApp (func1, arg1), FunApp (func2, arg2) ->
+    | Fun_app (func1, arg1), Fun_app (func2, arg2) ->
         begin match is_convertible_neu size tys func1 func2 with
-        | Some (FunType (_, param_ty, body_ty)) ->
+        | Some (Fun_type (_, param_ty, body_ty)) ->
             if is_convertible size tys arg1 arg2 param_ty then Some (body_ty arg1) else None
         | Some _ -> error "not a function type"
         | None -> None
         end
-    | RecProj (record1, label1), RecProj (record2, label2) when label1 = label2 ->
+    | Rec_proj (record1, label1), Rec_proj (record2, label2) when label1 = label2 ->
         begin match is_convertible_neu size tys record1 record2 with
-        | Some (RecType decls) -> proj_ty (Neu record1) decls label1
+        | Some (Rec_type decls) -> proj_ty (Neu record1) decls label1
         | Some _ -> error "not a record type"
         | None -> None
         end

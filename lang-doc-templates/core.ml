@@ -1,39 +1,39 @@
 type ty =
-  | FunTy of ty * ty
-  | TextTy
-  | ListTy of ty
-  | BoolTy
-  | IntTy
-  (* | NodeTy (* TODO: More precise node types *) *)
+  | Fun_ty of ty * ty
+  | Test_ty
+  | List_ty of ty
+  | Bool_ty
+  | Int_ty
+  (* | Node_ty (* TODO: More precise node types *) *)
 
 type tm =
   | Var of string
   | Let of string * ty * tm * tm
-  | FunLit of string * ty * tm
-  | FunApp of tm * tm
-  | TextLit of string
-  | ListNil
-  | ListCons of tm * tm
-  (* | ListElim of tm * tm * (string * string * tm) *)
-  | BoolLit of bool
-  | BoolElim of tm * tm * tm
-  | IntLit of int
-  (* | NodeLit of (string * tm) list * tm list *)
-  (* | NodeElim of ... *)
-  | PrimApp of Prim.t * tm list
+  | Fun_lit of string * ty * tm
+  | Fun_app of tm * tm
+  | Text_lit of string
+  | List_nil
+  | List_cons of tm * tm
+  (* | List_elim of tm * tm * (string * string * tm) *)
+  | Bool_lit of bool
+  | Bool_elim of tm * tm * tm
+  | Int_lit of int
+  (* | Node_lit of (string * tm) list * tm list *)
+  (* | Node_elim of ... *)
+  | Prim_app of Prim.t * tm list
 
 module Semantics = struct
 
   (** {2 Semantic domain} *)
 
   type vtm =
-    | FunLit of string * ty * (vtm -> vtm)
-    | ListNil
-    | ListCons of vtm * vtm
-    | TextLit of string
-    | BoolLit of bool
-    | IntLit of int
-    (* | NodeLit of (string * vtm) list * vtm list *)
+    | Fun_lit of string * ty * (vtm -> vtm)
+    | List_nil
+    | List_cons of vtm * vtm
+    | Text_lit of string
+    | Bool_lit of bool
+    | Int_lit of int
+    (* | Node_lit of (string * vtm) list * vtm list *)
 
   type env = (string * vtm) list
 
@@ -45,41 +45,41 @@ module Semantics = struct
         List.assoc name locals
     | Let (name, _, def, body) ->
         eval ((name, eval locals def) :: locals) body
-    | FunLit (name, ty, body) ->
-        FunLit (name, ty, fun v -> eval ((name, v) :: locals) body)
-    | FunApp (head, arg) ->
+    | Fun_lit (name, ty, body) ->
+        Fun_lit (name, ty, fun v -> eval ((name, v) :: locals) body)
+    | Fun_app (head, arg) ->
         begin match eval locals head with
-        | FunLit (_, _, f) -> f (eval locals arg)
+        | Fun_lit (_, _, f) -> f (eval locals arg)
         | _ -> invalid_arg "expected function literal"
         end
-    | ListNil -> ListNil
-    | ListCons (tm, tms) ->
-        ListCons (eval locals tm, eval locals tms)
-    | TextLit s ->
-        TextLit s
-    | BoolLit b ->
-        BoolLit b
-    | BoolElim (head, tm1, tm2) ->
+    | List_nil -> List_nil
+    | List_cons (tm, tms) ->
+        List_cons (eval locals tm, eval locals tms)
+    | Text_lit s ->
+        Text_lit s
+    | Bool_lit b ->
+        Bool_lit b
+    | Bool_elim (head, tm1, tm2) ->
         begin match eval locals head with
-        | BoolLit true -> eval locals tm1
-        | BoolLit false -> eval locals tm2
+        | Bool_lit true -> eval locals tm1
+        | Bool_lit false -> eval locals tm2
         | _ -> invalid_arg "expected boolean literal"
         end
-    | IntLit n ->
-        IntLit n
-    | PrimApp (prim, args) ->
+    | Int_lit n ->
+        Int_lit n
+    | Prim_app (prim, args) ->
         let args =
           args |> List.map @@ fun arg : Prim.value ->
             match eval locals arg with
-            | TextLit s -> TextLit s
-            | IntLit n -> IntLit n
-            | BoolLit b -> BoolLit b
+            | Text_lit s -> Text_lit s
+            | Int_lit n -> Int_lit n
+            | Bool_lit b -> Bool_lit b
             | _ -> failwith "expected primitive"
         in
         begin match Prim.app prim args with
-        | TextLit s -> TextLit s
-        | IntLit n -> IntLit n
-        | BoolLit b -> BoolLit b
+        | Text_lit s -> Text_lit s
+        | Int_lit n -> Int_lit n
+        | Bool_lit b -> Bool_lit b
         end
 
 end

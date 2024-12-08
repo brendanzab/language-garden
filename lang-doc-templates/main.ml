@@ -12,30 +12,30 @@ let define name ty term =
   context := (name, ty) :: !context;
   env := (name, Core.Semantics.eval !env term) :: !env
 
-let fun_lit (name, ty) body = Core.(FunLit (name, ty, body (Var name)))
+let fun_lit (name, ty) body = Core.(Fun_lit (name, ty, body (Var name)))
 
 let rec concat = function
-  | [] -> Core.TextLit ""
+  | [] -> Core.Text_lit ""
   | [t] -> t
-  | t :: ts -> Core.PrimApp (TextConcat, [t; concat ts])
+  | t :: ts -> Core.Prim_app (Test_concat, [t; concat ts])
 
 let node name body =
   concat [
-    TextLit (Format.sprintf "<%s>" name);
+    Text_lit (Format.sprintf "<%s>" name);
     body;
-    TextLit (Format.sprintf "</%s>" name);
+    Text_lit (Format.sprintf "</%s>" name);
   ]
 
 let () = begin
 
-  define "true" Core.BoolTy Core.(BoolLit true);
-  define "false" Core.BoolTy Core.(BoolLit false);
+  define "true" Core.Bool_ty Core.(Bool_lit true);
+  define "false" Core.Bool_ty Core.(Bool_lit false);
 
-  define "heading1" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "h1"));
-  define "heading2" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "h2"));
-  define "heading3" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "h3"));
-  define "para" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "p"));
-  define "link" Core.(FunTy (TextTy, TextTy)) (fun_lit ("text", TextTy) (node "a"));
+  define "heading1" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "h1"));
+  define "heading2" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "h2"));
+  define "heading3" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "h3"));
+  define "para" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "p"));
+  define "link" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "a"));
 
 end
 
@@ -55,15 +55,15 @@ let () =
     |> Surface.Elab.synth_template context
     |> Core.Semantics.eval env
   with
-  | Core.Semantics.TextLit s -> print_string s
+  | Core.Semantics.Text_lit s -> print_string s
   | _ -> failwith "text literal expected"
   | exception Lexer.Error error ->
       let msg =
         match error with
-        | `UnexpectedChar -> "unexpected character"
-        | `UnclosedBlockComment -> "unclosed block comment"
-        | `UnclosedTextLiteral -> "unclosed text literal"
-        | `InvalidEscapeCode s -> Format.sprintf "invalid escape code `\\%s`" s
+        | `Unexpected_char -> "unexpected character"
+        | `Unclosed_block_comment -> "unclosed block comment"
+        | `Unclosed_text_literal -> "unclosed text literal"
+        | `Invalid_escape_code s -> Format.sprintf "invalid escape code `\\%s`" s
       in
       print_error (Sedlexing.lexing_positions lexbuf) msg;
       exit 1

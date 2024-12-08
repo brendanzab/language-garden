@@ -187,10 +187,10 @@ Instead I prefer to use the following constructors:
 ```ocaml
 type tm =
   ...
-  | PairType of string * tm * tm
-  | PairLit of tm * tm
-  | PairFst of tm
-  | PairSnd of tm
+  | Pair_type of string * tm * tm
+  | Pair_lit of tm * tm
+  | Pair_fst of tm
+  | Pair_snd of tm
 ```
 
 ### Use types to disambiguate variant names

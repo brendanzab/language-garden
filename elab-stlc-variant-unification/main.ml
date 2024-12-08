@@ -21,8 +21,8 @@ let parse_tm (filename : string) (input : in_channel) : Surface.tm =
   | Lexer.Error error ->
       let msg =
         match error with
-        | `UnexpectedChar -> "unexpected character"
-        | `UnclosedBlockComment -> "unclosed block comment"
+        | `Unexpected_char -> "unexpected character"
+        | `Unclosed_block_comment -> "unclosed block comment"
       in
       print_error (Sedlexing.lexing_positions lexbuf) msg;
       exit 1
@@ -44,12 +44,12 @@ let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
       Core.zonk_ty ty
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
-        | (pos, `FunParam) -> print_error pos "ambiguous function parameter type"
-        | (pos, `FunBody) -> print_error pos "ambiguous function return type"
-        | (pos, `VariantLit) -> print_error pos "ambiguous variant literal"
-        | (pos, `MatchClauses) -> print_error pos "ambiguous match clauses"
-        | (pos, `PatternBinder) -> print_error pos "ambiguous pattern binder"
-        | (pos, `IfBranches) -> print_error pos "ambiguous if expression branches"
+        | (pos, `Fun_param) -> print_error pos "ambiguous function parameter type"
+        | (pos, `Fun_body) -> print_error pos "ambiguous function return type"
+        | (pos, `Variant_lit) -> print_error pos "ambiguous variant literal"
+        | (pos, `Match_clauses) -> print_error pos "ambiguous match clauses"
+        | (pos, `Pattern_binder) -> print_error pos "ambiguous pattern binder"
+        | (pos, `If_branches) -> print_error pos "ambiguous if expression branches"
         | (pos, `Placeholder) -> print_error pos "unsolved placeholder");
       exit 1
 

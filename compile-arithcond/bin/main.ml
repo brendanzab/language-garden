@@ -28,7 +28,7 @@ let parse_expr filename in_channel =
   | Tree_lang.Lexer.Error ->
       print_error (Sedlexing.lexing_positions lexbuf) "unexpected character";
       exit 1
-  | Tree_lang.UnboundName (loc, n) ->
+  | Tree_lang.Unbound_name (loc, n) ->
       print_error loc (Format.sprintf "unbound name `%s`" n);
       exit 1
   | Tree_lang.Parser.Error ->

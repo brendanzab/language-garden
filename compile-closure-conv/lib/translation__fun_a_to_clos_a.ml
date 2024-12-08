@@ -21,10 +21,10 @@ module Var_set = Fun_a.Var_set
 (** Translation to closure converted types *)
 let rec translate_ty : Fun_a.ty -> Clos_a.ty =
   function
-  | BoolType -> BoolType
-  | IntType -> IntType
-  | FunType (param_ty, body_ty) ->
-      ClosType (translate_ty param_ty, translate_ty body_ty)
+  | Bool_type -> Bool_type
+  | Int_type -> Int_type
+  | Fun_type (param_ty, body_ty) ->
+      Clos_type (translate_ty param_ty, translate_ty body_ty)
 
 (** Translation to closure converted terms. *)
 let rec translate env : Fun_a.tm -> Clos_a.tm =
@@ -45,14 +45,14 @@ let rec translate env : Fun_a.tm -> Clos_a.tm =
 
       Let (def_var', def_ty, def, body)
 
-  | BoolLit b -> BoolLit b
-  | IntLit i -> IntLit i
+  | Bool_lit b -> Bool_lit b
+  | Int_lit i -> Int_lit i
 
-  | PrimApp (prim, args) ->
+  | Prim_app (prim, args) ->
       let args = List.map (translate env) args in
-      PrimApp (prim, args)
+      Prim_app (prim, args)
 
-  | FunLit (param_var, param_ty, body) ->
+  | Fun_lit (param_var, param_ty, body) ->
       (* A fresh variable to be used for the environment parameter in the code
         of the closure *)
       let env_var' = Clos_a.Var.fresh "env" in
@@ -79,7 +79,7 @@ let rec translate env : Fun_a.tm -> Clos_a.tm =
           List.fold_left
             (fun (label, body_env) id ->
               let ty = snd (Var_map.find id env) in
-              let tm = Clos_a.TupleProj (Var env_var', label) in
+              let tm = Clos_a.Tuple_proj (Var env_var', label) in
               label + 1, Var_map.add id (tm, ty) body_env)
             (0, Var_map.singleton param_var (param_tm, param_ty))
             body_fvs
@@ -92,11 +92,11 @@ let rec translate env : Fun_a.tm -> Clos_a.tm =
       let env_tms = List.map (fun id -> fst (Var_map.find id env)) body_fvs in
 
       (* Construct the closure *)
-      ClosLit
-        (CodeLit ((env_var', TupleType env_tys), (param_var', param_ty), body),
-          TupleLit env_tms)
+      Clos_lit
+        (Code_lit ((env_var', Tuple_type env_tys), (param_var', param_ty), body),
+          Tuple_lit env_tms)
 
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       let head = translate env head in
       let arg = translate env arg in
-      ClosApp (head, arg)
+      Clos_app (head, arg)

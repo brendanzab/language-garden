@@ -46,7 +46,7 @@ let param :=
 
 let ty :=
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
-    { Surface.FunTy (ty1, ty2) }
+    { Surface.Fun_ty (ty1, ty2) }
 | atomic_ty
 
 let atomic_ty :=
@@ -60,9 +60,9 @@ let expr :=
     expr0 = located(expr); ";"; expr1 = located(expr);
     { Surface.Let (n, ps, ty, expr0, expr1) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(expr);
-    { Surface.FunLit (ps, t) }
+    { Surface.Fun_lit (ps, t) }
 | "if"; expr0 = located(or_expr); "then"; expr1 = located(expr); "else"; expr2 = located(expr);
-    { Surface.IfThenElse (expr0, expr1, expr2) }
+    { Surface.If_then_else (expr0, expr1, expr2) }
 | expr = located(or_expr); ":"; ty = located(ty);
     { Surface.Ann (expr, ty) }
 | or_expr
@@ -109,8 +109,8 @@ let atomic_expr :=
 | n = NAME;
     { Surface.Name n }
 | "true";
-    { Surface.BoolLit true }
+    { Surface.Bool_lit true }
 | "false";
-    { Surface.BoolLit false }
+    { Surface.Bool_lit false }
 | i = NUMBER;
-    { Surface.IntLit i }
+    { Surface.Int_lit i }

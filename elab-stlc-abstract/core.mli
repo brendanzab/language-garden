@@ -11,7 +11,7 @@ type ty =
   | A
   | B
   | C
-  | FunTy of ty * ty
+  | Fun_ty of ty * ty
 
 type tm
 
@@ -75,17 +75,17 @@ val catch_synth : 'e. ('e -> synth) -> 'e synth_err -> synth
 
 (** {2 Directional rules} *)
 
-val conv : synth -> [> `TypeMismatch of ty_mismatch] check_err
+val conv : synth -> [> `Type_mismatch of ty_mismatch] check_err
 val ann : check -> ty -> synth
 
 (** {2 Structural rules} *)
 
-val var : var -> [> `UnboundVar] synth_err
+val var : var -> [> `Unbound_var] synth_err
 val let_synth : name * ty * check -> (var -> synth) -> synth
 val let_check : name * ty * check -> (var -> check) -> check
 
 (** {2 Function rules} *)
 
-val fun_intro_check : name * ty option -> (var -> check) -> [> `MismatchedParamTy of ty_mismatch | `UnexpectedFunLit of ty] check_err
+val fun_intro_check : name * ty option -> (var -> check) -> [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err
 val fun_intro_synth : name * ty -> (var -> synth) -> synth
-val fun_elim : synth -> synth -> [> `UnexpectedArg of ty  | `TypeMismatch of ty_mismatch] synth_err
+val fun_elim : synth -> synth -> [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err

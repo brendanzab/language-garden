@@ -50,16 +50,16 @@ let param :=
 
 let ty :=
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
-    { Surface.FunType (ty1, ty2) }
+    { Surface.Fun_type (ty1, ty2) }
 | atomic_ty
 
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
 | "["; "|"; "]";
-    { Surface.VariantType [] }
+    { Surface.Variant_type [] }
 | "["; option("|"); r = separated_nonempty_list("|", l = located(NAME); ":"; ty = located(ty); { l, ty }); "]";
-    { Surface.VariantType r }
+    { Surface.Variant_type r }
 | n = NAME;
     { Surface.Name n }
 | UNDERSCORE;
@@ -67,7 +67,7 @@ let atomic_ty :=
 
 let pattern :=
 | "["; l = located(NAME); ":="; n = located(NAME); "]";
-    { Surface.VariantLit (l, n) : Surface.pattern_data }
+    { Surface.Variant_lit (l, n) : Surface.pattern_data }
 
 let clause :=
 | p = located(pattern); "=>"; tm = located(tm); { p, tm }
@@ -77,9 +77,9 @@ let tm :=
     tm1 = located(tm); ";"; tm2 = located(tm);
     { Surface.Let (n, ps, ty, tm1, tm2) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
-    { Surface.FunLit (ps, t) }
+    { Surface.Fun_lit (ps, t) }
 | "if"; tm1 = located(eq_tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
-    { Surface.IfThenElse (tm1, tm2, tm3) }
+    { Surface.If_then_else (tm1, tm2, tm3) }
 | "match"; tm1 = located(eq_tm); "with"; option("|"); clauses = separated_list("|", clause); "end";
     { Surface.Match (tm1, clauses) }
 | tm = located(eq_tm); ":"; ty = located(ty);
@@ -116,10 +116,10 @@ let atomic_tm :=
 | n = NAME;
     { Surface.Name n }
 | "["; l = located(NAME); ":="; tm = located(tm); "]";
-    { Surface.VariantLit (l, tm) }
+    { Surface.Variant_lit (l, tm) }
 | "true";
-    { Surface.BoolLit true }
+    { Surface.Bool_lit true }
 | "false";
-    { Surface.BoolLit false }
+    { Surface.Bool_lit false }
 | i = NUMBER;
-    { Surface.IntLit i }
+    { Surface.Int_lit i }

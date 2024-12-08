@@ -16,10 +16,10 @@ type tm =
   | Name of string                                  (** References to named things: [ x ] *)
   | Ann of tm * tm                                  (** Terms annotated with types: [ x : A ] *)
   | Univ                                            (** Universe of types: [ Type ] *)
-  | FunType of params * tm                          (** Function types: [ fun (x : A) -> B x ] *)
-  | FunArrow of tm * tm                             (** Function arrow types: [ A -> B ] *)
-  | FunLit of params * tm option * tm               (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
-  | FunApp of tm * tm list                          (** Function applications: [ f x ] *)
+  | Fun_type of params * tm                         (** Function types: [ fun (x : A) -> B x ] *)
+  | Fun_arrow of tm * tm                            (** Function arrow types: [ A -> B ] *)
+  | Fun_lit of params * tm option * tm              (** Function literals: [ fun x := f x ] or [ fun (x : A) := f x ] *)
+  | Fun_app of tm * tm list                         (** Function applications: [ f x ] *)
 
 and param = pattern * tm option
 and params = param list
@@ -147,7 +147,7 @@ let rec check ctx tm expected_ty : Syntax.tm =
       Syntax.Let (name, def, check ctx body expected_ty)
 
   (* Function literals *)
-  | FunLit (params, body_ty, body), expected_ty ->
+  | Fun_lit (params, body_ty, body), expected_ty ->
       check_fun_lit ctx params body_ty body expected_ty
 
   (* For anything else, try inferring the type of the term, then checking to
@@ -195,7 +195,7 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
       Syntax.Univ, Semantics.Univ
 
   (* Function types *)
-  | FunType (params, body_ty) ->
+  | Fun_type (params, body_ty) ->
       let rec go ctx = function
         | [] -> check ctx body_ty Semantics.Univ
         (* Function types always require annotations *)
@@ -203,30 +203,30 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
         | (name, Some param_ty) :: params ->
             let param_ty = check ctx param_ty Semantics.Univ in
             let ctx = bind_param ctx name (eval ctx param_ty) in
-            Syntax.FunType (name, param_ty, go ctx params)
+            Syntax.Fun_type (name, param_ty, go ctx params)
       in
       go ctx params, Semantics.Univ
 
   (* Arrow types. These are implemented as syntactic sugar for non-dependent
       function types. *)
-  | FunArrow (param_ty, body_ty) ->
+  | Fun_arrow (param_ty, body_ty) ->
       let param_ty = check ctx param_ty Semantics.Univ in
       let ctx = bind_param ctx None (eval ctx param_ty) in
       let body_ty = check ctx body_ty Semantics.Univ in
-      Syntax.FunType (None, param_ty, body_ty), Semantics.Univ
+      Syntax.Fun_type (None, param_ty, body_ty), Semantics.Univ
 
   (* Function literals *)
-  | FunLit (params, body_ty, body) ->
+  | Fun_lit (params, body_ty, body) ->
       infer_fun_lit ctx params body_ty body
 
   (* Function application *)
-  | FunApp (head, args) ->
+  | Fun_app (head, args) ->
       List.fold_left
         (fun (head, head_ty) arg ->
           match head_ty with
-          | Semantics.FunType (_, param_ty, body_ty) ->
+          | Semantics.Fun_type (_, param_ty, body_ty) ->
               let arg = check ctx arg (Lazy.force param_ty) in
-              (Syntax.FunApp (head, arg), body_ty (eval ctx arg))
+              (Syntax.Fun_app (head, arg), body_ty (eval ctx arg))
           | _ -> error "not a function")
         (infer ctx head)
         args
@@ -243,7 +243,7 @@ and check_fun_lit ctx params body_ty body expected_ty =
       else error (type_mismatch ctx
         ~expected:(quote ctx expected_ty)
         ~found:body_ty)
-  | (name, param_ty) :: params, body_ty, Semantics.FunType (_, expected_param_ty, expected_body_ty) ->
+  | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, expected_param_ty, expected_body_ty) ->
       let var = next_var ctx in
       let param_ty =
         match param_ty with
@@ -261,7 +261,7 @@ and check_fun_lit ctx params body_ty body expected_ty =
       in
       let ctx = bind_def ctx name param_ty var in
       let body = check_fun_lit ctx params body_ty body (expected_body_ty var) in
-      Syntax.FunLit (name, body)
+      Syntax.Fun_lit (name, body)
   | _, _, _ ->
       error "too many parameters in function literal"
 
@@ -285,7 +285,7 @@ and infer_fun_lit ctx params body_ty body =
         in
         let ctx = bind_def ctx name (eval ctx param_ty) var in
         let body, body_ty = go ctx params body_ty body in
-        Syntax.FunLit (name, body), Syntax.FunType (name, param_ty, body_ty)
+        Syntax.Fun_lit (name, body), Syntax.Fun_type (name, param_ty, body_ty)
   in
   let fun_tm, fun_ty = go ctx params body_ty body in
   Syntax.Ann (fun_tm, fun_ty), eval ctx fun_ty

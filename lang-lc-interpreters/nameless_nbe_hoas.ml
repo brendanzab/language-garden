@@ -11,8 +11,8 @@ type index = int
 type expr = Nameless.expr =
   | Var of index
   | Let of string * expr * expr
-  | FunLit of string * expr
-  | FunApp of expr * expr
+  | Fun_lit of string * expr
+  | Fun_app of expr * expr
 
 (** {2 Conversions} *)
 
@@ -37,10 +37,10 @@ type level = int
 
 type value =
   | Neu of neu
-  | FunLit of string * (value -> value)
+  | Fun_lit of string * (value -> value)
 and neu =
   | Var of level
-  | FunApp of neu * value
+  | Fun_app of neu * value
 
 type env = value list
 
@@ -50,11 +50,11 @@ let rec eval (vs : env) (e : expr) : value =
   match e with
   | Var i -> List.nth vs i
   | Let (_, def, body) -> eval (eval vs def :: vs) body
-  | FunLit (x, body) -> FunLit (x, fun v -> eval (v :: vs) body)
-  | FunApp (head, arg) -> begin
+  | Fun_lit (x, body) -> Fun_lit (x, fun v -> eval (v :: vs) body)
+  | Fun_app (head, arg) -> begin
       match eval vs head with
-      | FunLit (_, body) -> body (eval vs arg)
-      | Neu nv -> Neu (FunApp (nv, eval vs arg))
+      | Fun_lit (_, body) -> body (eval vs arg)
+      | Neu nv -> Neu (Fun_app (nv, eval vs arg))
   end
 
 (** {2 Quotation} *)
@@ -62,11 +62,11 @@ let rec eval (vs : env) (e : expr) : value =
 let rec quote (size : int) (v : value) : expr =
   match v with
   | Neu nv -> quote_neu size nv
-  | FunLit (x, body) -> FunLit (x, quote (size + 1) (body (Neu (Var size))))
+  | Fun_lit (x, body) -> Fun_lit (x, quote (size + 1) (body (Neu (Var size))))
 and quote_neu (size : int) (nv : neu) : expr =
   match nv with
   | Var l -> Var (size - l - 1)
-  | FunApp (head, arg) -> FunApp (quote_neu size head, quote size arg)
+  | Fun_app (head, arg) -> Fun_app (quote_neu size head, quote size arg)
 
 (** {2 Normalisation-by-evaluation} *)
 

@@ -23,7 +23,7 @@ let main :=
 
 let ty :=
 | ty1 = atomic_ty; "->"; ty2 = ty;
-    { Surface.FunTy (ty1, ty2) }
+    { Surface.Fun_ty (ty1, ty2) }
 | atomic_ty
 
 let atomic_ty :=
@@ -40,16 +40,16 @@ let tm :=
 | "let"; n = located(NAME); ":"; ty = ty; ":="; tm1 = located(tm); ";"; tm2 = located(tm);
     { Surface.Let (n, ty, tm1, tm2) }
 | "fun"; n = located(NAME); "=>"; tm = located(tm);
-    { Surface.FunLit (n, None, tm) }
+    { Surface.Fun_lit (n, None, tm) }
 | "fun"; "("; n = located(NAME); ":"; ty = ty; ")"; "=>"; tm = located(tm);
-    { Surface.FunLit (n, Some ty, tm) }
+    { Surface.Fun_lit (n, Some ty, tm) }
 | tm = located(app_tm); ":"; ty = ty;
     { Surface.Ann (tm, ty) }
 | app_tm
 
 let app_tm :=
 | tm1 = located(app_tm); tm2 = located(atomic_tm);
-    { Surface.FunApp (tm1, tm2) }
+    { Surface.Fun_app (tm1, tm2) }
 | atomic_tm
 
 let atomic_tm :=

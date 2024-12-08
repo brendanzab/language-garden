@@ -29,8 +29,8 @@ type ty =
 
 and ty_data =
   | Name of string
-  | FunType of ty * ty
-  | VariantType of (label * ty) list
+  | Fun_type of ty * ty
+  | Variant_type of (label * ty) list
   | Placeholder
 
 type pattern =
@@ -39,8 +39,8 @@ type pattern =
 and pattern_data =
   (* | Name of string *)
   (* | Placeholder *)
-  (* | IntLit of int *)
-  | VariantLit of label * binder
+  (* | Int_lit of int *)
+  | Variant_lit of label * binder
 
 (** Terms in the surface language *)
 type tm =
@@ -50,13 +50,13 @@ and tm_data =
   | Name of string
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
-  | FunLit of param list * tm
-  | VariantLit of label * tm
-  | IntLit of int
-  | BoolLit of bool
+  | Fun_lit of param list * tm
+  | Variant_lit of label * tm
+  | Int_lit of int
+  | Bool_lit of bool
   | App of tm * tm
   | Match of tm * (pattern * tm) list
-  | IfThenElse of tm * tm * tm
+  | If_then_else of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
@@ -79,12 +79,12 @@ and param =
 
 (** The reason why a metavariable was inserted *)
 type meta_info = [
-  | `FunParam
-  | `FunBody
-  | `VariantLit
-  | `MatchClauses
-  | `PatternBinder
-  | `IfBranches
+  | `Fun_param
+  | `Fun_body
+  | `Variant_lit
+  | `Match_clauses
+  | `Pattern_binder
+  | `If_branches
   | `Placeholder
 ]
 
@@ -97,7 +97,7 @@ let metas : (loc * meta_info * Core.meta_state ref) Dynarray.t =
 let fresh_meta (loc: loc) (info : meta_info) (constr : Core.constr) : Core.ty =
   let state = Core.fresh_meta constr in
   Dynarray.add_last metas (loc, info, state);
-  MetaVar state
+  Meta_var state
 
 (** Return a list of unsolved metavariables *)
 let unsolved_metas () : (loc * meta_info) list =
@@ -106,7 +106,7 @@ let unsolved_metas () : (loc * meta_info) list =
     | Core.Unsolved (_, Any) -> (loc, info) :: acc
     | Core.Unsolved (_, Variant row) ->
         (* Default to a concrete variant type *)
-        m := Solved (VariantType row);
+        m := Solved (Variant_type row);
         acc
     | Core.Solved _ -> acc
   in
@@ -139,8 +139,8 @@ let error (type a) (loc : loc) (message : string) : a =
 
 let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
   try Core.unify ty1 ty2 with
-  | Core.InfiniteType _ -> error loc "infinite type"
-  | Core.MismatchedTypes (_, _) ->
+  | Core.Infinite_type _ -> error loc "infinite type"
+  | Core.Mismatched_types (_, _) ->
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           Core.pp_ty (Core.zonk_ty ty1)
@@ -160,14 +160,14 @@ let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
 (** Elaborate a type, checking that it is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
   match ty.data with
-  | Name "Bool" -> BoolType
-  | Name "Int" -> IntType
+  | Name "Bool" -> Bool_type
+  | Name "Int" -> Int_type
   | Name name ->
       error ty.loc (Format.asprintf "unbound type `%s`" name)
-  | FunType (ty1, ty2) ->
-      FunType (elab_ty ty1, elab_ty ty2)
-  | VariantType row ->
-      VariantType
+  | Fun_type (ty1, ty2) ->
+      Fun_type (elab_ty ty1, elab_ty ty2)
+  | Variant_type row ->
+      Variant_type
         (List.fold_left
           (fun acc (label, ty) ->
             if Core.Label_map.mem label.data acc then
@@ -187,13 +187,13 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let body = elab_check ((def_name.data, def_ty) :: ctx) body body_ty in
       Let (def_name.data, def_ty, def, body)
 
-  | FunLit (params, body), ty ->
+  | Fun_lit (params, body), ty ->
       elab_check_fun_lit ctx params body ty
 
-  | VariantLit (label, tm), VariantType row -> begin
+  | Variant_lit (label, tm), Variant_type row -> begin
       match Core.Label_map.find_opt label.data row with
       | Some elem_ty ->
-          VariantLit (label.data, elab_check ctx tm elem_ty, ty)
+          Variant_lit (label.data, elab_check ctx tm elem_ty, ty)
       | None ->
           error label.loc
             (Format.asprintf "unexpected variant `%s` in type `%a`"
@@ -204,11 +204,11 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
   | Match (head, clauses), body_ty ->
       elab_check_match ctx head clauses body_ty
 
-  | IfThenElse (head, tm1, tm2), ty ->
-      let head = elab_check ctx head BoolType in
+  | If_then_else (head, tm1, tm2), ty ->
+      let head = elab_check ctx head Bool_type in
       let tm1 = elab_check ctx tm1 ty in
       let tm2 = elab_check ctx tm2 ty in
-      BoolElim (head, tm1, tm2)
+      Bool_elim (head, tm1, tm2)
 
   (* Fall back to type inference *)
   | _ ->
@@ -235,87 +235,87 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let ty = elab_ty ty in
       elab_check ctx tm ty, ty
 
-  | FunLit (params, body) ->
+  | Fun_lit (params, body) ->
       elab_infer_fun_lit ctx params None body
 
-  | VariantLit (label, elem_tm) ->
+  | Variant_lit (label, elem_tm) ->
       let elem_tm, elem_ty = elab_infer ctx elem_tm in
       let row = Core.Label_map.singleton label.data elem_ty in
-      let ty = fresh_meta tm.loc `VariantLit (Variant row) in
-      VariantLit (label.data, elem_tm, ty), ty
+      let ty = fresh_meta tm.loc `Variant_lit (Variant row) in
+      Variant_lit (label.data, elem_tm, ty), ty
 
-  | IntLit i ->
-      IntLit i, IntType
+  | Int_lit i ->
+      Int_lit i, Int_type
 
-  | BoolLit b ->
-      BoolLit b, BoolType
+  | Bool_lit b ->
+      Bool_lit b, Bool_type
 
   | App (head, arg) ->
       let head_loc = head.loc in
       let head, head_ty = elab_infer ctx head in
       let param_ty, body_ty =
         match Core.force head_ty with
-        | FunType (param_ty, body_ty) -> param_ty, body_ty
+        | Fun_type (param_ty, body_ty) -> param_ty, body_ty
         | head_ty ->
-            let param_ty = fresh_meta head_loc `FunParam Any in
-            let body_ty = fresh_meta head_loc `FunBody Any in
-            unify head_loc head_ty (FunType (param_ty, body_ty));
+            let param_ty = fresh_meta head_loc `Fun_param Any in
+            let body_ty = fresh_meta head_loc `Fun_body Any in
+            unify head_loc head_ty (Fun_type (param_ty, body_ty));
             param_ty, body_ty
       in
       let arg = elab_check ctx arg param_ty in
-      FunApp (head, arg), body_ty
+      Fun_app (head, arg), body_ty
 
   | Match (head, clauses) ->
-      let body_ty = fresh_meta tm.loc `MatchClauses Any in
+      let body_ty = fresh_meta tm.loc `Match_clauses Any in
       elab_check_match ctx head clauses body_ty, body_ty
 
-  | IfThenElse (head, tm1, tm2) ->
-      let head = elab_check ctx head BoolType in
-      let ty = fresh_meta tm.loc `IfBranches Any in
+  | If_then_else (head, tm1, tm2) ->
+      let head = elab_check ctx head Bool_type in
+      let ty = fresh_meta tm.loc `If_branches Any in
       let tm1 = elab_check ctx tm1 ty in
       let tm2 = elab_check ctx tm2 ty in
-      BoolElim (head, tm1, tm2), ty
+      Bool_elim (head, tm1, tm2), ty
 
   | Op2 (`Eq, tm0, tm1) ->
       let tm0, ty0 = elab_infer ctx tm0 in
       let tm1, ty1 = elab_infer ctx tm1 in
       unify tm.loc ty0 ty1;
       begin match Core.force ty0 with
-      | BoolType -> PrimApp (BoolEq, [tm0; tm1]), BoolType
-      | IntType -> PrimApp (IntEq, [tm0; tm1]), BoolType
+      | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
+      | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
       | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
       end
 
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
       let prim =
         match prim with
-        | `Add -> Prim.IntAdd
-        | `Sub -> Prim.IntSub
-        | `Mul -> Prim.IntMul
+        | `Add -> Prim.Int_add
+        | `Sub -> Prim.Int_sub
+        | `Mul -> Prim.Int_mul
       in
-      let tm0 = elab_check ctx tm0 IntType in
-      let tm1 = elab_check ctx tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), IntType
+      let tm0 = elab_check ctx tm0 Int_type in
+      let tm1 = elab_check ctx tm1 Int_type in
+      Prim_app (prim, [tm0; tm1]), Int_type
 
   | Op1 (`Neg, tm) ->
-      let tm = elab_check ctx tm IntType in
-      PrimApp (IntNeg, [tm]), IntType
+      let tm = elab_check ctx tm Int_type in
+      Prim_app (Int_neg, [tm]), Int_type
 
 (** Elaborate a function literal into a core term, given an expected type. *)
 and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
   match params, Core.force ty with
   | [], ty ->
       elab_check ctx body ty
-  | (name, None) :: params, FunType (param_ty, body_ty) ->
+  | (name, None) :: params, Fun_type (param_ty, body_ty) ->
       let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
-  | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
+      Fun_lit (name.data, param_ty, body)
+  | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
       let param_ty_loc = param_ty.loc in
       let param_ty = elab_ty param_ty in
       unify param_ty_loc param_ty param_ty';
       let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
-  | (name, _) :: _, MetaVar _ ->
+      Fun_lit (name.data, param_ty, body)
+  | (name, _) :: _, Meta_var _ ->
       let tm', ty' = elab_infer_fun_lit ctx params None body in
       unify name.loc ty ty';
       tm'
@@ -332,11 +332,11 @@ and elab_infer_fun_lit (context : context) (params : param list) (body_ty : ty o
       elab_infer context body
   | (name, param_ty) :: params, body_ty ->
       let param_ty = match param_ty with
-        | None -> fresh_meta name.loc `FunParam Any
+        | None -> fresh_meta name.loc `Fun_param Any
         | Some ty -> elab_ty ty
       in
       let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
-      FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+      Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
 
 (** Elaborate a pattern match, checking the clause bodies against an expected type. *)
 and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list) (body_ty : Core.ty) : Core.tm =
@@ -344,11 +344,11 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
   let head, head_ty = elab_infer ctx head in
   (* TDOD: Proper match compilation *)
   match Core.force head_ty with
-  | VariantType row ->
+  | Variant_type row ->
       (* iterate through clauses, accumulating cases *)
       let cases =
         List.fold_left
-          (fun cases ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
+          (fun cases ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
             if Core.Label_map.mem label.data cases then
               (* TODO: should be a warning *)
               error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
@@ -370,7 +370,7 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
       in
       if List.is_empty missing_cases then
         (* return cases *)
-        VariantElim (head, cases)
+        Variant_elim (head, cases)
       else
         error head_loc
           (Format.asprintf "non-exhaustive match, missing %a"
@@ -383,12 +383,12 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
       (* Build up the cases and the row from the clauses *)
       let cases, row =
         List.fold_left
-          (fun (cases, row) ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
+          (fun (cases, row) ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
             if Core.Label_map.mem label.data cases then
               (* TODO: should be a warning? *)
               error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
             else
-              let case_ty = fresh_meta name.loc `PatternBinder Any in
+              let case_ty = fresh_meta name.loc `Pattern_binder Any in
               let body_tm = elab_check ((name.data, case_ty) :: ctx) body_tm body_ty in
               Core.Label_map.add label.data (name.data, body_tm) cases,
               Core.Label_map.add label.data case_ty row)
@@ -396,6 +396,6 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
           clauses
       in
       (* Unify head type with variant type *)
-      unify head_loc head_ty (VariantType row);
+      unify head_loc head_ty (Variant_type row);
       (* return cases *)
-      VariantElim (head, cases)
+      Variant_elim (head, cases)

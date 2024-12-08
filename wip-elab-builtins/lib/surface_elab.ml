@@ -23,9 +23,9 @@ let lookup_item_vty context name =
 
 let rec check_tm context (tm : Surface_syntax.tm) (vty : Core.Semantics.value) : Core.Syntax.tm =
   match tm, vty with
-  | NumLit num, I32Type -> I32Lit (Int32.of_string num)
-  | NumLit num, I64Type -> I64Lit (Int64.of_string num)
-  | NumLit num, F64Type -> F64Lit (Float.of_string num)
+  | Num_lit num, I32_type -> I32_lit (Int32.of_string num)
+  | Num_lit num, I64_type -> I64_lit (Int64.of_string num)
+  | Num_lit num, F64_type -> F64_lit (Float.of_string num)
   | tm, vty ->
       let tm, vty' = synth_tm context tm in
       if is_convertible vty vty' then tm else
@@ -36,26 +36,26 @@ let rec check_tm context (tm : Surface_syntax.tm) (vty : Core.Semantics.value) :
 and synth_tm context : Surface_syntax.tm -> Core.Syntax.tm * Core.Semantics.value =
   function
   | Path ["builtin"; "Type"] -> Type, Type
-  | Path ["builtin"; "Bool"] -> BoolType, Type
-  | Path ["builtin"; "true"] -> BoolLit true, BoolType
-  | Path ["builtin"; "false"] -> BoolLit false, BoolType
-  | Path ["builtin"; "I32"] -> I32Type, Type
-  | Path ["builtin"; "I64"] -> I64Type, Type
-  | Path ["builtin"; "F64"] -> F64Type, Type
+  | Path ["builtin"; "Bool"] -> Bool_type, Type
+  | Path ["builtin"; "true"] -> Bool_lit true, Bool_type
+  | Path ["builtin"; "false"] -> Bool_lit false, Bool_type
+  | Path ["builtin"; "I32"] -> I32_type, Type
+  | Path ["builtin"; "I64"] -> I64_type, Type
+  | Path ["builtin"; "F64"] -> F64_type, Type
   | Path [name] ->
       begin match lookup_item_vty context name with
-      | Some ty -> ItemVar name, ty
+      | Some ty -> Item_var name, ty
       | None -> failwith ("unbound path: " ^ name)
       end
   | Path path ->
       failwith ("unbound path: " ^ String.concat "." path)
-  | NumLit _num ->
+  | Num_lit _num ->
       (* TODO: postponed elaboration? *)
       failwith "ambiguous numeric literal"
   | Binop (lhs, _op, rhs) ->
       (* TODO: unification? *)
       begin match synth_tm context lhs with
-      | _lhs, (I32Type | I64Type | F64Type as vty) ->
+      | _lhs, (I32_type | I64_type | F64_type as vty) ->
           let _rhs = check_tm context rhs vty in
           failwith "todo"
       | _ -> failwith "unexpected type in lhs"

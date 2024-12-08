@@ -23,7 +23,7 @@ type ty =
 
 and ty_data =
   | Name of string
-  | FunType of ty * ty
+  | Fun_type of ty * ty
   | Placeholder
 
 (** Names that bind definitions or parameters *)
@@ -36,13 +36,13 @@ type tm =
 and tm_data =
   | Name of string
   | Let of defn * tm
-  | LetRec of defn list * tm
+  | Let_rec of defn list * tm
   | Ann of tm * ty
-  | FunLit of param list * tm
-  | IntLit of int
-  | BoolLit of bool
+  | Fun_lit of param list * tm
+  | Int_lit of int
+  | Bool_lit of bool
   | App of tm * tm
-  | IfThenElse of tm * tm * tm
+  | If_then_else of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Op1 of [`Neg] * tm
 
@@ -69,9 +69,9 @@ and defn =
 
 (** The reason why a metavariable was inserted *)
 type meta_info = [
-  | `FunParam
-  | `FunBody
-  | `IfBranches
+  | `Fun_param
+  | `Fun_body
+  | `If_branches
   | `Placeholder
 ]
 
@@ -84,7 +84,7 @@ let metas : (loc * meta_info * Core.meta_state ref) Dynarray.t =
 let fresh_meta (loc: loc) (info : meta_info) : Core.ty =
   let state = Core.fresh_meta () in
   Dynarray.add_last metas (loc, info, state);
-  MetaVar state
+  Meta_var state
 
 (** Return a list of unsolved metavariables *)
 let unsolved_metas () : (loc * meta_info) list =
@@ -101,7 +101,7 @@ let unsolved_metas () : (loc * meta_info) list =
 (** An entry in the context *)
 type entry =
   | Def of string * Core.ty
-  | MutualDef of (string * Core.ty) list
+  | Mutual_def of (string * Core.ty) list
 
 (** A stack of bindings currently in scope *)
 type context = entry Core.env
@@ -113,10 +113,10 @@ let lookup (ctx : context) (name : string) : (Core.tm * Core.ty) option =
     | Def (name', ty) when name = name' ->
         Some (Core.Var index, ty)
     | Def (_, _) -> None
-    | MutualDef entries ->
+    | Mutual_def entries ->
         entries |> List.find_mapi @@ fun elem_index (name', ty) ->
           match name = name' with
-          | true -> Some (Core.TupleProj (Var index, elem_index), ty)
+          | true -> Some (Core.Tuple_proj (Var index, elem_index), ty)
           | false -> None
 
 
@@ -133,8 +133,8 @@ let error (type a) (loc : loc) (message : string) : a =
 
 let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
   try Core.unify ty1 ty2 with
-  | Core.InfiniteType _ -> error loc "infinite type"
-  | Core.MismatchedTypes (_, _) ->
+  | Core.Infinite_type _ -> error loc "infinite type"
+  | Core.Mismatched_types (_, _) ->
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           Core.pp_ty (Core.zonk_ty ty1)
@@ -154,12 +154,12 @@ let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
 (** Elaborate a type, checking that it is well-formed. *)
 let rec elab_ty (ty : ty) : Core.ty =
   match ty.data with
-  | Name "Bool" -> BoolType
-  | Name "Int" -> IntType
+  | Name "Bool" -> Bool_type
+  | Name "Int" -> Int_type
   | Name name ->
       error ty.loc (Format.asprintf "unbound type `%s`" name)
-  | FunType (ty1, ty2) ->
-      FunType (elab_ty ty1, elab_ty ty2)
+  | Fun_type (ty1, ty2) ->
+      Fun_type (elab_ty ty1, elab_ty ty2)
   | Placeholder ->
       fresh_meta ty.loc `Placeholder
 
@@ -171,19 +171,19 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
       let body = elab_check (Def (def_name.data, def_ty) :: ctx) body ty in
       Let (def_name.data, def_ty, def, body)
 
-  | LetRec (defns, body) ->
+  | Let_rec (defns, body) ->
       let def_name, defs_entry, def_ty, def = elab_let_rec_defns ctx defns in
       let body = elab_check (defs_entry :: ctx) body ty in
       Let (def_name, def_ty, def, body)
 
-  | FunLit (params, body) ->
+  | Fun_lit (params, body) ->
       elab_check_fun_lit ctx params body ty
 
-  | IfThenElse (head, tm0, tm1) ->
-      let head = elab_check ctx head BoolType in
+  | If_then_else (head, tm0, tm1) ->
+      let head = elab_check ctx head Bool_type in
       let tm0 = elab_check ctx tm0 ty in
       let tm1 = elab_check ctx tm1 ty in
-      BoolElim (head, tm0, tm1)
+      Bool_elim (head, tm0, tm1)
 
   (* Fall back to type inference *)
   | _ ->
@@ -205,7 +205,7 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let body, body_ty = elab_infer (Def (def_name.data, def_ty) :: ctx) body in
       Let (def_name.data, def_ty, def, body), body_ty
 
-  | LetRec (defns, body) ->
+  | Let_rec (defns, body) ->
       let def_name, defs_entry, def_ty, def = elab_let_rec_defns ctx defns in
       let body, body_ty = elab_infer (defs_entry :: ctx) body in
       Let (def_name, def_ty, def, body), body_ty
@@ -214,77 +214,77 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
       let ty = elab_ty ty in
       elab_check ctx tm ty, ty
 
-  | FunLit (params, body) ->
+  | Fun_lit (params, body) ->
       elab_infer_fun_lit ctx params None body
 
-  | IntLit i ->
-      IntLit i, IntType
+  | Int_lit i ->
+      Int_lit i, Int_type
 
-  | BoolLit b ->
-      BoolLit b, BoolType
+  | Bool_lit b ->
+      Bool_lit b, Bool_type
 
   | App (head, arg) ->
       let head_loc = head.loc in
       let head, head_ty = elab_infer ctx head in
       let param_ty, body_ty =
         match Core.force head_ty with
-        | FunType (param_ty, body_ty) -> param_ty, body_ty
+        | Fun_type (param_ty, body_ty) -> param_ty, body_ty
         | head_ty ->
-            let param_ty = fresh_meta head_loc `FunParam in
-            let body_ty = fresh_meta head_loc `FunBody in
-            unify head_loc head_ty (FunType (param_ty, body_ty));
+            let param_ty = fresh_meta head_loc `Fun_param in
+            let body_ty = fresh_meta head_loc `Fun_body in
+            unify head_loc head_ty (Fun_type (param_ty, body_ty));
             param_ty, body_ty
       in
       let arg = elab_check ctx arg param_ty in
-      FunApp (head, arg), body_ty
+      Fun_app (head, arg), body_ty
 
-  | IfThenElse (head, tm0, tm1) ->
-      let head = elab_check ctx head BoolType in
-      let ty = fresh_meta tm.loc `IfBranches in
+  | If_then_else (head, tm0, tm1) ->
+      let head = elab_check ctx head Bool_type in
+      let ty = fresh_meta tm.loc `If_branches in
       let tm0 = elab_check ctx tm0 ty in
       let tm1 = elab_check ctx tm1 ty in
-      BoolElim (head, tm0, tm1), ty
+      Bool_elim (head, tm0, tm1), ty
 
   | Op2 (`Eq, tm0, tm1) ->
       let tm0, ty0 = elab_infer ctx tm0 in
       let tm1, ty1 = elab_infer ctx tm1 in
       unify tm.loc ty0 ty1;
       begin match Core.force ty0 with
-      | BoolType -> PrimApp (BoolEq, [tm0; tm1]), BoolType
-      | IntType -> PrimApp (IntEq, [tm0; tm1]), BoolType
+      | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
+      | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
       | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
       end
 
   | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
       let prim =
         match prim with
-        | `Add -> Prim.IntAdd
-        | `Sub -> Prim.IntSub
-        | `Mul -> Prim.IntMul
+        | `Add -> Prim.Int_add
+        | `Sub -> Prim.Int_sub
+        | `Mul -> Prim.Int_mul
       in
-      let tm0 = elab_check ctx tm0 IntType in
-      let tm1 = elab_check ctx tm1 IntType in
-      PrimApp (prim, [tm0; tm1]), IntType
+      let tm0 = elab_check ctx tm0 Int_type in
+      let tm1 = elab_check ctx tm1 Int_type in
+      Prim_app (prim, [tm0; tm1]), Int_type
 
   | Op1 (`Neg, tm) ->
-      let tm = elab_check ctx tm IntType in
-      PrimApp (IntNeg, [tm]), IntType
+      let tm = elab_check ctx tm Int_type in
+      Prim_app (Int_neg, [tm]), Int_type
 
 (** Elaborate a function literal into a core term, given an expected type. *)
 and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
   match params, Core.force ty with
   | [], ty ->
       elab_check ctx body ty
-  | (name, None) :: params, FunType (param_ty, body_ty) ->
+  | (name, None) :: params, Fun_type (param_ty, body_ty) ->
       let body = elab_check_fun_lit (Def (name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
-  | (name, Some param_ty) :: params, FunType (param_ty', body_ty) ->
+      Fun_lit (name.data, param_ty, body)
+  | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
       let param_ty_loc = param_ty.loc in
       let param_ty = elab_ty param_ty in
       unify param_ty_loc param_ty param_ty';
       let body = elab_check_fun_lit (Def (name.data, param_ty) :: ctx) params body body_ty in
-      FunLit (name.data, param_ty, body)
-  | (name, _) :: _, MetaVar _ ->
+      Fun_lit (name.data, param_ty, body)
+  | (name, _) :: _, Meta_var _ ->
       let tm', ty' = elab_infer_fun_lit ctx params None body in
       unify name.loc ty ty';
       tm'
@@ -300,13 +300,13 @@ and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty optio
   | [], None ->
       elab_infer ctx body
   | (name, None) :: params, body_ty ->
-      let param_ty = fresh_meta name.loc `FunParam in
+      let param_ty = fresh_meta name.loc `Fun_param in
       let body, body_ty = elab_infer_fun_lit (Def (name.data, param_ty) :: ctx) params body_ty body in
-      FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+      Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
   | (name, Some param_ty) :: params, body_ty ->
       let param_ty = elab_ty param_ty in
       let body, body_ty = elab_infer_fun_lit (Def (name.data, param_ty) :: ctx) params body_ty body in
-      FunLit (name.data, param_ty, body), FunType (param_ty, body_ty)
+      Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
 
 (** Elaborate the definitions of a recursive let binding. *)
 and elab_let_rec_defns (ctx : context) (defns : defn list) : string * entry * Core.ty * Core.tm =
@@ -314,10 +314,10 @@ and elab_let_rec_defns (ctx : context) (defns : defn list) : string * entry * Co
   let rec fresh_fun_ty ctx loc params body_ty =
     match params, body_ty with
     | [], Some body_ty -> elab_ty body_ty
-    | [], None -> fresh_meta loc `FunBody
+    | [], None -> fresh_meta loc `Fun_body
     | (name, _) :: params, body_ty ->
-        let param_ty = fresh_meta name.loc `FunParam in
-        FunType (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: ctx) loc params body_ty)
+        let param_ty = fresh_meta name.loc `Fun_param in
+        Fun_type (param_ty, fresh_fun_ty (Def (name.data, param_ty) :: ctx) loc params body_ty)
   in
 
   (* Check the body of a definition, ensuring it is a function *)
@@ -333,7 +333,7 @@ and elab_let_rec_defns (ctx : context) (defns : defn list) : string * entry * Co
        found in “A practical mode system for recursive definitions” by Reynaud
        et. al. https://doi.org/10.1145/3434326. *)
     match elab_check_fun_lit ctx params def def_ty with
-    | FunLit _ as def_body -> def_body
+    | Fun_lit _ as def_body -> def_body
     | _ -> error def_loc "expected function literal in recursive let binding"
   in
 
@@ -361,14 +361,14 @@ and elab_let_rec_defns (ctx : context) (defns : defn list) : string * entry * Co
       let def_tys = defs |> List.map (fun (def_name, params, def_ty, _) ->
         def_name.data, fresh_fun_ty ctx def_name.loc params def_ty)
       in
-      let defs_entry = MutualDef def_tys in
+      let defs_entry = Mutual_def def_tys in
       let defs = check_def_bodies (defs_entry :: ctx) defs def_tys in
 
       (* Create the combined mutual definition using a tuple and the fixed-point
          combinator. Alternatively we could use a record here, which could make
          debugging the elaborated terms a little easier. *)
       let def_name = "$" ^ String.concat "-" (List.map fst def_tys) in
-      let def_ty = Core.TupleType (List.map snd def_tys) in
-      let def = Core.Fix (def_name, def_ty, TupleLit defs) in
+      let def_ty = Core.Tuple_type (List.map snd def_tys) in
+      let def = Core.Fix (def_name, def_ty, Tuple_lit defs) in
 
       def_name, defs_entry, def_ty, def

@@ -1,7 +1,7 @@
 exception Error of [
-  | `UnexpectedChar
-  | `UnclosedStringLiteral
-  | `InvalidEscapeCode of string
+  | `Unexpected_char
+  | `Unclosed_string_literal
+  | `Invalid_escape_code of string
 ]
 
 let whitespace = [%sedlex.regexp? Plus (' ' | '\t' | '\r' | '\n')]
@@ -25,14 +25,14 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "("           -> OPEN_PAREN
   | ")"           -> CLOSE_PAREN
   | eof           -> END
-  | _             -> raise (Error `UnexpectedChar)
+  | _             -> raise (Error `Unexpected_char)
 
 and line_comment (lexbuf : Sedlexing.lexbuf) : Parser.token =
   match%sedlex lexbuf with
   | newline       -> token lexbuf
   | any           -> line_comment lexbuf
   | eof           -> END
-  | _             -> raise (Error `UnexpectedChar)
+  | _             -> raise (Error `Unexpected_char)
 
 and string (lexbuf : Sedlexing.lexbuf) : Parser.token =
   let buf = Buffer.create 1 in
@@ -44,11 +44,11 @@ and string (lexbuf : Sedlexing.lexbuf) : Parser.token =
         | "\"" -> Buffer.add_string buf "\""; (go [@tailcall]) ()
         | "n" -> Buffer.add_string buf "\n"; (go [@tailcall]) ()
         | "t" -> Buffer.add_string buf "\t"; (go [@tailcall]) ()
-        | _ -> raise (Error (`InvalidEscapeCode (Sedlexing.Utf8.lexeme lexbuf)))
+        | _ -> raise (Error (`Invalid_escape_code (Sedlexing.Utf8.lexeme lexbuf)))
     end
     | "\"" -> Buffer.contents buf
     | any  -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); (go [@tailcall]) ()
-    | eof -> raise (Error `UnclosedStringLiteral)
-    | _ -> raise (Error `UnexpectedChar)
+    | eof -> raise (Error `Unclosed_string_literal)
+    | _ -> raise (Error `Unexpected_char)
   in
   STRING (go ())

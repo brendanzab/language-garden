@@ -15,18 +15,18 @@ type id = Id.t
 type name = Name.t
 
 type ty = Core.ty =
-  | BoolTy                                                (* Bool *)
-  | IntTy                                                 (* Int *)
-  | FunTy of ty * ty                                      (* t1 -> t2 *)
-  | TupleTy of ty list                                    (* (t1, ... tn) *)
+  | Bool_ty                                                 (* Bool *)
+  | Int_ty                                                  (* Int *)
+  | Fun_ty of ty * ty                                       (* t1 -> t2 *)
+  | Tuple_ty of ty list                                     (* (t1, ... tn) *)
 
 (** Complex expressions *)
 type expr =
-  | LetComp of name * id * cexpr * expr                   (* let x : t := ce; e *)
-  | LetJoin of name * id * (name * id * ty) * expr * expr (* letjoin j (x : t) : t := e1; e2 *)
-  | JoinApp of id * aexpr                                 (* jump j ae *)
-  | BoolElim of aexpr * expr * expr                       (* if ae then e1 else e2 *)
-  | Comp of cexpr                                         (* ce *)
+  | Let_comp of name * id * cexpr * expr                    (* let x : t := ce; e *)
+  | Let_join of name * id * (name * id * ty) * expr * expr  (* letjoin j (x : t) : t := e1; e2 *)
+  | Join_app of id * aexpr                                  (* jump j ae *)
+  | Bool_elim of aexpr * expr * expr                        (* if ae then e1 else e2 *)
+  | Comp of cexpr                                           (* ce *)
 
 (** Computation expressions
 
@@ -36,27 +36,27 @@ type expr =
     approach.
 *)
 and cexpr =
-  | FunApp of aexpr * aexpr                               (* ae1 ae2 *)
-  | TupleProj of aexpr * int                              (* ae.n *)
-  | Atom of aexpr                                         (* ae *)
+  | Fun_app of aexpr * aexpr                                (* ae1 ae2 *)
+  | Tuple_proj of aexpr * int                               (* ae.n *)
+  | Atom of aexpr                                           (* ae *)
 
 (** Atomic expressions *)
 and aexpr =
-  | Var of id                                             (* x *)
-  | Prim of Prim.t                                        (* #p *)
-  | FunLit of name * id * ty * expr                       (* fun (x : t) => e *)
-  | TupleLit of aexpr list                                (* (ae1, ..., aen) *)
-  | BoolLit of bool                                       (* true | false *)
-  | IntLit of int                                         (* ... | -1 | 0 | 1 | ... *)
+  | Var of id                                               (* x *)
+  | Prim of Prim.t                                          (* #p *)
+  | Fun_lit of name * id * ty * expr                        (* fun (x : t) => e *)
+  | Tuple_lit of aexpr list                                 (* (ae1, ..., aen) *)
+  | Bool_lit of bool                                        (* true | false *)
+  | Int_lit of int                                          (* ... | -1 | 0 | 1 | ... *)
 
 module Semantics = struct
 
   type vexpr = Core.Semantics.vexpr =
     | Prim of Prim.t
-    | IntLit of int
-    | BoolLit of bool
-    | FunLit of (vexpr -> vexpr)
-    | TupleLit of vexpr list
+    | Int_lit of int
+    | Bool_lit of bool
+    | Fun_lit of (vexpr -> vexpr)
+    | Tuple_lit of vexpr list
 
   type defn =
     | Value of vexpr
@@ -66,23 +66,23 @@ module Semantics = struct
 
   let rec eval (env : env) (expr : expr) : vexpr =
     match expr with
-    | LetComp (_, def_id, def, body) ->
+    | Let_comp (_, def_id, def, body) ->
         let def = eval_comp env def in
         eval ((def_id, Value def) :: env) body
-    | LetJoin (_, def_id, (_, param_id, _), def, body) ->
+    | Let_join (_, def_id, (_, param_id, _), def, body) ->
         let def = Join (param_id, def) in
         eval ((def_id, def) :: env) body
-    | JoinApp (id, arg) ->
+    | Join_app (id, arg) ->
         begin match List.assoc id env with
         | Join (param_id, body) ->
             let arg = eval_atom env arg in
             eval ((param_id, Value arg) :: env) body
         | _ -> invalid_arg "expected join"
         end
-    | BoolElim (head, on_true, on_false) ->
+    | Bool_elim (head, on_true, on_false) ->
         begin match eval_atom env head with
-        | BoolLit true -> eval env on_true
-        | BoolLit false -> eval env on_false
+        | Bool_lit true -> eval env on_true
+        | Bool_lit false -> eval env on_false
         | _ -> invalid_arg "expected boolean"
         end
     | Comp expr ->
@@ -90,15 +90,15 @@ module Semantics = struct
 
   and eval_comp (env : env) (expr : cexpr) : vexpr =
     match expr with
-    | FunApp (head, arg) ->
+    | Fun_app (head, arg) ->
         begin match eval_atom env head with
         | Prim prim -> Core.Semantics.prim_app prim (eval_atom env arg)
-        | FunLit body -> body (eval_atom env arg)
+        | Fun_lit body -> body (eval_atom env arg)
         | _ -> invalid_arg "expected function"
         end
-    | TupleProj (head, label) ->
+    | Tuple_proj (head, label) ->
         begin match eval_atom env head with
-        | TupleLit evs -> List.nth evs label
+        | Tuple_lit evs -> List.nth evs label
         | _ -> invalid_arg "expected tuple"
         end
     | Atom expr ->
@@ -112,11 +112,11 @@ module Semantics = struct
         | _ -> invalid_arg "expected value"
         end
     | Prim prim -> Prim prim
-    | FunLit (_, param_id, _, body) ->
-        FunLit (fun arg -> eval ((param_id, Value arg) :: env) body)
-    | TupleLit exprs ->
-        TupleLit (List.map (eval_atom env) exprs)
-    | IntLit i -> IntLit i
-    | BoolLit b -> BoolLit b
+    | Fun_lit (_, param_id, _, body) ->
+        Fun_lit (fun arg -> eval ((param_id, Value arg) :: env) body)
+    | Tuple_lit exprs ->
+        Tuple_lit (List.map (eval_atom env) exprs)
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
 
 end

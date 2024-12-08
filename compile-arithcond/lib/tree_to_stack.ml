@@ -13,9 +13,9 @@ let rec translate_code : Tree_lang.expr -> Stack_lang.code -> Stack_lang.code =
   | Tree_lang.Var n -> List.cons (Stack_lang.Access n)
   | Tree_lang.Let (_, e1, e2) ->
       translate_code e1
-        << List.cons Stack_lang.BeginLet
+        << List.cons Stack_lang.Begin_let
         << translate_code e2
-        << List.cons Stack_lang.EndLet
+        << List.cons Stack_lang.End_let
   | Tree_lang.Int i -> List.cons (Stack_lang.Int i)
   | Tree_lang.Bool b -> List.cons (Stack_lang.Bool b)
   | Tree_lang.Neg e -> translate_code e << List.cons Stack_lang.Neg
@@ -24,11 +24,11 @@ let rec translate_code : Tree_lang.expr -> Stack_lang.code -> Stack_lang.code =
   | Tree_lang.Mul (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Mul
   | Tree_lang.Div (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Div
   | Tree_lang.Eq (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Eq
-  | Tree_lang.IfThenElse(e1, e2, e3) ->
+  | Tree_lang.If_then_else(e1, e2, e3) ->
       translate_code e1
         << List.cons (Stack_lang.Code (translate_code e2 []))
         << List.cons (Stack_lang.Code (translate_code e3 []))
-        << List.cons Stack_lang.IfThenElse
+        << List.cons Stack_lang.If_then_else
 
 
 let translate (e : Tree_lang.expr) : Stack_lang.code =

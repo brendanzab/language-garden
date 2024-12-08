@@ -15,18 +15,18 @@ module Var_set = Set.Make (Var)
 (** {1 Syntax} *)
 
 type ty = Lang__fun.ty =
-  | BoolType
-  | IntType
-  | FunType of ty * ty
+  | Bool_type
+  | Int_type
+  | Fun_type of ty * ty
 
 type tm =
   | Var of Var.t
   | Let of Var.t * ty * tm * tm
-  | BoolLit of bool
-  | IntLit of int
-  | PrimApp of Prim.t * tm list
-  | FunLit of Var.t * ty * tm
-  | FunApp of tm * tm
+  | Bool_lit of bool
+  | Int_lit of int
+  | Prim_app of Prim.t * tm list
+  | Fun_lit of Var.t * ty * tm
+  | Fun_app of tm * tm
 
 
 (** Return the part of an environment that is used in a term *)
@@ -34,11 +34,11 @@ let rec fvs : tm -> Var_set.t =
   function
   | Var var -> Var_set.singleton var
   | Let (def_var, _, def, body) -> Var_set.union (fvs def) (Var_set.remove def_var (fvs body))
-  | BoolLit _ -> Var_set.empty
-  | IntLit _ -> Var_set.empty
-  | PrimApp (_, args) -> List.fold_left Var_set.union Var_set.empty (List.map fvs args)
-  | FunLit (param_var, _, body) -> Var_set.remove param_var (fvs body)
-  | FunApp (head, arg) -> Var_set.union (fvs head) (fvs arg)
+  | Bool_lit _ -> Var_set.empty
+  | Int_lit _ -> Var_set.empty
+  | Prim_app (_, args) -> List.fold_left Var_set.union Var_set.empty (List.map fvs args)
+  | Fun_lit (param_var, _, body) -> Var_set.remove param_var (fvs body)
+  | Fun_app (head, arg) -> Var_set.union (fvs head) (fvs arg)
 
 
 (** {1 Pretty printing} *)
@@ -73,10 +73,10 @@ let rec pp_tm (fmt : Format.formatter) (tm : tm) =
         | tm -> Format.fprintf fmt "@[%a@]" pp_tm tm
       in
       go fmt tm
-  | FunLit (name, param_ty, body) ->
+  | Fun_lit (name, param_ty, body) ->
       let rec go fmt tm =
         match tm with
-        | FunLit (name, param_ty, body) ->
+        | Fun_lit (name, param_ty, body) ->
             Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
               pp_param (name, param_ty)
               go body
@@ -89,11 +89,11 @@ let rec pp_tm (fmt : Format.formatter) (tm : tm) =
       pp_app_tm fmt tm
 and pp_app_tm (fmt : Format.formatter) (tm : tm) =
   match tm with
-  | PrimApp (head, args) ->
+  | Prim_app (head, args) ->
       Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.to_string head)
         (Format.pp_print_list pp_atomic_tm ~pp_sep:Format.pp_print_space) args
-  | FunApp (head, arg) ->
+  | Fun_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
         pp_app_tm head
         pp_atomic_tm arg
@@ -102,9 +102,9 @@ and pp_app_tm (fmt : Format.formatter) (tm : tm) =
 and pp_atomic_tm (fmt : Format.formatter) (tm : tm) =
   match tm with
   | Var var -> pp_var fmt var
-  | BoolLit true -> Format.fprintf fmt "true"
-  | BoolLit false -> Format.fprintf fmt "false"
-  | IntLit i -> Format.fprintf fmt "%i" i
+  | Bool_lit true -> Format.fprintf fmt "true"
+  | Bool_lit false -> Format.fprintf fmt "false"
+  | Int_lit i -> Format.fprintf fmt "%i" i
   | tm -> Format.fprintf fmt "@[(%a)@]" pp_tm tm
 
 
@@ -113,9 +113,9 @@ module Semantics = struct
   (** {1 Values} *)
 
   type vtm =
-    | BoolLit of bool
-    | IntLit of int
-    | FunLit of Var.t * ty * clos
+    | Bool_lit of bool
+    | Int_lit of int
+    | Fun_lit of Var.t * ty * clos
 
   and clos = {
     env : vtm Var_map.t;
@@ -131,16 +131,16 @@ module Semantics = struct
     | Let (def_var, _, def, body) ->
         let def = eval env def in
         eval (Var_map.add def_var def env) body
-    | BoolLit b -> BoolLit b
-    | IntLit i -> IntLit i
-    | PrimApp (prim, args) ->
+    | Bool_lit b -> Bool_lit b
+    | Int_lit i -> Int_lit i
+    | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
-    | FunLit (param_var, param_ty, body) ->
+    | Fun_lit (param_var, param_ty, body) ->
         (* We do a naive form of dynamic closure conversion here, just capturing
           the entire environment along with the code of the body. We’ll do a
           more thorough job in the compiler though. *)
-        FunLit (param_var, param_ty, { env; body })
-    | FunApp (head, arg) ->
+        Fun_lit (param_var, param_ty, { env; body })
+    | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
         fun_app head arg
@@ -150,15 +150,15 @@ module Semantics = struct
 
   and prim_app prim args =
     match prim, args with
-    | `Neg, [IntLit t1] -> IntLit (-t1)
-    | `Add, [IntLit t1; IntLit t2] -> IntLit (t1 + t2)
-    | `Sub, [IntLit t1; IntLit t2] -> IntLit (t1 - t2)
-    | `Mul, [IntLit t1; IntLit t2] -> IntLit (t1 * t2)
+    | `Neg, [Int_lit t1] -> Int_lit (-t1)
+    | `Add, [Int_lit t1; Int_lit t2] -> Int_lit (t1 + t2)
+    | `Sub, [Int_lit t1; Int_lit t2] -> Int_lit (t1 - t2)
+    | `Mul, [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
     | _, _ -> invalid_arg "invalid prim application"
 
   and fun_app head arg =
     match head with
-    | FunLit (param_var, _, { env; body }) ->
+    | Fun_lit (param_var, _, { env; body }) ->
         eval (Var_map.add param_var arg env) body
     | _ -> invalid_arg "expected function"
 
@@ -187,23 +187,23 @@ module Validation = struct
     | Let (def_var, _, def, body) ->
         let def_ty = synth context def in
         synth (Var_map.add def_var def_ty context) body
-    | BoolLit _ -> BoolType
-    | IntLit _ -> IntType
-    | PrimApp (`Neg, [t]) ->
-        check context t IntType;
-        IntType
-    | PrimApp ((`Add | `Sub | `Mul), [t1; t2]) ->
-        check context t1 IntType;
-        check context t2 IntType;
-        IntType
-    | PrimApp _ ->
+    | Bool_lit _ -> Bool_type
+    | Int_lit _ -> Int_type
+    | Prim_app (`Neg, [t]) ->
+        check context t Int_type;
+        Int_type
+    | Prim_app ((`Add | `Sub | `Mul), [t1; t2]) ->
+        check context t1 Int_type;
+        check context t2 Int_type;
+        Int_type
+    | Prim_app _ ->
         invalid_arg "invalid prim application"
-    | FunLit (param_var, param_ty, body) ->
+    | Fun_lit (param_var, param_ty, body) ->
         let body_ty = synth (Var_map.add param_var param_ty context) body in
-        FunType (param_ty, body_ty)
-    | FunApp (head, arg) ->
+        Fun_type (param_ty, body_ty)
+    | Fun_app (head, arg) ->
         begin match synth context head with
-        | FunType (param_ty, body_ty) ->
+        | Fun_type (param_ty, body_ty) ->
             check context arg param_ty;
             body_ty
         | ty ->

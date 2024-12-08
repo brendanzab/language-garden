@@ -4,7 +4,7 @@ type binop =
 
 type tm =
   | Path of string list
-  | NumLit of string
+  | Num_lit of string
   | Binop of tm * binop * tm
 
 type item =

@@ -154,8 +154,8 @@ module Fun = struct
             let body_ty, body = body (var x) ctx in
             Context.quote ctx body_ty, body)
       in
-      Context.eval ctx (Syntax.FunType (name, param_ty, body_ty)),
-      Syntax.FunLit (name, param_ty, body)
+      Context.eval ctx (Syntax.Fun_type (name, param_ty, body_ty)),
+      Syntax.Fun_lit (name, param_ty, body)
 
   let check_param_ty (ty : is_ty option) : check =
     fun ctx expected_ty ->
@@ -169,23 +169,23 @@ module Fun = struct
   let intro_check ?name ?ty:param_ty (body : synth -> check) : check =
     fun ctx expected_ty ->
       match expected_ty with
-      | Semantics.FunType (_, expected_param_ty, body_ty) ->
+      | Semantics.Fun_type (_, expected_param_ty, body_ty) ->
           let expected_param_ty = Lazy.force expected_param_ty in
           let param_ty = check_param_ty param_ty ctx expected_param_ty in
           Context.assume ctx name expected_param_ty
             (fun ctx x ->
               let x = var x in
               let body_ty = body_ty (Context.eval ctx (x ctx |> snd)) in
-              Syntax.FunLit (name, param_ty, body x ctx body_ty))
+              Syntax.Fun_lit (name, param_ty, body x ctx body_ty))
       | _ -> raise (Error "not a function type")
 
   let app (head : synth) (arg : check) : synth =
     fun ctx ->
       match head ctx with
-      | Semantics.FunType (_, param_ty, body_ty), head ->
+      | Semantics.Fun_type (_, param_ty, body_ty), head ->
           let arg = arg ctx (Lazy.force param_ty) in
           let body_ty = body_ty (Context.eval ctx arg) in
-          body_ty, Syntax.FunApp (head, arg)
+          body_ty, Syntax.Fun_app (head, arg)
       | _, _ -> raise (Error "expected a function type")
 
 end
@@ -206,6 +206,6 @@ module Univ = struct
         (fun ctx x ->
           let l2, body_ty = is_ty (body_ty (var x)) ctx in
           Semantics.Univ (Core.Level.max l1 l2),
-          Syntax.FunType (name, param_ty, body_ty))
+          Syntax.Fun_type (name, param_ty, body_ty))
 
 end

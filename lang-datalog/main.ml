@@ -17,9 +17,9 @@ let parse_program filename in_channel =
   | Lexer.Error error ->
       let msg =
         match error with
-        | `UnexpectedChar -> "unexpected character"
-        | `UnclosedStringLiteral -> "unclosed string literal"
-        | `InvalidEscapeCode s -> Format.sprintf "invalid escape code `\\%s`" s
+        | `Unexpected_char -> "unexpected character"
+        | `Unclosed_string_literal -> "unclosed string literal"
+        | `Invalid_escape_code s -> Format.sprintf "invalid escape code `\\%s`" s
       in
       print_error (Sedlexing.lexing_positions lexbuf) msg;
       exit 1

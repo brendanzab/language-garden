@@ -12,8 +12,8 @@ type inst =
   (* Environment related instructions from the SECD machine. For additional
      details see: https://xavierleroy.org/mpri/2-4/machines.pdf. *)
   | Access of int  (** Push the nth value in the environment onto the stack *)
-  | BeginLet       (** Pop a value off the stack and push it onto the environment *)
-  | EndLet         (** Discard the first entry of the environment *)
+  | Begin_let      (** Pop a value off the stack and push it onto the environment *)
+  | End_let        (** Discard the first entry of the environment *)
 
   (* Literals *)
   | Int of int     (** [         -- i     ] *)
@@ -27,7 +27,7 @@ type inst =
   | Mul            (** [ i1 i2   -- i1*i2 ] *)
   | Div            (** [ i1 i2   -- i1/i2 ] *)
   | Eq             (** [ v1 v2   -- v1=v2 ] *)
-  | IfThenElse     (** [ b c1 c2 -- v     ] *)
+  | If_then_else   (** [ b c1 c2 -- v     ] *)
 
 (** Instruction sequences *)
 and code =
@@ -48,10 +48,10 @@ let rec pp_inst fmt = function
   | Mul -> Format.fprintf fmt "mul"
   | Div -> Format.fprintf fmt "div"
   | Eq -> Format.fprintf fmt "eq"
-  | IfThenElse -> Format.fprintf fmt "if"
+  | If_then_else -> Format.fprintf fmt "if"
   | Access n -> Format.fprintf fmt "access %i" n
-  | BeginLet -> Format.fprintf fmt "begin-let"
-  | EndLet -> Format.fprintf fmt "end-let"
+  | Begin_let -> Format.fprintf fmt "begin-let"
+  | End_let -> Format.fprintf fmt "end-let"
 and pp_code fmt = function
   | [] -> ()
   | inst :: [] -> Format.fprintf fmt "%a;" pp_inst inst
@@ -76,22 +76,22 @@ module Semantics = struct
   type state = code * env * stack
 
   let step : state -> state = function
-    | Access n :: code,   env,      stack                                -> code,       env,      List.nth env n :: stack
-    | BeginLet :: code,   env,      v :: stack                           -> code,       v :: env, stack
-    | EndLet :: code,     _ :: env, stack                                -> code,       env,      stack
+    | Access n :: code,     env,      stack                                -> code,       env,      List.nth env n :: stack
+    | Begin_let :: code,    env,      v :: stack                           -> code,       v :: env, stack
+    | End_let :: code,      _ :: env, stack                                -> code,       env,      stack
 
-    | Int i :: code,      env,      stack                                -> code,       env,      Int i :: stack
-    | Bool b :: code,     env,      stack                                -> code,       env,      Bool b :: stack
-    | Code c :: code,     env,      stack                                -> code,       env,      Code c :: stack
+    | Int i :: code,        env,      stack                                -> code,       env,      Int i :: stack
+    | Bool b :: code,       env,      stack                                -> code,       env,      Bool b :: stack
+    | Code c :: code,       env,      stack                                -> code,       env,      Code c :: stack
 
-    | Neg :: code,        env,      Int i :: stack                       -> code,       env,      Int (-i) :: stack
-    | Add :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 + i2) :: stack
-    | Sub :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 - i2) :: stack
-    | Mul :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 * i2) :: stack
-    | Div :: code,        env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 / i2) :: stack
-    | Eq :: code,         env,      v2 :: v1 :: stack                    -> code,       env,      Bool (v1 = v2) :: stack
-    | IfThenElse :: code, env,      _ :: Code c1 :: Bool true  ::  stack -> c1 @ code,  env,      stack
-    | IfThenElse :: code, env,      Code c2 :: _ :: Bool false ::  stack -> c2 @ code,  env,      stack
+    | Neg :: code,          env,      Int i :: stack                       -> code,       env,      Int (-i) :: stack
+    | Add :: code,          env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 + i2) :: stack
+    | Sub :: code,          env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 - i2) :: stack
+    | Mul :: code,          env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 * i2) :: stack
+    | Div :: code,          env,      Int i2 :: Int i1 :: stack            -> code,       env,      Int (i1 / i2) :: stack
+    | Eq :: code,           env,      v2 :: v1 :: stack                    -> code,       env,      Bool (v1 = v2) :: stack
+    | If_then_else :: code, env,      _ :: Code c1 :: Bool true  ::  stack -> c1 @ code,  env,      stack
+    | If_then_else :: code, env,      Code c2 :: _ :: Bool false ::  stack -> c2 @ code,  env,      stack
 
     | _, _, _ -> failwith "invalid code"
 
