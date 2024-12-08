@@ -10,7 +10,7 @@
     sedlex))
 
 (menhir
-  (modules Parser)
+  (modules parser)
   (flags --explain --strict))
 
 (mdx

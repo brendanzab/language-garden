@@ -14,19 +14,19 @@ types as long as possible, up to code-generation time.
 | [`Clos`]      | STLC in A-normal form with explicit closures                    |
 | [`Monadic`]   | STLC with a separation between values and effectful expressions |
 
-[`Surface`]: ./Surface.ml
-[`Core`]: ./Core.ml
-[`Anf`]: ./Anf.ml
-[`Clos`]: ./Clos.ml
-[`Monadic`]: ./Monadic.ml
+[`Surface`]: ./surface.ml
+[`Core`]: ./core.ml
+[`Anf`]: ./anf.ml
+[`Clos`]: ./clos.ml
+[`Monadic`]: ./monadic.ml
 
 | Translation        |   | Source       |   | Target        |
 | ------------------ | - | ------------ | - | ------------- |
 | [`CoreToAnf`]      | : | [`Core`]     | → | [`Anf`]       |
 | [`CoreToMonadic`]  | : | [`Core`]     | → | [`Monadic`]   |
 
-[`CoreToAnf`]: ./CoreToAnf.ml
-[`CoreToMonadic`]: ./CoreToMonadic.ml
+[`CoreToAnf`]: ./coreToAnf.ml
+[`CoreToMonadic`]: ./coreToMonadic.ml
 
 ## Todo list
 

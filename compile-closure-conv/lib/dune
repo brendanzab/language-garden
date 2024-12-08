@@ -1,8 +1,8 @@
 (library
-  (name ClosureConv)
+  (name closureConv)
   (public_name compile-closure-conv)
   (preprocess
     (pps sedlex.ppx)))
 
 (menhir
-  (modules Lang_Fun_Parser))
+  (modules lang_Fun_Parser))

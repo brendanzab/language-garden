@@ -1,5 +1,5 @@
 (executable
-  (name Main)
+  (name main)
   (public_name datalog)
   (package lang-datalog)
   (preprocess
@@ -8,7 +8,7 @@
     menhirLib))
 
 (menhir
-  (modules Parser)
+  (modules parser)
   (flags --explain --strict))
 
 (mdx

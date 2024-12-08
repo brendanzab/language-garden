@@ -1,5 +1,5 @@
 (executable
-  (name Main)
+  (name main)
   (public_name stlc-bidirectional)
   (package elab-stlc-bidirectional)
   (preprocess
@@ -9,7 +9,7 @@
     menhirLib))
 
 (menhir
-  (modules Parser)
+  (modules parser)
   (flags --explain --strict))
 
 (mdx

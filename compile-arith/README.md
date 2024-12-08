@@ -3,7 +3,7 @@
 An interpreter and compiler for a language of arithmetic expressions.
 
 The correctness of compilation and pretty printing are tested with
-[property-based tests](./test/Properties.ml) implemented using the [qcheck]
+[property-based tests](./test/properties.ml) implemented using the [qcheck]
 library.
 
 ## Compiler overview
@@ -14,17 +14,17 @@ library.
 | [`AnfLang`]   | Arithmetic expressions in A-Normal Form |
 | [`StackLang`] | Arithmetic expressions as stack machine instructions |
 
-[`TreeLang`]: ./lib/TreeLang.ml
-[`AnfLang`]: ./lib/AnfLang.ml
-[`StackLang`]: ./lib/StackLang.ml
+[`TreeLang`]: ./lib/treeLang.ml
+[`AnfLang`]: ./lib/anfLang.ml
+[`StackLang`]: ./lib/stackLang.ml
 
 | Translation     |   | Source       |   | Target        |
 | --------------- | - | ------------ | - | ------------- |
 | [`TreeToAnf`]   | : | [`TreeLang`] | → | [`AnfLang`]   |
 | [`TreeToStack`] | : | [`TreeLang`] | → | [`StackLang`] |
 
-[`TreeToAnf`]: ./lib/TreeToAnf.ml
-[`TreeToStack`]: ./lib/TreeToStack.ml
+[`TreeToAnf`]: ./lib/treeToAnf.ml
+[`TreeToStack`]: ./lib/treeToStack.ml
 
 ## Compilation Targets
 

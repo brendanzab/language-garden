@@ -3,7 +3,7 @@
   (deps %{bin:arith}))
 
 (tests
-  (names Properties)
+  (names properties)
   (package compile-arith)
   (libraries
     compile-arith

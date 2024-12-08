@@ -1,5 +1,5 @@
 (executable
-  (name Main)
+  (name main)
   (public_name doc-templates)
   (package lang-doc-templates)
   (preprocess
@@ -8,5 +8,5 @@
     menhirLib))
 
 (menhir
-  (modules Parser)
+  (modules parser)
   (flags --explain --strict))

@@ -65,12 +65,12 @@ Some possible downsides to this approach are:
 | [`Core`]      | Core language, including normalisation, and pretty printing |
 | [`Prim`]      | Primitive operations                    |
 
-[`Main`]: ./Main.ml
-[`Lexer`]: ./Lexer.ml
-[`Parser`]: ./Parser.mly
-[`Surface`]: ./Surface.ml
-[`Core`]: ./Core.ml
-[`Prim`]: ./Prim.ml
+[`Main`]: ./main.ml
+[`Lexer`]: ./lexer.ml
+[`Parser`]: ./parser.mly
+[`Surface`]: ./surface.ml
+[`Core`]: ./core.ml
+[`Prim`]: ./prim.ml
 
 ## Todo list
 

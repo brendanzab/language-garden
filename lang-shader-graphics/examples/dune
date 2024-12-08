@@ -1,4 +1,4 @@
 (library
-  (name ShaderGraphicsExamples)
+  (name shaderGraphicsExamples)
   (public_name lang-shader-graphics.examples)
   (libraries lang-shader-graphics))

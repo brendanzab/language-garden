@@ -15,9 +15,9 @@ In the future is would be nice to produce graphical output for these systems.
 
 ## Examples
 
-[lib/Systems/Algae.ml](./lib/Systems/Algae.ml):
+[lib/systems/algae.ml](./lib/systems/algae.ml):
 
-<!-- $MDX file=lib/Systems/Algae.ml,part=grammar -->
+<!-- $MDX file=lib/systems/algae.ml,part=grammar -->
 ```ocaml
 (** Cytological state of a cell *)
 type symbol =
@@ -47,9 +47,9 @@ abaababaabaababaababaabaababaabaab
 abaababaabaababaababaabaababaabaababaababaabaababaababa
 ```
 
-[lib/Systems/Filament.ml](./lib/Systems/Filament.ml):
+[lib/systems/filament.ml](./lib/systems/filament.ml):
 
-<!-- $MDX file=lib/Systems/Filament.ml,part=grammar -->
+<!-- $MDX file=lib/systems/filament.ml,part=grammar -->
 ```ocaml
 (** Cytological state of a cell *)
 type size =

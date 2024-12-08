@@ -13,12 +13,12 @@ This project explores a way to alleviate this burden on the elaborator by
 taking an LCF-inspired approach for the core language.
 Instead of type checking and constructing core terms within the elaborator, we
 instead move this behind trusted inference rules defined in the core
-(see [`Core.mli`]).
+(see [`core.mli`]).
 Elaboration no longer needs to interact with core terms directly, and can
-instead focus on desugaring and error reporting (see [`Surface.ml`]).
+instead focus on desugaring and error reporting (see [`surface.ml`]).
 
-[`Core.mli`]: ./Core.mli
-[`Surface.ml`]: ./Surface.ml
+[`Core.mli`]: ./core.mli
+[`Surface.ml`]: ./surface.ml
 
 ## Todo
 

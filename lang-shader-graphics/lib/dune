@@ -1,5 +1,5 @@
 (library
-  (name ShaderGraphics)
+  (name shaderGraphics)
   (public_name lang-shader-graphics))
 
 (env

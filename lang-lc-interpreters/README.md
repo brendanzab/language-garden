@@ -71,15 +71,15 @@ ease of implementation, and performance. Other constraints might tip the balance
 however, for example unique identifiers can make elaborating pattern matching to
 case trees more straightforward.
 
-[`Named`]:                ./Named.ml
-[`NamedNbeClosures`]:     ./NamedNbeClosures.ml
-[`NamedNbeHoas`]:         ./NamedNbeHoas.ml
-[`Nameless`]:             ./Nameless.ml
-[`NamelessNbeClosures`]:  ./NamelessNbeClosures.ml
-[`NamelessNbeHoas`]:      ./NamelessNbeHoas.ml
-[`Unique`]:               ./Unique.ml
-[`UniqueNbeClosures`]:    ./UniqueNbeClosures.ml
-[`UniqueNbeHoas`]:        ./UniqueNbeHoas.ml
+[`Named`]:                ./named.ml
+[`NamedNbeClosures`]:     ./namedNbeClosures.ml
+[`NamedNbeHoas`]:         ./namedNbeHoas.ml
+[`Nameless`]:             ./nameless.ml
+[`NamelessNbeClosures`]:  ./namelessNbeClosures.ml
+[`NamelessNbeHoas`]:      ./namelessNbeHoas.ml
+[`Unique`]:               ./unique.ml
+[`UniqueNbeClosures`]:    ./uniqueNbeClosures.ml
+[`UniqueNbeHoas`]:        ./uniqueNbeHoas.ml
 
 ## Resources
 

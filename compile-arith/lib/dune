@@ -1,8 +1,8 @@
 (library
-  (name Arith)
+  (name arith)
   (public_name compile-arith)
   (preprocess
     (pps sedlex.ppx)))
 
 (menhir
-  (modules TreeLangParser))
+  (modules treeLangParser))

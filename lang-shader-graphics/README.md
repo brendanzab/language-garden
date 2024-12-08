@@ -9,7 +9,7 @@ procedural graphics in parallel on the GPU, without the use of mesh geometry.
 For more details see the  [resources](#resources) listed below. This is an
 embedded DSL for composing SDFs in OCaml and compiling them to shader programs.
 
-<!-- $MDX file=examples/Readme.ml,part=scene -->
+<!-- $MDX file=examples/readme.ml,part=scene -->
 ```ocaml
 (** A scene to render, assuming UV coordinates in (-0.5, 0.5) *)
 let scene : (vec3f repr) Env.t  =
@@ -32,7 +32,7 @@ The resulting DSL is clunkier than I’d like. This is due to OCaml’s odd appr
 to custom operators (which don’t allow for custom precedences), and lack of
 implicit overloading. Still, I think it’s an interesting proof-of-concept!
 
-A full example can be found in [examples/Basic.ml](./examples/Basic.ml), which
+A full example can be found in [examples/Basic.ml](./examples/basic.ml), which
 renders the following image using the sequential, CPU-based back-end:
 
 ![The rendered output of Main.ml](./test/readme.png)
