@@ -5,24 +5,24 @@
 (** Simply typed lambda calculus *)
 module Fun = struct
 
-  include Lang_Fun
+  include Lang__fun
 
-  module Lexer = Lang_Fun_Lexer
-  module Parser = Lang_Fun_Parser
+  module Lexer = Lang__fun__lexer
+  module Parser = Lang__fun__parser
 
 end
 
 (** Closure converted language *)
-module Clos = Lang_Clos
+module Clos = Lang__clos
 
 
 (** {1 Alpha-renamed languages} *)
 
 (** Simply typed lambda calculus (alpha-renamed) *)
-module FunA = Lang_FunA
+module Fun_a = Lang__fun_a
 
 (** Closure converted language (alpha-renamed) *)
-module ClosA = Lang_ClosA
+module Clos_a = Lang__clos_a
 
 (** Lambda lifted language (alpha-renamed) *)
-module LiftedA = Lang_LiftedA
+module Lifted_a = Lang__lifted_a

@@ -7,7 +7,7 @@
 %token CLOSE_PAREN ")"
 %token END
 
-%start <TreeLang.expr> main
+%start <Tree_lang.expr> main
 
 %%
 
@@ -20,22 +20,22 @@ let expr :=
 
 let add_expr :=
 | e1 = mul_expr; "+"; e2 = add_expr;
-    { TreeLang.add e1 e2 }
+    { Tree_lang.add e1 e2 }
 | e1 = mul_expr; "-"; e2 = add_expr;
-    { TreeLang.sub e1 e2 }
+    { Tree_lang.sub e1 e2 }
 | mul_expr
 
 let mul_expr :=
 | e1 = atomic_expr; "*"; e2 = mul_expr;
-    { TreeLang.mul e1 e2 }
+    { Tree_lang.mul e1 e2 }
 | e1 = atomic_expr; "/"; e2 = mul_expr;
-    { TreeLang.div e1 e2 }
+    { Tree_lang.div e1 e2 }
 | atomic_expr
 
 let atomic_expr :=
 | "("; e = expr; ")";
     { e }
 | i = NUMBER;
-    { TreeLang.int i }
+    { Tree_lang.int i }
 | "-"; e = atomic_expr;
-    { TreeLang.neg e }
+    { Tree_lang.neg e }

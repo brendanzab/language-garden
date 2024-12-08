@@ -3,12 +3,12 @@
 (** {1 Variables} *)
 
 (** Global variable identifiers *)
-module GlobalVar = Fresh.Make ()
+module Global_var = Fresh.Make ()
 
 (** Local variable identifiers *)
-module LocalVar = Fresh.Make ()
+module Local_var = Fresh.Make ()
 
-module LocalVarMap = Map.Make (LocalVar)
+module Local_var_map = Map.Make (Local_var)
 
 
 (** {1 Syntax} *)
@@ -25,27 +25,27 @@ type code_ty = {
   body_ty : ty;
 }
 
-type global_tys = (GlobalVar.t * code_ty) list
+type global_tys = (Global_var.t * code_ty) list
 
 type tm =
-  | LocalVar of LocalVar.t
-  | Let of LocalVar.t * ty * tm * tm
+  | LocalVar of Local_var.t
+  | Let of Local_var.t * ty * tm * tm
   | BoolLit of bool
   | IntLit of int
   | PrimApp of Prim.t * tm list
-  | CodeApp of GlobalVar.t * tm * tm
+  | CodeApp of Global_var.t * tm * tm
   | TupleLit of tm list
   | TupleProj of tm * int
-  | ClosLit of GlobalVar.t * tm
+  | ClosLit of Global_var.t * tm
   | ClosApp of tm * tm
 
 and code = {
-  env : LocalVar.t * ty;
-  param : LocalVar.t * ty;
+  env : Local_var.t * ty;
+  param : Local_var.t * ty;
   body : tm;
 }
 
-and globals = (GlobalVar.t * code) list
+and globals = (Global_var.t * code) list
 
 and lifted_tm = {
   globals : globals;
@@ -82,15 +82,15 @@ and pp_atomic_ty (fmt : Format.formatter) (ty : ty) =
   | ty ->
       Format.fprintf fmt "@[(%a)@]" pp_ty ty
 
-let pp_global_var (fmt : Format.formatter) (var : GlobalVar.t) =
+let pp_global_var (fmt : Format.formatter) (var : Global_var.t) =
   Format.fprintf fmt "%s%i↑"
-    (GlobalVar.name var)
-    (GlobalVar.to_int var)
+    (Global_var.name var)
+    (Global_var.to_int var)
 
-let pp_local_var (fmt : Format.formatter) (var : LocalVar.t) =
+let pp_local_var (fmt : Format.formatter) (var : Local_var.t) =
   Format.fprintf fmt "%s%i"
-    (LocalVar.name var)
-    (LocalVar.to_int var)
+    (Local_var.name var)
+    (Local_var.to_int var)
 
 let pp_name_ann (fmt : Format.formatter) (var, ty) =
   Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
@@ -181,17 +181,17 @@ module Semantics = struct
     | BoolLit of bool
     | IntLit of int
     | TupleLit of vtm list
-    | ClosLit of GlobalVar.t * vtm
+    | ClosLit of Global_var.t * vtm
 
 
   (** {1 Evaluation} *)
 
   let rec eval globals locals : tm -> vtm =
     function
-    | LocalVar var -> LocalVarMap.find var locals
+    | LocalVar var -> Local_var_map.find var locals
     | Let (def_var, _, def, body) ->
         let def = eval globals locals def in
-        eval globals (LocalVarMap.add def_var def locals) body
+        eval globals (Local_var_map.add def_var def locals) body
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
@@ -213,7 +213,7 @@ module Semantics = struct
         clos_app globals head arg
 
   and eval_lifted (tm : lifted_tm) : vtm =
-    eval tm.globals LocalVarMap.empty tm.main
+    eval tm.globals Local_var_map.empty tm.main
 
 
   (** {1 Eliminators} *)
@@ -229,9 +229,9 @@ module Semantics = struct
   and code_app globals head env arg =
     let code = List.assoc head globals in
     let locals =
-      LocalVarMap.empty
-      |> LocalVarMap.add (fst code.env) env
-      |> LocalVarMap.add (fst code.param) arg
+      Local_var_map.empty
+      |> Local_var_map.add (fst code.env) env
+      |> Local_var_map.add (fst code.param) arg
     in
     eval globals locals code.body
 
@@ -264,13 +264,13 @@ module Validation = struct
   and synth globals locals (tm : tm) : ty =
     match tm with
     | LocalVar var ->
-        begin match LocalVarMap.find_opt var locals with
+        begin match Local_var_map.find_opt var locals with
         | Some ty -> ty
         | None -> invalid_arg "unbound variable"
         end
     | Let (def_var, _, def, body) ->
         let def_ty = synth globals locals def in
-        synth globals (LocalVarMap.add def_var def_ty locals) body
+        synth globals (Local_var_map.add def_var def_ty locals) body
     | BoolLit _ -> BoolType
     | IntLit _ -> IntType
     | PrimApp (`Neg, [t]) ->
@@ -323,9 +323,9 @@ module Validation = struct
     | (var, code) :: globals ->
         let globals = synth_globals globals in
         let locals =
-          LocalVarMap.empty
-          |> LocalVarMap.add (fst code.env) (snd code.env)
-          |> LocalVarMap.add (fst code.param) (snd code.param)
+          Local_var_map.empty
+          |> Local_var_map.add (fst code.env) (snd code.env)
+          |> Local_var_map.add (fst code.param) (snd code.param)
         in
         let code_ty = {
           env_ty = snd code.env;
@@ -336,6 +336,6 @@ module Validation = struct
 
   let synth_lifted (tm : lifted_tm) : ty =
     let globals = synth_globals tm.globals in
-    synth globals LocalVarMap.empty tm.main
+    synth globals Local_var_map.empty tm.main
 
 end

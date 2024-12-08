@@ -170,11 +170,11 @@ let rec elab_ty (ty : ty) : Core.ty =
       VariantType
         (List.fold_left
           (fun acc (label, ty) ->
-            if Core.LabelMap.mem label.data acc then
+            if Core.Label_map.mem label.data acc then
               error label.loc (Format.asprintf "duplicate label `%s`" label.data)
             else
-              Core.LabelMap.add label.data (elab_ty ty) acc)
-          Core.LabelMap.empty
+              Core.Label_map.add label.data (elab_ty ty) acc)
+          Core.Label_map.empty
           row)
   | Placeholder ->
       fresh_meta ty.loc `Placeholder Any
@@ -191,7 +191,7 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
       elab_check_fun_lit ctx params body ty
 
   | VariantLit (label, tm), VariantType row -> begin
-      match Core.LabelMap.find_opt label.data row with
+      match Core.Label_map.find_opt label.data row with
       | Some elem_ty ->
           VariantLit (label.data, elab_check ctx tm elem_ty, ty)
       | None ->
@@ -240,7 +240,7 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.ty =
 
   | VariantLit (label, elem_tm) ->
       let elem_tm, elem_ty = elab_infer ctx elem_tm in
-      let row = Core.LabelMap.singleton label.data elem_ty in
+      let row = Core.Label_map.singleton label.data elem_ty in
       let ty = fresh_meta tm.loc `VariantLit (Variant row) in
       VariantLit (label.data, elem_tm, ty), ty
 
@@ -349,23 +349,23 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
       let cases =
         List.fold_left
           (fun cases ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
-            if Core.LabelMap.mem label.data cases then
+            if Core.Label_map.mem label.data cases then
               (* TODO: should be a warning *)
               error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
             else
-              match Core.LabelMap.find_opt label.data row with
+              match Core.Label_map.find_opt label.data row with
               | Some case_ty ->
                   let body_tm = elab_check ((name.data, case_ty) :: ctx) body_tm body_ty in
-                  Core.LabelMap.add label.data (name.data, body_tm) cases
+                  Core.Label_map.add label.data (name.data, body_tm) cases
               | None ->
                   error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
-          Core.LabelMap.empty
+          Core.Label_map.empty
           clauses
       in
       (* check that labels in the cases match the labels in the row *)
       let missing_cases =
-        Core.LabelMap.to_seq row
-        |> Seq.filter (fun (label, _) -> not (Core.LabelMap.mem label cases))
+        Core.Label_map.to_seq row
+        |> Seq.filter (fun (label, _) -> not (Core.Label_map.mem label cases))
         |> List.of_seq
       in
       if List.is_empty missing_cases then
@@ -384,15 +384,15 @@ and elab_check_match (ctx : context) (head : tm) (clauses : (pattern * tm) list)
       let cases, row =
         List.fold_left
           (fun (cases, row) ({ data = VariantLit (label, name); _}, body_tm : pattern * _) ->
-            if Core.LabelMap.mem label.data cases then
+            if Core.Label_map.mem label.data cases then
               (* TODO: should be a warning? *)
               error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
             else
               let case_ty = fresh_meta name.loc `PatternBinder Any in
               let body_tm = elab_check ((name.data, case_ty) :: ctx) body_tm body_ty in
-              Core.LabelMap.add label.data (name.data, body_tm) cases,
-              Core.LabelMap.add label.data case_ty row)
-          (Core.LabelMap.empty, Core.LabelMap.empty)
+              Core.Label_map.add label.data (name.data, body_tm) cases,
+              Core.Label_map.add label.data case_ty row)
+          (Core.Label_map.empty, Core.Label_map.empty)
           clauses
       in
       (* Unify head type with variant type *)

@@ -21,7 +21,7 @@ let is_convertible = Core.Semantics.is_convertible
 let lookup_item_vty context name =
   List.assoc_opt name context.item_vtys
 
-let rec check_tm context (tm : SurfaceSyntax.tm) (vty : Core.Semantics.value) : Core.Syntax.tm =
+let rec check_tm context (tm : Surface_syntax.tm) (vty : Core.Semantics.value) : Core.Syntax.tm =
   match tm, vty with
   | NumLit num, I32Type -> I32Lit (Int32.of_string num)
   | NumLit num, I64Type -> I64Lit (Int64.of_string num)
@@ -33,7 +33,7 @@ let rec check_tm context (tm : SurfaceSyntax.tm) (vty : Core.Semantics.value) : 
           Core.Syntax.pp_tm (Core.Semantics.quote vty)
           Core.Syntax.pp_tm (Core.Semantics.quote vty'))
 
-and synth_tm context : SurfaceSyntax.tm -> Core.Syntax.tm * Core.Semantics.value =
+and synth_tm context : Surface_syntax.tm -> Core.Syntax.tm * Core.Semantics.value =
   function
   | Path ["builtin"; "Type"] -> Type, Type
   | Path ["builtin"; "Bool"] -> BoolType, Type
@@ -61,7 +61,7 @@ and synth_tm context : SurfaceSyntax.tm -> Core.Syntax.tm * Core.Semantics.value
       | _ -> failwith "unexpected type in lhs"
       end
 
-let elab_item context : SurfaceSyntax.item -> Core.Syntax.item * context  =
+let elab_item context : Surface_syntax.item -> Core.Syntax.item * context  =
   function
   | Use _ -> failwith "todo"
   | Def def ->

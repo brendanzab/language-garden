@@ -21,20 +21,20 @@ de Bruijn indexed terms, the other between alpha-renamed terms.
                         │
            ╭────────────┴────────────╮
            │                         │
-Translation.FunToClos     Translation.FunToFunA
+Translation.Fun_to_clos     Translation.Fun_to_fun_a
            │                         │
            ▼                         ▼
      ┌───────────┐             ┌───────────┐
-     │ Lang.Clos │             │ Lang.FunA │
+     │ Lang.Clos │             │ Lang.Fun_a │
      └───────────┘             └───────────┘
                                      │
                         ╭────────────┴────────────╮
                         │                         │
-             Translation.FunAToClosA   Translation.FunAToLiftedA
+        Translation.Fun_a_to_clos_a   Translation.Fun_a_to_lifted_a
                         │                         │
                         ▼                         ▼
                   ┌────────────┐          ┌──────────────┐
-                  │ Lang.ClosA │          │ Lang.LiftedA │
+                  │ Lang.Clos_a │          │ Lang.Lifted_a │
                   └────────────┘          └──────────────┘
 
 ```
@@ -42,28 +42,28 @@ Translation.FunToClos     Translation.FunToFunA
 | Language          | Description                                           |
 | ----------------- | ----------------------------------------------------- |
 | [`Lang.Fun`]      | Simply typed lambda calculus                          |
-| [`Lang.FunA`]     | Simply typed lambda calculus (alpha-renamed)          |
+| [`Lang.Fun_a`]     | Simply typed lambda calculus (alpha-renamed)          |
 | [`Lang.Clos`]     | Closure converted functional language                 |
-| [`Lang.ClosA`]    | Closure converted functional language (alpha-renamed) |
-| [`Lang.LiftedA`]  | Lambda lifted functional language (alpha-renamed)     |
+| [`Lang.Clos_a`]    | Closure converted functional language (alpha-renamed) |
+| [`Lang.Lifted_a`]  | Lambda lifted functional language (alpha-renamed)     |
 
-[`Lang.Fun`]: ./lib/lang_Fun.ml
-[`Lang.Clos`]: ./lib/lang_Clos.ml
-[`Lang.FunA`]: ./lib/lang_FunA.ml
-[`Lang.ClosA`]: ./lib/lang_ClosA.ml
-[`Lang.LiftedA`]: ./lib/lang_LiftedA.ml
+[`Lang.Fun`]: ./lib/lang__fun.ml
+[`Lang.Clos`]: ./lib/lang__clos.ml
+[`Lang.Fun_a`]: ./lib/lang__fun_a.ml
+[`Lang.Clos_a`]: ./lib/lang__clos_a.ml
+[`Lang.Lifted_a`]: ./lib/lang__lifted_a.ml
 
-| Translation                   |   | Source          |   | Target           | Description
-| ----------------------------- | - | --------------- | - | ---------------- | ---------------------------------
-| [`Translation.FunToClos`]     | : | [`Lang.Fun`]    | → | [`Lang.Clos`]    | Closure conversion
-| [`Translation.FunToFunA`]     | : | [`Lang.Fun`]    | → | [`Lang.FunA`]    | Alpha renaming
-| [`Translation.FunAToClosA`]   | : | [`Lang.FunA`]   | → | [`Lang.ClosA`]   | Closure conversion (alpha renamed)
-| [`Translation.FunAToLiftedA`] | : | [`Lang.FunA`]   | → | [`Lang.LiftedA`] | Lambda lifting (alpha renamed)
+| Translation                       |   | Source          |   | Target            | Description
+| --------------------------------- | - | --------------- | - | ----------------- | ---------------------------------
+| [`Translation.Fun_to_clos`]       | : | [`Lang.Fun`]    | → | [`Lang.Clos`]     | Closure conversion
+| [`Translation.Fun_to_fun_a`]      | : | [`Lang.Fun`]    | → | [`Lang.Fun_a`]    | Alpha renaming
+| [`Translation.Fun_a_to_clos_a`]   | : | [`Lang.Fun_a`]  | → | [`Lang.Clos_a`]   | Closure conversion (alpha renamed)
+| [`Translation.Fun_a_to_lifted_a`] | : | [`Lang.Fun_a`]  | → | [`Lang.Lifted_a`] | Lambda lifting (alpha renamed)
 
-[`Translation.FunToClos`]: ./lib/translation_FunToClos.ml
-[`Translation.FunToFunA`]: ./lib/translation_FunToFunA.ml
-[`Translation.FunAToClosA`]: ./lib/translation_FunAToClosA.ml
-[`Translation.FunAToLiftedA`]: ./lib/translation_FunAToLiftedA.ml
+[`Translation.Fun_to_clos`]: ./lib/translation__fun_to_clos.ml
+[`Translation.Fun_to_fun_a`]: ./lib/translation__fun_to_fun_a.ml
+[`Translation.Fun_a_to_clos_a`]: ./lib/translation__fun_a_to_clos_a.ml
+[`Translation.Fun_a_to_lifted_a`]: ./lib/translation__fun_a_to_lifted_a.ml
 
 An evaluator and type checker is implemented for each intermediate language.
 Every translation pass should produce well-typed programs in the target language.

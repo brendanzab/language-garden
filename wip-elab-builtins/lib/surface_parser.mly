@@ -14,7 +14,7 @@
 
 %token END
 
-%start <SurfaceSyntax.item list> main
+%start <Surface_syntax.item list> main
 
 %%
 
@@ -24,15 +24,15 @@ let main :=
 
 let item :=
 | "use"; path = separated_nonempty_list(".", NAME); ";";
-    { SurfaceSyntax.Use { path } }
+    { Surface_syntax.Use { path } }
 | "def"; label = NAME; ty = option(":"; t = tm; { t }); ":="; tm = tm; ";";
-    { SurfaceSyntax.Def { label; ty; tm } }
+    { Surface_syntax.Def { label; ty; tm } }
 
 let tm :=
 | lhs = atomic_tm; "+"; rhs = tm;
-    { SurfaceSyntax.Binop (lhs, SurfaceSyntax.Add, rhs) }
+    { Surface_syntax.Binop (lhs, Surface_syntax.Add, rhs) }
 | lhs = atomic_tm; "-"; rhs = tm;
-    { SurfaceSyntax.Binop (lhs, SurfaceSyntax.Sub, rhs) }
+    { Surface_syntax.Binop (lhs, Surface_syntax.Sub, rhs) }
 | t = atomic_tm;
     { t }
 
@@ -40,6 +40,6 @@ let atomic_tm :=
 | "("; t = tm; ")";
     { t }
 | path = separated_nonempty_list(".", NAME);
-    { SurfaceSyntax.Path path }
+    { Surface_syntax.Path path }
 | num = NUMBER;
-    { SurfaceSyntax.NumLit num }
+    { Surface_syntax.NumLit num }

@@ -1,10 +1,10 @@
 (** {0 Compiler CLI} *)
 
-module TreeLang = ArithCond.TreeLang
-module StackLang = ArithCond.StackLang
-module AnfLang = ArithCond.AnfLang
-module TreeToStack = ArithCond.TreeToStack
-module TreeToAnf = ArithCond.TreeToAnf
+module Tree_lang = Arith_cond.Tree_lang
+module Stack_lang = Arith_cond.Stack_lang
+module Anf_lang = Arith_cond.Anf_lang
+module Tree_to_stack = Arith_cond.Tree_to_stack
+module Tree_to_anf = Arith_cond.Tree_to_anf
 
 
 (** {1 Helper functions} *)
@@ -22,24 +22,24 @@ let parse_expr filename in_channel =
 
   try
     lexbuf
-    |> Sedlexing.with_tokenizer TreeLang.Lexer.token
-    |> MenhirLib.Convert.Simplified.traditional2revised TreeLang.Parser.main
+    |> Sedlexing.with_tokenizer Tree_lang.Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised Tree_lang.Parser.main
   with
-  | TreeLang.Lexer.Error ->
+  | Tree_lang.Lexer.Error ->
       print_error (Sedlexing.lexing_positions lexbuf) "unexpected character";
       exit 1
-  | TreeLang.UnboundName (loc, n) ->
+  | Tree_lang.UnboundName (loc, n) ->
       print_error loc (Format.sprintf "unbound name `%s`" n);
       exit 1
-  | TreeLang.Parser.Error ->
+  | Tree_lang.Parser.Error ->
       print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
 let synth_expr ctx e =
   try
-    TreeLang.Validation.synth ctx e
+    Tree_lang.Validation.synth ctx e
   with
-  | TreeLang.Validation.Error message ->
+  | Tree_lang.Validation.Error message ->
       Printf.eprintf "error: %s" message;
       exit 1
 
@@ -56,13 +56,13 @@ let compile : compile_target -> unit =
   | `Stack ->
       let e = parse_expr "<input>" stdin in
       let _ = synth_expr [] e in
-      let c = TreeToStack.translate e in
-      Format.printf "@[<v>%a@]" StackLang.pp_code c
+      let c = Tree_to_stack.translate e in
+      Format.printf "@[<v>%a@]" Stack_lang.pp_code c
   | `Anf ->
       let e = parse_expr "<input>" stdin in
       let _ = synth_expr [] e in
-      let e = TreeToAnf.translate e in
-      Format.printf "@[<v>%a@]" (AnfLang.pp_expr []) e
+      let e = Tree_to_anf.translate e in
+      Format.printf "@[<v>%a@]" (Anf_lang.pp_expr []) e
 
 let exec : exec_target -> unit =
   function
@@ -70,21 +70,21 @@ let exec : exec_target -> unit =
       let e = parse_expr "<input>" stdin in
       let t = synth_expr [] e in
       Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-        (TreeLang.pp_expr []) TreeLang.Semantics.(normalise [] e)
-        TreeLang.pp_ty t
+        (Tree_lang.pp_expr []) Tree_lang.Semantics.(normalise [] e)
+        Tree_lang.pp_ty t
   | `Stack ->
       let e = parse_expr "<input>" stdin in
       let _ = synth_expr [] e in
-      let c = TreeToStack.translate e in
+      let c = Tree_to_stack.translate e in
       Format.printf "@[%a@]"
-        StackLang.pp_code StackLang.Semantics.(normalise (c, [], []))
+        Stack_lang.pp_code Stack_lang.Semantics.(normalise (c, [], []))
   | `Anf ->
       let e = parse_expr "<input>" stdin in
       let t = synth_expr [] e in
-      let e = TreeToAnf.translate e in
+      let e = Tree_to_anf.translate e in
       Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-        (AnfLang.pp_expr []) AnfLang.Semantics.(normalise Env.empty e)
-        TreeLang.pp_ty t
+        (Anf_lang.pp_expr []) Anf_lang.Semantics.(normalise Env.empty e)
+        Tree_lang.pp_ty t
 
 
 (** {1 CLI options} *)

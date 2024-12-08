@@ -1,5 +1,5 @@
-(** Translation pass between the {!TreeLang} and {!StackLang} *)
+(** Translation pass between the {!Tree_lang} and {!Stack_lang} *)
 
 include Translation.S
-  with type source = TreeLang.expr
-  with type target = StackLang.code
+  with type source = Tree_lang.expr
+  with type target = Stack_lang.code

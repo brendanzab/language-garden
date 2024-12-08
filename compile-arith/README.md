@@ -8,23 +8,23 @@ library.
 
 ## Compiler overview
 
-| Language      | Description                  |
-| ------------- | ---------------------------- |
-| [`TreeLang`]  | Arithmetic expressions as a tree of nested subexpressions |
-| [`AnfLang`]   | Arithmetic expressions in A-Normal Form |
-| [`StackLang`] | Arithmetic expressions as stack machine instructions |
+| Language       | Description                  |
+| -------------- | ---------------------------- |
+| [`Tree_lang`]  | Arithmetic expressions as a tree of nested subexpressions |
+| [`Anf_lang`]   | Arithmetic expressions in A-Normal Form |
+| [`Stack_lang`] | Arithmetic expressions as stack machine instructions |
 
-[`TreeLang`]: ./lib/treeLang.ml
-[`AnfLang`]: ./lib/anfLang.ml
-[`StackLang`]: ./lib/stackLang.ml
+[`Tree_lang`]: ./lib/Tree_lang.ml
+[`Anf_lang`]: ./lib/Anf_lang.ml
+[`Stack_lang`]: ./lib/Stack_lang.ml
 
-| Translation     |   | Source       |   | Target        |
-| --------------- | - | ------------ | - | ------------- |
-| [`TreeToAnf`]   | : | [`TreeLang`] | → | [`AnfLang`]   |
-| [`TreeToStack`] | : | [`TreeLang`] | → | [`StackLang`] |
+| Translation       |   | Source        |   | Target         |
+| ----------------- | - | ------------- | - | -------------- |
+| [`Tree_to_anf`]   | : | [`Tree_lang`] | → | [`Anf_lang`]   |
+| [`Tree_to_stack`] | : | [`Tree_lang`] | → | [`Stack_lang`] |
 
-[`TreeToAnf`]: ./lib/treeToAnf.ml
-[`TreeToStack`]: ./lib/treeToStack.ml
+[`Tree_to_anf`]: ./lib/tree_to_anf.ml
+[`Tree_to_stack`]: ./lib/tree_to_stack.ml
 
 ## Compilation Targets
 

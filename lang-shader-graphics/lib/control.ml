@@ -240,7 +240,7 @@ module Monad = struct
 
 
   (** A reader implemented for functions *)
-  module FunctionReader (V : sig type t end) : Reader
+  module Function_reader (V : sig type t end) : Reader
 
     with type value = V.t
     with type 'a t = V.t -> 'a
@@ -266,7 +266,7 @@ module Monad = struct
 
   (** A reader with an abstract implementation *)
   module Reader (V : sig type t end) : Reader with type value = V.t =
-    FunctionReader (V)
+    Function_reader (V)
 
 
   (** An environment that can access and update some shared state *)
@@ -293,7 +293,7 @@ module Monad = struct
 
 
   (** A state monad implemented for functions *)
-  module FunctionState (S : sig type t end) : State
+  module Function_state (S : sig type t end) : State
 
     with type state = S.t
     with type 'a t = S.t -> 'a * S.t
@@ -331,7 +331,7 @@ module Monad = struct
 
   (** A state monad with an abstract implementation *)
   module State (S : sig type t end) : State with type state = S.t =
-    FunctionState (S)
+    Function_state (S)
 
 end
 

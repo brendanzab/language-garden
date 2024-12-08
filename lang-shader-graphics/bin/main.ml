@@ -1,12 +1,12 @@
-open ShaderGraphics.ShaderTypes
+open Shader_graphics.Shader_types
 
-module Monad = ShaderGraphics.Control.Monad
+module Monad = Shader_graphics.Control.Monad
 
-module Cpu = ShaderGraphics.Cpu
-module Glsl = ShaderGraphics.Glsl
-module Sdf = ShaderGraphics.Sdf
-module Shader = ShaderGraphics.Shader
-module Examples = ShaderGraphicsExamples
+module Cpu = Shader_graphics.Cpu
+module Glsl = Shader_graphics.Glsl
+module Sdf = Shader_graphics.Sdf
+module Shader = Shader_graphics.Shader
+module Examples = Shader_graphics_examples
 
 
 (** {1 Example scenes} *)
@@ -20,11 +20,11 @@ end
 
 module Scene (S : Examples.Scene.F) : Scene = struct
 
-  module GlslScene = S (Glsl)
-  module CpuScene = S (Cpu)
+  module Glsl_scene = S (Glsl)
+  module Cpu_scene = S (Cpu)
 
-  let glsl_image = GlslScene.image
-  let cpu_image = CpuScene.image
+  let glsl_image = Glsl_scene.image
+  let cpu_image = Cpu_scene.image
 
 end
 

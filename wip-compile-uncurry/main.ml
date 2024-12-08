@@ -245,7 +245,7 @@ module Uncurried = struct
 end
 
 
-module CurriedToUncurried = struct
+module Curried_to_uncurried = struct
 
   type binding = {
     var : level * int;    (** The scope level and parameter index of this binding *)
@@ -369,7 +369,7 @@ let () =
 
   Format.printf "@[%a@]\n" (Curried.pp_expr []) term;
 
-  let term, _ = CurriedToUncurried.(translate empty_env term) in
+  let term, _ = Curried_to_uncurried.(translate empty_env term) in
 
   Format.printf "@[%a@]\n" (Uncurried.pp_expr []) term;
   Format.printf "\n";
@@ -387,7 +387,7 @@ let () =
 
   Format.printf "@[%a@]\n" (Curried.pp_expr []) term;
 
-  let term, _ = CurriedToUncurried.(translate empty_env term) in
+  let term, _ = Curried_to_uncurried.(translate empty_env term) in
 
   Format.printf "@[%a@]\n" (Uncurried.pp_expr []) term;
 

@@ -1,6 +1,6 @@
 (** {0 Language of signed distance functions} *)
 
-open ShaderTypes
+open Shader_types
 
 
 (** A language for building signed distance functions. *)

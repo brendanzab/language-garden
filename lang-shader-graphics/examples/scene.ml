@@ -1,6 +1,6 @@
-open ShaderGraphics.ShaderTypes
+open Shader_graphics.Shader_types
 
-module Shader = ShaderGraphics.Shader
+module Shader = Shader_graphics.Shader
 
 (** Construct a scene for a shader language *)
 module type F = functor (S : Shader.S) -> sig

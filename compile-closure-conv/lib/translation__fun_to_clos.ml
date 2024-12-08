@@ -9,7 +9,7 @@
     to simplify the handling of variable bindings.
 
     The implementation is somewhat fiddly due to the decision to use de Bruijn
-    indices in the source and target languages. {!Translate.FunAToClosA} uses
+    indices in the source and target languages. {!Translate.Fun_a_to_clos_a} uses
     alpha renamed terms, which simplifies this somewhat.
 
     Note that we don’t do any uncurrying during this translation, which results

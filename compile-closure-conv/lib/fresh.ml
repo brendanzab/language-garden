@@ -29,23 +29,23 @@ module Make () : S = struct
   let next_id = ref 0
 
   (** For storing the variable names *)
-  module IdMap = Map.Make (Int)
+  module Id_map = Map.Make (Int)
 
   (** A global store of variable names. This might not be an ideal approach
       more long-running compilers (it’s a memory leak), but it saves us having
       to cart around the names separately. *)
-  let names = ref IdMap.empty
+  let names = ref Id_map.empty
 
   let fresh name =
     let id = !next_id in
     incr next_id;
-    names := IdMap.add id name !names;
+    names := Id_map.add id name !names;
     id
 
   let compare = Int.compare
 
   let to_int id = id
 
-  let name id = IdMap.find id !names
+  let name id = Id_map.find id !names
 
 end

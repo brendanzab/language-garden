@@ -8,8 +8,8 @@
 
 module Var = Fresh.Make ()
 
-module VarMap = Map.Make (Var)
-module VarSet = Set.Make (Var)
+module Var_map = Map.Make (Var)
+module Var_set = Set.Make (Var)
 
 
 (** {1 Syntax} *)
@@ -154,10 +154,10 @@ module Semantics = struct
 
   let rec eval env : tm -> vtm =
     function
-    | Var var -> VarMap.find var env
+    | Var var -> Var_map.find var env
     | Let (def_var, _, def, body) ->
         let def = eval env def in
-        eval (VarMap.add def_var def env) body
+        eval (Var_map.add def_var def env) body
     | BoolLit b -> BoolLit b
     | IntLit i -> IntLit i
     | PrimApp (prim, args) ->
@@ -196,9 +196,9 @@ module Semantics = struct
     match head with
     | ClosLit (CodeLit ((env_var, _), (param_var, _), body), env) ->
         let env =
-          VarMap.empty
-          |> VarMap.add env_var env
-          |> VarMap.add param_var arg
+          Var_map.empty
+          |> Var_map.add env_var env
+          |> Var_map.add param_var arg
         in
         eval env body
     | _ -> invalid_arg "expected closure"
@@ -221,13 +221,13 @@ module Validation = struct
   and synth context tm =
     match tm with
     | Var var ->
-        begin match VarMap.find_opt var context with
+        begin match Var_map.find_opt var context with
         | Some ty -> ty
         | None -> invalid_arg "unbound variable"
         end
     | Let (def_var, _, def, body) ->
         let def_ty = synth context def in
-        synth (VarMap.add def_var def_ty context) body
+        synth (Var_map.add def_var def_ty context) body
     | BoolLit _ -> BoolType
     | IntLit _ -> IntType
     | PrimApp (`Neg, [t]) ->
@@ -244,9 +244,9 @@ module Validation = struct
           the body of the closure is synthesised in a new context that assumes
           only the parameter and the environment. *)
         let body_context =
-          VarMap.empty
-          |> VarMap.add env_var env_ty
-          |> VarMap.add param_var param_ty
+          Var_map.empty
+          |> Var_map.add env_var env_ty
+          |> Var_map.add param_var param_ty
         in
         let body_ty = synth body_context body in
         CodeType (env_ty, param_ty, body_ty)

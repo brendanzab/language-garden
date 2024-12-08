@@ -1,8 +1,8 @@
 (library
-  (name arithCond)
+  (name arith_cond)
   (public_name compile-arithcond)
   (preprocess
     (pps sedlex.ppx)))
 
 (menhir
-  (modules treeLangParser))
+  (modules tree_lang_parser))

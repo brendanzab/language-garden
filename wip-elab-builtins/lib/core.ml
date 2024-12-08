@@ -1,4 +1,4 @@
 (** The core language *)
 
-module Syntax = CoreSyntax
-module Semantics = CoreSemantics
+module Syntax = Core_syntax
+module Semantics = Core_semantics

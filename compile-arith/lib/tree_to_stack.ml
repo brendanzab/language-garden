@@ -1,5 +1,5 @@
-type source = TreeLang.expr
-type target = StackLang.code
+type source = Tree_lang.expr
+type target = Stack_lang.code
 
 
 (** Function composition *)
@@ -8,15 +8,15 @@ let ( << ) f g x = f (g x)
 (** Translate an expression, adding it to the continuation of the expression.
     The continuation allows us to avoid using list concatenation, which could
     lead to exponential blowups during compilation. *)
-let rec translate_code : TreeLang.expr -> StackLang.code -> StackLang.code =
+let rec translate_code : Tree_lang.expr -> Stack_lang.code -> Stack_lang.code =
   function
-  | TreeLang.Int i -> List.cons (StackLang.Int i)
-  | TreeLang.Neg e -> translate_code e << List.cons StackLang.Neg
-  | TreeLang.Add (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Add
-  | TreeLang.Sub (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Sub
-  | TreeLang.Mul (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Mul
-  | TreeLang.Div (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Div
+  | Tree_lang.Int i -> List.cons (Stack_lang.Int i)
+  | Tree_lang.Neg e -> translate_code e << List.cons Stack_lang.Neg
+  | Tree_lang.Add (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Add
+  | Tree_lang.Sub (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Sub
+  | Tree_lang.Mul (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Mul
+  | Tree_lang.Div (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Div
 
 
-let translate (e : TreeLang.expr) : StackLang.code =
+let translate (e : Tree_lang.expr) : Stack_lang.code =
   translate_code e []

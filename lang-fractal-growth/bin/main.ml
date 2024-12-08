@@ -1,29 +1,29 @@
-module System = FractalGrowth.System
-module Systems = FractalGrowth.Systems
+module System = Fractal_growth.System
+module Systems = Fractal_growth.Systems
 
 
 (** {1 Helper functions} *)
 
-module type PrintableGrammar = sig
+module type Printable_grammar = sig
   include System.Grammar
   val string_of_word : symbol list -> string
 end
 
-let print_generations (module G : PrintableGrammar) =
+let print_generations (module G : Printable_grammar) =
   let module Util = System.Util (G) in
   Util.generate G.axiom
     |> Seq.map G.string_of_word
     |> Seq.iter print_endline
 
 (** Example L-Systems that can be run via the CLI *)
-let systems : (string * (module PrintableGrammar)) list = [
+let systems : (string * (module Printable_grammar)) list = [
   "algae", (module Systems.Algae);
   "filament", (module Systems.Filament);
-  "koch-island", (module Systems.KochIsland);
+  "koch-island", (module Systems.Koch_island);
   "parametric", (module Systems.Parametric);
-  "binary-tree", (module Systems.BinaryTree);
-  "cantor-set", (module Systems.CantorSet);
-  "monopodial-inflorence", (module Systems.MonopodialInflorence);
+  "binary-tree", (module Systems.Binary_tree);
+  "cantor-set", (module Systems.Cantor_set);
+  "monopodial-inflorence", (module Systems.Monopodial_inflorence);
 ]
 
 

@@ -20,13 +20,13 @@ types as long as possible, up to code-generation time.
 [`Clos`]: ./clos.ml
 [`Monadic`]: ./monadic.ml
 
-| Translation        |   | Source       |   | Target        |
-| ------------------ | - | ------------ | - | ------------- |
-| [`CoreToAnf`]      | : | [`Core`]     | → | [`Anf`]       |
-| [`CoreToMonadic`]  | : | [`Core`]     | → | [`Monadic`]   |
+| Translation          |   | Source       |   | Target        |
+| -------------------- | - | ------------ | - | ------------- |
+| [`Core_to_anf`]      | : | [`Core`]     | → | [`Anf`]       |
+| [`Core_to_monadic`]  | : | [`Core`]     | → | [`Monadic`]   |
 
-[`CoreToAnf`]: ./coreToAnf.ml
-[`CoreToMonadic`]: ./coreToMonadic.ml
+[`Core_to_anf`]: ./core_to_anf.ml
+[`Core_to_monadic`]: ./core_to_monadic.ml
 
 ## Todo list
 
@@ -45,8 +45,8 @@ Translations:
 - [x] Lexer
 - [x] Parser
 - [x] Elaboration to core ([`Surface`])
-- [x] ANF-translation ([`CoreToAnf`])
-- [x] Monadic translation ([`CoreToMonadic`])
+- [x] ANF-translation ([`Core_to_anf`])
+- [x] Monadic translation ([`Core_to_monadic`])
 - [ ] Closure conversion
 - [ ] Hoisting
 - [ ] Single static assignment
@@ -80,14 +80,14 @@ Other features:
                           │
             ╭─────────────┴───────────────╮
             │                             │
-   Core.ToAnf.translate         Core.ToMonadic.translate
+   Core.To_anf.translate         Core.To_monadic.translate
             │                             │
             ▼                             ▼
     ╭────────────────╮            ╭────────────────╮
     │    Anf.expr    │            │  Monadic.expr  │
     ╰────────────────╯            ╰────────────────╯
             │
-   Anf.ToClos.translate
+   Anf.To_clos.translate
             │
             │     ╭───────────────╮
             ▼     ▼               │
@@ -97,24 +97,24 @@ Other features:
             │     │               │
             │     ╰───────────────╯
             │
-            ├─────────────────┬──── Clos.ToWasm.translate ─────────▶︎ ...
+            ├─────────────────┬──── Clos.To_wasm.translate ─────────▶︎ ...
             │                 │
-            │                 ├──── Clos.ToLlvm.translate ─────────▶︎ ...
+            │                 ├──── Clos.To_llvm.translate ─────────▶︎ ...
             │                 │
-            │                 ╰──── Clos.ToCranelift.translate ────▶︎ ...
+            │                 ╰──── Clos.To_cranelift.translate ────▶︎ ...
             │
-   Clos.ToSsa.translate
+   Clos.To_ssa.translate
             │
             ▼
     ╭────────────────╮
     │   Ssa.prog     │
     ╰────────────────╯
             │
-   Ssa.ToTal.translate
+   Ssa.To_tal.translate
             │
     ╭────────────────╮
     │   Tal.prog     │
     ╰────────────────╯
             │
-            ╰──── Tal.To<AsmTarget>.translate ────▶︎ ...
+            ╰──── Tal.To_<asm_aarget>.translate ────▶︎ ...
 ```

@@ -47,26 +47,26 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
 
 (** {2 Variable sets} *)
 
-module StringSet = Set.Make (String)
+module String_set = Set.Make (String)
 
-let rec fresh (ns : StringSet.t) (x : string) : string =
-  match StringSet.mem x ns with
+let rec fresh (ns : String_set.t) (x : string) : string =
+  match String_set.mem x ns with
   | true -> fresh ns (x ^ "'")
   | false -> x
 
-let rec free_vars (e : expr) : StringSet.t =
+let rec free_vars (e : expr) : String_set.t =
   match e with
-  | Var x -> StringSet.singleton x
-  | Let (x, def, body) -> StringSet.(union (free_vars def) (remove x (free_vars body)))
-  | FunLit (x, body) -> StringSet.remove x (free_vars body)
-  | FunApp (head, arg) -> StringSet.union (free_vars head) (free_vars arg)
+  | Var x -> String_set.singleton x
+  | Let (x, def, body) -> String_set.(union (free_vars def) (remove x (free_vars body)))
+  | FunLit (x, body) -> String_set.remove x (free_vars body)
+  | FunApp (head, arg) -> String_set.union (free_vars head) (free_vars arg)
 
-let rec all_vars (e : expr) : StringSet.t =
+let rec all_vars (e : expr) : String_set.t =
   match e with
-  | Var x -> StringSet.singleton x
-  | Let (_, def, body) -> StringSet.union (all_vars def) (all_vars body)
+  | Var x -> String_set.singleton x
+  | Let (_, def, body) -> String_set.union (all_vars def) (all_vars body)
   | FunLit (_, body) -> all_vars body
-  | FunApp (head, arg) -> StringSet.union (all_vars head) (all_vars arg)
+  | FunApp (head, arg) -> String_set.union (all_vars head) (all_vars arg)
 
 (** {2 Substitution} *)
 
@@ -74,23 +74,23 @@ let rec all_vars (e : expr) : StringSet.t =
 let rec subst (x, s : string * expr) (e : expr) : expr =
   (* Based on https://github.com/sweirich/lambda-n-ways/blob/c4ffc2add78d63b89c3d5d872f6787dadb890626/lib/Named/Lennart.hs#L83-L114 *)
   let fvs = free_vars s in
-  let vs = StringSet.add x fvs in
+  let vs = String_set.add x fvs in
   let freshen_body y body =
     (* NOTE: Just the free variables are sufficient, but it’s faster to collect
        all of the variables without removing the bound ones. *)
-    let y' = fresh (StringSet.union vs (all_vars body)) y in
+    let y' = fresh (String_set.union vs (all_vars body)) y in
     y', subst (y, Var y') body
   in
   let rec go e =
     match e with
     | Var y -> if x = y then s else e
     | Let (y, _, _) when x = y -> e
-    | Let (y, def, body) when StringSet.mem y fvs ->
+    | Let (y, def, body) when String_set.mem y fvs ->
         let y', body' = freshen_body y body in
         Let (y', go def, go body')
     | Let (y, def, body) -> Let (y, def, go body)
     | FunLit (y, _) when x = y -> e
-    | FunLit (y, body) when StringSet.mem y fvs ->
+    | FunLit (y, body) when String_set.mem y fvs ->
         let y', body' = freshen_body y body in
         FunLit (y', go body')
     | FunLit (y, body) -> FunLit (y, go body)

@@ -1,6 +1,6 @@
 (** Translation from the core language into monadic form. *)
 
-module SrcEnv : sig
+module Src_env : sig
 
   type t
 
@@ -38,20 +38,20 @@ end
 let ( let@ ) : type a b. (a -> b) -> a -> b =
   ( @@ )
 
-let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
+let rec translate (env : Src_env.t) (expr : Core.expr) : Monadic.expr =
   match expr with
   | Var index ->
-      Atom (Var (SrcEnv.lookup_id index env))
+      Atom (Var (Src_env.lookup_id index env))
   | Prim prim ->
       Atom (Prim prim)
   | Let (def_name, def_ty, def, body) ->
       let def_id = Monadic.Id.fresh () in
       Let (def_name, def_id, def_ty, translate env def,
-        translate (SrcEnv.extend def_id def_ty env) body)
+        translate (Src_env.extend def_id def_ty env) body)
   | FunLit (param_name, param_ty, body) ->
       let param_id = Monadic.Id.fresh () in
       Atom (FunLit (param_name, param_id, param_ty,
-        translate (SrcEnv.extend param_id param_ty env) body))
+        translate (Src_env.extend param_id param_ty env) body))
   | FunApp (head, arg) ->
       let@ head = translate_name env "head" head in
       let@ arg = translate_name env "arg" arg in
@@ -70,14 +70,14 @@ let rec translate (env : SrcEnv.t) (expr : Core.expr) : Monadic.expr =
   | IntLit i ->
       Atom (IntLit i)
 
-and translate_name (env : SrcEnv.t) (name : string) (expr : Core.expr) (k : Monadic.aexpr -> Monadic.expr) : Monadic.expr =
+and translate_name (env : Src_env.t) (name : string) (expr : Core.expr) (k : Monadic.aexpr -> Monadic.expr) : Monadic.expr =
   let expr_id = Monadic.Id.fresh () in
-  let expr_ty = SrcEnv.type_of expr env in
+  let expr_ty = Src_env.type_of expr env in
   match translate env expr with
   | Atom expr -> k expr
   | expr -> Let (Machine name, expr_id, expr_ty, expr, k (Var expr_id))
 
-and translate_names (env : SrcEnv.t) (name : string) (exprs : Core.expr list) (k : Monadic.aexpr list -> Monadic.expr) : Monadic.expr =
+and translate_names (env : Src_env.t) (name : string) (exprs : Core.expr list) (k : Monadic.aexpr list -> Monadic.expr) : Monadic.expr =
   match exprs with
   | [] -> k []
   | expr :: exprs ->
@@ -86,4 +86,4 @@ and translate_names (env : SrcEnv.t) (name : string) (exprs : Core.expr list) (k
       k (expr :: exprs)
 
 let translate (expr : Core.expr) : Monadic.expr =
-  translate SrcEnv.empty expr
+  translate Src_env.empty expr

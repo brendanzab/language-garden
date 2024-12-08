@@ -1,6 +1,6 @@
 (** {0 Closure converted functional language}
 
-    Unlike {!FunLang}, this language makes an explicit distinction between the
+    Unlike {!Fun_lang}, this language makes an explicit distinction between the
     ‘code’ of closures, and the captured variables they close over.
 *)
 

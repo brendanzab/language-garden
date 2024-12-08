@@ -28,10 +28,10 @@
 
 %}
 
-%start <TreeLang.expr> main
+%start <Tree_lang.expr> main
 
 (* The name environment is used to assign De Bruijn indices during parsing. *)
-%type <string list -> TreeLang.expr> expr
+%type <string list -> Tree_lang.expr> expr
 
 %%
 
@@ -41,28 +41,28 @@ let main :=
 
 let expr :=
 | "let"; n = NAME; ":="; e1 = expr; ";"; e2 = expr;
-    { fun names -> TreeLang.let_ n (e1 names) (e2 (n :: names)) }
+    { fun names -> Tree_lang.let_ n (e1 names) (e2 (n :: names)) }
 | "if"; e1 = eq_expr; "then"; e2 = eq_expr; "else"; e3 = expr;
-    { fun names -> TreeLang.if_then_else (e1 names) (e2 names) (e3 names) }
+    { fun names -> Tree_lang.if_then_else (e1 names) (e2 names) (e3 names) }
 | eq_expr
 
 let eq_expr :=
 | e1 = add_expr; "="; e2 = eq_expr;
-    { fun names -> TreeLang.eq (e1 names) (e2 names) }
+    { fun names -> Tree_lang.eq (e1 names) (e2 names) }
 | add_expr
 
 let add_expr :=
 | e1 = mul_expr; "+"; e2 = add_expr;
-    { fun names -> TreeLang.add (e1 names) (e2 names) }
+    { fun names -> Tree_lang.add (e1 names) (e2 names) }
 | e1 = mul_expr; "-"; e2 = add_expr;
-    { fun names -> TreeLang.sub (e1 names) (e2 names) }
+    { fun names -> Tree_lang.sub (e1 names) (e2 names) }
 | mul_expr
 
 let mul_expr :=
 | e1 = atomic_expr; "*"; e2 = mul_expr;
-    { fun names -> TreeLang.mul (e1 names) (e2 names) }
+    { fun names -> Tree_lang.mul (e1 names) (e2 names) }
 | e1 = atomic_expr; "/"; e2 = mul_expr;
-    { fun names -> TreeLang.div (e1 names) (e2 names) }
+    { fun names -> Tree_lang.div (e1 names) (e2 names) }
 | atomic_expr
 
 let atomic_expr :=
@@ -72,14 +72,14 @@ let atomic_expr :=
     { fun names ->
         (* Assign a De Bruijn index for the variable *)
         match elem_index n names with
-        | Some n -> TreeLang.var n
-        | None -> raise (TreeLang.UnboundName ($loc(n), n))
+        | Some n -> Tree_lang.var n
+        | None -> raise (Tree_lang.UnboundName ($loc(n), n))
     }
 | i = NUMBER;
-    { fun _ -> TreeLang.int i }
+    { fun _ -> Tree_lang.int i }
 | "true";
-    { fun _ -> TreeLang.bool true }
+    { fun _ -> Tree_lang.bool true }
 | "false";
-    { fun _ -> TreeLang.bool false }
+    { fun _ -> Tree_lang.bool false }
 | "-"; e = atomic_expr;
-    { fun names -> TreeLang.neg (e names) }
+    { fun names -> Tree_lang.neg (e names) }

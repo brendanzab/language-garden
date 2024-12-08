@@ -5,7 +5,7 @@
     everything else. It’s expensive, requiring lots of tree-traversals and
     transient memory allocations, and error prone (it’s very easy to forget to
     shift a de Bruijn index). I don’t recommend it for most implementations.
-    See {!NamelessClosures} and {!NamelessHoas} for far better approaches that
+    See {!Nameless_closures} and {!Nameless_hoas} for far better approaches that
     use de Bruijn indices.
 *)
 

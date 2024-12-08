@@ -1,5 +1,5 @@
-type source = TreeLang.expr
-type target = StackLang.code
+type source = Tree_lang.expr
+type target = Stack_lang.code
 
 
 (** Function composition *)
@@ -8,28 +8,28 @@ let ( << ) f g x = f (g x)
 (** Translate an expression, adding it to the continuation of the expression.
     The continuation allows us to avoid using list concatenation, which could
     lead to exponential blowups during compilation. *)
-let rec translate_code : TreeLang.expr -> StackLang.code -> StackLang.code =
+let rec translate_code : Tree_lang.expr -> Stack_lang.code -> Stack_lang.code =
   function
-  | TreeLang.Var n -> List.cons (StackLang.Access n)
-  | TreeLang.Let (_, e1, e2) ->
+  | Tree_lang.Var n -> List.cons (Stack_lang.Access n)
+  | Tree_lang.Let (_, e1, e2) ->
       translate_code e1
-        << List.cons StackLang.BeginLet
+        << List.cons Stack_lang.BeginLet
         << translate_code e2
-        << List.cons StackLang.EndLet
-  | TreeLang.Int i -> List.cons (StackLang.Int i)
-  | TreeLang.Bool b -> List.cons (StackLang.Bool b)
-  | TreeLang.Neg e -> translate_code e << List.cons StackLang.Neg
-  | TreeLang.Add (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Add
-  | TreeLang.Sub (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Sub
-  | TreeLang.Mul (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Mul
-  | TreeLang.Div (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Div
-  | TreeLang.Eq (e1, e2) -> translate_code e1 << translate_code e2 << List.cons StackLang.Eq
-  | TreeLang.IfThenElse(e1, e2, e3) ->
+        << List.cons Stack_lang.EndLet
+  | Tree_lang.Int i -> List.cons (Stack_lang.Int i)
+  | Tree_lang.Bool b -> List.cons (Stack_lang.Bool b)
+  | Tree_lang.Neg e -> translate_code e << List.cons Stack_lang.Neg
+  | Tree_lang.Add (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Add
+  | Tree_lang.Sub (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Sub
+  | Tree_lang.Mul (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Mul
+  | Tree_lang.Div (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Div
+  | Tree_lang.Eq (e1, e2) -> translate_code e1 << translate_code e2 << List.cons Stack_lang.Eq
+  | Tree_lang.IfThenElse(e1, e2, e3) ->
       translate_code e1
-        << List.cons (StackLang.Code (translate_code e2 []))
-        << List.cons (StackLang.Code (translate_code e3 []))
-        << List.cons StackLang.IfThenElse
+        << List.cons (Stack_lang.Code (translate_code e2 []))
+        << List.cons (Stack_lang.Code (translate_code e3 []))
+        << List.cons Stack_lang.IfThenElse
 
 
-let translate (e : TreeLang.expr) : StackLang.code =
+let translate (e : Tree_lang.expr) : Stack_lang.code =
   translate_code e []

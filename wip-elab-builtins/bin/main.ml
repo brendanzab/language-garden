@@ -1,7 +1,7 @@
 (** {0 Compiler CLI} *)
 
-module Surface = ElabBuiltins.Surface
-module Core = ElabBuiltins.Core
+module Surface = Elab_builtins.Surface
+module Core = Elab_builtins.Core
 
 
 (** Helper functions *)

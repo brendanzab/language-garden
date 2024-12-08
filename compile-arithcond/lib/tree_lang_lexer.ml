@@ -8,7 +8,7 @@ let name_start = [%sedlex.regexp? 'a'..'z' | 'A'..'Z']
 let name_continue = [%sedlex.regexp? '-' | '_' | 'a'..'z' | 'A'..'Z' | '0'..'9']
 let name = [%sedlex.regexp? name_start, Star name_continue]
 
-let rec token (lexbuf : Sedlexing.lexbuf) : TreeLangParser.token =
+let rec token (lexbuf : Sedlexing.lexbuf) : Tree_lang_parser.token =
   match%sedlex lexbuf with
   | whitespace    -> token lexbuf
   | "#"           -> line_comment lexbuf
@@ -32,7 +32,7 @@ let rec token (lexbuf : Sedlexing.lexbuf) : TreeLangParser.token =
   | eof           -> END
   | _             -> raise Error
 
-and line_comment (lexbuf : Sedlexing.lexbuf) : TreeLangParser.token =
+and line_comment (lexbuf : Sedlexing.lexbuf) : Tree_lang_parser.token =
   match%sedlex lexbuf with
   | newline       -> token lexbuf
   | any           -> line_comment lexbuf

@@ -1,5 +1,5 @@
-module Lang = ClosureConv.Lang
-module Translation = ClosureConv.Translation
+module Lang = Closure_conv.Lang
+module Translation = Closure_conv.Translation
 
 
 (** {1 Helper functions} *)
@@ -35,9 +35,9 @@ let parse_expr filename in_channel =
 
 type compile_target = [
   | `Clos
-  | `FunA
-  | `ClosA
-  | `LiftedA
+  | `Fun_a
+  | `Clos_a
+  | `Lifted_a
 ]
 
 let compile : compile_target -> unit =
@@ -46,49 +46,49 @@ let compile : compile_target -> unit =
         let fun_tm = parse_expr "<input>" stdin in
 
         let _ = Lang.Fun.Validation.synth [] fun_tm in
-        let clos_tm = Translation.FunToClos.translate [] 0 0 fun_tm in
+        let clos_tm = Translation.Fun_to_clos.translate [] 0 0 fun_tm in
 
         Format.printf "@[<v>%a@]@." (Lang.Clos.pp_tm []) clos_tm;
 
         let _ = Lang.Clos.Validation.synth [] clos_tm in
         let _ = Lang.Clos.Semantics.eval [] clos_tm in ()
 
-  | `FunA ->
+  | `Fun_a ->
       let fun_tm = parse_expr "<input>" stdin in
 
       let _ = Lang.Fun.Validation.synth [] fun_tm in
-      let funa_tm = Translation.FunToFunA.translate [] fun_tm in
+      let funa_tm = Translation.Fun_to_fun_a.translate [] fun_tm in
 
-      Format.printf "@[<v>%a@]@." Lang.FunA.pp_tm funa_tm;
+      Format.printf "@[<v>%a@]@." Lang.Fun_a.pp_tm funa_tm;
 
-      let _ = Lang.FunA.Validation.synth Lang.FunA.VarMap.empty funa_tm in
-      let _ = Lang.FunA.Semantics.eval Lang.FunA.VarMap.empty funa_tm in ()
+      let _ = Lang.Fun_a.Validation.synth Lang.Fun_a.Var_map.empty funa_tm in
+      let _ = Lang.Fun_a.Semantics.eval Lang.Fun_a.Var_map.empty funa_tm in ()
 
-  | `ClosA ->
+  | `Clos_a ->
       let fun_tm = parse_expr "<input>" stdin in
 
       let _ = Lang.Fun.Validation.synth [] fun_tm in
-      let funa_tm = Translation.FunToFunA.translate [] fun_tm in
-      let _ = Lang.FunA.Validation.synth Lang.FunA.VarMap.empty funa_tm in
-      let closa_tm = Translation.FunAToClosA.translate Lang.FunA.VarMap.empty funa_tm in
+      let funa_tm = Translation.Fun_to_fun_a.translate [] fun_tm in
+      let _ = Lang.Fun_a.Validation.synth Lang.Fun_a.Var_map.empty funa_tm in
+      let closa_tm = Translation.Fun_a_to_clos_a.translate Lang.Fun_a.Var_map.empty funa_tm in
 
-      Format.printf "@[<v>%a@]@." (Lang.ClosA.pp_tm) closa_tm;
+      Format.printf "@[<v>%a@]@." (Lang.Clos_a.pp_tm) closa_tm;
 
-      let _ = Lang.ClosA.Validation.synth Lang.ClosA.VarMap.empty closa_tm in
-      let _ = Lang.ClosA.Semantics.eval Lang.ClosA.VarMap.empty closa_tm in ()
+      let _ = Lang.Clos_a.Validation.synth Lang.Clos_a.Var_map.empty closa_tm in
+      let _ = Lang.Clos_a.Semantics.eval Lang.Clos_a.Var_map.empty closa_tm in ()
 
-  | `LiftedA ->
+  | `Lifted_a ->
       let fun_tm = parse_expr "<input>" stdin in
 
       let _ = Lang.Fun.Validation.synth [] fun_tm in
-      let funa_tm = Translation.FunToFunA.translate [] fun_tm in
-      let _ = Lang.FunA.Validation.synth Lang.FunA.VarMap.empty funa_tm in
-      let lifteda_tm = Translation.FunAToLiftedA.translate funa_tm in
+      let funa_tm = Translation.Fun_to_fun_a.translate [] fun_tm in
+      let _ = Lang.Fun_a.Validation.synth Lang.Fun_a.Var_map.empty funa_tm in
+      let lifteda_tm = Translation.Fun_a_to_lifted_a.translate funa_tm in
 
-      Format.printf "@[<v>%a@]@." (Lang.LiftedA.pp_lifted_tm) lifteda_tm;
+      Format.printf "@[<v>%a@]@." (Lang.Lifted_a.pp_lifted_tm) lifteda_tm;
 
-      let _ = Lang.LiftedA.Validation.synth_lifted lifteda_tm in
-      let _ = Lang.LiftedA.Semantics.eval_lifted lifteda_tm in ()
+      let _ = Lang.Lifted_a.Validation.synth_lifted lifteda_tm in
+      let _ = Lang.Lifted_a.Semantics.eval_lifted lifteda_tm in ()
 
 
 (** {1 CLI options} *)
@@ -98,9 +98,9 @@ let cmd =
 
   let targets = [
     "clos", `Clos;
-    "fun-a", `FunA;
-    "clos-a", `ClosA;
-    "lifted-a", `LiftedA;
+    "fun-a", `Fun_a;
+    "clos-a", `Clos_a;
+    "lifted-a", `Lifted_a;
   ] in
 
   let compile_target : compile_target Term.t =

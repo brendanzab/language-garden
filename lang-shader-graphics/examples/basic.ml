@@ -1,11 +1,11 @@
-open ShaderGraphics.ShaderTypes
+open Shader_graphics.Shader_types
 
-module Monad = ShaderGraphics.Control.Monad
+module Monad = Shader_graphics.Control.Monad
 
-module Cpu = ShaderGraphics.Cpu
-module Glsl = ShaderGraphics.Glsl
-module Sdf = ShaderGraphics.Sdf
-module Shader = ShaderGraphics.Shader
+module Cpu = Shader_graphics.Cpu
+module Glsl = Shader_graphics.Glsl
+module Sdf = Shader_graphics.Sdf
+module Shader = Shader_graphics.Shader
 
 module Make (S : Shader.S) = struct
 
@@ -18,7 +18,7 @@ module Make (S : Shader.S) = struct
   end
 
   (** An environment with access to a 2D coordinate. *)
-  module Env = Monad.FunctionReader (struct type t = vec2f repr end)
+  module Env = Monad.Function_reader (struct type t = vec2f repr end)
 
   (* Bring notations into scope *)
   open Shader.Notation (S)

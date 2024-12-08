@@ -5,16 +5,16 @@
 *)
 
 module Fun = Lang.Fun
-module FunA = Lang.FunA
+module Fun_a = Lang.Fun_a
 
 
 (** {1 Translation} *)
 
-let rec translate env : Fun.tm -> FunA.tm =
+let rec translate env : Fun.tm -> Fun_a.tm =
   function
   | Var index -> Var (List.nth env index)
   | Let (def_name, def_ty, def, body) ->
-      let def_var = FunA.Var.fresh def_name in
+      let def_var = Fun_a.Var.fresh def_name in
       let def = translate env def in
       let body = translate (def_var :: env) body in
       Let (def_var, def_ty, def, body)
@@ -24,7 +24,7 @@ let rec translate env : Fun.tm -> FunA.tm =
       let args = List.map (translate env) args in
       PrimApp (prim, args)
   | FunLit (param_name, param_ty, body) ->
-      let param_var = FunA.Var.fresh param_name in
+      let param_var = Fun_a.Var.fresh param_name in
       let body = translate (param_var :: env) body in
       FunLit (param_var, param_ty, body)
   | FunApp (head, arg) ->

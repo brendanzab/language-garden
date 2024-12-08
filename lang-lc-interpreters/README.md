@@ -26,14 +26,14 @@ equality comparison.
 
 ### Normalisation-by-evaluation based interpreters
 
-| Module                      | Variables (Syntax) | Variables (Semantics)  | Closures (Semantics)    |
-| --------------------------- | ------------------ | ---------------------- | ----------------------- |
-| [`NamedNbeClosures`]        | Strings            | Strings                | Defunctionalised        |
-| [`NamedNbeHoas`]            | Strings            | Strings                | Host functions          |
-| [`NamelessNbeClosures`]     | De Bruijn indices  | De Bruijn levels       | Defunctionalised        |
-| [`NamelessNbeHoas`]         | De Bruijn indices  | De Bruijn levels       | Host functions          |
-| [`UniqueNbeClosures`]       | Unique identifiers | Unique identifiers     | Defunctionalised        |
-| [`UniqueNbeHoas`]           | Unique identifiers | Unique identifiers     | Host functions          |
+| Module                        | Variables (Syntax) | Variables (Semantics)  | Closures (Semantics)    |
+| ----------------------------- | ------------------ | ---------------------- | ----------------------- |
+| [`Named_nbe_closures`]        | Strings            | Strings                | Defunctionalised        |
+| [`Named_nbe_hoas`]            | Strings            | Strings                | Host functions          |
+| [`Nameless_nbe_closures`]     | De Bruijn indices  | De Bruijn levels       | Defunctionalised        |
+| [`Nameless_nbe_hoas`]         | De Bruijn indices  | De Bruijn levels       | Host functions          |
+| [`Unique_nbe_closures`]       | Unique identifiers | Unique identifiers     | Defunctionalised        |
+| [`Unique_nbe_hoas`]           | Unique identifiers | Unique identifiers     | Host functions          |
 
 Normalisation-by-evaluation (NbE) breaks up normalisation into evaluation and
 quotation.
@@ -65,21 +65,21 @@ Variable representations:
 
 ## Discussion
 
-For implementations I personally prefer [`NamelessNbeClosures`] or
-[`NamelessNbeHoas`] for most things, as it provides a good balance of convenience,
+For implementations I personally prefer [`Nameless_nbe_closures`] or
+[`Nameless_nbe_hoas`] for most things, as it provides a good balance of convenience,
 ease of implementation, and performance. Other constraints might tip the balance
 however, for example unique identifiers can make elaborating pattern matching to
 case trees more straightforward.
 
-[`Named`]:                ./named.ml
-[`NamedNbeClosures`]:     ./namedNbeClosures.ml
-[`NamedNbeHoas`]:         ./namedNbeHoas.ml
-[`Nameless`]:             ./nameless.ml
-[`NamelessNbeClosures`]:  ./namelessNbeClosures.ml
-[`NamelessNbeHoas`]:      ./namelessNbeHoas.ml
-[`Unique`]:               ./unique.ml
-[`UniqueNbeClosures`]:    ./uniqueNbeClosures.ml
-[`UniqueNbeHoas`]:        ./uniqueNbeHoas.ml
+[`Named`]:                  ./named.ml
+[`Named_nbe_closures`]:     ./named_nbe_closures.ml
+[`Named_nbe_hoas`]:         ./named_nbe_hoas.ml
+[`Nameless`]:               ./nameless.ml
+[`Nameless_nbe_closures`]:  ./nameless_nbe_closures.ml
+[`Nameless_nbe_hoas`]:      ./nameless_nbe_hoas.ml
+[`Unique`]:                 ./unique.ml
+[`Unique_nbe_closures`]:    ./unique_nbe_closures.ml
+[`Unique_nbe_hoas`]:        ./unique_nbe_hoas.ml
 
 ## Resources
 

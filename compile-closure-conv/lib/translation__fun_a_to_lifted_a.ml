@@ -1,25 +1,25 @@
 (** {0 Typed lambda lifting on alpha renamed terms}
 
-    Translation from {!Lang.FunA} to {!Lang.LiftedA}.
+    Translation from {!Lang.Fun_a} to {!Lang.Lifted_a}.
 
     This translation lifts the code of function literals to top-level
     definitions, calling the code immediately if possible. This cuts down on
-    the number of closures being constructed, compared to {!Translation.FunAToClosA}.
+    the number of closures being constructed, compared to {!Translation.Fun_a_to_clos_a}.
     We could further reduce the number of closures even more by uncurrying
     functions during this translation.
 *)
 
-module FunA = Lang.FunA
-module LiftedA = Lang.LiftedA
+module Fun_a = Lang.Fun_a
+module Lifted_a = Lang.Lifted_a
 
-module VarMap = FunA.VarMap
-module VarSet = FunA.VarSet
+module Var_map = Fun_a.Var_map
+module Var_set = Fun_a.Var_set
 
 
 (** {1 Translation} *)
 
 (** Translation to lambda-lifted types *)
-let rec translate_ty : FunA.ty -> LiftedA.ty =
+let rec translate_ty : Fun_a.ty -> Lifted_a.ty =
   function
   | BoolType -> BoolType
   | IntType -> IntType
@@ -28,24 +28,24 @@ let rec translate_ty : FunA.ty -> LiftedA.ty =
 
 (** Translation to lambda lifted terms. The [name] parameter is used when
     naming global definitions, to aid with debugging translated terms. *)
-let rec translate globals locals ?name : FunA.tm -> LiftedA.globals * LiftedA.tm =
+let rec translate globals locals ?name : Fun_a.tm -> Lifted_a.globals * Lifted_a.tm =
   function
   | Var var ->
-      globals, fst (VarMap.find var locals)
+      globals, fst (Var_map.find var locals)
 
   | Let (def_var, def_ty, def, body) ->
-      let def_name = FunA.Var.name def_var in
+      let def_name = Fun_a.Var.name def_var in
       let def_ty = translate_ty def_ty in
 
       (* Function literals will be lifted to the top level, so there’s no need to
         compile them to intermediate let bindings. *)
       begin match translate globals locals ~name:def_name def with
       | globals, (ClosLit (_, _) as def) ->
-          let body_env = VarMap.add def_var (def, def_ty) locals in
+          let body_env = Var_map.add def_var (def, def_ty) locals in
           translate globals body_env body
       | globals, def ->
-          let def_var' = LiftedA.LocalVar.fresh def_name in
-          let body_env = VarMap.add def_var (LiftedA.LocalVar def_var', def_ty) locals in
+          let def_var' = Lifted_a.Local_var.fresh def_name in
+          let body_env = Var_map.add def_var (Lifted_a.LocalVar def_var', def_ty) locals in
           let globals, body = translate globals body_env body in
           globals, Let (def_var', def_ty, def, body)
       end
@@ -64,20 +64,20 @@ let rec translate globals locals ?name : FunA.tm -> LiftedA.globals * LiftedA.tm
   | FunLit (param_var, param_ty, body) ->
       (* A fresh variable to be used for the environment parameter in the code
         of the closure *)
-      let env_var' = LiftedA.LocalVar.fresh "env" in
+      let env_var' = Lifted_a.Local_var.fresh "env" in
 
       (* Create a fresh variable for the parameter in the target language,
         and then transtlate the parameter *)
-      let param_var' = LiftedA.LocalVar.fresh (FunA.Var.name param_var) in
+      let param_var' = Lifted_a.Local_var.fresh (Fun_a.Var.name param_var) in
       let param_ty = translate_ty param_ty in
-      let param_tm = LiftedA.LocalVar param_var' in
+      let param_tm = Lifted_a.LocalVar param_var' in
 
       (* Construct the list of variable ocurrences captured by the body of the
         function from the surrounding environment *)
       let body_fvs =
-        FunA.fvs body
-        |> VarSet.remove param_var
-        |> VarSet.elements
+        Fun_a.fvs body
+        |> Var_set.remove param_var
+        |> Var_set.elements
       in
 
       (* Translate the body of the closure’s code in an environment where
@@ -87,23 +87,23 @@ let rec translate globals locals ?name : FunA.tm -> LiftedA.globals * LiftedA.tm
         let _, body_env =
           List.fold_left
             (fun (label, body_env) id ->
-              let ty = snd (VarMap.find id locals) in
-              let tm = LiftedA.TupleProj (LocalVar env_var', label) in
-              label + 1, VarMap.add id (tm, ty) body_env)
-            (0, VarMap.singleton param_var (param_tm, param_ty))
+              let ty = snd (Var_map.find id locals) in
+              let tm = Lifted_a.TupleProj (LocalVar env_var', label) in
+              label + 1, Var_map.add id (tm, ty) body_env)
+            (0, Var_map.singleton param_var (param_tm, param_ty))
             body_fvs
         in
         translate globals body_env body in
 
       (* Lists of terms and types to be used when explicitly constructing the
         environment of the closure *)
-      let env_tys = List.map (fun id -> snd (VarMap.find id locals)) body_fvs in
-      let env_tms = List.map (fun id -> fst (VarMap.find id locals)) body_fvs in
+      let env_tys = List.map (fun id -> snd (Var_map.find id locals)) body_fvs in
+      let env_tms = List.map (fun id -> fst (Var_map.find id locals)) body_fvs in
 
       (* Create the lifted code *)
       let lifted_name = Option.value name ~default:"anon" in
-      let lifted_var = LiftedA.GlobalVar.fresh lifted_name in
-      let lifted_code = LiftedA.{
+      let lifted_var = Lifted_a.Global_var.fresh lifted_name in
+      let lifted_code = Lifted_a.{
         env = env_var', TupleType env_tys;
         param = param_var', param_ty;
         body;
@@ -125,6 +125,6 @@ let rec translate globals locals ?name : FunA.tm -> LiftedA.globals * LiftedA.tm
       end
 
 (** Translation to lambda lifted terms. *)
-let translate (tm : FunA.tm) : LiftedA.lifted_tm =
-  let globals, main = translate [] FunA.VarMap.empty tm in
+let translate (tm : Fun_a.tm) : Lifted_a.lifted_tm =
+  let globals, main = translate [] Fun_a.Var_map.empty tm in
   { globals; main }

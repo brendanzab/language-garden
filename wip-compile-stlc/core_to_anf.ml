@@ -1,7 +1,7 @@
 (** A translation that normalises the core language into A-normal form, making
     the evaluation order explicit. *)
 
-module SrcEnv : sig
+module Src_env : sig
 
   type t
 
@@ -36,7 +36,7 @@ end = struct
 
 end
 
-type 'a cont = SrcEnv.t -> 'a -> Anf.expr
+type 'a cont = Src_env.t -> 'a -> Anf.expr
 
 let comp : Anf.cexpr cont =
   fun _ expr -> Comp expr
@@ -52,17 +52,17 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
   fun env k ->
     match expr with
     | Var index ->
-        k env (Atom (Var (SrcEnv.lookup_id index env)))
+        k env (Atom (Var (Src_env.lookup_id index env)))
     | Prim prim ->
         k env (Atom (Anf.Prim prim))
     | Let (def_name, def_ty, def, body) ->
         translate def env @@ fun env def ->
           let def_id = Anf.Id.fresh () in
-          let body = translate body (SrcEnv.extend def_id def_ty env) k in
+          let body = translate body (Src_env.extend def_id def_ty env) k in
           LetComp (def_name, def_id, def, body)
     | FunLit (param_name, param_ty, body) ->
         let param_id = Anf.Id.fresh () in
-        let body = translate body (SrcEnv.extend param_id param_ty env) comp in
+        let body = translate body (Src_env.extend param_id param_ty env) comp in
         k env (Atom (FunLit (param_name, param_id, param_ty, body)))
     | FunApp (head, arg) ->
         translate_name "head" head env @@ fun env head ->
@@ -80,7 +80,7 @@ let rec translate (expr : Core.expr) : Anf.cexpr cont cont =
         translate_name "head" head env @@ fun env head ->
           let def_id = Anf.Id.fresh () in
           let param_id = Anf.Id.fresh () in
-          let expr_ty = SrcEnv.type_of expr env in
+          let expr_ty = Src_env.type_of expr env in
           LetJoin (
             Machine "cont",
             def_id,
@@ -115,4 +115,4 @@ and translate_names (name : string) (exprs : Core.expr list) : Anf.aexpr list co
             k env (expr :: exprs)
 
 let translate (expr : Core.expr) : Anf.expr =
-  translate expr SrcEnv.empty comp
+  translate expr Src_env.empty comp

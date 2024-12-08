@@ -53,18 +53,18 @@ let of_named (e : Named.expr) : expr =
   go [] e
 
 let to_named (e : expr) : Named.expr =
-  let rec go (ns : Named.StringSet.t) (m : string Id.Map.t) (e : expr) : Named.expr =
+  let rec go (ns : Named.String_set.t) (m : string Id.Map.t) (e : expr) : Named.expr =
     match e with
     | Var i -> Var (Id.Map.find i m)
     | Let (x, i, def, body) ->
         let x = Named.fresh ns x in
-        Let (x, go ns m def, go (Named.StringSet.add x ns) (Id.Map.add i x m) body)
+        Let (x, go ns m def, go (Named.String_set.add x ns) (Id.Map.add i x m) body)
     | FunLit (x, i, body) ->
         let x = Named.fresh ns x in
-        FunLit (x, go (Named.StringSet.add x ns) (Id.Map.add i x m) body)
+        FunLit (x, go (Named.String_set.add x ns) (Id.Map.add i x m) body)
     | FunApp (head, arg) -> FunApp (go ns m head, go ns m arg)
   in
-  go Named.StringSet.empty Id.Map.empty e
+  go Named.String_set.empty Id.Map.empty e
 
 (** {2 Alpha Equivalence} *)
 

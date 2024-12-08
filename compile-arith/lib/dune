@@ -5,4 +5,4 @@
     (pps sedlex.ppx)))
 
 (menhir
-  (modules treeLangParser))
+  (modules tree_lang_parser))

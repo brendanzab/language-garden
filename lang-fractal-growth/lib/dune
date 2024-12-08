@@ -1,5 +1,5 @@
 (library
-  (name fractalGrowth)
+  (name fractal_growth)
   (public_name lang-fractal-growth))
 
 (include_subdirs qualified)

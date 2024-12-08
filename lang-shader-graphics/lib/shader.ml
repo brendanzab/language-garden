@@ -1,6 +1,6 @@
 (** {1 Typed shader language expressions} *)
 
-open ShaderTypes
+open Shader_types
 
 
 (** A shader language that supports a variety of operators and functions related

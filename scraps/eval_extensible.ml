@@ -15,7 +15,7 @@
 (** An extensible interpreter implemented using OCaml’s extensible variant
     types. See the {{:https://ocaml.org/manual/5.2/extensiblevariants.html}
     OCaml manual}. for more information on this feature. *)
-module ExtensibleVariants = struct
+module Extensible_variants = struct
 
   (** Type of expressions *)
   type expr = ..
@@ -167,7 +167,7 @@ end
 (** An extensible interpreter implemented using OCaml’s polymorphic variants.
     See the {{:https://ocaml.org/manual/5.2/polyvariant.html} OCaml manual}.
     for more information on this feature. *)
-module PolymorphicVariants = struct
+module Polymorphic_variants = struct
 
   (** Environments, as mappings from strings to values *)
   module Env = struct

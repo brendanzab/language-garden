@@ -1,25 +1,25 @@
 (** {0 Typed closure conversion on alpha renamed terms}
 
-    Translation from {!Lang.FunA} to {!Lang.ClosA}.
+    Translation from {!Lang.Fun_a} to {!Lang.Clos_a}.
 
     This translation converts functions into closures, separating the code of
     functions from the data implicitly captured from the surrounding environment.
 
-    Unlike {!Translate.FunToClos}, this translation uses alpha renamed terms,
+    Unlike {!Translate.Fun_to_clos}, this translation uses alpha renamed terms,
     which simplifies weakening.
 *)
 
-module FunA = Lang.FunA
-module ClosA = Lang.ClosA
+module Fun_a = Lang.Fun_a
+module Clos_a = Lang.Clos_a
 
-module VarMap = FunA.VarMap
-module VarSet = FunA.VarSet
+module Var_map = Fun_a.Var_map
+module Var_set = Fun_a.Var_set
 
 
 (** {1 Translation} *)
 
 (** Translation to closure converted types *)
-let rec translate_ty : FunA.ty -> ClosA.ty =
+let rec translate_ty : Fun_a.ty -> Clos_a.ty =
   function
   | BoolType -> BoolType
   | IntType -> IntType
@@ -27,20 +27,20 @@ let rec translate_ty : FunA.ty -> ClosA.ty =
       ClosType (translate_ty param_ty, translate_ty body_ty)
 
 (** Translation to closure converted terms. *)
-let rec translate env : FunA.tm -> ClosA.tm =
+let rec translate env : Fun_a.tm -> Clos_a.tm =
   function
   | Var var ->
-      fst (VarMap.find var env)
+      fst (Var_map.find var env)
 
   | Let (def_var, def_ty, def, body) ->
       (* Create a fresh variable for the definition in the target language,
          and then translate the definition *)
-      let def_var' = ClosA.Var.fresh (FunA.Var.name def_var) in
+      let def_var' = Clos_a.Var.fresh (Fun_a.Var.name def_var) in
       let def_ty = translate_ty def_ty in
       let def = translate env def in
 
       (* Translate the body of the let expression with the definition bound *)
-      let body_env = VarMap.add def_var (ClosA.Var def_var', def_ty) env in
+      let body_env = Var_map.add def_var (Clos_a.Var def_var', def_ty) env in
       let body = translate body_env body in
 
       Let (def_var', def_ty, def, body)
@@ -55,20 +55,20 @@ let rec translate env : FunA.tm -> ClosA.tm =
   | FunLit (param_var, param_ty, body) ->
       (* A fresh variable to be used for the environment parameter in the code
         of the closure *)
-      let env_var' = ClosA.Var.fresh "env" in
+      let env_var' = Clos_a.Var.fresh "env" in
 
       (* Create a fresh variable for the parameter in the target language,
          and then transtlate the parameter *)
-      let param_var' = ClosA.Var.fresh (FunA.Var.name param_var) in
+      let param_var' = Clos_a.Var.fresh (Fun_a.Var.name param_var) in
       let param_ty = translate_ty param_ty in
-      let param_tm = ClosA.Var param_var' in
+      let param_tm = Clos_a.Var param_var' in
 
       (* Construct the list of variable ocurrences captured by the body of the
          function from the surrounding environment *)
       let body_fvs =
-        FunA.fvs body
-        |> VarSet.remove param_var
-        |> VarSet.elements
+        Fun_a.fvs body
+        |> Var_set.remove param_var
+        |> Var_set.elements
       in
 
       (* Translate the body of the closure’s code in an environment where
@@ -78,18 +78,18 @@ let rec translate env : FunA.tm -> ClosA.tm =
         let _, body_env =
           List.fold_left
             (fun (label, body_env) id ->
-              let ty = snd (VarMap.find id env) in
-              let tm = ClosA.TupleProj (Var env_var', label) in
-              label + 1, VarMap.add id (tm, ty) body_env)
-            (0, VarMap.singleton param_var (param_tm, param_ty))
+              let ty = snd (Var_map.find id env) in
+              let tm = Clos_a.TupleProj (Var env_var', label) in
+              label + 1, Var_map.add id (tm, ty) body_env)
+            (0, Var_map.singleton param_var (param_tm, param_ty))
             body_fvs
         in
         translate body_env body in
 
       (* Lists of terms and types to be used when explicitly constructing the
          environment of the closure *)
-      let env_tys = List.map (fun id -> snd (VarMap.find id env)) body_fvs in
-      let env_tms = List.map (fun id -> fst (VarMap.find id env)) body_fvs in
+      let env_tys = List.map (fun id -> snd (Var_map.find id env)) body_fvs in
+      let env_tms = List.map (fun id -> fst (Var_map.find id env)) body_fvs in
 
       (* Construct the closure *)
       ClosLit

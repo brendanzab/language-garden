@@ -1,10 +1,10 @@
-(** Translation pass between the {!TreeLang} and {!AnfLang} *)
+(** Translation pass between the {!Tree_lang} and {!Anf_lang} *)
 
 
 (** Translate from an arithmetic expression to an ANF expression *)
 include Translation.S
-  with type source = TreeLang.expr
-  with type target = AnfLang.expr
+  with type source = Tree_lang.expr
+  with type target = Anf_lang.expr
 
 
 (** An environment for constructing ANF expressions *)
@@ -21,7 +21,7 @@ module Env : sig
 
 
   (** The type of the continuation *)
-  type 'a cont = 'a -> AnfLang.expr
+  type 'a cont = 'a -> Anf_lang.expr
 
   (** Construct a continuation-passing computation from a function *)
   val embed : 'a. 'a cont cont -> 'a t
@@ -34,7 +34,7 @@ module Env : sig
   (** Translate from an arithmetic expression to a computation that constructs
       an ANF expression with a continuation.  *)
   include Translation.S
-    with type source = TreeLang.expr
-    with type target = AnfLang.comp t
+    with type source = Tree_lang.expr
+    with type target = Anf_lang.comp t
 
 end

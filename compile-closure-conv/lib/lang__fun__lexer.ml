@@ -11,7 +11,7 @@ let name_start = [%sedlex.regexp? 'a'..'z' | 'A'..'Z']
 let name_continue = [%sedlex.regexp? '-' | '_' | 'a'..'z' | 'A'..'Z' | '0'..'9']
 let name = [%sedlex.regexp? name_start, Star name_continue]
 
-let rec token (lexbuf : Sedlexing.lexbuf) : Lang_Fun_Parser.token =
+let rec token (lexbuf : Sedlexing.lexbuf) : Lang__fun__parser.token =
   match%sedlex lexbuf with
   | whitespace    -> token lexbuf
   | "--"          -> line_comment lexbuf
@@ -37,14 +37,14 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Lang_Fun_Parser.token =
   | eof           -> END
   | _             -> raise (Error `UnexpectedChar)
 
-and line_comment (lexbuf : Sedlexing.lexbuf) : Lang_Fun_Parser.token =
+and line_comment (lexbuf : Sedlexing.lexbuf) : Lang__fun__parser.token =
   match%sedlex lexbuf with
   | newline       -> token lexbuf
   | any           -> line_comment lexbuf
   | eof           -> END
   | _             -> raise (Error `UnexpectedChar)
 
-and block_comment (lexbuf : Sedlexing.lexbuf) (level : int) : Lang_Fun_Parser.token =
+and block_comment (lexbuf : Sedlexing.lexbuf) (level : int) : Lang__fun__parser.token =
   match%sedlex lexbuf with
   | "/-"          -> block_comment lexbuf (level + 1)
   | "-/"          -> if level = 0 then token lexbuf else block_comment lexbuf (level - 1)

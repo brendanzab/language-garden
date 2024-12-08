@@ -16,8 +16,8 @@ type value =
 and head = ItemVar of string
 and elim = |
 
-val eval : (string -> value) -> CoreSyntax.tm -> value
+val eval : (string -> value) -> Core_syntax.tm -> value
 
-val quote : value -> CoreSyntax.tm
+val quote : value -> Core_syntax.tm
 
 val is_convertible : value -> value -> bool

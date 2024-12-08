@@ -5,7 +5,7 @@
     graphics APIs. It could also be useful for implementing constant folding
     optimisations in the future. *)
 
-open ShaderTypes
+open Shader_types
 
 
 include Shader.S with type 'a repr = 'a

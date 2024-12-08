@@ -1,10 +1,10 @@
 (** {0 Compiler CLI} *)
 
-module TreeLang = Arith.TreeLang
-module StackLang = Arith.StackLang
-module AnfLang = Arith.AnfLang
-module TreeToStack = Arith.TreeToStack
-module TreeToAnf = Arith.TreeToAnf
+module Tree_lang = Arith.Tree_lang
+module Stack_lang = Arith.Stack_lang
+module Anf_lang = Arith.Anf_lang
+module Tree_to_stack = Arith.Tree_to_stack
+module Tree_to_anf = Arith.Tree_to_anf
 
 
 (** {1 Helper functions} *)
@@ -22,13 +22,13 @@ let parse_expr filename in_channel =
 
   try
     lexbuf
-    |> Sedlexing.with_tokenizer TreeLang.Lexer.token
-    |> MenhirLib.Convert.Simplified.traditional2revised TreeLang.Parser.main
+    |> Sedlexing.with_tokenizer Tree_lang.Lexer.token
+    |> MenhirLib.Convert.Simplified.traditional2revised Tree_lang.Parser.main
   with
-  | TreeLang.Lexer.Error ->
+  | Tree_lang.Lexer.Error ->
       print_error (Sedlexing.lexing_positions lexbuf) "unexpected character";
       exit 1
-  | TreeLang.Parser.Error ->
+  | Tree_lang.Parser.Error ->
       print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
@@ -43,27 +43,27 @@ let compile : compile_target -> unit =
   function
   | `Stack ->
       let e = parse_expr "<input>" stdin in
-      let c = TreeToStack.translate e in
-      Format.printf "@[<v>%a@]" StackLang.pp_code c
+      let c = Tree_to_stack.translate e in
+      Format.printf "@[<v>%a@]" Stack_lang.pp_code c
   | `Anf ->
       let e = parse_expr "<input>" stdin in
-      let e = TreeToAnf.translate e in
-      Format.printf "@[<v>%a@]" AnfLang.pp_expr e
+      let e = Tree_to_anf.translate e in
+      Format.printf "@[<v>%a@]" Anf_lang.pp_expr e
 
 let exec : exec_target -> unit =
   function
   | `Tree ->
       let e = parse_expr "<input>" stdin in
-      Format.printf "%d" TreeLang.Semantics.(eval e)
+      Format.printf "%d" Tree_lang.Semantics.(eval e)
   | `Stack ->
       let e = parse_expr "<input>" stdin in
-      let c = TreeToStack.translate e in
+      let c = Tree_to_stack.translate e in
       Format.printf "@[%a@]"
-        StackLang.pp_code StackLang.Semantics.(normalise (c, []))
+        Stack_lang.pp_code Stack_lang.Semantics.(normalise (c, []))
   | `Anf ->
       let e = parse_expr "<input>" stdin in
-      let e = TreeToAnf.translate e in
-      Format.printf "%d" AnfLang.Semantics.(eval Env.empty e)
+      let e = Tree_to_anf.translate e in
+      Format.printf "%d" Anf_lang.Semantics.(eval Env.empty e)
 
 
 (** {1 CLI options} *)

@@ -1,4 +1,4 @@
-open DeBruijn
+open De_bruijn
 
 (* Syntax *)
 

@@ -1,4 +1,4 @@
-open ShaderTypes
+open Shader_types
 
 
 type 'a repr = 'a

@@ -7,7 +7,7 @@
 type label = string
 
 (** An unordered row of elements distinguished by label. *)
-module LabelMap = Map.Make (String)
+module Label_map = Map.Make (String)
 
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
@@ -49,7 +49,7 @@ type meta_id = int
 type ty =
   | MetaVar of meta_state ref
   | FunType of ty * ty
-  | VariantType of ty LabelMap.t
+  | VariantType of ty Label_map.t
   | IntType
   | BoolType
 
@@ -63,7 +63,7 @@ and constr =
   | Any
   (** Unifies with any type *)
 
-  | Variant of ty LabelMap.t
+  | Variant of ty Label_map.t
   (** Unifies with variant types that contain {i at least} all of the entries
       recorded in the map. *)
 
@@ -74,7 +74,7 @@ type tm =
   | FunLit of name * ty * tm
   | FunApp of tm * tm
   | VariantLit of label * tm * ty
-  | VariantElim of tm * (name * tm) LabelMap.t
+  | VariantElim of tm * (name * tm) Label_map.t
   | IntLit of int
   | BoolLit of bool
   | BoolElim of tm * tm * tm
@@ -103,7 +103,7 @@ module Semantics = struct
   and ntm =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | FunApp of ntm * vtm
-    | VariantElim of ntm * (name * (vtm -> vtm)) LabelMap.t
+    | VariantElim of ntm * (name * (vtm -> vtm)) Label_map.t
     | BoolElim of ntm * vtm Lazy.t * vtm Lazy.t
     | PrimApp of Prim.t * vtm list
 
@@ -120,7 +120,7 @@ module Semantics = struct
     match head with
     | Neu ntm -> Neu (VariantElim (ntm, cases))
     | VariantLit (label, vtm, _) ->
-        let _, body = LabelMap.find label cases in
+        let _, body = Label_map.find label cases in
         body vtm
     | _ -> invalid_arg "expected variant"
 
@@ -165,7 +165,7 @@ module Semantics = struct
     | VariantElim (head, cases) ->
         let head = eval env head in
         let cases =
-          cases |> LabelMap.map (fun (name, body) ->
+          cases |> Label_map.map (fun (name, body) ->
             name, fun arg -> eval (arg :: env) body)
         in
         variant_elim head cases
@@ -203,7 +203,7 @@ module Semantics = struct
     | VariantElim (head, cases) ->
         let head = quote_neu size head in
         let cases =
-          cases |> LabelMap.map (fun (name, body) ->
+          cases |> Label_map.map (fun (name, body) ->
             name, quote (size + 1) (body (Neu (Var size))))
         in
         VariantElim (head, cases)
@@ -279,8 +279,8 @@ and occurs_meta (id : meta_id) (m : meta_state ref) : unit =
   | Unsolved (_, Variant row) -> occurs_row id row
   | Unsolved (_, Any) | Solved _ -> ()
 
-and occurs_row (id : meta_id) (row : ty LabelMap.t) : unit =
-  row |> LabelMap.iter (fun _ -> occurs id)
+and occurs_row (id : meta_id) (row : ty Label_map.t) : unit =
+  row |> Label_map.iter (fun _ -> occurs id)
 
 (** Check if two types are the same, updating unsolved metavaribles in one
     type with known information from the other type if possible. *)
@@ -293,7 +293,7 @@ let rec unify (ty1 : ty) (ty2 : ty) : unit =
       unify param_ty1 param_ty2;
       unify body_ty1 body_ty2
   | VariantType row1, VariantType row2 ->
-      if not (LabelMap.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2) then
+      if not (Label_map.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2) then
         raise (MismatchedTypes (ty1, ty2))
   | IntType, IntType -> ()
   | BoolType, BoolType -> ()
@@ -318,8 +318,8 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
       occurs_row id exact_row;
       (* Unify the entries in the contraint row against the entries in the
          concrete type row, failing if any are missing. *)
-      row |> LabelMap.iter begin fun label row_ty ->
-        match LabelMap.find_opt label exact_row with
+      row |> Label_map.iter begin fun label row_ty ->
+        match Label_map.find_opt label exact_row with
         | Some exact_row_ty -> unify row_ty exact_row_ty
         | None -> raise (MismatchedTypes (MetaVar m, ty))
       end;
@@ -331,7 +331,7 @@ and unify_meta (m : meta_state ref) (ty : ty) : unit =
 (** Unify two constraints, returning the combined constraint if successful. *)
 and unify_constrs (c1 : constr) (c2 : constr) : constr =
   let unify_rows =
-    LabelMap.merge @@ fun _ ty1 ty2 ->
+    Label_map.merge @@ fun _ ty1 ty2 ->
       match ty1, ty2 with
       | Some ty1, Some ty2 -> unify ty1 ty2; Some ty1
       | Some ty, None | None, Some ty -> Some ty
@@ -356,7 +356,7 @@ let rec zonk_ty (ty : ty) : ty =
   | FunType (param_ty, body_ty) ->
       FunType (zonk_ty param_ty, zonk_ty body_ty)
   | VariantType row ->
-      VariantType (row |> LabelMap.map (fun ty -> zonk_ty ty))
+      VariantType (row |> Label_map.map (fun ty -> zonk_ty ty))
   | IntType -> IntType
   | BoolType -> BoolType
 
@@ -373,7 +373,7 @@ let rec zonk_tm (tm : tm) : tm =
   | VariantLit (label, tm, ty) -> VariantLit (label, zonk_tm tm, zonk_ty ty)
   | VariantElim (head, cases) ->
       let head = zonk_tm head in
-      let cases = cases |> LabelMap.map (fun (binder, body) -> binder, zonk_tm body) in
+      let cases = cases |> Label_map.map (fun (binder, body) -> binder, zonk_tm body) in
       VariantElim (head, cases)
   | IntLit i -> IntLit i
   | BoolLit b -> BoolLit b
@@ -396,7 +396,7 @@ let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
 and pp_atomic_ty fmt ty =
   match ty with
   | MetaVar m -> pp_meta fmt m
-  | VariantType cases when LabelMap.is_empty cases ->
+  | VariantType cases when Label_map.is_empty cases ->
       Format.fprintf fmt "[|]"
   | VariantType row ->
       Format.fprintf fmt "[%a]"
@@ -404,7 +404,7 @@ and pp_atomic_ty fmt ty =
           ~pp_sep:(fun fmt () -> Format.fprintf fmt "@ |@ ")
           (fun fmt (label, ty) ->
             Format.fprintf fmt "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty))
-        (LabelMap.to_seq row)
+        (Label_map.to_seq row)
   | IntType -> Format.fprintf fmt "Int"
   | BoolType -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
@@ -445,7 +445,7 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
               label
               name
               (pp_tm (name :: names)) body))
-        (LabelMap.to_seq cases)
+        (Label_map.to_seq cases)
   | FunLit (name, param_ty, body) ->
       let rec go names fmt tm =
         match tm with

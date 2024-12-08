@@ -8,5 +8,5 @@
     menhirLib))
 
 (menhir
-  (modules surfaceParser)
+  (modules surface_parser)
   (flags --explain --strict))

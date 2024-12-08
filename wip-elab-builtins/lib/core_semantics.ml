@@ -19,7 +19,7 @@ and head =
 and elim = |
 
 
-let eval (items : string -> value) : CoreSyntax.tm -> value =
+let eval (items : string -> value) : Core_syntax.tm -> value =
   function
   | ItemVar name -> items name
 
@@ -36,7 +36,7 @@ let eval (items : string -> value) : CoreSyntax.tm -> value =
   | F64Lit x -> F64Lit x
 
 
-let rec quote : value -> CoreSyntax.tm =
+let rec quote : value -> Core_syntax.tm =
   function
   | Neutral (head, spine) -> quote_spine (quote_head head) spine
 
@@ -52,7 +52,7 @@ let rec quote : value -> CoreSyntax.tm =
   | I64Lit x -> I64Lit x
   | F64Lit x -> F64Lit x
 
-and quote_head : head -> CoreSyntax.tm =
+and quote_head : head -> Core_syntax.tm =
   function
   | ItemVar name -> ItemVar name
 
