@@ -12,7 +12,7 @@ module type S = sig
   val set_stroke : bool -> t -> t
   val set_fill : bool -> t -> t
 
-  val overlay : t list -> t
+  val stack : t list -> t
   val rotate : radians:float -> t -> t
   val translate : vec2 -> t -> t
 
@@ -72,7 +72,7 @@ end = struct
     fun ~fill:_ ~stroke ctx ->
       dia ~fill:value ~stroke ctx
 
-  let overlay dias =
+  let stack dias =
     fun ~fill ~stroke ctx ->
       dias |> List.fold_left (fun () dia -> dia ~fill ~stroke ctx) ()
 

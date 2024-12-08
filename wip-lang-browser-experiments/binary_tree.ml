@@ -59,13 +59,13 @@ let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> 
         |> D.set_fill true
 
   | Fork (tree1, tree2) ->
-      D.overlay [
+      D.stack [
         D.rotate ~radians:(+.fork_angle *. Float.pi /. 180.0) (draw tree1);
         D.rotate ~radians:(-.fork_angle *. Float.pi /. 180.0) (draw tree2);
       ]
 
   | Branch tree ->
-      D.overlay [
+      D.stack [
         D.line (0.0, 0.0) (0.0, -.branch_len)
           |> D.set_stroke true;
         D.translate (0.0, -.branch_len) (draw tree);
