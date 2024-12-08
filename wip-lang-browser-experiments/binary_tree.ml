@@ -52,24 +52,21 @@ let apex_diameter = 3.0
 let branch_len = 6.0
 let fork_angle = 45.0
 
-let draw (type d) (module D : Diagram.S with type t = d) : t -> d =
-  let rec draw (tree : t) =
-    match tree with
-    | Apex ->
-        D.circle ~diameter:apex_diameter
-          |> D.set_fill true
+let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> d =
+  function
+  | Apex ->
+      D.circle ~diameter:apex_diameter
+        |> D.set_fill true
 
-    | Fork (tree1, tree2) ->
-        D.overlay [
-          D.rotate ~radians:(+.fork_angle *. Float.pi /. 180.0) (draw tree1);
-          D.rotate ~radians:(-.fork_angle *. Float.pi /. 180.0) (draw tree2);
-        ]
+  | Fork (tree1, tree2) ->
+      D.overlay [
+        D.rotate ~radians:(+.fork_angle *. Float.pi /. 180.0) (draw tree1);
+        D.rotate ~radians:(-.fork_angle *. Float.pi /. 180.0) (draw tree2);
+      ]
 
-    | Branch tree ->
-        D.overlay [
-          D.line (0.0, 0.0) (0.0, -.branch_len)
-            |> D.set_stroke true;
-          D.translate (0.0, -.branch_len) (draw tree);
-        ]
-  in
-  draw
+  | Branch tree ->
+      D.overlay [
+        D.line (0.0, 0.0) (0.0, -.branch_len)
+          |> D.set_stroke true;
+        D.translate (0.0, -.branch_len) (draw tree);
+      ]
