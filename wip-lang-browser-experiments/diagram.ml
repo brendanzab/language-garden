@@ -19,11 +19,11 @@ module type S = sig
 
 end
 
-module Html = Js_of_ocaml.Dom_html
-module Js = Js_of_ocaml.Js
-
 (** A declarative version of the Canvas API *)
 module Canvas : sig
+
+  module Html := Js_of_ocaml.Dom_html
+  module Js := Js_of_ocaml.Js
 
   type t
 
@@ -32,6 +32,9 @@ module Canvas : sig
   val run : t -> Html.canvasRenderingContext2D Js.t -> unit
 
 end = struct
+
+  module Html = Js_of_ocaml.Dom_html
+  module Js = Js_of_ocaml.Js
 
   type state = {
     fill_style : style;
