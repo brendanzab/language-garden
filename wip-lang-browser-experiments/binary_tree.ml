@@ -46,6 +46,7 @@ let rules (rules : t -> t) : t -> t =
   function
   | Apex -> Branch (Fork (Apex, Apex))
   | Fork (tree1, tree2) -> Fork (rules tree1, rules tree2)
+  (* Boilerplate productions *)
   | Branch tree -> Branch (Branch (rules tree))
 
 let apex_diameter = 3.0
