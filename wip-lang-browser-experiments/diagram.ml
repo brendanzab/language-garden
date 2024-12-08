@@ -1,5 +1,6 @@
 (** Declarative diagramming API *)
 
+type style = [`solid | `none]
 type vec2 = float * float
 
 module type S = sig
@@ -9,8 +10,8 @@ module type S = sig
   val circle : diameter:float -> t
   val line : vec2 -> vec2 -> t
 
-  val set_stroke : bool -> t -> t
-  val set_fill : bool -> t -> t
+  val stroke : style -> t -> t
+  val fill : style -> t -> t
 
   val stack : t list -> t
   val rotate : radians:float -> t -> t
@@ -32,10 +33,20 @@ module Canvas : sig
 
 end = struct
 
-  type t = fill:bool -> stroke:bool -> Html.canvasRenderingContext2D Js.t -> unit
+  type state = {
+    fill_style : style;
+    stroke_style : style;
+  }
+
+  let default_style = {
+    fill_style =`none;
+    stroke_style = `none;
+  }
+
+  type t = state -> Html.canvasRenderingContext2D Js.t -> unit
 
   let arc ~center:(center_x, center_y) ~radius ~theta1 ~theta2 ~ccw =
-    fun ~fill ~stroke ctx ->
+    fun state ctx ->
       ctx##arc
         (* center_x *) (Js.float center_x)
         (* center_y *) (Js.float center_y)
@@ -43,8 +54,8 @@ end = struct
         (* theta1 *) (Js.float theta1)
         (* theta2 *) (Js.float theta2)
         (* ccw *) (Js.bool ccw);
-      if fill then ctx##fill;
-      if stroke then ctx##stroke;
+      (match state.fill_style with `solid -> ctx##fill | `none -> ());
+      (match state.stroke_style with `solid -> ctx##stroke | `none -> ());
       ()
 
   let circle ~diameter =
@@ -56,41 +67,42 @@ end = struct
       ~ccw:false
 
   let line (x1, y1) (x2, y2) =
-    fun ~fill:_ ~stroke ctx ->
-      if stroke then begin
-        ctx##beginPath;
-        ctx##moveTo x1 y1;
-        ctx##lineTo x2 y2;
-        ctx##stroke;
-      end
+    fun state ctx ->
+      match state.stroke_style with
+      | `solid ->
+          ctx##beginPath;
+          ctx##moveTo x1 y1;
+          ctx##lineTo x2 y2;
+          ctx##stroke;
+      | `none -> ()
 
-  let set_stroke value dia =
-    fun ~fill ~stroke:_ ctx ->
-      dia ~fill ~stroke:value ctx
+  let stroke style dia =
+    fun state ctx ->
+      dia { state with stroke_style = style } ctx
 
-  let set_fill value dia =
-    fun ~fill:_ ~stroke ctx ->
-      dia ~fill:value ~stroke ctx
+  let fill style dia =
+    fun state ctx ->
+      dia { state with fill_style = style } ctx
 
   let stack dias =
-    fun ~fill ~stroke ctx ->
-      dias |> List.fold_left (fun () dia -> dia ~fill ~stroke ctx) ()
+    fun state ctx ->
+      dias |> List.fold_left (fun () dia -> dia state ctx) ()
 
   let rotate ~radians dia =
-    fun ~fill ~stroke ctx ->
+    fun state ctx ->
       ctx##save;
       ctx##rotate radians;
-      dia ~fill ~stroke ctx;
+      dia state ctx;
       ctx##restore
 
   let translate (dx, dy) dia =
-    fun ~fill ~stroke ctx ->
+    fun state ctx ->
       ctx##save;
       ctx##translate dx dy;
-      dia ~fill ~stroke ctx;
+      dia state ctx;
       ctx##restore
 
   let run dia ctx =
-    dia ~fill:false ~stroke:false ctx
+    dia default_style ctx
 
 end

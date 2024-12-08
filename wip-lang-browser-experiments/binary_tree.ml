@@ -56,7 +56,7 @@ let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> 
   function
   | Apex ->
       D.circle ~diameter:apex_diameter
-        |> D.set_fill true
+        |> D.fill `solid
 
   | Fork (tree1, tree2) ->
       D.stack [
@@ -67,6 +67,6 @@ let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> 
   | Branch tree ->
       D.stack [
         D.line (0.0, 0.0) (0.0, -.branch_len)
-          |> D.set_stroke true;
+          |> D.stroke `solid;
         D.translate (0.0, -.branch_len) (draw tree);
       ]
