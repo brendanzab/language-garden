@@ -50,8 +50,8 @@ let rules (rules : t -> t) : t -> t =
   | Branch tree -> Branch (Branch (rules tree))
 
 let apex_diameter = 3.0
-let branch_len = 6.0
-let fork_angle = 45.0
+let fork_angle = 45.0 *. Float.pi /. 180.0
+let branch_length = 6.0
 
 let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> d =
   function
@@ -61,13 +61,13 @@ let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> 
 
   | Fork (tree1, tree2) ->
       D.stack [
-        D.rotate ~radians:(+.fork_angle *. Float.pi /. 180.0) (draw tree1);
-        D.rotate ~radians:(-.fork_angle *. Float.pi /. 180.0) (draw tree2);
+        D.rotate ~radians:(+.fork_angle) (draw tree1);
+        D.rotate ~radians:(-.fork_angle) (draw tree2);
       ]
 
   | Branch tree ->
       D.stack [
-        D.line (0.0, 0.0) (0.0, -.branch_len)
+        D.line (0.0, 0.0) (0.0, -.branch_length)
           |> D.stroke `solid;
-        D.translate (0.0, -.branch_len) (draw tree);
+        D.translate (0.0, -.branch_length) (draw tree);
       ]
