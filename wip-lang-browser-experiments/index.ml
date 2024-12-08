@@ -32,7 +32,7 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
 
     (* Draw the tree *)
     ctx |> Diagram.Canvas.run
-      (Binary_tree.draw (module Diagram.Canvas) (Binary_tree.grow 5));
+      System.Binary_tree.(draw (module Diagram.Canvas) (grow 5));
 
     ctx##restore;
   end;
