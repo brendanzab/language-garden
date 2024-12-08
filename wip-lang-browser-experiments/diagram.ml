@@ -1,9 +1,5 @@
 (** Declarative diagramming API *)
 
-module Dom = Js_of_ocaml.Dom
-module Html = Js_of_ocaml.Dom_html
-module Js = Js_of_ocaml.Js
-
 type vec2 = float * float
 
 module type S = sig
@@ -21,6 +17,9 @@ module type S = sig
   val translate : vec2 -> t -> t
 
 end
+
+module Html = Js_of_ocaml.Dom_html
+module Js = Js_of_ocaml.Js
 
 (** A declarative version of the Canvas API *)
 module Canvas : sig
