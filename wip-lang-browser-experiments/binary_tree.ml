@@ -34,39 +34,26 @@
 
 *)
 
-type tree =
+type t =
   | Apex
-  | Fork of tree * tree
-  | Branch of tree
+  | Fork of t * t
+  | Branch of t
 
-let axiom : tree =
+let axiom : t =
   Apex
 
-let rules (rules : tree -> tree) : tree -> tree =
+let rules (rules : t -> t) : t -> t =
   function
   | Apex -> Branch (Fork (Apex, Apex))
   | Fork (tree1, tree2) -> Fork (rules tree1, rules tree2)
   | Branch tree -> Branch (Branch (rules tree))
 
-let rec step tree =
-  rules step tree
-
-let grow (iters : int) : tree =
-  let rec go iters tree =
-    if iters < 0 then tree else
-      (go [@tailcall]) (iters - 1) (step tree)
-  in
-  go iters axiom
-
-let generations axiom =
-  Seq.unfold (fun t -> Some (t, step t)) axiom
-
 let apex_diameter = 3.0
 let branch_len = 6.0
 let fork_angle = 45.0
 
-let draw (type d) (module D : Diagram.S with type t = d) : tree -> d =
-  let rec draw (tree : tree) =
+let draw (type d) (module D : Diagram.S with type t = d) : t -> d =
+  let rec draw (tree : t) =
     match tree with
     | Apex ->
         D.circle ~diameter:apex_diameter
