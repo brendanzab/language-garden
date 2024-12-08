@@ -60,3 +60,29 @@ let grow (iters : int) : tree =
 
 let generations axiom =
   Seq.unfold (fun t -> Some (t, step t)) axiom
+
+let apex_diameter = 3.0
+let branch_len = 6.0
+let fork_angle = 45.0
+
+let draw (type d) (module D : Diagram.S with type t = d) : tree -> d =
+  let rec draw (tree : tree) =
+    match tree with
+    | Apex ->
+        D.circle ~diameter:apex_diameter
+          |> D.set_fill true
+
+    | Fork (tree1, tree2) ->
+        D.overlay [
+          D.rotate ~radians:(+.fork_angle *. Float.pi /. 180.0) (draw tree1);
+          D.rotate ~radians:(-.fork_angle *. Float.pi /. 180.0) (draw tree2);
+        ]
+
+    | Branch tree ->
+        D.overlay [
+          D.line (0.0, 0.0) (0.0, -.branch_len)
+            |> D.set_stroke true;
+          D.translate (0.0, -.branch_len) (draw tree);
+        ]
+  in
+  draw
