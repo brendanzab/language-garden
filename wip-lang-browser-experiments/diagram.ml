@@ -79,13 +79,13 @@ end = struct
           ctx##stroke;
       | `none -> ()
 
-  let stroke stroke_style dia =
+  let stroke style dia =
     fun state ctx ->
-      dia { state with stroke_style } ctx
+      dia { state with stroke_style = style } ctx
 
-  let fill fill_style dia =
+  let fill style dia =
     fun state ctx ->
-      dia { state with fill_style } ctx
+      dia { state with fill_style = style } ctx
 
   let stack dias =
     fun state ctx ->
