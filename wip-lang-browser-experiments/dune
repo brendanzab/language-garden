@@ -1,3 +1,5 @@
+(include_subdirs qualified)
+
 (alias
   (name wip-lang-browser-experiments)
   (package wip-lang-browser-experiments))
