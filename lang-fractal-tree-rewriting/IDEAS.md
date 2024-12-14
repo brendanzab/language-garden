@@ -189,33 +189,33 @@ def axiom :=
 
 def rules : _ -> nondet _ :=
   | .branch(...) ->
-      one-of [
-        -- branch left and right:
-        --
-        -- o :
-        --  \| o
-        --   |/
-        --   |
-        .branch(.fork(.right(.branch(.apex)),
-          .branch(.fork(.left(.branch(.apex)),
-            .branch(...))))),
+      -- branch left and right:
+      --
+      -- o :
+      --  \| o
+      --   |/
+      --   |
+      .branch(.fork(.right(.branch(.apex)),
+        .branch(.fork(.left(.branch(.apex)),
+          .branch(...)))))
 
-        -- branch right:
-        --
-        --   : o
-        --   |/
-        --   |
-        .branch(.fork(.right(.branch(.apex)),
-          .branch(...))),
+  | .branch(...) ->
+      -- branch right:
+      --
+      --   : o
+      --   |/
+      --   |
+      .branch(.fork(.right(.branch(.apex)),
+        .branch(...)))
 
-        -- branch left:
-        --
-        -- o :
-        --  \|
-        --   |
-        .branch(.fork(.left (.branch(.apex)),
-          .branch(...)));
-      ]
+  | .branch(...) ->
+      -- branch left:
+      --
+      -- o :
+      --  \|
+      --   |
+      .branch(.fork(.left (.branch(.apex)),
+        .branch(...)))
 ```
 
 [^nondet]: Section 1.7 of “The Algorithmic Beauty of Plants”
