@@ -4,6 +4,25 @@ This is domain specific language for drawing 2-dimensional graphics. The goal is
 to describe drawings in terms of simple, composable components, with no hidden
 drawing state[^1].
 
+## Todo list
+
+- [x] Embedded DSL
+- [ ] External DSL
+- [ ] Web playground
+
+Diagram support
+
+- [x] 2D diagrams
+- [ ] 2D diagrams with envelope-based alignment
+- [ ] 2.5D diagrams
+- [ ] 3D diagrams
+
+Additional backends
+
+- [ ] CPU Backend
+- [ ] SVG Backend
+- [ ] GPU Backend
+
 ## Related work
 
 This was inspired the [diagrams][haskell-diagrams] library for Haskell.
