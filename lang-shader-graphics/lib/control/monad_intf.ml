@@ -8,14 +8,14 @@ module type Core = sig
 
 end
 
-(** Applicative functors *)
 module type S = sig
-  (** This is technically an “endofunctor” between the ‘category’ of OCaml
-      types and functions. *)
 
   include Core
 
   include Applicative.S with type 'a t := 'a t
+
+  val join : 'a. 'a t t -> 'a t
+  (** Remove one level of monadic structure *)
 
   (** Convenience operators *)
   module O : sig

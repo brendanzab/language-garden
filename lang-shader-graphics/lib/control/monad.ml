@@ -7,6 +7,9 @@ module Make (X : Core) : S
   include X
   include Applicative.Make (X)
 
+  let join x =
+    bind x Fun.id
+
   module O = struct
 
     include O
