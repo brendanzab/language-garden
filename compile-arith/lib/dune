@@ -1,8 +1,7 @@
+(include_subdirs qualified)
+
 (library
   (name arith)
   (public_name compile-arith)
   (preprocess
     (pps sedlex.ppx)))
-
-(menhir
-  (modules tree_lang_parser))

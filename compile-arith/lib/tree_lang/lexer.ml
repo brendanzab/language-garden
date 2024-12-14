@@ -4,7 +4,7 @@ let whitespace = [%sedlex.regexp? Plus (' ' | '\t' | '\r' | '\n')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
 let digits = [%sedlex.regexp? Plus ('0'..'9')]
 
-let rec token (lexbuf : Sedlexing.lexbuf) : Tree_lang_parser.token =
+let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   match%sedlex lexbuf with
   | whitespace    -> token lexbuf
   | "#"           -> line_comment lexbuf

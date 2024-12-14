@@ -3,12 +3,7 @@
 (** {1 Intermediate languages} *)
 
 (** Nested arithmetic expressions *)
-module Tree_lang = struct
-  include Tree_lang
-
-  module Lexer = Tree_lang_lexer
-  module Parser = Tree_lang_parser
-end
+module Tree_lang = Tree_lang
 
 (** Stack machine language *)
 module Stack_lang = Stack_lang
