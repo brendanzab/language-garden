@@ -65,7 +65,7 @@ end
 (* An environment that allows for the definition of shared GLSL expressions *)
 module Env : sig
 
-  include Control.Monad.State with type state = Locals.t
+  include Control.Monad.State.S with type state = Locals.t
 
   (** Define a new local definition *)
   val define_local : 'a. 'a expr -> ('a expr) t

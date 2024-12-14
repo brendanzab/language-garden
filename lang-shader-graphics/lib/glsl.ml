@@ -86,7 +86,7 @@ end
 
 module Env = struct
 
-  include Control.Monad.State (Locals)
+  include Control.Monad.State.Make (Locals)
 
   let define_local expr =
     embed (Locals.define expr)
@@ -95,8 +95,7 @@ end
 
 
 open Env
-open Control.Monad.Notation (Env)
-open Control.Monad.Util (Env)
+open Env.O
 
 
 type 'a repr = ('a expr) Env.t

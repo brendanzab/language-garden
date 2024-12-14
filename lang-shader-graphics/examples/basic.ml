@@ -18,11 +18,11 @@ module Make (S : Shader.S) = struct
   end
 
   (** An environment with access to a 2D coordinate. *)
-  module Env = Monad.Function_reader (struct type t = vec2f repr end)
+  module Env = Monad.Reader.Function (struct type t = vec2f repr end)
 
   (* Bring notations into scope *)
   open Shader.Notation (S)
-  open Monad.Notation (Env)
+  open Env.O
 
 
   (** Gradient background, assuming UV coordinates in [[0.0, 1.0]] *)
