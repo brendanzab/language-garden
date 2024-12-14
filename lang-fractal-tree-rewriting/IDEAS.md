@@ -2,6 +2,8 @@
 
 A sketch of a DSL that can be used to model plant growth.
 
+- Have been interested for a long time in an approach to procedural grammars
+  that is more rooted in approaches developed in programming language research.
 - Unlike L-systems which operate on strings, we operate directly on trees,
   which helps to better capture the branching anatomy of plants.
   This avoids the workarounds needed to get context-sensitive L-systems to work with strings.
