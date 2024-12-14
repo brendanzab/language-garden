@@ -1,4 +1,4 @@
-module Diagram = Declarative_graphics.Diagram
+module Canvas_diagram = Declarative_graphics.Dom.Canvas_diagram
 module Dom = Js_of_ocaml.Dom
 module Html = Js_of_ocaml.Dom_html
 module Js = Js_of_ocaml.Js
@@ -31,9 +31,11 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
     (* Move to the center of the canvas *)
     ctx##translate (canvas_width *. 0.5) canvas_height;
 
+    (* TODO: stepper *)
+
     (* Draw the tree *)
-    ctx |> Diagram.Canvas.run
-      Examples.Binary_tree.(render (module Diagram.Canvas) (grow 5));
+    ctx |> Canvas_diagram.run
+      Examples.Binary_tree.(render (module Canvas_diagram) (grow 5));
 
     ctx##restore;
   end;
