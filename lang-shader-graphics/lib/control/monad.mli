@@ -13,7 +13,6 @@ module Reader : sig
     with type value = V.t
     with type 'a t = V.t -> 'a
 
-
   (** A reader with an abstract implementation *)
   module Make (V : sig type t end) : S
     with type value = V.t
