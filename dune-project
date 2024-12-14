@@ -169,6 +169,14 @@
     (mdx (and (>= "2.4.1") :with-test))))
 
 (package
+  (name lang-fractal-tree-rewriting)
+  (allow_empty)
+  (depends
+    (js_of_ocaml-compiler (>= "5.8.2"))
+    (js_of_ocaml (>= "5.8.2"))
+    (js_of_ocaml-ppx (>= "5.8.2"))))
+
+(package
   (name lang-lc-interpreters)
   (depends
     (menhir (and (>= "20240715") :build))
@@ -205,14 +213,6 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))))
-
-(package
-  (name wip-lang-browser-experiments)
-  (allow_empty)
-  (depends
-    (js_of_ocaml-compiler (>= "5.8.2"))
-    (js_of_ocaml (>= "5.8.2"))
-    (js_of_ocaml-ppx (>= "5.8.2"))))
 
 
 ; Miscellaneous scraps

@@ -5,7 +5,6 @@ homepage: "https://github.com/brendanzab/language-garden"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.16"}
-  "lang-diagrams"
   "js_of_ocaml-compiler" {>= "5.8.2"}
   "js_of_ocaml" {>= "5.8.2"}
   "js_of_ocaml-ppx" {>= "5.8.2"}

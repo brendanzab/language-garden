@@ -1,12 +1,12 @@
 (include_subdirs qualified)
 
 (alias
-  (name wip-lang-browser-experiments)
-  (package wip-lang-browser-experiments))
+  (name lang-fractal-tree-rewriting)
+  (package lang-fractal-tree-rewriting))
 
 (alias
   (name all)
-  (package wip-lang-browser-experiments)
+  (package lang-fractal-tree-rewriting)
   (deps
     (glob_files *.html)
     index.bc.js))
