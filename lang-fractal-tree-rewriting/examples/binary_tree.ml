@@ -71,5 +71,5 @@ let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> 
       D.stack [
         D.line (0.0, 0.0) (0.0, -.branch_length)
           |> D.stroke `solid;
-        D.translate (0.0, -.branch_length) (draw tree);
+        D.translate_y (-.branch_length) (draw tree);
       ]

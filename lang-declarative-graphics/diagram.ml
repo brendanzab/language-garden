@@ -1,20 +1,20 @@
 (** Declarative diagramming API *)
 
-type style = [`solid | `none]
-type vec2 = float * float
+include Diagram_intf
 
-module type S = sig
+module Make (X : Core) : S
+  with type t = X.t
+= struct
 
-  type t
+  include X
 
-  val circle : diameter:float -> t
-  val line : vec2 -> vec2 -> t
+  let stack dias =
+    List.fold_left over empty dias
 
-  val stroke : style -> t -> t
-  val fill : style -> t -> t
+  let translate_x dx dia =
+    translate (dx, 0.0) dia
 
-  val stack : t list -> t
-  val rotate : radians:float -> t -> t
-  val translate : vec2 -> t -> t
+  let translate_y dy dia =
+    translate (0.0, dy) dia
 
 end
