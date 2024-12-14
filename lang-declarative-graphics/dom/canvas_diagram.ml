@@ -28,12 +28,12 @@ module Core = struct
     fun state ctx ->
       ctx##beginPath;
       ctx##arc
-        (* center_x *) (Js.float center_x)
-        (* center_y *) (Js.float center_y)
-        (* radius *) (Js.float radius)
-        (* theta1 *) (Js.float theta1)
-        (* theta2 *) (Js.float theta2)
-        (* ccw *) (Js.bool ccw);
+        (Js.float center_x)
+        (Js.float center_y)
+        (Js.float radius)
+        (Js.float theta1)
+        (Js.float theta2)
+        (Js.bool ccw);
       (match state.fill_style with `solid -> ctx##fill | `none -> ());
       (match state.stroke_style with `solid -> ctx##stroke | `none -> ());
       ()
