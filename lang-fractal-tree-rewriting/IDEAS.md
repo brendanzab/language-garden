@@ -2,24 +2,20 @@
 
 A sketch of a DSL that can be used to model plant growth.
 
-- Have been interested for a long time in an approach to procedural grammars
+- Have been interested in an approach to procedural grammars
   that is more rooted in approaches developed in programming language research.
 - Unlike L-systems which operate on strings, we operate directly on trees,
   which helps to better capture the branching anatomy of plants.
   This avoids the workarounds needed to get context-sensitive L-systems to work with strings.
-- I was probably prompted to start re-examining the string rewriting approach that L-systems use
-  as a result of reading tweets from the developers of [Idu](https://idu.cyberplant.ee/) expressing skepticism of L-systems.
-  I believe they use a markov-chain based approach on graphs.
-- It would be interesting to see if people have done something similar,
-  but searching for work on parallel rewriting on trees is hard,
-  because so many of the results are drowned drowned out by L-systems!
 - The anatomy of the plant and how it is rendered are more carefully separated than in L-systems,
   where the symbols sometimes stand-in for turtle drawing commands.
+  - The rendering is described declaratively with [lang-declarative-graphics](../lang-declarative-graphics),
+    as opposed to using an imperative turtle-based approach like in L-systems.
   - This is a cleaner separation of concerns,
     but has the downside of making plants more tedious to define.
-  - It would be fun if you could have a library of common plant anatomical elements (along with a “stock’ graphical interpretation) that could be stitched together into a plant.
-- I was partly inspired by the so-called “catamorphism” notation in the [Nanopass Framework](https://nanopass.org) to elide boilerplate rules,
-  and to automate threading through transformations.
+  - It would be fun if you could have a library of common plant anatomical elements
+    (along with a “stock’ graphical interpretation)
+    that could be stitched together into a plant.
 - I’m still not entirely happy with the notation... L-systems are still a lot cleaner.
 - I still don’t know how the rules would be wired together at the top level
 - Feeding information back into the model, e.g. gravity, light, world geometry
@@ -30,9 +26,23 @@ Previous experiments:
 - [fractal_growth.ml](https://gist.github.com/brendanzab/d614ca12319a57bd5a77e08094cd20e4)
 - [lindenmayer_systems.ml](https://gist.github.com/brendanzab/bb5ea233c010f0bff2461c35fa89367c)
 - [lang-fractal-growth](https://github.com/brendanzab/language-garden/tree/main/lang-fractal-growth) in my [language-garden](https://github.com/brendanzab/language-garden)
-- a larger prototype in OCaml, implemented with a custom recursion scheme library and diagrams library (still need to publish this!)
 
-## Resources
+## Related work
+
+I was probably prompted to start re-examining the string rewriting approach that L-systems use
+as a result of reading tweets from [Eli](https://mastodon.gamedev.place/@eli)
+(one of the developers of developers of [Idu](https://idu.cyberplant.ee/))
+expressing skepticism about L-systems.
+If I recall correctly, Idu is implemented using a markov-chains and a graph-based data structure.
+
+The `...` notation is inspired by the “catamorphism” notation from the [Nanopass Framework](https://nanopass.org).
+Nanopass also allows boilerplate rules to be elided.
+
+It would be interesting to see if other people have done similar work with tree rewriting,
+but searching for work on rewriting systems for trees is hard,
+because so many of the results are drowned drowned out by L-systems!
+
+# Resources
 
 - [Algorithmic Botany](https://web.archive.org/web/20240924020925/http://algorithmicbotany.org/)
 - [L-system](https://en.wikipedia.org/wiki/L-system) on Wikipedia
