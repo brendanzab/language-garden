@@ -32,6 +32,7 @@ end
 
 module Reader = struct
 
+  (** An environment with access to a shared value *)
   module type S = sig
 
     type value
@@ -53,6 +54,7 @@ end
 
 module State = struct
 
+  (** An environment that can access and update some shared state *)
   module type S = sig
 
     type state

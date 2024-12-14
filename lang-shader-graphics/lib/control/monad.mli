@@ -4,7 +4,6 @@ module type S = Monad_intf.S
 module Make (X : Core) : S
   with type 'a t = 'a X.t
 
-(** An environment with access to a shared value *)
 module Reader : sig
 
   module type S = Monad_intf.Reader.S
@@ -21,7 +20,6 @@ module Reader : sig
 
 end
 
-(** An environment that can access and update some shared state *)
 module State : sig
 
   module type S = Monad_intf.State.S
