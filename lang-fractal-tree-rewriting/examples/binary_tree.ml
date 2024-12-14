@@ -47,9 +47,9 @@ let axiom : t =
 let rules (rules : t -> t) : t -> t =
   function
   | Apex -> Branch (Fork (Apex, Apex))
-  | Fork (tree1, tree2) -> Fork (rules tree1, rules tree2)
-  (* Boilerplate productions *)
   | Branch tree -> Branch (Branch (rules tree))
+  (* Boilerplate productions *)
+  | Fork (tree1, tree2) -> Fork (rules tree1, rules tree2)
 
 let apex_diameter = 3.0
 let fork_angle = 45.0 *. Float.pi /. 180.0
