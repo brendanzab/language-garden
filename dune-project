@@ -155,6 +155,13 @@
     (sedlex (>= "3.3"))))
 
 (package
+  (name lang-declarative-graphics)
+  (depends
+    (js_of_ocaml-compiler (>= "5.8.2"))
+    (js_of_ocaml (>= "5.8.2"))
+    (js_of_ocaml-ppx (>= "5.8.2"))))
+
+(package
   (name lang-doc-templates)
   (depends
     (menhir (and (>= "20240715") :build))
@@ -172,6 +179,7 @@
   (name lang-fractal-tree-rewriting)
   (allow_empty)
   (depends
+    lang-declarative-graphics
     (js_of_ocaml-compiler (>= "5.8.2"))
     (js_of_ocaml (>= "5.8.2"))
     (js_of_ocaml-ppx (>= "5.8.2"))))

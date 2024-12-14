@@ -34,6 +34,8 @@
 
 *)
 
+module Diagram = Declarative_graphics.Diagram
+
 type t =
   | Apex
   | Fork of t * t

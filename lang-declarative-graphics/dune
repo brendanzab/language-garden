@@ -1,0 +1,7 @@
+(library
+  (name declarative_graphics)
+  (public_name lang-declarative-graphics)
+  (libraries
+    js_of_ocaml)
+  (preprocess
+    (pps js_of_ocaml-ppx)))

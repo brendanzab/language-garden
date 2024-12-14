@@ -1,4 +1,6 @@
-(** Production systems *)
+(** Parallel tree rewriting systems *)
+
+open Declarative_graphics
 
 module Deterministic = struct
 

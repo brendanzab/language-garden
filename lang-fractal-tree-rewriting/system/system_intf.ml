@@ -1,3 +1,5 @@
+open Declarative_graphics
+
 module Deterministic = struct
 
   module type Core = sig
