@@ -7,7 +7,3 @@ module Deterministic : sig
     with type t = X.t
 
 end
-
-(** Example systems *)
-
-module Binary_tree : Deterministic.S

@@ -36,7 +36,3 @@ module Deterministic = struct
   end
 
 end
-
-(** Example systems *)
-
-module Binary_tree = Deterministic.Make (Binary_tree)
