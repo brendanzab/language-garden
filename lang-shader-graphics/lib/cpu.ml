@@ -1,112 +1,116 @@
-open Shader_types
+open Storage
 
 
-type 'a repr = 'a
+include Shader.Make (struct
 
-let float s = s
+  type 'a repr = 'a
 
-let vec2 s1 s2 = vec2 s1 s2
-let vec3 s1 s2 s3 = vec3 s1 s2 s3
-let vec4 s1 s2 s3 s4 = vec4 s1 s2 s3 s4
+  let float s = s
 
-let mat2 v1 v2 = vec2 v1 v2
-let mat3 v1 v2 v3 = vec3 v1 v2 v3
-let mat4 v1 v2 v3 v4 = vec4 v1 v2 v3 v4
+  let vec2 s1 s2 = vec2 s1 s2
+  let vec3 s1 s2 s3 = vec3 s1 s2 s3
+  let vec4 s1 s2 s3 s4 = vec4 s1 s2 s3 s4
 
-let neg s = -.s
-let neg_vec v = map_vec neg v
+  let mat2 v1 v2 = vec2 v1 v2
+  let mat3 v1 v2 v3 = vec3 v1 v2 v3
+  let mat4 v1 v2 v3 v4 = vec4 v1 v2 v3 v4
 
-let add = ( +. )
-let add_vec v1 v2 = zip_with_vec add v1 v2
-let add_scalar v s = map_vec (add s) v
+  let neg s = -.s
+  let neg_vec v = map_vec neg v
 
-let sub = ( -. )
-let sub_vec v1 v2 = zip_with_vec sub v1 v2
-let sub_scalar v s = map_vec (sub s) v
+  let add = ( +. )
+  let add_vec v1 v2 = zip_with_vec add v1 v2
+  let add_scalar v s = map_vec (add s) v
 
-let mul = ( *. )
-let mul_vec v1 v2 = zip_with_vec mul v1 v2
-let mul_scalar v s = map_vec (mul s) v
+  let sub = ( -. )
+  let sub_vec v1 v2 = zip_with_vec sub v1 v2
+  let sub_scalar v s = map_vec (sub s) v
 
-let div = ( /. )
-let div_vec v1 v2 = zip_with_vec div v1 v2
-let div_scalar v s = map_vec (div s) v
+  let mul = ( *. )
+  let mul_vec v1 v2 = zip_with_vec mul v1 v2
+  let mul_scalar v s = map_vec (mul s) v
 
-(* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml *)
-let mod_ s1 s2 = s1 -. s2 *. Float.floor (s1 /. s2)
-let mod_vec v1 v2 = zip_with_vec mod_ v1 v2
-let mod_scalar v s = map_vec (mod_ s) v
+  let div = ( /. )
+  let div_vec v1 v2 = zip_with_vec div v1 v2
+  let div_scalar v s = map_vec (div s) v
 
-let abs = Float.abs
-let abs_vec v = map_vec abs v
+  (* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml *)
+  let mod_ s1 s2 = s1 -. s2 *. Float.floor (s1 /. s2)
+  let mod_vec v1 v2 = zip_with_vec mod_ v1 v2
+  let mod_scalar v s = map_vec (mod_ s) v
 
-let max = Float.max
-let max_vec v1 v2 = zip_with_vec max v1 v2
+  let abs = Float.abs
+  let abs_vec v = map_vec abs v
 
-let min = Float.min
-let min_vec v1 v2 = zip_with_vec min v1 v2
+  let max = Float.max
+  let max_vec v1 v2 = zip_with_vec max v1 v2
 
-let pow = Float.pow
-let pow_vec v1 v2 = zip_with_vec pow v1 v2
+  let min = Float.min
+  let min_vec v1 v2 = zip_with_vec min v1 v2
 
-(* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/clamp.xhtml *)
-let clamp s ~min:smin ~max:smax = min (max s smin) smax
+  let pow = Float.pow
+  let pow_vec v1 v2 = zip_with_vec pow v1 v2
 
-let clamp_vec v ~min ~max =
-   zip_with3_vec (fun s min max -> clamp s ~min ~max) v min max
+  (* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/clamp.xhtml *)
+  let clamp s ~min:smin ~max:smax = min (max s smin) smax
 
-let clamp_scalar v ~min ~max = map_vec (clamp ~min ~max) v
+  let clamp_vec v ~min ~max =
+    zip_with3_vec (fun s min max -> clamp s ~min ~max) v min max
 
-let cos = Float.cos
-let cos_vec v = map_vec cos v
+  let clamp_scalar v ~min ~max = map_vec (clamp ~min ~max) v
 
-let dot v1 v2 = fold_left_vec ( +. ) 0.0 (zip_with_vec ( *. ) v1 v2)
+  let cos = Float.cos
+  let cos_vec v = map_vec cos v
 
-let length2 v = dot v v
-let length v = sqrt (length2 v)
+  let dot v1 v2 = fold_left_vec ( +. ) 0.0 (zip_with_vec ( *. ) v1 v2)
 
-let lerp s1 s2 a = s1 *. (1.0 -. a) +. s2 *. a
-let lerp_vec v1 v2 a = zip_with3_vec lerp v1 v2 a
-let lerp_scalar v1 v2 a = zip_with_vec (fun s1 s2 -> lerp s1 s2 a) v1 v2
+  let length2 v = dot v v
+  let length v = sqrt (length2 v)
 
-let round = Float.round
-let round_vec v = map_vec round v
+  let lerp s1 s2 a = s1 *. (1.0 -. a) +. s2 *. a
+  let lerp_vec v1 v2 a = zip_with3_vec lerp v1 v2 a
+  let lerp_scalar v1 v2 a = zip_with_vec (fun s1 s2 -> lerp s1 s2 a) v1 v2
 
-let sin = Float.sin
-let sin_vec v = map_vec sin v
+  let round = Float.round
+  let round_vec v = map_vec round v
 
-(* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml *)
-let smooth_step ~lower ~upper s =
-   let t = clamp ((s -. lower) /. (upper -. lower)) ~min:0.0 ~max:1.0 in
-   t *. t *. (3.0 -. 2.0 *. t) *. t
+  let sin = Float.sin
+  let sin_vec v = map_vec sin v
 
-let smooth_step_vec ~lower ~upper v =
-   zip_with3_vec (fun lower upper v -> smooth_step ~lower ~upper v) lower upper v
+  (* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/smoothstep.xhtml *)
+  let smooth_step ~lower ~upper s =
+    let t = clamp ((s -. lower) /. (upper -. lower)) ~min:0.0 ~max:1.0 in
+    t *. t *. (3.0 -. 2.0 *. t) *. t
 
-let smooth_step_scalar ~lower ~upper v =
-   map_vec (fun v -> smooth_step ~lower ~upper v) v
+  let smooth_step_vec ~lower ~upper v =
+    zip_with3_vec (fun lower upper v -> smooth_step ~lower ~upper v) lower upper v
 
-let sqrt = Float.sqrt
-let sqrt_vec v = map_vec sqrt v
+  let smooth_step_scalar ~lower ~upper v =
+    map_vec (fun v -> smooth_step ~lower ~upper v) v
 
-(* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/step.xhtml *)
-let step ~edge s = if s < edge then 0.0 else 1.0
-let step_vec ~edge v = zip_with_vec (fun edge v -> step ~edge v) edge v
-let step_scalar ~edge v = map_vec (fun v -> step ~edge v) v
+  let sqrt = Float.sqrt
+  let sqrt_vec v = map_vec sqrt v
 
-let tan = Float.tan
-let tan_vec v = map_vec tan v
+  (* See: https://registry.khronos.org/OpenGL-Refpages/gl4/html/step.xhtml *)
+  let step ~edge s = if s < edge then 0.0 else 1.0
+  let step_vec ~edge v = zip_with_vec (fun edge v -> step ~edge v) edge v
+  let step_scalar ~edge v = map_vec (fun v -> step ~edge v) v
 
-
-let map_vec  = map_vec
-let fold_left_vec  = fold_left_vec
+  let tan = Float.tan
+  let tan_vec v = map_vec tan v
 
 
-let get = get
-let get2 = get2
-let get3 = get3
-let get4 = get4
-let set = set
+  let map_vec  = map_vec
+  let fold_left_vec  = fold_left_vec
+
+
+  let get = get
+  let get2 = get2
+  let get3 = get3
+  let get4 = get4
+  let set = set
+
+end)
 
 
 type image_shader = vec2f repr -> vec3f repr

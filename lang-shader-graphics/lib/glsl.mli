@@ -1,6 +1,6 @@
 (** {0 Expressions in the GLSL shader language} *)
 
-open Shader_types
+open Storage
 
 
 (** GLSL type *)

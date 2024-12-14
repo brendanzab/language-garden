@@ -14,15 +14,15 @@ embedded DSL for composing SDFs in OCaml and compiling them to shader programs.
 (** A scene to render, assuming UV coordinates in (-0.5, 0.5) *)
 let scene : (vec3f repr) Env.t  =
   (* Some shapes defined using signed distance functions *)
-  let* s1 = circle !!0.3 |> move (S.vec2 !!0.0 !!0.0) in
-  let* s2 = square !!0.2 |> move (S.vec2 !!0.2 !!0.0) in
+  let* s1 = circle !!0.3 |> move (L.vec2 !!0.0 !!0.0) in
+  let* s2 = square !!0.2 |> move (L.vec2 !!0.2 !!0.0) in
 
   (* Combine the two shapes, meeting at a rounded edge *)
   let shape = union_round s1 s2 !!0.05 in
 
   (* Colours to use in the background and foreground *)
-  let background_color = S.vec3 !!0.35 !!0.45 !!0.50 in
-  let shape_color = S.vec3 !!1.0 !!1.0 !!1.0 in
+  let background_color = L.vec3 !!0.35 !!0.45 !!0.50 in
+  let shape_color = L.vec3 !!1.0 !!1.0 !!1.0 in
 
   (* The final output colour to render at the current UV coordinate. *)
   Env.pure (background_color |> overlay ~shape:shape ~color:shape_color)

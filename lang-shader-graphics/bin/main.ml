@@ -1,4 +1,4 @@
-open Shader_graphics.Shader_types
+open Shader_graphics.Storage
 
 module Monad = Shader_graphics.Control.Monad
 
@@ -42,8 +42,6 @@ let example : string -> (module Scene) =
 (** {1 Subcommands} *)
 
 let compile_cmd scene =
-  let open Shader.Notation (Glsl) in
-
   (* TODO: Render to HTML canvas *)
 
   Glsl.Shadertoy.compile_image_shader
@@ -54,8 +52,6 @@ let compile_cmd scene =
         ~position:frag_coord)
 
 let render_cmd scene =
-  let open Shader.Notation (Cpu) in
-
   Cpu.render_ppm ~width:600 ~height:400
     (fun position ->
       let (module Scene) = example scene in

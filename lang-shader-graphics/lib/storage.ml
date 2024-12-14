@@ -1,4 +1,4 @@
-(** {0 Common types used in GPU shader languages} *)
+(** {0 Common storage types used in GPU shader languages} *)
 
 
 (** {1 Type level natural numbers} *)
