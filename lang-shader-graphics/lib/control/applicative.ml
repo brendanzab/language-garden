@@ -15,6 +15,14 @@ module Make (X : Core) : S
 
   end
 
+  open O
+
+  let map0 = pure
+  let map1 = map
+  let map2 f x1 x2 = map1 f x1 <*> x2
+  let map3 f x1 x2 x3 = map2 f x1 x2 <*> x3
+  let map4 f x1 x2 x3 x4 = map3 f x1 x2 x3 <*> x4
+
 end
 
 module Compose (F : S) (G : S) = Make (struct

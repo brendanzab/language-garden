@@ -24,26 +24,6 @@ module Make (X : Core) : S
 
   end
 
-  open O
-
-  let map2 f x1 x2 =
-    let* x1 = x1 in
-    let* x2 = x2 in
-    pure (f x1 x2)
-
-  let map3 f x1 x2 x3 =
-    let* x1 = x1 in
-    let* x2 = x2 in
-    let* x3 = x3 in
-    pure (f x1 x2 x3)
-
-  let map4 f x1 x2 x3 x4 =
-    let* x1 = x1 in
-    let* x2 = x2 in
-    let* x3 = x3 in
-    let* x4 = x4 in
-    pure (f x1 x2 x3 x4)
-
 end
 
 module Reader = struct

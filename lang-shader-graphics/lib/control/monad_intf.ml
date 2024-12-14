@@ -17,10 +17,6 @@ module type S = sig
 
   include Applicative.S with type 'a t := 'a t
 
-  val map2 : 'a 'b 'c. ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
-  val map3 : 'a 'b 'c 'd. ('a -> 'b -> 'c -> 'd) -> 'a t -> 'b t -> 'c t -> 'd t
-  val map4 : 'a 'b 'c 'd 'e. ('a -> 'b -> 'c -> 'd -> 'e) -> 'a t -> 'b t -> 'c t -> 'd t -> 'e t
-
   (** Convenience operators *)
   module O : sig
 
