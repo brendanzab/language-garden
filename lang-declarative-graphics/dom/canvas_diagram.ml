@@ -6,7 +6,7 @@ type state = {
   stroke_style : Diagram.style;
 }
 
-let default_style = {
+let default_state = {
   fill_style =`none;
   stroke_style = `none;
 }
@@ -83,4 +83,4 @@ end
 include Diagram.Make (Core)
 
 let run dia ctx =
-  dia default_style ctx
+  dia default_state ctx
