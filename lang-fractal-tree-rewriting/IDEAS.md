@@ -25,7 +25,7 @@ Previous experiments:
 
 - [fractal_growth.ml](https://gist.github.com/brendanzab/d614ca12319a57bd5a77e08094cd20e4)
 - [lindenmayer_systems.ml](https://gist.github.com/brendanzab/bb5ea233c010f0bff2461c35fa89367c)
-- [lang-fractal-growth](https://github.com/brendanzab/language-garden/tree/main/lang-fractal-growth) in my [language-garden](https://github.com/brendanzab/language-garden)
+- [lang-fractal-growth](../lang-fractal-growth)
 
 ## Related work
 

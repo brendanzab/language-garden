@@ -74,7 +74,7 @@ Miscellaneous programming language experiments.
 - [**lang-fractal-growth**](./lang-fractal-growth/):
   Experiments with using grammars and rewriting systems to model fractal growth.
 - [**lang-fractal-tree-rewriting**](./lang-fractal-tree-rewriting/):
-  Plant growth modelled as parallel tree rewriting systems.
+  Plant growth modelled as tree rewriting systems.
 - [**lang-lc-interpreters**](./lang-lc-interpreters/):
   A comparison of lambda calculus interpreters using different approaches to
   name binding.
