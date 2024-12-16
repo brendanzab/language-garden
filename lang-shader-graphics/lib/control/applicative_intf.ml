@@ -27,6 +27,8 @@ module type S = sig
 
   include Functor.S with type 'a t := 'a t
 
+  val both : 'a 'b. 'a t -> 'b t -> ('a * 'b) t
+
   val map0 : 'a. 'a -> 'a t
   val map1 : 'a 'b. ('a -> 'b) -> 'a t -> 'b t
   val map2 : 'a 'b 'c. ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
@@ -38,7 +40,14 @@ module type S = sig
 
     include module type of O
 
+    val ( let+ ) : 'a 'b. 'a t -> ('a -> 'b) -> 'b t
+    (** Alias for {!map} *)
+
+    val ( and+ ) : 'a 'b. 'a t -> 'b t -> ('a * 'b) t
+    (** Alias for {!both} *)
+
     val ( <*> ) : 'a 'b. ('a -> 'b) t -> 'a t -> 'b t
+    (** Alias for {!apply} *)
 
   end
 

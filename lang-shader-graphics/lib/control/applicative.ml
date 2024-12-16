@@ -7,21 +7,25 @@ module Make (X : Core) : S
   include X
   include Functor.Make (X)
 
-  module O = struct
+  let ( <*> ) = apply
 
-    include O
-
-    let ( <*> ) = apply
-
-  end
-
-  open O
+  let both x1 x2 =
+    map (fun x1 x2 -> (x1, x2)) x1 <*> x2
 
   let map0 = pure
   let map1 = map
   let map2 f x1 x2 = map1 f x1 <*> x2
   let map3 f x1 x2 x3 = map2 f x1 x2 <*> x3
   let map4 f x1 x2 x3 x4 = map3 f x1 x2 x3 <*> x4
+
+  module O = struct
+
+    include O
+
+    let ( <*> ) = ( <*> )
+    let ( and+ ) = ( both )
+
+  end
 
 end
 

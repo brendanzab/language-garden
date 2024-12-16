@@ -14,16 +14,8 @@ module Make (X : Core) : S
 
     include O
 
-    let ( let* ) =
-      bind
-
-    let ( and* ) t n =
-      let* x = t in
-      let* y = n in
-      pure (x, y)
-
-    let ( and+ ) t n =
-      ( and* ) t n
+    let ( let* ) = bind
+    let ( and* ) = both
 
   end
 

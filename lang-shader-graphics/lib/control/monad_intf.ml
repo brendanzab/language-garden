@@ -24,7 +24,6 @@ module type S = sig
 
     val ( let* ) : 'a 'b. 'a t -> ('a -> 'b t) -> 'b t
     val ( and* ) : 'a 'b. 'a t -> 'b t -> ('a * 'b) t
-    val ( and+ ) : 'a 'b. 'a t -> 'b t -> ('a * 'b) t
 
   end
 
