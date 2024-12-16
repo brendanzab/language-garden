@@ -6,7 +6,7 @@ These projects are mostly my attempt to understand different techniques and
 approaches to implementing programming languages. Perhaps from these seedlings
 something new and interesting might germinate?
 
-## Implementations
+## The garden path
 
 ### Elaboration
 
@@ -115,6 +115,18 @@ myself in the position of:
 
 My hope is that by collecting some of these projects and experiments together
 into a single repository they might be useful to others and my future self.
+
+I’m also trying to get better at interleaved breadth-first/depth-first search as part of my learning process -
+somewhat like the search strategy employed by [miniKanren](http://minikanren.org/).
+My goal is not to become an expert of one thing,
+but to be able to be good at combining ideas from different places and perspective.
+I want to be comfortable with a bit of bodging,
+of publishing more “scrappy fiddles”[^scrappy-fiddles],
+but not so much that they can't be turned into something more coherent later on.
+
+[^scrappy-fiddles]: A term coined by Lu Wilson (a.k.a. [TodePond](https://www.todepond.com/))
+
+## Related work
 
 The metaphor of a “garden” as related to knowledge work was inspired by the rising
 popularity of “digital gardening” (which apparently originates from
