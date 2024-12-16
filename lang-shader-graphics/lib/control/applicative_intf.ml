@@ -12,7 +12,15 @@ module type Core = sig
 
 end
 
-(** Applicative functors *)
+(** Applicative functors
+
+    This can be seen as a generalisation of the {!Functor.S} signature, but
+    where {!Functor.S.map} can take any number of arguments.
+
+    Applicatives can also be viewed as a restricted form of the {!Monad.S} signature,
+    where one computation cannot depend on the result of another computation.
+    For this reason applicatives are a useful way of describing effects that can be parallelised.
+*)
 module type S = sig
 
   include Core
