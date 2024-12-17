@@ -136,7 +136,10 @@ Attributed node languages:
 
 - [Sofu](https://sofu.sourceforge.net)
 - [SDLang: Simple Declarative Language](https://sdlang.org/)
-- [KDL Document Language](https://kdl.dev/)
+- [KDL Document Language](https://kdl.dev/):
+  configuration and serialisation language with xml-like and shell-style syntax for nodes,
+  and a JSON Schema-style schema language
+- [Pkl](https://pkl-lang.org): configuration language with support for data templating and validation.
 - [RELAX NG compact syntax](https://relaxng.org/compact-tutorial-20030326.html)
 - [XDuce](https://xduce.sourceforge.net/) ([Github mirror](https://github.com/ozzymcduff/XDuce))
 - [svg, idk](https://x.nas.sr/svg-editor/) ([Mastodon thread](https://merveilles.town/@nasser/112300138172061442))
