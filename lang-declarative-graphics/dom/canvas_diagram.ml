@@ -78,6 +78,13 @@ module Core = struct
       dia state ctx;
       ctx##restore
 
+  let scale xy dia =
+    fun state ctx ->
+      ctx##save;
+      ctx##scale xy xy;
+      dia state ctx;
+      ctx##restore
+
 end
 
 include Diagram.Make (Core)

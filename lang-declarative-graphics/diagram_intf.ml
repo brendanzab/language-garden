@@ -16,6 +16,7 @@ module type Core = sig
 
   val rotate : radians:float -> t -> t
   val translate : vec2 -> t -> t
+  val scale : float -> t -> t
 
 end
 
