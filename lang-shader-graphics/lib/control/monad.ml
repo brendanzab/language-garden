@@ -7,14 +7,14 @@ module Make (X : Core) : S
   include X
   include Applicative.Make (X)
 
-  let join x =
-    bind x Fun.id
+  let flatten x =
+    flat_map Fun.id x
 
   module O = struct
 
     include O
 
-    let ( let* ) = bind
+    let ( let* ) x f = flat_map f x
     let ( and* ) = both
 
   end
@@ -36,7 +36,7 @@ module Reader = struct
       let map f x = fun v ->  f (x v)
       let pure v = fun _ -> v
       let apply f x = fun v -> (f v) (x v)
-      let bind t f = fun v -> f (t v) v
+      let flat_map f t = fun v -> f (t v) v
 
     end)
 
@@ -76,7 +76,7 @@ module State = struct
         let x, s = x s in
         f x, s
 
-      let bind x f = fun s ->
+      let flat_map f x = fun s ->
         let x, s = x s in
         f x s
 
@@ -102,6 +102,6 @@ module Output (Input : sig type t end) = Make (struct
   let map f g = fun x -> f (g x)
   let pure x = fun _ -> x
   let apply f g = fun x -> (f x) (g x)
-  let bind f g = fun x -> g (f x) x
+  let flat_map g f = fun x -> g (f x) x
 
 end)

@@ -4,7 +4,9 @@ module type Core = sig
 
   include Applicative.Core with type 'a t := 'a t
 
-  val bind : 'a 'b. 'a t -> ('a -> 'b t) -> 'b t
+  val flat_map : 'a 'b. ('a -> 'b t) -> 'a t -> 'b t
+  (** Apply a function to a value of type ['a t], flattening the result into the
+      monadic structure. *)
 
 end
 
@@ -14,7 +16,7 @@ module type S = sig
 
   include Applicative.S with type 'a t := 'a t
 
-  val join : 'a. 'a t t -> 'a t
+  val flatten : 'a. 'a t t -> 'a t
   (** Remove one level of monadic structure *)
 
   (** Convenience operators *)
@@ -23,7 +25,10 @@ module type S = sig
     include module type of O
 
     val ( let* ) : 'a 'b. 'a t -> ('a -> 'b t) -> 'b t
+    (** Alias for {!flat_map} *)
+
     val ( and* ) : 'a 'b. 'a t -> 'b t -> ('a * 'b) t
+    (** Alias for {!both} *)
 
   end
 

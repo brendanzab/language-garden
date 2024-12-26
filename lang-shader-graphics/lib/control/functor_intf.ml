@@ -2,9 +2,9 @@ module type Core = sig
 
   type 'a t
 
+  val map : 'a 'b. ('a -> 'b) -> ('a t -> 'b t)
   (** Turn a function of type ['a -> 'b] into a function of type
       ['a t -> 'b t]. *)
-  val map : 'a 'b. ('a -> 'b) -> ('a t -> 'b t)
 
   (** {1 Laws}
 

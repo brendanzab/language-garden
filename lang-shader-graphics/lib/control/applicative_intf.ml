@@ -4,11 +4,11 @@ module type Core = sig
 
   include Functor.Core with type 'a t := 'a t
 
-  (** Embed a pure value in [t] *)
   val pure : 'a. 'a -> 'a t
+  (** Embed a pure value in [t] *)
 
-  (** Apply a function embedded in [t] to a value embedded in [t] *)
   val apply : 'a 'b. ('a -> 'b) t -> 'a t -> 'b t
+  (** Apply a function embedded in [t] to a value embedded in [t] *)
 
 end
 

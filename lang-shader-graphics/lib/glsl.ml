@@ -152,55 +152,55 @@ include Shader.Make (struct
   let mat4 = call4 Mat4 "mat4"
 
   let neg = pre Float "-"
-  let neg_vec v = bind v (fun v -> pre v.ty "-" (pure v))
+  let neg_vec v = flat_map (fun v -> pre v.ty "-" (pure v)) v
   let add = binop1 Float "+"
-  let add_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "+" (pure v1) v2)
-  let add_scalar v s = bind v (fun v -> binop1 v.ty "+" (pure v) s)
+  let add_vec v1 v2 = flat_map (fun v1 -> binop1 v1.ty "+" (pure v1) v2) v1
+  let add_scalar v s = flat_map (fun v -> binop1 v.ty "+" (pure v) s) v
   let sub = binop1 Float "-"
-  let sub_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "-" (pure v1) v2)
-  let sub_scalar v s = bind v (fun v -> binop1 v.ty "-" (pure v) s)
+  let sub_vec v1 v2 = flat_map (fun v1 -> binop1 v1.ty "-" (pure v1) v2) v1
+  let sub_scalar v s = flat_map (fun v -> binop1 v.ty "-" (pure v) s) v
   let mul = binop1 Float "*"
-  let mul_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "*" (pure v1) v2)
-  let mul_scalar v s = bind v (fun v -> binop1 v.ty "*" (pure v) s)
+  let mul_vec v1 v2 = flat_map (fun v1 -> binop1 v1.ty "*" (pure v1) v2) v1
+  let mul_scalar v s = flat_map (fun v -> binop1 v.ty "*" (pure v) s) v
   let div = binop1 Float "/"
-  let div_vec v1 v2 = bind v1 (fun v1 -> binop1 v1.ty "/" (pure v1) v2)
-  let div_scalar v s = bind v (fun v -> binop1 v.ty "/" (pure v) s)
+  let div_vec v1 v2 = flat_map (fun v1 -> binop1 v1.ty "/" (pure v1) v2) v1
+  let div_scalar v s = flat_map (fun v -> binop1 v.ty "/" (pure v) s) v
   let mod_ = call2 Float "mod"
-  let mod_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "mod" (pure v1) v2)
-  let mod_scalar v s = bind v (fun v -> call2 v.ty "mod" (pure v) s)
+  let mod_vec v1 v2 = flat_map (fun v1 -> call2 v1.ty "mod" (pure v1) v2) v1
+  let mod_scalar v s = flat_map (fun v -> call2 v.ty "mod" (pure v) s) v
 
   let abs s = call1 Float "abs" s
-  let abs_vec v = bind v (fun v -> call1 v.ty "abs" (pure v))
+  let abs_vec v = flat_map (fun v -> call1 v.ty "abs" (pure v)) v
   let clamp s ~min ~max = call3 Float "clamp" s min max
-  let clamp_vec v ~min ~max = bind v (fun v -> call3 v.ty "clamp" (pure v) min max)
-  let clamp_scalar v ~min ~max = bind v (fun v -> call3 v.ty "clamp" (pure v) min max)
+  let clamp_vec v ~min ~max = flat_map (fun v -> call3 v.ty "clamp" (pure v) min max) v
+  let clamp_scalar v ~min ~max = flat_map (fun v -> call3 v.ty "clamp" (pure v) min max) v
   let cos a = call1 Float "cos" a
-  let cos_vec v = bind v (fun v -> call1 v.ty "cos" (pure v))
+  let cos_vec v = flat_map (fun v -> call1 v.ty "cos" (pure v)) v
   let dot v1 v2 = call2 Float "dot" v1 v2
   let length v = call1 Float "length" v
   let lerp s1 s2 s3 = call3 Float "mix" s1 s2 s3
-  let lerp_vec v1 v2 v3 = bind v1 (fun v1 -> call3 v1.ty "mix" (pure v1) v2 v3)
-  let lerp_scalar v s1 s2 = bind v (fun v -> call3 v.ty "mix" (pure v) s1 s2)
+  let lerp_vec v1 v2 v3 = flat_map (fun v1 -> call3 v1.ty "mix" (pure v1) v2 v3) v1
+  let lerp_scalar v s1 s2 = flat_map (fun v -> call3 v.ty "mix" (pure v) s1 s2) v
   let max s1 s2 = call2 Float "max" s1 s2
-  let max_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "max" (pure v1) v2)
+  let max_vec v1 v2 = flat_map (fun v1 -> call2 v1.ty "max" (pure v1) v2) v1
   let min s1 s2 = call2 Float "min" s1 s2
-  let min_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "min" (pure v1) v2)
+  let min_vec v1 v2 = flat_map (fun v1 -> call2 v1.ty "min" (pure v1) v2) v1
   let pow s = call2 Float "pow" s
-  let pow_vec v1 v2 = bind v1 (fun v1 -> call2 v1.ty "pow" (pure v1) v2)
+  let pow_vec v1 v2 = flat_map (fun v1 -> call2 v1.ty "pow" (pure v1) v2) v1
   let round s = call1 Float "round" s
-  let round_vec v = bind v (fun v -> call1 v.ty "round" (pure v))
+  let round_vec v = flat_map (fun v -> call1 v.ty "round" (pure v)) v
   let sin a = call1 Float "sin" a
-  let sin_vec v = bind v (fun v -> call1 v.ty "sin" (pure v))
+  let sin_vec v = flat_map (fun v -> call1 v.ty "sin" (pure v)) v
   let smooth_step ~lower ~upper s = call3 Float "smoothstep" lower upper s
-  let smooth_step_vec ~lower ~upper v = bind v (fun v -> call3 v.ty "smoothstep" lower upper (pure v))
-  let smooth_step_scalar ~lower ~upper v = bind v (fun v -> call3 v.ty "smoothstep" lower upper (pure v))
+  let smooth_step_vec ~lower ~upper v = flat_map (fun v -> call3 v.ty "smoothstep" lower upper (pure v)) v
+  let smooth_step_scalar ~lower ~upper v = flat_map (fun v -> call3 v.ty "smoothstep" lower upper (pure v)) v
   let sqrt a = call1 Float "sqrt" a
-  let sqrt_vec v = bind v (fun v -> call1 v.ty "sqrt" (pure v))
+  let sqrt_vec v = flat_map (fun v -> call1 v.ty "sqrt" (pure v)) v
   let step ~edge s = call2 Float "step" edge s
-  let step_vec ~edge v = bind v (fun v -> call2 v.ty "step" edge (pure v))
-  let step_scalar ~edge v = bind v (fun v -> call2 v.ty "step" edge (pure v))
+  let step_vec ~edge v = flat_map (fun v -> call2 v.ty "step" edge (pure v)) v
+  let step_scalar ~edge v = flat_map (fun v -> call2 v.ty "step" edge (pure v)) v
   let tan a = call1 Float "tan" a
-  let tan_vec v = bind v (fun v -> call1 v.ty "tan" (pure v))
+  let tan_vec v = flat_map (fun v -> call1 v.ty "tan" (pure v)) v
 
 
   (** The name of a vector component *)
@@ -236,7 +236,7 @@ include Shader.Make (struct
       | Z, { ty = Vec4; _ } -> vec4 (pure v |> get X) (pure v |> get Y) s (pure v |> get W)
       | W, { ty = Vec4; _ } -> vec4 (pure v |> get X) (pure v |> get Y) (pure v |> get Z) s
     in
-    bind v (go c s)
+    flat_map (go c s) v
 
 
   let map_vec f v =
@@ -246,7 +246,7 @@ include Shader.Make (struct
       | { ty = Vec3; _ } -> vec3 (pure v |> get X |> f) (pure v |> get Y |> f) (pure v |> get Z |> f)
       | { ty = Vec4; _ } -> vec4 (pure v |> get X |> f) (pure v |> get Y |> f) (pure v |> get Z |> f) (pure v |> get W |> f)
     in
-    bind v (go f)
+    flat_map (go f) v
 
   let fold_left_vec f acc v =
     let go (type a n) f (acc : a repr) (v : (n vecf) expr) : a repr =
@@ -267,7 +267,7 @@ include Shader.Make (struct
           let acc = pure v |> get X |> f acc in
           acc
     in
-    bind v (go f acc)
+    flat_map (go f acc) v
 
 end)
 
