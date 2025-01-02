@@ -15,7 +15,7 @@ module Core = struct
 
   let indent : t =
     fun _ buf level ->
-      for _ = 0 to (level * 2) do
+      for _ = 1 to (level * 2) do
         Buffer.add_char buf ' ';
       done
 
