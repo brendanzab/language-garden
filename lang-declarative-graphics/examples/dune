@@ -1,0 +1,14 @@
+(executable
+ (name tree)
+ (libraries
+  lang-declarative-graphics.core))
+
+(rule
+ (with-stdout-to ./tree.svg.tmp
+  (run ./tree.exe)))
+
+(rule
+ (alias runtest)
+ (package lang-declarative-graphics)
+ (action
+  (diff ./tree.svg ./tree.svg.tmp)))

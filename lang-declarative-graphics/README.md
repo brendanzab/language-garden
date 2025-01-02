@@ -20,7 +20,7 @@ Diagram support
 Additional backends
 
 - [ ] CPU Backend
-- [ ] SVG Backend
+- [x] SVG Backend
 - [ ] GPU Backend
 
 ## Related work
