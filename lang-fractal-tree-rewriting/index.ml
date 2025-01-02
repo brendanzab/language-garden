@@ -1,4 +1,4 @@
-module Canvas_diagram = Declarative_graphics.Dom.Canvas_diagram
+module Canvas_diagram = Declarative_graphics_jsoo.Canvas_diagram
 module Dom = Js_of_ocaml.Dom
 module Html = Js_of_ocaml.Dom_html
 module Js = Js_of_ocaml.Js

@@ -1,0 +1,10 @@
+(include_subdirs qualified)
+
+(library
+  (name declarative_graphics_jsoo)
+  (public_name lang-declarative-graphics.jsoo)
+  (libraries
+    js_of_ocaml
+    lang-declarative-graphics.core)
+  (preprocess
+    (pps js_of_ocaml-ppx)))

@@ -1,0 +1,5 @@
+(include_subdirs qualified)
+
+(library
+  (name declarative_graphics_core)
+  (public_name lang-declarative-graphics.core))

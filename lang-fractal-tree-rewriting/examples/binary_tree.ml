@@ -34,7 +34,7 @@
 
 *)
 
-module Diagram = Declarative_graphics.Diagram
+module Diagram = Declarative_graphics_core.Diagram
 
 type t =
   | Apex

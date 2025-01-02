@@ -1,4 +1,4 @@
-open Declarative_graphics
+open Declarative_graphics_core
 
 module Deterministic = struct
 

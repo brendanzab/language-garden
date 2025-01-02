@@ -1,3 +1,4 @@
+module Diagram = Declarative_graphics_core.Diagram
 module Html = Js_of_ocaml.Dom_html
 module Js = Js_of_ocaml.Js
 
