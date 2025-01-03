@@ -82,7 +82,7 @@ end
 
 include Diagram.Make (Core)
 
-let run (dia : t) (doc : Svg.document Js.t) (* attributes *) : Svg.svgElement Js.t =
+let run (doc : Svg.document Js.t) (* attributes *) (dia : t) : Svg.svgElement Js.t =
   let elem = Svg.createSvg doc in
   dia default_state doc (elem :> Svg.element Js.t);
   elem

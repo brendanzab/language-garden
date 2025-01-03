@@ -90,5 +90,5 @@ end
 
 include Diagram.Make (Core)
 
-let run dia ctx =
+let run ctx dia =
   dia default_state ctx

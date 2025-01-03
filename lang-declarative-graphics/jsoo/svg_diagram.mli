@@ -6,4 +6,4 @@ type t
 
 include Diagram.S with type t := t
 
-val run : t -> Svg.document Js.t -> Svg.svgElement Js.t
+val run : Svg.document Js.t -> t -> Svg.svgElement Js.t

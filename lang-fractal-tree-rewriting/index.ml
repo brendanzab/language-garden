@@ -24,21 +24,12 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
   (* Normalise the coordinate system to CSS pixels *)
   ctx##scale scale scale;
 
-  (* Draw the scene *)
-  begin
-    ctx##save;
+  (* TODO: stepper *)
 
-    (* Move to the center of the canvas *)
-    ctx##translate (canvas_width *. 0.5) canvas_height;
-
-    (* TODO: stepper *)
-
-    (* Draw the tree *)
-    ctx |> Canvas_diagram.run
-      Examples.Binary_tree.(render (module Canvas_diagram) (grow 5));
-
-    ctx##restore;
-  end;
+  (* Draw the tree *)
+  Examples.Binary_tree.(render (module Canvas_diagram) (grow 5))
+  |> Canvas_diagram.translate (canvas_width *. 0.5, canvas_height)
+  |> Canvas_diagram.run ctx;
 
   Js._false
 end

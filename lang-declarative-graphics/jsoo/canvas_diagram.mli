@@ -9,4 +9,4 @@ type t
 include Diagram.S with type t := t
 
 (** Render the diagram in the supplied canvas rendering context *)
-val run : t -> Html.canvasRenderingContext2D Js.t -> unit
+val run : Html.canvasRenderingContext2D Js.t -> t -> unit
