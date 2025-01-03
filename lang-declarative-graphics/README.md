@@ -4,6 +4,8 @@ This is domain specific language for drawing 2-dimensional graphics. The goal is
 to describe drawings in terms of simple, composable components, with no hidden
 drawing state[^1].
 
+Used in [**lang-fractal-tree-rewriting**](../lang-fractal-tree-rewriting).
+
 ## Todo list
 
 - [x] Embedded DSL
