@@ -26,7 +26,7 @@ module Core = struct
     end
 
   let arc ~center:(center_x, center_y) ~radius ~theta1 ~theta2 ~ccw =
-    fun state ctx ->
+    fun state ctx -> begin
       ctx##beginPath;
       ctx##arc
         (Js.float center_x)
@@ -37,7 +37,7 @@ module Core = struct
         (Js.bool ccw);
       (match state.fill_style with `solid -> ctx##fill | `none -> ());
       (match state.stroke_style with `solid -> ctx##stroke | `none -> ());
-      ()
+    end
 
   let circle ~diameter =
     arc
@@ -66,25 +66,28 @@ module Core = struct
       dia { state with fill_style = style } ctx
 
   let rotate ~radians dia =
-    fun state ctx ->
+    fun state ctx -> begin
       ctx##save;
       ctx##rotate radians;
       dia state ctx;
-      ctx##restore
+      ctx##restore;
+    end
 
   let translate (dx, dy) dia =
-    fun state ctx ->
+    fun state ctx -> begin
       ctx##save;
       ctx##translate dx dy;
       dia state ctx;
-      ctx##restore
+      ctx##restore;
+    end
 
   let scale xy dia =
-    fun state ctx ->
+    fun state ctx -> begin
       ctx##save;
       ctx##scale xy xy;
       dia state ctx;
-      ctx##restore
+      ctx##restore;
+    end
 
 end
 
