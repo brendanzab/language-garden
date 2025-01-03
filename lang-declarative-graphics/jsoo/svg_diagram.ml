@@ -4,13 +4,13 @@ module Svg = Js_of_ocaml.Dom_svg
 module Js = Js_of_ocaml.Js
 
 type state = {
-  fill_style : Diagram.style;
-  stroke_style : Diagram.style;
+  fill_style : string option;
+  stroke_style : string option;
 }
 
 let default_state = {
-  fill_style =`none;
-  stroke_style = `none;
+  fill_style = None;
+  stroke_style = None;
 }
 
 module Core = struct
@@ -30,12 +30,8 @@ module Core = struct
     fun state doc parent ->
       let elem = Svg.createCircle doc in
       elem##setAttribute (Js.string "r") (Js.string (string_of_float (diameter *. 0.5)));
-      (match state.fill_style with
-        | `solid -> elem##setAttribute (Js.string "fill") (Js.string "black")
-        | `none -> ());
-      (match state.stroke_style with
-        | `solid -> elem##setAttribute (Js.string "stroke") (Js.string "black")
-        | `none -> ());
+      state.fill_style |> Option.iter (fun style -> elem##setAttribute (Js.string "fill") (Js.string style));
+      state.stroke_style |> Option.iter (fun style -> elem##setAttribute (Js.string "stroke") (Js.string style));
       Dom.appendChild parent elem
 
   let line (x1, y1) (x2, y2) : t =
@@ -45,18 +41,21 @@ module Core = struct
       elem##setAttribute (Js.string "y1") (Js.string (string_of_float y1));
       elem##setAttribute (Js.string "x2") (Js.string (string_of_float x2));
       elem##setAttribute (Js.string "y2") (Js.string (string_of_float y2));
-      (match state.stroke_style with
-        | `solid -> elem##setAttribute (Js.string "stroke") (Js.string "black")
-        | `none -> ());
+      state.fill_style |> Option.iter (fun style -> elem##setAttribute (Js.string "stroke") (Js.string style));
       Dom.appendChild parent elem
+
+  let to_svg_style style =
+    match style with
+    | `solid -> Some "black"
+    | `none -> None
 
   let stroke style dia : t =
     fun state ctx ->
-      dia { state with stroke_style = style } ctx
+      dia { state with stroke_style = to_svg_style style } ctx
 
   let fill style dia =
     fun state ctx ->
-      dia { state with fill_style = style } ctx
+      dia { state with fill_style = to_svg_style style } ctx
 
   let rotate ~radians dia : t =
     fun state doc parent ->

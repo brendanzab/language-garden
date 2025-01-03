@@ -8,7 +8,7 @@ type state = {
 }
 
 let default_state = {
-  fill_style =`none;
+  fill_style = `none;
   stroke_style = `none;
 }
 

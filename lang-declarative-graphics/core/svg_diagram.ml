@@ -1,13 +1,12 @@
 type state = {
-  fill_style : Diagram.style;
-  stroke_style : Diagram.style;
+  fill_style : string option;
+  stroke_style : string option;
 }
 
 let default_state = {
-  fill_style =`none;
-  stroke_style = `none;
+  fill_style = None;
+  stroke_style = None;
 }
-
 
 module Core = struct
 
@@ -32,12 +31,8 @@ module Core = struct
     fun state level oc -> begin
       Printf.fprintf oc "%t<circle" (indent state level);
       Printf.fprintf oc " r=\"%f\"" (diameter *. 0.5);
-      (match state.fill_style with
-        | `solid -> Printf.fprintf oc " fill=\"black\""
-        | `none -> ());
-      (match state.stroke_style with
-        | `solid -> Printf.fprintf oc " stroke=\"black\""
-        | `none -> ());
+      state.fill_style |> Option.iter (Printf.fprintf oc " fill=\"%s\"");
+      state.stroke_style |> Option.iter (Printf.fprintf oc " stroke=\"%s\"");
       Printf.fprintf oc "/>\n";
     end
 
@@ -48,19 +43,22 @@ module Core = struct
       Printf.fprintf oc " y1=\"%f\"" y1;
       Printf.fprintf oc " x2=\"%f\"" x2;
       Printf.fprintf oc " y2=\"%f\"" y2;
-      (match state.stroke_style with
-        | `solid -> Printf.fprintf oc " stroke=\"black\""
-        | `none -> ());
+      state.stroke_style |> Option.iter (Printf.fprintf oc " stroke=\"%s\"");
       Printf.fprintf oc "/>\n";
     end
 
+  let to_svg_style style =
+    match style with
+    | `solid -> Some "black"
+    | `none -> None
+
   let stroke style dia : t =
     fun state ctx ->
-      dia { state with stroke_style = style } ctx
+      dia { state with stroke_style = to_svg_style style } ctx
 
   let fill style dia =
     fun state ctx ->
-      dia { state with fill_style = style } ctx
+      dia { state with fill_style = to_svg_style style } ctx
 
   let rotate ~radians dia : t =
     fun state level oc -> begin
