@@ -30,8 +30,7 @@ module Core = struct
 
   let circle ~diameter : t =
     fun state level oc -> begin
-      indent state level oc;
-      Printf.fprintf oc "<circle";
+      Printf.fprintf oc "%t<circle" (indent state level);
       Printf.fprintf oc " r=\"%f\"" (diameter *. 0.5);
       (match state.fill_style with
         | `solid -> Printf.fprintf oc " fill=\"black\""
@@ -44,8 +43,7 @@ module Core = struct
 
   let line (x1, y1) (x2, y2) : t =
     fun state level oc -> begin
-      indent state level oc;
-      Printf.fprintf oc "<line ";
+      Printf.fprintf oc "%t<line " (indent state level);
       Printf.fprintf oc " x1=\"%f\"" x1;
       Printf.fprintf oc " y1=\"%f\"" y1;
       Printf.fprintf oc " x2=\"%f\"" x2;
@@ -66,40 +64,35 @@ module Core = struct
 
   let rotate ~radians dia : t =
     fun state level oc -> begin
-      indent state level oc;
-      Printf.fprintf oc "<g";
+      Printf.fprintf oc "%t<g" (indent state level);
       Printf.fprintf oc " transform=\"rotate(%f)\"" (radians *. 180.0 /. Float.pi);
       Printf.fprintf oc ">\n";
 
       dia state (level + 1) oc;
 
-      indent state level oc;
-      Printf.fprintf oc "</g>\n";
+      Printf.fprintf oc "%t</g>\n" (indent state level);
     end
 
   let translate (dx, dy) dia : t =
     fun state level oc -> begin
-      indent state level oc;
-      Printf.fprintf oc "<g";
+      Printf.fprintf oc "%t<g" (indent state level);
       Printf.fprintf oc " transform=\"translate(%f, %f)\"" dx dy;
       Printf.fprintf oc ">\n";
 
       dia state (level + 1) oc;
 
-      indent state level oc;
-      Printf.fprintf oc "</g>\n";
+      Printf.fprintf oc "%t</g>\n" (indent state level);
     end
 
   let scale xy dia : t =
     fun state level oc -> begin
-      indent state level oc;
-      Printf.fprintf oc "<g";
+      Printf.fprintf oc "%t<g" (indent state level);
       Printf.fprintf oc " transform=\"scale(%f)\"" xy;
       Printf.fprintf oc ">\n";
 
       dia state (level + 1) oc;
 
-      Printf.fprintf oc "</g>\n";
+      Printf.fprintf oc "%t</g>\n" (indent state level);
     end
 
 end
