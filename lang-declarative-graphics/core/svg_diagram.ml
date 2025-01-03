@@ -38,7 +38,7 @@ module Core = struct
 
   let line (x1, y1) (x2, y2) : t =
     fun state level oc -> begin
-      Printf.fprintf oc "%t<line " (indent state level);
+      Printf.fprintf oc "%t<line" (indent state level);
       Printf.fprintf oc " x1=\"%f\"" x1;
       Printf.fprintf oc " y1=\"%f\"" y1;
       Printf.fprintf oc " x2=\"%f\"" x2;
