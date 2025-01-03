@@ -11,49 +11,49 @@ let default_state = {
 
 module Core = struct
 
-  type t = state -> Buffer.t -> int -> unit
+  type t = state -> int -> out_channel -> unit
 
   let indent : t =
-    fun _ buf level ->
-      for _ = 1 to (level * 2) do
-        Buffer.add_char buf ' ';
+    fun _ level oc ->
+      for _ = 1 to level do
+        Printf.fprintf oc "  ";
       done
 
   let empty : t =
     fun _ _ _-> ()
 
   let over dia1 dia2 : t =
-    fun state buf level -> begin
-      dia2 state buf level;
-      dia1 state buf level;
+    fun state level oc -> begin
+      dia2 state level oc;
+      dia1 state level oc;
     end
 
   let circle ~diameter : t =
-    fun state buf level -> begin
-      indent state buf level;
-      Buffer.add_string buf "<circle";
-      Buffer.add_string buf (Printf.sprintf " r=\"%f\"" (diameter *. 0.5));
+    fun state level oc -> begin
+      indent state level oc;
+      Printf.fprintf oc "<circle";
+      Printf.fprintf oc " r=\"%f\"" (diameter *. 0.5);
       (match state.fill_style with
-        | `solid -> Buffer.add_string buf " fill=\"black\""
+        | `solid -> Printf.fprintf oc " fill=\"black\""
         | `none -> ());
       (match state.stroke_style with
-        | `solid -> Buffer.add_string buf " stroke=\"black\""
+        | `solid -> Printf.fprintf oc " stroke=\"black\""
         | `none -> ());
-      Buffer.add_string buf "/>\n";
+      Printf.fprintf oc "/>\n";
     end
 
   let line (x1, y1) (x2, y2) : t =
-    fun state buf level -> begin
-      indent state buf level;
-      Buffer.add_string buf "<line ";
-      Buffer.add_string buf (Printf.sprintf " x1=\"%f\"" x1);
-      Buffer.add_string buf (Printf.sprintf " y1=\"%f\"" y1);
-      Buffer.add_string buf (Printf.sprintf " x2=\"%f\"" x2);
-      Buffer.add_string buf (Printf.sprintf " y2=\"%f\"" y2);
+    fun state level oc -> begin
+      indent state level oc;
+      Printf.fprintf oc "<line ";
+      Printf.fprintf oc " x1=\"%f\"" x1;
+      Printf.fprintf oc " y1=\"%f\"" y1;
+      Printf.fprintf oc " x2=\"%f\"" x2;
+      Printf.fprintf oc " y2=\"%f\"" y2;
       (match state.stroke_style with
-        | `solid -> Buffer.add_string buf " stroke=\"black\""
+        | `solid -> Printf.fprintf oc " stroke=\"black\""
         | `none -> ());
-      Buffer.add_string buf "/>\n";
+      Printf.fprintf oc "/>\n";
     end
 
   let stroke style dia : t =
@@ -65,53 +65,51 @@ module Core = struct
       dia { state with fill_style = style } ctx
 
   let rotate ~radians dia : t =
-    fun state buf level -> begin
-      indent state buf level;
-      Buffer.add_string buf "<g";
-      Buffer.add_string buf (Printf.sprintf " transform=\"rotate(%f)\"" (radians *. 180.0 /. Float.pi));
-      Buffer.add_string buf ">\n";
+    fun state level oc -> begin
+      indent state level oc;
+      Printf.fprintf oc "<g";
+      Printf.fprintf oc " transform=\"rotate(%f)\"" (radians *. 180.0 /. Float.pi);
+      Printf.fprintf oc ">\n";
 
-      dia state buf (level + 1);
+      dia state (level + 1) oc;
 
-      indent state buf level;
-      Buffer.add_string buf "</g>\n";
+      indent state level oc;
+      Printf.fprintf oc "</g>\n";
     end
 
   let translate (dx, dy) dia : t =
-    fun state buf level -> begin
-      indent state buf level;
-      Buffer.add_string buf "<g";
-      Buffer.add_string buf (Printf.sprintf " transform=\"translate(%f, %f)\"" dx dy);
-      Buffer.add_string buf ">\n";
+    fun state level oc -> begin
+      indent state level oc;
+      Printf.fprintf oc "<g";
+      Printf.fprintf oc " transform=\"translate(%f, %f)\"" dx dy;
+      Printf.fprintf oc ">\n";
 
-      dia state buf (level + 1);
+      dia state (level + 1) oc;
 
-      indent state buf level;
-      Buffer.add_string buf "</g>\n";
+      indent state level oc;
+      Printf.fprintf oc "</g>\n";
     end
 
   let scale xy dia : t =
-    fun state buf level -> begin
-      indent state buf level;
-      Buffer.add_string buf "<g";
-      Buffer.add_string buf (Printf.sprintf " transform=\"scale(%f)\"" xy);
-      Buffer.add_string buf ">\n";
+    fun state level oc -> begin
+      indent state level oc;
+      Printf.fprintf oc "<g";
+      Printf.fprintf oc " transform=\"scale(%f)\"" xy;
+      Printf.fprintf oc ">\n";
 
-      dia state buf (level + 1);
+      dia state (level + 1) oc;
 
-      Buffer.add_string buf "</g>\n";
+      Printf.fprintf oc "</g>\n";
     end
 
 end
 
 include Diagram.Make (Core)
 
-let run ~view_box:(minx, miny, width, height) (dia : t) : string =
-  let buf = Buffer.create 256 in
-  Buffer.add_string buf "<svg";
-  Buffer.add_string buf (Printf.sprintf " viewBox=\"%f %f %f %f\"" minx miny width height);
-  Buffer.add_string buf " xmlns=\"http://www.w3.org/2000/svg\"";
-  Buffer.add_string buf ">\n";
-  dia default_state buf 1;
-  Buffer.add_string buf "</svg>\n";
-  Buffer.to_bytes buf |> Bytes.to_string
+let run ~view_box:(minx, miny, width, height) (dia : t) (oc : out_channel) =
+  Printf.fprintf oc "<svg";
+  Printf.fprintf oc " viewBox=\"%f %f %f %f\"" minx miny width height;
+  Printf.fprintf oc " xmlns=\"http://www.w3.org/2000/svg\"";
+  Printf.fprintf oc ">\n";
+  dia default_state 1 oc;
+  Printf.fprintf oc "</svg>\n";

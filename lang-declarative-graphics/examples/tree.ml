@@ -11,10 +11,8 @@ let tree (type t) (module D : Diagram.S with type t = t) ~(iters : int) : t =
   and branch ~(iters : int) : t =
     let len = branch_length *. Float.pow 2.0 (float_of_int iters) in
     D.stack [
-      D.line (0.0, 0.0) (0.0, -.len)
-        |> D.stroke `solid;
-      D.translate_y (-.len)
-        (if iters <= 0 then apex else fork ~iters);
+      D.line (0.0, 0.0) (0.0, -.len) |> D.stroke `solid;
+      D.translate_y (-.len) (if iters <= 0 then apex else fork ~iters);
     ]
 
   and fork ~(iters : int) =
@@ -30,6 +28,6 @@ let () =
   let (width, height) = (400.0, 400.0) in
 
   tree (module Svg_diagram) ~iters:5
-    |> Svg_diagram.translate (width /. 2.0, height)
-    |> Svg_diagram.run ~view_box:(0.0, 0.0, width, height)
-    |> print_string
+  |> Svg_diagram.translate (width /. 2.0, height)
+  |> Svg_diagram.run ~view_box:(0.0, 0.0, width, height)
+  |> Printf.printf "%t"
