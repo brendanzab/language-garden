@@ -69,6 +69,8 @@ Miscellaneous programming language experiments.
 
 - [**lang-datalog**](./lang-datalog/):
   A simple Datalog interpreter.
+- [**lang-declarative-graphics**](./lang-declarative-graphics/):
+  Declarative DSL for 2-dimensional graphics.
 - [**lang-doc-templates**](./lang-doc-templates/):
   A programmable document template language that elaborates to a typed lambda calculus.
 - [**lang-fractal-growth**](./lang-fractal-growth/):
