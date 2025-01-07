@@ -157,6 +157,8 @@ If you like this repository, you might find these interesting as well:
 
 Other project gardens:
 
+- [github:cu1ch3n/type-inference-zoo](https://github.com/cu1ch3n/type-inference-zoo)
+  Implementations of various type inference algorithms and interactive playground
 - [github:jake-87/project-garden](https://github.com/jake-87/project-garden/):
   A garden for small projects
 - [github:qexat/PLAGE](https://github.com/qexat/PLAGE/):
