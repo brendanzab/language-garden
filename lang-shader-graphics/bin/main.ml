@@ -56,7 +56,7 @@ let render_cmd scene =
     (fun position ->
       let (module Scene) = example scene in
       Scene.cpu_image
-        ~dimensions:(vec2 600.0 400.0)
+        ~dimensions:(Vec.[600.0; 400.0])
         ~position)
 
 let list_cmd () =

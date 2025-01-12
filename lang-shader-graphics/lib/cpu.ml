@@ -7,13 +7,13 @@ include Shader.Make (struct
 
   let float s = s
 
-  let vec2 s1 s2 = vec2 s1 s2
-  let vec3 s1 s2 s3 = vec3 s1 s2 s3
-  let vec4 s1 s2 s3 s4 = vec4 s1 s2 s3 s4
+  let vec2 s1 s2 = Vec.[s1; s2]
+  let vec3 s1 s2 s3 = Vec.[s1; s2; s3]
+  let vec4 s1 s2 s3 s4 = Vec.[s1; s2; s3; s4]
 
-  let mat2 v1 v2 = vec2 v1 v2
-  let mat3 v1 v2 v3 = vec3 v1 v2 v3
-  let mat4 v1 v2 v3 v4 = vec4 v1 v2 v3 v4
+  let mat2 v1 v2 = Vec.[v1; v2]
+  let mat3 v1 v2 v3 = Vec.[v1; v2; v3]
+  let mat4 v1 v2 v3 v4 = Vec.[v1; v2; v3; v4]
 
   let neg s = -.s
   let neg_vec v = map_vec neg v

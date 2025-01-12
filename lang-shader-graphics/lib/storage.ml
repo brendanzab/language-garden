@@ -33,9 +33,15 @@ type 'n ge4 = 'n succ ge3
 (** Vectors indexed with a statically known size. This is not a very efficient
     representation, but we don’t actually use these for computation so it
     doesn’t really matter. *)
-type (_, _) vec =
-  | Nil : ('s, zero) vec
-  | Cons : 's * ('s, 'n) vec -> ('s, 'n succ) vec
+module Vec = struct
+
+  type (_, _) t =
+    | [] : ('s, zero) t
+    | ( :: ) : 's * ('s, 'n) t -> ('s, 'n succ) t
+
+end
+
+type ('s, 'n) vec = ('s, 'n) Vec.t
 
 type 'n vecf = (float, 'n) vec
 
@@ -63,12 +69,6 @@ type 'n vec_ge2f = ('n ge2) vecf
 type 'n vec_ge3f = ('n ge3) vecf
 type 'n vec_ge4f = ('n ge4) vecf
 
-(** {2 Vector constructors} *)
-
-let vec2 s1 s2 = Cons (s1, Cons (s2, Nil))
-let vec3 s1 s2 s3 = Cons (s1, Cons (s2, Cons (s3, Nil)))
-let vec4 s1 s2 s3 s4 = Cons (s1, Cons (s2, Cons (s3, Cons (s4, Nil))))
-
 (** {2 Vector component accessors} *)
 
 (** Named component of a vector *)
@@ -82,58 +82,58 @@ type _ component =
 
 let get (type a n) (c : n component) (v : (a, n) vec) : a =
   match c, v with
-  | X, Cons (s, _) -> s
-  | Y, Cons (_, Cons (s, _)) -> s
-  | Z, Cons (_, Cons (_, Cons (s, _))) -> s
-  | W, Cons (_, Cons (_, Cons (_, Cons (s, _)))) -> s
+  | X, (s :: _) -> s
+  | Y, (_ :: s :: _) -> s
+  | Z, (_ :: _ :: s :: _) -> s
+  | W, (_ :: _ :: _ :: s :: _) -> s
 
 let rec swizzle : type a n m. (n component, m) vec -> (a, n) vec -> (a, m) vec =
   fun cv v ->
     match cv with
-    | Nil -> Nil
-    | Cons (c, cv) -> Cons (get c v, swizzle cv v)
+    | [] -> []
+    | c :: cv -> get c v :: swizzle cv v
 
 let get2 (type a n) (c1, c2 : n component * n component) (v : (a, n) vec) : a vec2 =
-  swizzle (vec2 c1 c2) v
+  swizzle Vec.[c1; c2] v
 
 let get3 (type a n) (c1, c2, c3 : n component * n component * n component) (v : (a, n) vec) : a vec3 =
-  swizzle (vec3 c1 c2 c3) v
+  swizzle Vec.[c1; c2; c3] v
 
 let get4 (type a n) (c1, c2, c3, c4 : n component * n component * n component * n component) (v : (a, n) vec) : a vec4 =
-  swizzle (vec4 c1 c2 c3 c4) v
+  swizzle Vec.[c1; c2; c3; c4] v
 
 let set (type n) (c : n component) (s : float) (v : n vecf) : n vecf =
   match c, v with
-  | X, Cons (_, v) -> Cons (s, v)
-  | Y, Cons (sx, Cons (_, v)) -> Cons (sx, Cons (s, v))
-  | Z, Cons (sx, Cons (sy, Cons (_, v))) -> Cons (sx, Cons (sy, Cons (s, v)))
-  | W, Cons (sx, Cons (sy, Cons (sz, Cons (_, v)))) -> Cons (sx, Cons (sy, Cons (sz, Cons (s, v))))
+  | X, (_ :: v) -> s :: v
+  | Y, (sx :: _ :: v) -> sx :: s :: v
+  | Z, (sx :: sy :: _ :: v) -> sx :: sy :: s :: v
+  | W, (sx :: sy :: sz :: _ :: v) -> sx :: sy :: sz :: s :: v
 
 (** {2 Vector combinators} *)
 
 let rec map_vec : type a b n. (a -> b) -> (a, n) vec -> (b, n) vec =
   fun f -> function
-    | Nil -> Nil
-    | Cons (s, v) -> Cons (f s, map_vec f v)
+    | [] -> []
+    | s :: v -> f s :: map_vec f v
 
 let rec fold_left_vec : type a b n. (a -> b -> a) -> a -> (b, n) vec -> a =
   fun f acc -> function
-    | Nil -> acc
-    | Cons (s, v) -> fold_left_vec f (f acc s) v
+    | [] -> acc
+    | s :: v -> fold_left_vec f (f acc s) v
 
 let rec zip_with_vec : type a b c n. (a -> b -> c) -> (a, n) vec -> (b, n) vec -> (c, n) vec =
   fun f v1 v2 ->
     match v1, v2 with
-    | Nil, Nil -> Nil
-    | Cons (s1, v1), Cons (s2, v2) ->
-        Cons (f s1 s2, zip_with_vec f v1 v2)
+    | [], [] -> []
+    | (s1 :: v1), (s2 :: v2) ->
+        f s1 s2 :: zip_with_vec f v1 v2
 
 let rec zip_with3_vec : type a b c d n. (a -> b -> c -> d) -> (a, n) vec -> (b, n) vec -> (c, n) vec -> (d, n) vec =
   fun f v1 v2 v3 ->
     match v1, v2, v3 with
-    | Nil, Nil, Nil -> Nil
-    | Cons (s1, v1), Cons (s2, v2), Cons (s3, v3) ->
-        Cons (f s1 s2 s3, zip_with3_vec f v1 v2 v3)
+    | [], [], [] -> []
+    | (s1 :: v1), (s2 :: v2), (s3 :: v3) ->
+        f s1 s2 s3 :: zip_with3_vec f v1 v2 v3
 
 
 (** {1 Fixed-size matrices} *)
