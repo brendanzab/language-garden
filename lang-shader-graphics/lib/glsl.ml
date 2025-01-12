@@ -204,27 +204,27 @@ include Shader.Make (struct
 
 
   (** The name of a vector component *)
-  let field_name (type n) : n component -> string =
+  let field_name (type n) : n Vec.component -> string =
     function
     | X -> "x"
     | Y -> "y"
     | Z -> "z"
     | W -> "w"
 
-  let get (type n) (c : n component) (v : (n vecf) repr) : float repr =
+  let get (type n) (c : n Vec.component) (v : (n vecf) repr) : float repr =
     post Float (Format.sprintf ".%s" (field_name c)) v
 
-  let get2 (type n) (c1, c2 : n component * n component) (v : (n vecf) repr) : vec2f repr =
+  let get2 (type n) (c1, c2 : n Vec.component * n Vec.component) (v : (n vecf) repr) : vec2f repr =
     post Vec2 (Format.sprintf ".%s%s" (field_name c1) (field_name c2)) v
 
-  let get3 (type n) (c1, c2, c3 : n component * n component * n component) (v : (n vecf) repr) : vec3f repr =
+  let get3 (type n) (c1, c2, c3 : n Vec.component * n Vec.component * n Vec.component) (v : (n vecf) repr) : vec3f repr =
     post Vec3 (Format.sprintf ".%s%s%s" (field_name c1) (field_name c2) (field_name c3)) v
 
-  let get4 (type n) (c1, c2, c3, c4 : n component * n component * n component * n component) (v : (n vecf) repr) : vec4f repr =
+  let get4 (type n) (c1, c2, c3, c4 : n Vec.component * n Vec.component * n Vec.component * n Vec.component) (v : (n vecf) repr) : vec4f repr =
     post Vec4 (Format.sprintf ".%s%s%s%s" (field_name c1) (field_name c2) (field_name c3) (field_name c4)) v
 
-  let set (type n) (c : n component) (s : float repr) (v : (n vecf) repr) : (n vecf) repr =
-    let go (type n) (c : n component) s (v : (n vecf) expr) : (n vecf) repr =
+  let set (type n) (c : n Vec.component) (s : float repr) (v : (n vecf) repr) : (n vecf) repr =
+    let go (type n) (c : n Vec.component) s (v : (n vecf) expr) : (n vecf) repr =
       match c, v with
       | X, { ty = Vec2; _ } -> vec2 s (pure v |> get Y)
       | X, { ty = Vec3; _ } -> vec3 s (pure v |> get Y) (pure v |> get Z)

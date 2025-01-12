@@ -106,17 +106,17 @@ module type Core = sig
 
   (** {2 Component projections} *)
 
-  val get : 'n. 'n component -> ('n vecf) repr -> float repr
+  val get : 'n. 'n Vec.component -> ('n vecf) repr -> float repr
 
   (** {2 Swizzle operators} *)
 
-  val get2 : 'n. 'n component * 'n component -> ('n vecf) repr -> vec2f repr
-  val get3 : 'n. 'n component * 'n component * 'n component -> ('n vecf) repr -> vec3f repr
-  val get4 : 'n. 'n component * 'n component * 'n component * 'n component -> ('n vecf) repr -> vec4f repr
+  val get2 : 'n. 'n Vec.component * 'n Vec.component -> ('n vecf) repr -> vec2f repr
+  val get3 : 'n. 'n Vec.component * 'n Vec.component * 'n Vec.component -> ('n vecf) repr -> vec3f repr
+  val get4 : 'n. 'n Vec.component * 'n Vec.component * 'n Vec.component * 'n Vec.component -> ('n vecf) repr -> vec4f repr
 
   (** {2 Component updates} *)
 
-  val set : 'n. 'n component ->  float repr -> ('n vecf) repr -> ('n vecf) repr
+  val set : 'n. 'n Vec.component ->  float repr -> ('n vecf) repr -> ('n vecf) repr
 
 end
 
@@ -195,8 +195,8 @@ module type S = sig
     val ( |%| ) : 'n. ('n vecf) repr -> ('n vecf) repr -> ('n vecf) repr
     val ( |% ) : 'n. ('n vecf) repr -> float repr -> ('n vecf) repr
 
-    val ( .%{ } ) : 'n. ('n vecf) repr -> 'n component -> float repr
-    val ( .%{ }<- ) : 'n. ('n vecf) repr -> 'n component ->  float repr -> ('n vecf) repr
+    val ( .%{ } ) : 'n. ('n vecf) repr -> 'n Vec.component -> float repr
+    val ( .%{ }<- ) : 'n. ('n vecf) repr -> 'n Vec.component ->  float repr -> ('n vecf) repr
 
   end
 

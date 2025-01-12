@@ -1,7 +1,5 @@
 (** {1 Typed shader language expressions} *)
 
-open Storage
-
 module type Core = Shader_intf.Core
 module type S = Shader_intf.S
 
