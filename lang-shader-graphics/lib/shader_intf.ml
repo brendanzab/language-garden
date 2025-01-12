@@ -1,4 +1,4 @@
-open Storage
+open Data
 
 module type Core = sig
 
@@ -203,96 +203,96 @@ module type S = sig
   (** Named vector component accessors *)
   module Component : sig
 
-    val x : 'n. 'n ge1 vecf repr -> float repr
-    val y : 'n. 'n ge2 vecf repr -> float repr
-    val z : 'n. 'n ge3 vecf repr -> float repr
-    val w : 'n. 'n ge4 vecf repr -> float repr
+    val x : 'n. 'n vec_ge1f repr -> float repr
+    val y : 'n. 'n vec_ge2f repr -> float repr
+    val z : 'n. 'n vec_ge3f repr -> float repr
+    val w : 'n. 'n vec_ge4f repr -> float repr
 
-    val set_x : 'n. float repr -> 'n ge1 vecf repr -> 'n ge1 vecf repr
-    val set_y : 'n. float repr -> 'n ge2 vecf repr -> 'n ge2 vecf repr
-    val set_z : 'n. float repr -> 'n ge3 vecf repr -> 'n ge3 vecf repr
-    val set_w : 'n. float repr -> 'n ge4 vecf repr -> 'n ge4 vecf repr
+    val set_x : 'n. float repr -> 'n vec_ge1f repr -> 'n vec_ge1f repr
+    val set_y : 'n. float repr -> 'n vec_ge2f repr -> 'n vec_ge2f repr
+    val set_z : 'n. float repr -> 'n vec_ge3f repr -> 'n vec_ge3f repr
+    val set_w : 'n. float repr -> 'n vec_ge4f repr -> 'n vec_ge4f repr
 
-    val xx : 'n. 'n ge1 vecf repr -> vec2f repr
-    val xy : 'n. 'n ge2 vecf repr -> vec2f repr
-    val xz : 'n. 'n ge3 vecf repr -> vec2f repr
-    val xw : 'n. 'n ge4 vecf repr -> vec2f repr
-    val yx : 'n. 'n ge2 vecf repr -> vec2f repr
-    val yy : 'n. 'n ge2 vecf repr -> vec2f repr
-    val yz : 'n. 'n ge3 vecf repr -> vec2f repr
-    val yw : 'n. 'n ge4 vecf repr -> vec2f repr
-    val zx : 'n. 'n ge3 vecf repr -> vec2f repr
-    val zy : 'n. 'n ge3 vecf repr -> vec2f repr
-    val zz : 'n. 'n ge3 vecf repr -> vec2f repr
-    val zw : 'n. 'n ge4 vecf repr -> vec2f repr
-    val wx : 'n. 'n ge4 vecf repr -> vec2f repr
-    val wy : 'n. 'n ge4 vecf repr -> vec2f repr
-    val wz : 'n. 'n ge4 vecf repr -> vec2f repr
-    val ww : 'n. 'n ge4 vecf repr -> vec2f repr
-    val xxx : 'n. 'n ge1 vecf repr -> vec3f repr
-    val xxy : 'n. 'n ge2 vecf repr -> vec3f repr
-    val xxz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val xxw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val xyx : 'n. 'n ge2 vecf repr -> vec3f repr
-    val xyy : 'n. 'n ge2 vecf repr -> vec3f repr
-    val xyz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val xyw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val xzx : 'n. 'n ge3 vecf repr -> vec3f repr
-    val xzy : 'n. 'n ge3 vecf repr -> vec3f repr
-    val xzz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val xzw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val xwx : 'n. 'n ge4 vecf repr -> vec3f repr
-    val xwy : 'n. 'n ge4 vecf repr -> vec3f repr
-    val xwz : 'n. 'n ge4 vecf repr -> vec3f repr
-    val xww : 'n. 'n ge4 vecf repr -> vec3f repr
-    val yxx : 'n. 'n ge2 vecf repr -> vec3f repr
-    val yxy : 'n. 'n ge2 vecf repr -> vec3f repr
-    val yxz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val yxw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val yyx : 'n. 'n ge2 vecf repr -> vec3f repr
-    val yyy : 'n. 'n ge2 vecf repr -> vec3f repr
-    val yyz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val yyw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val yzx : 'n. 'n ge3 vecf repr -> vec3f repr
-    val yzy : 'n. 'n ge3 vecf repr -> vec3f repr
-    val yzz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val yzw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val ywx : 'n. 'n ge4 vecf repr -> vec3f repr
-    val ywy : 'n. 'n ge4 vecf repr -> vec3f repr
-    val ywz : 'n. 'n ge4 vecf repr -> vec3f repr
-    val yww : 'n. 'n ge4 vecf repr -> vec3f repr
-    val zxx : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zxy : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zxz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zxw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val zyx : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zyy : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zyz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zyw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val zzx : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zzy : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zzz : 'n. 'n ge3 vecf repr -> vec3f repr
-    val zzw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val zwx : 'n. 'n ge4 vecf repr -> vec3f repr
-    val zwy : 'n. 'n ge4 vecf repr -> vec3f repr
-    val zwz : 'n. 'n ge4 vecf repr -> vec3f repr
-    val zww : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wxx : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wxy : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wxz : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wxw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wyx : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wyy : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wyz : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wyw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wzx : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wzy : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wzz : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wzw : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wwx : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wwy : 'n. 'n ge4 vecf repr -> vec3f repr
-    val wwz : 'n. 'n ge4 vecf repr -> vec3f repr
-    val www : 'n. 'n ge4 vecf repr -> vec3f repr
+    val xx : 'n. 'n vec_ge1f repr -> vec2f repr
+    val xy : 'n. 'n vec_ge2f repr -> vec2f repr
+    val xz : 'n. 'n vec_ge3f repr -> vec2f repr
+    val xw : 'n. 'n vec_ge4f repr -> vec2f repr
+    val yx : 'n. 'n vec_ge2f repr -> vec2f repr
+    val yy : 'n. 'n vec_ge2f repr -> vec2f repr
+    val yz : 'n. 'n vec_ge3f repr -> vec2f repr
+    val yw : 'n. 'n vec_ge4f repr -> vec2f repr
+    val zx : 'n. 'n vec_ge3f repr -> vec2f repr
+    val zy : 'n. 'n vec_ge3f repr -> vec2f repr
+    val zz : 'n. 'n vec_ge3f repr -> vec2f repr
+    val zw : 'n. 'n vec_ge4f repr -> vec2f repr
+    val wx : 'n. 'n vec_ge4f repr -> vec2f repr
+    val wy : 'n. 'n vec_ge4f repr -> vec2f repr
+    val wz : 'n. 'n vec_ge4f repr -> vec2f repr
+    val ww : 'n. 'n vec_ge4f repr -> vec2f repr
+    val xxx : 'n. 'n vec_ge1f repr -> vec3f repr
+    val xxy : 'n. 'n vec_ge2f repr -> vec3f repr
+    val xxz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val xxw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val xyx : 'n. 'n vec_ge2f repr -> vec3f repr
+    val xyy : 'n. 'n vec_ge2f repr -> vec3f repr
+    val xyz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val xyw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val xzx : 'n. 'n vec_ge3f repr -> vec3f repr
+    val xzy : 'n. 'n vec_ge3f repr -> vec3f repr
+    val xzz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val xzw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val xwx : 'n. 'n vec_ge4f repr -> vec3f repr
+    val xwy : 'n. 'n vec_ge4f repr -> vec3f repr
+    val xwz : 'n. 'n vec_ge4f repr -> vec3f repr
+    val xww : 'n. 'n vec_ge4f repr -> vec3f repr
+    val yxx : 'n. 'n vec_ge2f repr -> vec3f repr
+    val yxy : 'n. 'n vec_ge2f repr -> vec3f repr
+    val yxz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val yxw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val yyx : 'n. 'n vec_ge2f repr -> vec3f repr
+    val yyy : 'n. 'n vec_ge2f repr -> vec3f repr
+    val yyz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val yyw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val yzx : 'n. 'n vec_ge3f repr -> vec3f repr
+    val yzy : 'n. 'n vec_ge3f repr -> vec3f repr
+    val yzz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val yzw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val ywx : 'n. 'n vec_ge4f repr -> vec3f repr
+    val ywy : 'n. 'n vec_ge4f repr -> vec3f repr
+    val ywz : 'n. 'n vec_ge4f repr -> vec3f repr
+    val yww : 'n. 'n vec_ge4f repr -> vec3f repr
+    val zxx : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zxy : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zxz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zxw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val zyx : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zyy : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zyz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zyw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val zzx : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zzy : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zzz : 'n. 'n vec_ge3f repr -> vec3f repr
+    val zzw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val zwx : 'n. 'n vec_ge4f repr -> vec3f repr
+    val zwy : 'n. 'n vec_ge4f repr -> vec3f repr
+    val zwz : 'n. 'n vec_ge4f repr -> vec3f repr
+    val zww : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wxx : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wxy : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wxz : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wxw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wyx : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wyy : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wyz : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wyw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wzx : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wzy : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wzz : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wzw : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wwx : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wwy : 'n. 'n vec_ge4f repr -> vec3f repr
+    val wwz : 'n. 'n vec_ge4f repr -> vec3f repr
+    val www : 'n. 'n vec_ge4f repr -> vec3f repr
 
   end
 

@@ -5,7 +5,7 @@
     graphics APIs. It could also be useful for implementing constant folding
     optimisations in the future. *)
 
-open Storage
+open Data
 
 
 include Shader.S with type 'a repr = 'a

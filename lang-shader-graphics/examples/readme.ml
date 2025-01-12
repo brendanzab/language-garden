@@ -1,4 +1,4 @@
-open Shader_graphics.Storage
+open Shader_graphics.Data
 
 module Monad = Shader_graphics.Control.Monad
 

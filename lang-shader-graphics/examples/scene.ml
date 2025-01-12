@@ -1,4 +1,4 @@
-open Shader_graphics.Storage
+open Shader_graphics.Data
 
 module Shader = Shader_graphics.Shader
 

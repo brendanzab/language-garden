@@ -1,4 +1,4 @@
-open Storage
+open Data
 
 
 include Shader.Make (struct

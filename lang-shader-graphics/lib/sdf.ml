@@ -1,6 +1,6 @@
 (** {0 Language of signed distance functions} *)
 
-open Storage
+open Data
 
 
 (** A language for building signed distance functions. *)
@@ -22,10 +22,10 @@ module type S = sig
   type 'n sdf = ('n vecf) repr -> dist
 
   (** A two-dimensional distance function *)
-  type sdf2 = n2 sdf
+  type sdf2 = Nat.n2 sdf
 
   (** A three-dimensional distance function *)
-  type sdf3 = n3 sdf
+  type sdf3 = Nat.n3 sdf
 
 
   (** {1 Primitive shape functions} *)
@@ -45,7 +45,7 @@ module type S = sig
   val segment : 'n. ?radius:float repr -> ('n vecf) repr -> ('n vecf) repr -> 'n sdf
 
   (* Line from the origin, up to a length in the y axis *)
-  val segment_y : 'n. ?radius:float repr -> float repr -> ('n ge2) sdf
+  val segment_y : 'n. ?radius:float repr -> float repr -> ('n Nat.ge2) sdf
 
   (** {2 3D shapes} *)
 
@@ -106,13 +106,13 @@ module type S = sig
   val reflect : 'n. 'n sdf -> 'n sdf
 
   (** Reflect a copy of the distance function in the x axis *)
-  val reflect_x : 'n. ('n ge1) sdf -> ('n ge1) sdf
+  val reflect_x : 'n. ('n Nat.ge1) sdf -> ('n Nat.ge1) sdf
 
   (** Reflect a copy of the distance function in the y axis *)
-  val reflect_y : 'n. ('n ge2) sdf -> ('n ge2) sdf
+  val reflect_y : 'n. ('n Nat.ge2) sdf -> ('n Nat.ge2) sdf
 
   (** Reflect a copy of the distance function in the z axis *)
-  val reflect_z : ('n ge3) sdf -> ('n ge3) sdf
+  val reflect_z : ('n Nat.ge3) sdf -> ('n Nat.ge3) sdf
 
 
   (** {1 Repetition operations} *)
@@ -152,8 +152,8 @@ module Make (L : Shader.S) : S
 
   type dist = float repr
   type 'n sdf = ('n vecf) repr -> dist
-  type sdf2 = n2 sdf
-  type sdf3 = n3 sdf
+  type sdf2 = Nat.n2 sdf
+  type sdf3 = Nat.n3 sdf
 
 
   (** Based on the equation:
