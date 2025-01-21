@@ -35,9 +35,9 @@ type tm =
     elaboration to the core language. For example:
 
     - If we have [ x : Nat ] and [ x ≡ 7 : Nat ], we can elaborate the term
-      [ x : A [= 7 ] ] into [ #sing-intro x : A [= 7 ] ]
+      [ x : A [= 7 ] ] into [ #sing-intro : A [= 7 ] ]
     - If we have [ x : Nat [= 7 ] ], we can elaborate the term [ x : Nat ]
-      into [ #sing-elim x 7 : Nat ]
+      into [ 7 ]
 *)
 
 
@@ -461,10 +461,10 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
 
 (** Connectives that were introduced implicitly during elaboration can
     sometimes get in the way, for example when calling {!coerce}, or when
-    elaborating the head of an elimination. This removes them by adding
+    elaborating the head of an elimination. This removes them by applying
     appropriate elimination forms. *)
 and elim_implicits ctx tm = function
-  (* Convert the singleton back to its underlying term using {!Syntax.Sing_elim} *)
+  (* Eliminate the singleton, converting it back to its underlying term *)
   | Semantics.Sing_type (ty, sing_tm) ->
       elim_implicits ctx (quote ctx sing_tm) ty
   (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
