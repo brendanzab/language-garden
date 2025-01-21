@@ -450,7 +450,7 @@ module Semantics = struct
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Neu (Var size) in
         is_convertible (size + 1) (body1 x) (body2 x)
-    | Rec_type (decls1), Rec_type (decls2) ->
+    | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
     | Sing_type (ty1, sing_tm1), Sing_type (ty2, sing_tm2) ->
         is_convertible size ty1 ty2
