@@ -48,16 +48,16 @@ let pp_def ~resugar context fmt (name, ty, tm) =
 
 (** {1 Subcommands} *)
 
-let elab_cmd (no_resugar : bool) : unit =
+let elab_cmd () : unit =
   let context = Surface.initial_context in
   let (tm, ty) = infer context (parse_tm "<input>" stdin) in
-  Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
+  Format.printf "%a@\n" (pp_def ~resugar:false context)
     ("<input>", Surface.quote context ty, tm)
 
-let norm_cmd (no_resugar : bool) : unit =
+let norm_cmd () : unit =
   let context = Surface.initial_context in
   let (tm, ty) = infer context (parse_tm "<input>" stdin) in
-  Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
+  Format.printf "%a@\n" (pp_def ~resugar:true context)
     ("<input>", Surface.quote context ty, Surface.normalise context tm)
 
 
@@ -66,17 +66,11 @@ let norm_cmd (no_resugar : bool) : unit =
 let cmd =
   let open Cmdliner in
 
-  let no_resugar : bool Term.t =
-    Arg.(value & flag
-      & info ["no-resugar"]
-          ~doc:"disable resugaring in pretty printed terms")
-  in
-
   Cmd.group (Cmd.info "record-patching") [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
-      Term.(const elab_cmd $ no_resugar);
+      Term.(const elab_cmd $ const ());
     Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")
-      Term.(const norm_cmd $ no_resugar);
+      Term.(const norm_cmd $ const ());
   ]
 
 

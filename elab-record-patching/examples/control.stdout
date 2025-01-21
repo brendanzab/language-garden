@@ -1,49 +1,59 @@
 <input> : Type :=
   let Functor :=
     {
-      T : Type -> Type;
-      map : fun (A : Type) (B : Type) A -> B -> T A -> T B
+      T : fun (_ : Type) -> Type;
+      map : fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A) -> T B
     };
   let Applicative :=
     {
-      T : Type -> Type;
+      T : fun (_ : Type) -> Type;
       functor :
         {
-          T : (Type -> Type) [= T];
-          map : fun (A : Type) (B : Type) A -> B -> T A -> T B
+          T : (fun (_ : Type) -> Type) [= T];
+          map :
+            fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A) -> T B
         };
-      pure : fun (A : Type) A -> T A;
-      apply : fun (A : Type) (B : Type) T (A -> B) -> T A -> T B
+      pure : fun (A : Type) (_ : A) -> T A;
+      apply :
+        fun (A : Type) (B : Type) (_ : T (fun (_ : A) -> B)) (_ : T A) -> T B
     };
   let Monad :=
     {
-      T : Type -> Type;
+      T : fun (_ : Type) -> Type;
       applicative :
         {
-          T : (Type -> Type) [= T];
+          T : (fun (_ : Type) -> Type) [= T];
           functor :
             {
-              T : (Type -> Type) [= T];
-              map : fun (A : Type) (B : Type) A -> B -> T A -> T B
+              T : (fun (_ : Type) -> Type) [= T];
+              map :
+                fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A)
+                    -> T B
             };
-          pure : fun (A : Type) A -> T A;
-          apply : fun (A : Type) (B : Type) T (A -> B) -> T A -> T B
+          pure : fun (A : Type) (_ : A) -> T A;
+          apply :
+            fun (A : Type) (B : Type) (_ : T (fun (_ : A) -> B)) (_ : T A)
+                -> T B
         };
-      flat-map : fun (A : Type) (B : Type) A -> T B -> T A -> T B
+      flat-map :
+        fun (A : Type) (B : Type) (_ : fun (_ : A) -> T B) (_ : T A) -> T B
     };
-  let Option : Type -> Type :=
-    fun A := fun (Out : Type) { some : A -> Out; none : Out } -> Out;
-  let none : fun (A : Type) -> Option A := fun A Out cases := cases.none;
-  let some : fun (A : Type) A -> Option A :=
-    fun A a Out cases := cases.some a;
-  let option-functor : Functor :=
+  let Option :=
+    (fun A :=
+       fun (Out : Type) (_ : { some : fun (_ : A) -> Out; none : Out })
+           -> Out) :
+      fun (_ : Type) -> Type;
+  let none := (fun A Out cases := cases.none) : fun (A : Type) -> Option A;
+  let some :=
+    (fun A a Out cases := cases.some a) : fun (A : Type) (_ : A) -> Option A;
+  let option-functor :=
     {
       T := Option;
       map :=
         fun A B f opt-A :=
           opt-A (Option B) { some := fun x := some B (f x); none := none B }
-    };
-  let option-applicative : Applicative :=
+    } : Functor;
+  let option-applicative :=
     {
       T := Option;
       functor := { T := #sing-intro; map := option-functor.map };
@@ -55,8 +65,8 @@
               some := fun f := option-functor.map A B f opt-A;
               none := none B
             }
-    };
-  let option-monad : Monad :=
+    } : Applicative;
+  let option-monad :=
     {
       T := Option;
       applicative :=
@@ -68,5 +78,5 @@
         };
       flat-map :=
         fun A B f opt-A := opt-A (Option B) { some := f; none := none B }
-    };
+    } : Monad;
   Type
