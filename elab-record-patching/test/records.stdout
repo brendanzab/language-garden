@@ -1,71 +1,70 @@
 <input> : Type :=
-  let F := { A : Type; B : Type; f : fun (_ : A) -> B };
-  let patch-1 :=
-    (fun x := { A := x.A; B := x.A; f := x.f }) :
-      fun (_ : { A : Type; B : Type [= A]; f : fun (_ : A) -> A }) -> F;
-  let patch-2 :=
-    (fun A x := { A := A; B := A; f := x.f }) :
-      fun (A : Type)
-          (_ : { A : Type [= A]; B : Type [= A]; f : fun (_ : A) -> A }) 
-          -> F;
-  let patch-3 :=
-    (fun A x := { A := A; B := A; f := fun x := x }) :
-      fun (A : Type)
-          (_ :
+  let F : Type := { A : Type; B : Type; f : fun (_ : A) -> B };
+  let patch-1 :
+        fun (_ : { A : Type; B : Type [= A]; f : fun (_ : A) -> A }) -> F
+  := fun x := { A := x.A; B := x.A; f := x.f };
+  let patch-2 :
+        fun (A : Type)
+            (_ : { A : Type [= A]; B : Type [= A]; f : fun (_ : A) -> A })
+            -> F
+  := fun A x := { A := A; B := A; f := x.f };
+  let patch-3 :
+        fun (A : Type)
+            (_ :
+              {
+                A : Type [= A];
+                B : Type [= A];
+                f : (fun (_ : A) -> A) [= fun x := x]
+              })
+            -> F
+  := fun A x := { A := A; B := A; f := fun x := x };
+  let patch-3b :
+        fun (A : Type)
+            (_ :
+              {
+                A : Type [= A];
+                B : Type [= A];
+                f : (fun (_ : A) -> A) [= fun x := x]
+              })
+            -> F
+  := fun A x := { A := A; B := A; f := fun x := x };
+  let patch-4 :
+        fun (A : Type)
+            (_ : { A : Type [= A]; B : Type [= A]; f : fun (_ : A) -> A })
+            -> { A : Type; B : Type [= A]; f : fun (_ : A) -> A }
+  := fun A x := { A := A; B := x.B; f := x.f };
+  let patch-5 :
+        fun (A : Type)
+            (_ : { A : Type [= A]; B : Type [= A]; f : fun (_ : A) -> A })
+            -> { A : Type [= A]; B : Type; f : fun (_ : A) -> B }
+  := fun A x := { A := x.A; B := A; f := x.f };
+  let patch-6 :
+        fun (C : Type)
+            (_ : { A : Type [= C]; B : Type [= C]; f : fun (_ : C) -> C })
+            -> { A : Type; B : Type [= C]; f : fun (_ : A) -> C }
+  := fun C x := { A := C; B := x.B; f := x.f };
+  let coerce-missing-1 :
+        fun (C : Type)
+            -> { A : Type [= C]; B : Type [= C]; f : fun (_ : C) -> C }
+  := fun C := { A := #sing-intro; B := #sing-intro; f := fun x := x };
+  let coerce-missing-2 :
+        fun (C : Type)
+            ->
             {
-              A : Type [= A];
-              B : Type [= A];
-              f : (fun (_ : A) -> A) [= fun x := x]
-            })
-          -> F;
-  let patch-3b :=
-    (fun A x := { A := A; B := A; f := fun x := x }) :
-      fun (A : Type)
-          (_ :
-            {
-              A : Type [= A];
-              B : Type [= A];
-              f : (fun (_ : A) -> A) [= fun x := x]
-            })
-          -> F;
-  let patch-4 :=
-    (fun A x := { A := A; B := x.B; f := x.f }) :
-      fun (A : Type)
-          (_ : { A : Type [= A]; B : Type [= A]; f : fun (_ : A) -> A })
-          -> { A : Type; B : Type [= A]; f : fun (_ : A) -> A };
-  let patch-5 :=
-    (fun A x := { A := x.A; B := A; f := x.f }) :
-      fun (A : Type)
-          (_ : { A : Type [= A]; B : Type [= A]; f : fun (_ : A) -> A })
-          -> { A : Type [= A]; B : Type; f : fun (_ : A) -> B };
-  let patch-6 :=
-    (fun C x := { A := C; B := x.B; f := x.f }) :
-      fun (C : Type)
-          (_ : { A : Type [= C]; B : Type [= C]; f : fun (_ : C) -> C })
-          -> { A : Type; B : Type [= C]; f : fun (_ : A) -> C };
-  let coerce-missing-1 :=
-    (fun C := { A := #sing-intro; B := #sing-intro; f := fun x := x }) :
-      fun (C : Type)
-          -> { A : Type [= C]; B : Type [= C]; f : fun (_ : C) -> C };
-  let coerce-missing-2 :=
-    (fun C := { A := #sing-intro; B := #sing-intro; f := #sing-intro }) :
-      fun (C : Type)
-          ->
-          {
-            A : Type [= C];
-            B : Type [= C];
-            f : (fun (_ : C) -> C) [= fun x := x]
-          };
-  let coerce-missing-3 :=
-    (fun C := { A := #sing-intro; B := #sing-intro; f := fun x := x }) :
-      fun (C : Type)
-          -> { A : Type [= C]; B : Type [= C]; f : fun (_ : C) -> C };
-  let coerce-missing-patched-fields-1 :=
-    (fun A B r := { A := #sing-intro; B := #sing-intro; f := r.f }) :
-      fun (A : Type) (B : Type) (_ : { f : fun (_ : A) -> B })
-          -> { A : Type [= A]; B : Type [= B]; f : fun (_ : A) -> B };
-  let coerce-missing-patched-fields-2 :=
-    (fun A B r := { A := r.A; B := #sing-intro; f := r.f }) :
-      fun (A : Type) (B : Type) (_ : { A : Type; f : fun (_ : A) -> B })
-          -> { A : Type; B : Type [= B]; f : fun (_ : A) -> B };
-  Type
+              A : Type [= C];
+              B : Type [= C];
+              f : (fun (_ : C) -> C) [= fun x := x]
+            }
+  := fun C := { A := #sing-intro; B := #sing-intro; f := #sing-intro };
+  let coerce-missing-3 :
+        fun (C : Type)
+            -> { A : Type [= C]; B : Type [= C]; f : fun (_ : C) -> C }
+  := fun C := { A := #sing-intro; B := #sing-intro; f := fun x := x };
+  let coerce-missing-patched-fields-1 :
+        fun (A : Type) (B : Type) (_ : { f : fun (_ : A) -> B })
+            -> { A : Type [= A]; B : Type [= B]; f : fun (_ : A) -> B }
+  := fun A B r := { A := #sing-intro; B := #sing-intro; f := r.f };
+  let coerce-missing-patched-fields-2 :
+        fun (A : Type) (B : Type) (_ : { A : Type; f : fun (_ : A) -> B })
+            -> { A : Type; B : Type [= B]; f : fun (_ : A) -> B }
+  := fun A B r := { A := r.A; B := #sing-intro; f := r.f }; Type

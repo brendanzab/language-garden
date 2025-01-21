@@ -230,17 +230,19 @@ let rec check ctx tm ty : Syntax.tm =
   match tm, ty with
   (* Let expressions *)
   | Let (name, def_ty, def, body), ty ->
-      let def, def_ty =
+      let def, def_ty, def_ty' =
         match def_ty with
-        | None -> infer ctx def
+        | None ->
+            let def, def_ty' = infer ctx def in
+            def, quote ctx def_ty', def_ty'
         | Some def_ty ->
             let def_ty = check ctx def_ty Semantics.Univ in
             let def_ty' = eval ctx def_ty in
             let def = check ctx def def_ty' in
-            Syntax.Ann (def, def_ty), def_ty'
+            def, def_ty, def_ty'
       in
-      let ctx = bind_def ctx name def_ty (eval ctx def) in
-      Syntax.Let (name, def, check ctx body ty)
+      let ctx = bind_def ctx name def_ty' (eval ctx def) in
+      Syntax.Let (name, def_ty, def, check ctx body ty)
 
   (* Function literals *)
   | Fun_lit (names, body), ty ->
@@ -311,18 +313,20 @@ let rec check ctx tm ty : Syntax.tm =
 and infer ctx : tm -> Syntax.tm * Semantics.vty = function
   (* Let expressions *)
   | Let (name, def_ty, def, body) ->
-      let def, def_ty =
+      let def, def_ty, def_ty' =
         match def_ty with
-        | None -> infer ctx def
+        | None ->
+            let def, def_ty' = infer ctx def in
+            def, quote ctx def_ty', def_ty'
         | Some def_ty ->
             let def_ty = check ctx def_ty Semantics.Univ in
             let def_ty' = eval ctx def_ty in
             let def = check ctx def def_ty' in
-            Syntax.Ann (def, def_ty), def_ty'
+            def, def_ty, def_ty'
       in
-      let ctx = bind_def ctx name def_ty (eval ctx def) in
+      let ctx = bind_def ctx name def_ty' (eval ctx def) in
       let body, body_ty = infer ctx body in
-      Syntax.Let (name, def, body), body_ty
+      Syntax.Let (name, def_ty, def, body), body_ty
 
   (* Named terms *)
   | Name name ->
@@ -336,7 +340,7 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
       let ty = check ctx ty Semantics.Univ in
       let ty' = eval ctx ty in
       let tm = check ctx tm ty' in
-      Syntax.Ann (tm, ty), ty'
+      tm, ty'
 
     (* Universes *)
   | Univ ->

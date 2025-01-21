@@ -1,4 +1,4 @@
 <input> : Type :=
-  let _ :=
-    (fun A x sing-x := x) : fun (A : Type) (x : A) (sing-x : A [= x]) -> A;
+  let _ : fun (A : Type) (x : A) (sing-x : A [= x]) -> A :=
+    fun A x sing-x := x;
   Type

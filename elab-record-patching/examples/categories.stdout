@@ -1,5 +1,5 @@
 <input> : Type :=
-  let Category :=
+  let Category : Type :=
     {
       Ob : Type;
       Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
@@ -8,11 +8,11 @@
         fun (A : Ob) (B : Ob) (C : Ob) (f : Hom { S := A; T := B })
             (g : Hom { S := B; T := C }) -> Hom { S := A; T := C }
     };
-  let types :=
+  let types : Category :=
     {
       Ob := Type;
       Hom := fun params := fun (_ : params.S) -> params.T;
       id := fun A a := a;
       seq := fun A B C f g a := g (f a)
-    } : Category;
+    };
   Type

@@ -53,9 +53,8 @@ module Syntax = struct
 
   (** Terms *)
   and tm =
-    | Let of name * tm * tm
+    | Let of name * ty * tm * tm
     | Var of index
-    | Ann of tm * ty
     | Univ
     | Fun_type of name * ty * (ty binds)
     | Fun_lit of name * (tm binds)
@@ -85,8 +84,8 @@ module Syntax = struct
 
   (** Returns [ true ] if the variable is bound anywhere in the term. *)
   let rec is_bound var = function
-    | Let (_, def, body) -> is_bound var def || is_bound (var + 1) body
-    | Ann (tm, ty) -> is_bound var tm || is_bound var ty
+    | Let (_, def_ty, def, body) ->
+        is_bound var def_ty || is_bound var def || is_bound (var + 1) body
     | Var index -> index = var
     | Univ -> false
     | Fun_type (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
@@ -137,26 +136,17 @@ module Syntax = struct
     in
 
     let rec pp_tm names fmt = function
-      | Let (_, _, _) as tm ->
+      | Let (_, _, _, _) as tm ->
           let rec go names fmt = function
-            | Let (name, Ann (def, def_ty), body) when resugar ->
+            | Let (name, def_ty, def, body) ->
                 Format.fprintf fmt "@[<2>@[let @[<2>%a@]@ :=@]@ @[%a;@]@]@ %a"
                   (pp_decl names) (name, def_ty)
-                  (pp_tm names) def
-                  (go (name :: names)) body
-            | Let (name, def, body) ->
-                Format.fprintf fmt "@[<2>@[let %a :=@]@ @[%a;@]@]@ %a"
-                  pp_name name
                   (pp_tm names) def
                   (go (name :: names)) body
             (* Final term should be grouped in a box *)
             | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
           in
           go names fmt tm
-      | Ann (tm, ty) ->
-          Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
-            (pp_app_tm names) tm
-            (pp_tm names) ty
       | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
           Format.fprintf fmt "@[%a@ ->@]@ %a"
             (pp_app_tm names) param_ty
@@ -352,9 +342,8 @@ module Semantics = struct
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
   let rec eval tms : Syntax.tm -> vtm = function
-    | Syntax.Let (_, def, body) -> eval (eval tms def :: tms) body
+    | Syntax.Let (_, _, def, body) -> eval (eval tms def :: tms) body
     | Syntax.Var index -> List.nth tms index
-    | Syntax.Ann (tm, _) -> eval tms tm
     | Syntax.Univ -> Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
         Fun_type (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
