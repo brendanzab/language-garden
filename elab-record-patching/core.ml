@@ -68,12 +68,9 @@ module Syntax = struct
   (** Each ‘connective’ in the core language follows a similar pattern, with
       separate variants for:
 
-      - type formation: for contructing types that represent the connective
-      - introduction: for contructing terms of a given connective
+      - type formation: for constructing types that represent the connective
+      - introduction: for constructing terms of a given connective
       - elimination: for deconstructing terms of a given connective
-
-      In the case of [ #sing-elim x a ], the [ a ] is used for evaluation
-      during type checking, but is intended to be erased in compiled code.
   *)
 
   (** Field declarations *)
