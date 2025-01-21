@@ -1,10 +1,10 @@
 let _ : fun (A : Type) (B : Type) -> { A : Type; B : Type } :=
-  fun A B := { A; B };
+  fun A B => { A; B };
 
 let _ : fun (A : Type) (B : Type) -> { A : Type; B : Type } :=
-  fun A B := { A := A; B };
+  fun A B => { A := A; B };
 
 let _ : fun (A : Type) (B : Type) -> { A : Type; B : Type } :=
-  fun A B := { A; B := B };
+  fun A B => { A; B := B };
 
 Type

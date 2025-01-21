@@ -7,6 +7,7 @@
 %token COLON_EQUALS ":="
 %token DOT "."
 %token EQUALS "="
+%token EQUALS_GREATER "=>"
 %token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
 
@@ -36,7 +37,7 @@ let tm :=
     { Surface.Fun_arrow (t1, t2) }
 | "fun"; ps = nonempty_list(param); "->"; t = tm;
     { Surface.Fun_type (ps, t) }
-| "fun"; ps = nonempty_list(pattern); ":="; t = tm;
+| "fun"; ps = nonempty_list(pattern); "=>"; t = tm;
     { Surface.Fun_lit (ps, t) }
 | app_tm
 

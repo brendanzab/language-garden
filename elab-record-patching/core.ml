@@ -168,7 +168,7 @@ module Syntax = struct
       | Fun_lit (_, _) as tm ->
           let params, body = fun_lits tm in
           (* TODO: improve printing of record types and literals *)
-          Format.fprintf fmt "@[<2>@[<4>fun %a@ :=@]@ @[%a@]@]"
+          Format.fprintf fmt "@[<2>@[<4>fun %a@ =>@]@ @[%a@]@]"
             (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
             (pp_tm (List.rev_append params names)) body
       | tm ->
