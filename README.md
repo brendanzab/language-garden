@@ -163,6 +163,8 @@ Other project gardens:
   Implementations of various type inference algorithms and interactive playground
 - [github:jake-87/project-garden](https://github.com/jake-87/project-garden/):
   A garden for small projects
+- [github:jakob-schuster/language-scrapyard](https://github.com/jakob-schuster/language-scrapyard):
+  Scrappy implementations of programming language ideas
 - [github:qexat/PLAGE](https://github.com/qexat/PLAGE/):
   Programming Language Adjacent General Experiments
 - [github:RiscInside/LanguageEtudes](https://github.com/RiscInside/LanguageEtudes/):
