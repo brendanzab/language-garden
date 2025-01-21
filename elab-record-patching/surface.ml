@@ -184,8 +184,7 @@ let rec coerce ctx from_ty to_ty tm : Syntax.tm =
   (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
     and attempt further coercions from its underlying type *)
   | Semantics.Sing_type (from_ty, sing_tm), to_ty ->
-      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm) in
-      coerce ctx from_ty to_ty tm
+      coerce ctx from_ty to_ty (quote ctx sing_tm)
   (* Coerce the fields of a record with record eta expansion *)
   | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
       (* TODO: bind [tm] to a local variable to avoid duplicating records *)
@@ -467,8 +466,7 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
 and elim_implicits ctx tm = function
   (* Convert the singleton back to its underlying term using {!Syntax.Sing_elim} *)
   | Semantics.Sing_type (ty, sing_tm) ->
-      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm) in
-      elim_implicits ctx tm ty
+      elim_implicits ctx (quote ctx sing_tm) ty
   (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
     for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
   | ty -> tm, ty

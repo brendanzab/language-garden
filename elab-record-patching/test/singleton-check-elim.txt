@@ -1,6 +1,5 @@
 let _ : fun (A : Type) (x : A) (sing-x : A [= x]) -> A :=
   fun A x sing-x := sing-x;
-  --                ^^^^^^ Elaborates to `#sing-elim sing-x x`
-  --                       when checking `sing-x` against `A`
+  --                ^^^^^^ Elaborates to `x` when checking `sing-x` against `A`
 
 Type

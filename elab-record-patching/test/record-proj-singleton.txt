@@ -5,6 +5,6 @@ let _ : fun (A : Type) (x : A) -> A :=
     --                                        when checking `{ x }` against `{ x : A } [= { x }]`
 
     record.x;
---  ^^^^^^ Elaborates to `#sing-elim record { x }`
+--  ^^^^^^ Elaborates to `{ x }`
 
 Type

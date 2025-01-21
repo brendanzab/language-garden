@@ -65,7 +65,6 @@ module Syntax = struct
     | Rec_proj of tm * label
     | Sing_type of ty * tm              (** Singleton type former: [ A [= x ] ] *)
     | Sing_intro                        (** Singleton introduction: [ #sing-intro ] *)
-    | Sing_elim of tm * tm              (** Singleton elimination: [ #sing-elim x a ] *)
 
   (** Each ‘connective’ in the core language follows a similar pattern, with
       separate variants for:
@@ -98,7 +97,6 @@ module Syntax = struct
     | Rec_proj (head, _) -> is_bound var head
     | Sing_type (ty, sing_tm) -> is_bound var ty || is_bound var sing_tm
     | Sing_intro -> false
-    | Sing_elim (tm, sing_tm) -> is_bound var tm || is_bound var sing_tm
   and is_bound_decls var = function
     | Nil -> false
     | Cons (_, ty, decls) ->
@@ -201,10 +199,6 @@ module Syntax = struct
             (pp_tm names) sing_tm
       | Sing_intro ->
           Format.fprintf fmt "#sing-intro"
-      | Sing_elim (tm, sing_tm) ->
-          Format.fprintf fmt "@[<2>#sing-elim@ %a@ %a@]"
-          (pp_proj_tm names) tm
-          (pp_proj_tm names) sing_tm
       | tm ->
           pp_proj_tm names fmt tm
 
@@ -372,7 +366,6 @@ module Semantics = struct
     | Syntax.Rec_proj (head, label) -> proj (eval tms head) label
     | Syntax.Sing_type (ty, sing_tm) -> Sing_type (eval tms ty, eval tms sing_tm)
     | Syntax.Sing_intro -> Sing_intro
-    | Syntax.Sing_elim (_, sing_tm) -> eval tms sing_tm
   and eval_decls tms : Syntax.decls -> decls = function
     | Syntax.Nil -> Nil
     | Syntax.Cons (label, ty, decls) ->

@@ -1,6 +1,4 @@
 <input> : Type :=
   let _ : fun (A : Type) (x : A) -> A :=
-    fun A x :=
-      let record : { x : A } [= { x }] := #sing-intro;
-      (#sing-elim record { x }).x;
+    fun A x := let record : { x : A } [= { x }] := #sing-intro; { x }.x;
   Type
