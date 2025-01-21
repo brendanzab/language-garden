@@ -16,17 +16,13 @@ let coerce-missing-1 : fun (C : Type) -> F [ A := C; B := C ]                   
 let coerce-missing-2 : fun (C : Type) -> F [ A := C; B := C; f := fun x => x ]  := fun C => ({} : {});
 let coerce-missing-3 : fun (C : Type) -> F [ A := C; B := C ]                   := fun C => { A := C; f := fun x => x };
 
--- let record-lit-coerce-1 :=
---   (fun B r => r) :
---     fun (B : Type) (r : { A : Type [= B ]; a : B })
---       -> { A : Type; a : A };
--- let record-lit-coerce-2 :=
---   (fun B b => { A := B; a := b } : { A : Type; a : B }) :
---     fun (B : Type) (b : Type) -> { A : Type; a : A };
+let record-lit-coerce-1 : fun (B : Type) (r : { A : Type [= B]; a : B }) -> { A : Type; a : A } :=
+  fun B r => r;
+let record-lit-coerce-2 : fun (B : Type) (b : B) -> { A : Type; a : A } :=
+  fun B b => { A := B; a := b } : { A : Type; a : B };
 
 let coerce-missing-patched-fields-1 : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ] :=
     fun A B r => r;
-
 let coerce-missing-patched-fields-2 : fun (A : Type) (B : Type) -> { A : Type; f : A -> B } -> F [ B := B ] :=
     fun A B r => r;
 
