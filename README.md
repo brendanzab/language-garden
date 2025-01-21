@@ -122,11 +122,6 @@ I’m also trying to get better at interleaved breadth-first/depth-first search 
 somewhat like the search strategy employed by [miniKanren](http://minikanren.org/).
 My goal is not to become an expert of one thing,
 but to be able to be good at combining ideas from different places and perspective.
-I want to be comfortable with a bit of bodging,
-of publishing more “scrappy fiddles”[^scrappy-fiddles],
-but not so much that they can't be turned into something more coherent later on.
-
-[^scrappy-fiddles]: A term coined by Lu Wilson (a.k.a. [TodePond](https://www.todepond.com/))
 
 ## Related work
 
