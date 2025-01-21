@@ -6,7 +6,13 @@
 *)
 
 
-open Base
+(** Returns a list of duplicate elements in a list *)
+let find_dupes (type a) (xs : a list) : a list =
+  let rec go dupes = function
+    | [] -> List.rev dupes
+    | x :: xs when List.mem x xs && not (List.mem x dupes) -> go (x :: dupes) xs
+    | _ :: xs -> go dupes xs in
+  go [] xs
 
 
 (** {1 Surface Syntax} *)
@@ -449,7 +455,7 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
             end
       in
 
-      let dupes = List.find_dupes (List.map fst patches) in
+      let dupes = find_dupes (List.map fst patches) in
       if List.compare_length_with dupes 0 <> 0 then
         error ("duplicate labels in patches: `" ^ String.concat "`, `" dupes ^ "`")
       else
