@@ -1,2 +1,2 @@
 <input> : Type :=
-  let _ : fun (A : Type) (x : A) -> A [= x] := fun A x := #sing-intro x; Type
+  let _ : fun (A : Type) (x : A) -> A [= x] := fun A x := #sing-intro; Type

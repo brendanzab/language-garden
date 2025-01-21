@@ -31,7 +31,7 @@
   :=
     fun key :=
       {
-        Key := #sing-intro key.T;
+        Key := #sing-intro;
         Map := fun A := key.T -> Option A;
         empty := fun A x := none A;
         add :=

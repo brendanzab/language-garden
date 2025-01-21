@@ -110,12 +110,12 @@ let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) o
 
 let eval ctx : Syntax.tm -> Semantics.vtm =
   Semantics.eval ctx.tms
-let quote ctx : Semantics.vtm -> Semantics.vty -> Syntax.tm =
-  Semantics.quote ctx.size ctx.tys
-let normalise ctx : Syntax.tm -> Semantics.vtm -> Syntax.tm =
-  Semantics.normalise ctx.size ctx.tms ctx.tys
-let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> Semantics.vty -> bool =
-  Semantics.is_convertible ctx.size ctx.tys
+let quote ctx : Semantics.vtm -> Syntax.tm =
+  Semantics.quote ctx.size
+let normalise ctx : Syntax.tm -> Syntax.tm =
+  Semantics.normalise ctx.size ctx.tms
+let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> bool =
+  Semantics.is_convertible ctx.size
 let pp ?(resugar = true) ctx : Format.formatter -> Syntax.tm -> unit =
   Syntax.pp ~resugar ctx.names
 
@@ -170,21 +170,21 @@ let rec coerce ctx from_ty to_ty tm : Syntax.tm =
 
   match from_ty, to_ty with
   (* No need to coerce the term if both types are already the same! *)
-  | from_ty, to_ty when is_convertible ctx from_ty to_ty Semantics.Univ -> tm
+  | from_ty, to_ty when is_convertible ctx from_ty to_ty -> tm
   (* Coerce the term to a singleton with {!Syntax.Sing_intro}, if the term is
     convertible to the term expected by the singleton *)
   | from_ty, Semantics.Sing_type (to_ty, sing_tm) ->
       let tm = coerce ctx from_ty to_ty tm in
       let tm' = eval ctx tm in
-      if is_convertible ctx sing_tm tm' to_ty then Syntax.Sing_intro tm else
+      if is_convertible ctx sing_tm tm' then Syntax.Sing_intro else
         error (singleton_mismatch ctx
-          ~expected:(quote ctx sing_tm to_ty)
-          ~found:(quote ctx tm' from_ty)
-          ~ty:(quote ctx to_ty Semantics.Univ))
+          ~expected:(quote ctx sing_tm)
+          ~found:(quote ctx tm')
+          ~ty:(quote ctx to_ty))
   (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
     and attempt further coercions from its underlying type *)
   | Semantics.Sing_type (from_ty, sing_tm), to_ty ->
-      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm from_ty) in
+      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm) in
       coerce ctx from_ty to_ty tm
   (* Coerce the fields of a record with record eta expansion *)
   | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
@@ -201,8 +201,8 @@ let rec coerce ctx from_ty to_ty tm : Syntax.tm =
         (* When the type of the target field is a singleton we can use it to
             fill in the definition of a missing field in the source term. This
             is similar to how we handle missing fields in {!check}. *)
-        | from_decls, Semantics.Cons (to_label, Semantics.Sing_type (to_ty, sing_tm), to_decls) ->
-            let to_tm = Syntax.Sing_intro (quote ctx sing_tm to_ty) in
+        | from_decls, Semantics.Cons (to_label, Semantics.Sing_type (_, _), to_decls) ->
+            let to_tm = Syntax.Sing_intro in
             (to_label, to_tm) :: go from_decls (to_decls (eval ctx to_tm))
         | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
             error (field_mismatch ~expected:to_label ~found:from_label)
@@ -212,8 +212,8 @@ let rec coerce ctx from_ty to_ty tm : Syntax.tm =
   (* TODO: subtyping for functions! *)
   | from_ty, to_ty  ->
       error (type_mismatch ctx
-        ~expected:(quote ctx to_ty Semantics.Univ)
-        ~found:(quote ctx from_ty Semantics.Univ))
+        ~expected:(quote ctx to_ty)
+        ~found:(quote ctx from_ty))
 
 
 (** {2 Bidirectional type checking} *)
@@ -274,8 +274,8 @@ let rec check ctx tm ty : Syntax.tm =
             (label, tm) :: go defns (decls (eval ctx tm))
         (* When the expected type of a field is a singleton we can use it to
             fill in the definition of a missing fields in the record literal. *)
-        | defns, Semantics.Cons (label, Semantics.Sing_type (ty, sing_tm), decls) ->
-            let tm = Syntax.Sing_intro (quote ctx sing_tm ty) in
+        | defns, Semantics.Cons (label, Semantics.Sing_type (_, _), decls) ->
+            let tm = Syntax.Sing_intro in
             (label, tm) :: go defns (decls (eval ctx tm))
         | _, Semantics.Cons (label, _, _) -> error (missing_field label)
         | (label, _) :: _, Semantics.Nil -> error ("unexpected field `" ^ label ^ "` in record literal")
@@ -294,11 +294,11 @@ let rec check ctx tm ty : Syntax.tm =
   | tm, Semantics.Sing_type (ty, sing_tm) ->
       let tm = check ctx tm ty in
       let tm' = eval ctx tm in
-      if is_convertible ctx sing_tm tm' ty then Syntax.Sing_intro tm else
+      if is_convertible ctx sing_tm tm' then Syntax.Sing_intro else
         error (singleton_mismatch ctx
-          ~expected:(quote ctx sing_tm ty)
-          ~found:(quote ctx tm' ty)
-          ~ty:(quote ctx ty Semantics.Univ))
+          ~expected:(quote ctx sing_tm)
+          ~found:(quote ctx tm')
+          ~ty:(quote ctx ty))
 
   (* For anything else, try inferring the type of the term, then attempting to
       coerce the term to the expected type. *)
@@ -431,7 +431,7 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
         | Semantics.Nil, (label, _) :: _ ->
             error ("field `" ^ label ^ "` not found in record type")
         | Semantics.Cons (label, ty, tys), patches ->
-            let ty' = quote ctx ty Univ in
+            let ty' = quote ctx ty in
             begin match List.assoc_opt label patches with
             | Some patch_tm ->
                 let tm = check ctx patch_tm ty in
@@ -467,7 +467,7 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
 and elim_implicits ctx tm = function
   (* Convert the singleton back to its underlying term using {!Syntax.Sing_elim} *)
   | Semantics.Sing_type (ty, sing_tm) ->
-      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm ty) in
+      let tm = Syntax.Sing_elim (tm, quote ctx sing_tm) in
       elim_implicits ctx tm ty
   (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
     for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)

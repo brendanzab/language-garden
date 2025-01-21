@@ -50,26 +50,20 @@
   := fun C x := { A := #sing-elim x.A C; B := x.B; f := x.f };
   let coerce-missing-1 :
         fun (C : Type) -> { A : Type [= C]; B : Type [= C]; f : C -> C }
-  := fun C := { A := #sing-intro C; B := #sing-intro C; f := fun x := x };
+  := fun C := { A := #sing-intro; B := #sing-intro; f := fun x := x };
   let coerce-missing-2 :
         fun (C : Type)
             ->
             { A : Type [= C]; B : Type [= C]; f : (C -> C) [= fun x := x] }
-  :=
-    fun C :=
-      {
-        A := #sing-intro C;
-        B := #sing-intro C;
-        f := #sing-intro (fun x := x)
-      };
+  := fun C := { A := #sing-intro; B := #sing-intro; f := #sing-intro };
   let coerce-missing-3 :
         fun (C : Type) -> { A : Type [= C]; B : Type [= C]; f : C -> C }
-  := fun C := { A := #sing-intro C; B := #sing-intro C; f := fun x := x };
+  := fun C := { A := #sing-intro; B := #sing-intro; f := fun x := x };
   let coerce-missing-patched-fields-1 :
         fun (A : Type) (B : Type) { f : A -> B } ->
             { A : Type [= A]; B : Type [= B]; f : A -> B }
-  := fun A B r := { A := #sing-intro A; B := #sing-intro B; f := r.f };
+  := fun A B r := { A := #sing-intro; B := #sing-intro; f := r.f };
   let coerce-missing-patched-fields-2 :
         fun (A : Type) (B : Type) { A : Type; f : A -> B } ->
             { A : Type; B : Type [= B]; f : A -> B }
-  := fun A B r := { A := r.A; B := #sing-intro B; f := r.f }; Type
+  := fun A B r := { A := r.A; B := #sing-intro; f := r.f }; Type

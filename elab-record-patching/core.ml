@@ -64,7 +64,7 @@ module Syntax = struct
     | Rec_lit of (label * tm) list
     | Rec_proj of tm * label
     | Sing_type of ty * tm              (** Singleton type former: [ A [= x ] ] *)
-    | Sing_intro of tm                  (** Singleton introduction: [ #sing-intro x ] *)
+    | Sing_intro                        (** Singleton introduction: [ #sing-intro ] *)
     | Sing_elim of tm * tm              (** Singleton elimination: [ #sing-elim x a ] *)
 
   (** Each ‘connective’ in the core language follows a similar pattern, with
@@ -97,7 +97,7 @@ module Syntax = struct
     | Rec_lit defns -> List.exists (fun (_, tm) -> is_bound var tm) defns
     | Rec_proj (head, _) -> is_bound var head
     | Sing_type (ty, sing_tm) -> is_bound var ty || is_bound var sing_tm
-    | Sing_intro tm -> is_bound var tm
+    | Sing_intro -> false
     | Sing_elim (tm, sing_tm) -> is_bound var tm || is_bound var sing_tm
   and is_bound_decls var = function
     | Nil -> false
@@ -199,9 +199,8 @@ module Syntax = struct
           Format.fprintf fmt "@[<2>%a@ @[[=@ %a]@]@]"
             (pp_proj_tm names) ty
             (pp_tm names) sing_tm
-      | Sing_intro tm ->
-          Format.fprintf fmt "@[<2>#sing-intro@ %a@]"
-            (pp_proj_tm names) tm
+      | Sing_intro ->
+          Format.fprintf fmt "#sing-intro"
       | Sing_elim (tm, sing_tm) ->
           Format.fprintf fmt "@[<2>#sing-elim@ %a@ %a@]"
           (pp_proj_tm names) tm
@@ -293,7 +292,7 @@ module Semantics = struct
     | Rec_type of decls
     | Rec_lit of (label * vtm) list
     | Sing_type of vty * vtm
-    | Sing_intro                          (** Singleton introduction, with term erased *)
+    | Sing_intro                          (** Singleton introduction *)
 
   (** Field declarations *)
   and decls =
@@ -372,7 +371,7 @@ module Semantics = struct
         Rec_lit (List.map (fun (label, expr) -> (label, eval tms expr)) defns)
     | Syntax.Rec_proj (head, label) -> proj (eval tms head) label
     | Syntax.Sing_type (ty, sing_tm) -> Sing_type (eval tms ty, eval tms sing_tm)
-    | Syntax.Sing_intro _ -> Sing_intro
+    | Syntax.Sing_intro -> Sing_intro
     | Syntax.Sing_elim (_, sing_tm) -> eval tms sing_tm
   and eval_decls tms : Syntax.decls -> decls = function
     | Syntax.Nil -> Nil
@@ -391,82 +390,45 @@ module Semantics = struct
       variables in the semantic domain back to an {!index} representation
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at.
-
-      Quotation is type directed, but we currently only use types as a way to
-      restore the values of singletons that were erased during evaluation. The
-      typing environment is used to recover the types of variables. We could
-      alternatively add type annotations to neutral terms to avoid needing to
-      supply this argument.
   *)
-  let rec quote size tys tm ty : Syntax.tm =
+  let rec quote size tm : Syntax.tm =
     match tm with
-    | Neu neu -> fst (quote_neu size tys neu)
+    | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
     | Fun_type (name, param_ty, body_ty) ->
-        let var = Neu (Var size) in
-        let param_ty = quote size tys param_ty Univ in
-        let body_ty = quote (size + 1) (Univ :: tys) (body_ty var) Univ in
+        let param_ty = quote size param_ty in
+        let body_ty = quote (size + 1) (body_ty (Neu (Var size))) in
         Syntax.Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        begin match ty with
-        | Fun_type (_, param_ty, body_ty) ->
-            let var = Neu (Var size) in
-            Syntax.Fun_lit (name, quote (size + 1) (param_ty :: tys) (body var) (body_ty var))
-        | _ -> error "not a function type"
-        end
-    | Rec_type decls -> Syntax.Rec_type (quote_decls size tys decls)
+        Syntax.Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
+    | Rec_type decls ->
+        Syntax.Rec_type (quote_decls size decls)
     | Rec_lit defns ->
-        begin match ty with
-        | Rec_type decls ->
-            let rec go defns decls =
-              match defns, decls with
-              | [], Nil -> []
-              | (label, tm) :: defns, Cons (label', ty, decls) when label = label' ->
-                  (label, quote size tys tm ty) :: go defns (decls tm)
-              | _, _ -> error "mismatched fields"
-            in
-            Syntax.Rec_lit (go defns decls)
-        | _ -> error "not a record type"
-        end
+        Syntax.Rec_lit (defns |> List.map (fun (label, tm) -> (label, quote size tm)))
     | Sing_type (ty, sing_tm) ->
-        Syntax.Sing_type (quote size tys ty Univ, quote size tys sing_tm ty)
+        Syntax.Sing_type (quote size ty, quote size sing_tm)
     | Sing_intro ->
-        begin match ty with
-        (* Restore the erased term from the singleton type *)
-        | Sing_type (ty, sing_tm) -> Syntax.Sing_intro (quote size tys ty sing_tm)
-        | _ -> error "not a singleton type"
-        end
-  and quote_neu size tys : neu -> Syntax.tm * vty = function
+        Syntax.Sing_intro
+  and quote_neu size : neu -> Syntax.tm = function
     | Var level ->
-        let index = level_to_index size level in
-        (Syntax.Var index, List.nth tys index)
+        Syntax.Var (level_to_index size level)
     | Fun_app (head, arg) ->
-        begin match quote_neu size tys head with
-        | head, Fun_type (_, param_ty, body_ty) ->
-            (Syntax.Fun_app (head, (quote size tys arg param_ty)), body_ty arg)
-        | _ -> error "not a function type"
-        end
+        Syntax.Fun_app (quote_neu size head, quote size arg)
     | Rec_proj (head, label) ->
-        begin match quote_neu size tys head with
-        | head', Rec_type decls ->
-            let ty = proj_ty (Neu head) decls label |> Option.get in
-            (Syntax.Rec_proj (head', label), ty)
-        | _ -> error "not a record type"
-        end
-  and quote_decls size tys : decls -> Syntax.decls = function
+        Syntax.Rec_proj (quote_neu size head, label)
+  and quote_decls size : decls -> Syntax.decls = function
     | Nil -> Syntax.Nil
     | Cons (label, ty, decls) ->
-        let var = Neu (Var size) in
-        Syntax.Cons (label, quote size tys ty Univ,
-          quote_decls (size + 1) (ty :: tys) (decls var))
+        Syntax.Cons (label, quote size ty,
+          quote_decls (size + 1) (decls (Neu (Var size))))
 
 
   (** {1 Normalisation} *)
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise size tms tys tm ty : Syntax.tm =
-    quote size tys (eval tms tm) ty
+  let normalise size tms tm : Syntax.tm =
+    quote size (eval tms tm)
 
 
   (** {1 Conversion Checking} *)
@@ -476,88 +438,56 @@ module Semantics = struct
       back both values and checking for alpha-equivalence, but it’s faster to
       do this all at once.
 
-      Type-directed conversion allows us to support full eta for unit types,
-      which show up in our language as empty records and singletons. If we
-      wanted to stick to untyped conversion checking, according to Andras
-      Korvacs we could alternatively:
-
-      - perform best-effort eta, where unit elements are the same as anything
-      - detect definitionally irrelevant types during elaboration, marking
-        irrelevant terms
+      We support best-effort eta conversion for singletons and unit records,
+      similar to the approach found in the
+      {{:https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
+      elaboration zoo}.
 
       As with {!quote}, the typing environment is used to recover the types of
       variables.
   *)
-  let rec is_convertible size tys tm1 tm2 : vty -> bool = function
-    | Neu _ ->
-        begin match tm1, tm2 with
-        | Neu n1, Neu n2 -> Option.is_some (is_convertible_neu size tys n1 n2)
-        (* Neutral types are abstract, so their inhabitants should not have reduced *)
-        | _, _ -> error "not a neutral"
-        end
-    | Univ ->
-        begin match tm1, tm2 with
-        | Univ, Univ -> true
-        | Neu neu1, Neu neu2 -> Option.is_some (is_convertible_neu size tys neu1 neu2)
-        | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
-            let var = Neu (Var size) in
-            is_convertible size tys param_ty1 param_ty2 Univ
-              && is_convertible (size + 1) (param_ty1 :: tys) (body_ty1 var) (body_ty2 var) Univ
-        | Rec_type (decls1), Rec_type (decls2) ->
-            is_convertible_decls size tys decls1 decls2
-        | Sing_type (ty1, sing_tm1), Sing_type (ty2, sing_tm2) ->
-            is_convertible size tys ty1 ty2 Univ
-              && is_convertible size tys sing_tm1 sing_tm2 ty1
-        | _, _ -> false
-        end
-    | Fun_type (_, param_ty, body_ty) ->
-        (* Eta for functions *)
+  let rec is_convertible size tm1 tm2 : bool =
+    match tm1, tm2 with
+    | Neu n1, Neu n2 -> is_convertible_neu size n1 n2
+    | Univ, Univ -> true
+    | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
         let var = Neu (Var size) in
-        is_convertible (size + 1) (param_ty :: tys) (app tm1 var) (app tm2 var) (body_ty var)
-    | Rec_type decls ->
-        (* Eta for records
+        is_convertible size param_ty1 param_ty2
+          && is_convertible (size + 1) (body_ty1 var) (body_ty2 var)
+    | Fun_lit (_, body1), Fun_lit (_, body2) ->
+        let x = Neu (Var size) in
+        is_convertible (size + 1) (body1 x) (body2 x)
+    | Rec_type (decls1), Rec_type (decls2) ->
+        is_convertible_decls size decls1 decls2
+    | Sing_type (ty1, sing_tm1), Sing_type (ty2, sing_tm2) ->
+        is_convertible size ty1 ty2
+          && is_convertible size sing_tm1 sing_tm2
+    | Sing_intro, Sing_intro -> true
 
-          Record patching introduces subtyping problems that go inside records.
-          With coercive subtyping (implemented in {!Surface.coerce}), record
-          eta expansions are sometimes introduced in the core language that
-          weren't present in the source syntax. This means that for usability
-          it helps to include eta for records.
-        *)
-        let rec go decls =
-          match decls with
-          | Cons (label, ty, decls) ->
-              let tm1 = proj tm1 label in
-              let tm2 = proj tm2 label in
-              is_convertible size tys tm1 tm2 ty && go (decls tm1)
-          | Nil -> true (* Pretty sure eta for units is hidden in here! *)
-        in
-        go decls
-    | Sing_type (_, _) -> true
-    | _ -> error "not a type"
-  and is_convertible_neu size tys neu1 neu2 =
+    (* Eta rules *)
+    | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
+        let x = Neu (Var size) in
+        is_convertible size (body x) (app fun_tm x)
+    | Rec_lit decls, rec_tm | rec_tm, Rec_lit decls ->
+        decls |> List.for_all (fun (label, elem) -> is_convertible size elem (proj rec_tm label))
+    | Sing_intro, _ | _, Sing_intro -> true
+
+    | _, _ -> false
+  and is_convertible_neu size neu1 neu2 =
     match neu1, neu2 with
-    | Var level1, Var level2 when level1 = level2 -> Some (List.nth tys (level_to_index size level1))
+    | Var level1, Var level2 -> level1 = level2
     | Fun_app (func1, arg1), Fun_app (func2, arg2) ->
-        begin match is_convertible_neu size tys func1 func2 with
-        | Some (Fun_type (_, param_ty, body_ty)) ->
-            if is_convertible size tys arg1 arg2 param_ty then Some (body_ty arg1) else None
-        | Some _ -> error "not a function type"
-        | None -> None
-        end
-    | Rec_proj (record1, label1), Rec_proj (record2, label2) when label1 = label2 ->
-        begin match is_convertible_neu size tys record1 record2 with
-        | Some (Rec_type decls) -> proj_ty (Neu record1) decls label1
-        | Some _ -> error "not a record type"
-        | None -> None
-        end
-    | _, _ -> None
-  and is_convertible_decls size tys decls1 decls2 =
+        is_convertible_neu size func1 func2 && is_convertible size arg1 arg2
+    | Rec_proj (record1, label1), Rec_proj (record2, label2) ->
+        label1 = label2 && is_convertible_neu size record1 record2
+    | _, _ -> false
+  and is_convertible_decls size decls1 decls2 =
     match decls1, decls2 with
     | Nil, Nil -> true
     | Cons (label1, ty1, decls1), Cons (label2, ty2, decls2) when label1 = label2 ->
         let var = Neu (Var size) in
-        is_convertible size tys ty1 ty2 Univ
-          && is_convertible_decls (size + 1) (ty1 :: tys) (decls1 var) (decls2 var)
+        is_convertible size ty1 ty2
+          && is_convertible_decls (size + 1) (decls1 var) (decls2 var)
     | _, _ -> false
 
 end

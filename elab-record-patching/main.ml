@@ -52,13 +52,13 @@ let elab_cmd (no_resugar : bool) : unit =
   let context = Surface.initial_context in
   let (tm, ty) = infer context (parse_tm "<input>" stdin) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
-    ("<input>", Surface.quote context ty Core.Semantics.Univ, tm)
+    ("<input>", Surface.quote context ty, tm)
 
 let norm_cmd (no_resugar : bool) : unit =
   let context = Surface.initial_context in
   let (tm, ty) = infer context (parse_tm "<input>" stdin) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) context)
-    ("<input>", Surface.quote context ty Core.Semantics.Univ, Surface.normalise context tm ty)
+    ("<input>", Surface.quote context ty, Surface.normalise context tm)
 
 
 (** {1 CLI options} *)
