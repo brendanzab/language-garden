@@ -45,9 +45,6 @@ type 'a env = 'a list
 (** Syntax of the core language *)
 module Syntax = struct
 
-  (** For documenting where variables are bound *)
-  type 'a binds = 'a
-
   (** Types *)
   type ty = tm
 
@@ -56,8 +53,8 @@ module Syntax = struct
     | Let of name * ty * tm * tm
     | Var of index
     | Univ
-    | Fun_type of name * ty * (ty binds)
-    | Fun_lit of name * (tm binds)
+    | Fun_type of name * ty * ty
+    | Fun_lit of name * tm
     | Fun_app of tm * tm
     | Rec_type of decls
     | Rec_lit of (label * tm) list
@@ -76,7 +73,7 @@ module Syntax = struct
   (** Field declarations *)
   and decls =
     | Nil
-    | Cons of label * ty * (decls binds)
+    | Cons of label * ty * decls
 
 
   (** Returns [ true ] if the variable is bound anywhere in the term. *)
