@@ -72,4 +72,5 @@
   let coerce-missing-patched-fields-2 :
         fun (A : Type) (B : Type) (_ : { A : Type; f : fun (_ : A) -> B })
             -> { A : Type; B : Type [= B]; f : fun (_ : A) -> B }
-  := fun A B r => { A := r.A; B := #sing-intro; f := r.f }; Type
+  := fun A B r => { A := r.A; B := #sing-intro; f := r.f };
+  Type

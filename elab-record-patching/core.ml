@@ -143,7 +143,7 @@ module Syntax = struct
             (* Final term should be grouped in a box *)
             | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
           in
-          go names fmt tm
+          Format.fprintf fmt "@[<v>%a@]" (go names) tm
       | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
           Format.fprintf fmt "@[%a@ ->@]@ %a"
             (pp_app_tm names) param_ty
