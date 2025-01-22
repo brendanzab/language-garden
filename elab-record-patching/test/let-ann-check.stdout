@@ -1,2 +1,3 @@
 <input> : {} :=
-  let id : fun (A : Type) (_ : A) -> A := fun A a => a; id {} {}
+  let Id : Type := fun (A : Type) (_ : A) -> A; let id : Id := fun A a => a;
+  id {} {}
