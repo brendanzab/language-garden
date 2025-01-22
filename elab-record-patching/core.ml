@@ -56,7 +56,7 @@ module Syntax = struct
     | Fun_type of name * ty * ty
     | Fun_lit of name * tm
     | Fun_app of tm * tm
-    | Rec_type of decls
+    | Rec_type of (label * ty) list
     | Rec_lit of (label * tm) list
     | Rec_proj of tm * label
     | Sing_type of ty * tm              (** Singleton type former: [ A [= x ] ] *)
@@ -69,11 +69,6 @@ module Syntax = struct
       - introduction: for constructing terms of a given connective
       - elimination: for deconstructing terms of a given connective
   *)
-
-  (** Field declarations *)
-  and decls =
-    | Nil
-    | Cons of label * ty * decls
 
 
   (** Returns [ true ] if the variable is bound anywhere in the term. *)
@@ -91,10 +86,10 @@ module Syntax = struct
     | Rec_proj (head, _) -> is_bound var head
     | Sing_type (ty, sing_tm) -> is_bound var ty || is_bound var sing_tm
     | Sing_intro -> false
-  and is_bound_decls (var : index) (decls : decls) =
+  and is_bound_decls (var : index) (decls : (label * ty) list) =
     match decls with
-    | Nil -> false
-    | Cons (_, ty, decls) ->
+    | [] -> false
+    | (_, ty) :: decls ->
         is_bound var ty || is_bound_decls (var + 1) decls
 
   let rec fun_lits tm =
@@ -213,16 +208,16 @@ module Syntax = struct
       match tm with
       | Var index -> Format.fprintf ppf "%a" pp_name (List.nth names index)
       | Univ -> Format.fprintf ppf "Type"
-      | Rec_type Nil | Rec_lit [] -> Format.fprintf ppf "{}"
+      | Rec_type [] | Rec_lit [] -> Format.fprintf ppf "{}"
       | Rec_type decls ->
           let rec go_decls names ppf tm =
             match tm with
-            | Nil -> Format.fprintf ppf ""
-            | Cons (label, ty, Nil) ->
+            | [] -> Format.fprintf ppf ""
+            | [label, ty] ->
                 (* TODO: use trailing semicolons when splitting over multiple lines *)
                 Format.fprintf ppf "@;<1 2>@[<2>%a@]"
                   (pp_decl names) (Some label, ty)
-            | Cons (label, ty, decls) ->
+            | (label, ty) :: decls ->
                 Format.fprintf ppf "@;<1 2>@[<2>%a;@]%a"
                   (pp_decl names) (Some label, ty)
                   (go_decls (Some label :: names)) decls
@@ -352,23 +347,23 @@ module Semantics = struct
   (** Evaluate a term from the syntax into its semantic interpretation *)
   let rec eval (tms : vtm env) (tm : Syntax.tm) : vtm =
     match tm with
-    | Syntax.Let (_, _, def, body) -> eval (eval tms def :: tms) body
-    | Syntax.Var index -> List.nth tms index
-    | Syntax.Univ -> Univ
-    | Syntax.Fun_type (name, param_ty, body_ty) ->
+    | Let (_, _, def, body) -> eval (eval tms def :: tms) body
+    | Var index -> List.nth tms index
+    | Univ -> Univ
+    | Fun_type (name, param_ty, body_ty) ->
         Fun_type (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
-    | Syntax.Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: tms) body)
-    | Syntax.Fun_app (head, arg) -> app (eval tms head) (eval tms arg)
-    | Syntax.Rec_type decls -> Rec_type (eval_decls tms decls)
-    | Syntax.Rec_lit defns ->
+    | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: tms) body)
+    | Fun_app (head, arg) -> app (eval tms head) (eval tms arg)
+    | Rec_type decls -> Rec_type (eval_decls tms decls)
+    | Rec_lit defns ->
         Rec_lit (List.map (fun (label, expr) -> (label, eval tms expr)) defns)
-    | Syntax.Rec_proj (head, label) -> proj (eval tms head) label
-    | Syntax.Sing_type (ty, sing_tm) -> Sing_type (eval tms ty, eval tms sing_tm)
-    | Syntax.Sing_intro -> Sing_intro
-  and eval_decls (tms : vtm env) (decls : Syntax.decls) : decls =
+    | Rec_proj (head, label) -> proj (eval tms head) label
+    | Sing_type (ty, sing_tm) -> Sing_type (eval tms ty, eval tms sing_tm)
+    | Sing_intro -> Sing_intro
+  and eval_decls (tms : vtm env) (decls : (label * Syntax.ty) list) : decls =
     match decls with
-    | Syntax.Nil -> Nil
-    | Syntax.Cons (label, ty, decls) ->
+    | [] -> Nil
+    | (label, ty) :: decls ->
         Cons (label, eval tms ty, fun x -> eval_decls (x :: tms) decls)
 
 
@@ -387,35 +382,27 @@ module Semantics = struct
   let rec quote (size : int) (tm : vtm) : Syntax.tm =
     match tm with
     | Neu neu -> quote_neu size neu
-    | Univ -> Syntax.Univ
+    | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
         let param_ty = quote size param_ty in
         let body_ty = quote (size + 1) (body_ty (Neu (Var size))) in
-        Syntax.Fun_type (name, param_ty, body_ty)
+        Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        Syntax.Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
-    | Rec_type decls ->
-        Syntax.Rec_type (quote_decls size decls)
-    | Rec_lit defns ->
-        Syntax.Rec_lit (defns |> List.map (fun (label, tm) -> (label, quote size tm)))
-    | Sing_type (ty, sing_tm) ->
-        Syntax.Sing_type (quote size ty, quote size sing_tm)
-    | Sing_intro ->
-        Syntax.Sing_intro
+        Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
+    | Rec_type decls -> Rec_type (quote_decls size decls)
+    | Rec_lit defns -> Rec_lit (defns |> List.map (fun (label, tm) -> (label, quote size tm)))
+    | Sing_type (ty, sing_tm) -> Sing_type (quote size ty, quote size sing_tm)
+    | Sing_intro -> Sing_intro
   and quote_neu (size : int) (neu : neu) : Syntax.tm =
     match neu with
-    | Var level ->
-        Syntax.Var (level_to_index size level)
-    | Fun_app (head, arg) ->
-        Syntax.Fun_app (quote_neu size head, quote size arg)
-    | Rec_proj (head, label) ->
-        Syntax.Rec_proj (quote_neu size head, label)
-  and quote_decls (size : int) (decls : decls) : Syntax.decls =
+    | Var level -> Syntax.Var (level_to_index size level)
+    | Fun_app (head, arg) -> Syntax.Fun_app (quote_neu size head, quote size arg)
+    | Rec_proj (head, label) -> Syntax.Rec_proj (quote_neu size head, label)
+  and quote_decls (size : int) (decls : decls) : (label * Syntax.ty) list =
     match decls with
-    | Nil -> Syntax.Nil
+    | Nil -> []
     | Cons (label, ty, decls) ->
-        Syntax.Cons (label, quote size ty,
-          quote_decls (size + 1) (decls (Neu (Var size))))
+        (label, quote size ty) :: quote_decls (size + 1) (decls (Neu (Var size)))
 
 
   (** {1 Normalisation} *)

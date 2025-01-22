@@ -292,7 +292,7 @@ let rec check (ctx : context) (tm : tm) (ty : Semantics.vty) : Syntax.tm =
   (* Records with no entries. These need to be disambiguated with a type
       annotation. *)
   | Rec_unit, Semantics.Univ ->
-      Syntax.Rec_type Syntax.Nil
+      Syntax.Rec_type []
   | Rec_unit, Semantics.Rec_type Semantics.Nil ->
       Syntax.Rec_lit []
 
@@ -384,13 +384,13 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
   (* Function application *)
   | Rec_type decls ->
       let rec go ctx seen_labels = function
-        | [] -> (Syntax.Nil)
+        | [] -> []
         | (label, _) :: _ when List.mem label seen_labels ->
             error ("duplicate label `" ^ label ^ "` in record type")
         | (label, ty) :: decls ->
             let ty = check ctx ty Semantics.Univ in
             let ctx = bind_param ctx (Some label) (eval ctx ty) in
-            Syntax.Cons (label, ty, go ctx (label :: seen_labels) decls)
+            (label, ty) :: go ctx (label :: seen_labels) decls
       in
       Syntax.Rec_type (go ctx [] decls), Semantics.Univ
 
@@ -437,7 +437,7 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
   | Patch (head, patches) ->
       let rec go ctx decls patches =
         match decls, patches with
-        | Semantics.Nil, [] -> Syntax.Nil
+        | Semantics.Nil, [] -> []
         | Semantics.Nil, (label, _) :: _ ->
             error ("field `" ^ label ^ "` not found in record type")
         | Semantics.Cons (label, ty, tys), patches ->
@@ -448,11 +448,11 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
                 let tm' = eval ctx tm in
                 let ctx = bind_def ctx (Some label) (Semantics.Sing_type (ty, tm')) tm' in
                 let patches = List.remove_assoc label patches in
-                Syntax.Cons (label, Syntax.Sing_type (ty', tm), go ctx (tys tm') patches)
+                (label, Syntax.Sing_type (ty', tm)) :: go ctx (tys tm') patches
             | None ->
                 let var = next_var ctx in
                 let ctx = bind_def ctx (Some label) ty var in
-                Syntax.Cons (label, ty', go ctx (tys var) patches)
+                (label, ty') :: go ctx (tys var) patches
             end
       in
 
