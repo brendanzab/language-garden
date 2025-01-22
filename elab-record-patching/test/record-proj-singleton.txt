@@ -1,7 +1,7 @@
 let _ : fun (A : Type) (x : A) -> A :=
   fun A x =>
     let record : { x : A } [= { x }] := { x };
-    --                                  ^^^^^ Elaborates to `#sing-intro { x }`
+    --                                  ^^^^^ Elaborates to `#sing-intro`
     --                                        when checking `{ x }` against `{ x : A } [= { x }]`
 
     record.x;
