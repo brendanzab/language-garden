@@ -24,7 +24,7 @@ type name = string option
 
 (** {i De Bruijn index} that represents a variable occurance by the number of
     binders between the occurance and the binder it refers to. *)
-    type index = int
+type index = int
 
 (** {i De Bruijn level} that represents a variable occurance by the number of
     binders from the top of the environment to the binder that the ocurrance
@@ -34,7 +34,7 @@ type level = int
 
 (** Converts a {!level} to an {!index} that is bound in an environment of the
     supplied size. Assumes that [ size > level ]. *)
-let level_to_index size level =
+let level_to_index (size : int) (level : level) : index =
   size - level - 1
 
 (** An environment of bindings that can be looked up directly using a
@@ -77,7 +77,8 @@ module Syntax = struct
 
 
   (** Returns [ true ] if the variable is bound anywhere in the term. *)
-  let rec is_bound var = function
+  let rec is_bound (var : index) (tm : tm) : bool =
+    match tm with
     | Let (_, def_ty, def, body) ->
         is_bound var def_ty || is_bound var def || is_bound (var + 1) body
     | Var index -> index = var
@@ -90,26 +91,30 @@ module Syntax = struct
     | Rec_proj (head, _) -> is_bound var head
     | Sing_type (ty, sing_tm) -> is_bound var ty || is_bound var sing_tm
     | Sing_intro -> false
-  and is_bound_decls var = function
+  and is_bound_decls (var : index) (decls : decls) =
+    match decls with
     | Nil -> false
     | Cons (_, ty, decls) ->
         is_bound var ty || is_bound_decls (var + 1) decls
 
-  let rec fun_lits = function
+  let rec fun_lits tm =
+    match tm with
     | Fun_lit (name, body) ->
         let names, body = fun_lits body
         in name :: names, body
     | body -> [], body
 
   let fun_apps tm =
-    let rec go args = function
+    let rec go args tm =
+      match tm with
       | Fun_app (head, arg) -> go (arg :: args) head
       | head -> (head, args)
     in
     go [] tm
 
   let rec_projs tm =
-    let rec go labels = function
+    let rec go labels tm =
+      match tm with
       | Rec_proj (head, label) -> go (label :: labels) head
       | head -> (head, labels)
     in
@@ -123,125 +128,135 @@ module Syntax = struct
       could move this dusugaring step into a {i delaborator}/{i distillation}
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
-  let pp ?(resugar = true) names =
-    let pp_name fmt = function
-      | Some name -> Format.pp_print_string fmt name
-      | None -> Format.pp_print_string fmt "_"
+  let pp ?(resugar = true) (names : name env) : Format.formatter -> tm -> unit =
+    let pp_name ppf name =
+      match name with
+      | Some name -> Format.pp_print_string ppf name
+      | None -> Format.pp_print_string ppf "_"
     in
 
-    let rec pp_tm names fmt = function
+    let rec pp_tm names ppf tm =
+      match tm with
       | Let (_, _, _, _) as tm ->
-          let rec go names fmt = function
+          let rec go names ppf tm =
+            match tm with
             | Let (name, def_ty, def, body) ->
-                Format.fprintf fmt "@[<2>@[let @[<2>%a@]@ :=@]@ @[%a;@]@]@ %a"
+                Format.fprintf ppf "@[<2>@[let @[<2>%a@]@ :=@]@ @[%a;@]@]@ %a"
                   (pp_decl names) (name, def_ty)
                   (pp_tm names) def
                   (go (name :: names)) body
             (* Final term should be grouped in a box *)
-            | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+            | tm -> Format.fprintf ppf "@[%a@]" (pp_tm names) tm
           in
-          Format.fprintf fmt "@[<v>%a@]" (go names) tm
+          Format.fprintf ppf "@[<v>%a@]" (go names) tm
       | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-          Format.fprintf fmt "@[%a@ ->@]@ %a"
+          Format.fprintf ppf "@[%a@ ->@]@ %a"
             (pp_app_tm names) param_ty
             (pp_tm (None :: names)) body_ty
       | Fun_type (_, _, _) as tm ->
-          let rec go names fmt = function
+          let rec go names ppf tm =
+            match tm with
             | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-                Format.fprintf fmt "@[%a@ ->@]@ %a"
+                Format.fprintf ppf "@[%a@ ->@]@ %a"
                   (pp_tm names) param_ty
                   (pp_tm (None :: names)) body_ty
             | Fun_type (name, param_ty, body_ty) ->
-                Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]@ %a"
+                Format.fprintf ppf "@[<2>(@[%a :@]@ %a)@]@ %a"
                   pp_name name
                   (pp_tm names) param_ty
                   (go (name :: names)) body_ty
             | body_ty ->
                 (* TODO: improve printing of record types *)
-                Format.fprintf fmt "@[->@ @[%a@]@]"
+                Format.fprintf ppf "@[->@ @[%a@]@]"
                   (pp_tm names) body_ty
           in
-          Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
+          Format.fprintf ppf "@[<4>fun %a@]" (go names) tm
       | Fun_lit (_, _) as tm ->
           let params, body = fun_lits tm in
           (* TODO: improve printing of record types and literals *)
-          Format.fprintf fmt "@[<2>@[<4>fun %a@ =>@]@ @[%a@]@]"
+          Format.fprintf ppf "@[<2>@[<4>fun %a@ =>@]@ @[%a@]@]"
             (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
             (pp_tm (List.rev_append params names)) body
       | tm ->
-          pp_app_tm names fmt tm
+          pp_app_tm names ppf tm
 
-    and pp_app_tm names fmt = function
+    and pp_app_tm names ppf tm =
+      match tm with
       | Fun_app (_, _) as tm ->
           let head, args = fun_apps tm in
-          Format.fprintf fmt "@[<2>%a@ %a@]"
+          Format.fprintf ppf "@[<2>%a@ %a@]"
             (pp_proj_tm names) head
             (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_proj_tm names)) args
       | Sing_type (ty, sing_tm) ->
-          Format.fprintf fmt "@[<2>%a@ @[[=@ %a]@]@]"
+          Format.fprintf ppf "@[<2>%a@ @[[=@ %a]@]@]"
             (pp_proj_tm names) ty
             (pp_tm names) sing_tm
       | Sing_intro ->
-          Format.fprintf fmt "#sing-intro"
+          Format.fprintf ppf "#sing-intro"
       | tm ->
-          pp_proj_tm names fmt tm
+          pp_proj_tm names ppf tm
 
-    and pp_proj_tm names fmt = function
+    and pp_proj_tm names ppf tm =
+      match tm with
       | Rec_proj (_, _) as tm ->
           let head, labels = rec_projs tm in
-          Format.fprintf fmt "@[<2>%a@,%a@]"
+          Format.fprintf ppf "@[<2>%a@,%a@]"
             (pp_proj_tm names) head
             (Format.pp_print_list
               ~pp_sep:Format.pp_print_space
-              (fun fmt label -> Format.fprintf fmt ".%s" label))
+              (fun ppf label -> Format.fprintf ppf ".%s" label))
             labels
       | tm ->
-          pp_atomic_tm names fmt tm
+          pp_atomic_tm names ppf tm
 
-    and pp_atomic_tm names fmt = function
-      | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
-      | Univ -> Format.fprintf fmt "Type"
-      | Rec_type Nil | Rec_lit [] -> Format.fprintf fmt "{}"
+    and pp_atomic_tm names ppf tm =
+      match tm with
+      | Var index -> Format.fprintf ppf "%a" pp_name (List.nth names index)
+      | Univ -> Format.fprintf ppf "Type"
+      | Rec_type Nil | Rec_lit [] -> Format.fprintf ppf "{}"
       | Rec_type decls ->
-          let rec go_decls names fmt = function
-            | Nil -> Format.fprintf fmt ""
+          let rec go_decls names ppf tm =
+            match tm with
+            | Nil -> Format.fprintf ppf ""
             | Cons (label, ty, Nil) ->
                 (* TODO: use trailing semicolons when splitting over multiple lines *)
-                Format.fprintf fmt "@;<1 2>@[<2>%a@]"
+                Format.fprintf ppf "@;<1 2>@[<2>%a@]"
                   (pp_decl names) (Some label, ty)
             | Cons (label, ty, decls) ->
-                Format.fprintf fmt "@;<1 2>@[<2>%a;@]%a"
+                Format.fprintf ppf "@;<1 2>@[<2>%a;@]%a"
                   (pp_decl names) (Some label, ty)
                   (go_decls (Some label :: names)) decls
           in
-          Format.fprintf fmt "@[<hv>{%a@ }@]"
+          Format.fprintf ppf "@[<hv>{%a@ }@]"
             (go_decls names) decls
       | Rec_lit defns ->
-          let rec go_defns fmt = function
-            | [] -> Format.fprintf fmt ""
+          let rec go_defns ppf tm =
+            match tm with
+            | [] -> Format.fprintf ppf ""
             | (label, ty) :: [] ->
                 (* TODO: use trailing semicolons when splitting over multiple lines *)
-                Format.fprintf fmt "@;<1 2>@[<2>%a@]"
+                Format.fprintf ppf "@;<1 2>@[<2>%a@]"
                   (pp_defn names) (Some label, ty)
             | (label, ty) :: decls ->
-                Format.fprintf fmt "@;<1 2>@[<2>%a;@]%a"
+                Format.fprintf ppf "@;<1 2>@[<2>%a;@]%a"
                   (pp_defn names) (Some label, ty)
                   go_defns decls
           in
-          Format.fprintf fmt "@[<hv>{%a@ }@]"
+          Format.fprintf ppf "@[<hv>{%a@ }@]"
             go_defns defns
-      | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
+      | tm -> Format.fprintf ppf "@[(%a)@]" (pp_tm names) tm
 
-    and pp_decl names fmt (name, ty) =
-      Format.fprintf fmt "@[%a@ :@]@ %a"
+    and pp_decl names ppf (name, ty) =
+      Format.fprintf ppf "@[%a@ :@]@ %a"
         pp_name name
         (pp_tm names) ty
 
-    and pp_defn names fmt = function
+    and pp_defn names ppf defn =
+      match defn with
       | name, Var index when resugar && name = List.nth names index ->
-          Format.fprintf fmt "%a" pp_name name
+          Format.fprintf ppf "%a" pp_name name
       | name, tm ->
-          Format.fprintf fmt "@[%a@ :=@]@ %a"
+          Format.fprintf ppf "@[%a@ :=@]@ %a"
             pp_name name
             (pp_tm names) tm
     in
@@ -294,7 +309,7 @@ module Semantics = struct
   exception Error of string
 
   (** Raises an {!Error} exception *)
-  let error message =
+  let error (message : string) =
     raise (Error message)
 
 
@@ -305,14 +320,14 @@ module Semantics = struct
       term is in a neutral form. *)
 
   (** Compute a function application *)
-  let app head arg =
+  let app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu neu -> Neu (Fun_app (neu, arg))
     | Fun_lit (_, body) -> body arg
     | _ -> error "invalid application"
 
   (** Compute a record projection *)
-  let proj head label =
+  let proj (head : vtm) (label : label) : vtm =
     match head with
     | Rec_lit defns -> defns |> List.find (fun (l, _) -> l = label) |> snd
     | Neu neu -> Neu (Rec_proj (neu, label))
@@ -322,7 +337,7 @@ module Semantics = struct
   (** {1 Finding the types of record projections} *)
 
   (** Returns the type of a record projection *)
-  let proj_ty head decls label =
+  let proj_ty (head : vtm) (decls : decls) (label : label) : vty option =
     let rec go decls =
       match decls with
         | Nil -> None
@@ -335,7 +350,8 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval tms : Syntax.tm -> vtm = function
+  let rec eval (tms : vtm env) (tm : Syntax.tm) : vtm =
+    match tm with
     | Syntax.Let (_, _, def, body) -> eval (eval tms def :: tms) body
     | Syntax.Var index -> List.nth tms index
     | Syntax.Univ -> Univ
@@ -349,7 +365,8 @@ module Semantics = struct
     | Syntax.Rec_proj (head, label) -> proj (eval tms head) label
     | Syntax.Sing_type (ty, sing_tm) -> Sing_type (eval tms ty, eval tms sing_tm)
     | Syntax.Sing_intro -> Sing_intro
-  and eval_decls tms : Syntax.decls -> decls = function
+  and eval_decls (tms : vtm env) (decls : Syntax.decls) : decls =
+    match decls with
     | Syntax.Nil -> Nil
     | Syntax.Cons (label, ty, decls) ->
         Cons (label, eval tms ty, fun x -> eval_decls (x :: tms) decls)
@@ -367,7 +384,7 @@ module Semantics = struct
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at.
   *)
-  let rec quote size tm : Syntax.tm =
+  let rec quote (size : int) (tm : vtm) : Syntax.tm =
     match tm with
     | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
@@ -385,14 +402,16 @@ module Semantics = struct
         Syntax.Sing_type (quote size ty, quote size sing_tm)
     | Sing_intro ->
         Syntax.Sing_intro
-  and quote_neu size : neu -> Syntax.tm = function
+  and quote_neu (size : int) (neu : neu) : Syntax.tm =
+    match neu with
     | Var level ->
         Syntax.Var (level_to_index size level)
     | Fun_app (head, arg) ->
         Syntax.Fun_app (quote_neu size head, quote size arg)
     | Rec_proj (head, label) ->
         Syntax.Rec_proj (quote_neu size head, label)
-  and quote_decls size : decls -> Syntax.decls = function
+  and quote_decls (size : int) (decls : decls) : Syntax.decls =
+    match decls with
     | Nil -> Syntax.Nil
     | Cons (label, ty, decls) ->
         Syntax.Cons (label, quote size ty,
@@ -403,7 +422,7 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise size tms tm : Syntax.tm =
+  let normalise (size : int) (tms : vtm env) (tm : Syntax.tm) : Syntax.tm =
     quote size (eval tms tm)
 
 
@@ -415,14 +434,14 @@ module Semantics = struct
       do this all at once.
 
       We support best-effort eta conversion for singletons and unit records,
-      similar to the approach found in the
+      similar to the approach found in the elaboration zoo in
       {{:https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
-      elaboration zoo}.
+      03-holes-unit-eta}.
 
       As with {!quote}, the typing environment is used to recover the types of
       variables.
   *)
-  let rec is_convertible size tm1 tm2 : bool =
+  let rec is_convertible (size : int) (tm1 : vtm) (tm2 : vtm) : bool =
     match tm1, tm2 with
     | Neu n1, Neu n2 -> is_convertible_neu size n1 n2
     | Univ, Univ -> true
@@ -449,7 +468,7 @@ module Semantics = struct
     | Sing_intro, _ | _, Sing_intro -> true
 
     | _, _ -> false
-  and is_convertible_neu size neu1 neu2 =
+  and is_convertible_neu (size : int) (neu1 : neu) (neu2 : neu) =
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
     | Fun_app (func1, arg1), Fun_app (func2, arg2) ->
@@ -457,7 +476,7 @@ module Semantics = struct
     | Rec_proj (record1, label1), Rec_proj (record2, label2) ->
         label1 = label2 && is_convertible_neu size record1 record2
     | _, _ -> false
-  and is_convertible_decls size decls1 decls2 =
+  and is_convertible_decls (size : int) (decls1 : decls) (decls2 : decls) =
     match decls1, decls2 with
     | Nil, Nil -> true
     | Cons (label1, ty1, decls1), Cons (label2, ty2, decls2) when label1 = label2 ->

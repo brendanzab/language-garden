@@ -84,11 +84,11 @@ let initial_context = {
 
 (** Returns the next variable that will be bound in the context after calling
     {!bind_def} or {!bind_param} *)
-let next_var ctx =
+let next_var (ctx : context) : Semantics.vtm =
   Semantics.Neu (Semantics.Var ctx.size)
 
 (** Binds a definition in the context *)
-let bind_def ctx name ty tm = {
+let bind_def (ctx : context) (name : string option) (ty : Semantics.vty) (tm : Semantics.vtm) = {
   size = ctx.size + 1;
   names = name :: ctx.names;
   tys = ty :: ctx.tys;
@@ -96,11 +96,11 @@ let bind_def ctx name ty tm = {
 }
 
 (** Binds a parameter in the context *)
-let bind_param ctx name ty =
+let bind_param (ctx : context) (name : string option) (ty : Semantics.vty) =
   bind_def ctx name ty (next_var ctx)
 
 (** Lookup a name in the context *)
-let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
+let lookup (ctx : context) (name : string) : (Core.index * Semantics.vty) option =
   (* Find the index of most recent binding in the context identified by
       [name], starting from the most recent binding. This gives us the
       corresponding de Bruijn index of the variable. *)
@@ -153,13 +153,13 @@ let field_mismatch ~expected ~found =
     expected
     found
 
-let missing_field label =
+let missing_field (label : string) =
   Format.asprintf "field with label `%s` not found in record" label
 
-let not_bound name =
+let not_bound (name : string) =
   Format.asprintf "`%s` is not bound in the current scope" name
 
-let ambiguous_param name =
+let ambiguous_param (name : string option) =
     Format.asprintf "ambiguous function parameter `%s`"
       (Option.value ~default:"_" name)
 
@@ -169,7 +169,7 @@ let ambiguous_param name =
 (** Returns a coercion from a term of one type to a term of another type. By
     performing coercions during elaboration we avoid having to introduce
     subtyping in the core language. *)
-let rec coerce ctx from_ty to_ty tm : Syntax.tm =
+let rec coerce (ctx : context) (from_ty : Semantics.vty) (to_ty : Semantics.vty) (tm : Syntax.tm) : Syntax.tm =
   (* TODO: Return [tm] unchanged if no coercion was needed, avoiding unnecessary
     eta-expansions to the elaborated terms. An example of this can be seen here:
     https://github.com/AndrasKovacs/staged/blob/9e381eb162f44912d70fb843c4ca6567b0d1683a/demo/Elaboration.hs#L87-L140 *)
@@ -232,7 +232,7 @@ let rec coerce ctx from_ty to_ty tm : Syntax.tm =
 
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
-let rec check ctx tm ty : Syntax.tm =
+let rec check (ctx : context) (tm : tm) (ty : Semantics.vty) : Syntax.tm =
   match tm, ty with
   (* Let expressions *)
   | Let (name, def_ty, def, body), ty ->
@@ -316,7 +316,8 @@ let rec check ctx tm ty : Syntax.tm =
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
-and infer ctx : tm -> Syntax.tm * Semantics.vty = function
+and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
+  match tm with
   (* Let expressions *)
   | Let (name, def_ty, def, body) ->
       let def, def_ty, def_ty' =
@@ -473,7 +474,8 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
     sometimes get in the way, for example when calling {!coerce}, or when
     elaborating the head of an elimination. This removes them by applying
     appropriate elimination forms. *)
-and elim_implicits ctx tm = function
+and elim_implicits (ctx : context) (tm : Syntax.tm) (ty : Semantics.vty) : Syntax.tm * Semantics.vty =
+  match ty with
   (* Eliminate the singleton, converting it back to its underlying term *)
   | Semantics.Sing_type (ty, sing_tm) ->
       elim_implicits ctx (quote ctx sing_tm) ty
