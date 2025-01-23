@@ -26,16 +26,15 @@ let Map := {
 };
 
 -- TODO: sealing operator
-let eq-map : fun (key : Eq) -> Map [ Key := key.T ] :=
-  fun key => {
-    Map A := key.T -> Option A;
-    empty A x := none A;
-    add A k v map :=
-      fun x => (key.eq x k) (Option A) {
-        true := some A v;
-        false := map x;
-      };
-    lookup A k map := map k;
-  };
+let eq-map (key : Eq) : Map [ Key := key.T ] := {
+  Map A := key.T -> Option A;
+  empty A x := none A;
+  add A k v map :=
+    fun x => (key.eq x k) (Option A) {
+      true := some A v;
+      false := map x;
+    };
+  lookup A k map := map k;
+};
 
 Type
