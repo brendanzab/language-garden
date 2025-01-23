@@ -16,8 +16,8 @@ let Category := {
 let types : Category := {
   Ob := Type;
   Hom := fun params => params.S -> params.T;
-  id := fun A a => a;
-  seq := fun A B C f g a => g (f a);
+  id A a := a;
+  seq A B C f g a := g (f a);
 };
 
 Type

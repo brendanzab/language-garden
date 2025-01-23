@@ -27,9 +27,9 @@ let some (A : Type) (a : A) : Option A :=
 
 let option-functor : Functor := {
   T := Option;
-  map := fun A B f opt-A =>
+  map A B f opt-A :=
     opt-A (Option B) {
-      some := fun x => some B (f x);
+      some x := some B (f x);
       none := none B;
     };
 };
@@ -38,9 +38,9 @@ let option-applicative : Applicative := {
   T := Option;
   functor := option-functor;
   pure := some;
-  apply := fun A B opt-f opt-A =>
+  apply A B opt-f opt-A :=
     opt-f (Option B) {
-      some := fun f => option-functor.map A B f opt-A;
+      some f := option-functor.map A B f opt-A;
       none := none B;
     };
 };
@@ -48,7 +48,7 @@ let option-applicative : Applicative := {
 let option-monad : Monad := {
   T := Option;
   applicative := option-applicative;
-  flat-map := fun A B f opt-A =>
+  flat-map A B f opt-A :=
     opt-A (Option B) {
       some := f;
       none := none B;

@@ -85,8 +85,8 @@ let param :=
 let defn :=
 | l = NAME;
     { l, None }
-| l = NAME; ":="; t = tm;
-    { l, Some t }
+| l = NAME; ps = list(param); ":="; t = tm;
+    { l, Some (ps, t) }
 
 let nonempty_sequence(T) :=
 | t = T; option(";");

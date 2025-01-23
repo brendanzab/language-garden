@@ -29,7 +29,7 @@ type tm =
   | Fun_arrow of tm * tm                            (** Function arrow types: [ A -> B ] *)
   | Fun_lit of params * tm option * tm              (** Function literals: [ fun x => f x ] *)
   | Rec_type of (string * tm) list                  (** Record types: [ { x : A; ... } ]*)
-  | Rec_lit of (string * tm option) list            (** Record literals: [ { x := A; ... } ]*)
+  | Rec_lit of (string * (params * tm) option) list (** Record literals: [ { x := A; ... } ]*)
   | Rec_unit                                        (** Unit records: [ {} ] *)
   | Sing_type of tm * tm                            (** Singleton types: [ A [= x ] ] *)
   | App of tm * tm list                             (** Applications: [ f x ] *)
@@ -258,7 +258,7 @@ let rec check (ctx : context) (tm : tm) (expected_ty : Semantics.vty) : Syntax.t
            punned fields appropriately. *)
         | (label, tm) :: defns, Semantics.Cons (label', ty, decls) when label = label' ->
             let tm = match tm with
-              | Some tm -> check ctx tm ty (* explicit field definition *)
+              | Some (params, tm) -> check_fun_lit ctx params None tm ty (* explicit field definition *)
               | None -> check ctx (Name label) ty (* punned field definition *)
             in
             (label, tm) :: go defns (decls (eval ctx tm))
@@ -510,7 +510,7 @@ and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body 
 and elim_implicits (ctx : context) (tm : Syntax.tm) (ty : Semantics.vty) : Syntax.tm * Semantics.vty =
   match ty with
   (* Eliminate the singleton, converting it back to its underlying term *)
-  | Semantics.Sing_type (ty, sing_tm) ->
+  | Sing_type (ty, sing_tm) ->
       elim_implicits ctx (quote ctx sing_tm) ty
   (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
     for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
