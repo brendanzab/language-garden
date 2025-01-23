@@ -21,20 +21,20 @@ type pattern = string option
 
 (** Terms in the surface language *)
 type tm =
-  | Let of pattern * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
-  | Name of string                         (** References to named things: [ x ] *)
-  | Ann of tm * tm                         (** Terms annotated with types: [ x : A ] *)
-  | Univ                                   (** Universe of types: [ Type ] *)
-  | Fun_type of (pattern * tm) list * tm   (** Function types: [ fun (x : A) -> B x ] *)
-  | Fun_arrow of tm * tm                   (** Function arrow types: [ A -> B ] *)
-  | Fun_lit of pattern list * tm           (** Function literals: [ fun x := f x ] *)
-  | Rec_type of (string * tm) list         (** Record types: [ { x : A; ... } ]*)
-  | Rec_lit of (string * tm option) list   (** Record literals: [ { x := A; ... } ]*)
-  | Rec_unit                               (** Unit records: [ {} ] *)
-  | Sing_type of tm * tm                   (** Singleton types: [ A [= x ] ] *)
-  | App of tm * tm list                    (** Applications: [ f x ] *)
-  | Proj of tm * string list               (** Projections: [ r.l ] *)
-  | Patch of tm * (string * tm) list       (** Record patches: [ R [ B := A; ... ] ] *)
+  | Let of pattern * params * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
+  | Name of string                                  (** References to named things: [ x ] *)
+  | Ann of tm * tm                                  (** Terms annotated with types: [ x : A ] *)
+  | Univ                                            (** Universe of types: [ Type ] *)
+  | Fun_type of params * tm                         (** Function types: [ fun (x : A) -> B x ] *)
+  | Fun_arrow of tm * tm                            (** Function arrow types: [ A -> B ] *)
+  | Fun_lit of params * tm option * tm              (** Function literals: [ fun x => f x ] *)
+  | Rec_type of (string * tm) list                  (** Record types: [ { x : A; ... } ]*)
+  | Rec_lit of (string * tm option) list            (** Record literals: [ { x := A; ... } ]*)
+  | Rec_unit                                        (** Unit records: [ {} ] *)
+  | Sing_type of tm * tm                            (** Singleton types: [ A [= x ] ] *)
+  | App of tm * tm list                             (** Applications: [ f x ] *)
+  | Proj of tm * string list                        (** Projections: [ r.l ] *)
+  | Patch of tm * (string * tm) list                (** Record patches: [ R [ B := A; ... ] ] *)
 
 (** We don’t need to add syntax for introducing and eliminating singletons in
     the surface language. These are instead added implicitly during
@@ -45,6 +45,9 @@ type tm =
     - If we have [ x : Nat [= 7 ] ], we can elaborate the term [ x : Nat ]
       into [ 7 ]
 *)
+
+and param = pattern * tm option
+and params = param list
 
 
 (** {1 Elaboration } *)
@@ -232,38 +235,18 @@ let rec coerce (ctx : context) (from_ty : Semantics.vty) (to_ty : Semantics.vty)
 
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
-let rec check (ctx : context) (tm : tm) (ty : Semantics.vty) : Syntax.tm =
-  match tm, ty with
+let rec check (ctx : context) (tm : tm) (expected_ty : Semantics.vty) : Syntax.tm =
+  match tm, expected_ty with
   (* Let expressions *)
-  | Let (name, def_ty, def, body), ty ->
-      let def, def_ty, def_ty' =
-        match def_ty with
-        | None ->
-            let def, def_ty' = infer ctx def in
-            def, quote ctx def_ty', def_ty'
-        | Some def_ty ->
-            let def_ty = check ctx def_ty Semantics.Univ in
-            let def_ty' = eval ctx def_ty in
-            let def = check ctx def def_ty' in
-            def, def_ty, def_ty'
-      in
-      let ctx = bind_def ctx name def_ty' (eval ctx def) in
-      Syntax.Let (name, def_ty, def, check ctx body ty)
+  | Let (name, params, def_ty, def, body), expected_ty ->
+      let def, def_ty = infer_fun_lit ctx params def_ty def in
+      let def_ty' = eval ctx def_ty in
+      let body = check (bind_def ctx name def_ty' (eval ctx def)) body expected_ty in
+      Syntax.Let (name, def_ty, def, body)
 
   (* Function literals *)
-  | Fun_lit (names, body), ty ->
-      (* Iterate over the parameters of the function literal, constructing a
-          function literal in the core language. *)
-      let rec go ctx names ty =
-        match names, ty with
-        | [], body_ty -> check ctx body body_ty
-        | name :: names, Semantics.Fun_type (_, param_ty, body_ty) ->
-            let var = next_var ctx in
-            let ctx = bind_def ctx name param_ty var in
-            Syntax.Fun_lit (name, go ctx names (body_ty var))
-        | _, _ -> error "too many parameters in function literal"
-      in
-      go ctx names ty
+  | Fun_lit (params, body_ty, body), expected_ty ->
+      check_fun_lit ctx params body_ty body expected_ty
 
   (* Record literals *)
   | Rec_lit defns, Semantics.Rec_type decls ->
@@ -309,30 +292,20 @@ let rec check (ctx : context) (tm : tm) (ty : Semantics.vty) : Syntax.tm =
 
   (* For anything else, try inferring the type of the term, then attempting to
       coerce the term to the expected type. *)
-  | tm, ty ->
+  | tm, expected_ty ->
       let tm, ty' = infer ctx tm in
       let tm, ty' = elim_implicits ctx tm ty' in
-      coerce ctx ty' ty tm
+      coerce ctx ty' expected_ty tm
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
 and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
   match tm with
   (* Let expressions *)
-  | Let (name, def_ty, def, body) ->
-      let def, def_ty, def_ty' =
-        match def_ty with
-        | None ->
-            let def, def_ty' = infer ctx def in
-            def, quote ctx def_ty', def_ty'
-        | Some def_ty ->
-            let def_ty = check ctx def_ty Semantics.Univ in
-            let def_ty' = eval ctx def_ty in
-            let def = check ctx def def_ty' in
-            def, def_ty, def_ty'
-      in
-      let ctx = bind_def ctx name def_ty' (eval ctx def) in
-      let body, body_ty = infer ctx body in
+  | Let (name, params, def_ty, def, body) ->
+      let def, def_ty = infer_fun_lit ctx params def_ty def in
+      let def_ty' = eval ctx def_ty in
+      let body, body_ty = infer (bind_def ctx name def_ty' (eval ctx def)) body in
       Syntax.Let (name, def_ty, def, body), body_ty
 
   (* Named terms *)
@@ -360,7 +333,9 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
   | Fun_type (params, body_ty) ->
       let rec go ctx = function
         | [] -> check ctx body_ty Semantics.Univ
-        | (name, param_ty) :: params ->
+        (* Function types always require annotations *)
+        | (name, None) :: _ -> error (ambiguous_param name)
+        | (name, Some param_ty) :: params ->
             let param_ty = check ctx param_ty Semantics.Univ in
             let ctx = bind_param ctx name (eval ctx param_ty) in
             Syntax.Fun_type (name, param_ty, go ctx params)
@@ -379,7 +354,9 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
       and so we don’t know ahead of time what types to use for the arguments
       when adding them to the context. As a result with coose to throw an
       ambiguity error here. *)
-  | Fun_lit (_, _) -> error "ambiguous function literal"
+  | Fun_lit (params, body_ty, body) ->
+      let fun_tm, fun_ty = infer_fun_lit ctx params body_ty body in
+      fun_tm, eval ctx fun_ty
 
   (* Function application *)
   | Rec_type decls ->
@@ -467,6 +444,62 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
             Syntax.Rec_type decls, Semantics.Univ
         | _ -> error "can only patch record types"
         end
+
+(** Elaborate a function literal in checking mode. *)
+and check_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) (expected_ty : Semantics.vty) =
+  match params, body_ty, expected_ty with
+  | [], None, expected_ty -> check ctx body expected_ty
+  | [], Some body_ty, expected_ty ->
+      let body_ty = check ctx body_ty Semantics.Univ in
+      let body_ty' = eval ctx body_ty in
+      if is_convertible ctx body_ty' expected_ty then
+        check ctx body body_ty'
+      else error (type_mismatch ctx
+        ~expected:(quote ctx expected_ty)
+        ~found:body_ty)
+  | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, expected_param_ty, expected_body_ty) ->
+      let var = next_var ctx in
+      let param_ty =
+        match param_ty with
+        | None -> expected_param_ty
+        | Some param_ty ->
+            let param_ty = check ctx param_ty Semantics.Univ in
+            let param_ty' = eval ctx param_ty in
+            let expected_param_ty = expected_param_ty in
+            (* Check that the parameter annotation in the function literal
+                matches the expected parameter type. *)
+            if is_convertible ctx param_ty' expected_param_ty then param_ty' else
+              error (type_mismatch ctx
+                ~expected:(quote ctx expected_param_ty)
+                ~found:param_ty)
+      in
+      let ctx = bind_def ctx name param_ty var in
+      let body = check_fun_lit ctx params body_ty body (expected_body_ty var) in
+      Syntax.Fun_lit (name, body)
+  | _, _, _ ->
+      error "too many parameters in function literal"
+
+(** Elaborate a function literal in inference mode. *)
+and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
+  match params, body_ty with
+  | [], None ->
+      let body, body_ty = infer ctx body in
+      body, quote ctx body_ty
+  | [], Some body_ty ->
+      let body_ty = check ctx body_ty Semantics.Univ in
+      check ctx body (eval ctx body_ty), body_ty
+  | (name, param_ty) :: params, body_ty ->
+      let var = next_var ctx in
+      let param_ty =
+        match param_ty with
+        (* We’re in inference mode, so function parameters need annotations *)
+        | None -> error (ambiguous_param name)
+        | Some param_ty -> check ctx param_ty Semantics.Univ
+      in
+      let ctx = bind_def ctx name (eval ctx param_ty) var in
+      let body, body_ty = infer_fun_lit ctx params body_ty body in
+      Syntax.Fun_lit (name, body), Syntax.Fun_type (name, param_ty, body_ty)
+
 
 (** {2 Eliminating implicit connectives} *)
 

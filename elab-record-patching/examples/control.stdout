@@ -38,11 +38,11 @@
       flat-map :
         fun (A : Type) (B : Type) (_ : fun (_ : A) -> T B) (_ : T A) -> T B
     };
-  let Option : fun (_ : Type) -> Type :=
+  let Option : fun (A : Type) -> Type :=
     fun A =>
       fun (Out : Type) (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out;
   let none : fun (A : Type) -> Option A := fun A Out cases => cases.none;
-  let some : fun (A : Type) (_ : A) -> Option A :=
+  let some : fun (A : Type) (a : A) -> Option A :=
     fun A a Out cases => cases.some a;
   let option-functor : Functor :=
     {

@@ -61,7 +61,7 @@
             -> { A : Type [= C]; B : Type [= C]; f : fun (_ : C) -> C }
   := fun C => { A := #sing-intro; B := #sing-intro; f := fun x => x };
   let record-lit-coerce-1 :
-        fun (B : Type) (r : { A : Type [= B]; a : B }) -> { A : Type; a : A }
+        fun (B : Type) (_ : { A : Type [= B]; a : B }) -> { A : Type; a : A }
   := fun B r => { A := B; a := r.a };
   let record-lit-coerce-2 : fun (B : Type) (b : B) -> { A : Type; a : A } :=
     fun B b => { A := { A := B; a := b }.A; a := { A := B; a := b }.a };

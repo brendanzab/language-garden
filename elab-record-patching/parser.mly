@@ -29,16 +29,17 @@ let main :=
     { t }
 
 let tm :=
-| "let"; p = pattern; t1 = option(":"; t1 = tm; { t1 }); ":="; t2 = tm; ";"; t3 = tm;
-    { Surface.Let (p, t1, t2, t3) }
+| "let"; p = pattern; ps = list(param); t1 = option(":"; t1 = tm; { t1 }); ":=";
+    t2 = tm; ";"; t3 = tm;
+    { Surface.Let (p, ps, t1, t2, t3) }
 | t1 = app_tm; ":"; t2 = tm;
     { Surface.Ann (t1, t2) }
 | t1 =  app_tm; "->"; t2 = tm;
     { Surface.Fun_arrow (t1, t2) }
 | "fun"; ps = nonempty_list(param); "->"; t = tm;
     { Surface.Fun_type (ps, t) }
-| "fun"; ps = nonempty_list(pattern); "=>"; t = tm;
-    { Surface.Fun_lit (ps, t) }
+| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = tm; { t1 }); "=>"; t2 = tm;
+    { Surface.Fun_lit (ps, t1, t2) }
 | app_tm
 
 let app_tm :=
@@ -77,7 +78,9 @@ let pattern :=
 
 let param :=
 | "("; p = pattern; ":"; t = tm; ")";
-    { p, t }
+    { p, Some t }
+| p = pattern;
+    { p, None }
 
 let defn :=
 | l = NAME;

@@ -4,26 +4,26 @@ let F := {
   f : A -> B;
 };
 
-let patch-1   : F [ B := A ] -> F                                              := fun x => x;
-let patch-2   : fun (A : Type) -> F [ A := A; B := A ] -> F                    := fun A x => x;
-let patch-3   : fun (A : Type) -> F [ A := A; B := A; f := fun x => x ] -> F   := fun A x => x;
-let patch-3b  : fun (A : Type) -> F [ B := A; f := fun x => x; A := A; ] -> F  := fun A x => x;
-let patch-4   : fun (A : Type) -> F [ A := A; B := A ] -> F [ B := A ]         := fun A x => x;
-let patch-5   : fun (A : Type) -> F [ A := A; B := A ] -> F [ A := A ]         := fun A x => x;
-let patch-6   : fun (C : Type) -> F [ A := C; B := C ] -> F [ B := C ]         := fun C x => x;
+let patch-1   : F [ B := A ] -> F                                       := fun x => x;
+let patch-2   (A : Type) : F [ A := A; B := A ] -> F                    := fun x => x;
+let patch-3   (A : Type) : F [ A := A; B := A; f := fun x => x ] -> F   := fun x => x;
+let patch-3b  (A : Type) : F [ B := A; f := fun x => x; A := A; ] -> F  := fun x => x;
+let patch-4   (A : Type) : F [ A := A; B := A ] -> F [ B := A ]         := fun x => x;
+let patch-5   (A : Type) : F [ A := A; B := A ] -> F [ A := A ]         := fun x => x;
+let patch-6   (C : Type) : F [ A := C; B := C ] -> F [ B := C ]         := fun x => x;
 
-let coerce-missing-1 : fun (C : Type) -> F [ A := C; B := C ]                   := fun C => { f := fun x => x };
-let coerce-missing-2 : fun (C : Type) -> F [ A := C; B := C; f := fun x => x ]  := fun C => ({} : {});
-let coerce-missing-3 : fun (C : Type) -> F [ A := C; B := C ]                   := fun C => { A := C; f := fun x => x };
+let coerce-missing-1 (C : Type) : F [ A := C; B := C ]                   := { f := fun x => x };
+let coerce-missing-2 (C : Type) : F [ A := C; B := C; f := fun x => x ]  := ({} : {});
+let coerce-missing-3 (C : Type) : F [ A := C; B := C ]                   := { A := C; f := fun x => x };
 
-let record-lit-coerce-1 : fun (B : Type) (r : { A : Type [= B]; a : B }) -> { A : Type; a : A } :=
-  fun B r => r;
-let record-lit-coerce-2 : fun (B : Type) (b : B) -> { A : Type; a : A } :=
-  fun B b => { A := B; a := b } : { A : Type; a : B };
+let record-lit-coerce-1 (B : Type) : { A : Type [= B]; a : B } -> { A : Type; a : A } :=
+  fun r => r;
+let record-lit-coerce-2 (B : Type) (b : B) : { A : Type; a : A } :=
+  { A := B; a := b } : { A : Type; a : B };
 
-let coerce-missing-patched-fields-1 : fun (A : Type) (B : Type) -> { f : A -> B } -> F [ A := A; B := B ] :=
-    fun A B r => r;
-let coerce-missing-patched-fields-2 : fun (A : Type) (B : Type) -> { A : Type; f : A -> B } -> F [ B := B ] :=
-    fun A B r => r;
+let coerce-missing-patched-fields-1 (A : Type) (B : Type) : { f : A -> B } -> F [ A := A; B := B ] :=
+    fun r => r;
+let coerce-missing-patched-fields-2 (A : Type) (B : Type) : { A : Type; f : A -> B } -> F [ B := B ] :=
+    fun r => r;
 
 Type
