@@ -1,10 +1,12 @@
 # Elaboration with Record Patching and Singleton Types
 
+Extends [**elab-dependent-sugar**](../elab-dependent-sugar).
+
 This is an implementation of a dependently typed language with dependent
 record types, with some additional features intended to make it more
 convenient to use records as first-class modules. It was originally ported
 from [a gist by mb64](https://gist.github.com/mb64/04315edd1a8b1b2c2e5bd38071ff66b5),
-which was inspired by the language feature implemented in [CoolTT](https://github.com/RedPRL/cooltt).
+which was inspired by the “record patching” feature implemented in [CoolTT](https://github.com/RedPRL/cooltt).
 
 The type system is implemented in terms of an ‘elaborator’, which type
 checks and tanslates a user-friendly surface language into a simpler and
