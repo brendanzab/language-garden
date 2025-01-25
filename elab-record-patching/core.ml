@@ -92,14 +92,14 @@ module Syntax = struct
     | (_, ty) :: decls ->
         is_bound var ty || is_bound_decls (var + 1) decls
 
-  let rec fun_lits tm =
+  let rec fun_lits (tm : tm) : name list * ty =
     match tm with
     | Fun_lit (name, body) ->
         let names, body = fun_lits body
         in name :: names, body
     | body -> [], body
 
-  let fun_apps tm =
+  let fun_apps (tm : tm) : ty * ty list =
     let rec go args tm =
       match tm with
       | Fun_app (head, arg) -> go (arg :: args) head
@@ -107,7 +107,7 @@ module Syntax = struct
     in
     go [] tm
 
-  let rec_projs tm =
+  let rec_projs (tm : tm) : ty * label env =
     let rec go labels tm =
       match tm with
       | Rec_proj (head, label) -> go (label :: labels) head

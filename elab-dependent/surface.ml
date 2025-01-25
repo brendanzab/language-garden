@@ -58,11 +58,11 @@ let initial_context = {
 
 (** Returns the next variable that will be bound in the context after calling
     {!bind_def} or {!bind_param} *)
-let next_var ctx =
+let next_var (ctx : context) : Semantics.vtm =
   Semantics.Neu (Semantics.Var ctx.size)
 
 (** Binds a definition in the context *)
-let bind_def ctx name ty tm = {
+let bind_def (ctx : context) (name : string option) (ty : Semantics.vty) (tm : Semantics.vtm) = {
   size = ctx.size + 1;
   names = name :: ctx.names;
   tys = ty :: ctx.tys;
@@ -70,7 +70,7 @@ let bind_def ctx name ty tm = {
 }
 
 (** Binds a parameter in the context *)
-let bind_param ctx name ty =
+let bind_param (ctx : context) (name : string option) (ty : Semantics.vty) =
   bind_def ctx name ty (next_var ctx)
 
 (** Lookup a name in the context *)
@@ -94,7 +94,7 @@ let quote ctx : Semantics.vtm -> Syntax.tm =
   Semantics.quote ctx.size
 let normalise ctx : Syntax.tm -> Syntax.tm =
   Semantics.normalise ctx.size ctx.tms
-let is_convertible ctx : Semantics.vtm * Semantics.vtm -> bool =
+let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> bool =
   Semantics.is_convertible ctx.size
 let pp ?(resugar = true) ctx =
   Syntax.pp ctx.names ~resugar
@@ -131,7 +131,7 @@ let not_bound name =
 
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
-let rec check ctx tm expected_ty : Syntax.tm =
+let rec check (ctx : context) (tm : tm) (expected_ty : Semantics.vty) : Syntax.tm =
   match tm, expected_ty with
   (* Let expressions *)
   | Let (name, def_ty, def, body), expected_ty ->
@@ -165,14 +165,15 @@ let rec check ctx tm expected_ty : Syntax.tm =
       type here. *)
   | tm, expected_ty ->
       let tm, ty' = infer ctx tm in
-      if is_convertible ctx (ty', expected_ty) then tm else
+      if is_convertible ctx ty' expected_ty then tm else
         error (type_mismatch ctx
           ~expected:(quote ctx expected_ty)
           ~found:(quote ctx ty'))
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
-and infer ctx : tm -> Syntax.tm * Semantics.vty = function
+and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
+  match tm with
   (* Let expressions *)
   | Let (name, def_ty, def, body) ->
       let def_ty = check ctx def_ty Semantics.Univ in

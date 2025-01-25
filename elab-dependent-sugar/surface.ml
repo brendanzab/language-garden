@@ -61,11 +61,11 @@ let initial_context = {
 
 (** Returns the next variable that will be bound in the context after calling
     {!bind_def} or {!bind_param} *)
-let next_var ctx =
+let next_var (ctx : context) : Semantics.vtm =
   Semantics.Neu (Semantics.Var ctx.size)
 
 (** Binds a definition in the context *)
-let bind_def ctx name ty tm = {
+let bind_def (ctx : context) (name : string option) (ty : Semantics.vty) (tm : Semantics.vtm) = {
   size = ctx.size + 1;
   names = name :: ctx.names;
   tys = ty :: ctx.tys;
@@ -73,11 +73,11 @@ let bind_def ctx name ty tm = {
 }
 
 (** Binds a parameter in the context *)
-let bind_param ctx name ty =
+let bind_param (ctx : context) (name : string option) (ty : Semantics.vty) =
   bind_def ctx name ty (next_var ctx)
 
 (** Lookup a name in the context *)
-let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
+let lookup (ctx : context) (name : string) : (Core.index * Semantics.vty) option =
   (* Find the index of most recent binding in the context identified by
       [name], starting from the most recent binding. This gives us the
       corresponding de Bruijn index of the variable. *)
@@ -97,7 +97,7 @@ let quote ctx : Semantics.vtm -> Syntax.tm =
   Semantics.quote ctx.size
 let normalise ctx : Syntax.tm -> Syntax.tm =
   Semantics.normalise ctx.size ctx.tms
-let is_convertible ctx : Semantics.vtm * Semantics.vtm -> bool =
+let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> bool =
   Semantics.is_convertible ctx.size
 let pp ?(resugar = true) ctx =
   Syntax.pp ctx.names ~resugar
@@ -138,7 +138,7 @@ let ambiguous_param name =
 
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
-let rec check ctx tm expected_ty : Syntax.tm =
+let rec check (ctx : context) (tm : tm) (expected_ty : Semantics.vty) : Syntax.tm =
   match tm, expected_ty with
   (* Let expressions *)
   | Let (name, params, def_ty, def, body), expected_ty ->
@@ -158,14 +158,15 @@ let rec check ctx tm expected_ty : Syntax.tm =
       type here. *)
   | tm, expected_ty ->
       let tm, ty' = infer ctx tm in
-      if is_convertible ctx (ty', expected_ty) then tm else
+      if is_convertible ctx ty' expected_ty then tm else
         error (type_mismatch ctx
           ~expected:(quote ctx expected_ty)
           ~found:(quote ctx ty'))
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
-and infer ctx : tm -> Syntax.tm * Semantics.vty = function
+and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
+  match tm with
   (* Let expressions *)
   | Let (name, params, def_ty, def, body) ->
       let def, def_ty = infer_def ctx params def_ty def in
@@ -232,13 +233,13 @@ and infer ctx : tm -> Syntax.tm * Semantics.vty = function
         args
 
 (** Elaborate a function literal in checking mode. *)
-and check_fun_lit ctx params body_ty body expected_ty =
+and check_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) (expected_ty : Semantics.vty) =
   match params, body_ty, expected_ty with
   | [], None, expected_ty -> check ctx body expected_ty
   | [], Some body_ty, expected_ty ->
       let body_ty = check ctx body_ty Semantics.Univ in
       let body_ty' = eval ctx body_ty in
-      if is_convertible ctx (body_ty', expected_ty) then
+      if is_convertible ctx body_ty' expected_ty then
         check ctx body body_ty'
       else error (type_mismatch ctx
         ~expected:(quote ctx expected_ty)
@@ -254,7 +255,7 @@ and check_fun_lit ctx params body_ty body expected_ty =
             let expected_param_ty = Lazy.force expected_param_ty in
             (* Check that the parameter annotation in the function literal
                 matches the expected parameter type. *)
-            if is_convertible ctx (param_ty', expected_param_ty) then param_ty' else
+            if is_convertible ctx param_ty' expected_param_ty then param_ty' else
               error (type_mismatch ctx
                 ~expected:(quote ctx expected_param_ty)
                 ~found:param_ty)
@@ -266,7 +267,7 @@ and check_fun_lit ctx params body_ty body expected_ty =
       error "too many parameters in function literal"
 
 (** Elaborate a function literal in inference mode. *)
-and infer_fun_lit ctx params body_ty body =
+and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
   let rec go ctx params body_ty body =
     match params, body_ty with
     | [], None ->

@@ -119,8 +119,8 @@ module Syntax = struct
   *)
 
   (** Returns [ true ] if the variable is bound anywhere in the term *)
-  let rec is_bound (var : index) : tm -> bool =
-    function
+  let rec is_bound (var : index) (tm : tm) : bool =
+    match tm with
     | Let (_, def, body) -> is_bound var def || is_bound (var + 1) body
     | Ann (tm, ty) -> is_bound var tm || is_bound var ty
     | Var index -> index = var
@@ -129,15 +129,16 @@ module Syntax = struct
     | Fun_lit (_, body) -> is_bound (var + 1) body
     | Fun_app (head, arg) -> is_bound var head || is_bound var arg
 
-  let rec fun_lits : tm -> name list * ty =
-    function
+  let rec fun_lits (tm : tm) : name list * ty =
+    match tm with
     | Fun_lit (name, body) ->
         let names, body = fun_lits body
         in name :: names, body
     | body -> [], body
 
   let fun_apps (tm : tm) : ty * ty list =
-    let rec go args = function
+    let rec go args tm =
+      match tm with
       | Fun_app (head, arg) -> go (arg :: args) head
       | head -> (head, args)
     in
@@ -152,76 +153,81 @@ module Syntax = struct
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
   let pp ?(resugar = true) (names : string option env) : Format.formatter -> tm -> unit =
-    let pp_name fmt = function
-      | Some name -> Format.pp_print_string fmt name
-      | None -> Format.pp_print_string fmt "_"
+    let pp_name ppf = function
+      | Some name -> Format.pp_print_string ppf name
+      | None -> Format.pp_print_string ppf "_"
     in
 
-    let rec pp_tm names fmt = function
+    let rec pp_tm names ppf tm =
+      match tm with
       | Let (_, _, _) as tm ->
-          let rec go names fmt = function
+          let rec go names ppf tm =
+      match tm with
             | Let (name, Ann (def, def_ty), body) when resugar ->
-                Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+                Format.fprintf ppf "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
                   (pp_name_ann names) (name, def_ty)
                   (pp_tm names) def
                   (go (name :: names)) body
             | Let (name, def, body) ->
-                Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+                Format.fprintf ppf "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
                   pp_name name
                   (pp_tm names) def
                   (go (name :: names)) body
             (* Final term should be grouped in a box *)
-            | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
+            | tm -> Format.fprintf ppf "@[%a@]" (pp_tm names) tm
           in
-          go names fmt tm
+          go names ppf tm
       | Ann (tm, ty) ->
-          Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+          Format.fprintf ppf "@[<2>@[%a :@]@ %a@]"
             (pp_app_tm names) tm
             (pp_tm names) ty
       | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-          Format.fprintf fmt "@[%a@ ->@]@ %a"
+          Format.fprintf ppf "@[%a@ ->@]@ %a"
             (pp_app_tm names) param_ty
             (pp_tm (None :: names)) body_ty
       | Fun_type (_, _, _) as tm ->
-          let rec go names fmt = function
+          let rec go names ppf tm =
+            match tm with
             | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-                Format.fprintf fmt "@[%a@ ->@]@ %a"
+                Format.fprintf ppf "@[%a@ ->@]@ %a"
                   (pp_tm names) param_ty
                   (pp_tm (None :: names)) body_ty
             | Fun_type (name, param_ty, body_ty) ->
-                Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]@ %a"
+                Format.fprintf ppf "@[<2>(@[%a :@]@ %a)@]@ %a"
                   pp_name name
                   (pp_tm names) param_ty
                   (go (name :: names)) body_ty
             | body_ty ->
-                Format.fprintf fmt "@[->@ @[%a@]@]"
+                Format.fprintf ppf "@[->@ @[%a@]@]"
                   (pp_tm names) body_ty
           in
-          Format.fprintf fmt "@[<4>fun %a@]" (go names) tm
+          Format.fprintf ppf "@[<4>fun %a@]" (go names) tm
       | Fun_lit (_, _) as tm ->
           let params, body = fun_lits tm in
-          Format.fprintf fmt "@[<2>@[<4>fun %a@ =>@]@ @[%a@]@]"
+          Format.fprintf ppf "@[<2>@[<4>fun %a@ =>@]@ @[%a@]@]"
             (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
             (pp_tm (List.rev_append params names)) body
       | tm ->
-          pp_app_tm names fmt tm
+          pp_app_tm names ppf tm
 
-    and pp_app_tm names fmt = function
+    and pp_app_tm names ppf tm =
+      match tm with
       | Fun_app (_, _) as tm ->
           let head, args = fun_apps tm in
-          Format.fprintf fmt "@[<2>%a@ %a@]"
+          Format.fprintf ppf "@[<2>%a@ %a@]"
             (pp_atomic_tm names) head
             (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_atomic_tm names)) args
       | tm ->
-          pp_atomic_tm names fmt tm
+          pp_atomic_tm names ppf tm
 
-    and pp_atomic_tm names fmt = function
-      | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
-      | Univ -> Format.fprintf fmt "Type"
-      | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
+    and pp_atomic_tm names ppf tm =
+      match tm with
+      | Var index -> Format.fprintf ppf "%a" pp_name (List.nth names index)
+      | Univ -> Format.fprintf ppf "Type"
+      | tm -> Format.fprintf ppf "@[(%a)@]" (pp_tm names) tm
 
-    and pp_name_ann names fmt (name, def_ty) =
-      Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+    and pp_name_ann names ppf (name, def_ty) =
+      Format.fprintf ppf "@[<2>@[%a :@]@ %a@]"
         pp_name name
         (pp_tm names) def_ty
     in
@@ -299,8 +305,8 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) : Syntax.tm -> vtm =
-    function
+  let rec eval (env : vtm env) (tm : Syntax.tm) : vtm =
+    match tm with
     | Syntax.Let (_, def, body) -> eval (eval env def :: env) body
     | Syntax.Ann (tm, _) -> eval env tm
     | Syntax.Var index -> List.nth env index
@@ -324,8 +330,8 @@ module Semantics = struct
       variables in the semantic domain back to an {!index} representation
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at. *)
-  let rec quote (size : int) : vtm -> Syntax.tm =
-    function
+  let rec quote (size : int) (tm : vtm) : Syntax.tm =
+    match tm with
     | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
     | Fun_type (name, param_ty, body_ty) ->
@@ -334,8 +340,8 @@ module Semantics = struct
     | Fun_lit (name, body) ->
         let x = Neu (Var size) in
         Syntax.Fun_lit (name, quote (size + 1) (body x))
-  and quote_neu (size : int) : neu -> Syntax.tm =
-    function
+  and quote_neu (size : int) (neu : neu) : Syntax.tm =
+    match neu with
     | Var level -> Syntax.Var (level_to_index size level)
     | Fun_app (neu, arg) -> Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
 
@@ -352,28 +358,28 @@ module Semantics = struct
 
   (** Checks that two values compute to the same term under the assumption that
       both values have the same type. *)
-  let rec is_convertible (size : int) : vtm * vtm -> bool =
-    function
-    | Neu neu1, Neu neu2 -> is_convertible_neu size (neu1, neu2)
+  let rec is_convertible (size : int) (tm1 : vtm) (tm2 : vtm) : bool =
+    match tm1, tm2 with
+    | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
     | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
         let x = Neu (Var size) in
-        is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
-          && is_convertible (size + 1) (body_ty1 x, body_ty2 x)
+        is_convertible size (Lazy.force param_ty1) (Lazy.force param_ty2)
+          && is_convertible (size + 1) (body_ty1 x) (body_ty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Neu (Var size) in
-        is_convertible (size + 1) (body1 x, body2 x)
+        is_convertible (size + 1) (body1 x) (body2 x)
     (* Eta for functions *)
     | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
         let x = Neu (Var size) in
-        is_convertible size (body x, app fun_tm x)
+        is_convertible size (body x) (app fun_tm x)
     | _, _ -> false
-  and is_convertible_neu (size : int) : neu * neu -> bool =
-    function
+  and is_convertible_neu (size : int) (neu1 : neu) (neu2 : neu) =
+    match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
     | Fun_app (neu1, arg1), Fun_app (neu2, arg2)  ->
-        is_convertible_neu size (neu1, neu2)
-          && is_convertible size (Lazy.force arg1, Lazy.force arg2)
+        is_convertible_neu size neu1 neu2
+          && is_convertible size (Lazy.force arg1) (Lazy.force arg2)
     | _, _ -> false
 
 end
