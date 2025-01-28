@@ -162,7 +162,7 @@ module Syntax = struct
       match tm with
       | Let (_, _, _) as tm ->
           let rec go names ppf tm =
-      match tm with
+            match tm with
             | Let (name, Ann (def, def_ty), body) when resugar ->
                 Format.fprintf ppf "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
                   (pp_name_ann names) (name, def_ty)
