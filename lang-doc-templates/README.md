@@ -155,6 +155,7 @@ Configuration languages:
 - [TOML](https://toml.io/)
 - [HCL](https://github.com/hashicorp/hcl)
 - [Pkl](https://pkl-lang.org/)
+- [DotBox](https://dotbox.dev/): A simple, readable configuration language.
 
 Type checking XML Papers:
 
