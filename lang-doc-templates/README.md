@@ -149,6 +149,7 @@ Data serialisation languages:
 - [edn](https://github.com/edn-format/edn)
 - [yaml](https://yaml.org/)
 - [NestedText](https://nestedtext.org/)
+- [Preserves](https://preserves.dev/)
 
 Configuration languages:
 
