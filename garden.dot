@@ -1,0 +1,78 @@
+// dot -Tsvg garden.dot > garden.svg
+// dot -Tpng garden.dot | imgcat
+
+digraph garden {
+
+  graph [
+    color = "none",
+    fillcolor = "gainsboro",
+    fontname = "Helvetica,Arial,sans-serif",
+    rankdir = LR,
+    style = "filled, rounded",
+  ];
+
+  node [
+    color = "none",
+    fillcolor = "white",
+    fontname = "Helvetica,Arial,sans-serif",
+    margin = "0.2, 0.0",
+    shape = "box",
+    style = "filled, rounded",
+  ];
+
+  subgraph elab {
+    label = "elab";
+    cluster = true;
+
+    "elab-stlc-bidirectional" [URL = "./elab-stlc-bidirectional"];
+    "elab-stlc-bidirectional-stratify" [URL = "./elab-stlc-bidirectional"];
+    "elab-stlc-abstract" [URL = "./elab-stlc-abstract"];
+    "elab-stlc-unification" [URL = "./elab-stlc-unification"];
+    "elab-stlc-letrec-unification" [URL = "./elab-stlc-letrec-unification"];
+    "elab-stlc-variant-unification" [URL = "./elab-stlc-variant-unification"];
+    "elab-system-f-bidirectional" [URL = "./elab-system-f-bidirectional"];
+    "elab-system-f-unification" [URL = "./elab-system-f-unification"];
+    "elab-dependent" [URL = "./elab-dependent/"];
+    "elab-dependent-sugar" [URL = "./elab-dependent-sugar/"];
+    "elab-record-patching" [URL = "./elab-record-patching/"];
+  }
+
+  subgraph compile {
+    label = "compile";
+    cluster = true;
+
+    "compile-arith" [URL = "./compile-arith/"];
+    "compile-arithcond" [URL = "./compile-arithcond/"];
+    "compile-closure-conv" [URL = "./compile-closure-conv"];
+  }
+
+  subgraph lang {
+    label = "lang";
+    cluster = true;
+
+    "lang-datalog" [URL = "./lang-datalog/"];
+    "lang-declarative-graphics" [URL = "./lang-declarative-graphics/"];
+    "lang-doc-templates" [URL = "./lang-doc-templates/"];
+    "lang-fractal-growth" [URL = "./lang-fractal-growth/"];
+    "lang-fractal-tree-rewriting" [URL = "./lang-fractal-tree-rewriting/"];
+    "lang-lc-interpreters" [URL = "./lang-lc-interpreters/"];
+    "lang-shader-graphics" [URL = "./lang-shader-graphics/"];
+  }
+
+  "elab-stlc-bidirectional" -> "elab-stlc-bidirectional-stratify";
+  "elab-stlc-bidirectional" -> "elab-stlc-unification";
+  "elab-stlc-bidirectional" -> "elab-stlc-abstract";
+  "elab-stlc-bidirectional" -> "elab-system-f-bidirectional";
+  "elab-stlc-bidirectional" -> "elab-dependent";
+  "elab-stlc-bidirectional" -> "lang-doc-templates";
+  "elab-stlc-unification" -> "elab-stlc-letrec-unification";
+  "elab-stlc-unification" -> "elab-stlc-variant-unification";
+  "elab-stlc-unification" -> "elab-system-f-unification";
+  "elab-system-f-bidirectional" -> "elab-system-f-unification";
+  "elab-dependent" -> "elab-dependent-sugar";
+  "elab-dependent-sugar" -> "elab-record-patching";
+  "compile-arith" -> "compile-arithcond";
+  "lang-lc-interpreters" -> "elab-stlc-bidirectional";
+  "lang-fractal-growth" -> "lang-fractal-tree-rewriting";
+
+}

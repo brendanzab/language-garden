@@ -1,0 +1,10 @@
+(rule
+ (deps garden.dot)
+ (action
+  (with-stdout-to garden.svg.tmp
+   (run dot -Tsvg garden.dot))))
+
+(rule
+ (alias all)
+ (action
+  (diff garden.svg garden.svg.tmp)))

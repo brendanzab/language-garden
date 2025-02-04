@@ -92,6 +92,10 @@ Miscellaneous programming language experiments.
 Many other smaller examples and unfinished projects can be found in the
 [scraps](./scraps/) directory.
 
+## Dependency graph
+
+![Project dependency graph](garden.svg)
+
 ## Background
 
 As I’ve been working in the area of programming languages I’ve often found
