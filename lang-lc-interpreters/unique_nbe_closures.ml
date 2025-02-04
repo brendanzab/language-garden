@@ -40,7 +40,6 @@ and neu =
   | Fun_app of neu * value
 
 and clos = Id.t * env * expr
-
 and env = value Id.Map.t
 
 (** {2 Evaluation} *)
@@ -50,12 +49,14 @@ let rec eval (vs : env) (e : expr) : value =
   | Var x -> Id.Map.find x vs
   | Let (_, i, def, body) -> eval (Id.Map.add i (eval vs def) vs) body
   | Fun_lit (x, i, body) -> Fun_lit (x, (i, vs, body))
-  | Fun_app (head, arg) -> begin
-      match eval vs head with
-      | Fun_lit (_, body) -> inst body (eval vs arg)
-      | Neu nv -> Neu (Fun_app (nv, eval vs arg))
-  end
-and inst (i, vs, e : clos) (arg : value) : value =
+  | Fun_app (head, arg) -> fun_app (eval vs head) (eval vs arg)
+
+and fun_app (head : value) (arg : value) =
+  match head with
+  | Fun_lit (_, body) -> clos_app body arg
+  | Neu nv -> Neu (Fun_app (nv, arg))
+
+and clos_app (i, vs, e : clos) (arg : value) : value =
   eval (Id.Map.add i arg vs) e
 
 (** {2 Quotation} *)
@@ -65,7 +66,7 @@ let rec quote (v : value) : expr =
   | Neu nv -> quote_neu nv
   | Fun_lit (x, body) ->
       let i = Id.fresh () in
-      Fun_lit (x, i, quote (inst body (Neu (Var i))))
+      Fun_lit (x, i, quote (clos_app body (Neu (Var i))))
 and quote_neu (nv : neu) : expr =
   match nv with
   | Var x -> Var x

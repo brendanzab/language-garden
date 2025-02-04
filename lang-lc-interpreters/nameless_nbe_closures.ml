@@ -43,7 +43,6 @@ and neu =
   | Fun_app of neu * value
 
 and clos = env * expr
-
 and env = value list
 
 (** {2 Evaluation} *)
@@ -53,12 +52,14 @@ let rec eval (vs : env) (e : expr) : value =
   | Var i -> List.nth vs i
   | Let (_, def, body) -> eval (eval vs def :: vs) body
   | Fun_lit (x, body) -> Fun_lit (x, (vs, body))
-  | Fun_app (head, arg) -> begin
-      match eval vs head with
-      | Fun_lit (_, body) -> inst body (eval vs arg)
-      | Neu nv -> Neu (Fun_app (nv, eval vs arg))
-  end
-and inst (vs, e : clos) (arg : value) : value =
+  | Fun_app (head, arg) -> fun_app (eval vs head) (eval vs arg)
+
+and fun_app (head : value) (arg : value) =
+  match head with
+  | Fun_lit (_, body) -> clos_app body arg
+  | Neu nv -> Neu (Fun_app (nv, arg))
+
+and clos_app (vs, e : clos) (arg : value) : value =
   eval (arg :: vs) e
 
 (** {2 Quotation} *)
@@ -66,7 +67,7 @@ and inst (vs, e : clos) (arg : value) : value =
 let rec quote (size : int) (v : value) : expr =
   match v with
   | Neu nv -> quote_neu size nv
-  | Fun_lit (x, body) -> Fun_lit (x, quote (size + 1) (inst body (Neu (Var size))))
+  | Fun_lit (x, body) -> Fun_lit (x, quote (size + 1) (clos_app body (Neu (Var size))))
 and quote_neu (size : int) (nv : neu) : expr =
   match nv with
   | Var l -> Var (size - l - 1)

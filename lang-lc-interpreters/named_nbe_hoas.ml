@@ -36,11 +36,12 @@ let rec eval (vs : env) (e : expr) : value =
   | Var x -> List.assoc x vs
   | Let (x, def, body) -> eval ((x, eval vs def) :: vs) body
   | Fun_lit (x, body) -> Fun_lit (x, fun v -> eval ((x, v) :: vs) body)
-  | Fun_app (head, arg) -> begin
-      match eval vs head with
-      | Fun_lit (_, body) -> body (eval vs arg)
-      | Neu nv -> Neu (Fun_app (nv, eval vs arg))
-  end
+  | Fun_app (head, arg) -> fun_app (eval vs head) (eval vs arg)
+
+and fun_app (head : value) (arg : value) =
+  match head with
+  | Fun_lit (_, body) -> body arg
+  | Neu nv -> Neu (Fun_app (nv, arg))
 
 (** {2 Quotation} *)
 
