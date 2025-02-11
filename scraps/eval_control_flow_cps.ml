@@ -47,16 +47,16 @@ let ( let@ ) = ( @@ )
 *)
 let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit k) (break_k : value k) (return_k : value k) : value =
   match expr with
-  | Var x -> return_k (List.assoc x env)
+  | Var x ->
+      return_k (List.assoc x env)
+
   | Let (x, def, body) ->
       let@ def = eval_expr env def continue_k break_k in
       eval_expr ((x, def) :: env) body continue_k break_k return_k
+
   | Seq (fst, snd) ->
-      let@ fst = eval_expr env fst continue_k break_k in
-      begin match fst with
-      | Unit -> eval_expr env snd continue_k break_k return_k
-      | _ -> failwith "expected unit"
-      end
+      let@ _ = eval_expr env fst continue_k break_k in
+      eval_expr env snd continue_k break_k return_k
 
   (* Unit *)
 
@@ -115,19 +115,16 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
 
   | Loop body ->
       let rec loop () =
-        let@ body = eval_expr env body loop return_k in
-        (*                             ^^^^ ^^^^^^^^
-                                       |    |
-                                       |    call the current return continuation
-                                       |    when breaking out of the loop
-                                       |
-                                       call the loop function recursively when
-                                       continuing to loop
+        let@ _ = eval_expr env body loop return_k in
+        (*                          ^^^^ ^^^^^^^^
+                                    |    |
+                                    |    call the current return continuation
+                                    |    when breaking out of the loop
+                                    |
+                                    call the loop function recursively when
+                                    continuing to loop
         *)
-        begin match body with
-        | Unit -> (loop [@tailcall]) ()
-        | _ -> failwith "expected unit"
-        end
+        (loop [@tailcall]) ()
       in
       loop ()
 
