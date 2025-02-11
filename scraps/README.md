@@ -20,8 +20,8 @@ build system support and are untested for now.
   calculus, refactored into continuation-passing-style in the style of the
   CEK machine.
 - [**eval_control_flow_cps.ml**](./eval_control_flow_cps.ml):
-  An evaluator for a language with imperative control flow operators,
-  implemented with continuation passing style.
+  An evaluator for imperative control flow (loop, break, continue) implemented
+  using continuation passing style
 - [**eval_extensible.ml**](./eval_extensible.ml): Extensible interpreters for
   lambda calculus and arithmetic expressions.
 - [**eval_landins_knot.ml**](./eval_landins_knot.ml):

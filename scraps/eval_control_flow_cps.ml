@@ -1,5 +1,5 @@
-(** An evaluator for a language with imperative control flow operators,
-    implemented with continuation passing style. *)
+(** An evaluator for imperative control flow (loop, break, continue) implemented
+    using continuation passing style. *)
 
 type expr =
   | Var of string                   (* Variable occurrences *)
@@ -41,6 +41,10 @@ type 'a k = 'a -> value
 
 let ( let@ ) = ( @@ )
 
+(** Evaluate an expression.
+
+    A separate continuation is passed for each control flow operator.
+*)
 let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit k) (break_k : value k) (return_k : value k) : value =
   match expr with
   | Var x -> return_k (List.assoc x env)
@@ -98,15 +102,26 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
   | Loop body ->
       let rec loop () =
         let@ body = eval_expr env body loop return_k in
+        (*                             ^^^^ ^^^^^^^^
+                                       |    |
+                                       |    call the current return continuation
+                                       |    when breaking out of the loop
+                                       |
+                                       call the loop function recursively when
+                                       continuing to loop
+        *)
         begin match body with
         | Unit -> (loop [@tailcall]) ()
         | _ -> failwith "expected unit"
         end
       in
       loop ()
-
   | Break expr ->
       eval_expr env expr continue_k break_k break_k
+      (*                                    ^^^^^^^
+                                            |
+                                            call the break continuation when returning
+      *)
   | Continue ->
       continue_k ()
 
