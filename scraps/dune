@@ -19,6 +19,11 @@
   (package scraps))
 
 (executable
+  (name eval_control_flow_cps)
+  (public_name eval-control-flow-cps)
+  (package scraps))
+
+(executable
   (name eval_triple_store)
   (public_name eval-triple-store)
   (package scraps))
