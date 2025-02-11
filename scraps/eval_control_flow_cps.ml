@@ -24,7 +24,7 @@ type expr =
   | Ref_get of expr
   | Ref_set of expr * expr
 
-  (* Loops *)
+  (* Control flow operators *)
   | Loop of expr                    (* Unbounded loop *)
   | Break of expr                   (* Break from a loop with a value *)
   | Continue                        (* Continue the next iteration of the surrounding loop *)
@@ -58,10 +58,15 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
       | _ -> failwith "expected unit"
       end
 
+  (* Unit *)
+
   | Unit -> return_k Unit
+
+  (* Booleans *)
 
   | Bool_true -> return_k Bool_true
   | Bool_false -> return_k Bool_false
+
   | Bool_elim (pred, true_body, false_body) ->
       let@ pred = eval_expr env pred continue_k break_k in
       begin match pred with
@@ -70,8 +75,11 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
       | _ -> failwith "expected bool"
       end
 
+  (* Natural numbers *)
+
   | Nat_zero -> return_k Nat_zero
   | Nat_succ n -> return_k (Nat_succ (eval_expr env n continue_k break_k return_k))
+
   | Nat_elim (nat, zero_body, (x, succ_body)) ->
       let@ nat = eval_expr env nat continue_k break_k in
       begin match nat with
@@ -80,15 +88,19 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
       | _ -> failwith "expected nat"
       end
 
+  (* Mutable references *)
+
   | Ref_new init ->
       let@ init = eval_expr env init continue_k break_k in
       return_k (Ref (ref init))
+
   | Ref_get curr ->
       let@ curr = eval_expr env curr continue_k break_k in
       begin match curr with
       | Ref curr -> return_k !curr
       | _ -> failwith "expected ref"
       end
+
   | Ref_set (curr, replacement) ->
       let@ curr = eval_expr env curr continue_k break_k in
       begin match curr with
@@ -98,6 +110,8 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
           return_k Unit
       | _ -> failwith "expected ref"
       end
+
+  (* Control flow operators *)
 
   | Loop body ->
       let rec loop () =
