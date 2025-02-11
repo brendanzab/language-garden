@@ -26,7 +26,7 @@ type expr =
 
   (* Loops *)
   | Loop of expr                    (* Unbounded loop *)
-  | Break of expr                   (* Break with a value *)
+  | Break of expr                   (* Break from a loop with a value *)
   | Continue                        (* Continue the next iteration of the surrounding loop *)
 
 type value =
@@ -116,12 +116,9 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
         end
       in
       loop ()
-  | Break expr ->
-      eval_expr env expr continue_k break_k break_k
-      (*                                    ^^^^^^^
-                                            |
-                                            call the break continuation when returning
-      *)
+  | Break ret ->
+      let@ ret = eval_expr env ret continue_k break_k in
+      break_k ret (* break from the loop with a value *)
   | Continue ->
       continue_k ()
 
