@@ -116,10 +116,16 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
         end
       in
       loop ()
+
   | Break ret ->
+      (* First evaluate the return expression *)
       let@ ret = eval_expr env ret continue_k break_k in
-      break_k ret (* break from the loop with a value *)
+
+      (* Now break from the loop with the value *)
+      break_k ret
+
   | Continue ->
+      (* Continuing is easy, just call the continue continuation (heh) *)
       continue_k ()
 
 
