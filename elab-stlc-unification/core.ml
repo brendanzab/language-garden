@@ -167,6 +167,7 @@ module Semantics = struct
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)
 
+
   (** {1 Normalisation} *)
 
   (** By evaluating a term then quoting the result, we can produce a term that

@@ -106,6 +106,7 @@ module Semantics = struct
     | Int_mul -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
     | Int_neg -> guard @@ fun[@warning "-partial-match"] [Int_lit t1] -> Int_lit (-t1)
 
+
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
@@ -156,6 +157,7 @@ module Semantics = struct
         Bool_elim (quote_neu size head, tm0, tm1)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)
+
 
   (** {1 Normalisation} *)
 
