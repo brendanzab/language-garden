@@ -37,78 +37,82 @@ type value =
   | Bool_false
   | Ref of value ref
 
+(** A continuation *)
 type 'a k = 'a -> value
+
+(** Additional control flow continuations *)
+type ops = {
+  continue_k : unit k;
+  break_k : value k;
+}
 
 (** Apply a continuation in a more “direct style” with a binding operator. *)
 let ( let@ ) (type a): a k k -> a k k = ( @@ )
 
-(** Evaluate an expression.
-
-    A separate continuation is passed for each control flow operator.
-*)
-let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit k) (break_k : value k) (return_k : value k) : value =
+(** Evaluate an expression. *)
+let rec eval_expr (env : (string * value) list) (expr : expr) (ops : ops) (k : value k) : value =
   match expr with
   | Var x ->
-      return_k (List.assoc x env)
+      k (List.assoc x env)
 
   | Let (x, def, body) ->
-      let@ def = eval_expr env def continue_k break_k in
-      eval_expr ((x, def) :: env) body continue_k break_k return_k
+      let@ def = eval_expr env def ops in
+      eval_expr ((x, def) :: env) body ops k
 
   | Seq (fst, snd) ->
-      let@ _ = eval_expr env fst continue_k break_k in
-      eval_expr env snd continue_k break_k return_k
+      let@ _ = eval_expr env fst ops in
+      eval_expr env snd ops k
 
   (* Unit *)
 
-  | Unit -> return_k Unit
+  | Unit -> k Unit
 
   (* Booleans *)
 
-  | Bool_true -> return_k Bool_true
-  | Bool_false -> return_k Bool_false
+  | Bool_true -> k Bool_true
+  | Bool_false -> k Bool_false
 
   | Bool_elim (pred, true_body, false_body) ->
-      let@ pred = eval_expr env pred continue_k break_k in
+      let@ pred = eval_expr env pred ops in
       begin match pred with
-      | Bool_true -> eval_expr env true_body continue_k break_k return_k
-      | Bool_false -> eval_expr env false_body continue_k break_k return_k
+      | Bool_true -> eval_expr env true_body ops k
+      | Bool_false -> eval_expr env false_body ops k
       | _ -> failwith "expected bool"
       end
 
   (* Natural numbers *)
 
-  | Nat_zero -> return_k Nat_zero
-  | Nat_succ n -> return_k (Nat_succ (eval_expr env n continue_k break_k return_k))
+  | Nat_zero -> k Nat_zero
+  | Nat_succ n -> k (Nat_succ (eval_expr env n ops k))
 
   | Nat_elim (nat, zero_body, (x, succ_body)) ->
-      let@ nat = eval_expr env nat continue_k break_k in
+      let@ nat = eval_expr env nat ops in
       begin match nat with
-      | Nat_zero -> eval_expr env zero_body continue_k break_k return_k
-      | Nat_succ n -> eval_expr ((x, n) :: env) succ_body continue_k break_k return_k
+      | Nat_zero -> eval_expr env zero_body ops k
+      | Nat_succ n -> eval_expr ((x, n) :: env) succ_body ops k
       | _ -> failwith "expected nat"
       end
 
   (* Mutable references *)
 
   | Ref_new init ->
-      let@ init = eval_expr env init continue_k break_k in
-      return_k (Ref (ref init))
+      let@ init = eval_expr env init ops in
+      k (Ref (ref init))
 
   | Ref_get curr ->
-      let@ curr = eval_expr env curr continue_k break_k in
+      let@ curr = eval_expr env curr ops in
       begin match curr with
-      | Ref curr -> return_k !curr
+      | Ref curr -> k !curr
       | _ -> failwith "expected ref"
       end
 
   | Ref_set (curr, replacement) ->
-      let@ curr = eval_expr env curr continue_k break_k in
+      let@ curr = eval_expr env curr ops in
       begin match curr with
       | Ref curr ->
-          let@ replacement = eval_expr env replacement continue_k break_k in
+          let@ replacement = eval_expr env replacement ops in
           curr := replacement;
-          return_k Unit
+          k Unit
       | _ -> failwith "expected ref"
       end
 
@@ -116,38 +120,37 @@ let rec eval_expr (env : (string * value) list) (expr : expr) (continue_k : unit
 
   | Loop body ->
       let rec loop () =
-        let@ _ = eval_expr env body loop return_k in
-        (*                          ^^^^ ^^^^^^^^
-                                    |    |
-                                    |    call the current return continuation
-                                    |    when breaking out of the loop
-                                    |
-                                    call the loop function recursively when
-                                    continuing to loop
-        *)
+        (* First evaluate the body of the loop *)
+        let@ _ = eval_expr env body {
+          continue_k = loop; (* call the loop function recursively when continuing to loop *)
+          break_k = k; (* call the value continuation when breaking out of the loop *)
+        } in
+
+        (* Now perform another iteration *)
         (loop [@tailcall]) ()
       in
       loop ()
 
   | Break ret ->
       (* First evaluate the return expression *)
-      let@ ret = eval_expr env ret continue_k break_k in
+      let@ ret = eval_expr env ret ops in
 
       (* Now break from the loop with the value *)
-      break_k ret
+      ops.break_k ret
 
   | Continue ->
       (* Continuing is easy, just call the continue continuation (heh) *)
-      continue_k ()
+      ops.continue_k ()
 
 
 module Tests = struct
 
   let eval_expr expr =
-    eval_expr [] expr
-      (fun () -> failwith "continue outside loop")
-      (fun _ -> failwith "break outside loop")
-      Fun.id
+    let ops = {
+      continue_k = (fun () -> failwith "continue outside loop");
+      break_k = (fun _ -> failwith "break outside loop");
+    } in
+    eval_expr [] expr ops Fun.id
 
   (* let x := ref false; !x == false *)
   let () =
