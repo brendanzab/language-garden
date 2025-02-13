@@ -39,7 +39,8 @@ type value =
 
 type 'a k = 'a -> value
 
-let ( let@ ) = ( @@ )
+(** Apply a continuation in a more “direct style” with a binding operator. *)
+let ( let@ ) (type a): a k k -> a k k = ( @@ )
 
 (** Evaluate an expression.
 
