@@ -47,7 +47,7 @@ type ops = {
 }
 
 (** Apply a continuation in a more “direct style” with a binding operator. *)
-let ( let@ ) (type a): a k k -> a k k = ( @@ )
+let ( let@ ) (type a) : a k k -> a k k = ( @@ )
 
 (** Evaluate an expression. *)
 let rec eval_expr (env : (string * value) list) (expr : expr) (ops : ops) (k : value k) : value =
