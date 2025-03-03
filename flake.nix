@@ -58,8 +58,7 @@
       devPackagesQuery = {
         ocaml-lsp-server = "*";
         ocamlformat = "*";
-        # Fix for “unpacker produced multiple directories”
-        # utop = "*";
+        utop = "*";
       };
 
       # Development package versions, along with the base compiler tools, used
@@ -84,6 +83,11 @@
               # For `lang-shader-graphics/test/dune`
               pkgs.netpbm
             ];
+          });
+          utop = prev.utop.overrideAttrs (previousAttrs: {
+            # Fix for "unpacker produced multiple directories"
+            # See: https://stackoverflow.com/a/77161896
+            sourceRoot = ".";
           });
         });
 
