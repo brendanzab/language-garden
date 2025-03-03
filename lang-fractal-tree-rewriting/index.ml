@@ -18,8 +18,8 @@ let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
 
   (* Set the actual size in memory *)
   let scale = Html.window##.devicePixelRatio in
-  canvas##.width := int_of_float (canvas_width *. scale);
-  canvas##.height := int_of_float (canvas_height *. scale);
+  canvas##.width := int_of_float (canvas_width *. Js.to_float scale);
+  canvas##.height := int_of_float (canvas_height *. Js.to_float scale);
 
   (* Normalise the coordinate system to CSS pixels *)
   ctx##scale scale scale;

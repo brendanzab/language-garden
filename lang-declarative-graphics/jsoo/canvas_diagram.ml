@@ -25,7 +25,7 @@ module Core = struct
       dia1 state ctx;
     end
 
-  let arc ~center:(center_x, center_y) ~radius ~theta1 ~theta2 ~ccw =
+  let arc ~center:(center_x, center_y) ~radius ~theta1 ~theta2 ~ccw : t =
     fun state ctx -> begin
       ctx##beginPath;
       ctx##arc
@@ -47,17 +47,17 @@ module Core = struct
       ~theta2:(2.0 *. Float.pi)
       ~ccw:false
 
-  let line (x1, y1) (x2, y2) =
+  let line (x1, y1) (x2, y2) : t =
     fun state ctx ->
       match state.stroke_style with
       | `solid ->
           ctx##beginPath;
-          ctx##moveTo x1 y1;
-          ctx##lineTo x2 y2;
+          ctx##moveTo (Js.float x1) (Js.float y1);
+          ctx##lineTo (Js.float x2) (Js.float y2);
           ctx##stroke;
       | `none -> ()
 
-  let stroke style dia =
+  let stroke style dia : t =
     fun state ctx ->
       dia { state with stroke_style = style } ctx
 
@@ -65,26 +65,26 @@ module Core = struct
     fun state ctx ->
       dia { state with fill_style = style } ctx
 
-  let rotate ~radians dia =
+  let rotate ~radians dia : t =
     fun state ctx -> begin
       ctx##save;
-      ctx##rotate radians;
+      ctx##rotate (Js.float radians);
       dia state ctx;
       ctx##restore;
     end
 
-  let translate (dx, dy) dia =
+  let translate (dx, dy) dia : t =
     fun state ctx -> begin
       ctx##save;
-      ctx##translate dx dy;
+      ctx##translate (Js.float dx) (Js.float dy);
       dia state ctx;
       ctx##restore;
     end
 
-  let scale xy dia =
+  let scale xy dia : t =
     fun state ctx -> begin
       ctx##save;
-      ctx##scale xy xy;
+      ctx##scale (Js.float xy) (Js.float xy);
       dia state ctx;
       ctx##restore;
     end
