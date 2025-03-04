@@ -14,96 +14,112 @@
     - {{:https://www.youtube.com/watch?v=3D-ngGIP4fQ} Query-based compiler architectures}
 *)
 
-type key = string
-type value = int
+module Build_system = struct
 
-type _ Effect.t +=
-  | Fetch : key -> value Effect.t
-  | Need_input : key -> value Effect.t
+  module type S = sig
 
-let fetch key (* Fetch *) = Effect.perform (Fetch key)
-let need_input key (* Need_input *) = Effect.perform (Need_input key)
+    type key
+    type value
 
-(** Run the build tasks, recursively building dependencies *)
-let rec build (target : key) (tasks : key -> value (* Fetch *)) : value =
-  try tasks target with
-  | effect (Fetch key), k ->
-      Effect.Deep.continue k (build key tasks)
+    val fetch : key -> value (* Fetch *)
+    val need_input : key -> value (* Need_input *)
 
-(** A build system transformer that reuses previous build results *)
-let memoize (tasks : key -> value (* Fetch *)) (key : key) : value (* Fetch *) =
-  let store : (key, value) Hashtbl.t =
-    Hashtbl.create 0
-  in
+    (** Run the build tasks, recursively building dependencies *)
+    val build : (key -> value (* Fetch *)) -> key -> value
 
-  try tasks key with
-  | effect (Fetch key), k ->
-      match Hashtbl.find_opt store key with
-      | Some value ->
-          Effect.Deep.continue k value
-      | None ->
-          let value = fetch key in
-          Hashtbl.add store key value;
-          Effect.Deep.continue k value
+    (** A build system transformer that reuses previous build results *)
+    val memoize : (key -> value (* Fetch *)) -> key -> value (* Fetch *)
 
-(** Run the build system, providing inputs when requested *)
-let supply_input (type a) (inputs : key -> value) (prog : unit -> a (* Need_input *)) : a =
-  try prog () with
-  | effect (Need_input key), k ->
-      Effect.Deep.continue k (inputs key)
+    (** Run the build system, providing inputs when requested *)
+    val supply_input : (key -> value) -> ('a -> 'b (* Need_input *)) -> 'a -> 'b
+
+  end
+
+  module Make (Key : sig type t end) (Value : sig type t end) : S
+    with type key = Key.t
+    with type value = Value.t
+  = struct
+
+    type key = Key.t
+    type value = Value.t
+
+    type _ Effect.t +=
+      | Fetch : key -> value Effect.t
+      | Need_input : key -> value Effect.t
+
+    let fetch key (* Fetch *) = Effect.perform (Fetch key)
+    let need_input key (* Need_input *) = Effect.perform (Need_input key)
+
+    let rec build (tasks : key -> value (* Fetch *)) (target : key) : value =
+      try tasks target with
+      | effect (Fetch target), k ->
+          Effect.Deep.continue k (build tasks target)
+
+    let memoize (tasks : key -> value (* Fetch *)) (target : key) : value (* Fetch *) =
+      let store : (key, value) Hashtbl.t = Hashtbl.create 0 in
+
+      try tasks target with
+      | effect (Fetch target), k ->
+          match Hashtbl.find_opt store target with
+          | Some value ->
+              Effect.Deep.continue k value
+          | None ->
+              let value = fetch target in
+              Hashtbl.add store target value;
+              Effect.Deep.continue k value
+
+    let supply_input (type a b) (inputs : key -> value) (prog : a -> b (* Need_input *)) (x : a) : b =
+      try prog x with
+      | effect (Need_input key), k ->
+          Effect.Deep.continue k (inputs key)
+
+  end
+
+end
 
 
 module Examples = struct
 
+  module B = Build_system.Make (String) (Int)
+
   (** Spreadsheet example from “Build systems ala Carte” *)
-  let spreadsheet1 (key : key) : value (* Fetch, Need_input *) =
-    Printf.printf "Fetch: %s\n" key;
-    match key with
-    | "B1" -> fetch "A1" + fetch "A2"
-    | "B2" -> fetch "B1" * 2
-    | key -> need_input key
+  let spreadsheet1 (target : string) : int (* B.Fetch, B.Need_input *) =
+    Printf.printf "Fetch: %s\n" target;
+    match target with
+    | "B1" -> B.fetch "A1" + B.fetch "A2"
+    | "B2" -> B.fetch "B1" * 2
+    | target -> B.need_input target
 
   (** Spreadsheet example that needs the same key twice *)
-  let spreadsheet2 (key : key) : value (* Fetch, Need_input *) =
-    Printf.printf "Fetch: %s\n" key;
-    match key with
-    | "B1" -> fetch "A1" + fetch "A2"
-    | "B2" -> fetch "B1" * fetch "B1"
-    | key -> need_input key
-
-  let ( let@ ) = ( @@ )
+  let spreadsheet2 (target : string) : int (* B.Fetch, B.Need_input *) =
+    Printf.printf "Fetch: %s\n" target;
+    match target with
+    | "B1" -> B.fetch "A1" + B.fetch "A2"
+    | "B2" -> B.fetch "B1" * B.fetch "B1"
+    | target -> B.need_input target
 
   let () =
     let exception Key_not_found of string in
 
-    let inputs key =
-      match key with
+    let inputs target =
+      match target with
       | "A1" -> 10
       | "A2" -> 20
-      | key -> raise (Key_not_found key)
+      | target -> raise (Key_not_found target)
     in
 
     try
 
       Printf.printf "Spreadsheet 1\n\n";
-      let result =
-        let@ () = supply_input inputs in
-        build "B2" spreadsheet1
-      in
+      let result = B.supply_input inputs (B.build spreadsheet1) "B2" in
       Printf.printf "Result: %i\n\n" result;
 
       Printf.printf "Spreadsheet 2\n\n";
-      let result =
-        let@ () = supply_input inputs in
-        build "B2" spreadsheet2
-      in
+      let result = B.supply_input inputs (B.build spreadsheet2) "B2" in
       Printf.printf "Result: %i\n\n" result;
 
       Printf.printf "Spreadsheet 2 (Memoized)\n\n";
-      let result =
-        let@ () = supply_input inputs in
-        build "B2" (memoize spreadsheet2)
-      in
+      let result = B.supply_input inputs (B.build (B.memoize spreadsheet2)) "B2" in
       Printf.printf "Result: %i\n\n" result;
 
     with
