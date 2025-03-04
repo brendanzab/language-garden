@@ -18,19 +18,19 @@ type _ Effect.t +=
 let fetch key (* Fetch *) = Effect.perform (Fetch key)
 let need_input key (* Need_input *) = Effect.perform (Need_input key)
 
-(** Run the build tasks, recursively fetching dependencies *)
+(** Run the build tasks, recursively building dependencies *)
 let rec build (target : key) (tasks : key -> value (* Fetch *)) : value =
   try tasks target with
   | effect (Fetch key), k ->
       Effect.Deep.continue k (build key tasks)
 
-(** Reuse previous build results if they are already present in the store *)
-let memoize (type a) (prog : unit -> a (* Fetch *)) : a (* Fetch *) =
+(** A build system transformer that reuses previous build results *)
+let memoize (tasks : key -> value (* Fetch *)) (key : key) : value (* Fetch *) =
   let store : (key, value) Hashtbl.t =
     Hashtbl.create 0
   in
 
-  try prog () with
+  try tasks key with
   | effect (Fetch key), k ->
       match Hashtbl.find_opt store key with
       | Some value ->
@@ -40,8 +40,8 @@ let memoize (type a) (prog : unit -> a (* Fetch *)) : a (* Fetch *) =
           Hashtbl.add store key value;
           Effect.Deep.continue k value
 
-(** Run the build system, supplying inputs when requested *)
-let supply_input (type a) (inputs : key -> value (* e *)) (prog : unit -> a (* Need_input, e *)) : a (* e *) =
+(** Run the build system, providing inputs when requested *)
+let supply_input (type a) (inputs : key -> value) (prog : unit -> a (* Need_input *)) : a =
   try prog () with
   | effect (Need_input key), k ->
       Effect.Deep.continue k (inputs key)
@@ -96,9 +96,7 @@ module Examples = struct
       Printf.printf "Spreadsheet 2 (Memoized)\n\n";
       let result =
         let@ () = supply_input inputs in
-        let@ key = build "B2" in
-        let@ () = memoize in
-        spreadsheet2 key
+        build "B2" (memoize spreadsheet2)
       in
       Printf.printf "Result: %i\n\n" result;
 
