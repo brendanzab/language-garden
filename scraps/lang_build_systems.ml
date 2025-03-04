@@ -2,10 +2,16 @@
     This is based on an example from the Effekt language documentation, which
     was in turn inspired by “Build systems à la carte” by Mokhov et. al.
 
+    A similar approach could eventually be used as a basis for query based,
+    demand-driven compilers (see {{:https://github.com/ollef/rock} Rock} and
+    {{:https://github.com/ollef/rock} Sixty}).
+
     {2 Resources}
 
     - {{:https://effekt-lang.org/docs/casestudies/buildsystem} Effekt Language Case Studies: Build System}
     - {{:https://doi.org/10.1017/S0956796820000088} Build systems à la carte: Theory and practice}
+    - {{:https://ollef.github.io/blog/posts/query-based-compilers.html} Query-based compiler architectures}
+    - {{:https://www.youtube.com/watch?v=3D-ngGIP4fQ} Query-based compiler architectures}
 *)
 
 type key = string
