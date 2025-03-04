@@ -32,3 +32,8 @@
   (name lang_ast_submodules)
   (public_name lang-ast-submodules)
   (package scraps))
+
+(executable
+  (name lang_build_systems)
+  (public_name lang-build-systems)
+  (package scraps))

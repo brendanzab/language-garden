@@ -32,3 +32,5 @@ build system support and are untested for now.
 - [**lang_ast_submodules.ml**](./lang_ast_submodules.ml):
   A pattern for nesting mutually recursive datatypes in submodules without
   duplicating the datatype definitions.
+- [**lang_build_systems.ml**](./lang_build_systems.ml):
+  Memoized build system using OCaml 5’s algebraic effects and handlers.
