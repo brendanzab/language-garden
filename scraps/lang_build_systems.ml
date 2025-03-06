@@ -181,6 +181,34 @@ module Examples = struct
 
   end
 
+  (** Ackermann example from section 3.8 of “Build systems à la carte: Theory
+      and practice” *)
+  module Ackermann = struct
+
+    module B = Build_system.Make (struct type t = int * int end) (Int)
+
+    let tasks (m, n : int * int) : int (* B.Fetch *) =
+      Printf.printf "  Fetch: (%i, %i)\n" m n;
+      match m, n with
+      | m, n when m < 0 || n < 0 -> raise Not_found
+      | 0, n -> n + 1
+      | m, 0 -> B.fetch (m - 1, 1)
+      | m, n ->
+          let index = B.fetch (m, n - 1) in
+          B.fetch (m - 1, index)
+
+    let () =
+      let@ () = B.run tasks in
+      Printf.printf "Ackermann\n\n";
+      Printf.printf "  Result: %i\n\n" (B.fetch (2, 3))
+
+    let () =
+      let@ () = B.run (B.memoize tasks) in
+      Printf.printf "Ackermann (Memoized)\n\n";
+      Printf.printf "  Result: %i\n\n" (B.fetch (2, 3))
+
+  end
+
   (** Makefile example from section 2.1 of “Build systems à la carte: Theory
       and practice” *)
   module Makefile = struct
