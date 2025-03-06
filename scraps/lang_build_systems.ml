@@ -52,18 +52,19 @@ module Build_system = struct
       | effect (Fetch target), k ->
           Effect.Deep.continue k (fetch target)
 
-    let memoize (tasks : key -> value (* Fetch *)) (target : key) : value (* Fetch *) =
+    let memoize (tasks : key -> value (* Fetch *)) : key -> value (* Fetch *) =
       let store : (key, value) Hashtbl.t = Hashtbl.create 0 in
 
-      try tasks target with
-      | effect (Fetch target), k ->
-          match Hashtbl.find_opt store target with
-          | Some value ->
-              Effect.Deep.continue k value
-          | None ->
-              let value = fetch target in
-              Hashtbl.add store target value;
-              Effect.Deep.continue k value
+      fun target ->
+        try tasks target with
+        | effect (Fetch target), k ->
+            match Hashtbl.find_opt store target with
+            | Some value ->
+                Effect.Deep.continue k value
+            | None ->
+                let value = fetch target in
+                Hashtbl.add store target value;
+                Effect.Deep.continue k value
 
   end
 
@@ -74,112 +75,88 @@ module Examples = struct
 
   let ( let@ ) = ( @@ )
 
-  module B = Build_system.Make (String) (Int)
+  module Spreadsheet = struct
 
-  (** Spreadsheet example from “Build systems ala Carte”
+    module B = Build_system.Make (String) (Int)
 
-      {t
-        |   | A  | B       |
-        | - | -- | ------- |
-        | 1 | 10 | A1 + A2 |
-        | 2 | 20 | B1 * 2  |
-      }
-  *)
-  let spreadsheet1 (target : string) : int (* B.Fetch, Not_found *) =
-    Printf.printf "Fetch: %s\n" target;
-    match target with
-    | "A1" -> 10
-    | "A2" -> 20
-    | "B1" -> B.fetch "A1" + B.fetch "A2"
-    | "B2" -> B.fetch "B1" * 2
-    | _ -> raise Not_found
+    (** Spreadsheet example from section 3.2 of “Build systems à la carte: Theory
+        and practice”:
 
-  let () = begin
+        {t
+          |   | A  | B       |
+          | - | -- | ------- |
+          | 1 | 10 | A1 + A2 |
+          | 2 | 20 | B1 * 2  |
+        }
+    *)
+    let spreadsheet1 (target : string) : int (* B.Fetch, Not_found *) =
+      Printf.printf "Fetch: %s\n" target;
+      match target with
+      | "A1" -> 10
+      | "A2" -> 20
+      | "B1" -> B.fetch "A1" + B.fetch "A2"
+      | "B2" -> B.fetch "B1" * 2
+      | _ -> raise Not_found
 
-    let@ () = B.run spreadsheet1 in
-    Printf.printf "Spreadsheet 1\n\n";
-    Printf.printf "Result: %i\n\n" (B.fetch "B2");
-
-  end
-
-  (*
-
-    Expected output:
-
-      Example 1
-
-      Fetch: B2
-      Fetch: B1
-      Fetch: A2
-      Fetch: A1
-      Result: 60
-
-  *)
+    let () =
+      let@ () = B.run spreadsheet1 in
+      Printf.printf "Spreadsheet 1\n\n";
+      Printf.printf "Result: %i\n\n" (B.fetch "B2")
 
 
-  (** Spreadsheet example that fetches the same key twice
+    (** Spreadsheet example that fetches the same key twice
 
-      {t
-        |   | A  | B       |
-        | - | -- | ------- |
-        | 1 | 10 | A1 + A2 |
-        | 2 | 20 | B1 * B1 |
-      }
-  *)
-  let spreadsheet2 (target : string) : int (* B.Fetch, Not_found *) =
-    Printf.printf "Fetch: %s\n" target;
-    match target with
-    | "A1" -> 10
-    | "A2" -> 20
-    | "B1" -> B.fetch "A1" + B.fetch "A2"
-    | "B2" -> B.fetch "B1" * B.fetch "B1"
-    | _ -> raise Not_found
+        {t
+          |   | A  | B       |
+          | - | -- | ------- |
+          | 1 | 10 | A1 + A2 |
+          | 2 | 20 | B1 * B1 |
+        }
+    *)
+    let spreadsheet2 (target : string) : int (* B.Fetch, Not_found *) =
+      Printf.printf "Fetch: %s\n" target;
+      match target with
+      | "A1" -> 10
+      | "A2" -> 20
+      | "B1" -> B.fetch "A1" + B.fetch "A2"
+      | "B2" -> B.fetch "B1" * B.fetch "B1"
+      | _ -> raise Not_found
 
-  let () = begin
+    let () =
+      let@ () = B.run spreadsheet2 in
+      Printf.printf "Spreadsheet 2\n\n";
+      Printf.printf "Result: %i\n\n" (B.fetch "B2")
 
-    let@ () = B.run spreadsheet2 in
-    Printf.printf "Spreadsheet 2\n\n";
-    Printf.printf "Result: %i\n\n" (B.fetch "B2");
+    let () =
+      let@ () = B.run (B.memoize spreadsheet2) in
+      Printf.printf "Spreadsheet 2 (Memoized)\n\n";
+      Printf.printf "Result: %i\n\n" (B.fetch "B2")
 
   end
 
-  (*
+  (** Fibonacci example from section 3.8 of “Build systems à la carte: Theory
+      and practice” *)
+  module Fibonacci = struct
 
-    Expected output:
+    module B = Build_system.Make (Int) (Int)
 
-      Example 2
+    let tasks (n : int) : int =
+      Printf.printf "Fetch: %i\n" n;
+      match n with
+      | 0 -> 0
+      | 1 -> 1
+      | n -> B.fetch (n - 1) + B.fetch (n - 2)
 
-      Fetch: B2
-      Fetch: B1
-      Fetch: A2
-      Fetch: A1
-      Fetch: B1
-      Fetch: A2
-      Fetch: A1
-      Result: 900
+    let () =
+      let@ () = B.run tasks in
+      Printf.printf "Fibonacci\n\n";
+      Printf.printf "Result: %i\n\n" (B.fetch 5)
 
-  *)
-
-  let () = begin
-
-    let@ () = B.run (B.memoize spreadsheet2) in
-    Printf.printf "Spreadsheet 2 (Memoized)\n\n";
-    Printf.printf "Result: %i\n\n" (B.fetch "B2");
+    let () =
+      let@ () = B.run (B.memoize tasks) in
+      Printf.printf "Fibonacci (Memoized)\n\n";
+      Printf.printf "Result: %i\n\n" (B.fetch 5)
 
   end
-
-  (*
-
-    Expected output:
-
-      Example 2 (Memoized)
-
-      Fetch: B2
-      Fetch: B1
-      Fetch: A2
-      Fetch: A1
-      Result: 900
-
-  *)
 
 end
