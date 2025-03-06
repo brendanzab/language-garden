@@ -40,10 +40,11 @@ module Build_system = struct
     type key
     type value
 
+    (** Fetch a build result for the supplied target *)
     val fetch : key -> value (* Fetch *)
 
     (** Run the build system, recursively fetching dependencies *)
-    val run : (key -> value (* Fetch *)) -> (unit -> 'a) -> 'a
+    val run : (key -> value (* Fetch *)) -> (unit -> 'a (* Fetch *)) -> 'a
 
     (** A build system transformer that reuses previous build results *)
     val memoize : (key -> value (* Fetch *)) -> key -> value (* Fetch *)
@@ -161,7 +162,7 @@ module Examples = struct
 
     module B = Build_system.Make (Int) (Int)
 
-    let tasks (n : int) : int =
+    let tasks (n : int) : int (* B.Fetch *) =
       Printf.printf "Fetch: %i\n" n;
       match n with
       | 0 -> 0
