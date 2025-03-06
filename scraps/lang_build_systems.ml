@@ -3,13 +3,15 @@
 
     A similar approach could eventually be used as a basis for query based,
     demand-driven compilers (see {{: https://github.com/ollef/rock} Rock} and
-    {{: https://github.com/ollef/rock} Sixty}).
+    {{: https://github.com/ollef/rock} Sixty}). The hope is to clarify some of
+    the essential ideas behind demand-driven language tooling, which currently
+    remains somewhat of a of a dark art.
 
-    Using algebraic effects is convenient in OCaml compared to monadic
-    approaches, but limits how much static analysis we can do to the build tasks
-    without first executing them. For example, we cannot compute the
-    dependencies of our build tasks without first running them, nor can we do
-    topological scheduling. This would require effects and handlers that support
+    Using algebraic effects is convenient in OCaml compared to the monadic
+    approach use in Build systems à la carte, but it limits how much static
+    analysis we can do to the build tasks without first executing them. For
+    example, we cannot compute the dependencies of our build tasks without first
+    running them. This would require effects and handlers that support
     non-monadic forms of effectful computation (see {{: https://doi.org/10.1145/2633628.2633636}
     “Algebraic effects and effect handlers for idioms and arrows”}).
 
@@ -19,6 +21,15 @@
     - {{: https://effekt-lang.org/docs/casestudies/buildsystem} Effekt Language Case Studies: Build System}
     - {{: https://ollef.github.io/blog/posts/query-based-compilers.html} Query-based compiler architectures}
     - {{: https://www.youtube.com/watch?v=3D-ngGIP4fQ} Query-based compiler architectures}
+*)
+
+(*
+    Todo list:
+
+    - [x] Basic build system
+    - [x] Memoized builds
+    - [ ] Incremental rebuilds
+    - [ ] Cycle detection
 *)
 
 module Build_system = struct
