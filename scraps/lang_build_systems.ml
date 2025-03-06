@@ -82,6 +82,15 @@ module Examples = struct
 
   module B = Build_system.Make (String) (Int)
 
+  exception Key_not_found of string
+
+  let inputs target (* Key_not_found *) =
+    match target with
+    | "A1" -> 10
+    | "A2" -> 20
+    | target -> raise (Key_not_found target)
+
+
   (** Spreadsheet example from “Build systems ala Carte” *)
   let spreadsheet1 (target : string) : int (* B.Fetch, B.Need_input *) =
     Printf.printf "Fetch: %s\n" target;
@@ -90,36 +99,11 @@ module Examples = struct
     | "B2" -> B.fetch "B1" * 2
     | target -> B.need_input target
 
-  (** Spreadsheet example that needs the same key twice *)
-  let spreadsheet2 (target : string) : int (* B.Fetch, B.Need_input *) =
-    Printf.printf "Fetch: %s\n" target;
-    match target with
-    | "B1" -> B.fetch "A1" + B.fetch "A2"
-    | "B2" -> B.fetch "B1" * B.fetch "B1"
-    | target -> B.need_input target
-
   let () =
-    let exception Key_not_found of string in
-
-    let inputs target =
-      match target with
-      | "A1" -> 10
-      | "A2" -> 20
-      | target -> raise (Key_not_found target)
-    in
-
     try
 
       Printf.printf "Spreadsheet 1\n\n";
       let result = B.supply_input inputs (B.build spreadsheet1) "B2" in
-      Printf.printf "Result: %i\n\n" result;
-
-      Printf.printf "Spreadsheet 2\n\n";
-      let result = B.supply_input inputs (B.build spreadsheet2) "B2" in
-      Printf.printf "Result: %i\n\n" result;
-
-      Printf.printf "Spreadsheet 2 (Memoized)\n\n";
-      let result = B.supply_input inputs (B.build (B.memoize spreadsheet2)) "B2" in
       Printf.printf "Result: %i\n\n" result;
 
     with
@@ -137,6 +121,36 @@ module Examples = struct
       Fetch: A2
       Fetch: A1
       Result: 60
+
+  *)
+
+
+  (** Spreadsheet example that needs the same key twice *)
+  let spreadsheet2 (target : string) : int (* B.Fetch, B.Need_input *) =
+    Printf.printf "Fetch: %s\n" target;
+    match target with
+    | "B1" -> B.fetch "A1" + B.fetch "A2"
+    | "B2" -> B.fetch "B1" * B.fetch "B1"
+    | target -> B.need_input target
+
+  let () =
+    try
+
+      Printf.printf "Spreadsheet 2\n\n";
+      let result = B.supply_input inputs (B.build spreadsheet2) "B2" in
+      Printf.printf "Result: %i\n\n" result;
+
+      Printf.printf "Spreadsheet 2 (Memoized)\n\n";
+      let result = B.supply_input inputs (B.build (B.memoize spreadsheet2)) "B2" in
+      Printf.printf "Result: %i\n\n" result;
+
+    with
+    | Key_not_found key ->
+        Printf.printf "Key not found: %s\n" key
+
+  (*
+
+    Expected output:
 
       Example 2
 
