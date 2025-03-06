@@ -28,6 +28,7 @@
 
     - [x] Basic build system
     - [x] Memoized builds
+    - [ ] Decouple inputs from build results
     - [ ] Incremental rebuilds
     - [ ] Cycle detection
 *)
