@@ -112,7 +112,7 @@ module Examples = struct
         }
     *)
     let spreadsheet1 (target : string) : int (* B.Fetch, Not_found *) =
-      Printf.printf "Fetch: %s\n" target;
+      Printf.printf "  Fetch: %s\n" target;
       match target with
       | "A1" -> 10
       | "A2" -> 20
@@ -123,7 +123,7 @@ module Examples = struct
     let () =
       let@ () = B.run spreadsheet1 in
       Printf.printf "Spreadsheet 1\n\n";
-      Printf.printf "Result: %i\n\n" (B.fetch "B2")
+      Printf.printf "  Result: %i\n\n" (B.fetch "B2")
 
 
     (** Spreadsheet example that fetches the same key twice
@@ -136,7 +136,7 @@ module Examples = struct
         }
     *)
     let spreadsheet2 (target : string) : int (* B.Fetch, Not_found *) =
-      Printf.printf "Fetch: %s\n" target;
+      Printf.printf "  Fetch: %s\n" target;
       match target with
       | "A1" -> 10
       | "A2" -> 20
@@ -147,12 +147,12 @@ module Examples = struct
     let () =
       let@ () = B.run spreadsheet2 in
       Printf.printf "Spreadsheet 2\n\n";
-      Printf.printf "Result: %i\n\n" (B.fetch "B2")
+      Printf.printf "  Result: %i\n\n" (B.fetch "B2")
 
     let () =
       let@ () = B.run (B.memoize spreadsheet2) in
       Printf.printf "Spreadsheet 2 (Memoized)\n\n";
-      Printf.printf "Result: %i\n\n" (B.fetch "B2")
+      Printf.printf "  Result: %i\n\n" (B.fetch "B2")
 
   end
 
@@ -163,7 +163,7 @@ module Examples = struct
     module B = Build_system.Make (Int) (Int)
 
     let tasks (n : int) : int (* B.Fetch *) =
-      Printf.printf "Fetch: %i\n" n;
+      Printf.printf "  Fetch: %i\n" n;
       match n with
       | 0 -> 0
       | 1 -> 1
@@ -172,12 +172,41 @@ module Examples = struct
     let () =
       let@ () = B.run tasks in
       Printf.printf "Fibonacci\n\n";
-      Printf.printf "Result: %i\n\n" (B.fetch 5)
+      Printf.printf "  Result: %i\n\n" (B.fetch 5)
 
     let () =
       let@ () = B.run (B.memoize tasks) in
       Printf.printf "Fibonacci (Memoized)\n\n";
-      Printf.printf "Result: %i\n\n" (B.fetch 5)
+      Printf.printf "  Result: %i\n\n" (B.fetch 5)
+
+  end
+
+  (** Makefile example from section 2.1 of “Build systems à la carte: Theory
+      and practice” *)
+  module Makefile = struct
+
+    module B = Build_system.Make (String) (Unit)
+
+    let tasks (target : string) : unit (* B.Fetch, Not_found *) =
+      Printf.printf "  Fetch: %s\n" target;
+      match target with
+      | "util.h" | "util.c" | "main.c" -> ()
+      | "util.o" -> B.fetch "util.h"; B.fetch "util.c"    (* gcc -c util.c *)
+      | "main.o" -> B.fetch "util.h"; B.fetch "main.c"    (* gcc -c main.c *)
+      | "main.exe" -> B.fetch "util.o"; B.fetch "main.o"  (* gcc util.o main.o -o main.exe *)
+      | _ -> raise Not_found
+
+    let () =
+      let@ () = B.run tasks in
+      Printf.printf "Makefile\n\n";
+      B.fetch "main.exe";
+      Printf.printf "  Result: ()\n\n"
+
+    let () =
+      let@ () = B.run (B.memoize tasks) in
+      Printf.printf "Makefile (Memoized)\n\n";
+      B.fetch "main.exe";
+      Printf.printf "  Result: ()\n\n"
 
   end
 
