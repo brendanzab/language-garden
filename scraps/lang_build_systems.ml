@@ -22,16 +22,12 @@ module Build_system = struct
     type value
 
     val fetch : key -> value (* Fetch *)
-    val need_input : key -> value (* Need_input *)
 
     (** Run the build tasks, recursively building dependencies *)
     val build : (key -> value (* Fetch *)) -> key -> value
 
     (** A build system transformer that reuses previous build results *)
     val memoize : (key -> value (* Fetch *)) -> key -> value (* Fetch *)
-
-    (** Run the build system, providing inputs when requested *)
-    val supply_input : (key -> value) -> ('a -> 'b (* Need_input *)) -> 'a -> 'b
 
   end
 
@@ -45,10 +41,8 @@ module Build_system = struct
 
     type _ Effect.t +=
       | Fetch : key -> value Effect.t
-      | Need_input : key -> value Effect.t
 
     let fetch key (* Fetch *) = Effect.perform (Fetch key)
-    let need_input key (* Need_input *) = Effect.perform (Need_input key)
 
     let rec build (tasks : key -> value (* Fetch *)) (target : key) : value =
       try tasks target with
@@ -68,11 +62,6 @@ module Build_system = struct
               Hashtbl.add store target value;
               Effect.Deep.continue k value
 
-    let supply_input (type a b) (inputs : key -> value) (prog : a -> b (* Need_input *)) (x : a) : b =
-      try prog x with
-      | effect (Need_input key), k ->
-          Effect.Deep.continue k (inputs key)
-
   end
 
 end
@@ -82,33 +71,23 @@ module Examples = struct
 
   module B = Build_system.Make (String) (Int)
 
-  exception Key_not_found of string
-
-  let inputs target (* Key_not_found *) =
+  (** Spreadsheet example from “Build systems ala Carte” *)
+  let spreadsheet1 (target : string) : int (* B.Fetch, Not_found *) =
+    Printf.printf "Fetch: %s\n" target;
     match target with
     | "A1" -> 10
     | "A2" -> 20
-    | target -> raise (Key_not_found target)
-
-
-  (** Spreadsheet example from “Build systems ala Carte” *)
-  let spreadsheet1 (target : string) : int (* B.Fetch, B.Need_input *) =
-    Printf.printf "Fetch: %s\n" target;
-    match target with
     | "B1" -> B.fetch "A1" + B.fetch "A2"
     | "B2" -> B.fetch "B1" * 2
-    | target -> B.need_input target
+    | _ -> raise Not_found
 
-  let () =
-    try
+  let () = begin
 
-      Printf.printf "Spreadsheet 1\n\n";
-      let result = B.supply_input inputs (B.build spreadsheet1) "B2" in
-      Printf.printf "Result: %i\n\n" result;
+    Printf.printf "Spreadsheet 1\n\n";
+    let result = B.build spreadsheet1 "B2" in
+    Printf.printf "Result: %i\n\n" result;
 
-    with
-    | Key_not_found key ->
-        Printf.printf "Key not found: %s\n" key
+  end
 
   (*
 
@@ -126,27 +105,26 @@ module Examples = struct
 
 
   (** Spreadsheet example that needs the same key twice *)
-  let spreadsheet2 (target : string) : int (* B.Fetch, B.Need_input *) =
+  let spreadsheet2 (target : string) : int (* B.Fetch, Not_found *) =
     Printf.printf "Fetch: %s\n" target;
     match target with
+    | "A1" -> 10
+    | "A2" -> 20
     | "B1" -> B.fetch "A1" + B.fetch "A2"
     | "B2" -> B.fetch "B1" * B.fetch "B1"
-    | target -> B.need_input target
+    | _ -> raise Not_found
 
-  let () =
-    try
+  let () = begin
 
-      Printf.printf "Spreadsheet 2\n\n";
-      let result = B.supply_input inputs (B.build spreadsheet2) "B2" in
-      Printf.printf "Result: %i\n\n" result;
+    Printf.printf "Spreadsheet 2\n\n";
+    let result = B.build spreadsheet2 "B2" in
+    Printf.printf "Result: %i\n\n" result;
 
-      Printf.printf "Spreadsheet 2 (Memoized)\n\n";
-      let result = B.supply_input inputs (B.build (B.memoize spreadsheet2)) "B2" in
-      Printf.printf "Result: %i\n\n" result;
+    Printf.printf "Spreadsheet 2 (Memoized)\n\n";
+    let result = B.build (B.memoize spreadsheet2) "B2" in
+    Printf.printf "Result: %i\n\n" result;
 
-    with
-    | Key_not_found key ->
-        Printf.printf "Key not found: %s\n" key
+  end
 
   (*
 
