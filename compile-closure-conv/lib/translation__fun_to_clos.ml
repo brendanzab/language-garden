@@ -4,7 +4,7 @@
 
     This translation converts functions into closures, separating the code of
     functions from the data implicitly captured from the surrounding environment.
-    It’s a modified version of the algorithm described in {{:https://doi.org/10.1145/1291201.1291212}
+    It’s a modified version of the algorithm described in {{: https://doi.org/10.1145/1291201.1291212}
     “A type-preserving closure conversion in haskell”}, using de Bruijn levels
     to simplify the handling of variable bindings.
 

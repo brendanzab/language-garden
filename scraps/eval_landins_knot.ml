@@ -1,7 +1,7 @@
 (** Demonstration of Landin’s Knot, an approach to encoding general recursion
     using higher-order references and backpatching.
 
-    {{:https://doi.org/10.1093/comjnl/6.4.308} The Mechanical Evaluation of Expressions}
+    {{: https://doi.org/10.1093/comjnl/6.4.308} The Mechanical Evaluation of Expressions}
 *)
 
 [@@@warning "-unused-value-declaration"]

@@ -1,6 +1,6 @@
 (** {0 Arithmetic expressions in A-Normal Form}
 
-    {{:https://en.wikipedia.org/wiki/A-normal_form} A-Normal Form} is an
+    {{: https://en.wikipedia.org/wiki/A-normal_form} A-Normal Form} is an
     intermediate representation that binds the result of each computation to an
     intermediate definition.
 *)

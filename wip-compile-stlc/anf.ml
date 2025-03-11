@@ -1,11 +1,11 @@
 (** A language that enforces a fixed evaluation order by binding every
     intermediate computation to a corresponding local binding.
 
-    - {{:https://en.wikipedia.org/wiki/A-normal_form}
+    - {{: https://en.wikipedia.org/wiki/A-normal_form}
       A-Normal Form} on Wikipedia
-    - {{:https://doi.org/10.1145/173262.155113}
+    - {{: https://doi.org/10.1145/173262.155113}
       The essence of compiling with continuations} by Flanagan, et. al.
-    - {{:https://matt.might.net/articles/a-normalization/}
+    - {{: https://matt.might.net/articles/a-normalization/}
       A-Normalization: Why and How (with code)} by Matt Might
 *)
 

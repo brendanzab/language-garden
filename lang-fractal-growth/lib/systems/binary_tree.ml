@@ -1,4 +1,4 @@
-(** From the {{:https://en.wikipedia.org/wiki/L-system#Example_2:_Fractal_(binary)_tree}
+(** From the {{: https://en.wikipedia.org/wiki/L-system#Example_2:_Fractal_(binary)_tree}
     L-system page} on Wikipedia. *)
 
 

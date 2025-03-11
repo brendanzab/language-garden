@@ -422,7 +422,7 @@ module Semantics = struct
 
       We support best-effort eta conversion for singletons and unit records,
       similar to the approach found in the elaboration zoo in
-      {{:https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
+      {{: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
       03-holes-unit-eta}.
 
       As with {!quote}, the typing environment is used to recover the types of

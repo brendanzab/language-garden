@@ -5,7 +5,7 @@
     related extensions to the syntax and semantics in a per-feature way.
 
     This approach used is similar to the one described by Matthias Blume in
-    {{:https://www.microsoft.com/en-us/research/video/records-sums-cases-and-exceptions-row-polymorphism-at-work/}
+    {{: https://www.microsoft.com/en-us/research/video/records-sums-cases-and-exceptions-row-polymorphism-at-work/}
     Records, sums, cases, and exceptions: Row-polymorphism at work}.
 *)
 
@@ -13,7 +13,7 @@
 
 
 (** An extensible interpreter implemented using OCaml’s extensible variant
-    types. See the {{:https://ocaml.org/manual/5.2/extensiblevariants.html}
+    types. See the {{: https://ocaml.org/manual/5.2/extensiblevariants.html}
     OCaml manual}. for more information on this feature. *)
 module Extensible_variants = struct
 
@@ -165,7 +165,7 @@ end
 
 
 (** An extensible interpreter implemented using OCaml’s polymorphic variants.
-    See the {{:https://ocaml.org/manual/5.2/polyvariant.html} OCaml manual}.
+    See the {{: https://ocaml.org/manual/5.2/polyvariant.html} OCaml manual}.
     for more information on this feature. *)
 module Polymorphic_variants = struct
 

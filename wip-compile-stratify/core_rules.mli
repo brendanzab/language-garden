@@ -6,19 +6,19 @@
     the core language. An elaborator can then dispatch to this API, avoiding the
     need to manipulate the innards of core terms and values directly.
 
-    The idea for this module was inspired by {{:https://github.com/jonsterling/dreamtt/}
-    DreamTT} and {{:https://github.com/RedPRL/cooltt/} CoolTT}, but apparently
+    The idea for this module was inspired by {{: https://github.com/jonsterling/dreamtt/}
+    DreamTT} and {{: https://github.com/RedPRL/cooltt/} CoolTT}, but apparently
     it dates back to “The LCF Approach” (pointers to a reference for this would
     be most appreciated).
 
    {1 References}
 
-    - {{:https://bentnib.org/posts/2015-04-19-algebraic-approach-typechecking-and-elaboration.html}
+    - {{: https://bentnib.org/posts/2015-04-19-algebraic-approach-typechecking-and-elaboration.html}
       An Algebraic Approach to Typechecking and Elaboration} by Robert Atkey
-    - {{:https://github.com/jonsterling/dreamtt/} DreamTT: A pedagogic
+    - {{: https://github.com/jonsterling/dreamtt/} DreamTT: A pedagogic
       implementation of abstract bidirectional elaboration for dependent type
       theory} by Jon Sterling
-    - {{:https://gist.github.com/TOTBWF/9b2c071d2edb1c6596b785656c866fd6}
+    - {{: https://gist.github.com/TOTBWF/9b2c071d2edb1c6596b785656c866fd6}
        MicroTT.ml: A simple single-file elaborator for MLTT} by Reed Mullanix
 *)
 

@@ -189,7 +189,7 @@ module Make (L : Shader.S) : S
     let d = L.abs_vec uv |-| extents in
     L.length (L.max_vec d L.zero2) + L.min (L.max_component2 d) !!0.0
 
-  (** See: {{:https://www.youtube.com/watch?v=PMltMdi1Wzg} The SDF of a Line Segment} *)
+  (** See: {{: https://www.youtube.com/watch?v=PMltMdi1Wzg} The SDF of a Line Segment} *)
   let segment ?radius p1 p2 uv =
     let uv_p1 = uv |-| p1 in
     let p2_p1 = p2 |-| p1 in
@@ -198,7 +198,7 @@ module Make (L : Shader.S) : S
     | None ->L.length (uv_p1 |-| (p2_p1 |* h))
     | Some r -> L.length (uv_p1 |-| (p2_p1 |* h)) - r
 
-  (** See: {{:https://www.youtube.com/watch?v=PMltMdi1Wzg} The SDF of a Line Segment} *)
+  (** See: {{: https://www.youtube.com/watch?v=PMltMdi1Wzg} The SDF of a Line Segment} *)
   let segment_y ?radius len uv =
     let uv = uv.%{Y} <- uv.%{Y} - L.clamp uv.%{Y} ~min:!!0.0 ~max:len in
     match radius with

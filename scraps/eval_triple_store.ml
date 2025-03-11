@@ -1,20 +1,20 @@
 (** An example of inferring facts from a triple store.
 
-    This is a port of {{:https://gist.github.com/jackrusher/5018122}
+    This is a port of {{: https://gist.github.com/jackrusher/5018122}
     triples.clj} by Jack Rusher.
 
     Resources:
 
-    - {{:https://berlin.social/@jack/113305897524830516} Original thread} by Jack Rusher
-    - {{:https://gist.github.com/jackrusher/5018122} triples.clj}
+    - {{: https://berlin.social/@jack/113305897524830516} Original thread} by Jack Rusher
+    - {{: https://gist.github.com/jackrusher/5018122} triples.clj}
       “A super simple example of inference from a set of triples”
-    - {{:https://gist.github.com/jackrusher/243411921ece513be355349adcd1c744} trinity.js}:
+    - {{: https://gist.github.com/jackrusher/243411921ece513be355349adcd1c744} trinity.js}:
       “A fast, minimal JS triple store implementation in ~70 lines of code”
-    - {{:https://gist.github.com/jackrusher/6386833} logic-triples.clj}:
+    - {{: https://gist.github.com/jackrusher/6386833} logic-triples.clj}:
       “Transitive properties in a toy triple store using Clojure's core.logic”
-    - {{:https://www.w3.org/2001/sw/Europe/events/20031113-storage/positions/rusher.html}
+    - {{: https://www.w3.org/2001/sw/Europe/events/20031113-storage/positions/rusher.html}
       Triple Store} by Jack Rusher
-    - {{:https://web.archive.org/web/20150202180258/http://rhetoricaldevice.com/articles/TripleStore.html}
+    - {{: https://web.archive.org/web/20150202180258/http://rhetoricaldevice.com/articles/TripleStore.html}
       Triple Store} by Jack Rusher (Original Version)
 *)
 

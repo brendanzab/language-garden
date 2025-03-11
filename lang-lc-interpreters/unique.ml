@@ -1,7 +1,7 @@
 (** The lambda calculus, implemented using unique identifiers.
 
     Based on Section 4 of Lennart Augustsson’s
-    {{:https://github.com/mietek/cook/blob/master/doc/pdf/augustsson-2006.pdf}
+    {{: https://github.com/mietek/cook/blob/master/doc/pdf/augustsson-2006.pdf}
     “λ-calculus cooked four ways”}.
 *)
 
@@ -73,7 +73,7 @@ let to_named (e : expr) : Named.expr =
 let alpha_equiv (e1 : expr) (e2 : expr) =
   (* Compare for alpha equivalence by comparing the binding depth of variable
     names in each expression. This approach is described in section 6.1 of
-    {{:https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf}
+    {{: https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf}
     “Checking Dependent Types with Normalization by Evaluation: A Tutorial
     (Haskell Version)”} by David Christiansen. *)
   let rec go (size : int) (ns1, e1 : int Id.Map.t * expr) (ns2, e2 : int Id.Map.t * expr) : bool =

@@ -1,4 +1,4 @@
-(** From section 3.5 of {{:http://algorithmicbotany.org/papers/cpfg.agtive99.html}
+(** From section 3.5 of {{: http://algorithmicbotany.org/papers/cpfg.agtive99.html}
     “An L-System-Based Plant Modeling Language”} *)
 
 (** The development of an individual flower *)

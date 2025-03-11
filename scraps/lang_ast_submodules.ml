@@ -4,7 +4,7 @@
 
     This file shows a pattern for nesting mutually recursive datatypes in
     submodules without duplicating the datatype definitions. It is based on
-    {{:https://blog.janestreet.com/a-trick-recursive-modules-from-recursive-signatures/}
+    {{: https://blog.janestreet.com/a-trick-recursive-modules-from-recursive-signatures/}
     this blog post}.
 *)
 

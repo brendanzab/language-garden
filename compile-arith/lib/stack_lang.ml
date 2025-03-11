@@ -1,7 +1,7 @@
 (** {0 A stack machine for arithmetic expressions}
 
     This represents arithmetic expressions as a
-    {{:https://en.wikipedia.org/wiki/Stack_machine} stack machine}.
+    {{: https://en.wikipedia.org/wiki/Stack_machine} stack machine}.
 *)
 
 

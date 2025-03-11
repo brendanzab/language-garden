@@ -1,4 +1,4 @@
-(** The development of a {{:https://en.wikipedia.org/wiki/Inflorescence}
+(** The development of a {{: https://en.wikipedia.org/wiki/Inflorescence}
     monopodial inflorescence} *)
 
 

@@ -23,7 +23,7 @@ type expr =
 let alpha_equiv (e1 : expr) (e2 : expr) =
   (* Compare for alpha equivalence by comparing the binding depth of variable
     names in each expression. This approach is described in section 6.1 of
-    {{:https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf}
+    {{: https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf}
     “Checking Dependent Types with Normalization by Evaluation: A Tutorial
     (Haskell Version)”} by David Christiansen. *)
   let rec go (size : int) (ns1, e1 : (string * int) list * expr) (ns2, e2 : (string * int) list * expr) : bool =

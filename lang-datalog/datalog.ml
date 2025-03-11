@@ -1,5 +1,5 @@
 (** A naive implementation of Datalog, originally based on
-    {{:https://dodisturb.me/posts/2018-12-25-The-Essence-of-Datalog.html}
+    {{: https://dodisturb.me/posts/2018-12-25-The-Essence-of-Datalog.html}
      The Essence of Datalog} by Mistral Contrastin.
 *)
 

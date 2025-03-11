@@ -1,4 +1,4 @@
-(** Quadratic {{:https://en.wikipedia.org/wiki/Koch_snowflake} Koch island} *)
+(** Quadratic {{: https://en.wikipedia.org/wiki/Koch_snowflake} Koch island} *)
 
 (** Alphabet of symbols for this system *)
 type symbol

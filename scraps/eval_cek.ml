@@ -26,10 +26,10 @@
 
     {2 Resources}
 
-    - {{:https://en.wikipedia.org/wiki/CEK_Machine} CEK Machine} on Wikipedia
-    - {{:https://matt.might.net/articles/cek-machines/} Writing CEK-style interpreters (or semantics) in Haskell} by Matt Might
-    - {{:https://github.com/kmicinski/cmsc330examples/blob/master/lambda-calculus/cek-lambda.ml} cek-lambda.ml} by Kristopher Micinski
-    - {{:https://doi.org/10.1145/173262.155113} The essence of compiling with continuations} by Felleisen and Friedman
+    - {{: https://en.wikipedia.org/wiki/CEK_Machine} CEK Machine} on Wikipedia
+    - {{: https://matt.might.net/articles/cek-machines/} Writing CEK-style interpreters (or semantics) in Haskell} by Matt Might
+    - {{: https://github.com/kmicinski/cmsc330examples/blob/master/lambda-calculus/cek-lambda.ml} cek-lambda.ml} by Kristopher Micinski
+    - {{: https://doi.org/10.1145/173262.155113} The essence of compiling with continuations} by Felleisen and Friedman
 *)
 
 (** {1 Syntax} *)
