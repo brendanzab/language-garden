@@ -68,8 +68,6 @@
         # ocaml-system = "*";
         # Use OCaml compiler from opam-repository
         ocaml-base-compiler = "5.3.0";
-        # Fix for build of ocamlfind 1.9.8 (see https://github.com/tweag/opam-nix/issues/112)
-        ocamlfind = "1.9.6";
       };
 
       # Package-specific derivation overrides.
