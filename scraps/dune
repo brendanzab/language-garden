@@ -1,39 +1,8 @@
-(executable
-  (name check_stlc_inference_rules)
-  (public_name check-stlc-inference-rules)
-  (package scraps))
-
-(executable
-  (name eval_cek)
-  (public_name eval-cek)
-  (package scraps))
-
-(executable
-  (name eval_extensible)
-  (public_name eval-extensible)
-  (package scraps))
-
-(executable
-  (name eval_landins_knot)
-  (public_name eval-landins-knot)
-  (package scraps))
-
-(executable
-  (name eval_control_flow_cps)
-  (public_name eval-control-flow-cps)
-  (package scraps))
-
-(executable
-  (name eval_triple_store)
-  (public_name eval-triple-store)
-  (package scraps))
-
-(executable
-  (name lang_ast_submodules)
-  (public_name lang-ast-submodules)
-  (package scraps))
-
-(executable
-  (name lang_build_systems)
-  (public_name lang-build-systems)
-  (package scraps))
+(executable (name check_stlc_inference_rules))
+(executable (name eval_cek))
+(executable (name eval_extensible))
+(executable (name eval_landins_knot))
+(executable (name eval_control_flow_cps))
+(executable (name eval_triple_store))
+(executable (name lang_ast_submodules))
+(executable (name lang_build_systems))

@@ -221,9 +221,3 @@
     (menhir (and (>= "20240715") :build))
     (menhirLib (>= "20240715"))
     (mdx (and (>= "2.4.1") :with-test))))
-
-
-; Miscellaneous scraps
-
-(package
-  (name scraps))
