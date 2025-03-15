@@ -14,14 +14,9 @@ end = struct
   let label () = Effect.perform Label
 
   let try_with ?(label=label) f x =
-    let open Effect.Deep in
-    try_with f x
-      { effc = fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Label -> Option.some @@ fun (k : (a, _) continuation) ->
-            continue k (label ())
-          | _ -> None
-      }
+    try f x with
+    | effect Label, k ->
+        Effect.Deep.continue k (label ())
 
 end
 
