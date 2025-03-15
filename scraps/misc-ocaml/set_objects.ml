@@ -190,7 +190,7 @@ module Object_oriented = struct
   (** I don't think anyone would usually use first-class modules like this,
       but I’m including it to demonstrate the correspondance between modules and
       object-oriented approaches to programming. *)
-  module FirstClassModules = struct
+  module First_class_modules = struct
 
     module rec Set : sig
 

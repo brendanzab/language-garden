@@ -2,7 +2,7 @@
     Based on https://effekt-lang.org/examples/comefrom.html
 *)
 
-module ComeFrom () : sig
+module Come_from () : sig
 
   val label : unit -> unit (* Label *)
   val try_with : ?label:(unit -> unit (* E *)) -> ('a -> 'b (* Label *)) -> 'a -> 'b (* E *)
@@ -25,19 +25,19 @@ end = struct
 
 end
 
-module ComeFrom0 = ComeFrom ()
-module ComeFrom1 = ComeFrom ()
-module ComeFrom2 = ComeFrom ()
+module Come_from0 = Come_from ()
+module Come_from1 = Come_from ()
+module Come_from2 = Come_from ()
 
-let hello_world () : unit (* ComeFrom0, ComeFrom1, ComeFrom2 *) =
-  ComeFrom0.label ();
+let hello_world () : unit (* Come_from0, Come_from1, Come_from2 *) =
+  Come_from0.label ();
   Printf.printf "Hello\n";
-  ComeFrom1.label ();
+  Come_from1.label ();
   Printf.printf "World\n";
-  ComeFrom2.label ()
+  Come_from2.label ()
 
 let () =
   ((fun () -> hello_world ())
-    |> ComeFrom0.try_with ~label:(fun () -> Printf.printf "Came from 0\n")
-    |> ComeFrom1.try_with ~label:(fun () -> Printf.printf "Came from 1\n")
-    |> ComeFrom2.try_with ~label:(fun () -> Printf.printf "Came from 2\n")) ()
+    |> Come_from0.try_with ~label:(fun () -> Printf.printf "Came from 0\n")
+    |> Come_from1.try_with ~label:(fun () -> Printf.printf "Came from 1\n")
+    |> Come_from2.try_with ~label:(fun () -> Printf.printf "Came from 2\n")) ()
