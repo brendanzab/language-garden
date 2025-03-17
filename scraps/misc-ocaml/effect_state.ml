@@ -1,3 +1,5 @@
+[@@@warning "-unused-value-declaration"]
+
 module State (A : sig type t end) : sig
 
   type t = A.t
@@ -5,7 +7,10 @@ module State (A : sig type t end) : sig
   val set : t -> unit
   val get : unit -> t
 
-  val run : t -> (unit -> 'a) -> 'a
+  val modify : (t -> t) -> unit
+
+  val run : init:t -> (unit -> 'a) -> 'a
+  val try_with : ?set:(t -> unit) -> ?get:(unit -> t) -> (unit -> 'a) -> 'a
 
 end = struct
 
@@ -18,15 +23,22 @@ end = struct
   let set x = Effect.perform (Set x)
   let get () = Effect.perform Get
 
-  let run (init : t) f =
+  let modify f = set (f (get ()))
+
+  let run ~(init : t) f =
+    let open Effect.Deep in
+
     let curr = ref init in
+    try f () with
+    | effect (Set x), k -> curr := x; continue k ()
+    | effect Get, k -> continue k !curr
+
+  let try_with ?(set = set) ?(get = get) f =
+    let open Effect.Deep in
 
     try f () with
-    | effect (Set x), k ->
-        curr := x;
-        Effect.Deep.continue k ()
-    | effect Get, k ->
-        Effect.Deep.continue k !curr
+    | effect (Set x), k -> continue k (set x)
+    | effect Get, k -> continue k (get ())
 
 end
 
@@ -34,6 +46,6 @@ let ( let@ ) = ( @@ )
 
 let () =
   let module S = State (String) in
-  let@ () = S.run "hello" in
-  S.set (S.get () ^ " world!");
+  let@ () = S.run ~init:"hello" in
+  S.modify (fun x -> x ^ " world!");
   print_string (S.get ())
