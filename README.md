@@ -18,36 +18,47 @@ widely applicable as well.
 
 Simply typed:
 
-- [**elab-stlc-bidirectional**](./elab-stlc-bidirectional):
+- **[elab-stlc-bidirectional]**:
   An elaborator for a simply typed lambda calculus that uses bidirectional
   typing to allow some type annotations to be omitted.
-- [**elab-stlc-bidirectional-stratify**](./elab-stlc-bidirectional):
+- **[elab-stlc-bidirectional-stratify]**:
   An elaborator that partially stratifies a combined type and term language into
   a simply typed core language.
-- [**elab-stlc-abstract**](./elab-stlc-abstract):
+- **[elab-stlc-abstract]**:
   An LCF-style elaborator that moves the construction of well-typed terms behind
   a trusted interface.
-- [**elab-stlc-unification**](./elab-stlc-unification):
+- **[elab-stlc-unification]**:
   An elaborator for a simply typed lambda calculus where type annotations can be omitted.
-- [**elab-stlc-letrec-unification**](./elab-stlc-letrec-unification):
+- **[elab-stlc-letrec-unification]**:
   Extends the simply typed lambda calculus with recursive let bindings.
-- [**elab-stlc-variant-unification**](./elab-stlc-variant-unification):
+- **[elab-stlc-variant-unification]**:
   Extends the simply typed lambda calculus with structural variant types,
   inferring types eagerly using constraint based unification.
 
 Polymorphically typed:
 
-- [**elab-system-f-bidirectional**](./elab-system-f-bidirectional):
+- **[elab-system-f-bidirectional]**:
   An elaborator for a higher-rank polymorphic lambda calculus.
 
 Dependently typed:
 
-- [**elab-dependent**](./elab-dependent/):
+- **[elab-dependent]**:
   An elaborator for a small dependently typed lambda calculus.
-- [**elab-dependent-sugar**](./elab-dependent-sugar/):
+- **[elab-dependent-sugar]**:
   An elaborator for a small dependently typed lambda calculus with syntactic sugar.
-- [**elab-record-patching**](./elab-record-patching/):
+- **[elab-record-patching]**:
   An elaborator of a dependently typed lambda calculus with singletons and record patching.
+
+[elab-stlc-bidirectional]: ./elab-stlc-bidirectional
+[elab-stlc-bidirectional-stratify]: ./elab-stlc-bidirectional
+[elab-stlc-abstract]: ./elab-stlc-abstract
+[elab-stlc-unification]: ./elab-stlc-unification
+[elab-stlc-letrec-unification]: ./elab-stlc-letrec-unification
+[elab-stlc-variant-unification]: ./elab-stlc-variant-unification
+[elab-system-f-bidirectional]: ./elab-system-f-bidirectional
+[elab-dependent]: ./elab-dependent/
+[elab-dependent-sugar]: ./elab-dependent-sugar/
+[elab-record-patching]: ./elab-record-patching/
 
 ### Compilation
 
@@ -55,49 +66,105 @@ These are related to compilation. Mainly to stack-machines, but I’m interested
 in exploring more approaches in the future, and other compilation passes
 related to compiling functional programming languages.
 
-- [**compile-arith**](./compile-arith/):
+- **[compile-arith]**:
   Compiling arithmetic expressions to stack machine instructions and A-Normal Form.
-- [**compile-arithcond**](./compile-arithcond/):
+- **[compile-arithcond]**:
   Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
-- [**compile-closure-conv**](./compile-closure-conv):
+- **[compile-closure-conv]**:
   Typed closure conversion and lambda lifting for a simply typed lambda calculus
   with booleans and integers.
+
+[compile-arith]: ./compile-arith/
+[compile-arithcond]: ./compile-arithcond/
+[compile-closure-conv]: ./compile-closure-conv
 
 ### Languages
 
 Miscellaneous programming language experiments.
 
-- [**lang-datalog**](./lang-datalog/):
+- **[lang-datalog]**:
   A simple Datalog interpreter.
-- [**lang-declarative-graphics**](./lang-declarative-graphics/):
+- **[lang-declarative-graphics]**:
   Declarative DSL for 2-dimensional graphics.
-- [**lang-doc-templates**](./lang-doc-templates/):
+- **[lang-doc-templates]**:
   A programmable document template language that elaborates to a typed lambda calculus.
-- [**lang-fractal-growth**](./lang-fractal-growth/):
+- **[lang-fractal-growth]**:
   Experiments with using grammars and rewriting systems to model fractal growth.
-- [**lang-fractal-tree-rewriting**](./lang-fractal-tree-rewriting/):
+- **[lang-fractal-tree-rewriting]**:
   Plant growth modelled as tree rewriting systems.
-- [**lang-lc-interpreters**](./lang-lc-interpreters/):
+- **[lang-lc-interpreters]**:
   A comparison of lambda calculus interpreters using different approaches to
   name binding.
-- [**lang-shader-graphics**](./lang-shader-graphics/):
+- **[lang-shader-graphics]**:
   An embedded DSL for describing procedural graphics, based on signed distance
   functions. These can be rendered on the CPU or compiled to GLSL shaders.
+
+[lang-datalog]: ./lang-datalog/
+[lang-declarative-graphics]: ./lang-declarative-graphics/
+[lang-doc-templates]: ./lang-doc-templates/
+[lang-fractal-growth]: ./lang-fractal-growth/
+[lang-fractal-tree-rewriting]: ./lang-fractal-tree-rewriting/
+[lang-lc-interpreters]: ./lang-lc-interpreters/
+[lang-shader-graphics]: ./lang-shader-graphics/
 
 ### Work in progress projects
 
 While most of the above projects need more work put into them, the following
 projects need more work put into them and a more incomplete in comparison.
 
-- [**wip-elab-builtins**](./wip-elab-builtins/):
+- **[wip-elab-builtins]**:
   An elaborator that supports built-in types and operations.
-- [**wip-compile-stlc**](./wip-compile-stlc):
+- **[wip-compile-stlc]**:
   A type preserving compiler for the simply typed lambda calculus.
-- [**wip-compile-stratify**](./wip-compile-stratify/):
+- **[wip-compile-stratify]**:
   Compiling a dependently typed lambda calculus into a stratified intermediate
   language.
-- [**wip-compile-uncurry**](./wip-compile-uncurry/):
+- **[wip-compile-uncurry]**:
   Compiling single-parameter functions to multiparameter functions.
+
+[wip-elab-builtins]: ./wip-elab-builtins/
+[wip-compile-stlc]: ./wip-compile-stlc
+[wip-compile-stratify]: ./wip-compile-stratify/
+[wip-compile-uncurry]: ./wip-compile-uncurry/
+
+## Concept map
+
+|                                     | Parse  | Eval | BidiTy | Elab | Unif | Comp | Lib |
+| ----------------------------------- | :----: | :--: | :----: | :--: | :--: | :--: | :-: |
+| [elab-stlc-bidirectional]           | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [elab-stlc-bidirectional-stratify]  | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [elab-stlc-abstract]                | ✔      |  ✔   | ✔      | ✔    |      |      | ✔   |
+| [elab-stlc-unification]             | ✔      |  ✔   | ✔      | ✔    | ✔    |      |     |
+| [elab-stlc-letrec-unification]      | ✔      |  ✔   | ✔      | ✔    | ✔    |      |     |
+| [elab-stlc-variant-unification]     | ✔      |  ✔   | ✔      | ✔    | ✔    |      |     |
+| [elab-system-f-bidirectional]       | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [elab-dependent]                    | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [elab-dependent-sugar]              | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [elab-record-patching]              | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [compile-arith]                     | ✔      |  ✔   |        |      |      | ✔    |     |
+| [compile-arithcond]                 | ✔      |  ✔   |        |      |      | ✔    |     |
+| [compile-closure-conv]              | ✔      |  ✔   | ✔      |      |      | ✔    |     |
+| [lang-datalog]                      | ✔      |  ✔   |        |      |      |      |     |
+| [lang-declarative-graphics]         |        |      |        |      |      |      | ✔   |
+| [lang-doc-templates]                | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [lang-fractal-growth]               |        |      |        |      |      |      | ✔   |
+| [lang-fractal-tree-rewriting]       |        |      |        |      |      |      | ✔   |
+| [lang-lc-interpreters]              | ✔      |  ✔   |        |      |      |      |     |
+| [lang-shader-graphics]              |        |      |        |      |      |      | ✔   |
+| [wip-elab-builtins]                 | ✔      |  ✔   | ✔      | ✔    |      |      |     |
+| [wip-compile-stlc]                  | ✔      |  ✔   | ✔      | ✔    |      | ✔    |     |
+| [wip-compile-stratify]              |        |  ✔   | ✔      |      |      | ✔    |     |
+| [wip-compile-uncurry]               |        |  ✔   |        |      |      | ✔    |     |
+
+### Key
+
+- **Parse**: Parsing
+- **Eval**: Evaluation
+- **BidiTy**: Bidirectional typing
+- **Elab**: Elaboration
+- **Unif**: Unification
+- **Comp**: Compilation
+- **Lib**: Library design and embedded DSLs
 
 ## Background
 
