@@ -17,6 +17,22 @@ let Eq := {
   eq : T -> T -> Bool;
 };
 
+let eq-bool : Eq [ T := Bool ] := {
+  eq x y :=
+    x Bool {
+      true := y Bool { true := true; false := false };
+      false := y Bool { true := false; false := true };
+    };
+};
+
+let eq-option (eq-a : Eq) : Eq [ T := Option eq-a.T ] := {
+  eq x y :=
+    x Bool {
+      some x := y Bool { some y := eq-a.eq x y; none := false };
+      none := y Bool { some _ := false; none := true };
+    };
+};
+
 let Map := {
   Key : Type;
   Map : Type -> Type;
