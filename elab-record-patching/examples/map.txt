@@ -37,4 +37,11 @@ let eq-map (key : Eq) : Map [ Key := key.T ] := {
   lookup A k map := map k;
 };
 
+-- Polymorphic map operations, inspired by Section 4.4 of “Modular Implicits”
+-- https://arxiv.org/abs/1512.01895
+
+let empty (key : Eq) (A : Type) : (eq-map key).Map A := (eq-map key).empty A;
+let add (key : Eq) (A : Type) : key.T -> A -> (eq-map key).Map A -> (eq-map key).Map A := (eq-map key).add A;
+let lookup (key : Eq) (A : Type) : key.T -> (eq-map key).Map A -> Option A := (eq-map key).lookup A;
+
 Type
