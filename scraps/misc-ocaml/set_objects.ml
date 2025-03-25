@@ -153,6 +153,7 @@ end
 *)
 module Object_oriented = struct
 
+  (* Sets as a characteristic function *)
   module Functions = struct
 
     type set = int -> bool
@@ -172,6 +173,8 @@ module Object_oriented = struct
       insert : int -> set;
       union : set -> set;
     }
+
+    (* Core implementations *)
 
     let rec empty () : set =
       let rec self = {
@@ -198,6 +201,32 @@ module Object_oriented = struct
         union = (fun s -> union self s);
       } in self
 
+    (* Additional implementations *)
+
+    let even : set =
+      let rec self = {
+        is_empty = false;
+        contains = (fun i -> i mod 2 = 0);
+        insert = (fun i -> insert self i);
+        union = (fun s -> union self s);
+      } in self
+
+    let full : set =
+      let rec self = {
+        is_empty = false;
+        contains = (fun _ -> true);
+        insert = (fun _ -> self);
+        union = (fun _ -> self);
+      } in self
+
+    let interval (n : int) (m : int) : set =
+      let rec self = {
+        is_empty = n > m;
+        contains = (fun i -> n <= i && i <= m);
+        insert = (fun i -> insert self i);
+        union = (fun s -> union self s);
+      } in self
+
   end
 
   (** Object types and objects *)
@@ -210,6 +239,8 @@ module Object_oriented = struct
       insert : int -> set;
       union : set -> set;
     >
+
+    (* Core implementations *)
 
     let rec empty () : set = object(self)
       method is_empty = true
@@ -234,6 +265,29 @@ module Object_oriented = struct
       method union s = union self s
     end
 
+    (* Additional implementations *)
+
+    let even : set = object(self)
+      method is_empty = false
+      method contains i = i mod 2 = 0
+      method insert i = insert self i
+      method union s = union self s
+    end
+
+    let full : set = object(self)
+      method is_empty = false
+      method contains _ = true
+      method insert _ = self
+      method union _ = self
+    end
+
+    let interval (n : int) (m : int) : set = object(self)
+      method is_empty = n > m
+      method contains i = n <= i && i <= m
+      method insert i = insert self i
+      method union s = union self s
+    end
+
   end
 
   (** I don't think anyone would usually use first-class modules like this, but
@@ -250,40 +304,60 @@ module Object_oriented = struct
         val union : (module Set.S) -> (module Set.S)
       end
 
-      val empty : unit -> (module Set.S)
-      val insert : (module Set.S) -> int -> (module Set.S)
-      val union : (module Set.S) -> (module Set.S) -> (module Set.S)
+    end = Set
 
-    end = struct
+    (* Core implementations *)
 
-      module type S = Set.S
+    let rec empty () : (module Set.S) =
+      let rec self : (module Set.S) = (module struct
+        let is_empty = true
+        let contains _ = false
+        let insert i = insert self i
+        let union s = s
+      end) in self
 
-      let empty () : (module S) =
-        let rec self : (module S) = (module struct
-          let is_empty = true
-          let contains _ = false
-          let insert i = Set.insert self i
-          let union s = s
+    and insert (module S : Set.S) (n : int) : (module Set.S) =
+      if S.contains n then (module S) else
+        let rec self : (module Set.S) = (module struct
+          let is_empty = false
+          let contains i = (i = n) || S.contains i
+          let insert i = insert self i
+          let union s = union self s
         end) in self
 
-      let insert (module S : S) (n : int) : (module S) =
-        if S.contains n then (module S) else
-          let rec self : (module S) = (module struct
-            let is_empty = false
-            let contains i = (i = n) || S.contains i
-            let insert i = Set.insert self i
-            let union s = Set.union self s
-          end) in self
+    and union (module S1 : Set.S) (module S2 : Set.S) : (module Set.S) =
+      let rec self : (module Set.S) = (module struct
+        let is_empty = S1.is_empty && S2.is_empty
+        let contains i = S1.contains i || S2.contains i
+        let insert i = insert self i
+        let union s = union self s
+      end) in self
 
-      let union (module S1 : S) (module S2 : S) : (module S) =
-        let rec self : (module S) = (module struct
-          let is_empty = S1.is_empty && S2.is_empty
-          let contains i = S1.contains i || S2.contains i
-          let insert i = Set.insert self i
-          let union s = Set.union self s
-        end) in self
+    (* Additional implementations *)
 
-    end
+    let even : (module Set.S) =
+      let rec self : (module Set.S) = (module struct
+        let is_empty = false
+        let contains i = i mod 2 = 0
+        let insert i = insert self i
+        let union s = union self s
+      end) in self
+
+    let full : (module Set.S) =
+      let rec self : (module Set.S) = (module struct
+        let is_empty = false
+        let contains _ = true
+        let insert _ = self
+        let union _ = self
+      end) in self
+
+    let interval (n : int) (m : int) : (module Set.S) =
+      let rec self : (module Set.S) = (module struct
+        let is_empty = n > m
+        let contains i = n <= i && i <= m
+        let insert i = insert self i
+        let union s = union self s
+      end) in self
 
   end
 
