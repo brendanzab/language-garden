@@ -15,7 +15,7 @@ module Abstract_data_types = struct
       approach used for defining APIs in OCaml. *)
   module Module = struct
 
-    (* Based on Figure 3 of the paper *)
+    (* Based on Figure 3 from the paper *)
     module type S = sig
 
       type t
@@ -28,7 +28,8 @@ module Abstract_data_types = struct
 
     end
 
-    (* Based on Figure 2 of the paper *)
+    (** A set implementation using equality. It’s not very efficient.
+        Based on Figure 2 from the paper. *)
     module Eq_set : S = struct
 
       type t =
@@ -57,7 +58,8 @@ module Abstract_data_types = struct
 
     end
 
-    (* Based on Figure 4 of the paper *)
+    (** A more efficient set implementation that uses a total ordering of the
+        elements. Based on Figure 4 from the paper. *)
     module Sorted_set : S = struct
 
       type t =
@@ -102,7 +104,8 @@ module Abstract_data_types = struct
   (** A set that hides its implementation using an existential type. *)
   module Existential = struct
 
-    (* Based on Figure 6 of the paper *)
+    (** This set type uses OCaml’s GADTs to define an existential type that
+        hides the underlying representation. Based on Figure 6 from the paper. *)
     type set =
       | Set : 'rep. {
         empty : 'rep;
@@ -112,6 +115,8 @@ module Abstract_data_types = struct
         union : 'rep -> 'rep -> 'rep;
       } -> set
 
+    (** This time we'll implement the set using a list internally. External
+        consumers cannot see this implementation detail. *)
     let eq_set : set =
       let empty = [] in
       let is_empty s = s = [] in
@@ -135,6 +140,7 @@ module Abstract_data_types = struct
 
       Set { empty; insert; is_empty; contains; union }
 
+    (** Implement the sorted set in terms of the abstract datatype defined earlier. *)
     let sorted_set : set = Set {
       empty = Module.Sorted_set.empty;
       insert = Module.Sorted_set.insert;
@@ -164,7 +170,69 @@ module Object_oriented = struct
 
   end
 
-  (** Recursive record types *)
+  (** OCaml’s object types are a good stand-in for the paper’s interfaces *)
+  module Objects = struct
+
+    (* Based on Figure 7 from the paper *)
+    type set = <
+      is_empty : bool;
+      contains : int -> bool;
+      insert : int -> set;
+      union : set -> set;
+    >
+
+    (* Core implementations *)
+
+    let rec empty () : set = object(self)
+      method is_empty = true
+      method contains _ = false
+      method insert i = insert self i
+      method union s = s
+    end
+
+    and insert (s : set) (n : int) : set =
+      if s#contains n then s else
+        object(self)
+          method is_empty = false
+          method contains i = (i = n) || s#contains i
+          method insert i = insert self i
+          method union s = union self s
+        end
+
+    and union (s1 : set) (s2 : set) : set = object(self)
+      method is_empty = s1#is_empty && s2#is_empty
+      method contains i = s1#contains i || s2#contains i
+      method insert i = insert self i
+      method union s = union self s
+    end
+
+    (* Additional implementations *)
+
+    let even : set = object(self)
+      method is_empty = false
+      method contains i = i mod 2 = 0
+      method insert i = insert self i
+      method union s = union self s
+    end
+
+    let full : set = object(self)
+      method is_empty = false
+      method contains _ = true
+      method insert _ = self
+      method union _ = self
+    end
+
+    let interval (n : int) (m : int) : set = object(self)
+      method is_empty = n > m
+      method contains i = n <= i && i <= m
+      method insert i = insert self i
+      method union s = union self s
+    end
+
+  end
+
+  (** We can actually just use recursive record to define objects in OCaml,
+      but it’s a little more awkward. *)
   module Records = struct
 
     type set = {
@@ -226,67 +294,6 @@ module Object_oriented = struct
         insert = (fun i -> insert self i);
         union = (fun s -> union self s);
       } in self
-
-  end
-
-  (** Object types and objects *)
-  module Objects = struct
-
-    (* Based on Figure 7 of the paper *)
-    type set = <
-      is_empty : bool;
-      contains : int -> bool;
-      insert : int -> set;
-      union : set -> set;
-    >
-
-    (* Core implementations *)
-
-    let rec empty () : set = object(self)
-      method is_empty = true
-      method contains _ = false
-      method insert i = insert self i
-      method union s = s
-    end
-
-    and insert (s : set) (n : int) : set =
-      if s#contains n then s else
-        object(self)
-          method is_empty = false
-          method contains i = (i = n) || s#contains i
-          method insert i = insert self i
-          method union s = union self s
-        end
-
-    and union (s1 : set) (s2 : set) : set = object(self)
-      method is_empty = s1#is_empty && s2#is_empty
-      method contains i = s1#contains i || s2#contains i
-      method insert i = insert self i
-      method union s = union self s
-    end
-
-    (* Additional implementations *)
-
-    let even : set = object(self)
-      method is_empty = false
-      method contains i = i mod 2 = 0
-      method insert i = insert self i
-      method union s = union self s
-    end
-
-    let full : set = object(self)
-      method is_empty = false
-      method contains _ = true
-      method insert _ = self
-      method union _ = self
-    end
-
-    let interval (n : int) (m : int) : set = object(self)
-      method is_empty = n > m
-      method contains i = n <= i && i <= m
-      method insert i = insert self i
-      method union s = union self s
-    end
 
   end
 
