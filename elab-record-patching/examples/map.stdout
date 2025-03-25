@@ -10,6 +10,59 @@
   let some : fun (A : Type) (a : A) -> Option A :=
     fun A a Out cases => cases.some a;
   let Eq : Type := { T : Type; eq : fun (_ : T) (_ : T) -> Bool };
+  let eq-bool :
+        {
+          T : Type [= Bool];
+          eq :
+            fun (_ :
+                  fun (Out : Type) (_ : { true : Out; false : Out }) -> Out)
+                (_ :
+                  fun (Out : Type) (_ : { true : Out; false : Out }) -> Out)
+                (Out : Type) (_ : { true : Out; false : Out }) -> Out
+        }
+  :=
+    {
+      T := #sing-intro;
+      eq :=
+        fun x y =>
+          x Bool
+            {
+              true := y Bool { true := true; false := false };
+              false := y Bool { true := false; false := true }
+            }
+    };
+  let eq-option :
+        fun (eq-a : Eq)
+            ->
+            {
+              T : Type [= Option eq-a.T];
+              eq :
+                fun (_ :
+                      fun (Out : Type)
+                          (_ :
+                            { some : fun (_ : eq-a.T) -> Out; none : Out })
+                          -> Out)
+                    (_ :
+                      fun (Out : Type)
+                          (_ :
+                            { some : fun (_ : eq-a.T) -> Out; none : Out })
+                          -> Out)
+                    (Out : Type) (_ : { true : Out; false : Out }) -> Out
+            }
+  :=
+    fun eq-a =>
+      {
+        T := #sing-intro;
+        eq :=
+          fun x y =>
+            x Bool
+              {
+                some :=
+                  fun x =>
+                    y Bool { some := fun y => eq-a.eq x y; none := false };
+                none := y Bool { some := fun _ => false; none := true }
+              }
+      };
   let Map : Type :=
     {
       Key : Type;
