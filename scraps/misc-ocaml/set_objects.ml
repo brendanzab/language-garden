@@ -251,13 +251,13 @@ module Object_oriented = struct
 
     end = struct
 
-      include Set
+      module type S = Set.S
 
       let empty () : (module S) =
         let rec self : (module S) = (module struct
           let is_empty = true
           let contains _ = false
-          let insert i = insert self i
+          let insert i = Set.insert self i
           let union s = s
         end) in self
 
@@ -266,16 +266,16 @@ module Object_oriented = struct
           let rec self : (module S) = (module struct
             let is_empty = false
             let contains i = (i = n) || S.contains i
-            let insert i = insert self i
-            let union s = union self s
+            let insert i = Set.insert self i
+            let union s = Set.union self s
           end) in self
 
       let union (module S1 : S) (module S2 : S) : (module S) =
         let rec self : (module S) = (module struct
           let is_empty = S1.is_empty && S2.is_empty
           let contains i = S1.contains i || S2.contains i
-          let insert i = insert self i
-          let union s = union self s
+          let insert i = Set.insert self i
+          let union s = Set.union self s
         end) in self
 
     end
