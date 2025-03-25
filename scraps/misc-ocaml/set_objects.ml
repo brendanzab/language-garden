@@ -15,7 +15,7 @@ module Abstract_data_types = struct
       approach used for defining APIs in OCaml. *)
   module Module = struct
 
-    module Set : sig
+    module type S = sig
 
       type t
 
@@ -25,7 +25,9 @@ module Abstract_data_types = struct
       val contains : t -> int -> bool
       val union : t -> t -> t
 
-    end = struct
+    end
+
+    module Eq_set : S = struct
 
       type t =
         | Empty
@@ -39,13 +41,12 @@ module Abstract_data_types = struct
       let rec contains s i =
         match s with
         | Empty -> false
-        | Insert (n, r) ->
-            if i = n then true else contains r i
+        | Insert (n, _) when i = n -> true
+        | Insert (_, r) -> contains r i
 
       let insert s i =
-        if not (contains s i) then
+        if contains s i then s else
           Insert (i, s)
-        else s
 
       let rec union s1 s2 =
         match s1 with
@@ -54,7 +55,44 @@ module Abstract_data_types = struct
 
     end
 
-    (* TODO: Show sorted set implementation *)
+    module Sorted_set : S = struct
+
+      type t =
+        | Empty
+        | Insert of int * t
+
+      let empty = Empty
+
+      let is_empty s =
+        s = Empty
+
+      let rec contains s i =
+        match s with
+        | Empty -> false
+        | Insert (n, _) when i = n -> true
+        | Insert (n, _) when i > n -> false
+        | Insert (_, r) -> contains r i
+
+      let rec insert s i =
+        match s with
+        | Empty -> Insert (i, s)
+        | Insert (n, _) when i = n -> s
+        | Insert (n, _) when i < n -> Insert (i, s)
+        | Insert (n, r) ->
+            let t = insert r i in
+            if r = t then s else Insert (n, t)
+
+      let rec union s1 s2 =
+        match s1 with
+        | Empty -> s2
+        | Insert (n1, r1) ->
+            match s2 with
+            | Empty -> s1
+            | Insert (n2, r2) when n1 = n2 -> insert (union r1 r2) n1
+            | Insert (n2, _) when n1 < n2 -> insert (union r1 s2) n1
+            | Insert (n2, r2) -> insert (union s1 r2) n2
+
+    end
 
   end
 
@@ -70,19 +108,19 @@ module Abstract_data_types = struct
         union : 'rep -> 'rep -> 'rep;
       } -> set
 
-    let set : set =
+    let eq_set : set =
       let empty = [] in
       let is_empty s = s = [] in
 
       let rec contains s i =
         match s with
         | [] -> false
-        | n :: r ->
-            if i = n then true else contains r i
+        | n :: _ when i = n -> true
+        | _ :: r -> contains r i
       in
 
       let insert s i =
-        if not (contains s i) then i :: s else s
+        if contains s i then s else i :: s
       in
 
       let rec union s1 s2 =
@@ -93,9 +131,15 @@ module Abstract_data_types = struct
 
       Set { empty; insert; is_empty; contains; union }
 
-  end
+    let sorted_set : set = Set {
+      empty = Module.Sorted_set.empty;
+      insert = Module.Sorted_set.insert;
+      is_empty = Module.Sorted_set.is_empty;
+      contains = Module.Sorted_set.contains;
+      union = Module.Sorted_set.union;
+    }
 
-  (* TODO: Show sorted set implementation *)
+  end
 
 end
 
@@ -187,8 +231,8 @@ module Object_oriented = struct
 
   end
 
-  (** I don't think anyone would usually use first-class modules like this,
-      but I’m including it to demonstrate the correspondance between modules and
+  (** I don't think anyone would usually use first-class modules like this, but
+      I’m including it to demonstrate the correspondence between modules and
       object-oriented approaches to programming. *)
   module First_class_modules = struct
 
