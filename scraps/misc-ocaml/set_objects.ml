@@ -15,6 +15,7 @@ module Abstract_data_types = struct
       approach used for defining APIs in OCaml. *)
   module Module = struct
 
+    (* Based on Figure 3 of the paper *)
     module type S = sig
 
       type t
@@ -27,6 +28,7 @@ module Abstract_data_types = struct
 
     end
 
+    (* Based on Figure 2 of the paper *)
     module Eq_set : S = struct
 
       type t =
@@ -55,6 +57,7 @@ module Abstract_data_types = struct
 
     end
 
+    (* Based on Figure 4 of the paper *)
     module Sorted_set : S = struct
 
       type t =
@@ -99,6 +102,7 @@ module Abstract_data_types = struct
   (** A set that hides its implementation using an existential type. *)
   module Existential = struct
 
+    (* Based on Figure 6 of the paper *)
     type set =
       | Set : 'rep. {
         empty : 'rep;
@@ -199,6 +203,7 @@ module Object_oriented = struct
   (** Object types and objects *)
   module Objects = struct
 
+    (* Based on Figure 7 of the paper *)
     type set = <
       is_empty : bool;
       contains : int -> bool;
