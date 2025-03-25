@@ -41,4 +41,14 @@
             key.eq x k (Option A) { true := some A v; false := map x };
         lookup := fun A k map => map k
       };
+  let empty : fun (key : Eq) (A : Type) -> (eq-map key).Map A :=
+    fun key A => (eq-map key).empty A;
+  let add :
+        fun (key : Eq) (A : Type) (_ : key.T) (_ : A)
+            (_ : (eq-map key).Map A) -> (eq-map key).Map A
+  := fun key A => (eq-map key).add A;
+  let lookup :
+        fun (key : Eq) (A : Type) (_ : key.T) (_ : (eq-map key).Map A)
+            -> Option A
+  := fun key A => (eq-map key).lookup A;
   Type
