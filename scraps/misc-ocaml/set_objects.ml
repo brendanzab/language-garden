@@ -288,3 +288,22 @@ module Object_oriented = struct
   end
 
 end
+
+(*
+
+  Section 3.9:
+
+  type 'a f = {
+    is_empty : bool;
+    contains : int -> bool;
+    insert : int -> 'a;
+    union : 'a -> 'a;
+  }
+
+  (* set_obj is isomorphic to Object_oriented.Records.set *)
+  (* set_adt is isomorphic to Abstract_data_types.Existential.set *)
+
+  type set_obj = Set_obj f
+  type set_adt = Set_adt : 'rep. 'rep * ('rep -> 'rep f) -> set_adt
+
+*)
