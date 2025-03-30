@@ -393,10 +393,10 @@ end
     union : 'a -> 'a;
   }
 
-  (* set_obj is isomorphic to Object_oriented.Records.set *)
-  (* set_adt is isomorphic to Abstract_data_types.Existential.set *)
+  (* isomorphic to Object_oriented.Records.set *)
+  type set_obj = Set_obj : set_obj f -> set_obj
 
-  type set_obj = Set_obj f
+  (* isomorphic to Abstract_data_types.Existential.set *)
   type set_adt = Set_adt : 'rep. 'rep * ('rep -> 'rep f) -> set_adt
 
 *)
