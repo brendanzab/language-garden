@@ -433,6 +433,63 @@ Graph example
     yes
   
 
+Programming languages example
+  $ cat ./languages.datalog | datalog
+  ────────────────────────────────────────────────────────────────────────────────
+  Knowledge Base
+  ────────────────────────────────────────────────────────────────────────────────
+  homepage("OCaml", "https://ocaml.org").
+  homepage("Haskell", "https://www.haskell.org/").
+  homepage("Standard ML", "https://smlfamily.github.io/").
+  implementation("Haskell", "GHC").
+  implementation("OCaml", "ocamlc").
+  implementation("Standard ML", "SML/NJ").
+  implementation("Standard ML", "MLton").
+  implementation("Standard ML", "MLKit").
+  implementation("Standard ML", "Poly/ML").
+  influencedBy("Caml", "ML").
+  influencedBy("Haskell", "ISWIM").
+  influencedBy("Haskell", "KRC").
+  influencedBy("Haskell", "Miranda").
+  influencedBy("Haskell", "Standard ML").
+  influencedBy("Haskell", "SASL").
+  influencedBy("Haskell", "SISAL").
+  influencedBy("KRC", "SASL").
+  influencedBy("Miranda", "Hope").
+  influencedBy("Miranda", "KRC").
+  influencedBy("Miranda", "ML").
+  influencedBy("ML", "ISWIM").
+  influencedBy("OCaml", "Caml").
+  influencedBy("SASL", "ISWIM").
+  influencedBy("Standard ML", "Hope").
+  influencedBy("Standard ML", "ML").
+  influenced("ML", "Caml").
+  influenced("ISWIM", "Haskell").
+  influenced("KRC", "Haskell").
+  influenced("Miranda", "Haskell").
+  influenced("Standard ML", "Haskell").
+  influenced("SASL", "Haskell").
+  influenced("SISAL", "Haskell").
+  influenced("SASL", "KRC").
+  influenced("Hope", "Miranda").
+  influenced("KRC", "Miranda").
+  influenced("ML", "Miranda").
+  influenced("ISWIM", "ML").
+  influenced("Caml", "OCaml").
+  influenced("ISWIM", "SASL").
+  influenced("Hope", "Standard ML").
+  influenced("ML", "Standard ML").
+  
+  ────────────────────────────────────────────────────────────────────────────────
+  Query Results
+  ────────────────────────────────────────────────────────────────────────────────
+  ? influenced("ISWIM", A).
+    > A := "Haskell".
+    > A := "ML".
+    > A := "SASL".
+    yes
+  
+
 Zoo example
   $ cat ./zoo.datalog | datalog
   ────────────────────────────────────────────────────────────────────────────────

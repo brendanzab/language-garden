@@ -1,0 +1,32 @@
+homepage("OCaml", "https://ocaml.org").
+homepage("Haskell", "https://www.haskell.org/").
+homepage("Standard ML", "https://smlfamily.github.io/").
+
+implementation("Haskell", "GHC").
+implementation("Haskell", "GHC").
+implementation("OCaml", "ocamlc").
+implementation("Standard ML", "SML/NJ").
+implementation("Standard ML", "MLton").
+implementation("Standard ML", "MLKit").
+implementation("Standard ML", "Poly/ML").
+
+influencedBy("Caml", "ML").
+influencedBy("Haskell", "ISWIM").
+influencedBy("Haskell", "KRC").
+influencedBy("Haskell", "Miranda").
+influencedBy("Haskell", "Standard ML").
+influencedBy("Haskell", "SASL").
+influencedBy("Haskell", "SISAL").
+influencedBy("KRC", "SASL").
+influencedBy("Miranda", "Hope").
+influencedBy("Miranda", "KRC").
+influencedBy("Miranda", "ML").
+influencedBy("ML", "ISWIM").
+influencedBy("OCaml", "Caml").
+influencedBy("SASL", "ISWIM").
+influencedBy("Standard ML", "Hope").
+influencedBy("Standard ML", "ML").
+
+influenced(A, B) <- influencedBy(B, A).
+
+? influenced("ISWIM", A).
