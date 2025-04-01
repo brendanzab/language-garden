@@ -1,0 +1,137 @@
+────────────────────────────────────────────────────────────────────────────────
+Knowledge Base
+────────────────────────────────────────────────────────────────────────────────
+size("mouse", "tiny").
+size("frog", "tiny").
+size("rabbit", "small").
+size("fox", "small").
+size("wolf", "medium").
+size("goat", "medium").
+size("pig", "medium").
+size("bear", "big").
+size("horse", "big").
+size("cow", "big").
+size("elephant", "huge").
+size("giraffe", "huge").
+colour("mouse", "grey").
+colour("mouse", "black").
+colour("mouse", "white").
+colour("frog", "green").
+colour("rabbit", "brown").
+colour("rabbit", "white").
+colour("fox", "red").
+colour("wolf", "brown").
+colour("elephant", "grey").
+feet("horse", "hooves").
+feet("cow", "hooves").
+feet("goat", "hooves").
+feet("rabbit", "paws").
+feet("fox", "paws").
+feet("bear", "paws").
+herbivore("rabbit").
+herbivore("elephant").
+herbivore("giraffe").
+carnivore("fox").
+carnivore("wolf").
+carnivore("bear").
+size("mouse", "small").
+size("frog", "small").
+size("elephant", "big").
+size("giraffe", "big").
+herbivore("horse").
+herbivore("cow").
+herbivore("goat").
+bigger("rabbit", "mouse").
+bigger("fox", "mouse").
+bigger("rabbit", "frog").
+bigger("fox", "frog").
+bigger("wolf", "rabbit").
+bigger("goat", "rabbit").
+bigger("pig", "rabbit").
+bigger("wolf", "fox").
+bigger("goat", "fox").
+bigger("pig", "fox").
+bigger("bear", "wolf").
+bigger("horse", "wolf").
+bigger("cow", "wolf").
+bigger("bear", "goat").
+bigger("horse", "goat").
+bigger("cow", "goat").
+bigger("bear", "pig").
+bigger("horse", "pig").
+bigger("cow", "pig").
+bigger("elephant", "bear").
+bigger("giraffe", "bear").
+bigger("elephant", "horse").
+bigger("giraffe", "horse").
+bigger("elephant", "cow").
+bigger("giraffe", "cow").
+eats("rabbit", "grass").
+eats("elephant", "grass").
+eats("giraffe", "grass").
+eats("rabbit", "leaves").
+eats("elephant", "leaves").
+eats("giraffe", "leaves").
+bigger("mouse", "mouse").
+bigger("frog", "mouse").
+bigger("mouse", "frog").
+bigger("frog", "frog").
+bigger("wolf", "mouse").
+bigger("goat", "mouse").
+bigger("pig", "mouse").
+bigger("wolf", "frog").
+bigger("goat", "frog").
+bigger("pig", "frog").
+bigger("elephant", "wolf").
+bigger("giraffe", "wolf").
+bigger("elephant", "goat").
+bigger("giraffe", "goat").
+bigger("elephant", "pig").
+bigger("giraffe", "pig").
+bigger("elephant", "elephant").
+bigger("giraffe", "elephant").
+bigger("elephant", "giraffe").
+bigger("giraffe", "giraffe").
+eats("horse", "grass").
+eats("cow", "grass").
+eats("goat", "grass").
+eats("horse", "leaves").
+eats("cow", "leaves").
+eats("goat", "leaves").
+eats("fox", "mouse").
+eats("fox", "frog").
+eats("wolf", "rabbit").
+eats("wolf", "fox").
+eats("bear", "wolf").
+eats("bear", "goat").
+eats("bear", "pig").
+eaten("grass").
+eaten("leaves").
+eats("wolf", "mouse").
+eats("wolf", "frog").
+eaten("mouse").
+eaten("frog").
+eaten("rabbit").
+eaten("fox").
+eaten("wolf").
+eaten("goat").
+eaten("pig").
+
+────────────────────────────────────────────────────────────────────────────────
+Query Results
+────────────────────────────────────────────────────────────────────────────────
+? eats(Eater, Eaten), colour(Eater, Colour), colour(Eaten, Colour).
+  > Eater := "wolf".
+    Eaten := "rabbit".
+    Colour := "brown".
+  yes
+
+? eaten(X), size(X, "tiny").
+  > X := "mouse".
+  > X := "frog".
+  yes
+
+? herbivore(Animal), size(Animal, "big"), colour(Animal, "grey").
+  > Animal := "elephant".
+  yes
+
