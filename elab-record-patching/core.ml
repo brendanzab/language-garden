@@ -417,16 +417,13 @@ module Semantics = struct
 
   (** Conversion checking tests to see if two terms are are equal by checking
       if they compute to the same term. This could be implemented by reading
-      back both values and checking for alpha-equivalence, but it’s faster to
-      do this all at once.
+      back both values and checking the terms for alpha-equivalence, but it’s
+      faster to compare the values directly.
 
       We support best-effort eta conversion for singletons and unit records,
       similar to the approach found in the elaboration zoo in
       {{: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
       03-holes-unit-eta}.
-
-      As with {!quote}, the typing environment is used to recover the types of
-      variables.
   *)
   let rec is_convertible (size : int) (tm1 : vtm) (tm2 : vtm) : bool =
     match tm1, tm2 with
