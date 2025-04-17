@@ -1,3 +1,4 @@
+(executable (name adt_properties))
 (executable (name ast_folds))
 (executable (name effect_come_from))
 (executable (name effect_state))
