@@ -135,8 +135,8 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
         let head = eval env head in
-        let vtm1 = Lazy.from_fun (fun () -> eval env tm1) in
-        let vtm2 = Lazy.from_fun (fun () -> eval env tm2) in
+        let vtm1 = lazy (eval env tm1) in
+        let vtm2 = lazy (eval env tm2) in
         bool_elim head vtm1 vtm2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)

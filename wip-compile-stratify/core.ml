@@ -111,11 +111,11 @@ module Semantics = struct
     | Syntax.Var x -> Env.lookup x env
     | Syntax.Univ l ->  Univ l
     | Syntax.Fun_type (name, param_ty, body_ty) ->
-        let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
+        let param_ty = lazy (eval env param_ty) in
         let body_ty x = eval (Env.bind_entry x env) body_ty in
         Fun_type (name, param_ty, body_ty)
     | Syntax.Fun_lit (name, param_ty, body) ->
-        let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
+        let param_ty = lazy (eval env param_ty) in
         let body x = eval (Env.bind_entry x env) body in
         Fun_lit (name, param_ty, body)
     | Syntax.Fun_app (head, arg) -> app (eval env head) (eval env arg)

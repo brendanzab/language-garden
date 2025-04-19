@@ -312,7 +312,7 @@ module Semantics = struct
     | Syntax.Var index -> List.nth env index
     | Syntax.Univ ->  Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
-        let param_ty = Lazy.from_fun (fun () -> eval env param_ty) in
+        let param_ty = lazy (eval env param_ty) in
         let body_ty = fun x -> eval (x :: env) body_ty in
         Fun_type (name, param_ty, body_ty)
     | Syntax.Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
