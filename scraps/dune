@@ -5,6 +5,7 @@
 (executable (name eval_landins_knot))
 (executable (name eval_stlc_gadt))
 (executable (name eval_stlc_gadt_values))
+(executable (name eval_stlc_gadt_globals))
 (executable (name eval_triple_store))
 (executable (name lang_ast_submodules))
 (executable (name lang_build_systems))

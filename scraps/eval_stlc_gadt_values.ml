@@ -1,4 +1,4 @@
-(** Extends [eval_stlc_gadt] with a separate value datatype. *)
+(** A well-typed lambda calculus evaluator, with a separate value datatype. *)
 
 type ('ctx, 'a) index =
   | Stop : ('a * 'ctx, 'a) index
