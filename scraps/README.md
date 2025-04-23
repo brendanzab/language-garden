@@ -29,6 +29,8 @@ build system support and are untested for now.
   using higher-order references and backpatching.
 - [**eval_stlc_gadt.ml**](./eval_stlc_gadt.ml):
   A well-typed lambda calculus evaluator using GADTs.
+- [**eval_stlc_gadt_values.ml**](./eval_stlc_gadt_values.ml):
+  Extends `eval_stlc_gadt` with a separate value datatype.
 - [**eval_triple_store.ml**](./eval_triple_store.ml):
   Example of inferring facts from a triple store.
 - [**lang_ast_submodules.ml**](./lang_ast_submodules.ml):

@@ -28,8 +28,15 @@ let rec eval : type ctx a. ctx env -> (ctx, a) expr -> a =
     | Fun_abs body -> fun x -> eval (x :: env) body
     | Fun_app (fn, arg) -> (eval env fn) (eval env arg)
 
-let () =
+let () = begin
+
+  print_string "Running tests ...";
+
   assert (eval [] (Fun_abs (Var Stop)) 1 = 1);
   assert (eval [] (Fun_abs (Fun_abs (Var (Pop Stop)))) "hello" 4 = "hello");
   assert (eval ["hello"] (Fun_app (Fun_abs (Fun_abs (Var (Pop Stop))), Var Stop)) 4 = "hello");
   assert (eval [2; "hello"] (Let (Var (Pop Stop), Var Stop)) = "hello");
+
+  print_string " ok!\n";
+
+end
