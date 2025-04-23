@@ -4,17 +4,17 @@ type 'ctx env =
   | [] : unit env
   | ( :: ) : 'a * 'ctx env -> ('a * 'ctx) env
 
-type ('ctx, 'a) var =
-  | Stop : ('a * 'ctx, 'a) var
-  | Pop : ('ctx, 'a) var -> ('b * 'ctx, 'a) var
+type ('ctx, 'a) index =
+  | Stop : ('a * 'ctx, 'a) index
+  | Pop : ('ctx, 'a) index -> ('b * 'ctx, 'a) index
 
 type ('ctx, 'a) expr =
   | Let : ('ctx, 'a) expr * ('a * 'ctx, 'b) expr -> ('ctx, 'b) expr
-  | Var : ('ctx, 'a) var -> ('ctx, 'a) expr
+  | Var : ('ctx, 'a) index -> ('ctx, 'a) expr
   | Fun_abs : ('a * 'ctx, 'b) expr -> ('ctx, 'a -> 'b) expr
   | Fun_app : ('ctx, 'a -> 'b) expr * ('ctx, 'a) expr -> ('ctx, 'b) expr
 
-let rec lookup : type ctx a. (ctx, a) var -> ctx env -> a =
+let rec lookup : type ctx a. (ctx, a) index -> ctx env -> a =
   fun x env ->
     match x, env with
     | Stop, v :: _ -> v
