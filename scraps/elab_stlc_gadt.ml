@@ -52,7 +52,7 @@ module Core = struct
   type 'ctx some_expr = Expr : 'a ty * ('ctx, 'a) expr -> 'ctx some_expr
 
   (** Compare two types for equality *)
-  let rec eq_ty : type a b . a ty -> b ty -> (a, b) Type.eq option =
+  let rec eq_ty : type a b. a ty -> b ty -> (a, b) Type.eq option =
     fun ty1 ty2 ->
       match ty1, ty2 with
       | Unit_ty, Unit_ty -> Some Equal
