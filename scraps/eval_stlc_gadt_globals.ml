@@ -6,10 +6,6 @@ type 'a global_var =
   | Const : (int -> string -> int) global_var
   | Fix : (((int -> int) -> int -> int) -> int -> int) global_var
 
-type 'ctx env =
-  | [] : unit env
-  | ( :: ) : 'a * 'ctx env -> ('a * 'ctx) env
-
 type ('ctx, 'a) index =
   | Stop : ('a * 'ctx, 'a) index
   | Pop : ('ctx, 'a) index -> ('b * 'ctx, 'a) index
@@ -35,6 +31,10 @@ let lookup_global : type ctx a. a global_var -> (ctx, a) expr  =
         let f = Local_var (Pop Stop) in
         let x = Local_var Stop in
         f $ (fix $ f) $ x))
+
+type 'ctx env =
+  | [] : unit env
+  | ( :: ) : 'a * 'ctx env -> ('a * 'ctx) env
 
 let rec lookup : type ctx a. (ctx, a) index -> ctx env -> a =
   fun x env ->

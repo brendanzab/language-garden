@@ -1,9 +1,5 @@
 (** A well-typed lambda calculus evaluator using GADTs. *)
 
-type 'ctx env =
-  | [] : unit env
-  | ( :: ) : 'a * 'ctx env -> ('a * 'ctx) env
-
 type ('ctx, 'a) index =
   | Stop : ('a * 'ctx, 'a) index
   | Pop : ('ctx, 'a) index -> ('b * 'ctx, 'a) index
@@ -13,6 +9,10 @@ type ('ctx, 'a) expr =
   | Var : ('ctx, 'a) index -> ('ctx, 'a) expr
   | Fun_abs : ('a * 'ctx, 'b) expr -> ('ctx, 'a -> 'b) expr
   | Fun_app : ('ctx, 'a -> 'b) expr * ('ctx, 'a) expr -> ('ctx, 'b) expr
+
+type 'ctx env =
+  | [] : unit env
+  | ( :: ) : 'a * 'ctx env -> ('a * 'ctx) env
 
 let rec lookup : type ctx a. (ctx, a) index -> ctx env -> a =
   fun x env ->
