@@ -37,6 +37,9 @@ build system support and are untested for now.
   (compare with [check_stlc_bidir.rs](./check_stlc_bidir.rs)).
 - [**elab_stlc_gadt.ml**](./elab_stlc_gadt.ml):
   An elaborator from an untyped surface language into a well-typed core language.
+- [**elab_stlc_gadt_bidir.ml**](./elab_stlc_gadt_bidir.ml):
+  An elaborator from an untyped surface language into a well-typed core language,
+  allowing more type annotations to be omitted in the surface language.
 - [**lang_ast_submodules.ml**](./lang_ast_submodules.ml):
   A pattern for nesting mutually recursive datatypes in submodules without
   duplicating the datatype definitions.

@@ -1,5 +1,6 @@
 (** An elaborator from an untyped surface language into a well-typed core
-    language. Extends [eval_stlc_gadt].
+    language. Extends [elab_stlc_gadt], allowing more type annotations to be
+    omitted in the surface language.
 
     Based on {{: https://discuss.ocaml.org/t/parsing-terms-into-a-well-typed-representation-a-gadt-puzzle/8688}
     “Parsing” terms into a well-typed representation: a GADT puzzle} by gasche.
@@ -73,9 +74,10 @@ module Surface = struct
     | Fun_ty of ty * ty
 
   type expr =
-    | Let : (string * ty * expr) * expr -> expr
     | Var : string -> expr
-    | Fun_lit : (string * ty) * expr -> expr
+    | Ann : expr * ty -> expr
+    | Let : (string * ty option * expr) * expr -> expr
+    | Fun_lit : (string * ty option) * expr -> expr
     | Fun_app : expr * expr -> expr
     | Unit_lit : expr
 
@@ -103,13 +105,23 @@ module Surface = struct
             Index (ty, Pop idx)
 
   exception Type_mismatch
+  exception Ambiguous_param of string
 
   let rec check_expr : type ctx a. ctx env -> expr -> a Core.ty -> (ctx, a) Core.expr =
     fun env expr expected_ty ->
-      let Expr (ty, expr) = synth_expr env expr in
-      match Core.eq_ty ty expected_ty with
-      | Some Equal -> expr
-      | _ -> raise Type_mismatch
+      match expr, expected_ty with
+      | Let ((name, def_ty, def_expr), body_expr), body_ty ->
+          let Expr (def_ty, def_expr) = elab_ann_expr env def_expr def_ty in
+          let body_expr = check_expr ((name, def_ty) :: env) body_expr body_ty in
+          Let (def_expr, body_expr)
+      | Fun_lit ((name, None), body_expr), Fun_ty (param_ty, body_ty) ->
+          Fun_lit (check_expr ((name, param_ty) :: env) body_expr body_ty)
+      | _ ->
+          let Expr (ty, expr) = synth_expr env expr in
+          begin match Core.eq_ty ty expected_ty with
+          | Some Equal -> expr
+          | _ -> raise Type_mismatch
+          end
 
   and synth_expr : type ctx. ctx env -> expr -> ctx Core.some_expr =
     fun env expr ->
@@ -117,24 +129,34 @@ module Surface = struct
       | Var name ->
           let Index (ty, index) = elab_var env name in
           Expr (ty, Var index)
+      | Ann (expr, ty) ->
+          elab_ann_expr env expr (Some ty)
       | Let ((name, def_ty, def_expr), body_expr) ->
-          let Ty def_ty = elab_ty def_ty in
-          let def_expr = check_expr env def_expr def_ty in
+          let Expr (def_ty, def_expr) = elab_ann_expr env def_expr def_ty in
           let Expr (body_ty, body_expr) = synth_expr ((name, def_ty) :: env) body_expr in
           Expr (body_ty, Let (def_expr, body_expr))
-      | Fun_lit ((name, param_ty), body_expr) ->
+      | Fun_lit ((name, Some param_ty), body_expr) ->
           let Ty param_ty = elab_ty param_ty in
           let Expr (body_ty, body_expr) = synth_expr ((name, param_ty) :: env) body_expr in
           Expr (Fun_ty (param_ty, body_ty), Fun_lit body_expr)
+      | Fun_lit ((name, None), _) ->
+          raise (Ambiguous_param name)
       | Fun_app (fn_expr, arg_expr) ->
-          let Expr (fn_ty, fn_expr) = synth_expr env fn_expr in
-          begin match fn_ty with
-          | Fun_ty (param_ty, body_ty) ->
+          begin match synth_expr env fn_expr with
+          | Expr (Fun_ty (param_ty, body_ty), fn_expr) ->
               let arg_expr = check_expr env arg_expr param_ty in
               Expr (body_ty, Fun_app (fn_expr, arg_expr))
           | _ -> raise Type_mismatch
           end
       | Unit_lit ->
           Expr (Unit_ty, Unit_lit)
+
+  and elab_ann_expr : type ctx. ctx env -> expr -> ty option -> ctx Core.some_expr =
+    fun env expr ty ->
+      match ty with
+      | Some ty ->
+          let Ty ty = elab_ty ty in
+          Expr (ty, check_expr env expr ty)
+      | None -> synth_expr env expr
 
 end
