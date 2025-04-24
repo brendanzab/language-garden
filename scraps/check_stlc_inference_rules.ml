@@ -1,6 +1,7 @@
-(**  A demo of translating inference rules for the STLC into a type inference algorithm
+(** A demonstration of translating inference rules for the STLC into a type
+    inference algorithm.
 
-     Originally posted at https://gist.github.com/brendanzab/ebdf8bed6f239d3abbc50a396ce468ae
+    Originally posted at https://gist.github.com/brendanzab/ebdf8bed6f239d3abbc50a396ce468ae
 *)
 
 [@@@warning "-unused-constructor"]
@@ -65,7 +66,7 @@ let rec lookup (ctx : ctx) (x : string) =
 
     Γ ⊢ e1 : t1 -> t2    Γ ⊢ e2 : t1
   ──────────────────────────────────── (T-App)
-              Γ ⊢ e1 e2 : t2
+            Γ ⊢ e1 e2 : t2
 
   ─────────────────── (T-True)
     Γ ⊢ true : Bool

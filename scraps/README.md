@@ -29,7 +29,11 @@ build system support and are untested for now.
 - [**check_stlc_bidir.rs**](./check_stlc_bidir.rs):
   Bidirectional type checker for a simple functional language
 - [**check_stlc_inference_rules.ml**](./check_stlc_inference_rules.ml):
-  A demo of translating inference rules for the STLC into a type inference algorithm
+  A demonstration of translating inference rules for the STLC into a type
+  inference algorithm.
+- [**check_stlc_inference_rules_bidir.ml**](./check_stlc_inference_rules_bidir.ml):
+  A demonstration of translating bidirectional inference rules for the STLC into
+  a type inference algorithm.
 - [**check_dependent.pl**](./check_dependent.pl):
   A small dependent type system, implemented in SWI-Prolog using normalisation-by-evaluation.
 - [**elab_stlc_bidir.rs**](./elab_stlc_bidir.rs):
