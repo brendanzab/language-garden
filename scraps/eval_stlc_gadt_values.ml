@@ -14,7 +14,7 @@ type ('ctx, 'a) expr =
   | String_lit : string -> ('ctx, string) expr
 
 type 'a value =
-  | Fun_abs : ('a  value -> 'b value) -> ('a -> 'b) value
+  | Fun_abs : ('a value -> 'b value) -> ('a -> 'b) value
   | Int_lit : int -> int value
   | String_lit : string -> string value
 
