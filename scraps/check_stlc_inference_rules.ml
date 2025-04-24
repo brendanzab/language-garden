@@ -27,10 +27,10 @@ type ty (* t *) =
   | Bool                          (* Bool *)
   | Fun of ty * ty                (* t -> t *)
 
-type tm (* e *) =
+type expr (* e *) =
   | Var of string                 (* x *)
-  | Lam of string * ty * tm       (* \(x : t). e *)
-  | App of tm * tm                (* e e *)
+  | Lam of string * ty * expr     (* \(x : t). e *)
+  | App of expr * expr            (* e e *)
   | True                          (* true *)
   | False                         (* false *)
 
@@ -75,14 +75,14 @@ let rec lookup (ctx : ctx) (x : string) =
 *)
 
 (* Γ ⊢ x : T *)
-let rec infer (ctx : ctx) (tm : tm) : ty =
+let rec infer (ctx : ctx) (e : expr) : ty =
   (* Note how we visit the nodes of a proof tree (specified by the inference
      rules) using the call-stack. This is not the only way to traverse the proof
      tree – we could take other paths through it! *)
 
-  match tm with
+  match e with
   (* T-Var *)
-  | Var i -> lookup ctx i
+  | Var x -> lookup ctx x
 
   (* T-Lam *)
   | Lam (x, t1, e) ->
