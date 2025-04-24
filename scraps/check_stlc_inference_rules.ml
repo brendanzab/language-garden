@@ -9,59 +9,59 @@
 (*
   T ::=
     | Bool
-    | T -> T
+    | t -> t
 
-  t ::=
+  e ::=
     | x
-    | \(x : T). t
-    | t t
+    | \(x : t). e
+    | e e
 
   Γ ::=
     | ∅
-    | Γ, x : T
+    | Γ, x : t
 *)
 
-type ty (* T *) =
-  | Bool                  (* Bool *)
-  | Fun of ty * ty        (* T -> T *)
+type ty (* t *) =
+  | Bool                          (* Bool *)
+  | Fun of ty * ty                (* t -> t *)
 
-type tm (* t *) =
-  | Var of int            (* x *)
-  | Lam of ty * tm        (* \(x : T). t *)
-  | App of tm * tm        (* t t *)
+type tm (* e *) =
+  | Var of string                 (* x *)
+  | Lam of string * ty * tm       (* \(x : t). e *)
+  | App of tm * tm                (* e e *)
 
 type ctx (* Γ *) =
-  | Empty                 (* ∅ *)
-  | Extend of ctx * ty    (* Γ, x : T *)
+  | Empty                         (* ∅ *)
+  | Extend of ctx * string * ty   (* Γ, x : t *)
 
 (*
   ──────────────────── (V-Stop)
-    x : T ∈ Γ, x : T
+    x : t ∈ Γ, x : t
 
-        x : T ∈ Γ
+        x : t ∈ Γ
   ───────────────────── (V-Pop)
-    x : T ∈ Γ, y : T'
+    x : t ∈ Γ, y : t'
 *)
 
-(* x : T ∈ Γ *)
-let rec lookup (ctx : ctx) (i : int) =
+(* x : t ∈ Γ *)
+let rec lookup (ctx : ctx) (x : string) =
   match ctx with
   | Empty -> failwith "unbound variable"
-  | Extend (_, ty) when i = 0 -> ty          (* V-Stop *)
-  | Extend (ctx, _) -> lookup ctx (i - 1)    (* V-Pop *)
+  | Extend (_, y, t) when x = y -> t      (* V-Stop *)
+  | Extend (ctx, _, _) -> lookup ctx x    (* V-Pop *)
 
 (*
-    x : T ∈ Γ
+    x : t ∈ Γ
   ───────────── (T-Var)
-    Γ ⊢ x : T
+    Γ ⊢ x : t
 
-          Γ, x : T1 ⊢ t : T2
+          Γ, x : t1 ⊢ e : t2
   ───────────────────────────────── (T-Lam)
-    Γ ⊢ (\(x : T1). t) : T1 -> T2
+    Γ ⊢ (\(x : t1). e) : t1 -> t2
 
-    Γ ⊢ t1 : T1 -> T2    Γ ⊢ t2 : T1
+    Γ ⊢ e1 : t1 -> t2    Γ ⊢ e2 : t1
   ──────────────────────────────────── (T-App)
-              Γ ⊢ t1 t2 : T2
+              Γ ⊢ e1 e2 : t2
 *)
 
 (* Γ ⊢ x : T *)
@@ -75,16 +75,13 @@ let rec infer (ctx : ctx) (tm : tm) : ty =
   | Var i -> lookup ctx i
 
   (* T-Lam *)
-  | Lam (param_ty, body_tm) ->
-      let body_ty = infer (Extend (ctx, param_ty)) body_tm in
-      Fun (param_ty, body_ty)
+  | Lam (x, t1, e) ->
+      let t2 = infer (Extend (ctx, x, t1)) e in
+      Fun (t1, t2)
 
   (* T-App *)
-  | App (head_tm, arg_tm) -> begin
-      match infer ctx head_tm with
-      | Fun (param_ty, body_ty) ->
-          if infer ctx arg_tm = param_ty then body_ty else
-            failwith "mismatched argument type"
-      | _ ->
-          failwith "unexpected argument"
-  end
+  | App (e1, e2) ->
+      begin match infer ctx e1 with
+      | Fun (t1, t2) when infer ctx e2 = t1 -> t2
+      | _ -> failwith "type mismatch"
+      end
