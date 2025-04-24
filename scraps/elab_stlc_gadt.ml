@@ -11,6 +11,8 @@
 (** Well-typed core language *)
 module Core = struct
 
+  (** Syntax *)
+
   type 'a ty =
     | Unit_ty : unit ty
     | Fun_ty : 'a ty * 'b ty -> ('a -> 'b) ty
@@ -25,6 +27,14 @@ module Core = struct
     | Fun_lit : 'a ty * ('a * 'ctx, 'b) expr -> ('ctx, 'a -> 'b) expr
     | Fun_app : ('ctx, 'a -> 'b) expr * ('ctx, 'a) expr -> ('ctx, 'b) expr
     | Unit_lit : ('ctx, unit) expr
+
+  (** Existential types *)
+
+  type some_ty = Ty : 'a ty -> some_ty
+  type 'ctx some_index = Index : 'a ty * ('ctx, 'a) index -> 'ctx some_index
+  type 'ctx some_expr = Expr : 'a ty * ('ctx, 'a) expr -> 'ctx some_expr
+
+  (** Semantics *)
 
   type 'ctx env =
     | [] : unit env
@@ -44,12 +54,6 @@ module Core = struct
       | Fun_lit (_, body) -> fun x -> eval (x :: env) body
       | Fun_app (fn, arg) -> (eval env fn) (eval env arg)
       | Unit_lit -> ()
-
-  (** Existential types *)
-
-  type some_ty = Ty : 'a ty -> some_ty
-  type 'ctx some_index = Index : 'a ty * ('ctx, 'a) index -> 'ctx some_index
-  type 'ctx some_expr = Expr : 'a ty * ('ctx, 'a) expr -> 'ctx some_expr
 
   (** Compare two types for equality *)
   let rec eq_ty : type a b. a ty -> b ty -> (a, b) Type.eq option =
