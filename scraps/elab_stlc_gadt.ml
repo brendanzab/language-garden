@@ -74,7 +74,7 @@ module Surface = struct
 
   type expr =
     | Let : (string * ty * expr) * expr -> expr
-    | Var : string -> expr
+    | Name : string -> expr
     | Fun_lit : (string * ty) * expr -> expr
     | Fun_app : expr * expr -> expr
     | Unit_lit : expr
@@ -93,13 +93,13 @@ module Surface = struct
 
   exception Unbound_var of string
 
-  let rec elab_var : type ctx. ctx env -> string -> ctx Core.some_index =
+  let rec elab_name : type ctx. ctx env -> string -> ctx Core.some_index =
     fun env name ->
       match env with
       | [] -> raise (Unbound_var name)
       | (name', ty) :: env ->
           if name = name' then Index (ty, Stop) else
-            let (Index (ty, idx)) = elab_var env name in
+            let (Index (ty, idx)) = elab_name env name in
             Index (ty, Pop idx)
 
   exception Type_mismatch
@@ -114,8 +114,8 @@ module Surface = struct
   and synth_expr : type ctx. ctx env -> expr -> ctx Core.some_expr =
     fun env expr ->
       match expr with
-      | Var name ->
-          let Index (ty, index) = elab_var env name in
+      | Name name ->
+          let Index (ty, index) = elab_name env name in
           Expr (ty, Var index)
       | Let ((name, def_ty, def_expr), body_expr) ->
           let Ty def_ty = elab_ty def_ty in
@@ -136,5 +136,16 @@ module Surface = struct
           end
       | Unit_lit ->
           Expr (Unit_ty, Unit_lit)
+
+end
+
+let () = begin
+
+  print_string "Running tests ...";
+
+  assert (Surface.synth_expr [] (Fun_lit (("x", Unit_ty), Name "x"))
+    = Core.Expr (Fun_ty (Unit_ty, Unit_ty), Fun_lit (Var Stop)));
+
+  print_string " ok!\n";
 
 end
