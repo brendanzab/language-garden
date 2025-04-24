@@ -15,6 +15,8 @@
     | x
     | \(x : t). e
     | e e
+    | true
+    | false
 
   Γ ::=
     | ∅
@@ -29,6 +31,8 @@ type tm (* e *) =
   | Var of string                 (* x *)
   | Lam of string * ty * tm       (* \(x : t). e *)
   | App of tm * tm                (* e e *)
+  | True                          (* true *)
+  | False                         (* false *)
 
 type ctx (* Γ *) =
   | Empty                         (* ∅ *)
@@ -62,6 +66,12 @@ let rec lookup (ctx : ctx) (x : string) =
     Γ ⊢ e1 : t1 -> t2    Γ ⊢ e2 : t1
   ──────────────────────────────────── (T-App)
               Γ ⊢ e1 e2 : t2
+
+  ─────────────────── (T-True)
+    Γ ⊢ true : Bool
+
+  ─────────────────── (T-False)
+    Γ ⊢ false : Bool
 *)
 
 (* Γ ⊢ x : T *)
@@ -85,3 +95,6 @@ let rec infer (ctx : ctx) (tm : tm) : ty =
       | Fun (t1, t2) when infer ctx e2 = t1 -> t2
       | _ -> failwith "type mismatch"
       end
+
+  (* T-True, T-False *)
+  | True | False -> Bool
