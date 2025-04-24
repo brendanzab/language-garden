@@ -107,10 +107,9 @@ module Surface = struct
   let rec check_expr : type ctx a. ctx env -> expr -> a Core.ty -> (ctx, a) Core.expr =
     fun env expr expected_ty ->
       let Expr (ty, expr) = synth_expr env expr in
-      begin match Core.eq_ty ty expected_ty with
+      match Core.eq_ty ty expected_ty with
       | Some Equal -> expr
       | _ -> raise Type_mismatch
-      end
 
   and synth_expr : type ctx. ctx env -> expr -> ctx Core.some_expr =
     fun env expr ->
