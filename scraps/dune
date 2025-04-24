@@ -1,4 +1,3 @@
-(executable (name check_stlc_inference_rules))
 (executable (name eval_cek))
 (executable (name eval_control_flow_cps))
 (executable (name eval_extensible))
@@ -7,5 +6,7 @@
 (executable (name eval_stlc_gadt_values))
 (executable (name eval_stlc_gadt_globals))
 (executable (name eval_triple_store))
+(executable (name check_stlc_inference_rules))
+(executable (name elab_stlc_gadt))
 (executable (name lang_ast_submodules))
 (executable (name lang_build_systems))
