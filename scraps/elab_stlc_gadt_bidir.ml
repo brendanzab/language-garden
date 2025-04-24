@@ -22,8 +22,8 @@ module Core = struct
 
   type ('ctx, 'a) expr =
     | Var : ('ctx, 'a) index -> ('ctx, 'a) expr
-    | Let : ('ctx, 'a) expr * ('a * 'ctx, 'b) expr -> ('ctx, 'b) expr
-    | Fun_lit : ('a * 'ctx, 'b) expr -> ('ctx, 'a -> 'b) expr
+    | Let : 'a ty * ('ctx, 'a) expr * ('a * 'ctx, 'b) expr -> ('ctx, 'b) expr
+    | Fun_lit : 'a ty * ('a * 'ctx, 'b) expr -> ('ctx, 'a -> 'b) expr
     | Fun_app : ('ctx, 'a -> 'b) expr * ('ctx, 'a) expr -> ('ctx, 'b) expr
     | Unit_lit : ('ctx, unit) expr
 
@@ -41,8 +41,8 @@ module Core = struct
     fun env expr ->
       match expr with
       | Var x -> lookup x env
-      | Let (def, body) -> eval (eval env def :: env) body
-      | Fun_lit body -> fun x -> eval (x :: env) body
+      | Let (_, def, body) -> eval (eval env def :: env) body
+      | Fun_lit (_, body) -> fun x -> eval (x :: env) body
       | Fun_app (fn, arg) -> (eval env fn) (eval env arg)
       | Unit_lit -> ()
 
@@ -113,9 +113,10 @@ module Surface = struct
       | Let ((name, def_ty, def_expr), body_expr), body_ty ->
           let Expr (def_ty, def_expr) = elab_ann_expr env def_expr def_ty in
           let body_expr = check_expr ((name, def_ty) :: env) body_expr body_ty in
-          Let (def_expr, body_expr)
+          Let (def_ty, def_expr, body_expr)
       | Fun_lit ((name, None), body_expr), Fun_ty (param_ty, body_ty) ->
-          Fun_lit (check_expr ((name, param_ty) :: env) body_expr body_ty)
+          let body_expr = check_expr ((name, param_ty) :: env) body_expr body_ty in
+          Fun_lit (param_ty, body_expr)
       | _ ->
           let Expr (ty, expr) = synth_expr env expr in
           begin match Core.eq_ty ty expected_ty with
@@ -134,11 +135,11 @@ module Surface = struct
       | Let ((name, def_ty, def_expr), body_expr) ->
           let Expr (def_ty, def_expr) = elab_ann_expr env def_expr def_ty in
           let Expr (body_ty, body_expr) = synth_expr ((name, def_ty) :: env) body_expr in
-          Expr (body_ty, Let (def_expr, body_expr))
+          Expr (body_ty, Let (def_ty, def_expr, body_expr))
       | Fun_lit ((name, Some param_ty), body_expr) ->
           let Ty param_ty = elab_ty param_ty in
           let Expr (body_ty, body_expr) = synth_expr ((name, param_ty) :: env) body_expr in
-          Expr (Fun_ty (param_ty, body_ty), Fun_lit body_expr)
+          Expr (Fun_ty (param_ty, body_ty), Fun_lit (param_ty, body_expr))
       | Fun_lit ((name, None), _) ->
           raise (Ambiguous_param name)
       | Fun_app (fn_expr, arg_expr) ->
@@ -166,10 +167,10 @@ let () = begin
   print_string "Running tests ...";
 
   assert (Surface.synth_expr [] (Fun_lit (("x", Some Unit_ty), Name "x"))
-    = Core.Expr (Fun_ty (Unit_ty, Unit_ty), Fun_lit (Var Stop)));
+    = Core.Expr (Fun_ty (Unit_ty, Unit_ty), Fun_lit (Unit_ty, Var Stop)));
 
   assert (Surface.check_expr [] (Fun_lit (("x", None), Name "x")) (Fun_ty (Unit_ty, Unit_ty))
-    = Fun_lit (Var Stop));
+    = Fun_lit (Unit_ty, Var Stop));
 
   print_string " ok!\n";
 
