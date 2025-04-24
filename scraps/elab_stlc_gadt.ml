@@ -1,4 +1,5 @@
-(** An elaborator into a well-typed lambda calculus. Extends [eval_stlc_gadt].
+(** An elaborator from an untyped surface language into a well-typed core
+    language. Extends [eval_stlc_gadt].
 
     Based on {{: https://discuss.ocaml.org/t/parsing-terms-into-a-well-typed-representation-a-gadt-puzzle/8688}
     “Parsing” terms into a well-typed representation: a GADT puzzle} by gasche.
@@ -7,6 +8,7 @@
 [@@@warning "-unused-constructor"]
 [@@@warning "-unused-value-declaration"]
 
+(** Well-typed core language *)
 module Core = struct
 
   type 'a ty =
@@ -63,6 +65,7 @@ module Core = struct
 
 end
 
+(** Untyped surface language *)
 module Surface = struct
 
   type ty =
