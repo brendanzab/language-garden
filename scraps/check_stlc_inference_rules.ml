@@ -8,7 +8,7 @@
 [@@@warning "-unused-value-declaration"]
 
 (*
-  T ::=
+  t ::=
     | Bool
     | t -> t
 
