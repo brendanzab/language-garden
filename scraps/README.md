@@ -27,6 +27,8 @@ Evaluation:
   A well-typed lambda calculus evaluator, extended with some global definitions.
 - [**eval_triple_store.ml**](./eval_triple_store.ml):
   Example of inferring facts from a triple store.
+- [**eval_unsure_calculator**](./eval_unsure_calculator):
+  Probabilistic calculator based on Filip Hracek’s _Unsure Calculator_.
 
 Type checking:
 
