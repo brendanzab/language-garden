@@ -83,3 +83,15 @@ Miscellaneous:
   exposing the underlying representation.
 - [**misc_set_objects.ml**](./misc_set_objects.ml):
   Comparing set ADTs vs. set objects in OCaml.
+
+Work in progress projects:
+
+- [**wip-elab-builtins**](./wip-elab-builtins/):
+  An elaborator that supports built-in types and operations.
+- [**wip-compile-stlc**](./wip-compile-stlc):
+  A type preserving compiler for the simply typed lambda calculus.
+- [**wip-compile-stratify**](./wip-compile-stratify/):
+  Compiling a dependently typed lambda calculus into a stratified intermediate
+  language.
+- [**wip-compile-uncurry**](./wip-compile-uncurry/):
+  Compiling single-parameter functions to multiparameter functions.

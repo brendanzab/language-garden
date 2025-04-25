@@ -84,20 +84,10 @@ Miscellaneous programming language experiments.
   An embedded DSL for describing procedural graphics, based on signed distance
   functions. These can be rendered on the CPU or compiled to GLSL shaders.
 
-### Work in progress projects
+### Scraps
 
-While most of the above projects need more work put into them, the following
-projects need more work put into them and a more incomplete in comparison.
-
-- [**wip-elab-builtins**](./wip-elab-builtins/):
-  An elaborator that supports built-in types and operations.
-- [**wip-compile-stlc**](./wip-compile-stlc):
-  A type preserving compiler for the simply typed lambda calculus.
-- [**wip-compile-stratify**](./wip-compile-stratify/):
-  Compiling a dependently typed lambda calculus into a stratified intermediate
-  language.
-- [**wip-compile-uncurry**](./wip-compile-uncurry/):
-  Compiling single-parameter functions to multiparameter functions.
+Many other smaller examples and unfinished projects can be found in the
+[scraps](./scraps/) directory.
 
 ## Background
 
