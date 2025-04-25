@@ -42,6 +42,10 @@ type ctx (* Γ *) =
   | Extend of ctx * string * ty   (* Γ, x : t *)
 
 (*
+  ┌───────────┐
+  │ x : t ∈ Γ │
+  └───────────┘
+
   ──────────────────── (V-Stop)
     x : t ∈ Γ, x : t
 
@@ -58,6 +62,22 @@ let rec lookup (ctx : ctx) (x : string) =
   | Extend (ctx, _, _) -> lookup ctx x    (* V-Pop *)
 
 (*
+  ┌───────────┐
+  │ Γ ⊢ e ⇐ t │
+  └───────────┘
+
+      Γ, x : t1 ⊢ e ⇐ t2
+  ─────────────────────────── (C-Lam)
+    Γ ⊢ (\x. e) ⇐ t1 -> t2
+
+    Γ ⊢ e ⇒ t'    t' = t
+  ──────────────────────── (C-Conv)
+          Γ ⊢ e ⇐ t
+
+  ┌───────────┐
+  │ Γ ⊢ e ⇒ t │
+  └───────────┘
+
     x : t ∈ Γ
   ───────────── (I-Var)
     Γ ⊢ x ⇒ t
@@ -65,10 +85,6 @@ let rec lookup (ctx : ctx) (x : string) =
       Γ ⊢ e ⇐ t
   ───────────────── (I-Ann)
     Γ ⊢ e : t ⇒ t
-
-      Γ, x : t1 ⊢ e ⇐ t2
-  ─────────────────────────── (C-Lam)
-    Γ ⊢ (\x. e) ⇐ t1 -> t2
 
     Γ ⊢ e1 ⇒ t1 -> t2    Γ ⊢ e2 ⇐ t1
   ──────────────────────────────────── (I-App)
@@ -80,12 +96,9 @@ let rec lookup (ctx : ctx) (x : string) =
   ─────────────────── (I-False)
     Γ ⊢ false : Bool
 
-    Γ ⊢ e ⇒ t'    t' = t
-  ──────────────────────── (C-Conv)
-          Γ ⊢ e ⇐ t
 *)
 
-(* Γ ⊢ x ⇐ T *)
+(* Γ ⊢ e ⇐ t *)
 let rec check (ctx : ctx) (e : expr) (t : ty) : unit =
   match e, t with
   (* C-Lam *)
@@ -96,7 +109,7 @@ let rec check (ctx : ctx) (e : expr) (t : ty) : unit =
       if infer ctx e = t then () else
         failwith "type mismatch"
 
-(* Γ ⊢ x ⇒ T *)
+(* Γ ⊢ e ⇒ t *)
 and infer (ctx : ctx) (e : expr) : ty =
   match e with
   (* I-Var *)

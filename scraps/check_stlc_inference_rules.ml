@@ -40,6 +40,10 @@ type ctx (* Γ *) =
   | Extend of ctx * string * ty   (* Γ, x : t *)
 
 (*
+  ┌───────────┐
+  │ x : t ∈ Γ │
+  └───────────┘
+
   ──────────────────── (V-Stop)
     x : t ∈ Γ, x : t
 
@@ -49,13 +53,17 @@ type ctx (* Γ *) =
 *)
 
 (* x : t ∈ Γ *)
-let rec lookup (ctx : ctx) (x : string) =
+let rec lookup (ctx : ctx) (x : string) : ty =
   match ctx with
   | Empty -> failwith "unbound variable"
   | Extend (_, y, t) when x = y -> t      (* V-Stop *)
   | Extend (ctx, _, _) -> lookup ctx x    (* V-Pop *)
 
 (*
+  ┌───────────┐
+  │ Γ ⊢ e : t │
+  └───────────┘
+
     x : t ∈ Γ
   ───────────── (T-Var)
     Γ ⊢ x : t
@@ -75,7 +83,7 @@ let rec lookup (ctx : ctx) (x : string) =
     Γ ⊢ false : Bool
 *)
 
-(* Γ ⊢ x : T *)
+(* Γ ⊢ e : t *)
 let rec infer (ctx : ctx) (e : expr) : ty =
   (* Note how we visit the nodes of a proof tree (specified by the inference
      rules) using the call-stack. This is not the only way to traverse the proof
