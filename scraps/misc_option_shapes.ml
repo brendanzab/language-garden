@@ -1,4 +1,8 @@
-(** Inspired by https://okmij.org/ftp/tagless-final/datatypes.html *)
+(** Exposing introduction and elimination forms for variant types, without
+    exposing the underlying representation.
+
+    Inspired by https://okmij.org/ftp/tagless-final/datatypes.html
+*)
 
 [@@@warning "-unused-value-declaration"]
 

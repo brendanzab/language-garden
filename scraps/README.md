@@ -59,10 +59,27 @@ Compilation:
 - [**compile-arith-verified**](./compile-arith-verified/):
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
 
-Languages:
+Miscellaneous:
 
-- [**lang_ast_submodules.ml**](./lang_ast_submodules.ml):
+- [**misc_adt_properties.ml**](./misc_adt_properties.ml):
+  Some examples of abstract data types with their associated properties.
+- [**misc_ast_folds.ml**](./misc_ast_folds.ml):
+  Folding over an AST using recursion schemes.
+- [**misc_ast_submodules.ml**](./misc_ast_submodules.ml):
   A pattern for nesting mutually recursive datatypes in submodules without
   duplicating the datatype definitions.
-- [**lang_build_systems.ml**](./lang_build_systems.ml):
+- [**misc_effects_build_system.ml**](./misc_effects_build_system.ml):
   Memoized build system using OCaml 5’s algebraic effects and handlers.
+- [**misc_effects_build_system.ml**](./misc_effects_build_system.ml):
+  Memoized build system using OCaml 5’s algebraic effects and handlers.
+- [**misc_effects_come_from.ml**](./misc_effects_come_from.ml):
+  COMEFROM in OCaml, implemented with algebraic effects and handlers.
+- [**misc_effects_state.ml**](./misc_effects_state.ml):
+  State effect, implemented with algebraic effects and handlers.
+- [**misc_isorecursion_vs_equirecursion.ml**](./misc_isorecursion_vs_equirecursion.ml):
+  Comparing isorecursive variant types with equirecursive variant types in OCaml.
+- [**misc_option_shapes.ml**](./misc_option_shapes.ml):
+  Exposing introduction and elimination forms for variant types, without
+  exposing the underlying representation.
+- [**misc_set_objects.ml**](./misc_set_objects.ml):
+  Comparing set ADTs vs. set objects in OCaml.

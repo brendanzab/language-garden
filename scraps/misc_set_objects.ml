@@ -1,4 +1,6 @@
-(** Set examples in OCaml from {{:https://www.cs.utexas.edu/~wcook/Drafts/2009/essay.pdf}
+(** Comparing set ADTs vs. set objects in OCaml.
+
+    This is based on the examples from {{:https://www.cs.utexas.edu/~wcook/Drafts/2009/essay.pdf}
     “On Understanding Data Abstraction, Revisited”} by William R. Cook
 *)
 

@@ -1,3 +1,5 @@
+(** Comparing isorecursive variant types with equirecursive variant types in OCaml.*)
+
 [@@@warning "-unused-value-declaration"]
 [@@@warning "-unused-constructor"]
 

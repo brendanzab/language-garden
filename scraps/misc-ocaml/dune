@@ -1,7 +1,0 @@
-(executable (name adt_properties))
-(executable (name ast_folds))
-(executable (name effect_come_from))
-(executable (name effect_state))
-(executable (name isorecursion_vs_equirecursion))
-(executable (name option_shapes))
-(executable (name set_objects))
