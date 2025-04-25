@@ -7,9 +7,13 @@
 (executable (name eval_stlc_gadt_values_clos))
 (executable (name eval_stlc_gadt_globals))
 (executable (name eval_triple_store))
+
 (executable (name check_stlc_inference_rules))
+(executable (name check_stlc_inference_rules_bidir))
+
 (executable (name elab_stlc_gadt))
 (executable (name elab_stlc_gadt_bidir))
+
 (executable (name misc_adt_properties))
 (executable (name misc_ast_folds))
 (executable (name misc_ast_submodules))
