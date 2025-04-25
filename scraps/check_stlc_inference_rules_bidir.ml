@@ -1,5 +1,7 @@
 (** A demonstration of translating bidirectional inference rules for the STLC
-    into a type inference algorithm. Based on [check_stlc_inference_rules.ml].
+    into a type inference algorithm.
+
+    Extends [check_stlc_inference_rules.ml].
 *)
 
 [@@@warning "-unused-constructor"]

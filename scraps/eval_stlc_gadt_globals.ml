@@ -1,5 +1,8 @@
 (** A well-typed lambda calculus evaluator, extended with some global
-    definitions. Extends [eval_stlc_gadt]. *)
+    definitions.
+
+    Extends [eval_stlc_gadt].
+*)
 
 type 'a global_var =
   | Zero : int global_var

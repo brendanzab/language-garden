@@ -4,6 +4,7 @@
 (executable (name eval_landins_knot))
 (executable (name eval_stlc_gadt))
 (executable (name eval_stlc_gadt_values))
+(executable (name eval_stlc_gadt_values_clos))
 (executable (name eval_stlc_gadt_globals))
 (executable (name eval_triple_store))
 (executable (name check_stlc_inference_rules))

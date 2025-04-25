@@ -22,6 +22,9 @@ build system support and are untested for now.
   A well-typed lambda calculus evaluator using GADTs.
 - [**eval_stlc_gadt_values.ml**](./eval_stlc_gadt_values.ml):
   A well-typed lambda calculus evaluator, with a separate value datatype.
+- [**eval_stlc_gadt_values_clos.ml**](./eval_stlc_gadt_values_clos.ml):
+  A well-typed lambda calculus evaluator, with a separate value datatype, this
+  time using defunctionalised closures in the semantic domain.
 - [**eval_stlc_gadt_globals.ml**](./eval_stlc_gadt_globals.ml):
   A well-typed lambda calculus evaluator, extended with some global definitions.
 - [**eval_triple_store.ml**](./eval_triple_store.ml):

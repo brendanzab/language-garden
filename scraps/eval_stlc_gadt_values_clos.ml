@@ -1,6 +1,8 @@
-(** A well-typed lambda calculus evaluator, with a separate value datatype.
+(** A well-typed lambda calculus evaluator, with a separate value datatype, this
+    time using defunctionalised closures in the semantic domain, as opposed to
+    HOAS.
 
-    Extends [eval_stlc_gadt].
+    Extends [eval_stlc_gadt_values].
 *)
 
 type ('ctx, 'a) index =
@@ -16,11 +18,14 @@ type ('ctx, 'a) expr =
   | String_lit : string -> ('ctx, string) expr
 
 type 'a value =
-  | Fun_abs : ('a value -> 'b value) -> ('a -> 'b) value
+  | Fun_abs : ('a, 'b) clos -> ('a -> 'b) value
   | Int_lit : int -> int value
   | String_lit : string -> string value
 
-type 'ctx env =
+and ('a, 'b) clos =
+  | Clos : 'ctx env * ('a * 'ctx, 'b) expr -> ('a, 'b) clos
+
+and 'ctx env =
   | [] : unit env
   | ( :: ) : 'a value * 'ctx env -> ('a * 'ctx) env
 
@@ -35,10 +40,16 @@ let rec eval : type ctx a. ctx env -> (ctx, a) expr -> a value =
     match expr with
     | Let (def, body) -> eval (eval env def :: env) body
     | Var x -> lookup x env
-    | Fun_abs body -> Fun_abs (fun x -> eval (x :: env) body)
-    | Fun_app (fn, arg) -> let (Fun_abs fn) = eval env fn in fn (eval env arg)
+    | Fun_abs body -> Fun_abs (Clos (env, body))
+    | Fun_app (fn, arg) ->
+        let Fun_abs clos = eval env fn in
+        clos_app clos (eval env arg)
     | Int_lit i -> Int_lit i
     | String_lit s -> String_lit s
+
+and clos_app : type a b. (a, b) clos -> a value -> b value =
+  fun (Clos (env, body)) arg ->
+    eval (arg :: env) body
 
 let () = begin
 
