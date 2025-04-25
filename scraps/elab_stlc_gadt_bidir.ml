@@ -1,8 +1,10 @@
 (** An elaborator from an untyped surface language into a well-typed core
-    language. Extends [elab_stlc_gadt], allowing more type annotations to be
-    omitted in the surface language.
+    language, allowing more type annotations to be omitted in the surface
+    language through the use of bidirectional typing.
 
-    Based on {{: https://discuss.ocaml.org/t/parsing-terms-into-a-well-typed-representation-a-gadt-puzzle/8688}
+    Extends [elab_stlc_gadt.ml].
+
+    Originally based on {{: https://discuss.ocaml.org/t/parsing-terms-into-a-well-typed-representation-a-gadt-puzzle/8688}
     “Parsing” terms into a well-typed representation: a GADT puzzle} by gasche.
 *)
 
@@ -73,6 +75,8 @@ end
 (** Untyped surface language *)
 module Surface = struct
 
+  (** Syntax *)
+
   type ty =
     | Unit_ty
     | Fun_ty of ty * ty
@@ -84,6 +88,8 @@ module Surface = struct
     | Fun_lit : (string * ty option) * expr -> expr
     | Fun_app : expr * expr -> expr
     | Unit_lit : expr
+
+  (** Elaboration *)
 
   type 'ctx env =
     | [] : unit env
