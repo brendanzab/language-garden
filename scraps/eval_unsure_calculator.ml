@@ -1,21 +1,23 @@
-(** Probabilistic calculator based on Filip Hracek’s {{: https://filiph.github.io/unsure/}
-    Unsure Calculator}, implemented using probabilistic programming as described
-    by Rodrigo Mesquita.
+(** Probabilistic calculator based on Filip Hracek’s Unsure Calculator,
+    implemented using probabilistic programming with the approach described by
+    Rodrigo Mesquita.
+
+    Resources:
 
     - Filip Hracek, {{: https://filiph.github.io/unsure/} Unsure Calculator}
     - Rodrigo Mesquita, {{: https://alt-romes.github.io/posts/2025-04-25-unsure-calculator-in-100-lines-of-haskell.html}
       Implementing Unsure Calculator in 100 lines of Haskell}
-    - Rodrigo Mesquita, {{: https://gist.github.com/alt-romes/58346dee164a91ddab48c5a111d1b5ea}
-      Unsure Calculator in exactly 100 lines of Haskell}
 *)
 
 [@@@warning "-unused-value-declaration"]
 
 (** Monadic computations for building probabilistic distributions.
 
+    Resources:
+
     - {{: https://mlg.eng.cam.ac.uk/pub/pdf/SciGhaGor15.pdf} Practical Probabilistic Programming with Monads}
     - {{: https://www.youtube.com/watch?v=qZ4O-1VYv4c} The Probability Monad }
-    - {{: https://github.com/tweag/monad-bayes} monad-bayes}
+    - {{: https://github.com/tweag/monad-bayes} tweag/monad-bayes}
 *)
 module Dist : sig
 
