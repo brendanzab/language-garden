@@ -72,8 +72,6 @@ Miscellaneous:
   duplicating the datatype definitions.
 - [**misc_effects_build_system.ml**](./misc_effects_build_system.ml):
   Memoized build system using OCaml 5’s algebraic effects and handlers.
-- [**misc_effects_build_system.ml**](./misc_effects_build_system.ml):
-  Memoized build system using OCaml 5’s algebraic effects and handlers.
 - [**misc_effects_come_from.ml**](./misc_effects_come_from.ml):
   COMEFROM in OCaml, implemented with algebraic effects and handlers.
 - [**misc_effects_state.ml**](./misc_effects_state.ml):
