@@ -18,9 +18,9 @@ Evaluation:
   using higher-order references and backpatching.
 - [**eval_stlc_gadt.ml**](./eval_stlc_gadt.ml):
   A well-typed lambda calculus evaluator using GADTs.
-- [**eval_stlc_gadt_values.ml**](./eval_stlc_gadt_values.ml):
+- [**eval_stlc_gadt_values_hoas.ml**](./eval_stlc_gadt_values_hoas.ml):
   A well-typed lambda calculus evaluator, with a separate value datatype.
-- [**eval_stlc_gadt_values_clos.ml**](./eval_stlc_gadt_values_clos.ml):
+- [**eval_stlc_gadt_values_closures.ml**](./eval_stlc_gadt_values_closures.ml):
   A well-typed lambda calculus evaluator, with a separate value datatype, this
   time using defunctionalised closures in the semantic domain.
 - [**eval_stlc_gadt_globals.ml**](./eval_stlc_gadt_globals.ml):
