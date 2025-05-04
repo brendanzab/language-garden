@@ -106,20 +106,23 @@ module Abstract_data_types = struct
   (** A set that hides its implementation using an existential type. *)
   module Existential = struct
 
+    (** The set interface, with the representation exposed as a type parameter *)
+    type 'a set = {
+      empty : 'a;
+      insert : 'a -> int -> 'a;
+      is_empty : 'a -> bool;
+      contains : 'a -> int -> bool;
+      union : 'a -> 'a -> 'a;
+    }
+
     (** This set type uses OCaml’s GADTs to define an existential type that
         hides the underlying representation. Based on Figure 6 from the paper. *)
-    type set =
-      | Set : 'rep. {
-        empty : 'rep;
-        insert : 'rep -> int -> 'rep;
-        is_empty : 'rep -> bool;
-        contains : 'rep -> int -> bool;
-        union : 'rep -> 'rep -> 'rep;
-      } -> set
+    type some_set =
+      | Set : 'a. 'a set -> some_set
 
     (** This time we'll implement the set using a list internally. External
         consumers cannot see this implementation detail. *)
-    let eq_set : set =
+    let eq_set : some_set =
       let empty = [] in
       let is_empty s = s = [] in
 
@@ -142,16 +145,31 @@ module Abstract_data_types = struct
 
       Set { empty; insert; is_empty; contains; union }
 
-    (** Implement the sorted set in terms of the abstract datatype defined earlier. *)
-    let sorted_set : set = Set {
-      empty = Module.Sorted_set.empty;
-      insert = Module.Sorted_set.insert;
-      is_empty = Module.Sorted_set.is_empty;
-      contains = Module.Sorted_set.contains;
-      union = Module.Sorted_set.union;
+  end
+
+  (** Isomorphisms between presentation styles *)
+
+  (* Module <=> Existential *)
+
+  let existential_of_module (module S : Module.S) : Existential.some_set =
+    Set {
+      empty = S.empty;
+      insert = S.insert;
+      is_empty = S.is_empty;
+      contains = S.contains;
+      union = S.union;
     }
 
-  end
+  let module_of_existential : Existential.some_set -> (module Module.S) =
+    fun (Set (type a) (set : a Existential.set)) ->
+      (module struct
+        type t = a
+        let empty = set.empty
+        let insert = set.insert
+        let is_empty = set.is_empty
+        let contains = set.contains
+        let union = set.union
+      end)
 
 end
 
@@ -161,7 +179,7 @@ end
 *)
 module Object_oriented = struct
 
-  (* Sets as a characteristic function *)
+  (** Sets as a characteristic function *)
   module Functions = struct
 
     type set = int -> bool
@@ -299,10 +317,12 @@ module Object_oriented = struct
 
   end
 
-  (** I don't think anyone would usually use first-class modules like this, but
+  (** Object oriented implementation using first-class modules.
+
+      I don't think anyone would usually use first-class modules like this, but
       I’m including it to demonstrate the correspondence between modules and
       object-oriented approaches to programming. *)
-  module First_class_modules = struct
+  module Modules = struct
 
     module rec Set : sig
 
@@ -381,6 +401,60 @@ module Object_oriented = struct
       in self
 
   end
+
+  (** Isomorphisms between presentation styles *)
+
+  (* Objects <=> Records *)
+
+  let rec record_of_object (self : Objects.set) : Records.set = {
+    is_empty = self#is_empty;
+    contains = (fun i -> self#contains i);
+    insert = (fun i -> record_of_object (self#insert i));
+    union = (fun s -> record_of_object (self#union (object_of_record s)));
+  }
+
+  and object_of_record (self : Records.set) : Objects.set =
+    object
+      method is_empty = self.is_empty
+      method contains i = self.contains i
+      method insert i = object_of_record (self.insert i)
+      method union s = object_of_record (self.union (record_of_object s))
+    end
+
+  (* Records <=> Modules *)
+
+  let rec module_of_record (module Self : Modules.Set.S) : Records.set = {
+    is_empty = Self.is_empty;
+    contains = (fun i -> Self.contains i);
+    insert = (fun i -> module_of_record (Self.insert i));
+    union = (fun s -> module_of_record (Self.union (record_of_module s)));
+  }
+
+  and record_of_module  (self : Records.set) : (module Modules.Set.S) =
+    (module struct
+      let is_empty = self.is_empty
+      let contains i = self.contains i
+      let insert i = record_of_module (self.insert i)
+      let union s = record_of_module (self.union (module_of_record s))
+    end)
+
+  (* Modules <=> Objects *)
+
+  let rec object_of_module (module Self : Modules.Set.S) : Objects.set =
+    object
+      method is_empty = Self.is_empty
+      method contains i = Self.contains i
+      method insert i = object_of_module (Self.insert i)
+      method union s = object_of_module (Self.union (module_of_object s))
+    end
+
+  and module_of_object (self : Objects.set) : (module Modules.Set.S) =
+    (module struct
+      let is_empty = self#is_empty
+      let contains i = self#contains i
+      let insert i = module_of_object (self#insert i)
+      let union s = module_of_object (self#union (object_of_module s))
+    end)
 
 end
 
