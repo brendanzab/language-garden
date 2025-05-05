@@ -39,6 +39,9 @@ Polymorphically typed:
 
 - [**elab-system-f-bidirectional**](./elab-system-f-bidirectional):
   An elaborator for a higher-rank polymorphic lambda calculus.
+- [**elab-system-f-unification**](./elab-system-f-unification):
+  An elaborator for a higher-rank polymorphic lambda calculus where explicit
+  type applications and type annotations can be omitted.
 
 Dependently typed:
 

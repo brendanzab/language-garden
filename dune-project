@@ -135,6 +135,15 @@
     (sedlex (>= "3.3"))))
 
 (package
+  (name elab-system-f-unification)
+  (depends
+    (cmdliner (>= "1.3"))
+    (menhir (and (>= "20240715") :build))
+    (menhirLib (>= "20240715"))
+    (mdx (and (>= "2.4.1") :with-test))
+    (sedlex (>= "3.3"))))
+
+(package
   (name elab-record-patching)
   (depends
     (cmdliner (>= "1.3"))
