@@ -26,7 +26,7 @@ type ty =
 
 and ty_data =
   | Name of string
-  | Ty_fun_type of binder list * ty
+  | Forall_type of binder list * ty
   | Fun_type of ty * ty
 
 (** Terms in the surface language *)
@@ -164,11 +164,11 @@ let rec elab_ty (ctx : context) (ty : ty) : Core.ty =
       | None when name = "Int" -> Int_type
       | None -> error ty.loc (Format.asprintf "unbound type `%s`" name)
       end
-  | Ty_fun_type (names, body_ty) ->
+  | Forall_type (names, body_ty) ->
       let rec go ctx names : Core.ty =
         match names with
         | [] -> elab_ty ctx body_ty
-        | name :: names -> Ty_fun_type (name.data, go (extend_ty ctx name) names)
+        | name :: names -> Forall_type (name.data, go (extend_ty ctx name) names)
       in
       go ctx names
   | Fun_type (ty1, ty2) ->
@@ -230,14 +230,14 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
       let head, head_ty = elab_infer ctx head in
       let body_ty =
         match head_ty with
-        | Ty_fun_type (_, body_ty) -> body_ty
+        | Forall_type (_, body_ty) -> body_ty
         | head_vty ->
             error head_loc
               (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: type function@]@ @[found: %a@]@]"
                 (pp_ty ctx) (quote_vty ctx head_vty))
       in
       let arg = elab_ty ctx arg in
-      Ty_fun_app (head, arg), body_ty (eval_ty ctx arg)
+      Forall_app (head, arg), body_ty (eval_ty ctx arg)
 
   | App (head, Arg arg) ->
       let head_loc = head.loc in
@@ -287,10 +287,10 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : 
   | [], vty ->
       elab_check ctx body vty
 
-  | Ty_param name :: params, Ty_fun_type (_, body_vty) ->
+  | Ty_param name :: params, Forall_type (_, body_vty) ->
       let ty_var = next_ty_var ctx in
       let body_tm = elab_check_fun_lit (extend_ty ctx name) params body (body_vty ty_var) in
-      Ty_fun_lit (name.data, body_tm)
+      Forall_lit (name.data, body_tm)
 
   | Param (name, None) :: params, Fun_type (param_vty, body_vty) ->
       let body_tm = elab_check_fun_lit (extend_tm ctx name param_vty) params body body_vty in
@@ -325,7 +325,7 @@ and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty optio
 
     | Ty_param name :: params, body_ty ->
         let body, body_ty = go (extend_ty ctx name) params body_ty body in
-        Ty_fun_lit (name.data, body), Ty_fun_type (name.data, body_ty)
+        Forall_lit (name.data, body), Forall_type (name.data, body_ty)
 
     | Param (name, None) :: _, _ ->
         error name.loc "ambiguous parameter type"

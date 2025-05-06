@@ -47,7 +47,7 @@ let param :=
 
 let ty :=
 | ns = nonempty_list("["; ~ = binder; "]"; <>); "->"; ty = located(ty);
-    { Surface.Ty_fun_type (ns, ty) }
+    { Surface.Forall_type (ns, ty) }
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
     { Surface.Fun_type (ty1, ty2) }
 | atomic_ty

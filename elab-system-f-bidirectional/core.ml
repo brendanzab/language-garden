@@ -38,7 +38,7 @@ type 'a env = 'a list
 (** Type syntax *)
 type ty =
   | Var of index                    (* Local type variables *)
-  | Ty_fun_type of name * ty        (* Type of a type function (i.e. a forall) *)
+  | Forall_type of name * ty        (* Type of a forall (i.e. the type of a term parameterised by a type) *)
   | Fun_type of ty * ty             (* Type of function types *)
   | Int_type
   | Bool_type
@@ -47,9 +47,9 @@ type ty =
 type tm =
   | Var of index                    (* Local term variables *)
   | Let of name * ty * tm * tm
-  | Ty_fun_lit of name * tm         (* Type function literal (i.e. a big-lambda abstraction) *)
-  | Ty_fun_app of tm * ty           (* Type function application *)
-  | Fun_lit of name * ty * tm       (* Function literal (i.e. a lambda abstraction) *)
+  | Forall_lit of name * tm         (* Forall literal (i.e. big-lambda abstraction) *)
+  | Forall_app of tm * ty           (* Forall application *)
+  | Fun_lit of name * ty * tm       (* Function literal (i.e. lambda abstraction) *)
   | Fun_app of tm * tm              (* Function application *)
   | Int_lit of int
   | Bool_lit of bool
@@ -64,7 +64,7 @@ module Semantics = struct
   (** Types in weak head normal form (i.e. type values) *)
   type vty =
     | Neu of nty
-    | Ty_fun_type of name * (vty -> vty)
+    | Forall_type of name * (vty -> vty)
     | Fun_type of vty * vty
     | Int_type
     | Bool_type
@@ -81,7 +81,7 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
-    | Ty_fun_lit of name * (vty -> vtm)
+    | Forall_lit of name * (vty -> vtm)
     | Fun_lit of name * vty * (vtm -> vtm)
     | Int_lit of int
     | Bool_lit of bool
@@ -95,7 +95,7 @@ module Semantics = struct
   *)
   and ntm =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
-    | Ty_fun_app of ntm * vty
+    | Forall_app of ntm * vty
     | Fun_app of ntm * vtm
     | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
     | Prim_app of Prim.t * vtm list
@@ -105,8 +105,8 @@ module Semantics = struct
 
   let ty_fun_app (head : vtm) (arg : vty) : vtm =
     match head with
-    | Neu ntm -> Neu (Ty_fun_app (ntm, arg))
-    | Ty_fun_lit (_, body) -> body arg
+    | Neu ntm -> Neu (Forall_app (ntm, arg))
+    | Forall_lit (_, body) -> body arg
     | _ -> invalid_arg "expected type function"
 
   let fun_app (head : vtm) (arg : vtm) : vtm =
@@ -142,8 +142,8 @@ module Semantics = struct
   let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
     match ty with
     | Var index -> List.nth ty_env index
-    | Ty_fun_type (name, body_ty) ->
-        Ty_fun_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
+    | Forall_type (name, body_ty) ->
+        Forall_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
     | Fun_type (param_ty, body_ty) ->
         let param_vty = eval_ty ty_env param_ty in
         let body_vty = eval_ty ty_env body_ty in
@@ -158,9 +158,9 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval_tm ty_env tm_env def in
         eval_tm ty_env (def :: tm_env) body
-    | Ty_fun_lit (name, body) ->
-        Ty_fun_lit (name, fun arg -> eval_tm (arg :: ty_env) tm_env body)
-    | Ty_fun_app (head, arg) ->
+    | Forall_lit (name, body) ->
+        Forall_lit (name, fun arg -> eval_tm (arg :: ty_env) tm_env body)
+    | Forall_app (head, arg) ->
         let head = eval_tm ty_env tm_env head in
         let arg = eval_ty ty_env arg in
         ty_fun_app head arg
@@ -188,9 +188,9 @@ module Semantics = struct
   let rec quote_vty  (ty_size : int) (vty : vty) : ty =
     match vty with
     | Neu (Var level) -> Var (level_to_index ty_size level)
-    | Ty_fun_type (name, body_vty) ->
+    | Forall_type (name, body_vty) ->
         let body = quote_vty (ty_size + 1) (body_vty (Neu (Var ty_size))) in
-        Ty_fun_type (name, body)
+        Forall_type (name, body)
     | Fun_type (param_vty, body_vty) ->
         let param_ty = quote_vty ty_size param_vty in
         let body_ty = quote_vty ty_size body_vty in
@@ -202,9 +202,9 @@ module Semantics = struct
   let rec quote_vtm (ty_size : int) (tm_size : int) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_ntm ty_size tm_size ntm
-    | Ty_fun_lit (name, body) ->
+    | Forall_lit (name, body) ->
         let body = quote_vtm (ty_size + 1) tm_size (body (Neu (Var ty_size))) in
-        Ty_fun_lit (name, body)
+        Forall_lit (name, body)
     | Fun_lit (name, param_vty, body) ->
         let param_ty = quote_vty ty_size param_vty in
         let body = quote_vtm ty_size (tm_size + 1) (body (Neu (Var tm_size))) in
@@ -216,8 +216,8 @@ module Semantics = struct
     match ntm with
     | Var level ->
         Var (level_to_index tm_size level)
-    | Ty_fun_app (head, arg) ->
-        Ty_fun_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
+    | Forall_app (head, arg) ->
+        Forall_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
     | Fun_app (head, arg) ->
         Fun_app (quote_ntm ty_size tm_size head, quote_vtm ty_size tm_size arg)
     | Bool_elim (head, vtm0, vtm1) ->
@@ -241,7 +241,7 @@ module Semantics = struct
   let rec is_convertible (ty_size : int) (vty1 : vty) (vty2 : vty) : bool =
     match vty1, vty2 with
     | Neu (Var level1), Neu (Var level2) -> level1 = level2
-    | Ty_fun_type (_, body_ty1), Ty_fun_type (_, body_ty2) ->
+    | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
         let x : vty = Neu (Var ty_size) in
         is_convertible (ty_size + 1) (body_ty1 x) (body_ty2 x)
     | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
@@ -258,7 +258,7 @@ end
 
 let rec pp_ty  (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
-  | Ty_fun_type (name, body_ty) ->
+  | Forall_type (name, body_ty) ->
       Format.fprintf fmt "[%s] -> %a"
         name
         (pp_ty (name :: ty_names)) body_ty
@@ -284,7 +284,7 @@ let pp_param ty_names fmt (name, ty) =
 let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatter) (tm : tm) : unit =
   let rec go_params ty_names tm_names fmt tm =
     match tm with
-    | Ty_fun_lit (name, body) ->
+    | Forall_lit (name, body) ->
         Format.fprintf fmt "@ @[fun@ [%s]@ =>@]%a"
           name
           (go_params (name :: ty_names) tm_names) body
@@ -306,7 +306,7 @@ let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatte
         | tm -> Format.fprintf fmt "@[%a@]" (pp_tm ty_names tm_names) tm
       in
       Format.fprintf fmt "@[<v>%a@]" (go tm_names) tm
-  | Ty_fun_lit (name, body) ->
+  | Forall_lit (name, body) ->
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ [%s]@ =>@]%a"
         name
         (go_params (name :: ty_names) tm_names) body
@@ -323,7 +323,7 @@ let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatte
       pp_app_tm ty_names tm_names fmt tm
 and pp_app_tm ty_names tm_names fmt tm =
   match tm with
-  | Ty_fun_app (head, arg) ->
+  | Forall_app (head, arg) ->
       Format.fprintf fmt "@[%a@ [%a]@]"
         (pp_app_tm ty_names tm_names) head
         (pp_ty ty_names) arg
