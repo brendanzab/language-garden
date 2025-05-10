@@ -50,7 +50,7 @@ let cmd =
       & info ["system"] ~docv:"SYSTEM" ~doc:"The system to run.")
   in
 
-  Cmd.group (Cmd.info "fractal-growth") [
+  Cmd.group (Cmd.info Sys.argv.(0)) [
     Cmd.v (Cmd.info "generations" ~doc:"print the generations of a system to standard output")
       Term.(const generations_cmd $ system);
     Cmd.v (Cmd.info "list" ~doc:"list the available systems")

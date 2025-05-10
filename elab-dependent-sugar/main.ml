@@ -72,7 +72,7 @@ let cmd =
           ~doc:"disable resugaring in pretty printed terms")
   in
 
-  Cmd.group (Cmd.info "dependent-sugar") [
+  Cmd.group (Cmd.info Sys.argv.(0)) [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
       Term.(const elab_cmd $ no_resugar);
     Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")

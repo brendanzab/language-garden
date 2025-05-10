@@ -111,7 +111,7 @@ let cmd =
                 be one of $(b,clos), $(b,fun-a), $(b,clos-a) or $(b,lifted-a).")
   in
 
-  Cmd.group (Cmd.info "compile-closure-conv") [
+  Cmd.group (Cmd.info Sys.argv.(0)) [
     Cmd.v (Cmd.info "compile" ~doc:"compile an arithmetic expression")
       Term.(const compile $ compile_target);
   ]

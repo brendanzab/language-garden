@@ -75,7 +75,7 @@ let cmd =
       & info ["scene"] ~docv:"NAME" ~doc:"The scene to use.")
   in
 
-  Cmd.group (Cmd.info "shader-graphics") [
+  Cmd.group (Cmd.info Sys.argv.(0)) [
     Cmd.v (Cmd.info "compile" ~doc:"Compile the scene to a GLSL shader that can be rendered in parallel on the GPU.")
       Term.(const compile_cmd $ scene);
     Cmd.v (Cmd.info "render" ~doc:"Render the scene sequentially on the CPU to a PPM image file.")

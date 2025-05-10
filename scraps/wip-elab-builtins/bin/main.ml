@@ -48,7 +48,7 @@ let elab_cmd () : unit =
 let cmd =
   let open Cmdliner in
 
-  Cmd.group (Cmd.info "builtin") [
+  Cmd.group (Cmd.info Sys.argv.(0)) [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a module from standard input")
       Term.(const elab_cmd $ const ());
     (* TODO: `norm` command *)
