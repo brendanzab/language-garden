@@ -74,7 +74,7 @@ let norm_cmd () : unit =
 let cmd =
   let open Cmdliner in
 
-  Cmd.group (Cmd.info Sys.argv.(0)) [
+  Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
       Term.(const elab_cmd $ const ());
     Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")

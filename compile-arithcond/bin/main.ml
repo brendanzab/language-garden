@@ -107,7 +107,7 @@ let cmd =
                 of $(docv) must be one of $(b,tree), $(b,stack) or $(b,anf).")
   in
 
-  Cmd.group (Cmd.info Sys.argv.(0)) [
+  Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
     Cmd.v (Cmd.info "compile" ~doc:"compile an arithmetic expression")
       Term.(const compile $ compile_target);
     Cmd.v (Cmd.info "exec" ~doc:"run an arithmetic expression")
