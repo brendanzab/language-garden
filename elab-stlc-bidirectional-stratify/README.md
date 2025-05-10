@@ -25,7 +25,7 @@ Will be elaborated to:
 
 <!-- $MDX file=examples/elephant.stdout -->
 ```
-let grow : Int -> Int := fun (e : Int) => #int-add -e 1;
+let grow : Int -> Int := fun (e : Int) => #int-add e 1;
 grow 4 : Int
 ```
 
@@ -103,7 +103,7 @@ Type : Type 1
 
 ```sh
 $ stlc-bidirectional-stratify elab <<< "let Univ := Type; let Number : Univ := Int; 1 + 2 : Number"
-#int-add -1 2 : Int
+#int-add 1 2 : Int
 ```
 
 More examples can be found in [`tests.t`](tests.t).

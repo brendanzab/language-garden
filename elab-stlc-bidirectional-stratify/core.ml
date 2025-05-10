@@ -231,7 +231,7 @@ and pp_app_expr names fmt e =
         (pp_atomic_expr names) arg
   | Prim_app (prim, args) ->
       let pp_sep fmt () = Format.fprintf fmt "@ " in
-      Format.fprintf fmt "@[#%s@ -%a@]"
+      Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.name prim)
         (Format.pp_print_list ~pp_sep (pp_atomic_expr names)) args
   | e ->

@@ -1,2 +1,2 @@
-let grow : Int -> Int := fun (e : Int) => #int-add -e 1;
+let grow : Int -> Int := fun (e : Int) => #int-add e 1;
 grow 4 : Int

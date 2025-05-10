@@ -57,12 +57,12 @@ $ stlc-bidirectional elab <<< "fun x => x + 2"
 
 ```sh
 $ stlc-bidirectional elab <<< "fun (x : Int) => x + 2"
-fun (x : Int) => #int-add -x 2 : Int -> Int
+fun (x : Int) => #int-add x 2 : Int -> Int
 ```
 
 ```sh
 $ stlc-bidirectional elab <<< "(fun x f => f x * x) : Int -> (Int -> Int) -> Int"
-fun (x : Int) => fun (f : Int -> Int) => #int-mul -(f x) x :
+fun (x : Int) => fun (f : Int -> Int) => #int-mul (f x) x :
   Int -> (Int -> Int) -> Int
 ```
 

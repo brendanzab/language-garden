@@ -1,22 +1,22 @@
 Boolean equality
   $ stlc-letrec-unification elab <<< "true = false"
-  #bool-eq -true false : Bool
+  #bool-eq true false : Bool
 
 Integer equality
   $ stlc-letrec-unification elab <<< "1 = 2"
-  #int-eq -1 2 : Bool
+  #int-eq 1 2 : Bool
 
 Integer Addition
   $ stlc-letrec-unification elab <<< "1 + 2"
-  #int-add -1 2 : Int
+  #int-add 1 2 : Int
 
 Add two function
   $ stlc-letrec-unification elab <<< "fun x => x + 2"
-  fun (x : Int) => #int-add -x 2 : Int -> Int
+  fun (x : Int) => #int-add x 2 : Int -> Int
 
 Function application
   $ stlc-letrec-unification elab <<< "fun x f => f x * x"
-  fun (x : Int) => fun (f : Int -> Int) => #int-mul -(f x) x :
+  fun (x : Int) => fun (f : Int -> Int) => #int-mul (f x) x :
     Int -> (Int -> Int) -> Int
 
 Function application
@@ -46,7 +46,7 @@ Placeholder return type
 
 If expressions
   $ stlc-letrec-unification elab <<< "fun x y => if x = 0 then y else 3"
-  fun (x : Int) => fun (y : Int) => if #int-eq -x 0 then y else 3 :
+  fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3 :
     Int -> Int -> Int
 
 
@@ -62,7 +62,7 @@ Recursive bindings: Factorial
   let fact : Int -> Int :=
     #fix (fact : Int -> Int) =>
       fun (n : Int) =>
-        if #int-eq -n 0 then 1 else #int-mul -n (fact (#int-sub -n 1));
+        if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1));
   fact 5 : Int
 
   $ cat fact.txt | stlc-letrec-unification norm
@@ -89,7 +89,7 @@ Recursive bindings: Factorial in terms of the fixed-point combinator
     fun (n : Int) =>
       fix
       (fun (fact : Int -> Int) => fun (n' : Int) =>
-         if #int-eq -n' 0 then 1 else #int-mul -n' (fact (#int-sub -n' 1)))
+         if #int-eq n' 0 then 1 else #int-mul n' (fact (#int-sub n' 1)))
       n;
   fact 5 : Int
 
@@ -152,13 +152,13 @@ Recursive bindings: Ackermann function
   let ack : Int -> Int -> Int :=
     #fix (ack : Int -> Int -> Int) =>
       fun (m : Int) => fun (n : Int) =>
-        if #int-eq -m 0 then
-          #int-add -n 1
+        if #int-eq m 0 then
+          #int-add n 1
         else
-          if #int-eq -n 0 then
-            ack (#int-sub -m 1) 1
+          if #int-eq n 0 then
+            ack (#int-sub m 1) 1
           else
-            ack (#int-sub -m 1) (ack m (#int-sub -n 1));
+            ack (#int-sub m 1) (ack m (#int-sub n 1));
   ack 1 0 : Int
 
   $ cat ack.txt | stlc-letrec-unification norm
@@ -182,17 +182,17 @@ Recursive bindings: Ackermann function (partially applied)
   let ack : Int -> Int -> Int :=
     #fix (ack : Int -> Int -> Int) =>
       fun (m : Int) => fun (n : Int) =>
-        if #int-eq -m 0 then
-          #int-add -n 1
+        if #int-eq m 0 then
+          #int-add n 1
         else
-          if #int-eq -n 0 then
-            ack (#int-sub -m 1) 1
+          if #int-eq n 0 then
+            ack (#int-sub m 1) 1
           else
-            ack (#int-sub -m 1) (ack m (#int-sub -n 1));
+            ack (#int-sub m 1) (ack m (#int-sub n 1));
   ack 0 : Int -> Int
 
   $ cat ack-partial-app.txt | stlc-letrec-unification norm
-  fun (n : Int) => #int-add -n 1 : Int -> Int
+  fun (n : Int) => #int-add n 1 : Int -> Int
 
 
 Recursive bindings: Count-down (partially applied)
@@ -207,18 +207,18 @@ Recursive bindings: Count-down (partially applied)
   let count-down : Bool -> Int -> Bool :=
     #fix (count-down : Bool -> Int -> Bool) =>
       fun (x : Bool) => fun (n : Int) =>
-        if #int-eq -n 0 then x else count-down x (#int-sub -n 1);
+        if #int-eq n 0 then x else count-down x (#int-sub n 1);
   count-down true : Int -> Bool
 
   $ cat count-down.txt | stlc-letrec-unification norm
   fun (n : Int) =>
-    if #int-eq -n 0 then
+    if #int-eq n 0 then
       true
     else
       (#fix (count-down : Bool -> Int -> Bool) =>
          fun (x : Bool) => fun (n' : Int) =>
-           if #int-eq -n' 0 then x else count-down x (#int-sub -n' 1))
-      true (#int-sub -n 1)
+           if #int-eq n' 0 then x else count-down x (#int-sub n' 1))
+      true (#int-sub n 1)
   : Int -> Bool
 
 
@@ -236,23 +236,23 @@ Recursive bindings: Even/odd (partially applied)
     #fix (even-odd : Bool -> Int -> Bool) =>
       fun (b : Bool) => fun (n : Int) =>
         if b then
-          (if #int-eq -n 0 then true else even-odd false (#int-sub -n 1))
+          (if #int-eq n 0 then true else even-odd false (#int-sub n 1))
         else
-          if #int-eq -n 0 then false else even-odd true (#int-sub -n 1);
+          if #int-eq n 0 then false else even-odd true (#int-sub n 1);
   even-odd true : Int -> Bool
 
   $ cat even-odd-partial-app.txt | stlc-letrec-unification norm
   fun (n : Int) =>
-    if #int-eq -n 0 then
+    if #int-eq n 0 then
       true
     else
       (#fix (even-odd : Bool -> Int -> Bool) =>
          fun (b : Bool) => fun (n' : Int) =>
            if b then
-             (if #int-eq -n' 0 then true else even-odd false (#int-sub -n' 1))
+             (if #int-eq n' 0 then true else even-odd false (#int-sub n' 1))
            else
-             if #int-eq -n' 0 then false else even-odd true (#int-sub -n' 1))
-      false (#int-sub -n 1)
+             if #int-eq n' 0 then false else even-odd true (#int-sub n' 1))
+      false (#int-sub n 1)
   : Int -> Bool
 
 
@@ -270,9 +270,9 @@ Mutually recursive bindings: Even/odd
   let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
     #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
       (fun (n : Int) =>
-         if #int-eq -n 0 then true else $is-even-is-odd.1 (#int-sub -n 1),
+         if #int-eq n 0 then true else $is-even-is-odd.1 (#int-sub n 1),
       fun (n : Int) =>
-        if #int-eq -n 0 then false else $is-even-is-odd.0 (#int-sub -n 1));
+        if #int-eq n 0 then false else $is-even-is-odd.0 (#int-sub n 1));
   $is-even-is-odd.0 6 : Bool
 
   $ cat even-odd.txt | stlc-letrec-unification norm
@@ -293,22 +293,22 @@ Mutually recursive bindings: Even/odd (partially applied)
   let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
     #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
       (fun (n : Int) =>
-         if #int-eq -n 0 then true else $is-even-is-odd.1 (#int-sub -n 1),
+         if #int-eq n 0 then true else $is-even-is-odd.1 (#int-sub n 1),
       fun (n : Int) =>
-        if #int-eq -n 0 then false else $is-even-is-odd.0 (#int-sub -n 1));
+        if #int-eq n 0 then false else $is-even-is-odd.0 (#int-sub n 1));
   $is-even-is-odd.0 : Int -> Bool
 
   $ cat even-odd.txt | stlc-letrec-unification norm
   fun (n : Int) =>
-    if #int-eq -n 0 then
+    if #int-eq n 0 then
       true
     else
       (#fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
          (fun (n' : Int) =>
-            if #int-eq -n' 0 then true else $is-even-is-odd.1 (#int-sub -n' 1),
+            if #int-eq n' 0 then true else $is-even-is-odd.1 (#int-sub n' 1),
          fun (n' : Int) =>
-           if #int-eq -n' 0 then false else $is-even-is-odd.0 (#int-sub -n' 1))).1
-      (#int-sub -n 1)
+           if #int-eq n' 0 then false else $is-even-is-odd.0 (#int-sub n' 1))).1
+      (#int-sub n 1)
   : Int -> Bool
 
 

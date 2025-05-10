@@ -428,7 +428,7 @@ and pp_app_tm names fmt tm =
         (pp_proj_tm names) arg
   | Prim_app (prim, args) ->
       let pp_sep fmt () = Format.fprintf fmt "@ " in
-      Format.fprintf fmt "@[#%s@ -%a@]"
+      Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.name prim)
         (Format.pp_print_list ~pp_sep (pp_atomic_tm names)) args
   | tm ->
