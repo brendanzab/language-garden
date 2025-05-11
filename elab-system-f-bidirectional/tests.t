@@ -98,6 +98,14 @@ Polymorphic identity and constant functions
     fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
   always [[a] -> a -> a] id : [b] -> b -> [a] -> a -> a
 
+Self application
+  $ system-f-bidirectional elab <<EOF
+  > fun (x : [a] -> a -> a) =>
+  >   x [[a] -> a -> a] x
+  > EOF
+  fun (x : [a] -> a -> a) => x [[a] -> a -> a] x :
+    ([a] -> a -> a) -> [a] -> a -> a
+
 
 Lexer Errors
 ------------
