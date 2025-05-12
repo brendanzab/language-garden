@@ -27,8 +27,8 @@ let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
   match Seq.uncons input with
   | Some (ch, input) ->
       begin match ch with
-      | '(' -> fun () -> Seq.Cons (Left_paren, tokens input)
-      | ')' -> fun () -> Seq.Cons (Right_paren, tokens input)
+      | '(' -> Seq.cons Left_paren (tokens input)
+      | ')' -> Seq.cons Right_paren (tokens input)
       | ch when is_atom ch ->
           let buf = Buffer.create 1 in
           Buffer.add_char buf ch;
@@ -38,11 +38,11 @@ let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
             | Some _ | None -> (String.of_bytes (Buffer.to_bytes buf), input)
           in
           let (s, input) = atom input in
-          fun () -> Seq.Cons (Atom s, tokens input)
+          Seq.cons (Atom s) (tokens input)
       | ch when is_ascii_whitespace ch -> tokens input
-      | ch -> fun () -> raise (Unexpected_char { found = ch })
+      | ch -> raise (Unexpected_char { found = ch })
       end
-  | None -> fun () -> Seq.Nil
+  | None -> Seq.empty
 
 
 (** Parser *)
