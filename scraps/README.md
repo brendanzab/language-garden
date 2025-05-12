@@ -17,6 +17,8 @@ Evaluation:
   using continuation passing style
 - [**eval_extensible.ml**](./eval_extensible.ml): Extensible interpreters for
   lambda calculus and arithmetic expressions.
+- [**eval_imp.ml**](./eval_imp.ml):
+  A simple imperative language.
 - [**eval_landins_knot.ml**](./eval_landins_knot.ml):
   Demonstration of Landin’s Knot, an approach to encoding general recursion
   using higher-order references and backpatching.

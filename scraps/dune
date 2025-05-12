@@ -3,6 +3,7 @@
 (executable (name eval_cek))
 (executable (name eval_control_flow_cps))
 (executable (name eval_extensible))
+(executable (name eval_imp))
 (executable (name eval_landins_knot))
 (executable (name eval_stlc_gadt))
 (executable (name eval_stlc_gadt_values_hoas))
