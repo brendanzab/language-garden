@@ -78,19 +78,22 @@ let parse_sexpr (tokens : token Seq.t) : sexpr =
 
 let () = begin
 
+  let tokenise input = String.to_seq input |> tokens in
+  let parse input = tokenise input |> parse_sexpr in
+
   Printexc.record_backtrace true;
 
   print_string "Running tests ...";
 
-  assert ("()" |> String.to_seq |> tokens |> List.of_seq = [Left_paren; Right_paren]);
-  assert ("foo" |> String.to_seq |> tokens |> List.of_seq = [Atom "foo"]);
+  assert (tokenise "()" |> List.of_seq = [Left_paren; Right_paren]);
+  assert (tokenise "foo" |> List.of_seq = [Atom "foo"]);
 
-  assert ("()" |> String.to_seq |> tokens |> parse_sexpr = List []);
-  assert ("foo" |> String.to_seq |> tokens |> parse_sexpr = Atom "foo");
-  assert ("(foo)" |> String.to_seq |> tokens |> parse_sexpr = List [Atom "foo"]);
-  assert ("(foo bar)" |> String.to_seq |> tokens |> parse_sexpr = List [Atom "foo"; Atom "bar"]);
-  assert ("(add 1 2 (mul 3 4))" |> String.to_seq |> tokens |> parse_sexpr = List [Atom "add"; Atom "1"; Atom "2"; List [Atom "mul"; Atom "3"; Atom "4"]]);
-  assert ("(add (mul 1 2) 3 4)" |> String.to_seq |> tokens |> parse_sexpr = List [Atom "add"; List [Atom "mul"; Atom "1"; Atom "2"]; Atom "3"; Atom "4"]);
+  assert (parse "()" = List []);
+  assert (parse "foo" = Atom "foo");
+  assert (parse "(foo)" = List [Atom "foo"]);
+  assert (parse "(foo bar)" = List [Atom "foo"; Atom "bar"]);
+  assert (parse "(add 1 2 (mul 3 4))" = List [Atom "add"; Atom "1"; Atom "2"; List [Atom "mul"; Atom "3"; Atom "4"]]);
+  assert (parse "(add (mul 1 2) 3 4)" = List [Atom "add"; List [Atom "mul"; Atom "1"; Atom "2"]; Atom "3"; Atom "4"]);
 
   print_string " ok!\n";
 
