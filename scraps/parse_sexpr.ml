@@ -26,24 +26,26 @@ exception Unexpected_token of { found : token; expected : token list }
 exception Unexpected_eof
 exception Unconsumed_tokens of token Seq.t
 
-let rec tokens (input : char Seq.t) : token Seq.t =
-  fun () ->
-    match Seq.uncons input with
-    | Some (ch, input) ->
-        begin match ch with
-        | '(' -> Seq.Cons (Left_paren, tokens input)
-        | ')' -> Seq.Cons (Right_paren, tokens input)
-        | ch when is_atom ch ->
-            let rec atom input acc =
-              match Seq.uncons input with
-              | Some (ch, input) when is_atom ch -> atom input (acc ^ String.make 1 ch)
-              | Some _ | None -> Seq.Cons (Atom acc, tokens input)
-            in
-            atom input (String.make 1 ch)
-        | ch when is_ascii_whitespace ch -> tokens input ()
-        | ch -> raise (Unexpected_char ch)
-        end
-    | None -> Seq.Nil
+let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
+  match Seq.uncons input with
+  | Some (ch, input) ->
+      begin match ch with
+      | '(' -> fun () -> Seq.Cons (Left_paren, tokens input)
+      | ')' -> fun () -> Seq.Cons (Right_paren, tokens input)
+      | ch when is_atom ch ->
+          let buf = Buffer.create 1 in
+          Buffer.add_char buf ch;
+          let rec atom input =
+            match Seq.uncons input with
+            | Some (ch, input) when is_atom ch -> Buffer.add_char buf ch; atom input
+            | Some _ | None -> (String.of_bytes (Buffer.to_bytes buf), input)
+          in
+          let (s, input) = atom input in
+          fun () -> Seq.Cons (Atom s, tokens input)
+      | ch when is_ascii_whitespace ch -> tokens input
+      | ch -> fun () -> raise (Unexpected_char ch)
+      end
+  | None -> fun () -> Seq.Nil
 
 
 (** Parser *)
