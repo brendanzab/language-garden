@@ -59,7 +59,7 @@ let parse_sexpr (tokens : token Seq.t) : sexpr =
   let rec parse_sexpr (tokens : token Seq.t) : sexpr * token Seq.t =
     match Seq.uncons tokens with
     | Some (Left_paren, tokens) -> parse_list tokens []
-    | Some (Atom s, tokens) -> Atom s, tokens
+    | Some (Atom s, tokens) -> (Atom s, tokens)
     | Some (token, _) -> raise (Unexpected_token { found = token })
     | None -> raise Unexpected_eof
 
