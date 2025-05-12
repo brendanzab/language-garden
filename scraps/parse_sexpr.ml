@@ -21,10 +21,10 @@ let is_ascii_whitespace : char -> bool =
   | ' ' | '\n' | '\r' | '\t' -> true
   | _ -> false
 
-exception Unexpected_char of char
-exception Unexpected_token of { found : token; expected : token list }
+exception Unexpected_char of { found : char }
+exception Unexpected_token of { found : token }
 exception Unexpected_eof
-exception Unconsumed_tokens of token Seq.t
+exception Unconsumed_tokens of { remaining : token Seq.t }
 
 let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
   match Seq.uncons input with
@@ -43,7 +43,7 @@ let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
           let (s, input) = atom input in
           fun () -> Seq.Cons (Atom s, tokens input)
       | ch when is_ascii_whitespace ch -> tokens input
-      | ch -> fun () -> raise (Unexpected_char ch)
+      | ch -> fun () -> raise (Unexpected_char { found = ch })
       end
   | None -> fun () -> Seq.Nil
 
@@ -61,7 +61,7 @@ let parse_sexpr (tokens : token Seq.t) : sexpr =
         let (sexprs, tokens) = parse_list tokens in
         (List sexprs, tokens)
     | Some (Atom s, tokens) -> Atom s, tokens
-    | Some (token, _) -> raise (Unexpected_token { found = token; expected = [] })
+    | Some (token, _) -> raise (Unexpected_token { found = token })
     | None -> raise Unexpected_eof
 
   and parse_list (tokens : token Seq.t) : sexpr list * token Seq.t =
@@ -75,7 +75,7 @@ let parse_sexpr (tokens : token Seq.t) : sexpr =
 
   let (sexpr, tokens) = parse_sexpr tokens in
   if Seq.is_empty tokens then sexpr else
-    raise (Unconsumed_tokens tokens)
+    raise (Unconsumed_tokens { remaining = tokens })
 
 
 let () = begin
