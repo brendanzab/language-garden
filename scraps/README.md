@@ -3,6 +3,10 @@
 I’m not really ready to add these to the top-level directory. They also might
 lack build system support and are untested for now.
 
+Parsing:
+
+- [**parse_sexpr.ml**](./parse_sexpr.ml): Recursive descent parser for S-expressions.
+
 Evaluation:
 
 - [**eval_cek.ml**](./eval_cek.ml): A tree-walking interpreter for the lambda
