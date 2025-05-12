@@ -22,9 +22,6 @@ let is_ascii_whitespace : char -> bool =
   | _ -> false
 
 exception Unexpected_char of { found : char }
-exception Unexpected_token of { found : token }
-exception Unexpected_eof
-exception Unconsumed_tokens of { remaining : token Seq.t }
 
 let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
   match Seq.uncons input with
@@ -49,6 +46,10 @@ let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
 
 
 (** Parser *)
+
+exception Unexpected_token of { found : token }
+exception Unexpected_eof
+exception Unconsumed_tokens of { remaining : token Seq.t }
 
 type sexpr =
   | Atom of string
