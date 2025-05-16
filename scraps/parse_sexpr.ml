@@ -39,8 +39,11 @@ let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
     Buffer.add_char buf init_ch;
     let rec go input =
       match Seq.uncons input with
-      | Some (ch, input) when f ch -> Buffer.add_char buf ch; go input
-      | Some _ | None -> (String.of_bytes (Buffer.to_bytes buf), input)
+      | Some (ch, input) when f ch ->
+          Buffer.add_char buf ch;
+          (go [@tailcall]) input
+      | Some _ | None ->
+          (String.of_bytes (Buffer.to_bytes buf), input)
     in
     go input
   in
@@ -56,7 +59,7 @@ let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
           let (s, input) = take_while is_ident_continue ch input in
           Seq.cons (Ident s) (tokens input)
       | ch when is_ascii_whitespace ch -> tokens input
-      | ch -> raise (Unexpected_char { found = ch })
+      | ch -> fun () -> raise (Unexpected_char { found = ch })
       end
   | None -> Seq.empty
 
@@ -83,10 +86,11 @@ let parse_sexpr (tokens : token Seq.t) : sexpr =
 
   and parse_list (tokens : token Seq.t) (acc : sexpr list) : sexpr * token Seq.t =
     match Seq.uncons tokens with
-    | Some (Right_paren, tokens) -> (List (List.rev acc), tokens)
+    | Some (Right_paren, tokens) ->
+        (List (List.rev acc), tokens)
     | Some _ | None ->
         let (sexpr, tokens) = parse_sexpr tokens in
-        parse_list tokens (sexpr :: acc)
+        (parse_list [@tailcall]) tokens (sexpr :: acc)
   in
 
   let (sexpr, tokens) = parse_sexpr tokens in
