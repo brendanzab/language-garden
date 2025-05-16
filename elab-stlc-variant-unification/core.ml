@@ -20,12 +20,12 @@ type name = string
     using numbers that represent the distance to a binder, instead of by the
     names attached to those binders. *)
 
-(** {i De Bruijn index} that represents a variable occurance by the number of
-    binders between the occurance and the binder it refers to. *)
+(** {i De Bruijn index} that represents a variable occurrence by the number of
+    binders between the occurrence and the binder it refers to. *)
 type index = int
 
-(** {i De Bruijn level} that represents a variable occurance by the number of
-    binders from the top of the environment to the binder that the ocurrance
+(** {i De Bruijn level} that represents a variable occurrence by the number of
+    binders from the top of the environment to the binder that the occurrence
     refers to. These do not change their meaning as new bindings are added to
     the environment. *)
 type level = int

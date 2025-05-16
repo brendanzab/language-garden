@@ -9,7 +9,7 @@
     use de Bruijn indices.
 *)
 
-(** [elem_index x xs] returns the index of the first occurance of [x] in [xs]. *)
+(** [elem_index x xs] returns the index of the first occurrence of [x] in [xs]. *)
 let elem_index (type a) (a : a) (xs : a list) =
   let rec go i = function
     | [] -> None

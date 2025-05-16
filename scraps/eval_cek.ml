@@ -35,13 +35,13 @@
 (** {1 Syntax} *)
 
 type index = int
-(** De Bruijn index, i.e. the number of binders between a variable occurance and
+(** De Bruijn index, i.e. the number of binders between a variable occurrence and
     the binder that it refers to. This allows for quick variable lookups in the
     environment without requiring names. *)
 
 (** Lambda calculus expressions, with let bindings *)
 type expr =
-  | Var of index                    (* variable occurences *)
+  | Var of index                    (* variable occurrences *)
   | Let of string * expr * expr     (* let bindings *)
   | Fun_lit of string * expr         (* function literals *)
   | Fun_app of expr * expr           (* function applications *)
@@ -215,7 +215,7 @@ end = struct
   let var (level : int) : t =
     fun ~size ->
       (* Translate the level to an index, counting the number of binders
-          upward  from the variable  occurance, as opposed to downwards from
+          upward  from the variable  occurrence, as opposed to downwards from
           the top of the expression. *)
       Var (size - level - 1)
 

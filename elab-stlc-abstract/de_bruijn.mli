@@ -15,8 +15,8 @@ module Size : sig
 
 end
 
-(** {i De Bruijn index} that represents a variable occurance by the number of
-    binders between the occurance and the binder it refers to. *)
+(** {i De Bruijn index} that represents a variable occurrence by the number of
+    binders between the occurrence and the binder it refers to. *)
 module rec Index : sig
 
   type t = private int
@@ -32,8 +32,8 @@ module rec Index : sig
 
 end
 
-(** A {i De Bruijn level} that represents a variable occurance by the number of
-    binders from the top of the environment to the binder that the ocurrance
+(** A {i De Bruijn level} that represents a variable occurrence by the number of
+    binders from the top of the environment to the binder that the occurrence
     refers to.
 
     These do not change their meaning as new bindings are added to the environment.

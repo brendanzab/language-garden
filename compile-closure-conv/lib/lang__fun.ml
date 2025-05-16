@@ -1,7 +1,7 @@
 (** {0 Simply typed lambda calculus}
 
     This is a simply typed lambda calculus with let expressions, booleans and
-    integers. Variables occurances are represented with de Bruijn indices. This
+    integers. Variables occurrences are represented with de Bruijn indices. This
     could be used as the basis of a core language for a more fully featured
     programming language.
 *)
