@@ -137,8 +137,8 @@ let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
   | Core.Mismatched_types (_, _) ->
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty (Core.zonk_ty ty1)
-          Core.pp_ty (Core.zonk_ty ty2))
+          Core.pp_ty ty1
+          Core.pp_ty ty2)
 
 
 (** {2 Bidirectional type checking} *)

@@ -344,50 +344,10 @@ and unify_constrs (c1 : constr) (c2 : constr) : constr =
   | Variant row1, Variant row2 -> Variant (unify_rows row1 row2)
 
 
-(** {1 Zonking} *)
-
-(** These functions flatten solved metavariables in types. This is imporatant
-    for pretty printing types, as we want to be able to ‘see through’
-    metavariables to properly associate function types. *)
-
-(* Deeply force a type, leaving only unsolved metavariables remaining *)
-let rec zonk_ty (ty : ty) : ty =
-  match force ty with
-  | Meta_var m -> Meta_var m
-  | Fun_type (param_ty, body_ty) ->
-      Fun_type (zonk_ty param_ty, zonk_ty body_ty)
-  | Variant_type row ->
-      Variant_type (row |> Label_map.map (fun ty -> zonk_ty ty))
-  | Int_type -> Int_type
-  | Bool_type -> Bool_type
-
-(** Flatten all metavariables in a term *)
-let rec zonk_tm (tm : tm) : tm =
-  match tm with
-  | Var index -> Var index
-  | Let (name, def_ty, def, body) ->
-      Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
-  | Fun_lit (name, param_ty, body) ->
-      Fun_lit (name, zonk_ty param_ty, zonk_tm body)
-  | Fun_app (head, arg) ->
-      Fun_app (zonk_tm head, zonk_tm arg)
-  | Variant_lit (label, tm, ty) -> Variant_lit (label, zonk_tm tm, zonk_ty ty)
-  | Variant_elim (head, cases) ->
-      let head = zonk_tm head in
-      let cases = cases |> Label_map.map (fun (binder, body) -> binder, zonk_tm body) in
-      Variant_elim (head, cases)
-  | Int_lit i -> Int_lit i
-  | Bool_lit b -> Bool_lit b
-  | Bool_elim (head, tm0, tm1) ->
-      Bool_elim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
-  | Prim_app (prim, args) ->
-      Prim_app (prim, List.map zonk_tm args)
-
-
 (** {1 Pretty printing} *)
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
-  match ty with
+  match force ty with
   | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty

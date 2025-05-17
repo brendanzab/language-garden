@@ -143,8 +143,8 @@ let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
   | Core.Mismatched_types (_, _) ->
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty (Core.zonk_ty ty1)
-          Core.pp_ty (Core.zonk_ty ty2))
+          Core.pp_ty ty1
+          Core.pp_ty ty2)
 
 
 (** {2 Bidirectional type checking} *)
@@ -198,7 +198,7 @@ let rec elab_check (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
           error label.loc
             (Format.asprintf "unexpected variant `%s` in type `%a`"
               label.data
-              Core.pp_ty (Core.zonk_ty ty))
+              Core.pp_ty ty)
   end
 
   | Match (head, clauses), body_ty ->

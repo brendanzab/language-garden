@@ -298,47 +298,6 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
       raise (Mismatched_types (ty1, ty2))
 
 
-(** {1 Zonking} *)
-
-(** These functions flatten solved metavariables in types. This is imporatant
-    for pretty printing types, as we want to be able to ‘see through’
-    metavariables to properly associate function types. *)
-
-(* Deeply force a type, leaving only unsolved metavariables remaining *)
-let rec zonk_ty (ty : ty) : ty =
-  match force ty with
-  | Meta_var m -> Meta_var m
-  | Fun_type (param_ty, body_ty) ->
-      Fun_type (zonk_ty param_ty, zonk_ty body_ty)
-  | Tuple_type elem_tys ->
-      Tuple_type (List.map zonk_ty elem_tys)
-  | Int_type -> Int_type
-  | Bool_type -> Bool_type
-
-(** Flatten all metavariables in a term *)
-let rec zonk_tm (tm : tm) : tm =
-  match tm with
-  | Var index -> Var index
-  | Let (name, def_ty, def, body) ->
-      Let (name, zonk_ty def_ty, zonk_tm def, zonk_tm body)
-  | Fix (name, self_ty, body) ->
-      Fix (name, zonk_ty self_ty, zonk_tm body)
-  | Fun_lit (name, param_ty, body) ->
-      Fun_lit (name, zonk_ty param_ty, zonk_tm body)
-  | Fun_app (head, arg) ->
-      Fun_app (zonk_tm head, zonk_tm arg)
-  | Tuple_lit elems ->
-      Tuple_lit (List.map zonk_tm elems)
-  | Tuple_proj (head, elem_index) ->
-      Tuple_proj (zonk_tm head, elem_index)
-  | Int_lit i -> Int_lit i
-  | Bool_lit b -> Bool_lit b
-  | Bool_elim (head, tm0, tm1) ->
-      Bool_elim (zonk_tm head, zonk_tm tm0, zonk_tm tm1)
-  | Prim_app (prim, args) ->
-      Prim_app (prim, List.map zonk_tm args)
-
-
 (** {1 Pretty printing} *)
 
 let rec fresh (ns : string env) (n : string) : string =
@@ -347,7 +306,7 @@ let rec fresh (ns : string env) (n : string) : string =
   | false -> n
 
 let rec pp_ty (fmt : Format.formatter) (ty : ty) : unit =
-  match ty with
+  match force ty with
   | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
         pp_atomic_ty param_ty

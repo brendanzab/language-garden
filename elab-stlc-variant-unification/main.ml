@@ -40,8 +40,7 @@ let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
 
   match Surface.unsolved_metas () with
   | [] ->
-      Core.zonk_tm tm,
-      Core.zonk_ty ty
+      tm, ty
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
         | (pos, `Fun_param) -> print_error pos "ambiguous function parameter type"
