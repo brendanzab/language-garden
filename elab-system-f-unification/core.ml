@@ -77,9 +77,10 @@ module Semantics = struct
 
   type meta_entry =
     | Unsolved of { scope : int }
-    (** Unsolved meta variables record the size of the context where they were
-        inserted. We use this to ensure that meta variables do not
-        {{: https://counterexamples.org/scope-escape.html} escape} their scope. *)
+    (** Conceptually, metavariables are interspersed with normal bound variables
+        in the typing context. As we perform type checking we keep track of the
+        scopes in which the metas will be inserted, raising them as needed
+        during unification. *)
 
     | Solved of vty
 
@@ -283,8 +284,8 @@ module Semantics = struct
   exception Escaping_scope of meta_id
 
   let validate_meta_solution (ty_size : int) (id : meta_id) (scope : int) (vty : vty) =
-    (** Traverse the candidate solution, using the size of the typing context to
-        generate free variables under binders. *)
+    (** Traverse the solution candidate type, using the size of the typing
+        context to generate free variables under binders. *)
     let rec go ty_size' vty =
       match vty with
       | Fun_type (param_ty, body_ty) ->
@@ -295,17 +296,18 @@ module Semantics = struct
       | Int_type -> ()
       | Bool_type -> ()
       | Local_var level ->
-          (* The metavariable should not depend on type variables that have
-             not yet been bound. Type variables that are bound inside the
-             candidate solution are ok, however. *)
-          if level >= scope && level < ty_size then raise (Escaping_scope id)
+          (* Throw an error if a to-be-solved metavariable would depend on type
+             variables to “the right” of it in the context. *)
+          if scope <= level && level < ty_size then
+            raise (Escaping_scope id)
       | Meta_var id' ->
           if id = id' then raise (Infinite_type id);
           begin match lookup_meta id' with
           | Unsolved { scope = scope' } ->
-              (* Raise the scope of metavariables in the candidate solution to
-                 match the metavariable we will be updating. *)
-              if scope' > scope then set_meta id' (Unsolved { scope })
+              (* Raise the scope constraint on metavariables to match the scope
+                 of the to-be-solved metavariable. *)
+              if scope < scope' then
+                set_meta id' (Unsolved { scope })
           | Solved vty -> go ty_size' vty
           end
     in
