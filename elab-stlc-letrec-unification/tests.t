@@ -34,6 +34,11 @@ Explicit return type
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
+Unused parameter
+  $ stlc-unification elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
+  let f : Int -> Int -> Int := fun (x : Int) => fun (_ : Int) => x;
+  f 3 : Int -> Int
+
 Placeholder types
   $ stlc-letrec-unification elab <<< "let f (x : _) : _ := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
@@ -267,13 +272,13 @@ Mutually recursive bindings: Even/odd
   > EOF
 
   $ cat even-odd.txt | stlc-letrec-unification elab
-  let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
-    #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+  let $mutual-0 : (Int -> Bool, Int -> Bool) :=
+    #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
       (fun (n : Int) =>
-         if #int-eq n 0 then true else $is-even-is-odd.1 (#int-sub n 1),
+         if #int-eq n 0 then true else $mutual-0.1 (#int-sub n 1),
       fun (n : Int) =>
-        if #int-eq n 0 then false else $is-even-is-odd.0 (#int-sub n 1));
-  $is-even-is-odd.0 6 : Bool
+        if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
+  $mutual-0.0 6 : Bool
 
   $ cat even-odd.txt | stlc-letrec-unification norm
   true : Bool
@@ -290,24 +295,24 @@ Mutually recursive bindings: Even/odd (partially applied)
   > EOF
 
   $ cat even-odd.txt | stlc-letrec-unification elab
-  let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
-    #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+  let $mutual-0 : (Int -> Bool, Int -> Bool) :=
+    #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
       (fun (n : Int) =>
-         if #int-eq n 0 then true else $is-even-is-odd.1 (#int-sub n 1),
+         if #int-eq n 0 then true else $mutual-0.1 (#int-sub n 1),
       fun (n : Int) =>
-        if #int-eq n 0 then false else $is-even-is-odd.0 (#int-sub n 1));
-  $is-even-is-odd.0 : Int -> Bool
+        if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
+  $mutual-0.0 : Int -> Bool
 
   $ cat even-odd.txt | stlc-letrec-unification norm
   fun (n : Int) =>
     if #int-eq n 0 then
       true
     else
-      (#fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+      (#fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
          (fun (n' : Int) =>
-            if #int-eq n' 0 then true else $is-even-is-odd.1 (#int-sub n' 1),
+            if #int-eq n' 0 then true else $mutual-0.1 (#int-sub n' 1),
          fun (n' : Int) =>
-           if #int-eq n' 0 then false else $is-even-is-odd.0 (#int-sub n' 1))).1
+           if #int-eq n' 0 then false else $mutual-0.0 (#int-sub n' 1))).1
       (#int-sub n 1)
   : Int -> Bool
 

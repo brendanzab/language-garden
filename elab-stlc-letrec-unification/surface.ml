@@ -27,7 +27,7 @@ and ty_data =
   | Placeholder
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string option located
 
 (** Terms in the surface language *)
 type tm =
@@ -100,8 +100,8 @@ let unsolved_metas () : (loc * meta_info) list =
 
 (** An entry in the context *)
 type entry =
-  | Def of string * Core.ty
-  | Mutual_def of (string * Core.ty) list
+  | Def of string option * Core.ty
+  | Mutual_def of (string option * Core.ty) list
 
 (** A stack of bindings currently in scope *)
 type context = entry Core.env
@@ -110,12 +110,12 @@ type context = entry Core.env
 let lookup (ctx : context) (name : string) : (Core.tm * Core.ty) option =
   ctx |> List.find_mapi @@ fun index entry ->
     match entry with
-    | Def (name', ty) when name = name' ->
+    | Def (name', ty) when Some name = name' ->
         Some (Core.Var index, ty)
     | Def (_, _) -> None
     | Mutual_def entries ->
         entries |> List.find_mapi @@ fun elem_index (name', ty) ->
-          match name = name' with
+          match Some name = name' with
           | true -> Some (Core.Tuple_proj (Var index, elem_index), ty)
           | false -> None
 
@@ -309,7 +309,7 @@ and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty optio
       Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
 
 (** Elaborate the definitions of a recursive let binding. *)
-and elab_let_rec_defns (ctx : context) (defns : defn list) : string * entry * Core.ty * Core.tm =
+and elab_let_rec_defns (ctx : context) (defns : defn list) : string option * entry * Core.ty * Core.tm =
   (* Creates a fresh function type for a definition. *)
   let rec fresh_fun_ty ctx loc params body_ty =
     match params, body_ty with
@@ -367,8 +367,8 @@ and elab_let_rec_defns (ctx : context) (defns : defn list) : string * entry * Co
       (* Create the combined mutual definition using a tuple and the fixed-point
          combinator. Alternatively we could use a record here, which could make
          debugging the elaborated terms a little easier. *)
-      let def_name = "$" ^ String.concat "-" (List.map fst def_tys) in
+      let def_name = Printf.sprintf "$mutual-%i" (List.length ctx) in
       let def_ty = Core.Tuple_type (List.map snd def_tys) in
-      let def = Core.Fix (def_name, def_ty, Tuple_lit defs) in
+      let def = Core.Fix (Some def_name, def_ty, Tuple_lit defs) in
 
-      def_name, defs_entry, def_ty, def
+      Some def_name, defs_entry, def_ty, def

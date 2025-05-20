@@ -16,6 +16,7 @@
 %token HYPHEN "-"
 %token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
+%token UNDERSCORE "_"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
 %token OPEN_BRACKET "["
@@ -35,18 +36,21 @@ let located(X) :=
     { Surface.{ loc = $loc; data } }
 
 let binder :=
-| located(NAME)
+| n = NAME;
+    { Some n }
+| "_";
+    { None }
 
 let param :=
-| "["; n = binder; "]";
+| "["; n = located(binder); "]";
     { Surface.Ty_param n }
-| n = binder;
+| n = located(binder);
     { Surface.Param (n, None) }
-| "("; n = binder; ":"; ty = located(ty); ")";
+| "("; n = located(binder); ":"; ty = located(ty); ")";
     { Surface.Param (n, Some ty) }
 
 let ty :=
-| ns = nonempty_list("["; ~ = binder; "]"; <>); "->"; ty = located(ty);
+| ns = nonempty_list("["; ~ = located(binder); "]"; <>); "->"; ty = located(ty);
     { Surface.Forall_type (ns, ty) }
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
     { Surface.Fun_type (ty1, ty2) }
@@ -59,7 +63,7 @@ let atomic_ty :=
     { Surface.Name n }
 
 let tm :=
-| "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
+| "let"; n = located(binder); ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
     tm0 = located(tm); ";"; tm1 = located(tm);
     { Surface.Let (n, ps, ty, tm0, tm1) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);

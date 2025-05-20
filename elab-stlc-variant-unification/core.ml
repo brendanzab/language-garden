@@ -11,7 +11,7 @@ module Label_map = Map.Make (String)
 
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
-type name = string
+type name = string option
 
 
 (** {1 Nameless binding structure} *)
@@ -377,11 +377,16 @@ and pp_meta fmt m =
       Format.fprintf fmt "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
         id pp_ty (Variant_type cases)
 
+let pp_name fmt name =
+  match name with
+  | Some name -> Format.pp_print_string fmt name
+  | None -> Format.pp_print_string fmt "_"
+
 let pp_name_ann fmt (name, ty) =
-  Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name pp_ty ty
+  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" pp_name name pp_ty ty
 
 let pp_param fmt (name, ty) =
-  Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
+  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" pp_name name pp_ty ty
 
 let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
   match tm with
@@ -402,9 +407,9 @@ let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
         (Format.pp_print_seq
           ~pp_sep:(fun fmt () -> Format.fprintf fmt "")
           (fun fmt (label, (name, body)) ->
-            Format.fprintf fmt "@[@[<2>@[|@ [%s@ :=@]@ @[%s@]]@]@ =>@ @[%a@]@]@ "
+            Format.fprintf fmt "@[@[<2>@[|@ [%s@ :=@]@ @[%a@]]@]@ =>@ @[%a@]@]@ "
               label
-              name
+              pp_name name
               (pp_tm (name :: names)) body))
         (Label_map.to_seq cases)
   | Fun_lit (name, param_ty, body) ->
@@ -446,7 +451,7 @@ and pp_app_tm names fmt tm =
       pp_atomic_tm names fmt tm
 and pp_atomic_tm names fmt tm =
   match tm with
-  | Var index -> Format.fprintf fmt "%s" (List.nth names index)
+  | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
   | Int_lit i -> Format.fprintf fmt "%i" i
   | Bool_lit true -> Format.fprintf fmt "true"
   | Bool_lit false -> Format.fprintf fmt "false"

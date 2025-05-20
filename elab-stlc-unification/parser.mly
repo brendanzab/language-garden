@@ -34,12 +34,15 @@ let located(X) :=
     { Surface.{ loc = $loc; data } }
 
 let binder :=
-| located(NAME)
+| n = NAME;
+    { Some n }
+| "_";
+    { None }
 
 let param :=
-| n = binder;
+| n = located(binder);
     { n, None }
-| "("; n = binder; ":"; ty = located(ty); ")";
+| "("; n = located(binder); ":"; ty = located(ty); ")";
     { n, Some ty }
 
 let ty :=
@@ -56,7 +59,7 @@ let atomic_ty :=
     { Surface.Placeholder }
 
 let tm :=
-| "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
+| "let"; n = located(binder); ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
     tm1 = located(tm); ";"; tm2 = located(tm);
     { Surface.Let (n, ps, ty, tm1, tm2) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(tm);

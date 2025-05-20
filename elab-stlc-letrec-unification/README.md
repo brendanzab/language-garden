@@ -42,13 +42,13 @@ Elaborated program:
 
 <!-- $MDX file=examples/even-odd.stdout -->
 ```
-let $is-even-is-odd : (Int -> Bool, Int -> Bool) :=
-  #fix ($is-even-is-odd : (Int -> Bool, Int -> Bool)) =>
+let $mutual-0 : (Int -> Bool, Int -> Bool) :=
+  #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
     (fun (n : Int) =>
-       if #int-eq n 0 then true else $is-even-is-odd.1 (#int-sub n 1),
+       if #int-eq n 0 then true else $mutual-0.1 (#int-sub n 1),
     fun (n : Int) =>
-      if #int-eq n 0 then false else $is-even-is-odd.0 (#int-sub n 1));
-$is-even-is-odd.0 6 : Bool
+      if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
+$mutual-0.0 6 : Bool
 ```
 
 Due to the introduction of general recursion to the language, care must be taken

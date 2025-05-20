@@ -35,16 +35,19 @@ let located(X) :=
     { Surface.{ loc = $loc; data } }
 
 let binder :=
-| located(NAME)
+| n = NAME;
+    { Some n }
+| "_";
+    { None }
 
 let param :=
-| n = binder;
+| n = located(binder);
     { n, None }
-| "("; n = binder; ":"; ty = located(ty); ")";
+| "("; n = located(binder); ":"; ty = located(ty); ")";
     { n, Some ty }
 
 let defn :=
-| n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":="; tm = located(tm);
+| n = located(binder); ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":="; tm = located(tm);
     { n, ps, ty, tm }
 
 let ty :=

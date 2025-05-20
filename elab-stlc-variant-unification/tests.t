@@ -34,6 +34,11 @@ Explicit return type
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
+Unused parameter
+  $ stlc-unification elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
+  let f : Int -> Int -> Int := fun (x : Int) => fun (_ : Int) => x;
+  f 3 : Int -> Int
+
 Placeholder types
   $ stlc-variant-unification elab <<< "let f (x : _) : _ := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;

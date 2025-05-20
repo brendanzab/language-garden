@@ -21,7 +21,7 @@ type 'a located = {
 type label = string located
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string option located
 
 (** Types in the surface language *)
 type ty =
@@ -116,12 +116,12 @@ let unsolved_metas () : (loc * meta_info) list =
 (** {2 Local bindings} *)
 
 (** A stack of bindings currently in scope *)
-type context = (string * Core.ty) Core.env
+type context = (string option * Core.ty) Core.env
 
 (** Lookup a name in the context *)
 let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
   ctx |> List.find_mapi @@ fun index (name', ty) ->
-    match name = name' with
+    match Some name = name' with
     | true -> Some (index, ty)
     | false -> None
 

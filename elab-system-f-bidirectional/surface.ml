@@ -18,7 +18,7 @@ type 'a located = {
 }
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string option located
 
 (** Types in the surface language *)
 type ty =
@@ -72,9 +72,9 @@ and arg =
     separate namespaces. *)
 type context = {
   ty_size : int;
-  ty_names : string Core.env;
+  ty_names : string option Core.env;
   ty_env : Core.Semantics.vty Core.env;
-  tm_tys : (string * Core.Semantics.vty) Core.env;
+  tm_tys : (string option * Core.Semantics.vty) Core.env;
 }
 
 (** The empty context *)
@@ -106,14 +106,14 @@ let extend_tm (ctx : context) (name : binder) (vty : Core.Semantics.vty) : conte
 (** Lookup a type name in the context *)
 let lookup_ty (ctx : context) (name : string) : Core.index option =
   ctx.ty_names |> List.find_mapi @@ fun index name' ->
-    match name = name' with
+    match Some name = name' with
     | true -> Some index
     | false -> None
 
 (** Lookup a term name in the context *)
 let lookup_tm (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
   ctx.tm_tys |> List.find_mapi @@ fun index (name', ty) ->
-    match name = name' with
+    match Some name = name' with
     | true -> Some (index, ty)
     | false -> None
 

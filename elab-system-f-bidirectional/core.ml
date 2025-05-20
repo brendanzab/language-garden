@@ -4,7 +4,7 @@
 
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
-type name = string
+type name = string option
 
 
 (** {1 Nameless binding structure} *)
@@ -256,11 +256,16 @@ end
 
 (** {1 Pretty printing} *)
 
+let pp_name fmt name =
+  match name with
+  | Some name -> Format.pp_print_string fmt name
+  | None -> Format.pp_print_string fmt "_"
+
 let rec pp_ty  (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
   | Forall_type (name, body_ty) ->
-      Format.fprintf fmt "[%s] -> %a"
-        name
+      Format.fprintf fmt "[%a] -> %a"
+        pp_name name
         (pp_ty (name :: ty_names)) body_ty
   | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
@@ -270,23 +275,23 @@ let rec pp_ty  (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty ty_names fmt ty
 and pp_atomic_ty ty_names fmt ty =
   match ty with
-  | Var index -> Format.fprintf fmt "%s" (List.nth ty_names index)
+  | Var index -> Format.fprintf fmt "%a" pp_name (List.nth ty_names index)
   | Int_type -> Format.fprintf fmt "Int"
   | Bool_type -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty ty_names) ty
 
 let pp_name_ann ty_names fmt (name, ty) =
-  Format.fprintf fmt "@[<2>@[%s :@]@ %a@]" name (pp_ty ty_names) ty
+  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" pp_name name (pp_ty ty_names) ty
 
 let pp_param ty_names fmt (name, ty) =
-  Format.fprintf fmt "@[<2>(@[%s :@]@ %a)@]" name (pp_ty ty_names) ty
+  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" pp_name name (pp_ty ty_names) ty
 
 let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatter) (tm : tm) : unit =
   let rec go_params ty_names tm_names fmt tm =
     match tm with
     | Forall_lit (name, body) ->
-        Format.fprintf fmt "@ @[fun@ [%s]@ =>@]%a"
-          name
+        Format.fprintf fmt "@ @[fun@ [%a]@ =>@]%a"
+          pp_name name
           (go_params (name :: ty_names) tm_names) body
     | Fun_lit (name, param_ty, body) ->
         Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
@@ -307,8 +312,8 @@ let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatte
       in
       Format.fprintf fmt "@[<v>%a@]" (go tm_names) tm
   | Forall_lit (name, body) ->
-      Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ [%s]@ =>@]%a"
-        name
+      Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ [%a]@ =>@]%a"
+        pp_name name
         (go_params (name :: ty_names) tm_names) body
   | Fun_lit (name, param_ty, body) ->
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
@@ -340,7 +345,7 @@ and pp_app_tm ty_names tm_names fmt tm =
       pp_atomic_tm ty_names tm_names fmt tm
 and pp_atomic_tm ty_names tm_names fmt tm =
   match tm with
-  | Var index -> Format.fprintf fmt "%s" (List.nth tm_names index)
+  | Var index -> Format.fprintf fmt "%a" pp_name (List.nth tm_names index)
   | Int_lit i -> Format.fprintf fmt "%i" i
   | Bool_lit true -> Format.fprintf fmt "true"
   | Bool_lit false -> Format.fprintf fmt "false"
