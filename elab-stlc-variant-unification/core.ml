@@ -283,7 +283,7 @@ and occurs_meta (id : meta_id) (m : meta_state ref) : unit =
 and occurs_row (id : meta_id) (row : ty Label_map.t) : unit =
   row |> Label_map.iter (fun _ -> occurs id)
 
-(** Check if two types are the same, updating unsolved metavaribles in one
+(** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
 let rec unify (ty1 : ty) (ty2 : ty) : unit =
   match force ty1, force ty2 with

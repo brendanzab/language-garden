@@ -276,7 +276,7 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
   | Int_type -> ()
   | Bool_type -> ()
 
-(** Check if two types are the same, updating unsolved metavaribles in one
+(** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
 let rec unify (ty0 : ty) (ty1 : ty) : unit =
   match force ty0, force ty1 with

@@ -1,6 +1,6 @@
 (** {0 Surface language}
 
-    The surface language closely mirrors what the programmer originaly wrote,
+    The surface language closely mirrors what the programmer originally wrote,
     including syntactic sugar and higher level language features that make
     programming more convenient (in comparison to the {!Core}).
 *)
