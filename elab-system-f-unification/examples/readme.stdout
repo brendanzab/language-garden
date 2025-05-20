@@ -1,0 +1,8 @@
+let id : [a] -> a -> a := fun [a] => fun (x : a) => x;
+let always : [a] -> a -> [b] -> b -> a :=
+  fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
+let _ : Int := id [Int] 3;
+let _ : [a] -> a -> a := id [[a] -> a -> a] id;
+let _ : [b] -> b -> [a] -> a -> a := always [[a] -> a -> a] id;
+let _ : Int -> Int := always [Int -> Int] (id [Int]) [Int] 3;
+true : Bool

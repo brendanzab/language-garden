@@ -5,11 +5,17 @@ Extends [**elab-system-f-bidirectional**](../elab-system-f-bidirectional).
 An elaborator for a higher-rank polymorphic lambda calculus where explicit
 type applications and type annotations can be omitted.
 
+<!-- $MDX file=examples/readme.txt -->
 ```text
 let id [a] (x : a) := x;
 let always [a] (x : a) [b] (y : b) := x;
 
-always id 33
+let _ := id 3;
+let _ := id id;
+let _ := always id;
+let _ := always (id [Int]) 3;
+
+true
 ```
 
 The approach to unification-with levels was mainly based on Mark Barbone’s
