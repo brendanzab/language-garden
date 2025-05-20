@@ -66,21 +66,12 @@ module Semantics = struct
 
   (** Types in weak head normal form (i.e. type values) *)
   type vty =
-    | Neu of nty
+    | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
+    | Meta_var of meta_id             (* Meta variables *)
     | Forall_type of name * (vty -> vty)
     | Fun_type of vty * vty
     | Int_type
     | Bool_type
-
-  (** Neutral type values.
-
-      We don’t have eliminators in types in System-F, so type neutrals only
-      consist of variables. This would be extended with type function
-      applications when moving to System-Fω.
-  *)
-  and nty =
-    | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
-    | Meta_var of meta_id
 
   (** {2 Functions related to meta variables} *)
 
@@ -112,7 +103,7 @@ module Semantics = struct
       is sometimes referred to as {i path compression}. *)
   let rec force (vty : vty) : vty =
     match vty with
-    | Neu (Meta_var id) as vty -> begin
+    | Meta_var id as vty -> begin
         match lookup_meta id with
         | Solved vty ->
             let vty = force vty in
@@ -189,7 +180,7 @@ module Semantics = struct
   let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
     match ty with
     | Local_var index -> List.nth ty_env index
-    | Meta_var id -> Neu (Meta_var id)
+    | Meta_var id -> Meta_var id
     | Forall_type (name, body_ty) ->
         Forall_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
     | Fun_type (param_ty, body_ty) ->
@@ -235,10 +226,10 @@ module Semantics = struct
   (** Convert types from the semantic domain back into syntax. *)
   let rec quote_vty  (ty_size : int) (vty : vty) : ty =
     match vty with
-    | Neu (Local_var level) -> Local_var (level_to_index ty_size level)
-    | Neu (Meta_var id) -> Meta_var id
+    | Local_var level -> Local_var (level_to_index ty_size level)
+    | Meta_var id -> Meta_var id
     | Forall_type (name, body_vty) ->
-        let body = quote_vty (ty_size + 1) (body_vty (Neu (Local_var ty_size))) in
+        let body = quote_vty (ty_size + 1) (body_vty (Local_var ty_size)) in
         Forall_type (name, body)
     | Fun_type (param_vty, body_vty) ->
         let param_ty = quote_vty ty_size param_vty in
@@ -252,7 +243,7 @@ module Semantics = struct
     match vtm with
     | Neu ntm -> quote_ntm ty_size tm_size ntm
     | Forall_lit (name, body) ->
-        let body = quote_vtm (ty_size + 1) tm_size (body (Neu (Local_var ty_size))) in
+        let body = quote_vtm (ty_size + 1) tm_size (body (Local_var ty_size)) in
         Forall_lit (name, body)
     | Fun_lit (name, param_vty, body) ->
         let param_ty = quote_vty ty_size param_vty in
@@ -300,15 +291,15 @@ module Semantics = struct
           go ty_size' param_ty;
           go ty_size' body_ty
       | Forall_type (_, body_ty) ->
-          go (ty_size' + 1) (body_ty (Neu (Local_var ty_size')))
+          go (ty_size' + 1) (body_ty (Local_var ty_size'))
       | Int_type -> ()
       | Bool_type -> ()
-      | Neu (Local_var level) ->
+      | Local_var level ->
           (* The metavariable should not depend on type variables that have
              not yet been bound. Type variables that are bound inside the
              candidate solution are ok, however. *)
           if level >= scope && level < ty_size then raise (Escaping_scope id)
-      | Neu (Meta_var id') ->
+      | Meta_var id' ->
           if id = id' then raise (Infinite_type id);
           begin match lookup_meta id' with
           | Unsolved { scope = scope' } ->
@@ -322,9 +313,9 @@ module Semantics = struct
 
   let rec unify_vtys (ty_size : int) (vty1 : vty) (vty2 : vty) : unit =
     match force vty1, force vty2 with
-    | Neu (Local_var level1), Neu (Local_var level2) when level1 = level2 -> ()
-    | Neu (Meta_var id1), Neu (Meta_var id2) when id1 = id2 -> ()
-    | Neu (Meta_var id), vty | vty, Neu (Meta_var id) ->
+    | Local_var level1, Local_var level2 when level1 = level2 -> ()
+    | Meta_var id1, Meta_var id2 when id1 = id2 -> ()
+    | Meta_var id, vty | vty, Meta_var id ->
         begin match lookup_meta id with
         | Solved vty' -> unify_vtys ty_size vty vty'
         | Unsolved { scope } ->
@@ -332,7 +323,7 @@ module Semantics = struct
             set_meta id (Solved vty)
         end
     | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
-        let x : vty = Neu (Local_var ty_size) in
+        let x : vty = Local_var ty_size in
         unify_vtys (ty_size + 1) (body_ty1 x) (body_ty2 x)
     | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
         unify_vtys ty_size param_ty1 param_ty2;

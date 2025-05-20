@@ -88,14 +88,14 @@ let empty : context = {
 
 (** The type variable that will be bound after calling {!extend_ty} *)
 let next_ty_var (ctx : context) : Core.Semantics.vty =
-  Neu (Local_var ctx.ty_size)
+  Local_var ctx.ty_size
 
 (** Extend the context with a type binding *)
 let extend_ty (ctx : context) (name : string option) : context = {
   ctx with
   ty_size = ctx.ty_size + 1;
   ty_names = name :: ctx.ty_names;
-  ty_env = Neu (Local_var ctx.ty_size) :: ctx.ty_env;
+  ty_env = next_ty_var ctx :: ctx.ty_env;
 }
 
 (** Extend the context with a term binding *)
@@ -295,7 +295,7 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
             let arg = elab_check ctx arg param_ty in
             Core.Fun_app (head, arg), body_ty
 
-        | Neu (Meta_var _) as head_ty, Arg arg ->
+        | Meta_var _ as head_ty, Arg arg ->
             let param_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_param) in
             let body_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_body) in
             unify_vtys ctx head_loc head_ty (Fun_type (param_ty, body_ty));
@@ -377,8 +377,8 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : 
       Fun_lit (name.data, param_ty,
         elab_check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty)
 
-  | Param (name, _) :: _, Neu (Meta_var _)
-  | Ty_param name :: _, Neu (Meta_var _) ->
+  | Param (name, _) :: _, Meta_var _
+  | Ty_param name :: _, Meta_var _ ->
       let tm', vty' = elab_infer_fun_lit ctx params None body in
       unify_vtys ctx name.loc vty vty';
       tm'

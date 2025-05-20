@@ -63,20 +63,11 @@ module Semantics = struct
 
   (** Types in weak head normal form (i.e. type values) *)
   type vty =
-    | Neu of nty
+    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | Forall_type of name * (vty -> vty)
     | Fun_type of vty * vty
     | Int_type
     | Bool_type
-
-  (** Neutral type values.
-
-      We don’t have eliminators in types in System-F, so type neutrals only
-      consist of variables. This would be extended with type function
-      applications when moving to System-Fω.
-  *)
-  and nty =
-    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
 
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
@@ -187,9 +178,9 @@ module Semantics = struct
   (** Convert types from the semantic domain back into syntax. *)
   let rec quote_vty  (ty_size : int) (vty : vty) : ty =
     match vty with
-    | Neu (Var level) -> Var (level_to_index ty_size level)
+    | Var level -> Var (level_to_index ty_size level)
     | Forall_type (name, body_vty) ->
-        let body = quote_vty (ty_size + 1) (body_vty (Neu (Var ty_size))) in
+        let body = quote_vty (ty_size + 1) (body_vty (Var ty_size)) in
         Forall_type (name, body)
     | Fun_type (param_vty, body_vty) ->
         let param_ty = quote_vty ty_size param_vty in
@@ -203,7 +194,7 @@ module Semantics = struct
     match vtm with
     | Neu ntm -> quote_ntm ty_size tm_size ntm
     | Forall_lit (name, body) ->
-        let body = quote_vtm (ty_size + 1) tm_size (body (Neu (Var ty_size))) in
+        let body = quote_vtm (ty_size + 1) tm_size (body (Var ty_size)) in
         Forall_lit (name, body)
     | Fun_lit (name, param_vty, body) ->
         let param_ty = quote_vty ty_size param_vty in
@@ -240,9 +231,9 @@ module Semantics = struct
 
   let rec is_convertible (ty_size : int) (vty1 : vty) (vty2 : vty) : bool =
     match vty1, vty2 with
-    | Neu (Var level1), Neu (Var level2) -> level1 = level2
+    | Var level1, Var level2 -> level1 = level2
     | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
-        let x : vty = Neu (Var ty_size) in
+        let x : vty = Var ty_size in
         is_convertible (ty_size + 1) (body_ty1 x) (body_ty2 x)
     | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
         is_convertible ty_size param_ty1 param_ty2
