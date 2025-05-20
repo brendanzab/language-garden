@@ -1,4 +1,4 @@
-# Bidirectional type checking and pattern unification for higher-rank polymorphism
+# Bidirectional type checking and unification for higher-rank polymorphism
 
 Extends [**elab-system-f-bidirectional**](../elab-system-f-bidirectional).
 
