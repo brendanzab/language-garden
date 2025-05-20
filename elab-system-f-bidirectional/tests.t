@@ -42,6 +42,11 @@ Explicit return type
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
+Unused parameter
+  $ stlc-unification elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
+  let f : Int -> Int -> Int := fun (x : Int) => fun (_ : Int) => x;
+  f 3 : Int -> Int
+
 Check let body type
   $ system-f-bidirectional elab <<EOF
   > let f (x : Int) : Int -> Int :=
@@ -105,6 +110,10 @@ Self application
   > EOF
   fun (x : [a] -> a -> a) => x [[a] -> a -> a] x :
     ([a] -> a -> a) -> [a] -> a -> a
+
+Missing type parameter insertion
+  $ system-f-bidirectional elab <<< "(fun x => x) : [a] -> a -> a"
+  fun [$a] => fun (x : $a) => x : [a] -> a -> a
 
 
 Lexer Errors

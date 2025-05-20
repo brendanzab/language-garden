@@ -90,17 +90,17 @@ let next_ty_var (ctx : context) : Core.Semantics.vty =
   Neu (Var ctx.ty_size)
 
 (** Extend the context with a type binding *)
-let extend_ty (ctx : context) (name : binder) : context = {
+let extend_ty (ctx : context) (name : string option) : context = {
   ctx with
   ty_size = ctx.ty_size + 1;
-  ty_names = name.data :: ctx.ty_names;
+  ty_names = name :: ctx.ty_names;
   ty_env = Neu (Var ctx.ty_size) :: ctx.ty_env;
 }
 
 (** Extend the context with a term binding *)
-let extend_tm (ctx : context) (name : binder) (vty : Core.Semantics.vty) : context = {
+let extend_tm (ctx : context) (name : string option) (vty : Core.Semantics.vty) : context = {
   ctx with
-  tm_tys = (name.data, vty) :: ctx.tm_tys;
+  tm_tys = (name, vty) :: ctx.tm_tys;
 }
 
 (** Lookup a type name in the context *)
@@ -168,7 +168,7 @@ let rec elab_ty (ctx : context) (ty : ty) : Core.ty =
       let rec go ctx names : Core.ty =
         match names with
         | [] -> elab_ty ctx body_ty
-        | name :: names -> Forall_type (name.data, go (extend_ty ctx name) names)
+        | name :: names -> Forall_type (name.data, go (extend_ty ctx name.data) names)
       in
       go ctx names
   | Fun_type (ty1, ty2) ->
@@ -179,7 +179,7 @@ let rec elab_check (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.t
   match tm.data with
   | Let (def_name, params, def_body_ty, def_body, body) ->
       let def, def_vty = elab_infer_fun_lit ctx params def_body_ty def_body in
-      let body = elab_check (extend_tm ctx def_name def_vty) body vty in
+      let body = elab_check (extend_tm ctx def_name.data def_vty) body vty in
       Let (def_name.data, quote_vty ctx def_vty, def, body)
 
   | Fun_lit (params, body) ->
@@ -208,7 +208,7 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
 
   | Let (def_name, params, def_body_ty, def_body, body) ->
       let def, def_vty = elab_infer_fun_lit ctx params def_body_ty def_body in
-      let body, body_ty = elab_infer (extend_tm ctx def_name def_vty) body in
+      let body, body_ty = elab_infer (extend_tm ctx def_name.data def_vty) body in
       Let (def_name.data, quote_vty ctx def_vty, def, body), body_ty
 
   | Ann (tm, ty) ->
@@ -289,11 +289,18 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : 
 
   | Ty_param name :: params, Forall_type (_, body_vty) ->
       let ty_var = next_ty_var ctx in
-      let body_tm = elab_check_fun_lit (extend_ty ctx name) params body (body_vty ty_var) in
+      let body_tm = elab_check_fun_lit (extend_ty ctx name.data) params body (body_vty ty_var) in
       Forall_lit (name.data, body_tm)
 
+  (* Insert missing type parameters *)
+  | params, Forall_type (name, body_vty) ->
+      let ty_var = next_ty_var ctx in
+      let name = name |> Option.map (fun n -> "$" ^ n) in
+      let body_tm = elab_check_fun_lit (extend_ty ctx name) params body (body_vty ty_var) in
+      Forall_lit (name, body_tm)
+
   | Param (name, None) :: params, Fun_type (param_vty, body_vty) ->
-      let body_tm = elab_check_fun_lit (extend_tm ctx name param_vty) params body body_vty in
+      let body_tm = elab_check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
       Fun_lit (name.data, quote_vty ctx param_vty, body_tm)
 
   | Param (name, Some param_ty) :: params, Fun_type (param_vty', body_vty) ->
@@ -302,7 +309,7 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : 
       let param_vty = eval_ty ctx param_ty in
       equate_vtys ctx param_ty_loc param_vty param_vty';
       Fun_lit (name.data, param_ty,
-        elab_check_fun_lit (extend_tm ctx name param_vty) params body body_vty)
+        elab_check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty)
 
   | Ty_param name :: _, _ ->
       error name.loc "unexpected type parameter"
@@ -324,7 +331,7 @@ and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty optio
         body, quote_vty ctx body_vty
 
     | Ty_param name :: params, body_ty ->
-        let body, body_ty = go (extend_ty ctx name) params body_ty body in
+        let body, body_ty = go (extend_ty ctx name.data) params body_ty body in
         Forall_lit (name.data, body), Forall_type (name.data, body_ty)
 
     | Param (name, None) :: _, _ ->
@@ -333,7 +340,7 @@ and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty optio
     | Param (name, Some param_ty) :: params, body_ty ->
         let param_ty = elab_ty ctx param_ty in
         let param_vty = eval_ty ctx param_ty in
-        let body, body_ty = go (extend_tm ctx name param_vty) params body_ty body in
+        let body, body_ty = go (extend_tm ctx name.data param_vty) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
   in
 
