@@ -1,6 +1,6 @@
 # Bidirectional typing with unification for higher-rank polymorphism
 
-Extends [**elab-system-f-bidirectional**](../elab-system-f-bidirectional).
+Extends [**elab-stlc-unification**](../elab-stlc-unification) and [**elab-system-f-bidirectional**](../elab-system-f-bidirectional).
 
 This implements a bidirectional elaborator for a higher-rank polymorphic lambda
 calculus where explicit type applications and type annotations can be omitted.
@@ -70,7 +70,8 @@ approach to unification.
 
 ## Resources
 
-In addition to the resources used in [elab-system-f-bidirectional](../elab-system-f-bidirectional):
+In addition to the resources used in [elab-stlc-unification](../elab-stlc-unification)
+and [elab-system-f-bidirectional](../elab-system-f-bidirectional):
 
 - Mark Barbone, [mb64/tychk.ml](https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7):
   Bidirectional typechecking for higher-rank polymorphism in OCaml, with and
@@ -80,7 +81,7 @@ In addition to the resources used in [elab-system-f-bidirectional](../elab-syste
   Hindley-Milner typecheckers. Mark Barbone’s approach is based on this work.
 - Richard A. Eisenberg, [Type inference in OCaml and GHC using Levels](https://www.youtube.com/watch?v=iFUrhTQi0-U)
 - Jana Dunfield and Neelakantan Krishnaswami,
-  [Complete and easy bidirectional typechecking for higher-rank polymorphism](https://dl.acm.org/doi/10.1145/2544174.2500582)
+  [Complete and easy bidirectional typechecking for higher-rank polymorphism](https://dl.acm.org/doi/10.1145/2544174.2500582),
   [[DOI](https://doi.org/10.1145/2544174.2500582)]
   [[PDF](https://www.cl.cam.ac.uk/~nk480/bidir.pdf)]
 

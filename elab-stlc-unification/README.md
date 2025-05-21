@@ -30,6 +30,11 @@ This implementation was originally based on [Arad Arbel’s gist](https://gist.g
 [`Core`]: ./core.ml
 [`Prim`]: ./prim.ml
 
+## Resources
+
+- Arad Arbel, [aradarbel10/main.ml](https://gist.github.com/aradarbel10/837aa65d2f06ac6710c6fbe479909b4c):
+  minimal STLC type inference with mutable metavars
+
 ## Examples
 
 ```sh
