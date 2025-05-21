@@ -1,4 +1,4 @@
-# Bidirectional type checking for a simply typed lambda calculus
+# Bidirectional typing for a simply typed lambda calculus
 
 Bidirectional typing is a technique for implementing type checking and
 elaboration, allowing type annotations to be provided when checking terms to

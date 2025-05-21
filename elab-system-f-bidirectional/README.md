@@ -1,4 +1,4 @@
-# Bidirectional type checking for higher-rank polymorphism
+# Bidirectional typing for higher-rank polymorphism
 
 Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
 
@@ -44,6 +44,8 @@ Type values are used throughout the elaborator to avoid the error-prone shifting
 [`Prim`]: ./prim.ml
 
 ## Resources
+
+In addition to the resources used in [elab-stlc-bidirectional](../elab-stlc-bidirectional):
 
 - [fullpoly](https://github.com/mspertus/TAPL/blob/main/fullpoly) from
   Benjamin Pierce’s [Types and Programming Languages](https://www.cis.upenn.edu/~bcpierce/tapl/).
