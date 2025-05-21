@@ -78,9 +78,12 @@ module Semantics = struct
   type meta_entry =
     | Unsolved of { scope : int }
     (** Conceptually, metavariables are interspersed with normal bound variables
-        in the typing context. As we perform type checking we keep track of the
-        scopes in which the metas will be inserted, raising them as needed
-        during unification. *)
+        in the typing context, and their solutions can only depend on type
+        variables “to the left” in the context.
+
+        At the time when we create an unsolved metavariable, we do not know what
+        level it should be inserted at, so we keep track of a scope constraint
+        to ensure that we do not introduce scoping errors during unification. *)
 
     | Solved of vty
 
