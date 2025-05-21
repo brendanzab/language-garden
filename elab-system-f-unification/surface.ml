@@ -374,8 +374,8 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : 
       let param_ty = elab_ty ctx param_ty in
       let param_vty = eval_ty ctx param_ty in
       unify_vtys ctx param_ty_loc param_vty param_vty';
-      Fun_lit (name.data, param_ty,
-        elab_check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty)
+      let body_tm = elab_check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
+      Fun_lit (name.data, param_ty, body_tm)
 
   | Param (name, _) :: _, Meta_var _
   | Ty_param name :: _, Meta_var _ ->
