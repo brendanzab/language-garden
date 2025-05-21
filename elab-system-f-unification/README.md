@@ -32,7 +32,6 @@ let always : [a] -> a -> [b] -> b -> a :=
   fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
 let _ : Int := id [Int] 3;
 let _ : [a] -> a -> a := id [[a] -> a -> a] id;
-let _ : [b] -> b -> [a] -> a -> a := always [[a] -> a -> a] id;
 let _ : [a] -> a -> a := always [[a] -> a -> a] id [Int] 3;
 let test : ([a] -> a -> a) -> Bool :=
   fun (f : [a] -> a -> a) => let _ : Int := f [Int] 3;

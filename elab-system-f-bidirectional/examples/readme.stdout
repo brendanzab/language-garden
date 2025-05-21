@@ -1,0 +1,4 @@
+let id : [a] -> a -> a := fun [a] => fun (x : a) => x;
+let always : [a] -> a -> [b] -> b -> a :=
+  fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
+always [Int -> Int] (id [Int]) : [b] -> b -> Int -> Int

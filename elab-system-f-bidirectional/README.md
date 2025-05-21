@@ -9,12 +9,26 @@ adding type functions to the simply typed lambda calculus.
 This allows us to express polymorphic terms,
 for example:
 
+<!-- $MDX file=examples/readme.txt -->
 ```text
 let id [a] (x : a) := x;
 let always [a] (x : a) [b] (y : b) := x;
 
 always [Int -> Int] (id [Int])
 ```
+
+<details>
+<summary>Elaboration output</summary>
+
+<!-- $MDX file=examples/readme.stdout -->
+```text
+let id : [a] -> a -> a := fun [a] => fun (x : a) => x;
+let always : [a] -> a -> [b] -> b -> a :=
+  fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
+always [Int -> Int] (id [Int]) : [b] -> b -> Int -> Int
+```
+
+</details>
 
 Note that polymorphic terms _must_ be explicitly instantiated in this language,
 as we do not implement metavariables and pattern unification.
