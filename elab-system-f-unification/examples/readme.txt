@@ -3,7 +3,11 @@ let always [a] (x : a) [b] (y : b) := x;
 
 let _ := id 3;
 let _ := id id;
-let _ := always id;
-let _ := always (id [Int]) 3;
+let _ := always id 3;
 
-true
+-- Call a polymorphic function with two different types
+let test (f : [a] -> a -> a) : Bool :=
+  let _ := f 3;
+  f true;
+
+test (fun x => x)
