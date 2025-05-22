@@ -230,7 +230,7 @@ let rec coerce (ctx : context) (from_ty : Semantics.vty) (to_ty : Semantics.vty)
     recursive {i checking} and {i inference} modes. By supplying type
     annotations as early as possible using the checking mode, we can improve
     the locality of type errors, and provide enough {i control} to the
-    algorithm to keep type inference deciable even in the presence of ‘fancy’
+    algorithm to keep type inference decidable even in the presence of ‘fancy’
     types, for example dependent types, higher rank types, and subtyping. *)
 
 (** Elaborate a term in the surface language into a term in the core language
@@ -350,10 +350,7 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
       let body_ty = check ctx body_ty Semantics.Univ in
       Syntax.Fun_type (None, param_ty, body_ty), Semantics.Univ
 
-  (* Function literals. These do not have type annotations on their arguments
-      and so we don’t know ahead of time what types to use for the arguments
-      when adding them to the context. As a result with coose to throw an
-      ambiguity error here. *)
+  (* Function literals. *)
   | Fun_lit (params, body_ty, body) ->
       let fun_tm, fun_ty = infer_fun_lit ctx params body_ty body in
       fun_tm, eval ctx fun_ty
@@ -372,8 +369,8 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
       Syntax.Rec_type (go ctx [] decls), Semantics.Univ
 
   (* Unit records. These are ambiguous in inference mode. We could default to
-      one or the other, and perhaps coerce between them, but we choose just to
-      throw an error instead. *)
+      one or the other, and perhaps coerce between them, but we choose to throw
+      an ambiguity error instead. *)
   | Rec_lit _ -> error "ambiguous record literal"
   | Rec_unit -> error "ambiguous unit record"
 

@@ -126,7 +126,7 @@ let not_bound name =
     recursive {i checking} and {i inference} modes. By supplying type
     annotations as early as possible using the checking mode, we can improve
     the locality of type errors, and provide enough {i control} to the
-    algorithm to keep type inference deciable even in the presence of ‘fancy’
+    algorithm to keep type inference decidable even in the presence of ‘fancy’
     types, for example dependent types, higher rank types, and subtyping. *)
 
 (** Elaborate a term in the surface language into a term in the core language

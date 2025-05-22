@@ -52,7 +52,7 @@ type 'a env = 'a list
 
 (** Nameless variable representations like {i De Bruijn indices} and {i De
     Bruijn levels} have a reputation for off-by-one errors and requiring
-    expensive reindexing operations when performing substitutions. Thankfully
+    expensive re-indexing operations when performing substitutions. Thankfully
     these issues can be largely avoided by choosing different variable
     representations for the {!Syntax} and the {!Semantics}:
 
@@ -83,7 +83,7 @@ module Syntax = struct
       directly, so lacks many convenience features programmers might wish for
       in day-to-day programming.
 
-      As mentioned ealier, a higher level {i surface language} that is easier
+      As mentioned earlier, a higher level {i surface language} that is easier
       for people to work with directly is defined in another part of this
       implementation.
   *)
@@ -108,11 +108,11 @@ module Syntax = struct
       the universe to be another connective, but that’s a something to tackle
       another time.
 
-      As more connctives are added to the core language, they should follow
+      As more connectives are added to the core language, they should follow
       the same pattern as function types, with separate variants for:
 
-      - type formation: for contructing types that represent the connective
-      - introduction: for contructing terms of a given connective
+      - type formation: for constructing types that represent the connective
+      - introduction: for constructing terms of a given connective
       - elimination: for deconstructing terms of a given connective
 
       This approach to designing type theories comes from {i natural deduction}.
