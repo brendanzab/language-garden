@@ -32,6 +32,7 @@ let level_to_index size level =
     {!index}, or by inverting a {!level} using {!level_to_index}. *)
 type 'a env = 'a list
 
+
 (** {1 Syntax} *)
 
 (** Metavariable identifier *)
