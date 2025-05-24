@@ -14,7 +14,8 @@ let rec fact n :=
 fact 5
 ```
 
-Elaborated program:
+<details>
+<summary>Elaboration output</summary>
 
 <!-- $MDX file=examples/fact.stdout -->
 ```
@@ -24,6 +25,8 @@ let fact : Int -> Int :=
       if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1));
 fact 5 : Int
 ```
+
+</details>
 
 Mutually recursive functions are elaborated to fixed-points over tuples of
 functions:
@@ -38,7 +41,8 @@ let rec is-even n :=
 is-even 6
 ```
 
-Elaborated program:
+<details>
+<summary>Elaboration output</summary>
 
 <!-- $MDX file=examples/even-odd.stdout -->
 ```
@@ -50,6 +54,8 @@ let $mutual-0 : (Int -> Bool, Int -> Bool) :=
       if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
 $mutual-0.0 6 : Bool
 ```
+
+</details>
 
 Due to the introduction of general recursion to the language, care must be taken
 when implementing quotation, as the naive approach will lead to infinite loops

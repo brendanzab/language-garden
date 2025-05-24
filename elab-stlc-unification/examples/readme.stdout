@@ -1,0 +1,4 @@
+let foo : Int -> Bool -> Bool -> Bool :=
+  fun (x : Int) => fun (y : Bool) => fun (z : Bool) =>
+    if #int-eq x 0 then y else z;
+foo 3 true false : Bool

@@ -7,6 +7,27 @@ that allows programmers to omit type annotations. This is done by inserting
 _metavariables_ that stand-in for unknown types during elaboration. These are
 later updated based on how they are used in other parts of the program.
 
+<!-- $MDX file=examples/readme.txt -->
+```
+let foo x y z :=
+  if x = 0 then y else z;
+
+foo 3 true false
+```
+
+<details>
+<summary>Elaboration output</summary>
+
+<!-- $MDX file=examples/readme.stdout -->
+```
+let foo : Int -> Bool -> Bool -> Bool :=
+  fun (x : Int) => fun (y : Bool) => fun (z : Bool) =>
+    if #int-eq x 0 then y else z;
+foo 3 true false : Bool
+```
+
+</details>
+
 This approach is a stepping-stone to more powerful type checking algorithms,
 such as those for Hindley-Milner type systems.
 

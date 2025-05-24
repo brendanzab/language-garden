@@ -87,9 +87,4 @@ and [elab-system-f-bidirectional](../elab-system-f-bidirectional):
 
 ## Examples
 
-```sh
-$ system-f-unification norm <<< "(fun [a] (x : a) [b] (y : b) => x) 3"
-fun [b] => fun (y : b) => 3 : [b] -> b -> Int
-```
-
 More examples can be found in [`tests.t`](tests.t).
