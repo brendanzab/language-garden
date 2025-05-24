@@ -108,14 +108,14 @@ module Semantics = struct
       is sometimes referred to as {i path compression}. *)
   let rec force (vty : vty) : vty =
     match vty with
-    | Meta_var id as vty -> begin
-        match lookup_meta id with
+    | Meta_var id as vty ->
+        begin match lookup_meta id with
         | Solved vty ->
             let vty = force vty in
             set_meta id (Solved vty);
             vty
         | Unsolved _ -> vty
-    end
+        end
     | vty -> vty
 
 
