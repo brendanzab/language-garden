@@ -287,7 +287,7 @@ and occurs_row (id : meta_id) (row : ty Label_map.t) : unit =
     type with known information from the other type if possible. *)
 let rec unify (ty1 : ty) (ty2 : ty) : unit =
   match force ty1, force ty2 with
-  | Meta_var m1, Meta_var m2 when m1 = m2 -> ()
+  | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
       unify_meta m ty
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->

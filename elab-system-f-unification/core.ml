@@ -319,7 +319,7 @@ module Semantics = struct
 
   let rec unify_vtys (ty_size : int) (vty1 : vty) (vty2 : vty) : unit =
     match force vty1, force vty2 with
-    | Local_var level1, Local_var level2 when level1 = level2 -> ()
+    | Local_var level1, Local_var level2 when level1 == level2 -> ()
     | Meta_var id1, Meta_var id2 when id1 = id2 -> ()
     | Meta_var id, vty | vty, Meta_var id ->
         begin match lookup_meta id with

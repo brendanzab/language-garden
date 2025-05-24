@@ -232,7 +232,7 @@ let rec occurs (id : meta_id) (ty : ty) : unit =
     type with known information from the other type if possible. *)
 let rec unify (ty1 : ty) (ty2 : ty) : unit =
   match force ty1, force ty2 with
-  | Meta_var m1, Meta_var m2 when m1 = m2 -> ()
+  | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
       occurs (expect_forced m) ty;
       m := Solved ty
