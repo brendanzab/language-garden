@@ -33,11 +33,15 @@ let level_to_index size level =
 type 'a env = 'a list
 
 
-(** Base datatypes used in the core language. Mutually recursive modules are
-    finicky to define in OCaml, so we define these in a submodule first. *)
+(** Base datatypes used in the core language. *)
 module Base = struct
 
-  (* See https://blog.janestreet.com/a-trick-recursive-modules-from-recursive-signatures/ *)
+  (* Mutually recursive modules are clunky to define in OCaml, so we define
+     these in a submodule first. See this blog post for more details:
+     https://blog.janestreet.com/a-trick-recursive-modules-from-recursive-signatures/
+
+     One day I would love to make a language with higher-order modules that
+     handles these in a nicer way, but today is not that day! *)
 
   module rec Syntax : sig
 
