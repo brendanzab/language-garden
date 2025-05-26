@@ -33,115 +33,102 @@ let level_to_index size level =
 type 'a env = 'a list
 
 
-(** {1 Syntax} *)
+(** Base datatypes used in the core language. Mutually recursive modules are
+    finicky to define in OCaml, so we define these in a submodule first. *)
+module Base = struct
 
-(** Metavariable identifier *)
-type meta_id = int
+  (* See https://blog.janestreet.com/a-trick-recursive-modules-from-recursive-signatures/ *)
 
-(** Type syntax *)
-type ty =
-  | Local_var of index              (* Local type variables *)
-  | Meta_var of meta_id             (* Meta variables *)
-  | Forall_type of name * ty        (* Type of a forall (i.e. the type of a term parameterised by a type) *)
-  | Fun_type of ty * ty             (* Type of function types *)
-  | Int_type
-  | Bool_type
+  module rec Syntax : sig
 
-(** Term syntax *)
-type tm =
-  | Local_var of index              (* Local term variables *)
-  | Let of name * ty * tm * tm
-  | Forall_lit of name * tm         (* Type function literal (i.e. a big-lambda abstraction) *)
-  | Forall_app of tm * ty           (* Type function application *)
-  | Fun_lit of name * ty * tm       (* Function literal (i.e. a lambda abstraction) *)
-  | Fun_app of tm * tm              (* Function application *)
-  | Int_lit of int
-  | Bool_lit of bool
-  | Bool_elim of tm * tm * tm
-  | Prim_app of Prim.t * tm list
+    (** Type syntax *)
+    type ty =
+      | Local_var of index              (* Local type variables *)
+      | Meta_var of Meta.t ref          (* Meta variables *)
+      | Forall_type of name * ty        (* Type of a forall (i.e. the type of a term parameterised by a type) *)
+      | Fun_type of ty * ty             (* Type of function types *)
+      | Int_type
+      | Bool_type
 
+    (** Term syntax *)
+    type tm =
+      | Local_var of index              (* Local term variables *)
+      | Let of name * ty * tm * tm      (* Local let bindings *)
+      | Forall_lit of name * tm         (* Type function literal (i.e. a big-lambda abstraction) *)
+      | Forall_app of tm * ty           (* Type function application *)
+      | Fun_lit of name * ty * tm       (* Function literal (i.e. a lambda abstraction) *)
+      | Fun_app of tm * tm              (* Function application *)
+      | Int_lit of int
+      | Bool_lit of bool
+      | Bool_elim of tm * tm * tm
+      | Prim_app of Prim.t * tm list
 
+  end = Syntax
+
+  and Semantics : sig
+
+    (** Types in weak head normal form (i.e. type values) *)
+    type vty =
+      | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
+      | Meta_var of Meta.t ref          (* Meta variables *)
+      | Forall_type of name * (vty -> vty)
+      | Fun_type of vty * vty
+      | Int_type
+      | Bool_type
+
+    (** Terms in weak head normal form (i.e. values) *)
+    type vtm =
+      | Neu of ntm
+      | Forall_lit of name * (vty -> vtm)
+      | Fun_lit of name * vty * (vtm -> vtm)
+      | Int_lit of int
+      | Bool_lit of bool
+
+    (** Neutral values that could not be reduced to a normal form as a result of
+        being stuck on something else that would not reduce further.
+
+        For simple (non-dependent) type systems these are not actually required,
+        however they allow us to {!quote} terms back to syntax, which is useful
+        for pretty printing under binders.
+    *)
+    and ntm =
+      | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
+      | Forall_app of ntm * vty
+      | Fun_app of ntm * vtm
+      | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
+      | Prim_app of Prim.t * vtm list
+
+  end = Semantics
+
+  and Meta : sig
+
+    (** Metavariable identifier, used in pretty printing *)
+    type id = int
+
+    (** The state of a metavariable, updated during unification *)
+    type t =
+      | Unsolved of { id : id; scope : int }
+      (** Conceptually, metavariables are interspersed with normal bound variables
+          in the typing context, and their solutions can only depend on type
+          variables “to the left” in the context.
+
+          At the time when we create an unsolved metavariable, we do not know what
+          level it should be inserted at, so we keep track of a scope constraint
+          to ensure that we do not introduce scoping errors during unification. *)
+
+      | Solved of Semantics.vty
+
+  end = Meta
+
+end
+
+(** Syntax of the core language *)
+module Syntax = Base.Syntax
+
+(** Semantics of the core language *)
 module Semantics = struct
 
-  (** {1 Type values} *)
-
-  (** Types in weak head normal form (i.e. type values) *)
-  type vty =
-    | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
-    | Meta_var of meta_id             (* Meta variables *)
-    | Forall_type of name * (vty -> vty)
-    | Fun_type of vty * vty
-    | Int_type
-    | Bool_type
-
-  (** {2 Functions related to meta variables} *)
-
-  type meta_entry =
-    | Unsolved of { scope : int }
-    (** Conceptually, metavariables are interspersed with normal bound variables
-        in the typing context, and their solutions can only depend on type
-        variables “to the left” in the context.
-
-        At the time when we create an unsolved metavariable, we do not know what
-        level it should be inserted at, so we keep track of a scope constraint
-        to ensure that we do not introduce scoping errors during unification. *)
-
-    | Solved of vty
-
-  let meta_ctx : meta_entry Dynarray.t =
-    Dynarray.create ()
-
-  (** Create a fresh, unsolved metavariable *)
-  let fresh_meta ty_size : meta_id =
-    let id = Dynarray.length meta_ctx in
-    Dynarray.add_last meta_ctx (Unsolved { scope = ty_size });
-    id
-
-  let lookup_meta (id : meta_id) : meta_entry =
-    Dynarray.get meta_ctx id
-
-  let set_meta (id : meta_id) (entry : meta_entry) : unit =
-    Dynarray.set meta_ctx id entry
-
-  (** Force any solved meta variables on the outermost part of a type. Chains of
-      meta variables will be collapsed to make forcing faster in the future. This
-      is sometimes referred to as {i path compression}. *)
-  let rec force (vty : vty) : vty =
-    match vty with
-    | Meta_var id as vty ->
-        begin match lookup_meta id with
-        | Solved vty ->
-            let vty = force vty in
-            set_meta id (Solved vty);
-            vty
-        | Unsolved _ -> vty
-        end
-    | vty -> vty
-
-
-  (** {1 Term values} *)
-
-  (** Terms in weak head normal form (i.e. values) *)
-  type vtm =
-    | Neu of ntm
-    | Forall_lit of name * (vty -> vtm)
-    | Fun_lit of name * vty * (vtm -> vtm)
-    | Int_lit of int
-    | Bool_lit of bool
-
-  (** Neutral values that could not be reduced to a normal form as a result of
-      being stuck on something else that would not reduce further.
-
-      For simple (non-dependent) type systems these are not actually required,
-      however they allow us to {!quote} terms back to syntax, which is useful
-      for pretty printing under binders.
-  *)
-  and ntm =
-    | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
-    | Forall_app of ntm * vty
-    | Fun_app of ntm * vtm
-    | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
-    | Prim_app of Prim.t * vtm list
+  include Base.Semantics
 
 
   (** {1 Eliminators} *)
@@ -182,7 +169,7 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a type from the syntax into its semantic interpretation *)
-  let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
+  let rec eval_ty (ty_env : vty env) (ty : Syntax.ty) : vty =
     match ty with
     | Local_var index -> List.nth ty_env index
     | Meta_var id -> Meta_var id
@@ -196,7 +183,7 @@ module Semantics = struct
     | Bool_type -> Bool_type
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : tm) : vtm =
+  let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : Syntax.tm) : vtm =
     match tm with
     | Local_var index -> List.nth tm_env index
     | Let (_, _, def, body) ->
@@ -229,7 +216,7 @@ module Semantics = struct
   (** {1 Quotation} *)
 
   (** Convert types from the semantic domain back into syntax. *)
-  let rec quote_vty  (ty_size : int) (vty : vty) : ty =
+  let rec quote_vty  (ty_size : int) (vty : vty) : Syntax.ty =
     match vty with
     | Local_var level -> Local_var (level_to_index ty_size level)
     | Meta_var id -> Meta_var id
@@ -244,7 +231,7 @@ module Semantics = struct
     | Bool_type -> Bool_type
 
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote_vtm (ty_size : int) (tm_size : int) (vtm : vtm) : tm =
+  let rec quote_vtm (ty_size : int) (tm_size : int) (vtm : vtm) : Syntax.tm =
     match vtm with
     | Neu ntm -> quote_ntm ty_size tm_size ntm
     | Forall_lit (name, body) ->
@@ -257,7 +244,7 @@ module Semantics = struct
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_ntm (ty_size : int) (tm_size : int) (ntm : ntm) : tm =
+  and quote_ntm (ty_size : int) (tm_size : int) (ntm : ntm) : Syntax.tm =
     match ntm with
     | Local_var level ->
         Local_var (level_to_index tm_size level)
@@ -277,69 +264,98 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise_tm (ty_env : vty env) (tm_env : vtm list) (tm : tm) : tm =
+  let normalise_tm (ty_env : vty env) (tm_env : vtm list) (tm : Syntax.tm) : Syntax.tm =
     quote_vtm (List.length ty_env) (List.length tm_env) (eval_tm ty_env tm_env tm)
 
-
-  (** {1 Unification} *)
-
-  exception Mismatched_types of vty * vty
-  exception Infinite_type of meta_id
-  exception Escaping_scope of meta_id
-
-  let validate_meta_solution (ty_size : int) (id : meta_id) (scope : int) (vty : vty) =
-    (** Traverse the solution candidate type, using the size of the typing
-        context to generate free variables under binders. *)
-    let rec go ty_size' vty =
-      match vty with
-      | Fun_type (param_ty, body_ty) ->
-          go ty_size' param_ty;
-          go ty_size' body_ty
-      | Forall_type (_, body_ty) ->
-          go (ty_size' + 1) (body_ty (Local_var ty_size'))
-      | Int_type -> ()
-      | Bool_type -> ()
-      | Local_var level ->
-          (* Throw an error if a to-be-solved metavariable would depend on type
-             variables to “the right” of it in the context. *)
-          if scope <= level && level < ty_size then
-            raise (Escaping_scope id)
-      | Meta_var id' ->
-          if id = id' then raise (Infinite_type id);
-          begin match lookup_meta id' with
-          | Unsolved { scope = scope' } ->
-              (* Raise the scope constraint on metavariables to match the scope
-                 of the to-be-solved metavariable. *)
-              if scope < scope' then
-                set_meta id' (Unsolved { scope })
-          | Solved vty -> go ty_size' vty
-          end
-    in
-    go ty_size vty
-
-  let rec unify_vtys (ty_size : int) (vty1 : vty) (vty2 : vty) : unit =
-    match force vty1, force vty2 with
-    | Local_var level1, Local_var level2 when level1 == level2 -> ()
-    | Meta_var id1, Meta_var id2 when id1 = id2 -> ()
-    | Meta_var id, vty | vty, Meta_var id ->
-        begin match lookup_meta id with
-        | Solved vty' -> unify_vtys ty_size vty vty'
-        | Unsolved { scope } ->
-            validate_meta_solution ty_size id scope vty;
-            set_meta id (Solved vty)
-        end
-    | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
-        let x : vty = Local_var ty_size in
-        unify_vtys (ty_size + 1) (body_ty1 x) (body_ty2 x)
-    | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
-        unify_vtys ty_size param_ty1 param_ty2;
-        unify_vtys ty_size body_ty1 body_ty2
-    | Int_type, Int_type -> ()
-    | Bool_type, Bool_type -> ()
-    | vty1, vty2 ->
-        raise (Mismatched_types (vty1, vty2))
-
 end
+
+(** The state of metavariables *)
+module Meta = Base.Meta
+
+
+(** {1 Functions related to meta variables} *)
+
+(** Create a fresh, unsolved metavariable *)
+let fresh_meta : int -> Meta.t ref =
+  let next_id = ref 0 in
+  fun ty_size ->
+    let id = !next_id in
+    incr next_id;
+    ref (Meta.Unsolved { id; scope = ty_size })
+
+(** Force any solved meta variables on the outermost part of a type. Chains of
+    meta variables will be collapsed to make forcing faster in the future. This
+    is sometimes referred to as {i path compression}. *)
+let rec force (vty : Semantics.vty) : Semantics.vty =
+  match vty with
+  | Meta_var m as vty ->
+      begin match !m with
+      | Solved vty ->
+          let vty = force vty in
+          m := Solved vty;
+          vty
+      | Unsolved _ -> vty
+      end
+  | vty -> vty
+
+
+(** {1 Unification} *)
+
+exception Mismatched_types of Semantics.vty * Semantics.vty
+exception Infinite_type of Meta.id
+exception Escaping_scope of Meta.id
+
+let validate_meta_solution (ty_size : int) (m : Meta.t ref) (id : Meta.id) (scope : int) (vty : Semantics.vty) =
+  (** Traverse the solution candidate type, using the size of the typing
+      context to generate free variables under binders. *)
+  let rec go ty_size' (vty : Semantics.vty) =
+    match vty with
+    | Fun_type (param_ty, body_ty) ->
+        go ty_size' param_ty;
+        go ty_size' body_ty
+    | Forall_type (_, body_ty) ->
+        go (ty_size' + 1) (body_ty (Local_var ty_size'))
+    | Int_type -> ()
+    | Bool_type -> ()
+    | Local_var level ->
+        (* Throw an error if a to-be-solved metavariable would depend on type
+            variables to “the right” of it in the context. *)
+        if scope <= level && level < ty_size then
+          raise (Escaping_scope id)
+    | Meta_var m' ->
+        if m == m' then raise (Infinite_type id);
+        begin match !m' with
+        | Unsolved { id = id'; scope = scope' } ->
+            (* Raise the scope constraint on metavariables to match the scope
+                of the to-be-solved metavariable. *)
+            if scope < scope' then
+              m' := Unsolved { id = id'; scope }
+        | Solved vty -> go ty_size' vty
+        end
+  in
+  go ty_size vty
+
+let rec unify_vtys (ty_size : int) (vty1 : Semantics.vty) (vty2 : Semantics.vty) : unit =
+  match force vty1, force vty2 with
+  | Local_var level1, Local_var level2 when level1 == level2 -> ()
+  | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
+  | Meta_var m, vty | vty, Meta_var m ->
+      begin match !m with
+      | Solved vty' -> unify_vtys ty_size vty vty'
+      | Unsolved { id; scope } ->
+          validate_meta_solution ty_size m id scope vty;
+          m := Solved vty
+      end
+  | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
+      let x : Semantics.vty = Local_var ty_size in
+      unify_vtys (ty_size + 1) (body_ty1 x) (body_ty2 x)
+  | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
+      unify_vtys ty_size param_ty1 param_ty2;
+      unify_vtys ty_size body_ty1 body_ty2
+  | Int_type, Int_type -> ()
+  | Bool_type, Bool_type -> ()
+  | vty1, vty2 ->
+      raise (Mismatched_types (vty1, vty2))
 
 
 (** {1 Zonking} *)
@@ -355,11 +371,11 @@ end
 *)
 
 (* Deeply force a type, leaving only unsolved metavariables remaining *)
-let rec zonk_ty (ty_size : int) (ty : ty) : ty =
+let rec zonk_ty (ty_size : int) (ty : Syntax.ty) : Syntax.ty =
   match ty with
-  | Meta_var id ->
-      begin match Semantics.lookup_meta id with
-      | Unsolved _ -> Meta_var id
+  | Meta_var m ->
+      begin match !m with
+      | Unsolved _ -> Meta_var m
       | Solved vty -> zonk_ty ty_size (Semantics.quote_vty ty_size vty)
       end
   | Local_var index -> Local_var index
@@ -371,8 +387,8 @@ let rec zonk_ty (ty_size : int) (ty : ty) : ty =
   | Bool_type -> Bool_type
 
 (** Force all metavariables in a term *)
-let zonk_tm (ty_size : int) (tm : tm) : tm =
-  let rec go tm =
+let zonk_tm (ty_size : int) (tm : Syntax.tm) : Syntax.tm =
+  let rec go (tm : Syntax.tm) : Syntax.tm =
     match tm with
     | Local_var index -> Local_var index
     | Let (name, def_ty, def, body) ->
@@ -402,7 +418,7 @@ let pp_name fmt name =
   | Some name -> Format.pp_print_string fmt name
   | None -> Format.pp_print_string fmt "_"
 
-let rec pp_ty  (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
+let rec pp_ty (ty_names : name env) (fmt : Format.formatter) (ty : Syntax.ty) : unit =
   match ty with
   | Forall_type (name, body_ty) ->
       Format.fprintf fmt "[%a] -> %a"
@@ -414,13 +430,17 @@ let rec pp_ty  (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
         (pp_ty ty_names) body_ty
   | ty ->
       pp_atomic_ty ty_names fmt ty
-and pp_atomic_ty ty_names fmt ty =
+and pp_atomic_ty (ty_names : name env) (fmt : Format.formatter) (ty : Syntax.ty) =
   match ty with
   | Local_var index -> Format.fprintf fmt "%a" pp_name (List.nth ty_names index)
-  | Meta_var id -> Format.fprintf fmt "?%i" id
+  | Meta_var m -> pp_meta fmt m
   | Int_type -> Format.fprintf fmt "Int"
   | Bool_type -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty ty_names) ty
+and pp_meta (fmt : Format.formatter) (m : Meta.t ref) =
+  match !m with
+  | Meta.Solved _ -> failwith "expected zonked type"
+  | Meta.Unsolved { id; _ } -> Format.fprintf fmt "?%i" id
 
 let pp_name_ann ty_names fmt (name, ty) =
   Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" pp_name name (pp_ty ty_names) ty
@@ -428,8 +448,8 @@ let pp_name_ann ty_names fmt (name, ty) =
 let pp_param ty_names fmt (name, ty) =
   Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" pp_name name (pp_ty ty_names) ty
 
-let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatter) (tm : tm) : unit =
-  let rec go_params ty_names tm_names fmt tm =
+let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatter) (tm : Syntax.tm) : unit =
+  let rec go_params ty_names tm_names fmt (tm : Syntax.tm) =
     match tm with
     | Forall_lit (name, body) ->
         Format.fprintf fmt "@ @[fun@ [%a]@ =>@]%a"
@@ -443,7 +463,7 @@ let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatte
   in
   match tm with
   | Let _ as tm ->
-      let rec go tm_names fmt tm =
+      let rec go tm_names fmt (tm : Syntax.tm) =
         match tm with
         | Let (name, def_ty, def, body) ->
             Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"

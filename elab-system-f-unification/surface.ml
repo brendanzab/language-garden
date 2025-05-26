@@ -58,6 +58,9 @@ and arg =
 
 (** {1 Elaboration} *)
 
+module Syntax = Core.Syntax
+module Semantics = Core.Semantics
+
 (** This is where we implement user-facing type checking, while also translating
     the surface language into the simpler, more explicit core language.
 
@@ -74,8 +77,8 @@ and arg =
 type context = {
   ty_size : int;
   ty_names : string option Core.env;
-  ty_env : Core.Semantics.vty Core.env;
-  tm_tys : (string option * Core.Semantics.vty) Core.env;
+  ty_env : Semantics.vty Core.env;
+  tm_tys : (string option * Semantics.vty) Core.env;
 }
 
 (** The empty context *)
@@ -87,7 +90,7 @@ let empty : context = {
 }
 
 (** The type variable that will be bound after calling {!extend_ty} *)
-let next_ty_var (ctx : context) : Core.Semantics.vty =
+let next_ty_var (ctx : context) : Semantics.vty =
   Local_var ctx.ty_size
 
 (** Extend the context with a type binding *)
@@ -99,7 +102,7 @@ let extend_ty (ctx : context) (name : string option) : context = {
 }
 
 (** Extend the context with a term binding *)
-let extend_tm (ctx : context) (name : string option) (vty : Core.Semantics.vty) : context = {
+let extend_tm (ctx : context) (name : string option) (vty : Semantics.vty) : context = {
   ctx with
   tm_tys = (name, vty) :: ctx.tm_tys;
 }
@@ -112,21 +115,21 @@ let lookup_ty (ctx : context) (name : string) : Core.index option =
     | false -> None
 
 (** Lookup a term name in the context *)
-let lookup_tm (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
+let lookup_tm (ctx : context) (name : string) : (Core.index * Semantics.vty) option =
   ctx.tm_tys |> List.find_mapi @@ fun index (name', ty) ->
     match Some name = name' with
     | true -> Some (index, ty)
     | false -> None
 
-let eval_ty (ctx : context) (ty : Core.ty) : Core.Semantics.vty =
-  Core.Semantics.eval_ty ctx.ty_env ty
-let quote_vty (ctx : context) (vty : Core.Semantics.vty) : Core.ty =
-  Core.Semantics.quote_vty ctx.ty_size vty
-let zonk_ty (ctx: context) (ty : Core.ty) : Core.ty =
+let eval_ty (ctx : context) (ty : Syntax.ty) : Semantics.vty =
+  Semantics.eval_ty ctx.ty_env ty
+let quote_vty (ctx : context) (vty : Semantics.vty) : Syntax.ty =
+  Semantics.quote_vty ctx.ty_size vty
+let zonk_ty (ctx: context) (ty : Syntax.ty) : Syntax.ty =
   Core.zonk_ty ctx.ty_size ty
-let zonk_tm (ctx: context) (tm : Core.tm) : Core.tm =
+let zonk_tm (ctx: context) (tm : Syntax.tm) : Syntax.tm =
   Core.zonk_tm ctx.ty_size tm
-let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Core.ty) : unit =
+let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Syntax.ty) : unit =
   Core.pp_ty ctx.ty_names fmt (zonk_ty ctx ty)
 
 (** {2 Metavariables} *)
@@ -142,21 +145,21 @@ type meta_info = [
 
 (** A global list of the metavariables inserted during elaboration. This is used
     to generate a list of unsolved metavariables at the end of elaboration. *)
-let metas : (Core.meta_id * loc * meta_info) Dynarray.t =
+let metas : (Core.Meta.t ref * loc * meta_info) Dynarray.t =
   Dynarray.create ()
 
 (** Generate a fresh metavariable, recording it in the list of metavariables *)
-let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
-  let id = Core.Semantics.fresh_meta ctx.ty_size in
-  Dynarray.add_last metas (id, loc, info);
-  Meta_var id
+let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Syntax.ty =
+  let m = Core.fresh_meta ctx.ty_size in
+  Dynarray.add_last metas (m, loc, info);
+  Meta_var m
 
 (** Return a list of unsolved metavariables *)
 let unsolved_metas () : (loc * meta_info) list =
-  let go (id, loc, info) acc =
-    match Core.Semantics.lookup_meta id with
-    | Core.Semantics.Unsolved _ -> (loc, info) :: acc
-    | Core.Semantics.Solved _ -> acc
+  let go (m, loc, info) acc =
+    match !m with
+    | Core.Meta.Unsolved _ -> (loc, info) :: acc
+    | Core.Meta.Solved _ -> acc
   in
   Dynarray.fold_right go metas []
 
@@ -172,20 +175,20 @@ exception Error of loc * string
 let error (type a) (loc : loc) (message : string) : a =
   raise (Error (loc, message))
 
-let unify_vtys (ctx : context) (loc : loc) (vty1 : Core.Semantics.vty) (vty2 : Core.Semantics.vty) =
-  try Core.Semantics.unify_vtys ctx.ty_size vty1 vty2 with
-  | Core.Semantics.Mismatched_types (_, _) ->
+let unify_vtys (ctx : context) (loc : loc) (vty1 : Semantics.vty) (vty2 : Semantics.vty) =
+  try Core.unify_vtys ctx.ty_size vty1 vty2 with
+  | Core.Mismatched_types (_, _) ->
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           (pp_ty ctx) (quote_vty ctx vty1)
           (pp_ty ctx) (quote_vty ctx vty2))
-  | Core.Semantics.Infinite_type id ->
+  | Core.Infinite_type id ->
       error loc
         (Format.asprintf "@[<v 2>@[meta variable ?%i refers to itself:@]@ @[expected: %a@]@ @[found: %a@]@]"
           id
           (pp_ty ctx) (quote_vty ctx vty1)
           (pp_ty ctx) (quote_vty ctx vty2))
-  | Core.Semantics.Escaping_scope id ->
+  | Core.Escaping_scope id ->
       error loc
         (Format.asprintf "@[<v 2>@[meta variable ?%i escapes its scope:@]@ @[expected: %a@]@ @[found: %a@]@]"
           id
@@ -204,7 +207,7 @@ let unify_vtys (ctx : context) (loc : loc) (vty1 : Core.Semantics.vty) (vty2 : C
     annotations where necessary. *)
 
 (** Elaborate a type, checking that it is well-formed. *)
-let rec elab_ty (ctx : context) (ty : ty) : Core.ty =
+let rec elab_ty (ctx : context) (ty : ty) : Syntax.ty =
   match ty.data with
   | Name name ->
       begin match lookup_ty ctx name with
@@ -216,7 +219,7 @@ let rec elab_ty (ctx : context) (ty : ty) : Core.ty =
   | Placeholder ->
       fresh_meta ctx ty.loc `Placeholder
   | Forall_type (names, body_ty) ->
-      let rec go ctx names : Core.ty =
+      let rec go ctx names : Syntax.ty =
         match names with
         | [] -> elab_ty ctx body_ty
         | name :: names -> Forall_type (name.data, go (extend_ty ctx name.data) names)
@@ -226,7 +229,7 @@ let rec elab_ty (ctx : context) (ty : ty) : Core.ty =
       Fun_type (elab_ty ctx ty1, elab_ty ctx ty2)
 
 (** Elaborate a surface term into a core term, given an expected type. *)
-let rec elab_check (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.tm =
+let rec elab_check (ctx : context) (tm : tm) (vty : Semantics.vty) : Syntax.tm =
   match tm.data with
   | Let (def_name, params, def_body_ty, def_body, body) ->
       let def, def_vty = elab_infer_fun_lit ctx params def_body_ty def_body in
@@ -249,7 +252,7 @@ let rec elab_check (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.t
       tm'
 
 (** Elaborate a surface term into a core term, inferring its type. *)
-and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
+and elab_infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
   match tm.data with
   | Name name -> begin
       match lookup_tm ctx name with
@@ -280,11 +283,11 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
       let head_loc = head.loc in
       let head, head_ty = elab_infer ctx head in
 
-      let rec go (head : Core.tm) (head_ty : Core.Semantics.vty) arg =
-        match Core.Semantics.force head_ty, arg with
+      let rec go (head : Syntax.tm) (head_ty : Semantics.vty) arg =
+        match Core.force head_ty, arg with
         | Forall_type (_, body_ty), Ty_arg arg ->
             let arg = elab_ty ctx arg in
-            Core.Forall_app (head, arg), body_ty (eval_ty ctx arg)
+            Syntax.Forall_app (head, arg), body_ty (eval_ty ctx arg)
 
         (* Instantiate expected type parameters with metavariables *)
         | Forall_type (_, body_ty), Arg arg ->
@@ -293,14 +296,14 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
 
         | Fun_type (param_ty, body_ty), Arg arg ->
             let arg = elab_check ctx arg param_ty in
-            Core.Fun_app (head, arg), body_ty
+            Syntax.Fun_app (head, arg), body_ty
 
         | Meta_var _ as head_ty, Arg arg ->
             let param_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_param) in
             let body_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_body) in
             unify_vtys ctx head_loc head_ty (Fun_type (param_ty, body_ty));
             let arg = elab_check ctx arg param_ty in
-            Core.Fun_app (head, arg), body_ty
+            Syntax.Fun_app (head, arg), body_ty
 
         | head_vty, Ty_arg _ ->
             error head_loc
@@ -326,7 +329,7 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
       let tm0, vty0 = elab_infer ctx tm0 in
       let tm1, vty1 = elab_infer ctx tm1 in
       unify_vtys ctx tm.loc vty0 vty1;
-      begin match Core.Semantics.force vty0 with
+      begin match Core.force vty0 with
       | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
       | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
       | vty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" (pp_ty ctx) (quote_vty ctx vty))
@@ -348,8 +351,8 @@ and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
       Prim_app (Int_neg, [tm]), Int_type
 
 (** Elaborate a function literal into a core term, given an expected type. *)
-and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : Core.Semantics.vty) : Core.tm =
-  match params, Core.Semantics.force vty with
+and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : Semantics.vty) : Syntax.tm =
+  match params, Core.force vty with
   | [], vty ->
       elab_check ctx body vty
 
@@ -390,7 +393,7 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : 
       error name.loc "unexpected parameter"
 
 (** Elaborate a function literal into a core term, inferring its type. *)
-and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.Semantics.vty =
+and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Syntax.tm * Semantics.vty =
   let rec go ctx params body_ty body =
     match params, body_ty with
     | [], Some body_ty ->

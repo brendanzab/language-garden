@@ -30,7 +30,7 @@ let parse_tm (filename : string) (input : in_channel) : Surface.tm =
       print_error (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
-let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
+let elab_tm (tm : Surface.tm) : Core.Syntax.tm * Core.Syntax.ty =
   let ctx = Surface.empty in
   let tm, vty =
     try Surface.elab_infer ctx tm with
