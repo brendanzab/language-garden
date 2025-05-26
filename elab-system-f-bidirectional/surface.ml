@@ -68,8 +68,7 @@ and arg =
 
 (** {2 Local bindings} *)
 
-(** The elaboration context, that keeps track of type and term bindings in
-    separate namespaces. *)
+(** The elaboration context *)
 type context = {
   ty_size : int;
   ty_names : string option Core.env;

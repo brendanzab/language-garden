@@ -39,7 +39,7 @@ let elab_tm (tm : Surface.tm) : Core.Syntax.tm * Core.Syntax.ty =
         exit 1
   in
 
-  match Surface.unsolved_metas () with
+  match Surface.unsolved_metas ctx with
   | [] ->
       Surface.zonk_tm ctx tm,
       Surface.zonk_ty ctx (Surface.quote_vty ctx vty)

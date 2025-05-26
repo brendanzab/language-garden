@@ -58,9 +58,6 @@ and arg =
 
 (** {1 Elaboration} *)
 
-module Syntax = Core.Syntax
-module Semantics = Core.Semantics
-
 (** This is where we implement user-facing type checking, while also translating
     the surface language into the simpler, more explicit core language.
 
@@ -69,16 +66,28 @@ module Semantics = Core.Semantics
     messages that are more relevant to what the programmer originally wrote.
 *)
 
+module Syntax = Core.Syntax
+module Semantics = Core.Semantics
 
-(** {2 Local bindings} *)
 
-(** The elaboration context, that keeps track of type and term bindings in
-    separate namespaces. *)
+(** {2 Elaboration context} *)
+
+(** The reason why a metavariable was inserted *)
+type meta_info = [
+  | `Forall_arg
+  | `Fun_param
+  | `Fun_body
+  | `If_branches
+  | `Placeholder
+]
+
+(** The elaboration context *)
 type context = {
   ty_size : int;
   ty_names : string option Core.env;
   ty_env : Semantics.vty Core.env;
   tm_tys : (string option * Semantics.vty) Core.env;
+  metas : (Core.Meta.t ref * loc * meta_info) Dynarray.t;
 }
 
 (** The empty context *)
@@ -87,6 +96,7 @@ let empty : context = {
   ty_names = [];
   ty_env = [];
   tm_tys = [];
+  metas = Dynarray.create ();
 }
 
 (** The type variable that will be bound after calling {!extend_ty} *)
@@ -121,6 +131,21 @@ let lookup_tm (ctx : context) (name : string) : (Core.index * Semantics.vty) opt
     | true -> Some (index, ty)
     | false -> None
 
+(** Generate a fresh metavariable *)
+let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Syntax.ty =
+  let m = Core.fresh_meta ctx.ty_size in
+  Dynarray.add_last ctx.metas (m, loc, info);
+  Meta_var m
+
+(** Return a list of unsolved metavariables *)
+let unsolved_metas (ctx : context) : (loc * meta_info) list =
+  let go (m, loc, info) acc =
+    match !m with
+    | Core.Meta.Unsolved _ -> (loc, info) :: acc
+    | Core.Meta.Solved _ -> acc
+  in
+  Dynarray.fold_right go ctx.metas []
+
 let eval_ty (ctx : context) (ty : Syntax.ty) : Semantics.vty =
   Semantics.eval_ty ctx.ty_env ty
 let quote_vty (ctx : context) (vty : Semantics.vty) : Syntax.ty =
@@ -131,37 +156,6 @@ let zonk_tm (ctx: context) (tm : Syntax.tm) : Syntax.tm =
   Core.zonk_tm ctx.ty_size tm
 let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Syntax.ty) : unit =
   Core.pp_ty ctx.ty_names fmt (zonk_ty ctx ty)
-
-(** {2 Metavariables} *)
-
-(** The reason why a metavariable was inserted *)
-type meta_info = [
-  | `Forall_arg
-  | `Fun_param
-  | `Fun_body
-  | `If_branches
-  | `Placeholder
-]
-
-(** A global list of the metavariables inserted during elaboration. This is used
-    to generate a list of unsolved metavariables at the end of elaboration. *)
-let metas : (Core.Meta.t ref * loc * meta_info) Dynarray.t =
-  Dynarray.create ()
-
-(** Generate a fresh metavariable, recording it in the list of metavariables *)
-let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Syntax.ty =
-  let m = Core.fresh_meta ctx.ty_size in
-  Dynarray.add_last metas (m, loc, info);
-  Meta_var m
-
-(** Return a list of unsolved metavariables *)
-let unsolved_metas () : (loc * meta_info) list =
-  let go (m, loc, info) acc =
-    match !m with
-    | Core.Meta.Unsolved _ -> (loc, info) :: acc
-    | Core.Meta.Solved _ -> acc
-  in
-  Dynarray.fold_right go metas []
 
 
 (** {2 Elaboration errors} *)
