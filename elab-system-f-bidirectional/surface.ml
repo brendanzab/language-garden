@@ -199,11 +199,11 @@ let rec elab_check (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.t
 (** Elaborate a surface term into a core term, inferring its type. *)
 and elab_infer (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
   match tm.data with
-  | Name name -> begin
-      match lookup_tm ctx name with
+  | Name name ->
+      begin match lookup_tm ctx name with
       | Some (index, vty) -> Var index, vty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
-  end
+      end
 
   | Let (def_name, params, def_body_ty, def_body, body) ->
       let def, def_vty = elab_infer_fun_lit ctx params def_body_ty def_body in

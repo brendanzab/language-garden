@@ -42,19 +42,19 @@ let elab_cmd () : unit =
   in
   match infer_tm with
   | Univ ->
-    Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-      Format.pp_print_string "Type"
-      Format.pp_print_string "Type 1"
+      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
+        Format.pp_print_string "Type"
+        Format.pp_print_string "Type 1"
 
   | Type t ->
-    Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-      Core.pp_ty t
-      Format.pp_print_string "Type"
+      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
+        Core.pp_ty t
+        Format.pp_print_string "Type"
 
   | Expr (e, t) ->
-    Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-      (Core.pp_expr []) e
-      Core.pp_ty t
+      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
+        (Core.pp_expr []) e
+        Core.pp_ty t
 
 let norm_cmd () : unit =
   let tm, ty =
