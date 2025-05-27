@@ -109,14 +109,20 @@ module Base = struct
 
     (** The state of a metavariable, updated during unification *)
     type t =
-      | Unsolved of { id : id; scope : int }
-      (** Conceptually, metavariables are interspersed with normal bound variables
-          in the typing context, and their solutions can only depend on type
-          variables “to the left” in the context.
+      | Unsolved of { id : id; level : level }
+      (** Conceptually, metavariables are interspersed with normal bound
+          variables in the typing context, and their solutions can only depend
+          on type variables “to the left” in the context. The [level] field
+          represents the point in the typing context where the meta should be
+          inserted. Multiple metavariables can be inserted at the same point in
+          the typing context.
 
-          At the time when we create an unsolved metavariable, we do not know what
-          level it should be inserted at, so we keep track of a scope constraint
-          to ensure that we do not introduce scoping errors during unification. *)
+          At the time when an unsolved metavariable is created, we do not yet
+          know what level it should be inserted at, so we raise it as needed
+          during unification. As we do this, we must be careful to ensure that s
+          coping errors are caught (i.e. when a meta would depend on type
+          variables “to the right” in the context).
+      *)
 
       | Solved of Semantics.vty
 
@@ -277,13 +283,13 @@ module Meta = Base.Meta
 
 (** {1 Functions related to meta variables} *)
 
-(** Create a fresh, unsolved metavariable *)
-let fresh_meta : int -> Meta.t ref =
+(** Create a fresh, unsolved metavariable at a given level in the typing context *)
+let fresh_meta : level -> Meta.t ref =
   let next_id = ref 0 in
-  fun ty_size ->
+  fun level ->
     let id = !next_id in
     incr next_id;
-    ref (Meta.Unsolved { id; scope = ty_size })
+    ref (Meta.Unsolved { id; level })
 
 (** Force any solved meta variables on the outermost part of a type. Chains of
     meta variables will be collapsed to make forcing faster in the future. This
@@ -307,7 +313,7 @@ exception Mismatched_types of Semantics.vty * Semantics.vty
 exception Infinite_type of Meta.id
 exception Escaping_scope of Meta.id
 
-let validate_meta_solution (ty_size : int) (m : Meta.t ref) (id : Meta.id) (scope : int) (vty : Semantics.vty) =
+let validate_meta_solution (ty_size : int) (m : Meta.t ref) (id : Meta.id) (level : level) (vty : Semantics.vty) =
   (** Traverse the solution candidate type, using the size of the typing
       context to generate free variables under binders. *)
   let rec go ty_size' (vty : Semantics.vty) =
@@ -319,19 +325,19 @@ let validate_meta_solution (ty_size : int) (m : Meta.t ref) (id : Meta.id) (scop
         go (ty_size' + 1) (body_ty (Local_var ty_size'))
     | Int_type -> ()
     | Bool_type -> ()
-    | Local_var level ->
+    | Local_var level' ->
         (* Throw an error if a to-be-solved metavariable would depend on type
             variables to “the right” of it in the context. *)
-        if scope <= level && level < ty_size then
+        if level <= level' && level' < ty_size then
           raise (Escaping_scope id)
     | Meta_var m' ->
         if m == m' then raise (Infinite_type id);
         begin match !m' with
-        | Unsolved { id = id'; scope = scope' } ->
-            (* Raise the scope constraint on metavariables to match the scope
-                of the to-be-solved metavariable. *)
-            if scope < scope' then
-              m' := Unsolved { id = id'; scope }
+        | Unsolved { id = id'; level = level' } ->
+            (* Raise the level constraint on metavariables to match the level
+               of the to-be-solved metavariable. *)
+            if level < level' then
+              m' := Unsolved { id = id'; level }
         | Solved vty -> go ty_size' vty
         end
   in
@@ -339,13 +345,14 @@ let validate_meta_solution (ty_size : int) (m : Meta.t ref) (id : Meta.id) (scop
 
 let rec unify_vtys (ty_size : int) (vty1 : Semantics.vty) (vty2 : Semantics.vty) : unit =
   match force vty1, force vty2 with
-  | Local_var level1, Local_var level2 when level1 == level2 -> ()
+  | Local_var level1, Local_var level2 when level1 = level2 -> ()
+  (* Use pointer equality to compare metavariables *)
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, vty | vty, Meta_var m ->
       begin match !m with
       | Solved vty' -> unify_vtys ty_size vty vty'
-      | Unsolved { id; scope } ->
-          validate_meta_solution ty_size m id scope vty;
+      | Unsolved { id; level } ->
+          validate_meta_solution ty_size m id level vty;
           m := Solved vty
       end
   | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
