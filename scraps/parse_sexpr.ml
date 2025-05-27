@@ -4,36 +4,35 @@
 *)
 
 
-(** Lexer *)
+module Lexer = struct
 
-type token =
-  | Ident of string
-  | Int of int
-  | Left_paren
-  | Right_paren
+  type token =
+    | Ident of string
+    | Int of int
+    | Left_paren
+    | Right_paren
 
-let is_digit (ch : char) : bool =
-  match ch with
-  | '0' .. '9' -> true
-  | _ -> false
+  let is_digit (ch : char) : bool =
+    match ch with
+    | '0' .. '9' -> true
+    | _ -> false
 
-let is_ident_start (ch : char) : bool =
-  match ch with
-  (* https://www.ietf.org/archive/id/draft-rivest-sexp-01.html#name-token-representation *)
-  | 'a' .. 'z' | 'A' .. 'Z' | '-' | '.' | '/' | ':' | '*' | '+' | '=' -> true
-  | _ -> false
+  let is_ident_start (ch : char) : bool =
+    match ch with
+    (* https://www.ietf.org/archive/id/draft-rivest-sexp-01.html#name-token-representation *)
+    | 'a' .. 'z' | 'A' .. 'Z' | '-' | '.' | '/' | ':' | '*' | '+' | '=' -> true
+    | _ -> false
 
-let is_ident_continue (ch : char) : bool =
-  is_ident_start ch || is_digit ch
+  let is_ident_continue (ch : char) : bool =
+    is_ident_start ch || is_digit ch
 
-let is_ascii_whitespace (ch : char) : bool =
-  match ch with
-  | ' ' | '\n' | '\r' | '\t' -> true
-  | _ -> false
+  let is_ascii_whitespace (ch : char) : bool =
+    match ch with
+    | ' ' | '\n' | '\r' | '\t' -> true
+    | _ -> false
 
-exception Unexpected_char of { found : char }
+  exception Unexpected_char of { found : char }
 
-let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
   let take_while f init_ch input =
     let buf = Buffer.create 1 in
     Buffer.add_char buf init_ch;
@@ -46,37 +45,41 @@ let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
           (String.of_bytes (Buffer.to_bytes buf), input)
     in
     go input
-  in
-  match Seq.uncons input with
-  | Some (ch, input) ->
-      begin match ch with
-      | '(' -> Seq.cons Left_paren (tokens input)
-      | ')' -> Seq.cons Right_paren (tokens input)
-      | ch when is_digit ch ->
-          let (s, input) = take_while is_digit ch input in
-          Seq.cons (Int (int_of_string s)) (tokens input)
-      | ch when is_ident_start ch ->
-          let (s, input) = take_while is_ident_continue ch input in
-          Seq.cons (Ident s) (tokens input)
-      | ch when is_ascii_whitespace ch -> tokens input
-      | ch -> fun () -> raise (Unexpected_char { found = ch })
-      end
-  | None -> Seq.empty
+
+  let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
+    match Seq.uncons input with
+    | Some (ch, input) ->
+        begin match ch with
+        | '(' -> Seq.cons Left_paren (tokens input)
+        | ')' -> Seq.cons Right_paren (tokens input)
+        | ch when is_digit ch ->
+            let (s, input) = take_while is_digit ch input in
+            Seq.cons (Int (int_of_string s)) (tokens input)
+        | ch when is_ident_start ch ->
+            let (s, input) = take_while is_ident_continue ch input in
+            Seq.cons (Ident s) (tokens input)
+        | ch when is_ascii_whitespace ch -> tokens input
+        | ch -> fun () -> raise (Unexpected_char { found = ch })
+        end
+    | None -> Seq.empty
+
+end
 
 
-(** Parser *)
+module Parser = struct
 
-exception Unexpected_token of { found : token }
-exception Unexpected_eof
-exception Unconsumed_tokens of { remaining : token Seq.t }
+  open Lexer
 
-type sexpr =
-  | Ident of string
-  | Int of int
-  | List of sexpr list
+  exception Unexpected_token of { found : token }
+  exception Unexpected_eof
+  exception Unconsumed_tokens of { remaining : token Seq.t }
 
-let parse_sexpr (tokens : token Seq.t) : sexpr =
-  let rec parse_sexpr (tokens : token Seq.t) : sexpr * token Seq.t =
+  type sexpr =
+    | Ident of string
+    | Int of int
+    | List of sexpr list
+
+  let rec parse_sexpr (tokens : token Seq.t) : sexpr * Lexer.token Seq.t =
     match Seq.uncons tokens with
     | Some (Left_paren, tokens) -> parse_list tokens []
     | Some (Ident s, tokens) -> (Ident s, tokens)
@@ -91,17 +94,19 @@ let parse_sexpr (tokens : token Seq.t) : sexpr =
     | Some _ | None ->
         let (sexpr, tokens) = parse_sexpr tokens in
         (parse_list [@tailcall]) tokens (sexpr :: acc)
-  in
 
-  let (sexpr, tokens) = parse_sexpr tokens in
-  if Seq.is_empty tokens then sexpr else
-    raise (Unconsumed_tokens { remaining = tokens })
+  let parse (tokens : token Seq.t) : sexpr =
+    let (sexpr, tokens) = parse_sexpr tokens in
+    if Seq.is_empty tokens then sexpr else
+      raise (Unconsumed_tokens { remaining = tokens })
+
+end
 
 
 let () = begin
 
-  let tokenise input = String.to_seq input |> tokens in
-  let parse input = tokenise input |> parse_sexpr in
+  let tokenise input = String.to_seq input |> Lexer.tokens in
+  let parse input = tokenise input |> Parser.parse in
 
   Printexc.record_backtrace true;
 
