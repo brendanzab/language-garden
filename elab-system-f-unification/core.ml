@@ -114,16 +114,16 @@ module Base = struct
 
           Conceptually, metavariables are interspersed with normal bound
           variables in the typing context, and their solutions can only depend
-          on type variables “to the left” in the context. The [ty_level] field
-          represents the point in the typing context where the meta should be
-          inserted. Multiple metavariables can be inserted at the same point in
-          the typing context.
+          on local type variables “to the left” in the context. The [ty_level]
+          field represents the point in the typing context where the meta should
+          be inserted. Multiple metavariables can be inserted at the same point
+          in the typing context.
 
           At the time when an unsolved metavariable is created, we do not yet
           know what level it should be inserted at, so we raise it as needed
-          during unification. As we do this, we must be careful to ensure that s
-          coping errors are caught (i.e. when a meta would depend on type
-          variables “to the right” in the context).
+          during unification. As we do this, we must be careful to ensure that
+          scoping errors are caught (i.e. when a solved metavariable would
+          depend on local type variables “to the right” in the context).
       *)
 
       | Solved of Semantics.vty
