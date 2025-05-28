@@ -87,7 +87,7 @@ type context = {
   ty_names : string option Core.env;
   ty_env : Semantics.vty Core.env;
   tm_tys : (string option * Semantics.vty) Core.env;
-  metas : (Core.Meta.t ref * loc * meta_info) Dynarray.t;
+  metas : (Core.Meta.t * loc * meta_info) Dynarray.t;
 }
 
 (** The empty context *)

@@ -46,7 +46,7 @@ module Base = struct
     (** Type syntax *)
     type ty =
       | Local_var of index              (* Local type variables *)
-      | Meta_var of Meta.t ref          (* Meta variables *)
+      | Meta_var of Meta.t              (* Meta variables *)
       | Forall_type of name * ty        (* Type of a forall (i.e. the type of a term parameterised by a type) *)
       | Fun_type of ty * ty             (* Type of function types *)
       | Int_type
@@ -72,7 +72,7 @@ module Base = struct
     (** Types in weak head normal form (i.e. type values) *)
     type vty =
       | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
-      | Meta_var of Meta.t ref          (* Meta variables *)
+      | Meta_var of Meta.t              (* Meta variables *)
       | Forall_type of name * (vty -> vty)
       | Fun_type of vty * vty
       | Int_type
@@ -104,13 +104,15 @@ module Base = struct
 
   and Meta : sig
 
-    (** Metavariable identifier, used in pretty printing *)
+    (** Identifier used in pretty printing to distinguish metavariables. *)
     type id = int
 
-    (** The state of a metavariable, updated during unification *)
-    type t =
+    (** The current state of a metavariable *)
+    type state =
       | Unsolved of { id : id; level : level }
-      (** Conceptually, metavariables are interspersed with normal bound
+      (** An unsolved metavariable.
+
+          Conceptually, metavariables are interspersed with normal bound
           variables in the typing context, and their solutions can only depend
           on type variables “to the left” in the context. The [level] field
           represents the point in the typing context where the meta should be
@@ -125,6 +127,11 @@ module Base = struct
       *)
 
       | Solved of Semantics.vty
+      (** The metavariable has a solution, and will no-longer be updated.  *)
+
+    (** Mutable representation of metavariables. This is updated in-place during
+        unification and when types are forced. *)
+    type t = state ref
 
   end = Meta
 
@@ -284,7 +291,7 @@ module Meta = Base.Meta
 (** {1 Functions related to meta variables} *)
 
 (** Create a fresh, unsolved metavariable at a given level in the typing context *)
-let fresh_meta : level -> Meta.t ref =
+let fresh_meta : level -> Meta.t =
   let next_id = ref 0 in
   fun level ->
     let id = !next_id in
@@ -313,7 +320,7 @@ exception Mismatched_types of Semantics.vty * Semantics.vty
 exception Infinite_type of Meta.id
 exception Escaping_scope of Meta.id
 
-let validate_meta_solution (ty_size : int) (m : Meta.t ref) (id : Meta.id) (level : level) (vty : Semantics.vty) =
+let validate_meta_solution (ty_size : int) (m : Meta.t) (id : Meta.id) (level : level) (vty : Semantics.vty) =
   (** Traverse the solution candidate type, using the size of the typing
       context to generate free variables under binders. *)
   let rec go ty_size' (vty : Semantics.vty) =
@@ -446,7 +453,7 @@ and pp_atomic_ty (ty_names : name env) (fmt : Format.formatter) (ty : Syntax.ty)
   | Int_type -> Format.fprintf fmt "Int"
   | Bool_type -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty ty_names) ty
-and pp_meta (fmt : Format.formatter) (m : Meta.t ref) =
+and pp_meta (fmt : Format.formatter) (m : Meta.t) =
   match !m with
   | Meta.Solved _ -> failwith "expected zonked type"
   | Meta.Unsolved { id; _ } -> Format.fprintf fmt "?%i" id
