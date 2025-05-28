@@ -46,8 +46,8 @@ test (fun [$a] => fun (x : $a) => x) : [a] -> a -> a
 
 The approach to unification-with levels was mainly based on Mark Barbone’s
 [implementation](https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7)
-of higher-rank polymorphism. Note that we do not implement polymorphic subtyping
-in this implementation. This is left to a future subproject.
+of higher-rank polymorphism. Note that we do not implement generalisation or
+polymorphic subtyping in this implementation (these are left to a future project).
 
 Thanks goes to Andras Kovacs for helping me iron out some bugs in my
 implementation, and in helping to improve my understanding of the level-raising
