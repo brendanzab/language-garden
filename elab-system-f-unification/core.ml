@@ -317,10 +317,10 @@ let rec force (vty : Semantics.vty) : Semantics.vty =
 (** {1 Unification} *)
 
 exception Mismatched_types of Semantics.vty * Semantics.vty
-exception Infinite_type of Meta.id
-exception Escaping_scope of Meta.id
+exception Infinite_type of Meta.t
+exception Escaping_scope of Meta.t
 
-let validate_meta_solution (ty_size : int) (m : Meta.t) (id : Meta.id) (ty_level : level) (vty : Semantics.vty) =
+let validate_meta_solution (ty_size : int) (m : Meta.t) (ty_level : level) (vty : Semantics.vty) =
   (** Traverse the solution candidate type, using the size of the typing
       context to generate free variables under binders. *)
   let rec go ty_size' (vty : Semantics.vty) =
@@ -336,9 +336,9 @@ let validate_meta_solution (ty_size : int) (m : Meta.t) (id : Meta.id) (ty_level
         (* Throw an error if a to-be-solved metavariable would depend on type
             variables to “the right” of it in the context. *)
         if ty_level <= ty_level' && ty_level' < ty_size then
-          raise (Escaping_scope id)
+          raise (Escaping_scope m)
     | Meta_var m' ->
-        if m == m' then raise (Infinite_type id);
+        if m == m' then raise (Infinite_type m);
         begin match !m' with
         | Unsolved { id = id'; ty_level = ty_level' } ->
             (* Raise the level constraint on metavariables to match the level
@@ -358,8 +358,8 @@ let rec unify_vtys (ty_size : int) (vty1 : Semantics.vty) (vty2 : Semantics.vty)
   | Meta_var m, vty | vty, Meta_var m ->
       begin match !m with
       | Solved vty' -> unify_vtys ty_size vty vty'
-      | Unsolved { id; ty_level } ->
-          validate_meta_solution ty_size m id ty_level vty;
+      | Unsolved { ty_level; _ } ->
+          validate_meta_solution ty_size m ty_level vty;
           m := Solved vty
       end
   | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
@@ -455,7 +455,7 @@ and pp_atomic_ty (ty_names : name env) (fmt : Format.formatter) (ty : Syntax.ty)
   | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty ty_names) ty
 and pp_meta (fmt : Format.formatter) (m : Meta.t) =
   match !m with
-  | Meta.Solved _ -> failwith "expected zonked type"
+  | Meta.Solved _ -> failwith "expected forced meta"
   | Meta.Unsolved { id; _ } -> Format.fprintf fmt "?%i" id
 
 let pp_name_ann ty_names fmt (name, ty) =

@@ -177,16 +177,16 @@ module Elab = struct
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
             (pp_ty ctx) (quote_vty ctx vty1)
             (pp_ty ctx) (quote_vty ctx vty2))
-    | Core.Infinite_type id ->
+    | Core.Infinite_type m ->
         error loc
-          (Format.asprintf "@[<v 2>@[meta variable ?%i refers to itself:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            id
+          (Format.asprintf "@[<v 2>@[meta variable %a refers to itself:@]@ @[expected: %a@]@ @[found: %a@]@]"
+            Core.pp_meta m
             (pp_ty ctx) (quote_vty ctx vty1)
             (pp_ty ctx) (quote_vty ctx vty2))
-    | Core.Escaping_scope id ->
+    | Core.Escaping_scope m ->
         error loc
-          (Format.asprintf "@[<v 2>@[meta variable ?%i escapes its scope:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            id
+          (Format.asprintf "@[<v 2>@[meta variable %a escapes its scope:@]@ @[expected: %a@]@ @[found: %a@]@]"
+            Core.pp_meta m
             (pp_ty ctx) (quote_vty ctx vty1)
             (pp_ty ctx) (quote_vty ctx vty2))
 
