@@ -119,16 +119,16 @@ let extend_tm (ctx : context) (name : string option) (vty : Semantics.vty) : con
 
 (** Lookup a type name in the context *)
 let lookup_ty (ctx : context) (name : string) : Core.index option =
-  ctx.ty_names |> List.find_mapi @@ fun index name' ->
+  ctx.ty_names |> List.find_mapi @@ fun ty_index name' ->
     match Some name = name' with
-    | true -> Some index
+    | true -> Some ty_index
     | false -> None
 
 (** Lookup a term name in the context *)
 let lookup_tm (ctx : context) (name : string) : (Core.index * Semantics.vty) option =
-  ctx.tm_tys |> List.find_mapi @@ fun index (name', ty) ->
+  ctx.tm_tys |> List.find_mapi @@ fun tm_index (name', ty) ->
     match Some name = name' with
-    | true -> Some (index, ty)
+    | true -> Some (tm_index, ty)
     | false -> None
 
 (** Generate a fresh metavariable *)
@@ -205,7 +205,7 @@ let rec elab_ty (ctx : context) (ty : ty) : Syntax.ty =
   match ty.data with
   | Name name ->
       begin match lookup_ty ctx name with
-      | Some index -> Local_var index
+      | Some ty_index -> Local_var ty_index
       | None when name = "Bool" -> Bool_type
       | None when name = "Int" -> Int_type
       | None -> error ty.loc (Format.asprintf "unbound type `%s`" name)
@@ -250,7 +250,7 @@ and elab_infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
   match tm.data with
   | Name name ->
       begin match lookup_tm ctx name with
-      | Some (index, vty) -> Local_var index, vty
+      | Some (tm_index, vty) -> Local_var tm_index, vty
       | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
       end
 

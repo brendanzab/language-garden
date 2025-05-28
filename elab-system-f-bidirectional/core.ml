@@ -132,7 +132,7 @@ module Semantics = struct
   (** Evaluate a type from the syntax into its semantic interpretation *)
   let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
     match ty with
-    | Var index -> List.nth ty_env index
+    | Var ty_index -> List.nth ty_env ty_index
     | Forall_type (name, body_ty) ->
         Forall_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
     | Fun_type (param_ty, body_ty) ->
@@ -145,7 +145,7 @@ module Semantics = struct
   (** Evaluate a term from the syntax into its semantic interpretation *)
   let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : tm) : vtm =
     match tm with
-    | Var index -> List.nth tm_env index
+    | Var tm_index -> List.nth tm_env tm_index
     | Let (_, _, def, body) ->
         let def = eval_tm ty_env tm_env def in
         eval_tm ty_env (def :: tm_env) body
@@ -178,7 +178,7 @@ module Semantics = struct
   (** Convert types from the semantic domain back into syntax. *)
   let rec quote_vty  (ty_size : int) (vty : vty) : ty =
     match vty with
-    | Var level -> Var (level_to_index ty_size level)
+    | Var ty_level -> Var (level_to_index ty_size ty_level)
     | Forall_type (name, body_vty) ->
         let body = quote_vty (ty_size + 1) (body_vty (Var ty_size)) in
         Forall_type (name, body)
@@ -205,8 +205,8 @@ module Semantics = struct
 
   and quote_ntm (ty_size : int) (tm_size : int) (ntm : ntm) : tm =
     match ntm with
-    | Var level ->
-        Var (level_to_index tm_size level)
+    | Var tm_level ->
+        Var (level_to_index tm_size tm_level)
     | Forall_app (head, arg) ->
         Forall_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
     | Fun_app (head, arg) ->
@@ -231,7 +231,7 @@ module Semantics = struct
 
   let rec is_convertible (ty_size : int) (vty1 : vty) (vty2 : vty) : bool =
     match vty1, vty2 with
-    | Var level1, Var level2 -> level1 = level2
+    | Var ty_level1, Var ty_level2 -> ty_level1 = ty_level2
     | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
         let x : vty = Var ty_size in
         is_convertible (ty_size + 1) (body_ty1 x) (body_ty2 x)
@@ -266,7 +266,7 @@ let rec pp_ty  (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
       pp_atomic_ty ty_names fmt ty
 and pp_atomic_ty ty_names fmt ty =
   match ty with
-  | Var index -> Format.fprintf fmt "%a" pp_name (List.nth ty_names index)
+  | Var ty_index -> Format.fprintf fmt "%a" pp_name (List.nth ty_names ty_index)
   | Int_type -> Format.fprintf fmt "Int"
   | Bool_type -> Format.fprintf fmt "Bool"
   | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty ty_names) ty
@@ -336,7 +336,7 @@ and pp_app_tm ty_names tm_names fmt tm =
       pp_atomic_tm ty_names tm_names fmt tm
 and pp_atomic_tm ty_names tm_names fmt tm =
   match tm with
-  | Var index -> Format.fprintf fmt "%a" pp_name (List.nth tm_names index)
+  | Var tm_index -> Format.fprintf fmt "%a" pp_name (List.nth tm_names tm_index)
   | Int_lit i -> Format.fprintf fmt "%i" i
   | Bool_lit true -> Format.fprintf fmt "true"
   | Bool_lit false -> Format.fprintf fmt "false"
