@@ -14,7 +14,17 @@ for example:
 let id [a] (x : a) := x;
 let always [a] (x : a) [b] (y : b) := x;
 
-always [Int -> Int] (id [Int])
+let _ := id [Int] 3;
+let _ := id [[a] -> a -> a] id;
+let _ := always [[a] -> a -> a] id [Int] 3;
+
+-- Call a polymorphic argument with different types
+let test (f : [a] -> a -> a) : [a] -> a -> a :=
+  let _ := f [Int] 3;       -- integers
+  let _ := f [Bool] true;   -- boolean
+  f [[a] -> a -> a] f;      -- itself
+
+test (fun x => x)
 ```
 
 <details>
@@ -25,7 +35,15 @@ always [Int -> Int] (id [Int])
 let id : [a] -> a -> a := fun [a] => fun (x : a) => x;
 let always : [a] -> a -> [b] -> b -> a :=
   fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
-always [Int -> Int] (id [Int]) : [b] -> b -> Int -> Int
+let _ : Int := id [Int] 3;
+let _ : [a] -> a -> a := id [[a] -> a -> a] id;
+let _ : [a] -> a -> a := always [[a] -> a -> a] id [Int] 3;
+let test : ([a] -> a -> a) -> [a] -> a -> a :=
+  fun (f : [a] -> a -> a) =>
+    let _ : Int := f [Int] 3;
+    let _ : Bool := f [Bool] true;
+    f [[a] -> a -> a] f;
+test (fun [$a] => fun (x : $a) => x) : [a] -> a -> a
 ```
 
 </details>

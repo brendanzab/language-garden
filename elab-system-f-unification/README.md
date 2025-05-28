@@ -14,10 +14,11 @@ let _ := id 3;
 let _ := id id;
 let _ := always id 3;
 
--- Call a polymorphic function with two different types
-let test (f : [a] -> a -> a) : Bool :=
-  let _ := f 3;
-  f true;
+-- Call a polymorphic argument with different types
+let test (f : [a] -> a -> a) : _ :=
+  let _ := f 3;     -- integers
+  let _ := f true;  -- boolean
+  f f;              -- itself
 
 test (fun x => x)
 ```
@@ -33,10 +34,12 @@ let always : [a] -> a -> [b] -> b -> a :=
 let _ : Int := id [Int] 3;
 let _ : [a] -> a -> a := id [[a] -> a -> a] id;
 let _ : [a] -> a -> a := always [[a] -> a -> a] id [Int] 3;
-let test : ([a] -> a -> a) -> Bool :=
-  fun (f : [a] -> a -> a) => let _ : Int := f [Int] 3;
-                             f [Bool] true;
-test (fun [$a] => fun (x : $a) => x) : Bool
+let test : ([a] -> a -> a) -> [a] -> a -> a :=
+  fun (f : [a] -> a -> a) =>
+    let _ : Int := f [Int] 3;
+    let _ : Bool := f [Bool] true;
+    f [[a] -> a -> a] f;
+test (fun [$a] => fun (x : $a) => x) : [a] -> a -> a
 ```
 
 </details>

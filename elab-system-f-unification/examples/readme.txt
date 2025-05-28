@@ -5,9 +5,10 @@ let _ := id 3;
 let _ := id id;
 let _ := always id 3;
 
--- Call a polymorphic function with two different types
-let test (f : [a] -> a -> a) : Bool :=
-  let _ := f 3;
-  f true;
+-- Call a polymorphic argument with different types
+let test (f : [a] -> a -> a) : _ :=
+  let _ := f 3;     -- integers
+  let _ := f true;  -- boolean
+  f f;              -- itself
 
 test (fun x => x)
