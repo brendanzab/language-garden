@@ -31,18 +31,19 @@ let parse_tm (filename : string) (input : in_channel) : Surface.tm =
       exit 1
 
 let elab_tm (tm : Surface.tm) : Core.Syntax.tm * Core.Syntax.ty =
-  let ctx = Surface.empty in
+  let ctx = Surface.Elab.empty in
+
   let tm, vty =
-    try Surface.elab_infer ctx tm with
-    | Surface.Error (pos, msg) ->
+    try Surface.Elab.infer_tm ctx tm with
+    | Surface.Elab.Error (pos, msg) ->
         print_error pos msg;
         exit 1
   in
 
-  match Surface.unsolved_metas ctx with
+  match Surface.Elab.unsolved_metas ctx with
   | [] ->
-      Surface.zonk_tm ctx tm,
-      Surface.zonk_ty ctx (Surface.quote_vty ctx vty)
+      Surface.Elab.zonk_tm ctx tm,
+      Surface.Elab.zonk_ty ctx (Surface.Elab.quote_vty ctx vty)
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
         | (pos, `Forall_arg) -> print_error pos "ambiguous type argument"

@@ -31,8 +31,8 @@ let parse_tm (filename : string) (input : in_channel) : Surface.tm =
       exit 1
 
 let elab_tm (tm : Surface.tm) : Core.tm * Core.Semantics.vty =
-  try Surface.elab_infer Surface.empty tm with
-  | Surface.Error (pos, msg) ->
+  try Surface.Elab.infer_tm Surface.Elab.empty tm with
+  | Surface.Elab.Error (pos, msg) ->
       print_error pos msg;
       exit 1
 
