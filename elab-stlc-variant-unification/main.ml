@@ -32,13 +32,13 @@ let parse_tm (filename : string) (input : in_channel) : Surface.tm =
 
 let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
   let tm, ty =
-    try Surface.elab_infer [] tm with
-    | Surface.Error (pos, msg) ->
+    try Surface.Elab.infer_tm [] tm with
+    | Surface.Elab.Error (pos, msg) ->
         print_error pos msg;
         exit 1
   in
 
-  match Surface.unsolved_metas () with
+  match Surface.Elab.unsolved_metas () with
   | [] ->
       tm, ty
   | unsolved_metas ->

@@ -41,16 +41,16 @@ and param =
   binder * tm option
 
 
-(** {1 Elaboration} *)
+(** Elaboration from the surface language into the core language
 
+    This is where we implement user-facing type checking, while also translating
+    the surface language into the simpler, more explicit core language.
+
+    While we {e could} translate syntactic sugar in the parser, by leaving
+    this to elaboration time we make it easier to report higher quality error
+    messages that are more relevant to what the programmer originally wrote.
+*)
 module Elab = struct
-  (** This is where we implement user-facing type checking, while also translating
-      the surface language into the simpler, more explicit core language.
-
-      While we {e could} translate syntactic sugar in the parser, by leaving
-      this to elaboration time we make it easier to report higher quality error
-      messages that are more relevant to what the programmer originally wrote.
-  *)
 
   (** This type allows us to define a bidirectional type checking algorithm that
       works over multiple levels of our core language. Universes only exist as
@@ -61,7 +61,7 @@ module Elab = struct
     | Expr of Core.expr * Core.ty
 
 
-  (** {2 Local bindings} *)
+  (** {2 Elaboration context} *)
 
   type entry =
     | Univ_def of string
