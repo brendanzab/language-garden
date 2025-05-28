@@ -45,7 +45,7 @@ module Base = struct
 
     (** Type syntax *)
     type ty =
-      | Local_var of index              (* Local type variables *)
+      | Local_var of index              (* Local type variables (i.e. bound or rigid variables) *)
       | Meta_var of Meta.t              (* Meta variables *)
       | Forall_type of name * ty        (* Type of a forall (i.e. the type of a term parameterised by a type) *)
       | Fun_type of ty * ty             (* Type of function types *)
@@ -113,11 +113,11 @@ module Base = struct
       (** An unsolved metavariable.
 
           Conceptually, metavariables are interspersed with normal bound
-          variables in the typing context, and their solutions can only depend
-          on local type variables “to the left” in the context. The [ty_level]
-          field represents the point in the typing context where the meta should
-          be inserted. Multiple metavariables can be inserted at the same point
-          in the typing context.
+          variables in the type environment, and their solutions can only depend
+          on local type variables “to the left” of them in the context. The
+          [ty_level] field represents the point in the type environment where
+          the meta should be inserted. Multiple metavariables can be inserted at
+          the same point in the type environment.
 
           At the time when an unsolved metavariable is created, we do not yet
           know what level it should be inserted at, so we raise it as needed
@@ -329,10 +329,10 @@ exception Escaping_scope of Meta.t
     - Scope check:
         This ensures that the candidate type does not refer to local type
         variables that are “to-the-right” of to-be-solved metavariable in
-        the typing context.
+        the type environment.
 
     - Level raising:
-        This raises the levels of metavariables in the candidate type
+        This raises the levels of unsolved metavariables in the candidate type
         to match the level of the to-be-solved metavariable.
 *)
 let validate_meta_solution (m, ty_level : Meta.t * level) (ty_size, vty : int * Semantics.vty) =
