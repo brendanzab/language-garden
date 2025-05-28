@@ -148,7 +148,7 @@ module Semantics = struct
 
   (** {1 Eliminators} *)
 
-  let ty_fun_app (head : vtm) (arg : vty) : vtm =
+  let forall_app (head : vtm) (arg : vty) : vtm =
     match head with
     | Neu ntm -> Neu (Forall_app (ntm, arg))
     | Forall_lit (_, body) -> body arg
@@ -209,7 +209,7 @@ module Semantics = struct
     | Forall_app (head, arg) ->
         let head = eval_tm ty_env tm_env head in
         let arg = eval_ty ty_env arg in
-        ty_fun_app head arg
+        forall_app head arg
     | Fun_lit (name, param_ty, body) ->
         let param_vty = eval_ty ty_env param_ty in
         Fun_lit (name, param_vty, fun arg -> eval_tm ty_env (arg :: tm_env) body)
