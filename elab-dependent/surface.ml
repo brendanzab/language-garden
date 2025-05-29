@@ -90,12 +90,16 @@ let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) o
 
 let eval ctx : Syntax.tm -> Semantics.vtm =
   Semantics.eval ctx.tms
+
 let quote ctx : Semantics.vtm -> Syntax.tm =
   Semantics.quote ctx.size
+
 let normalise ctx : Syntax.tm -> Syntax.tm =
   Semantics.normalise ctx.size ctx.tms
+
 let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> bool =
   Semantics.is_convertible ctx.size
+
 let pp ?(resugar = true) ctx =
   Syntax.pp ctx.names ~resugar
 

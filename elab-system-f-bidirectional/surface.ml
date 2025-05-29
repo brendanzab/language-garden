@@ -118,8 +118,10 @@ module Elab = struct
 
   let eval_ty (ctx : context) (ty : Core.ty) : Core.Semantics.vty =
     Core.Semantics.eval_ty ctx.ty_env ty
+
   let quote_vty (ctx : context) (vty : Core.Semantics.vty) : Core.ty =
     Core.Semantics.quote_vty ctx.ty_size vty
+
   let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Core.ty) : unit =
     Core.pp_ty ctx.ty_names fmt ty
 
