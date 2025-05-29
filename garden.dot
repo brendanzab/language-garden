@@ -51,13 +51,13 @@ digraph garden {
     label = "lang";
     cluster = true;
 
-    "lang-lc-interpreters";
-    "lang-doc-templates";
-    "lang-datalog";
-    "lang-shader-graphics";
     "lang-declarative-graphics";
     "lang-fractal-growth";
     "lang-fractal-tree-rewriting";
+    "lang-shader-graphics";
+    "lang-datalog";
+    "lang-doc-templates";
+    "lang-lc-interpreters";
   }
 
   "elab-stlc-bidirectional" -> "elab-stlc-bidirectional-stratify";
