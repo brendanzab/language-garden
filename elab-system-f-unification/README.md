@@ -1,6 +1,9 @@
-# Bidirectional typing with unification for higher-rank polymorphism
+# Level-based unification for higher-rank polymorphism
 
-Extends [**elab-stlc-unification**](../elab-stlc-unification) and [**elab-system-f-bidirectional**](../elab-system-f-bidirectional).
+- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ rank-n types)
+- Extends [**elab-system-f-bidirectional**](../elab-system-f-bidirectional) (+ unification)
+
+---
 
 This implements a bidirectional elaborator for a higher-rank polymorphic lambda
 calculus where explicit type applications and type annotations can be omitted.

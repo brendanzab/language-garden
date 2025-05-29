@@ -1,6 +1,8 @@
 # Bidirectional typing for higher-rank polymorphism
 
-Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ rank-n types)
+
+---
 
 This implements a bidirectional elaborator for a
 [higher-rank polymorphic](https://en.wikipedia.org/wiki/Parametric_polymorphism#Higher-rank_polymorphism)

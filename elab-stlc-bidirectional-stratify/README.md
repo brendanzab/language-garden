@@ -1,6 +1,8 @@
 # Future proofing the simply typed lambda calculus for fancy types
 
-Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ combined surface language)
+
+---
 
 Statically typed languages tend to evolve dependently typed features over time,
 and if the surface syntax is not prepared to handle it, this can lead to awkward

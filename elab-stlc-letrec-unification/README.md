@@ -1,6 +1,8 @@
 # Simply typed lambda calculus with recursive let bindings
 
-Extends [**elab-stlc-unification**](../elab-stlc-unification).
+- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ mutual recursion)
+
+---
 
 This is an implementation of recursive let bindings for the simply typed lambda
 calculus. Singly recursive functions are elaborated to fixed-points in the core

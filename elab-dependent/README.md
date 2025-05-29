@@ -1,5 +1,9 @@
 # A small dependently typed language
 
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ dependent types)
+
+---
+
 This is an implementation of a small dependently typed language where types are
 first-class and where the return type of a function may depend on the arguments
 it is applied to.

@@ -1,6 +1,8 @@
 # Simply typed lambda calculus with unification
 
-Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional).
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ unification)
+
+---
 
 This an elaborator for a simply typed lambda calculus (with booleans and integers)
 that allows programmers to omit type annotations. This is done by inserting

@@ -1,5 +1,9 @@
 # Document template language
 
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ document templates)
+
+---
+
 This is a small, statically typed typed document authoring language.
 Templates are type-checked and translated to a simple functional language,
 which means that type errors occur on the templates themselves, as opposed to in

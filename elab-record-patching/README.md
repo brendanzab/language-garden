@@ -1,6 +1,8 @@
 # Elaboration with Record Patching and Singleton Types
 
-Extends [**elab-dependent-sugar**](../elab-dependent-sugar).
+- Extends [**elab-dependent-sugar**](../elab-dependent-sugar) (+ dependent record types, singleton types, record patching, coercive subtyping)
+
+---
 
 This is an implementation of a dependently typed language with dependent
 record types, with some additional features intended to make it more

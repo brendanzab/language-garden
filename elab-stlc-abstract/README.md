@@ -1,5 +1,9 @@
 # Abstract elaboration for STLC
 
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ LCF-style kernel)
+
+---
+
 The translation of a high level, user friendly _surface language_ into a small,
 typed _core language_ is a useful pattern for implementing typed programming
 languages.
