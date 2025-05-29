@@ -39,6 +39,13 @@ type 'a env = 'a list
 
 (** {1 Base data types} *)
 
+(** Unlike in previous projects, mutual recursion now happens between the syntax
+    and the semantic domain due to the presence of metavariables, which means
+    that it would be difficult to define {!vty} inside the {!Semantics} module.
+    For simplicity we’ve chosen to inline the semantic domain into the top-level
+    module, but other options could be explored in a full-scale implementation.
+*)
+
 (** {2 Types} *)
 
 (** Identifier used to distinguish metavariables in in pretty printed types. *)
