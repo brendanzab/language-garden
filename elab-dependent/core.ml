@@ -31,7 +31,7 @@ type level = int
 (** To illustrate the relationship between indices and levels, the level and
     index of the variable [ g ] can be found as follows:
 
-    {[
+    {@text[
                     level = 3      index = 1
                 │─λ───λ───λ──────▶︎│◀︎─λ──────│
                 │                 │         │
@@ -39,18 +39,8 @@ type level = int
       Indices   │ λ   λ   λ   2 (λ   λ   0 (1 3)) (λ   1) (λ   0)
       Levels    │ λ   λ   λ   0 (λ   λ   4 (3 1)) (λ   2) (λ   3)
     ]}
-*)
 
-(** Converts a {!level} to an {!index} that is bound in an environment of the
-    supplied size. Assumes that [ size > level ]. *)
-let level_to_index (size : level) (level : level) =
-  size - level - 1
-
-(** An environment of bindings that can be looked up directly using a
-    {!index}, or by inverting a {!level} using {!level_to_index}. *)
-type 'a env = 'a list
-
-(** Nameless variable representations like {i De Bruijn indices} and {i De
+    Nameless variable representations like {i De Bruijn indices} and {i De
     Bruijn levels} have a reputation for off-by-one errors and requiring
     expensive re-indexing operations when performing substitutions. Thankfully
     these issues can be largely avoided by choosing different variable
@@ -74,6 +64,19 @@ type 'a env = 'a list
     explains the approach in {{: https://proofassistants.stackexchange.com/a/910/309}
     an answer on the Proof Assistants Stack Exchange}.
 *)
+
+(** [level_to_index size level] converts [level] to an {!index} that is bound in
+    an environment of the supplied [size], where [size] represents the next
+    fresh {!level} to be bound in the environment.
+
+    Assumes that [size > level].
+*)
+let level_to_index (size : level) (level : level) =
+  size - level - 1
+
+(** An environment of bindings that can be looked up directly using a
+    {!index}, or by converting to a {!level} using {!level_to_index}. *)
+type 'a env = 'a list
 
 
 (** Syntax of the core language *)

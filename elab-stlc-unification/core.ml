@@ -23,13 +23,17 @@ type index = int
     the environment. *)
 type level = int
 
-(** Converts a {!level} to an {!index} that is bound in an environment of the
-    supplied size. Assumes that [ size > level ]. *)
+(** [level_to_index size level] converts [level] to an {!index} that is bound in
+    an environment of the supplied [size], where [size] represents the next
+    fresh {!level} to be bound in the environment.
+
+    Assumes that [size > level].
+*)
 let level_to_index (size : level) (level : level) =
   size - level - 1
 
 (** An environment of bindings that can be looked up directly using a
-    {!index}, or by inverting a {!level} using {!level_to_index}. *)
+    {!index}, or by converting to a {!level} using {!level_to_index}. *)
 type 'a env = 'a list
 
 
