@@ -58,29 +58,29 @@ and vty =
   | Int_type
   | Bool_type
 
-(** The current state of a metavariable *)
+(** The current state of a metavariable
+
+    Conceptually, metavariables are interspersed with normal bound variables in
+    the type environment. Multiple metavariables can be introduced at the same
+    point in the type environment, and their solutions can only depend on local
+    type variables “to the left” of them in the context.
+*)
 and meta_state =
   | Unsolved of { id : meta_id; ty_level : level }
   (** An unsolved metavariable.
 
-      Conceptually, metavariables are interspersed with normal bound
-      variables in the type environment, and their solutions can only depend
-      on local type variables “to the left” of them in the context. The
-      [ty_level] field represents the point in the type environment where
-      the meta should be inserted. Multiple metavariables can be inserted at
-      the same point in the type environment.
-
-      At the time when an unsolved metavariable is created, we do not yet
-      know what level it should be inserted at, so we raise it as needed
-      during unification. As we do this, we must be careful to ensure that
-      scoping errors are caught (i.e. when a solved metavariable would
-      depend on local type variables “to the right” in the context).
+      The [ty_level] field represents the point in the type environment where
+      the meta should be inserted. At the time when an unsolved metavariable is
+      created, we do not yet know what level it should be inserted at, so we
+      raise it as needed during unification. As we do this, we must be careful
+      to ensure that scoping errors are caught (i.e. when a solved metavariable
+      would depend on local type variables “to the right” in the context).
   *)
 
   | Solved of vty
-  (** The metavariable has a solution, and will no-longer be updated. *)
+  (** A metavariable with a solution, that will no-longer be updated. *)
 
-(** Mutable representation of metavariables. This is updated in-place during
+(** Mutable representation of metavariables. These are updated in-place during
     unification and when types are forced. Alternatively we could have
     chosen to store these in a separate metacontext, like in the
     elaboration-zoo. *)
