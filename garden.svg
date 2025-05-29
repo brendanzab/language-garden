@@ -24,49 +24,94 @@
 <path fill="gainsboro" stroke="none" d="M221.67,-8C221.67,-8 623.4,-8 623.4,-8 629.4,-8 635.4,-14 635.4,-20 635.4,-20 635.4,-341 635.4,-341 635.4,-347 629.4,-353 623.4,-353 623.4,-353 221.67,-353 221.67,-353 215.67,-353 209.67,-347 209.67,-341 209.67,-341 209.67,-20 209.67,-20 209.67,-14 215.67,-8 221.67,-8"/>
 <text text-anchor="middle" x="422.54" y="-335.7" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang</text>
 </g>
-<!-- elab&#45;stlc&#45;bidirectional -->
+<!-- elab&#45;dependent -->
 <g id="node1" class="node">
+<title>elab&#45;dependent</title>
+<g id="a_node1"><a xlink:href="./elab-dependent/" xlink:title="elab&#45;dependent">
+<path fill="white" stroke="none" d="M356.72,-405C356.72,-405 258.17,-405 258.17,-405 252.17,-405 246.17,-399 246.17,-393 246.17,-393 246.17,-381 246.17,-381 246.17,-375 252.17,-369 258.17,-369 258.17,-369 356.72,-369 356.72,-369 362.72,-369 368.72,-375 368.72,-381 368.72,-381 368.72,-393 368.72,-393 368.72,-399 362.72,-405 356.72,-405"/>
+<text text-anchor="middle" x="307.45" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;dependent</text>
+</a>
+</g>
+</g>
+<!-- elab&#45;dependent&#45;sugar -->
+<g id="node2" class="node">
+<title>elab&#45;dependent&#45;sugar</title>
+<g id="a_node2"><a xlink:href="./elab-dependent-sugar/" xlink:title="elab&#45;dependent&#45;sugar">
+<path fill="white" stroke="none" d="M606.4,-405C606.4,-405 469.6,-405 469.6,-405 463.6,-405 457.6,-399 457.6,-393 457.6,-393 457.6,-381 457.6,-381 457.6,-375 463.6,-369 469.6,-369 469.6,-369 606.4,-369 606.4,-369 612.4,-369 618.4,-375 618.4,-381 618.4,-381 618.4,-393 618.4,-393 618.4,-399 612.4,-405 606.4,-405"/>
+<text text-anchor="middle" x="538" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;dependent&#45;sugar</text>
+</a>
+</g>
+</g>
+<!-- elab&#45;dependent&#45;&gt;elab&#45;dependent&#45;sugar -->
+<g id="edge11" class="edge">
+<title>elab&#45;dependent&#45;&gt;elab&#45;dependent&#45;sugar</title>
+<path fill="none" stroke="black" d="M369.1,-387C392.6,-387 420.01,-387 445.79,-387"/>
+<polygon fill="black" stroke="black" points="445.6,-390.5 455.6,-387 445.6,-383.5 445.6,-390.5"/>
+</g>
+<!-- elab&#45;record&#45;patching -->
+<g id="node3" class="node">
+<title>elab&#45;record&#45;patching</title>
+<g id="a_node3"><a xlink:href="./elab-record-patching/" xlink:title="elab&#45;record&#45;patching">
+<path fill="white" stroke="none" d="M809.2,-405C809.2,-405 680.65,-405 680.65,-405 674.65,-405 668.65,-399 668.65,-393 668.65,-393 668.65,-381 668.65,-381 668.65,-375 674.65,-369 680.65,-369 680.65,-369 809.2,-369 809.2,-369 815.2,-369 821.2,-375 821.2,-381 821.2,-381 821.2,-393 821.2,-393 821.2,-399 815.2,-405 809.2,-405"/>
+<text text-anchor="middle" x="744.92" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;record&#45;patching</text>
+</a>
+</g>
+</g>
+<!-- elab&#45;dependent&#45;sugar&#45;&gt;elab&#45;record&#45;patching -->
+<g id="edge12" class="edge">
+<title>elab&#45;dependent&#45;sugar&#45;&gt;elab&#45;record&#45;patching</title>
+<path fill="none" stroke="black" d="M618.82,-387C631.29,-387 644.24,-387 656.87,-387"/>
+<polygon fill="black" stroke="black" points="656.84,-390.5 666.84,-387 656.84,-383.5 656.84,-390.5"/>
+</g>
+<!-- elab&#45;system&#45;f&#45;bidirectional -->
+<g id="node4" class="node">
+<title>elab&#45;system&#45;f&#45;bidirectional</title>
+<g id="a_node4"><a xlink:href="./elab-system-f-bidirectional" xlink:title="elab&#45;system&#45;f&#45;bidirectional">
+<path fill="white" stroke="none" d="M388.97,-459C388.97,-459 225.92,-459 225.92,-459 219.92,-459 213.92,-453 213.92,-447 213.92,-447 213.92,-435 213.92,-435 213.92,-429 219.92,-423 225.92,-423 225.92,-423 388.97,-423 388.97,-423 394.97,-423 400.97,-429 400.97,-435 400.97,-435 400.97,-447 400.97,-447 400.97,-453 394.97,-459 388.97,-459"/>
+<text text-anchor="middle" x="307.45" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;system&#45;f&#45;bidirectional</text>
+</a>
+</g>
+</g>
+<!-- elab&#45;system&#45;f&#45;unification -->
+<g id="node5" class="node">
+<title>elab&#45;system&#45;f&#45;unification</title>
+<g id="a_node5"><a xlink:href="./elab-system-f-unification" xlink:title="elab&#45;system&#45;f&#45;unification">
+<path fill="white" stroke="none" d="M613.9,-459C613.9,-459 462.1,-459 462.1,-459 456.1,-459 450.1,-453 450.1,-447 450.1,-447 450.1,-435 450.1,-435 450.1,-429 456.1,-423 462.1,-423 462.1,-423 613.9,-423 613.9,-423 619.9,-423 625.9,-429 625.9,-435 625.9,-435 625.9,-447 625.9,-447 625.9,-453 619.9,-459 613.9,-459"/>
+<text text-anchor="middle" x="538" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;system&#45;f&#45;unification</text>
+</a>
+</g>
+</g>
+<!-- elab&#45;system&#45;f&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;unification -->
+<g id="edge10" class="edge">
+<title>elab&#45;system&#45;f&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;unification</title>
+<path fill="none" stroke="black" d="M401.41,-441C413.62,-441 426.16,-441 438.45,-441"/>
+<polygon fill="black" stroke="black" points="438.14,-444.5 448.14,-441 438.14,-437.5 438.14,-444.5"/>
+</g>
+<!-- elab&#45;stlc&#45;bidirectional -->
+<g id="node6" class="node">
 <title>elab&#45;stlc&#45;bidirectional</title>
-<g id="a_node1"><a xlink:href="./elab-stlc-bidirectional" xlink:title="elab&#45;stlc&#45;bidirectional">
+<g id="a_node6"><a xlink:href="./elab-stlc-bidirectional" xlink:title="elab&#45;stlc&#45;bidirectional">
 <path fill="white" stroke="none" d="M159.55,-459C159.55,-459 28,-459 28,-459 22,-459 16,-453 16,-447 16,-447 16,-435 16,-435 16,-429 22,-423 28,-423 28,-423 159.55,-423 159.55,-423 165.55,-423 171.55,-429 171.55,-435 171.55,-435 171.55,-447 171.55,-447 171.55,-453 165.55,-459 159.55,-459"/>
 <text text-anchor="middle" x="93.77" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;bidirectional</text>
 </a>
 </g>
 </g>
-<!-- elab&#45;stlc&#45;bidirectional&#45;stratify -->
-<g id="node2" class="node">
-<title>elab&#45;stlc&#45;bidirectional&#45;stratify</title>
-<g id="a_node2"><a xlink:href="./elab-stlc-bidirectional" xlink:title="elab&#45;stlc&#45;bidirectional&#45;stratify">
-<path fill="white" stroke="none" d="M395.35,-405C395.35,-405 219.55,-405 219.55,-405 213.55,-405 207.55,-399 207.55,-393 207.55,-393 207.55,-381 207.55,-381 207.55,-375 213.55,-369 219.55,-369 219.55,-369 395.35,-369 395.35,-369 401.35,-369 407.35,-375 407.35,-381 407.35,-381 407.35,-393 407.35,-393 407.35,-399 401.35,-405 395.35,-405"/>
-<text text-anchor="middle" x="307.45" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;bidirectional&#45;stratify</text>
-</a>
+<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;dependent -->
+<g id="edge5" class="edge">
+<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;dependent</title>
+<path fill="none" stroke="black" d="M167.03,-422.57C188.96,-416.97 213.03,-410.83 234.91,-405.25"/>
+<polygon fill="black" stroke="black" points="235.49,-408.71 244.32,-402.85 233.76,-401.93 235.49,-408.71"/>
 </g>
-</g>
-<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;bidirectional&#45;stratify -->
-<g id="edge1" class="edge">
-<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;bidirectional&#45;stratify</title>
-<path fill="none" stroke="black" d="M167.03,-422.57C185.07,-417.97 204.55,-412.99 223.08,-408.27"/>
-<polygon fill="black" stroke="black" points="223.87,-411.68 232.7,-405.82 222.14,-404.9 223.87,-411.68"/>
-</g>
-<!-- elab&#45;stlc&#45;abstract -->
-<g id="node3" class="node">
-<title>elab&#45;stlc&#45;abstract</title>
-<g id="a_node3"><a xlink:href="./elab-stlc-abstract" xlink:title="elab&#45;stlc&#45;abstract">
-<path fill="white" stroke="none" d="M361.22,-459C361.22,-459 253.67,-459 253.67,-459 247.67,-459 241.67,-453 241.67,-447 241.67,-447 241.67,-435 241.67,-435 241.67,-429 247.67,-423 253.67,-423 253.67,-423 361.22,-423 361.22,-423 367.22,-423 373.22,-429 373.22,-435 373.22,-435 373.22,-447 373.22,-447 373.22,-453 367.22,-459 361.22,-459"/>
-<text text-anchor="middle" x="307.45" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;abstract</text>
-</a>
-</g>
-</g>
-<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;abstract -->
-<g id="edge3" class="edge">
-<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;abstract</title>
-<path fill="none" stroke="black" d="M171.79,-441C190.78,-441 211.1,-441 230.05,-441"/>
-<polygon fill="black" stroke="black" points="229.83,-444.5 239.82,-441 229.82,-437.5 229.83,-444.5"/>
+<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;bidirectional -->
+<g id="edge4" class="edge">
+<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;bidirectional</title>
+<path fill="none" stroke="black" d="M171.79,-441C181.67,-441 191.91,-441 202.13,-441"/>
+<polygon fill="black" stroke="black" points="202.13,-444.5 212.13,-441 202.13,-437.5 202.13,-444.5"/>
 </g>
 <!-- elab&#45;stlc&#45;unification -->
-<g id="node4" class="node">
+<g id="node7" class="node">
 <title>elab&#45;stlc&#45;unification</title>
-<g id="a_node4"><a xlink:href="./elab-stlc-unification" xlink:title="elab&#45;stlc&#45;unification">
+<g id="a_node7"><a xlink:href="./elab-stlc-unification" xlink:title="elab&#45;stlc&#45;unification">
 <path fill="white" stroke="none" d="M367.6,-513C367.6,-513 247.3,-513 247.3,-513 241.3,-513 235.3,-507 235.3,-501 235.3,-501 235.3,-489 235.3,-489 235.3,-483 241.3,-477 247.3,-477 247.3,-477 367.6,-477 367.6,-477 373.6,-477 379.6,-483 379.6,-489 379.6,-489 379.6,-501 379.6,-501 379.6,-507 373.6,-513 367.6,-513"/>
 <text text-anchor="middle" x="307.45" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;unification</text>
 </a>
@@ -78,131 +123,86 @@
 <path fill="none" stroke="black" d="M167.03,-459.43C185.35,-464.11 205.17,-469.16 223.96,-473.96"/>
 <polygon fill="black" stroke="black" points="222.86,-477.29 233.41,-476.37 224.59,-470.5 222.86,-477.29"/>
 </g>
-<!-- elab&#45;system&#45;f&#45;bidirectional -->
-<g id="node7" class="node">
-<title>elab&#45;system&#45;f&#45;bidirectional</title>
-<g id="a_node7"><a xlink:href="./elab-system-f-bidirectional" xlink:title="elab&#45;system&#45;f&#45;bidirectional">
-<path fill="white" stroke="none" d="M388.97,-567C388.97,-567 225.92,-567 225.92,-567 219.92,-567 213.92,-561 213.92,-555 213.92,-555 213.92,-543 213.92,-543 213.92,-537 219.92,-531 225.92,-531 225.92,-531 388.97,-531 388.97,-531 394.97,-531 400.97,-537 400.97,-543 400.97,-543 400.97,-555 400.97,-555 400.97,-561 394.97,-567 388.97,-567"/>
-<text text-anchor="middle" x="307.45" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;system&#45;f&#45;bidirectional</text>
+<!-- elab&#45;stlc&#45;bidirectional&#45;stratify -->
+<g id="node10" class="node">
+<title>elab&#45;stlc&#45;bidirectional&#45;stratify</title>
+<g id="a_node10"><a xlink:href="./elab-stlc-bidirectional" xlink:title="elab&#45;stlc&#45;bidirectional&#45;stratify">
+<path fill="white" stroke="none" d="M395.35,-567C395.35,-567 219.55,-567 219.55,-567 213.55,-567 207.55,-561 207.55,-555 207.55,-555 207.55,-543 207.55,-543 207.55,-537 213.55,-531 219.55,-531 219.55,-531 395.35,-531 395.35,-531 401.35,-531 407.35,-537 407.35,-543 407.35,-543 407.35,-555 407.35,-555 407.35,-561 401.35,-567 395.35,-567"/>
+<text text-anchor="middle" x="307.45" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;bidirectional&#45;stratify</text>
 </a>
 </g>
 </g>
-<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;bidirectional -->
-<g id="edge4" class="edge">
-<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;bidirectional</title>
+<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;bidirectional&#45;stratify -->
+<g id="edge1" class="edge">
+<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;bidirectional&#45;stratify</title>
 <path fill="none" stroke="black" d="M115.37,-459.29C136.94,-477.57 172.51,-505.3 207.55,-522 210.88,-523.59 214.33,-525.1 217.84,-526.53"/>
 <polygon fill="black" stroke="black" points="216.54,-529.78 227.13,-530.05 219.03,-523.23 216.54,-529.78"/>
 </g>
-<!-- elab&#45;dependent -->
-<g id="node9" class="node">
-<title>elab&#45;dependent</title>
-<g id="a_node9"><a xlink:href="./elab-dependent/" xlink:title="elab&#45;dependent">
-<path fill="white" stroke="none" d="M356.72,-621C356.72,-621 258.17,-621 258.17,-621 252.17,-621 246.17,-615 246.17,-609 246.17,-609 246.17,-597 246.17,-597 246.17,-591 252.17,-585 258.17,-585 258.17,-585 356.72,-585 356.72,-585 362.72,-585 368.72,-591 368.72,-597 368.72,-597 368.72,-609 368.72,-609 368.72,-615 362.72,-621 356.72,-621"/>
-<text text-anchor="middle" x="307.45" y="-597.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;dependent</text>
+<!-- elab&#45;stlc&#45;abstract -->
+<g id="node11" class="node">
+<title>elab&#45;stlc&#45;abstract</title>
+<g id="a_node11"><a xlink:href="./elab-stlc-abstract" xlink:title="elab&#45;stlc&#45;abstract">
+<path fill="white" stroke="none" d="M361.22,-621C361.22,-621 253.67,-621 253.67,-621 247.67,-621 241.67,-615 241.67,-609 241.67,-609 241.67,-597 241.67,-597 241.67,-591 247.67,-585 253.67,-585 253.67,-585 361.22,-585 361.22,-585 367.22,-585 373.22,-591 373.22,-597 373.22,-597 373.22,-609 373.22,-609 373.22,-615 367.22,-621 361.22,-621"/>
+<text text-anchor="middle" x="307.45" y="-597.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;abstract</text>
 </a>
 </g>
 </g>
-<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;dependent -->
-<g id="edge5" class="edge">
-<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;dependent</title>
-<path fill="none" stroke="black" d="M105.02,-459.35C122.28,-488.57 160.01,-545.48 207.55,-576 215.93,-581.38 225.37,-585.7 235.01,-589.16"/>
-<polygon fill="black" stroke="black" points="233.89,-592.48 244.49,-592.25 236.06,-585.82 233.89,-592.48"/>
+<!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;abstract -->
+<g id="edge3" class="edge">
+<title>elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;abstract</title>
+<path fill="none" stroke="black" d="M105.02,-459.35C122.28,-488.57 160.01,-545.48 207.55,-576 214.63,-580.55 222.47,-584.33 230.55,-587.49"/>
+<polygon fill="black" stroke="black" points="229.23,-590.74 239.83,-590.78 231.57,-584.14 229.23,-590.74"/>
 </g>
 <!-- lang&#45;doc&#45;templates -->
-<g id="node16" class="node">
+<g id="node15" class="node">
 <title>lang&#45;doc&#45;templates</title>
-<g id="a_node16"><a xlink:href="./lang-doc-templates/" xlink:title="lang&#45;doc&#45;templates">
-<path fill="white" stroke="none" d="M367.6,-160C367.6,-160 247.3,-160 247.3,-160 241.3,-160 235.3,-154 235.3,-148 235.3,-148 235.3,-136 235.3,-136 235.3,-130 241.3,-124 247.3,-124 247.3,-124 367.6,-124 367.6,-124 373.6,-124 379.6,-130 379.6,-136 379.6,-136 379.6,-148 379.6,-148 379.6,-154 373.6,-160 367.6,-160"/>
-<text text-anchor="middle" x="307.45" y="-136.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;doc&#45;templates</text>
+<g id="a_node15"><a xlink:href="./lang-doc-templates/" xlink:title="lang&#45;doc&#45;templates">
+<path fill="white" stroke="none" d="M367.6,-106C367.6,-106 247.3,-106 247.3,-106 241.3,-106 235.3,-100 235.3,-94 235.3,-94 235.3,-82 235.3,-82 235.3,-76 241.3,-70 247.3,-70 247.3,-70 367.6,-70 367.6,-70 373.6,-70 379.6,-76 379.6,-82 379.6,-82 379.6,-94 379.6,-94 379.6,-100 373.6,-106 367.6,-106"/>
+<text text-anchor="middle" x="307.45" y="-82.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;doc&#45;templates</text>
 </a>
 </g>
 </g>
 <!-- elab&#45;stlc&#45;bidirectional&#45;&gt;lang&#45;doc&#45;templates -->
 <g id="edge6" class="edge">
 <title>elab&#45;stlc&#45;bidirectional&#45;&gt;lang&#45;doc&#45;templates</title>
-<path fill="none" stroke="black" d="M96.86,-422.61C103.42,-373.62 128.14,-238.94 207.55,-169 212.6,-164.55 218.31,-160.83 224.38,-157.72"/>
-<polygon fill="black" stroke="black" points="225.8,-160.92 233.51,-153.64 222.95,-154.53 225.8,-160.92"/>
+<path fill="none" stroke="black" d="M95.43,-422.72C98.42,-367.6 115.06,-201.54 207.55,-115 212.67,-110.21 218.55,-106.26 224.84,-103"/>
+<polygon fill="black" stroke="black" points="225.95,-106.33 233.64,-99.04 223.08,-99.95 225.95,-106.33"/>
+</g>
+<!-- elab&#45;stlc&#45;unification&#45;&gt;elab&#45;system&#45;f&#45;unification -->
+<g id="edge9" class="edge">
+<title>elab&#45;stlc&#45;unification&#45;&gt;elab&#45;system&#45;f&#45;unification</title>
+<path fill="none" stroke="black" d="M379.82,-478.14C401.44,-473.03 425.44,-467.36 448.05,-462.02"/>
+<polygon fill="black" stroke="black" points="448.62,-465.48 457.55,-459.77 447.02,-458.66 448.62,-465.48"/>
 </g>
 <!-- elab&#45;stlc&#45;letrec&#45;unification -->
-<g id="node5" class="node">
+<g id="node8" class="node">
 <title>elab&#45;stlc&#45;letrec&#45;unification</title>
-<g id="a_node5"><a xlink:href="./elab-stlc-letrec-unification" xlink:title="elab&#45;stlc&#45;letrec&#45;unification">
-<path fill="white" stroke="none" d="M616.9,-459C616.9,-459 459.1,-459 459.1,-459 453.1,-459 447.1,-453 447.1,-447 447.1,-447 447.1,-435 447.1,-435 447.1,-429 453.1,-423 459.1,-423 459.1,-423 616.9,-423 616.9,-423 622.9,-423 628.9,-429 628.9,-435 628.9,-435 628.9,-447 628.9,-447 628.9,-453 622.9,-459 616.9,-459"/>
-<text text-anchor="middle" x="538" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;letrec&#45;unification</text>
+<g id="a_node8"><a xlink:href="./elab-stlc-letrec-unification" xlink:title="elab&#45;stlc&#45;letrec&#45;unification">
+<path fill="white" stroke="none" d="M616.9,-513C616.9,-513 459.1,-513 459.1,-513 453.1,-513 447.1,-507 447.1,-501 447.1,-501 447.1,-489 447.1,-489 447.1,-483 453.1,-477 459.1,-477 459.1,-477 616.9,-477 616.9,-477 622.9,-477 628.9,-483 628.9,-489 628.9,-489 628.9,-501 628.9,-501 628.9,-507 622.9,-513 616.9,-513"/>
+<text text-anchor="middle" x="538" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;letrec&#45;unification</text>
 </a>
 </g>
 </g>
 <!-- elab&#45;stlc&#45;unification&#45;&gt;elab&#45;stlc&#45;letrec&#45;unification -->
 <g id="edge7" class="edge">
 <title>elab&#45;stlc&#45;unification&#45;&gt;elab&#45;stlc&#45;letrec&#45;unification</title>
-<path fill="none" stroke="black" d="M379.82,-478.14C401.44,-473.03 425.44,-467.36 448.05,-462.02"/>
-<polygon fill="black" stroke="black" points="448.62,-465.48 457.55,-459.77 447.02,-458.66 448.62,-465.48"/>
+<path fill="none" stroke="black" d="M379.82,-495C397.48,-495 416.73,-495 435.52,-495"/>
+<polygon fill="black" stroke="black" points="435.3,-498.5 445.3,-495 435.3,-491.5 435.3,-498.5"/>
 </g>
 <!-- elab&#45;stlc&#45;variant&#45;unification -->
-<g id="node6" class="node">
+<g id="node9" class="node">
 <title>elab&#45;stlc&#45;variant&#45;unification</title>
-<g id="a_node6"><a xlink:href="./elab-stlc-variant-unification" xlink:title="elab&#45;stlc&#45;variant&#45;unification">
-<path fill="white" stroke="none" d="M620.65,-513C620.65,-513 455.35,-513 455.35,-513 449.35,-513 443.35,-507 443.35,-501 443.35,-501 443.35,-489 443.35,-489 443.35,-483 449.35,-477 455.35,-477 455.35,-477 620.65,-477 620.65,-477 626.65,-477 632.65,-483 632.65,-489 632.65,-489 632.65,-501 632.65,-501 632.65,-507 626.65,-513 620.65,-513"/>
-<text text-anchor="middle" x="538" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;variant&#45;unification</text>
+<g id="a_node9"><a xlink:href="./elab-stlc-variant-unification" xlink:title="elab&#45;stlc&#45;variant&#45;unification">
+<path fill="white" stroke="none" d="M620.65,-567C620.65,-567 455.35,-567 455.35,-567 449.35,-567 443.35,-561 443.35,-555 443.35,-555 443.35,-543 443.35,-543 443.35,-537 449.35,-531 455.35,-531 455.35,-531 620.65,-531 620.65,-531 626.65,-531 632.65,-537 632.65,-543 632.65,-543 632.65,-555 632.65,-555 632.65,-561 626.65,-567 620.65,-567"/>
+<text text-anchor="middle" x="538" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;variant&#45;unification</text>
 </a>
 </g>
 </g>
 <!-- elab&#45;stlc&#45;unification&#45;&gt;elab&#45;stlc&#45;variant&#45;unification -->
 <g id="edge8" class="edge">
 <title>elab&#45;stlc&#45;unification&#45;&gt;elab&#45;stlc&#45;variant&#45;unification</title>
-<path fill="none" stroke="black" d="M379.82,-495C396.26,-495 414.09,-495 431.63,-495"/>
-<polygon fill="black" stroke="black" points="431.59,-498.5 441.59,-495 431.59,-491.5 431.59,-498.5"/>
-</g>
-<!-- elab&#45;system&#45;f&#45;unification -->
-<g id="node8" class="node">
-<title>elab&#45;system&#45;f&#45;unification</title>
-<g id="a_node8"><a xlink:href="./elab-system-f-unification" xlink:title="elab&#45;system&#45;f&#45;unification">
-<path fill="white" stroke="none" d="M613.9,-567C613.9,-567 462.1,-567 462.1,-567 456.1,-567 450.1,-561 450.1,-555 450.1,-555 450.1,-543 450.1,-543 450.1,-537 456.1,-531 462.1,-531 462.1,-531 613.9,-531 613.9,-531 619.9,-531 625.9,-537 625.9,-543 625.9,-543 625.9,-555 625.9,-555 625.9,-561 619.9,-567 613.9,-567"/>
-<text text-anchor="middle" x="538" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;system&#45;f&#45;unification</text>
-</a>
-</g>
-</g>
-<!-- elab&#45;stlc&#45;unification&#45;&gt;elab&#45;system&#45;f&#45;unification -->
-<g id="edge9" class="edge">
-<title>elab&#45;stlc&#45;unification&#45;&gt;elab&#45;system&#45;f&#45;unification</title>
 <path fill="none" stroke="black" d="M379.82,-511.86C401.44,-516.97 425.44,-522.64 448.05,-527.98"/>
 <polygon fill="black" stroke="black" points="447.02,-531.34 457.55,-530.23 448.62,-524.52 447.02,-531.34"/>
-</g>
-<!-- elab&#45;system&#45;f&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;unification -->
-<g id="edge10" class="edge">
-<title>elab&#45;system&#45;f&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;unification</title>
-<path fill="none" stroke="black" d="M401.41,-549C413.62,-549 426.16,-549 438.45,-549"/>
-<polygon fill="black" stroke="black" points="438.14,-552.5 448.14,-549 438.14,-545.5 438.14,-552.5"/>
-</g>
-<!-- elab&#45;dependent&#45;sugar -->
-<g id="node10" class="node">
-<title>elab&#45;dependent&#45;sugar</title>
-<g id="a_node10"><a xlink:href="./elab-dependent-sugar/" xlink:title="elab&#45;dependent&#45;sugar">
-<path fill="white" stroke="none" d="M606.4,-621C606.4,-621 469.6,-621 469.6,-621 463.6,-621 457.6,-615 457.6,-609 457.6,-609 457.6,-597 457.6,-597 457.6,-591 463.6,-585 469.6,-585 469.6,-585 606.4,-585 606.4,-585 612.4,-585 618.4,-591 618.4,-597 618.4,-597 618.4,-609 618.4,-609 618.4,-615 612.4,-621 606.4,-621"/>
-<text text-anchor="middle" x="538" y="-597.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;dependent&#45;sugar</text>
-</a>
-</g>
-</g>
-<!-- elab&#45;dependent&#45;&gt;elab&#45;dependent&#45;sugar -->
-<g id="edge11" class="edge">
-<title>elab&#45;dependent&#45;&gt;elab&#45;dependent&#45;sugar</title>
-<path fill="none" stroke="black" d="M369.1,-603C392.6,-603 420.01,-603 445.79,-603"/>
-<polygon fill="black" stroke="black" points="445.6,-606.5 455.6,-603 445.6,-599.5 445.6,-606.5"/>
-</g>
-<!-- elab&#45;record&#45;patching -->
-<g id="node11" class="node">
-<title>elab&#45;record&#45;patching</title>
-<g id="a_node11"><a xlink:href="./elab-record-patching/" xlink:title="elab&#45;record&#45;patching">
-<path fill="white" stroke="none" d="M809.2,-621C809.2,-621 680.65,-621 680.65,-621 674.65,-621 668.65,-615 668.65,-609 668.65,-609 668.65,-597 668.65,-597 668.65,-591 674.65,-585 680.65,-585 680.65,-585 809.2,-585 809.2,-585 815.2,-585 821.2,-591 821.2,-597 821.2,-597 821.2,-609 821.2,-609 821.2,-615 815.2,-621 809.2,-621"/>
-<text text-anchor="middle" x="744.92" y="-597.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;record&#45;patching</text>
-</a>
-</g>
-</g>
-<!-- elab&#45;dependent&#45;sugar&#45;&gt;elab&#45;record&#45;patching -->
-<g id="edge12" class="edge">
-<title>elab&#45;dependent&#45;sugar&#45;&gt;elab&#45;record&#45;patching</title>
-<path fill="none" stroke="black" d="M618.82,-603C631.29,-603 644.24,-603 656.87,-603"/>
-<polygon fill="black" stroke="black" points="656.84,-606.5 666.84,-603 656.84,-599.5 656.84,-606.5"/>
 </g>
 <!-- compile&#45;arith -->
 <g id="node12" class="node">
@@ -228,71 +228,77 @@
 <path fill="none" stroke="black" d="M147.64,-686C171.86,-686 201.06,-686 227.78,-686"/>
 <polygon fill="black" stroke="black" points="227.55,-689.5 237.55,-686 227.55,-682.5 227.55,-689.5"/>
 </g>
-<!-- lang&#45;datalog -->
-<g id="node14" class="node">
-<title>lang&#45;datalog</title>
-<g id="a_node14"><a xlink:href="./lang-datalog/" xlink:title="lang&#45;datalog">
-<path fill="white" stroke="none" d="M346.97,-52C346.97,-52 267.92,-52 267.92,-52 261.92,-52 255.92,-46 255.92,-40 255.92,-40 255.92,-28 255.92,-28 255.92,-22 261.92,-16 267.92,-16 267.92,-16 346.97,-16 346.97,-16 352.97,-16 358.97,-22 358.97,-28 358.97,-28 358.97,-40 358.97,-40 358.97,-46 352.97,-52 346.97,-52"/>
-<text text-anchor="middle" x="307.45" y="-28.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;datalog</text>
-</a>
-</g>
-</g>
-<!-- lang&#45;declarative&#45;graphics -->
-<g id="node15" class="node">
-<title>lang&#45;declarative&#45;graphics</title>
-<g id="a_node15"><a xlink:href="./lang-declarative-graphics/" xlink:title="lang&#45;declarative&#45;graphics">
-<path fill="white" stroke="none" d="M385.22,-106C385.22,-106 229.67,-106 229.67,-106 223.67,-106 217.67,-100 217.67,-94 217.67,-94 217.67,-82 217.67,-82 217.67,-76 223.67,-70 229.67,-70 229.67,-70 385.22,-70 385.22,-70 391.22,-70 397.22,-76 397.22,-82 397.22,-82 397.22,-94 397.22,-94 397.22,-100 391.22,-106 385.22,-106"/>
-<text text-anchor="middle" x="307.45" y="-82.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;declarative&#45;graphics</text>
-</a>
-</g>
-</g>
-<!-- lang&#45;fractal&#45;growth -->
-<g id="node17" class="node">
-<title>lang&#45;fractal&#45;growth</title>
-<g id="a_node17"><a xlink:href="./lang-fractal-growth/" xlink:title="lang&#45;fractal&#45;growth">
-<path fill="white" stroke="none" d="M365.72,-214C365.72,-214 249.17,-214 249.17,-214 243.17,-214 237.17,-208 237.17,-202 237.17,-202 237.17,-190 237.17,-190 237.17,-184 243.17,-178 249.17,-178 249.17,-178 365.72,-178 365.72,-178 371.72,-178 377.72,-184 377.72,-190 377.72,-190 377.72,-202 377.72,-202 377.72,-208 371.72,-214 365.72,-214"/>
-<text text-anchor="middle" x="307.45" y="-190.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;growth</text>
-</a>
-</g>
-</g>
-<!-- lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="node18" class="node">
-<title>lang&#45;fractal&#45;tree&#45;rewriting</title>
-<g id="a_node18"><a xlink:href="./lang-fractal-tree-rewriting/" xlink:title="lang&#45;fractal&#45;tree&#45;rewriting">
-<path fill="white" stroke="none" d="M615.4,-214C615.4,-214 460.6,-214 460.6,-214 454.6,-214 448.6,-208 448.6,-202 448.6,-202 448.6,-190 448.6,-190 448.6,-184 454.6,-178 460.6,-178 460.6,-178 615.4,-178 615.4,-178 621.4,-178 627.4,-184 627.4,-190 627.4,-190 627.4,-202 627.4,-202 627.4,-208 621.4,-214 615.4,-214"/>
-<text text-anchor="middle" x="538" y="-190.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;tree&#45;rewriting</text>
-</a>
-</g>
-</g>
-<!-- lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="edge15" class="edge">
-<title>lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting</title>
-<path fill="none" stroke="black" d="M377.95,-196C396.59,-196 417.12,-196 437.06,-196"/>
-<polygon fill="black" stroke="black" points="436.87,-199.5 446.87,-196 436.87,-192.5 436.87,-199.5"/>
-</g>
 <!-- lang&#45;lc&#45;interpreters -->
-<g id="node19" class="node">
+<g id="node14" class="node">
 <title>lang&#45;lc&#45;interpreters</title>
-<g id="a_node19"><a xlink:href="./lang-lc-interpreters/" xlink:title="lang&#45;lc&#45;interpreters">
-<path fill="white" stroke="none" d="M366.1,-268C366.1,-268 248.8,-268 248.8,-268 242.8,-268 236.8,-262 236.8,-256 236.8,-256 236.8,-244 236.8,-244 236.8,-238 242.8,-232 248.8,-232 248.8,-232 366.1,-232 366.1,-232 372.1,-232 378.1,-238 378.1,-244 378.1,-244 378.1,-256 378.1,-256 378.1,-262 372.1,-268 366.1,-268"/>
-<text text-anchor="middle" x="307.45" y="-244.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;lc&#45;interpreters</text>
+<g id="a_node14"><a xlink:href="./lang-lc-interpreters/" xlink:title="lang&#45;lc&#45;interpreters">
+<path fill="white" stroke="none" d="M366.1,-52C366.1,-52 248.8,-52 248.8,-52 242.8,-52 236.8,-46 236.8,-40 236.8,-40 236.8,-28 236.8,-28 236.8,-22 242.8,-16 248.8,-16 248.8,-16 366.1,-16 366.1,-16 372.1,-16 378.1,-22 378.1,-28 378.1,-28 378.1,-40 378.1,-40 378.1,-46 372.1,-52 366.1,-52"/>
+<text text-anchor="middle" x="307.45" y="-28.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;lc&#45;interpreters</text>
 </a>
 </g>
 </g>
 <!-- lang&#45;lc&#45;interpreters&#45;&gt;elab&#45;stlc&#45;bidirectional -->
 <g id="edge14" class="edge">
 <title>lang&#45;lc&#45;interpreters&#45;&gt;elab&#45;stlc&#45;bidirectional</title>
-<path fill="none" stroke="black" d="M236.36,-262.47C226.15,-266.13 216.18,-270.87 207.55,-277 158.32,-311.96 123.75,-375.61 106.77,-412.49"/>
-<polygon fill="black" stroke="black" points="103.76,-410.64 102.87,-421.2 110.15,-413.5 103.76,-410.64"/>
+<path fill="none" stroke="black" d="M236.49,-43.43C225.79,-47.45 215.63,-53.1 207.55,-61 107.57,-158.81 95.26,-340.83 94.43,-411.7"/>
+<polygon fill="black" stroke="black" points="90.93,-411.32 94.39,-421.33 97.93,-411.34 90.93,-411.32"/>
 </g>
-<!-- lang&#45;shader&#45;graphics -->
-<g id="node20" class="node">
-<title>lang&#45;shader&#45;graphics</title>
-<g id="a_node20"><a xlink:href="./lang-shader-graphics/" xlink:title="lang&#45;shader&#45;graphics">
-<path fill="white" stroke="none" d="M373.22,-322C373.22,-322 241.67,-322 241.67,-322 235.67,-322 229.67,-316 229.67,-310 229.67,-310 229.67,-298 229.67,-298 229.67,-292 235.67,-286 241.67,-286 241.67,-286 373.22,-286 373.22,-286 379.22,-286 385.22,-292 385.22,-298 385.22,-298 385.22,-310 385.22,-310 385.22,-316 379.22,-322 373.22,-322"/>
-<text text-anchor="middle" x="307.45" y="-298.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;shader&#45;graphics</text>
+<!-- lang&#45;datalog -->
+<g id="node16" class="node">
+<title>lang&#45;datalog</title>
+<g id="a_node16"><a xlink:href="./lang-datalog/" xlink:title="lang&#45;datalog">
+<path fill="white" stroke="none" d="M346.97,-160C346.97,-160 267.92,-160 267.92,-160 261.92,-160 255.92,-154 255.92,-148 255.92,-148 255.92,-136 255.92,-136 255.92,-130 261.92,-124 267.92,-124 267.92,-124 346.97,-124 346.97,-124 352.97,-124 358.97,-130 358.97,-136 358.97,-136 358.97,-148 358.97,-148 358.97,-154 352.97,-160 346.97,-160"/>
+<text text-anchor="middle" x="307.45" y="-136.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;datalog</text>
 </a>
 </g>
+</g>
+<!-- lang&#45;shader&#45;graphics -->
+<g id="node17" class="node">
+<title>lang&#45;shader&#45;graphics</title>
+<g id="a_node17"><a xlink:href="./lang-shader-graphics/" xlink:title="lang&#45;shader&#45;graphics">
+<path fill="white" stroke="none" d="M373.22,-214C373.22,-214 241.67,-214 241.67,-214 235.67,-214 229.67,-208 229.67,-202 229.67,-202 229.67,-190 229.67,-190 229.67,-184 235.67,-178 241.67,-178 241.67,-178 373.22,-178 373.22,-178 379.22,-178 385.22,-184 385.22,-190 385.22,-190 385.22,-202 385.22,-202 385.22,-208 379.22,-214 373.22,-214"/>
+<text text-anchor="middle" x="307.45" y="-190.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;shader&#45;graphics</text>
+</a>
+</g>
+</g>
+<!-- lang&#45;declarative&#45;graphics -->
+<g id="node18" class="node">
+<title>lang&#45;declarative&#45;graphics</title>
+<g id="a_node18"><a xlink:href="./lang-declarative-graphics/" xlink:title="lang&#45;declarative&#45;graphics">
+<path fill="white" stroke="none" d="M385.22,-268C385.22,-268 229.67,-268 229.67,-268 223.67,-268 217.67,-262 217.67,-256 217.67,-256 217.67,-244 217.67,-244 217.67,-238 223.67,-232 229.67,-232 229.67,-232 385.22,-232 385.22,-232 391.22,-232 397.22,-238 397.22,-244 397.22,-244 397.22,-256 397.22,-256 397.22,-262 391.22,-268 385.22,-268"/>
+<text text-anchor="middle" x="307.45" y="-244.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;declarative&#45;graphics</text>
+</a>
+</g>
+</g>
+<!-- lang&#45;fractal&#45;tree&#45;rewriting -->
+<g id="node20" class="node">
+<title>lang&#45;fractal&#45;tree&#45;rewriting</title>
+<g id="a_node20"><a xlink:href="./lang-fractal-tree-rewriting/" xlink:title="lang&#45;fractal&#45;tree&#45;rewriting">
+<path fill="white" stroke="none" d="M615.4,-295C615.4,-295 460.6,-295 460.6,-295 454.6,-295 448.6,-289 448.6,-283 448.6,-283 448.6,-271 448.6,-271 448.6,-265 454.6,-259 460.6,-259 460.6,-259 615.4,-259 615.4,-259 621.4,-259 627.4,-265 627.4,-271 627.4,-271 627.4,-283 627.4,-283 627.4,-289 621.4,-295 615.4,-295"/>
+<text text-anchor="middle" x="538" y="-271.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;tree&#45;rewriting</text>
+</a>
+</g>
+</g>
+<!-- lang&#45;declarative&#45;graphics&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
+<g id="edge16" class="edge">
+<title>lang&#45;declarative&#45;graphics&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting</title>
+<path fill="none" stroke="black" d="M397.47,-260.52C410.36,-262.04 423.71,-263.62 436.8,-265.16"/>
+<polygon fill="black" stroke="black" points="436.38,-268.64 446.72,-266.33 437.2,-261.69 436.38,-268.64"/>
+</g>
+<!-- lang&#45;fractal&#45;growth -->
+<g id="node19" class="node">
+<title>lang&#45;fractal&#45;growth</title>
+<g id="a_node19"><a xlink:href="./lang-fractal-growth/" xlink:title="lang&#45;fractal&#45;growth">
+<path fill="white" stroke="none" d="M365.72,-322C365.72,-322 249.17,-322 249.17,-322 243.17,-322 237.17,-316 237.17,-310 237.17,-310 237.17,-298 237.17,-298 237.17,-292 243.17,-286 249.17,-286 249.17,-286 365.72,-286 365.72,-286 371.72,-286 377.72,-292 377.72,-298 377.72,-298 377.72,-310 377.72,-310 377.72,-316 371.72,-322 365.72,-322"/>
+<text text-anchor="middle" x="307.45" y="-298.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;growth</text>
+</a>
+</g>
+</g>
+<!-- lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
+<g id="edge15" class="edge">
+<title>lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting</title>
+<path fill="none" stroke="black" d="M377.95,-295.79C396.59,-293.59 417.12,-291.16 437.06,-288.81"/>
+<polygon fill="black" stroke="black" points="437.36,-292.3 446.88,-287.65 436.54,-285.34 437.36,-292.3"/>
 </g>
 </g>
 </svg>

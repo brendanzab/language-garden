@@ -24,17 +24,19 @@ digraph garden {
     label = "elab";
     cluster = true;
 
-    "elab-stlc-bidirectional" [URL = "./elab-stlc-bidirectional"];
-    "elab-stlc-bidirectional-stratify" [URL = "./elab-stlc-bidirectional"];
-    "elab-stlc-abstract" [URL = "./elab-stlc-abstract"];
-    "elab-stlc-unification" [URL = "./elab-stlc-unification"];
-    "elab-stlc-letrec-unification" [URL = "./elab-stlc-letrec-unification"];
-    "elab-stlc-variant-unification" [URL = "./elab-stlc-variant-unification"];
-    "elab-system-f-bidirectional" [URL = "./elab-system-f-bidirectional"];
-    "elab-system-f-unification" [URL = "./elab-system-f-unification"];
     "elab-dependent" [URL = "./elab-dependent/"];
     "elab-dependent-sugar" [URL = "./elab-dependent-sugar/"];
     "elab-record-patching" [URL = "./elab-record-patching/"];
+
+    "elab-system-f-bidirectional" [URL = "./elab-system-f-bidirectional"];
+    "elab-system-f-unification" [URL = "./elab-system-f-unification"];
+
+    "elab-stlc-bidirectional" [URL = "./elab-stlc-bidirectional"];
+    "elab-stlc-unification" [URL = "./elab-stlc-unification"];
+    "elab-stlc-letrec-unification" [URL = "./elab-stlc-letrec-unification"];
+    "elab-stlc-variant-unification" [URL = "./elab-stlc-variant-unification"];
+    "elab-stlc-bidirectional-stratify" [URL = "./elab-stlc-bidirectional"];
+    "elab-stlc-abstract" [URL = "./elab-stlc-abstract"];
   }
 
   subgraph compile {
@@ -49,13 +51,13 @@ digraph garden {
     label = "lang";
     cluster = true;
 
-    "lang-datalog" [URL = "./lang-datalog/"];
-    "lang-declarative-graphics" [URL = "./lang-declarative-graphics/"];
+    "lang-lc-interpreters" [URL = "./lang-lc-interpreters/"];
     "lang-doc-templates" [URL = "./lang-doc-templates/"];
+    "lang-datalog" [URL = "./lang-datalog/"];
+    "lang-shader-graphics" [URL = "./lang-shader-graphics/"];
+    "lang-declarative-graphics" [URL = "./lang-declarative-graphics/"];
     "lang-fractal-growth" [URL = "./lang-fractal-growth/"];
     "lang-fractal-tree-rewriting" [URL = "./lang-fractal-tree-rewriting/"];
-    "lang-lc-interpreters" [URL = "./lang-lc-interpreters/"];
-    "lang-shader-graphics" [URL = "./lang-shader-graphics/"];
   }
 
   "elab-stlc-bidirectional" -> "elab-stlc-bidirectional-stratify";
@@ -73,5 +75,6 @@ digraph garden {
   "compile-arith" -> "compile-arithcond";
   "lang-lc-interpreters" -> "elab-stlc-bidirectional";
   "lang-fractal-growth" -> "lang-fractal-tree-rewriting";
+  "lang-declarative-graphics" -> "lang-fractal-tree-rewriting";
 
 }
