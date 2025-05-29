@@ -89,7 +89,9 @@ and [elab-system-f-bidirectional](../elab-system-f-bidirectional):
 - Oleg Kiselyov, [Efficient and Insightful Generalization](https://okmij.org/ftp/ML/generalization.html):
   Describes using levels for efficient generalisation in the implementation of
   Hindley-Milner typecheckers. Mark Barbone’s approach is based on this work.
-- Richard A. Eisenberg, [Type inference in OCaml and GHC using Levels](https://www.youtube.com/watch?v=iFUrhTQi0-U)
+- Richard A. Eisenberg, [Type inference in OCaml and GHC using Levels](https://www.youtube.com/watch?v=iFUrhTQi0-U):
+  A great talk going into the gory details of how the OCaml and GHC type
+  checkers use levels.
 - Jana Dunfield and Neelakantan Krishnaswami,
   [Complete and easy bidirectional typechecking for higher-rank polymorphism](https://dl.acm.org/doi/10.1145/2544174.2500582),
   [[DOI](https://doi.org/10.1145/2544174.2500582)]
