@@ -24,40 +24,40 @@ digraph garden {
     label = "elab";
     cluster = true;
 
-    "elab-dependent" [URL = "./elab-dependent/"];
-    "elab-dependent-sugar" [URL = "./elab-dependent-sugar/"];
-    "elab-record-patching" [URL = "./elab-record-patching/"];
+    "elab-dependent";
+    "elab-dependent-sugar";
+    "elab-record-patching";
 
-    "elab-system-f-bidirectional" [URL = "./elab-system-f-bidirectional"];
-    "elab-system-f-unification" [URL = "./elab-system-f-unification"];
+    "elab-system-f-bidirectional";
+    "elab-system-f-unification";
 
-    "elab-stlc-bidirectional" [URL = "./elab-stlc-bidirectional"];
-    "elab-stlc-unification" [URL = "./elab-stlc-unification"];
-    "elab-stlc-letrec-unification" [URL = "./elab-stlc-letrec-unification"];
-    "elab-stlc-variant-unification" [URL = "./elab-stlc-variant-unification"];
-    "elab-stlc-bidirectional-stratify" [URL = "./elab-stlc-bidirectional"];
-    "elab-stlc-abstract" [URL = "./elab-stlc-abstract"];
+    "elab-stlc-bidirectional";
+    "elab-stlc-unification";
+    "elab-stlc-letrec-unification";
+    "elab-stlc-variant-unification";
+    "elab-stlc-bidirectional-stratify";
+    "elab-stlc-abstract";
   }
 
   subgraph compile {
     label = "compile";
     cluster = true;
 
-    "compile-arith" [URL = "./compile-arith/"];
-    "compile-arithcond" [URL = "./compile-arithcond/"];
+    "compile-arith";
+    "compile-arithcond";
   }
 
   subgraph lang {
     label = "lang";
     cluster = true;
 
-    "lang-lc-interpreters" [URL = "./lang-lc-interpreters/"];
-    "lang-doc-templates" [URL = "./lang-doc-templates/"];
-    "lang-datalog" [URL = "./lang-datalog/"];
-    "lang-shader-graphics" [URL = "./lang-shader-graphics/"];
-    "lang-declarative-graphics" [URL = "./lang-declarative-graphics/"];
-    "lang-fractal-growth" [URL = "./lang-fractal-growth/"];
-    "lang-fractal-tree-rewriting" [URL = "./lang-fractal-tree-rewriting/"];
+    "lang-lc-interpreters";
+    "lang-doc-templates";
+    "lang-datalog";
+    "lang-shader-graphics";
+    "lang-declarative-graphics";
+    "lang-fractal-growth";
+    "lang-fractal-tree-rewriting";
   }
 
   "elab-stlc-bidirectional" -> "elab-stlc-bidirectional-stratify";

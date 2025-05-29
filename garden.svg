@@ -27,20 +27,14 @@
 <!-- elab&#45;dependent -->
 <g id="node1" class="node">
 <title>elab&#45;dependent</title>
-<g id="a_node1"><a xlink:href="./elab-dependent/" xlink:title="elab&#45;dependent">
 <path fill="white" stroke="none" d="M356.72,-405C356.72,-405 258.17,-405 258.17,-405 252.17,-405 246.17,-399 246.17,-393 246.17,-393 246.17,-381 246.17,-381 246.17,-375 252.17,-369 258.17,-369 258.17,-369 356.72,-369 356.72,-369 362.72,-369 368.72,-375 368.72,-381 368.72,-381 368.72,-393 368.72,-393 368.72,-399 362.72,-405 356.72,-405"/>
 <text text-anchor="middle" x="307.45" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;dependent</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;dependent&#45;sugar -->
 <g id="node2" class="node">
 <title>elab&#45;dependent&#45;sugar</title>
-<g id="a_node2"><a xlink:href="./elab-dependent-sugar/" xlink:title="elab&#45;dependent&#45;sugar">
 <path fill="white" stroke="none" d="M606.4,-405C606.4,-405 469.6,-405 469.6,-405 463.6,-405 457.6,-399 457.6,-393 457.6,-393 457.6,-381 457.6,-381 457.6,-375 463.6,-369 469.6,-369 469.6,-369 606.4,-369 606.4,-369 612.4,-369 618.4,-375 618.4,-381 618.4,-381 618.4,-393 618.4,-393 618.4,-399 612.4,-405 606.4,-405"/>
 <text text-anchor="middle" x="538" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;dependent&#45;sugar</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;dependent&#45;&gt;elab&#45;dependent&#45;sugar -->
 <g id="edge11" class="edge">
@@ -51,11 +45,8 @@
 <!-- elab&#45;record&#45;patching -->
 <g id="node3" class="node">
 <title>elab&#45;record&#45;patching</title>
-<g id="a_node3"><a xlink:href="./elab-record-patching/" xlink:title="elab&#45;record&#45;patching">
 <path fill="white" stroke="none" d="M809.2,-405C809.2,-405 680.65,-405 680.65,-405 674.65,-405 668.65,-399 668.65,-393 668.65,-393 668.65,-381 668.65,-381 668.65,-375 674.65,-369 680.65,-369 680.65,-369 809.2,-369 809.2,-369 815.2,-369 821.2,-375 821.2,-381 821.2,-381 821.2,-393 821.2,-393 821.2,-399 815.2,-405 809.2,-405"/>
 <text text-anchor="middle" x="744.92" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;record&#45;patching</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;dependent&#45;sugar&#45;&gt;elab&#45;record&#45;patching -->
 <g id="edge12" class="edge">
@@ -66,20 +57,14 @@
 <!-- elab&#45;system&#45;f&#45;bidirectional -->
 <g id="node4" class="node">
 <title>elab&#45;system&#45;f&#45;bidirectional</title>
-<g id="a_node4"><a xlink:href="./elab-system-f-bidirectional" xlink:title="elab&#45;system&#45;f&#45;bidirectional">
 <path fill="white" stroke="none" d="M388.97,-459C388.97,-459 225.92,-459 225.92,-459 219.92,-459 213.92,-453 213.92,-447 213.92,-447 213.92,-435 213.92,-435 213.92,-429 219.92,-423 225.92,-423 225.92,-423 388.97,-423 388.97,-423 394.97,-423 400.97,-429 400.97,-435 400.97,-435 400.97,-447 400.97,-447 400.97,-453 394.97,-459 388.97,-459"/>
 <text text-anchor="middle" x="307.45" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;system&#45;f&#45;bidirectional</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;system&#45;f&#45;unification -->
 <g id="node5" class="node">
 <title>elab&#45;system&#45;f&#45;unification</title>
-<g id="a_node5"><a xlink:href="./elab-system-f-unification" xlink:title="elab&#45;system&#45;f&#45;unification">
 <path fill="white" stroke="none" d="M613.9,-459C613.9,-459 462.1,-459 462.1,-459 456.1,-459 450.1,-453 450.1,-447 450.1,-447 450.1,-435 450.1,-435 450.1,-429 456.1,-423 462.1,-423 462.1,-423 613.9,-423 613.9,-423 619.9,-423 625.9,-429 625.9,-435 625.9,-435 625.9,-447 625.9,-447 625.9,-453 619.9,-459 613.9,-459"/>
 <text text-anchor="middle" x="538" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;system&#45;f&#45;unification</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;system&#45;f&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;unification -->
 <g id="edge10" class="edge">
@@ -90,11 +75,8 @@
 <!-- elab&#45;stlc&#45;bidirectional -->
 <g id="node6" class="node">
 <title>elab&#45;stlc&#45;bidirectional</title>
-<g id="a_node6"><a xlink:href="./elab-stlc-bidirectional" xlink:title="elab&#45;stlc&#45;bidirectional">
 <path fill="white" stroke="none" d="M159.55,-459C159.55,-459 28,-459 28,-459 22,-459 16,-453 16,-447 16,-447 16,-435 16,-435 16,-429 22,-423 28,-423 28,-423 159.55,-423 159.55,-423 165.55,-423 171.55,-429 171.55,-435 171.55,-435 171.55,-447 171.55,-447 171.55,-453 165.55,-459 159.55,-459"/>
 <text text-anchor="middle" x="93.77" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;bidirectional</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;dependent -->
 <g id="edge5" class="edge">
@@ -111,11 +93,8 @@
 <!-- elab&#45;stlc&#45;unification -->
 <g id="node7" class="node">
 <title>elab&#45;stlc&#45;unification</title>
-<g id="a_node7"><a xlink:href="./elab-stlc-unification" xlink:title="elab&#45;stlc&#45;unification">
 <path fill="white" stroke="none" d="M367.6,-513C367.6,-513 247.3,-513 247.3,-513 241.3,-513 235.3,-507 235.3,-501 235.3,-501 235.3,-489 235.3,-489 235.3,-483 241.3,-477 247.3,-477 247.3,-477 367.6,-477 367.6,-477 373.6,-477 379.6,-483 379.6,-489 379.6,-489 379.6,-501 379.6,-501 379.6,-507 373.6,-513 367.6,-513"/>
 <text text-anchor="middle" x="307.45" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;unification</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;unification -->
 <g id="edge2" class="edge">
@@ -126,11 +105,8 @@
 <!-- elab&#45;stlc&#45;bidirectional&#45;stratify -->
 <g id="node10" class="node">
 <title>elab&#45;stlc&#45;bidirectional&#45;stratify</title>
-<g id="a_node10"><a xlink:href="./elab-stlc-bidirectional" xlink:title="elab&#45;stlc&#45;bidirectional&#45;stratify">
 <path fill="white" stroke="none" d="M395.35,-567C395.35,-567 219.55,-567 219.55,-567 213.55,-567 207.55,-561 207.55,-555 207.55,-555 207.55,-543 207.55,-543 207.55,-537 213.55,-531 219.55,-531 219.55,-531 395.35,-531 395.35,-531 401.35,-531 407.35,-537 407.35,-543 407.35,-543 407.35,-555 407.35,-555 407.35,-561 401.35,-567 395.35,-567"/>
 <text text-anchor="middle" x="307.45" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;bidirectional&#45;stratify</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;bidirectional&#45;stratify -->
 <g id="edge1" class="edge">
@@ -141,11 +117,8 @@
 <!-- elab&#45;stlc&#45;abstract -->
 <g id="node11" class="node">
 <title>elab&#45;stlc&#45;abstract</title>
-<g id="a_node11"><a xlink:href="./elab-stlc-abstract" xlink:title="elab&#45;stlc&#45;abstract">
 <path fill="white" stroke="none" d="M361.22,-621C361.22,-621 253.67,-621 253.67,-621 247.67,-621 241.67,-615 241.67,-609 241.67,-609 241.67,-597 241.67,-597 241.67,-591 247.67,-585 253.67,-585 253.67,-585 361.22,-585 361.22,-585 367.22,-585 373.22,-591 373.22,-597 373.22,-597 373.22,-609 373.22,-609 373.22,-615 367.22,-621 361.22,-621"/>
 <text text-anchor="middle" x="307.45" y="-597.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;abstract</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;stlc&#45;bidirectional&#45;&gt;elab&#45;stlc&#45;abstract -->
 <g id="edge3" class="edge">
@@ -156,11 +129,8 @@
 <!-- lang&#45;doc&#45;templates -->
 <g id="node15" class="node">
 <title>lang&#45;doc&#45;templates</title>
-<g id="a_node15"><a xlink:href="./lang-doc-templates/" xlink:title="lang&#45;doc&#45;templates">
 <path fill="white" stroke="none" d="M367.6,-106C367.6,-106 247.3,-106 247.3,-106 241.3,-106 235.3,-100 235.3,-94 235.3,-94 235.3,-82 235.3,-82 235.3,-76 241.3,-70 247.3,-70 247.3,-70 367.6,-70 367.6,-70 373.6,-70 379.6,-76 379.6,-82 379.6,-82 379.6,-94 379.6,-94 379.6,-100 373.6,-106 367.6,-106"/>
 <text text-anchor="middle" x="307.45" y="-82.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;doc&#45;templates</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;stlc&#45;bidirectional&#45;&gt;lang&#45;doc&#45;templates -->
 <g id="edge6" class="edge">
@@ -177,11 +147,8 @@
 <!-- elab&#45;stlc&#45;letrec&#45;unification -->
 <g id="node8" class="node">
 <title>elab&#45;stlc&#45;letrec&#45;unification</title>
-<g id="a_node8"><a xlink:href="./elab-stlc-letrec-unification" xlink:title="elab&#45;stlc&#45;letrec&#45;unification">
 <path fill="white" stroke="none" d="M616.9,-513C616.9,-513 459.1,-513 459.1,-513 453.1,-513 447.1,-507 447.1,-501 447.1,-501 447.1,-489 447.1,-489 447.1,-483 453.1,-477 459.1,-477 459.1,-477 616.9,-477 616.9,-477 622.9,-477 628.9,-483 628.9,-489 628.9,-489 628.9,-501 628.9,-501 628.9,-507 622.9,-513 616.9,-513"/>
 <text text-anchor="middle" x="538" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;letrec&#45;unification</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;stlc&#45;unification&#45;&gt;elab&#45;stlc&#45;letrec&#45;unification -->
 <g id="edge7" class="edge">
@@ -192,11 +159,8 @@
 <!-- elab&#45;stlc&#45;variant&#45;unification -->
 <g id="node9" class="node">
 <title>elab&#45;stlc&#45;variant&#45;unification</title>
-<g id="a_node9"><a xlink:href="./elab-stlc-variant-unification" xlink:title="elab&#45;stlc&#45;variant&#45;unification">
 <path fill="white" stroke="none" d="M620.65,-567C620.65,-567 455.35,-567 455.35,-567 449.35,-567 443.35,-561 443.35,-555 443.35,-555 443.35,-543 443.35,-543 443.35,-537 449.35,-531 455.35,-531 455.35,-531 620.65,-531 620.65,-531 626.65,-531 632.65,-537 632.65,-543 632.65,-543 632.65,-555 632.65,-555 632.65,-561 626.65,-567 620.65,-567"/>
 <text text-anchor="middle" x="538" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;variant&#45;unification</text>
-</a>
-</g>
 </g>
 <!-- elab&#45;stlc&#45;unification&#45;&gt;elab&#45;stlc&#45;variant&#45;unification -->
 <g id="edge8" class="edge">
@@ -207,20 +171,14 @@
 <!-- compile&#45;arith -->
 <g id="node12" class="node">
 <title>compile&#45;arith</title>
-<g id="a_node12"><a xlink:href="./compile-arith/" xlink:title="compile&#45;arith">
 <path fill="white" stroke="none" d="M135.17,-704C135.17,-704 52.37,-704 52.37,-704 46.37,-704 40.37,-698 40.37,-692 40.37,-692 40.37,-680 40.37,-680 40.37,-674 46.37,-668 52.37,-668 52.37,-668 135.17,-668 135.17,-668 141.17,-668 147.17,-674 147.17,-680 147.17,-680 147.17,-692 147.17,-692 147.17,-698 141.17,-704 135.17,-704"/>
 <text text-anchor="middle" x="93.77" y="-680.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">compile&#45;arith</text>
-</a>
-</g>
 </g>
 <!-- compile&#45;arithcond -->
 <g id="node13" class="node">
 <title>compile&#45;arithcond</title>
-<g id="a_node13"><a xlink:href="./compile-arithcond/" xlink:title="compile&#45;arithcond">
 <path fill="white" stroke="none" d="M363.47,-704C363.47,-704 251.42,-704 251.42,-704 245.42,-704 239.42,-698 239.42,-692 239.42,-692 239.42,-680 239.42,-680 239.42,-674 245.42,-668 251.42,-668 251.42,-668 363.47,-668 363.47,-668 369.47,-668 375.47,-674 375.47,-680 375.47,-680 375.47,-692 375.47,-692 375.47,-698 369.47,-704 363.47,-704"/>
 <text text-anchor="middle" x="307.45" y="-680.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">compile&#45;arithcond</text>
-</a>
-</g>
 </g>
 <!-- compile&#45;arith&#45;&gt;compile&#45;arithcond -->
 <g id="edge13" class="edge">
@@ -231,11 +189,8 @@
 <!-- lang&#45;lc&#45;interpreters -->
 <g id="node14" class="node">
 <title>lang&#45;lc&#45;interpreters</title>
-<g id="a_node14"><a xlink:href="./lang-lc-interpreters/" xlink:title="lang&#45;lc&#45;interpreters">
 <path fill="white" stroke="none" d="M366.1,-52C366.1,-52 248.8,-52 248.8,-52 242.8,-52 236.8,-46 236.8,-40 236.8,-40 236.8,-28 236.8,-28 236.8,-22 242.8,-16 248.8,-16 248.8,-16 366.1,-16 366.1,-16 372.1,-16 378.1,-22 378.1,-28 378.1,-28 378.1,-40 378.1,-40 378.1,-46 372.1,-52 366.1,-52"/>
 <text text-anchor="middle" x="307.45" y="-28.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;lc&#45;interpreters</text>
-</a>
-</g>
 </g>
 <!-- lang&#45;lc&#45;interpreters&#45;&gt;elab&#45;stlc&#45;bidirectional -->
 <g id="edge14" class="edge">
@@ -246,38 +201,26 @@
 <!-- lang&#45;datalog -->
 <g id="node16" class="node">
 <title>lang&#45;datalog</title>
-<g id="a_node16"><a xlink:href="./lang-datalog/" xlink:title="lang&#45;datalog">
 <path fill="white" stroke="none" d="M346.97,-160C346.97,-160 267.92,-160 267.92,-160 261.92,-160 255.92,-154 255.92,-148 255.92,-148 255.92,-136 255.92,-136 255.92,-130 261.92,-124 267.92,-124 267.92,-124 346.97,-124 346.97,-124 352.97,-124 358.97,-130 358.97,-136 358.97,-136 358.97,-148 358.97,-148 358.97,-154 352.97,-160 346.97,-160"/>
 <text text-anchor="middle" x="307.45" y="-136.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;datalog</text>
-</a>
-</g>
 </g>
 <!-- lang&#45;shader&#45;graphics -->
 <g id="node17" class="node">
 <title>lang&#45;shader&#45;graphics</title>
-<g id="a_node17"><a xlink:href="./lang-shader-graphics/" xlink:title="lang&#45;shader&#45;graphics">
 <path fill="white" stroke="none" d="M373.22,-214C373.22,-214 241.67,-214 241.67,-214 235.67,-214 229.67,-208 229.67,-202 229.67,-202 229.67,-190 229.67,-190 229.67,-184 235.67,-178 241.67,-178 241.67,-178 373.22,-178 373.22,-178 379.22,-178 385.22,-184 385.22,-190 385.22,-190 385.22,-202 385.22,-202 385.22,-208 379.22,-214 373.22,-214"/>
 <text text-anchor="middle" x="307.45" y="-190.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;shader&#45;graphics</text>
-</a>
-</g>
 </g>
 <!-- lang&#45;declarative&#45;graphics -->
 <g id="node18" class="node">
 <title>lang&#45;declarative&#45;graphics</title>
-<g id="a_node18"><a xlink:href="./lang-declarative-graphics/" xlink:title="lang&#45;declarative&#45;graphics">
 <path fill="white" stroke="none" d="M385.22,-268C385.22,-268 229.67,-268 229.67,-268 223.67,-268 217.67,-262 217.67,-256 217.67,-256 217.67,-244 217.67,-244 217.67,-238 223.67,-232 229.67,-232 229.67,-232 385.22,-232 385.22,-232 391.22,-232 397.22,-238 397.22,-244 397.22,-244 397.22,-256 397.22,-256 397.22,-262 391.22,-268 385.22,-268"/>
 <text text-anchor="middle" x="307.45" y="-244.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;declarative&#45;graphics</text>
-</a>
-</g>
 </g>
 <!-- lang&#45;fractal&#45;tree&#45;rewriting -->
 <g id="node20" class="node">
 <title>lang&#45;fractal&#45;tree&#45;rewriting</title>
-<g id="a_node20"><a xlink:href="./lang-fractal-tree-rewriting/" xlink:title="lang&#45;fractal&#45;tree&#45;rewriting">
 <path fill="white" stroke="none" d="M615.4,-295C615.4,-295 460.6,-295 460.6,-295 454.6,-295 448.6,-289 448.6,-283 448.6,-283 448.6,-271 448.6,-271 448.6,-265 454.6,-259 460.6,-259 460.6,-259 615.4,-259 615.4,-259 621.4,-259 627.4,-265 627.4,-271 627.4,-271 627.4,-283 627.4,-283 627.4,-289 621.4,-295 615.4,-295"/>
 <text text-anchor="middle" x="538" y="-271.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;tree&#45;rewriting</text>
-</a>
-</g>
 </g>
 <!-- lang&#45;declarative&#45;graphics&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
 <g id="edge16" class="edge">
@@ -288,11 +231,8 @@
 <!-- lang&#45;fractal&#45;growth -->
 <g id="node19" class="node">
 <title>lang&#45;fractal&#45;growth</title>
-<g id="a_node19"><a xlink:href="./lang-fractal-growth/" xlink:title="lang&#45;fractal&#45;growth">
 <path fill="white" stroke="none" d="M365.72,-322C365.72,-322 249.17,-322 249.17,-322 243.17,-322 237.17,-316 237.17,-310 237.17,-310 237.17,-298 237.17,-298 237.17,-292 243.17,-286 249.17,-286 249.17,-286 365.72,-286 365.72,-286 371.72,-286 377.72,-292 377.72,-298 377.72,-298 377.72,-310 377.72,-310 377.72,-316 371.72,-322 365.72,-322"/>
 <text text-anchor="middle" x="307.45" y="-298.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;growth</text>
-</a>
-</g>
 </g>
 <!-- lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
 <g id="edge15" class="edge">
