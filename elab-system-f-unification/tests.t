@@ -285,9 +285,9 @@ Scope escape (see https://counterexamples.org/scope-escape.html)
   > let test (id : [a] -> a -> a) : Bool :=
   >   id true;
   > 
-  > fun f => test (fun [a] x => let y := f x; x)
+  > fun f => test (fun x => let y := f x; x)
   > EOF
-  <input>:4:39: meta variable ?2 escapes its scope:
+  <input>:4:35: type variable $a escapes the scope of meta variable ?2:
     expected: ?2
-    found: a
+    found: $a
   [1]

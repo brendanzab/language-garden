@@ -182,9 +182,10 @@ module Elab = struct
             Core.pp_meta m
             (pp_ty ctx) (quote_vty ctx vty1)
             (pp_ty ctx) (quote_vty ctx vty2))
-    | Core.Escaping_scope m ->
+    | Core.Escaping_scope (m, vty) ->
         error loc
-          (Format.asprintf "@[<v 2>@[meta variable %a escapes its scope:@]@ @[expected: %a@]@ @[found: %a@]@]"
+          (Format.asprintf "@[<v 2>@[type variable %a escapes the scope of meta variable %a:@]@ @[expected: %a@]@ @[found: %a@]@]"
+            (pp_ty ctx) (quote_vty ctx vty)
             Core.pp_meta m
             (pp_ty ctx) (quote_vty ctx vty1)
             (pp_ty ctx) (quote_vty ctx vty2))

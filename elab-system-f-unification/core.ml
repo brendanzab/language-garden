@@ -297,7 +297,7 @@ let rec force_vty (vty : vty) : vty =
 
 exception Mismatched_types of vty * vty
 exception Infinite_type of meta
-exception Escaping_scope of meta
+exception Escaping_scope of meta * vty
 
 (** Validate an unsolved metavariable against a solution candidate type:
 
@@ -331,7 +331,7 @@ let validate_meta_solution (m, ty_level : meta * level) (ty_size, vty : int * vt
         if ty_level <= ty_level' && ty_level' < ty_size then
           (* Throw an error if a to-be-solved metavariable would depend on type
               variables to “the right” of it in the context. *)
-          raise (Escaping_scope m)
+          raise (Escaping_scope (m, vty))
     | Meta_var m' ->
         (* Occurs check *)
         if m == m' then
