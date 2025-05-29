@@ -325,7 +325,7 @@ exception Escaping_scope of meta * vty
         This raises the levels of unsolved metavariables in the candidate type
         to match the level of the to-be-solved metavariable.
 *)
-let validate_meta_solution (m, ty_level : meta * level) (ty_size, vty : int * vty) =
+let validate_meta_solution (ty_size : level) (m, ty_level : meta * level) (vty : vty) : unit =
   (** Traverse the solution candidate type, using the size of the typing
       context to generate free variables under binders. *)
   let rec go ty_size' (vty : vty) =
@@ -369,7 +369,7 @@ let rec unify_vtys (ty_size : level) (vty1 : vty) (vty2 : vty) : unit =
       begin match !m with
       | Solved vty' -> unify_vtys ty_size vty vty'
       | Unsolved { ty_level; _ } ->
-          validate_meta_solution (m, ty_level) (ty_size, vty);
+          validate_meta_solution ty_size (m, ty_level) vty;
           m := Solved vty
       end
   | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
