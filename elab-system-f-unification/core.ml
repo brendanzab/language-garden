@@ -69,23 +69,30 @@ and vty =
   | Int_type
   | Bool_type
 
-(** The current state of a metavariable
+(** The current state of a metavariable.
+
+    As a result of adding binders like {!Forall_type} to our type syntax, the
+    main complication we have in this system is preventing bound type variables
+    (i.e. {!Local_var}) from escaping their scope during unification. To do this
+    we use {i de Bruijn levels}, with an approach inspired by Mark Barbone’s
+    {{: https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7}
+    implementation} of higher rank types (See the README of this project for
+    more resources).
 
     Conceptually, metavariables are interspersed with normal bound variables in
-    the type environment. Multiple metavariables can be introduced at the same
-    point in the type environment, and their solutions can only depend on local
-    type variables “to the left” of them in the context.
+    the type environment. For performance reasons we don’t actually store them
+    this way in our implementation, but we still need to keep track of their
+    position to avoid scoping errors. This level could also be used in the
+    future as an {{: https://okmij.org/ftp/ML/generalization.html} efficient way
+    to implement generalisation}.
 *)
 and meta_state =
   | Unsolved of { id : meta_id; ty_level : level }
   (** An unsolved metavariable.
 
-      The [ty_level] field represents the point in the type environment where
-      the meta should be inserted. At the time when an unsolved metavariable is
-      created, we do not yet know what level it should be inserted at, so we
-      raise it as needed during unification. As we do this, we must be careful
-      to ensure that scoping errors are caught (i.e. when a solved metavariable
-      would depend on local type variables “to the right” in the context).
+      The [ty_level] field is a constraint that represents the point in the type
+      environment that we currently think the meta should be inserted (we raise
+      this as needed during unification).
   *)
 
   | Solved of vty
