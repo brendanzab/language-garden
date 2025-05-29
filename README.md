@@ -89,7 +89,11 @@ Miscellaneous programming language experiments.
 Many other smaller examples and unfinished projects can be found in the
 [scraps](./scraps/) directory.
 
-## Dependency graph
+## Project dependency graph
+
+This diagram shows the flow of ideas and techniques between the various projects
+listed above. If you are struggling to understand concepts in a later project,
+it might be worth going back to an earlier one to see a simpler version.
 
 ![Project dependency graph](garden.svg)
 
