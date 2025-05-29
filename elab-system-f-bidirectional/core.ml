@@ -25,7 +25,7 @@ type level = int
 
 (** Converts a {!level} to an {!index} that is bound in an environment of the
     supplied size. Assumes that [ size > level ]. *)
-let level_to_index size level =
+let level_to_index (size : level) (level : level) =
   size - level - 1
 
 (** An environment of bindings that can be looked up directly using a
@@ -176,7 +176,7 @@ module Semantics = struct
   (** {1 Quotation} *)
 
   (** Convert types from the semantic domain back into syntax. *)
-  let rec quote_vty  (ty_size : int) (vty : vty) : ty =
+  let rec quote_vty  (ty_size : level) (vty : vty) : ty =
     match vty with
     | Var ty_level -> Var (level_to_index ty_size ty_level)
     | Forall_type (name, body_vty) ->
@@ -190,7 +190,7 @@ module Semantics = struct
     | Bool_type -> Bool_type
 
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote_vtm (ty_size : int) (tm_size : int) (vtm : vtm) : tm =
+  let rec quote_vtm (ty_size : level) (tm_size : level) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_ntm ty_size tm_size ntm
     | Forall_lit (name, body) ->
@@ -203,7 +203,7 @@ module Semantics = struct
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_ntm (ty_size : int) (tm_size : int) (ntm : ntm) : tm =
+  and quote_ntm (ty_size : level) (tm_size : level) (ntm : ntm) : tm =
     match ntm with
     | Var tm_level ->
         Var (level_to_index tm_size tm_level)
@@ -229,7 +229,7 @@ module Semantics = struct
 
   (** {1 Conversion Checking} *)
 
-  let rec is_convertible (ty_size : int) (vty1 : vty) (vty2 : vty) : bool =
+  let rec is_convertible (ty_size : level) (vty1 : vty) (vty2 : vty) : bool =
     match vty1, vty2 with
     | Var ty_level1, Var ty_level2 -> ty_level1 = ty_level2
     | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->

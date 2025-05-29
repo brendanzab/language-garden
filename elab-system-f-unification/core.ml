@@ -213,7 +213,7 @@ module Semantics = struct
   (** {1 Quotation} *)
 
   (** Convert types from the semantic domain back into syntax. *)
-  let rec quote_vty  (ty_size : int) (vty : vty) : ty =
+  let rec quote_vty  (ty_size : level) (vty : vty) : ty =
     match vty with
     | Local_var ty_level -> Local_var (level_to_index ty_size ty_level)
     | Meta_var id -> Meta_var id
@@ -228,7 +228,7 @@ module Semantics = struct
     | Bool_type -> Bool_type
 
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote_vtm (ty_size : int) (tm_size : int) (vtm : vtm) : tm =
+  let rec quote_vtm (ty_size : level) (tm_size : level) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_ntm ty_size tm_size ntm
     | Forall_lit (name, body) ->
@@ -241,7 +241,7 @@ module Semantics = struct
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_ntm (ty_size : int) (tm_size : int) (ntm : ntm) : tm =
+  and quote_ntm (ty_size : level) (tm_size : level) (ntm : ntm) : tm =
     match ntm with
     | Local_var tm_level ->
         Local_var (level_to_index tm_size tm_level)
@@ -349,7 +349,7 @@ let validate_meta_solution (m, ty_level : meta * level) (ty_size, vty : int * vt
   in
   go ty_size vty
 
-let rec unify_vtys (ty_size : int) (vty1 : vty) (vty2 : vty) : unit =
+let rec unify_vtys (ty_size : level) (vty1 : vty) (vty2 : vty) : unit =
   match force_vty vty1, force_vty vty2 with
   | Local_var level1, Local_var level2 when level1 = level2 -> ()
   (* Use pointer equality to compare metavariables *)
@@ -386,7 +386,7 @@ let rec unify_vtys (ty_size : int) (vty1 : vty) (vty2 : vty) : unit =
 *)
 
 (* Deeply force a type, leaving only unsolved metavariables remaining *)
-let rec zonk_ty (ty_size : int) (ty : ty) : ty =
+let rec zonk_ty (ty_size : level) (ty : ty) : ty =
   match ty with
   | Meta_var m ->
       begin match !m with
@@ -402,7 +402,7 @@ let rec zonk_ty (ty_size : int) (ty : ty) : ty =
   | Bool_type -> Bool_type
 
 (** Force all metavariables in a term *)
-let zonk_tm (ty_size : int) (tm : tm) : tm =
+let zonk_tm (ty_size : level) (tm : tm) : tm =
   let rec go (tm : tm) : tm =
     match tm with
     | Local_var tm_index -> Local_var tm_index

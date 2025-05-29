@@ -70,7 +70,7 @@ module Elab = struct
 
   (** The elaboration context *)
   type context = {
-    ty_size : int;
+    ty_size : Core.level;
     ty_names : string option Core.env;
     ty_env : Core.Semantics.vty Core.env;
     tm_tys : (string option * Core.Semantics.vty) Core.env;

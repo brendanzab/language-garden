@@ -25,7 +25,7 @@ type level = int
 
 (** Converts a {!level} to an {!index} that is bound in an environment of the
     supplied size. Assumes that [ size > level ]. *)
-let level_to_index size level =
+let level_to_index (size : level) (level : level) =
   size - level - 1
 
 (** An environment of bindings that can be looked up directly using a
@@ -136,7 +136,7 @@ module Semantics = struct
   (** {1 Quotation} *)
 
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote (size : int) (ve : vexpr) : expr =
+  let rec quote (size : level) (ve : vexpr) : expr =
     match ve with
     | Neu ne -> quote_neu size ne
     | Fun_lit (name, param_ty, body) ->
@@ -145,7 +145,7 @@ module Semantics = struct
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_neu (size : int) (ne : nexpr) : expr =
+  and quote_neu (size : level) (ne : nexpr) : expr =
     match ne with
     | Var level ->
         Var (level_to_index size level)

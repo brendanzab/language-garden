@@ -24,7 +24,7 @@ type level = int
 
 (** Convert a De Bruijn level to a De Bruijn index using the number of bindings
     the environment where the index will be used. *)
-let level_to_index size level =
+let level_to_index (size : level) (level : level) =
   size - level - 1
 
 

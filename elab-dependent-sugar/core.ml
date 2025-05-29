@@ -43,7 +43,7 @@ type level = int
 
 (** Converts a {!level} to an {!index} that is bound in an environment of the
     supplied size. Assumes that [ size > level ]. *)
-let level_to_index size level =
+let level_to_index (size : level) (level : level) =
   size - level - 1
 
 (** An environment of bindings that can be looked up directly using a
@@ -330,7 +330,7 @@ module Semantics = struct
       variables in the semantic domain back to an {!index} representation
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at. *)
-  let rec quote (size : int) (tm : vtm) : Syntax.tm =
+  let rec quote (size : level) (tm : vtm) : Syntax.tm =
     match tm with
     | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
@@ -340,7 +340,7 @@ module Semantics = struct
     | Fun_lit (name, body) ->
         let x = Neu (Var size) in
         Syntax.Fun_lit (name, quote (size + 1) (body x))
-  and quote_neu (size : int) (neu : neu) : Syntax.tm =
+  and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
     | Var level -> Syntax.Var (level_to_index size level)
     | Fun_app (neu, arg) -> Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
@@ -350,7 +350,7 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (size : int) (env : vtm env) (tm : Syntax.tm) : Syntax.tm =
+  let normalise (size : level) (env : vtm env) (tm : Syntax.tm) : Syntax.tm =
     quote size (eval (env : vtm env) tm)
 
 
@@ -358,7 +358,7 @@ module Semantics = struct
 
   (** Checks that two values compute to the same term under the assumption that
       both values have the same type. *)
-  let rec is_convertible (size : int) (tm1 : vtm) (tm2 : vtm) : bool =
+  let rec is_convertible (size : level) (tm1 : vtm) (tm2 : vtm) : bool =
     match tm1, tm2 with
     | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
@@ -374,7 +374,7 @@ module Semantics = struct
         let x = Neu (Var size) in
         is_convertible size (body x) (app fun_tm x)
     | _, _ -> false
-  and is_convertible_neu (size : int) (neu1 : neu) (neu2 : neu) =
+  and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
     | Fun_app (neu1, arg1), Fun_app (neu2, arg2)  ->
