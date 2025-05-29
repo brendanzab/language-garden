@@ -1,5 +1,5 @@
 let bin = "closure-conv"
-let package = "compile-closure-conv"
+let package = "wip-compile-closure-conv"
 
 let generate_rules base =
   Printf.printf

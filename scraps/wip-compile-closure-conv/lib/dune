@@ -1,6 +1,6 @@
 (library
   (name closure_conv)
-  (public_name compile-closure-conv)
+  (public_name wip-compile-closure-conv)
   (preprocess
     (pps sedlex.ppx)))
 

@@ -1,5 +1,5 @@
 (mdx
-  (package compile-closure-conv)
+  (package wip-compile-closure-conv)
   (deps %{bin:closure-conv}))
 
 (env

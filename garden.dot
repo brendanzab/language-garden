@@ -43,7 +43,6 @@ digraph garden {
 
     "compile-arith" [URL = "./compile-arith/"];
     "compile-arithcond" [URL = "./compile-arithcond/"];
-    "compile-closure-conv" [URL = "./compile-closure-conv"];
   }
 
   subgraph lang {

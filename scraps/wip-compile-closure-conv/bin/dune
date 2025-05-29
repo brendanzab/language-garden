@@ -1,9 +1,9 @@
 (executable
   (name main)
   (public_name closure-conv)
-  (package compile-closure-conv)
+  (package wip-compile-closure-conv)
   (libraries
-    compile-closure-conv
+    wip-compile-closure-conv
     cmdliner
     menhirLib
     sedlex))

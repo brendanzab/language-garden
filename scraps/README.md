@@ -94,6 +94,9 @@ Work in progress projects:
 
 - [**wip-elab-builtins**](./wip-elab-builtins/):
   An elaborator that supports built-in types and operations.
+- [**wip-compile-closure-conv**](./wip-compile-closure-conv):
+  Typed closure conversion and lambda lifting for a simply typed lambda calculus
+  with booleans and integers.
 - [**wip-compile-stlc**](./wip-compile-stlc):
   A type preserving compiler for the simply typed lambda calculus.
 - [**wip-compile-stratify**](./wip-compile-stratify/):
