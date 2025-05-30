@@ -420,28 +420,25 @@ let rec zonk_ty (ty_size : level) (ty : ty) : ty =
   | Bool_type -> Bool_type
 
 (** Force all metavariables in a term *)
-let zonk_tm (ty_size : level) (tm : tm) : tm =
-  let rec go (tm : tm) : tm =
-    match tm with
-    | Local_var tm_index -> Local_var tm_index
-    | Let (name, def_ty, def, body) ->
-        Let (name, zonk_ty ty_size def_ty, go def, go body)
-    | Forall_lit (name, body) ->
-        Forall_lit (name, go body)
-    | Forall_app (head, arg) ->
-        Forall_app (go head, zonk_ty ty_size arg)
-    | Fun_lit (name, param_ty, body) ->
-        Fun_lit (name, zonk_ty ty_size param_ty, go body)
-    | Fun_app (head, arg) ->
-        Fun_app (go head, go arg)
-    | Int_lit i -> Int_lit i
-    | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, tm1, tm2) ->
-        Bool_elim (go head, go tm1, go tm2)
-    | Prim_app (prim, args) ->
-        Prim_app (prim, List.map go args)
-  in
-  go tm
+let rec zonk_tm (ty_size : level) (tm : tm) : tm =
+  match tm with
+  | Local_var tm_index -> Local_var tm_index
+  | Let (name, def_ty, def, body) ->
+      Let (name, zonk_ty ty_size def_ty, zonk_tm ty_size def, zonk_tm ty_size body)
+  | Forall_lit (name, body) ->
+      Forall_lit (name, zonk_tm (ty_size + 1) body)
+  | Forall_app (head, arg) ->
+      Forall_app (zonk_tm ty_size head, zonk_ty ty_size arg)
+  | Fun_lit (name, param_ty, body) ->
+      Fun_lit (name, zonk_ty ty_size param_ty, zonk_tm ty_size body)
+  | Fun_app (head, arg) ->
+      Fun_app (zonk_tm ty_size head, zonk_tm ty_size arg)
+  | Int_lit i -> Int_lit i
+  | Bool_lit b -> Bool_lit b
+  | Bool_elim (head, tm1, tm2) ->
+      Bool_elim (zonk_tm ty_size head, zonk_tm ty_size tm1, zonk_tm ty_size tm2)
+  | Prim_app (prim, args) ->
+      Prim_app (prim, List.map (zonk_tm ty_size) args)
 
 
 (** {1 Pretty printing} *)
