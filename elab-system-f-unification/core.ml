@@ -53,7 +53,7 @@ type meta_id = int
 
 (** Type syntax *)
 type ty =
-  | Local_var of index              (* Local type variables (i.e. bound or rigid variables) *)
+  | Local_var of index              (* Local type variables bound in the type environment (i.e. bound or rigid variables) *)
   | Meta_var of meta                (* Meta variables *)
   | Forall_type of name * ty        (* Type of a forall (i.e. the type of a term parameterised by a type) *)
   | Fun_type of ty * ty             (* Type of function types *)
@@ -109,11 +109,11 @@ and meta = meta_state ref
 
 (** Term syntax *)
 type tm =
-  | Local_var of index              (* Local term variables *)
-  | Let of name * ty * tm * tm      (* Local let bindings *)
-  | Forall_lit of name * tm         (* Type function literal (i.e. a big-lambda abstraction) *)
+  | Local_var of index              (* Local term variables bound in the term environment *)
+  | Let of name * ty * tm * tm      (* Local let bindings, introducing a term binding *)
+  | Forall_lit of name * tm         (* Type function literal, introducing a type binding (i.e. a big-lambda abstraction) *)
   | Forall_app of tm * ty           (* Type function application *)
-  | Fun_lit of name * ty * tm       (* Function literal (i.e. a lambda abstraction) *)
+  | Fun_lit of name * ty * tm       (* Function literal, introducing a term binding (i.e. a lambda abstraction) *)
   | Fun_app of tm * tm              (* Function application *)
   | Int_lit of int
   | Bool_lit of bool
