@@ -324,8 +324,7 @@ module Elab = struct
       match params, body_ty with
       | [], Some body_ty ->
           let body_ty = check_ty ctx body_ty in
-          let body_vty = eval_ty ctx body_ty in
-          check_tm ctx body body_vty, body_ty
+          check_tm ctx body (eval_ty ctx body_ty), body_ty
 
       | [], None ->
           let body, body_vty = infer_tm ctx body in

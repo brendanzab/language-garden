@@ -397,8 +397,7 @@ module Elab = struct
       match params, body_ty with
       | [], Some body_ty ->
           let body_ty = check_ty ctx body_ty in
-          let body_vty = eval_ty ctx body_ty in
-          check_tm ctx body body_vty, body_ty
+          check_tm ctx body (eval_ty ctx body_ty), body_ty
 
       | [], None ->
           let body, body_vty = infer_tm ctx body in
@@ -413,10 +412,9 @@ module Elab = struct
             | None -> fresh_meta ctx name.loc `Fun_param
             | Some ty -> check_ty ctx ty
           in
-          let body, body_ty =
-            let ctx = extend_tm ctx name.data (eval_ty ctx param_ty) in
-            infer_fun_lit ctx params body_ty body in
-          Fun_lit (name.data, param_ty, body), Fun_type (param_ty, quote_vty ctx body_ty)
+          let param_vty = eval_ty ctx param_ty in
+          let body, body_ty = go (extend_tm ctx name.data param_vty) params body_ty body in
+          Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
     in
 
     let body, body_ty = go ctx params body_ty body in
