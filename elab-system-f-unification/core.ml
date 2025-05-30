@@ -71,8 +71,8 @@ and vty =
 
 (** The current state of a metavariable.
 
-    As a result of adding binders like {!Forall_type} to our type syntax, the
-    main complication we have in this system is preventing bound type variables
+    Because we have binders like {!Forall_lit} in our term syntax, the main
+    complication we have in this system is preventing bound type variables
     (i.e. {!Local_var}) from escaping their scope during unification. To do this
     we use {i de Bruijn levels}, with an approach inspired by Mark Barbone’s
     {{: https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7}
