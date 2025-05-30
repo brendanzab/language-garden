@@ -59,13 +59,13 @@ let elab_tm (tm : Surface.tm) : Core.tm * Core.ty =
 let elab_cmd () : unit =
   let tm, ty = elab_tm (parse_tm "<input>" stdin) in
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm [] []) tm
+    (Core.pp_tm []) tm
     (Core.pp_ty []) ty
 
 let norm_cmd () : unit =
   let tm, ty = elab_tm (parse_tm "<input>" stdin) in
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm [] []) (Core.Semantics.normalise_tm [] [] tm)
+    (Core.pp_tm []) (Core.Semantics.normalise_tm [] tm)
     (Core.pp_ty []) ty
 
 

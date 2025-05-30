@@ -83,57 +83,54 @@ module Elab = struct
 
   (** The elaboration context *)
   type context = {
-    ty_size : Core.level;
-    ty_names : string option Core.env;
-    ty_env : Core.vty Core.env;
-    tm_tys : (string option * Core.vty) Core.env;
+    size : Core.level;
+    names : string option Core.env;
+    decls : Core.decl Core.env;
+    defns : Core.defn Core.env;
     metas : (Core.meta * loc * meta_info) Dynarray.t;
   }
 
   (** The empty context *)
   let empty : context = {
-    ty_size = 0;
-    ty_names = [];
-    ty_env = [];
-    tm_tys = [];
+    size = 0;
+    names = [];
+    decls = [];
+    defns = [];
     metas = Dynarray.create ();
   }
 
   (** The type variable that will be bound after calling {!extend_ty} *)
   let next_ty_var (ctx : context) : Core.vty =
-    Local_var ctx.ty_size
+    Local_var ctx.size
 
   (** Extend the context with a type binding *)
   let extend_ty (ctx : context) (name : string option) : context = {
-    ctx with
-    ty_size = ctx.ty_size + 1;
-    ty_names = name :: ctx.ty_names;
-    ty_env = next_ty_var ctx :: ctx.ty_env;
+    size = ctx.size + 1;
+    names = name :: ctx.names;
+    decls = Ty_decl :: ctx.decls;
+    defns = Ty_defn (next_ty_var ctx) :: ctx.defns;
+    metas = ctx.metas;
   }
 
   (** Extend the context with a term binding *)
   let extend_tm (ctx : context) (name : string option) (vty : Core.vty) : context = {
-    ctx with
-    tm_tys = (name, vty) :: ctx.tm_tys;
+    size = ctx.size + 1;
+    names = name :: ctx.names;
+    decls = Tm_decl vty :: ctx.decls;
+    defns = Tm_defn (Neu (Local_var ctx.size)) :: ctx.defns;
+    metas = ctx.metas;
   }
 
-  (** Lookup a type name in the context *)
-  let lookup_ty (ctx : context) (name : string) : Core.index option =
-    ctx.ty_names |> List.find_mapi @@ fun ty_index name' ->
+  (** Lookup a name in the context *)
+  let lookup (ctx : context) (name : string) : (Core.index * Core.decl) option =
+    ctx.names |> List.find_mapi @@ fun index name' ->
       match Some name = name' with
-      | true -> Some ty_index
-      | false -> None
-
-  (** Lookup a term name in the context *)
-  let lookup_tm (ctx : context) (name : string) : (Core.index * Core.vty) option =
-    ctx.tm_tys |> List.find_mapi @@ fun tm_index (name', ty) ->
-      match Some name = name' with
-      | true -> Some (tm_index, ty)
+      | true -> Some (index, List.nth ctx.decls index)
       | false -> None
 
   (** Generate a fresh metavariable *)
   let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
-    let m = Core.fresh_meta ctx.ty_size in
+    let m = Core.fresh_meta ctx.size in
     Dynarray.add_last ctx.metas (m, loc, info);
     Meta_var m
 
@@ -147,19 +144,19 @@ module Elab = struct
     Dynarray.fold_right go ctx.metas []
 
   let eval_ty (ctx : context) (ty : Core.ty) : Core.vty =
-    Semantics.eval_ty ctx.ty_env ty
+    Semantics.eval_ty ctx.defns ty
 
   let quote_vty (ctx : context) (vty : Core.vty) : Core.ty =
-    Semantics.quote_vty ctx.ty_size vty
+    Semantics.quote_vty ctx.size vty
 
   let zonk_ty (ctx: context) (ty : Core.ty) : Core.ty =
-    Core.zonk_ty ctx.ty_size ty
+    Core.zonk_ty ctx.size ty
 
   let zonk_tm (ctx: context) (tm : Core.tm) : Core.tm =
-    Core.zonk_tm ctx.ty_size tm
+    Core.zonk_tm ctx.size tm
 
   let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Core.ty) : unit =
-    Core.pp_ty ctx.ty_names fmt (zonk_ty ctx ty)
+    Core.pp_ty ctx.names fmt (zonk_ty ctx ty)
 
 
   (** {2 Elaboration errors} *)
@@ -174,7 +171,7 @@ module Elab = struct
     raise (Error (loc, message))
 
   let unify_vtys (ctx : context) (loc : loc) (vty1 : Core.vty) (vty2 : Core.vty) =
-    try Core.unify_vtys ctx.ty_size vty1 vty2 with
+    try Core.unify_vtys ctx.size vty1 vty2 with
     | Core.Mismatched_types (_, _) ->
         error loc
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
@@ -209,8 +206,9 @@ module Elab = struct
   let rec check_ty (ctx : context) (ty : ty) : Core.ty =
     match ty.data with
     | Name name ->
-        begin match lookup_ty ctx name with
-        | Some ty_index -> Local_var ty_index
+        begin match lookup ctx name with
+        | Some (index, Ty_decl) -> Local_var index
+        | Some (_, Tm_decl _) -> error ty.loc (Format.asprintf "expected type, found `%s`" name)
         | None when name = "Bool" -> Bool_type
         | None when name = "Int" -> Int_type
         | None -> error ty.loc (Format.asprintf "unbound type `%s`" name)
@@ -254,8 +252,9 @@ module Elab = struct
   and infer_tm (ctx : context) (tm : tm) : Core.tm * Core.vty =
     match tm.data with
     | Name name ->
-        begin match lookup_tm ctx name with
-        | Some (tm_index, vty) -> Local_var tm_index, vty
+        begin match lookup ctx name with
+        | Some (_, Ty_decl) -> error tm.loc (Format.asprintf "expected term, found `%s`" name)
+        | Some (index, Tm_decl vty) -> Local_var index, vty
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 

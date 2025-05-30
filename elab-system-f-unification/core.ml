@@ -80,19 +80,19 @@ and vty =
     more resources).
 
     Conceptually, metavariables are interspersed with normal bound variables in
-    the type environment. For performance reasons we don’t actually store them
-    this way in our implementation, but we still need to keep track of their
-    position to avoid scoping errors. This level could also be used in the
-    future as an {{: https://okmij.org/ftp/ML/generalization.html} efficient way
-    to implement generalisation}.
+    the context. For performance reasons we don’t actually store them this way
+    in our implementation, but we still need to keep track of their position to
+    avoid scoping errors. This level could also be used in the future as an
+    {{: https://okmij.org/ftp/ML/generalization.html} efficient way to implement
+    generalisation}.
 *)
 and meta_state =
-  | Unsolved of { id : meta_id; ty_level : level }
+  | Unsolved of { id : meta_id; level : level }
   (** An unsolved metavariable.
 
-      The [ty_level] field is a constraint that represents the point in the type
-      environment that we currently think the meta should be inserted (we raise
-      this as needed during unification).
+      The [level] field is a constraint that represents the point in the context
+      that we currently think the meta should be inserted (we raise this as
+      needed during unification).
   *)
 
   | Solved of vty
@@ -143,6 +143,19 @@ and ntm =
   | Prim_app of Prim.t * vtm list
 
 
+(** {2 Environment entries} *)
+
+(** Type and term declarations *)
+type decl =
+  | Ty_decl
+  | Tm_decl of vty
+
+(** Type and term definitions *)
+type defn =
+  | Ty_defn of vty
+  | Tm_defn of vtm
+
+
 (** Semantics of the core language *)
 module Semantics = struct
 
@@ -184,116 +197,124 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a type from the syntax into its semantic interpretation *)
-  let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
+  let rec eval_ty (env : defn env) (ty : ty) : vty =
     match ty with
-    | Local_var ty_index -> List.nth ty_env ty_index
+    | Local_var index ->
+        begin match List.nth env index with
+        | Ty_defn vty -> vty
+        | Tm_defn _ -> invalid_arg "expected type"
+        end
     | Meta_var m -> Meta_var m
     | Forall_type (name, body_ty) ->
-        Forall_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
+        Forall_type (name, fun arg -> eval_ty (Ty_defn arg :: env) body_ty)
     | Fun_type (param_ty, body_ty) ->
-        let param_vty = eval_ty ty_env param_ty in
-        let body_vty = eval_ty ty_env body_ty in
+        let param_vty = eval_ty env param_ty in
+        let body_vty = eval_ty env body_ty in
         Fun_type (param_vty, body_vty)
     | Int_type -> Int_type
     | Bool_type -> Bool_type
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : tm) : vtm =
+  let rec eval_tm (env : defn env) (tm : tm) : vtm =
     match tm with
-    | Local_var tm_index -> List.nth tm_env tm_index
+    | Local_var index ->
+        begin match List.nth env index with
+        | Ty_defn _ -> invalid_arg "expected term"
+        | Tm_defn vtm -> vtm
+        end
     | Let (_, _, def, body) ->
-        let def = eval_tm ty_env tm_env def in
-        eval_tm ty_env (def :: tm_env) body
+        let def = eval_tm env def in
+        eval_tm (Tm_defn def :: env) body
     | Forall_lit (name, body) ->
-        Forall_lit (name, fun arg -> eval_tm (arg :: ty_env) tm_env body)
+        Forall_lit (name, fun arg -> eval_tm (Ty_defn arg :: env) body)
     | Forall_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_ty ty_env arg in
+        let head = eval_tm env head in
+        let arg = eval_ty env arg in
         forall_app head arg
     | Fun_lit (name, param_ty, body) ->
-        let param_vty = eval_ty ty_env param_ty in
-        Fun_lit (name, param_vty, fun arg -> eval_tm ty_env (arg :: tm_env) body)
+        let param_vty = eval_ty env param_ty in
+        Fun_lit (name, param_vty, fun arg -> eval_tm (Tm_defn arg :: env) body)
     | Fun_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_tm ty_env tm_env arg in
+        let head = eval_tm env head in
+        let arg = eval_tm env arg in
         fun_app head arg
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm0, tm1) ->
-        let head = eval_tm ty_env tm_env head in
-        let vtm0 = lazy (eval_tm ty_env tm_env tm0) in
-        let vtm1 = lazy (eval_tm ty_env tm_env tm1) in
+        let head = eval_tm env head in
+        let vtm0 = lazy (eval_tm env tm0) in
+        let vtm1 = lazy (eval_tm env tm1) in
         bool_elim head vtm0 vtm1
     | Prim_app (prim, args) ->
-        prim_app prim (List.map (eval_tm ty_env tm_env) args)
+        prim_app prim (List.map (eval_tm env) args)
 
 
   (** {1 Quotation} *)
 
   (** Convert types from the semantic domain back into syntax. *)
-  let rec quote_vty  (ty_size : level) (vty : vty) : ty =
+  let rec quote_vty  (size : level) (vty : vty) : ty =
     match vty with
-    | Local_var ty_level -> Local_var (level_to_index ty_size ty_level)
+    | Local_var level -> Local_var (level_to_index size level)
     | Meta_var id -> Meta_var id
     | Forall_type (name, body_vty) ->
-        let body = quote_vty (ty_size + 1) (body_vty (Local_var ty_size)) in
+        let body = quote_vty (size + 1) (body_vty (Local_var size)) in
         Forall_type (name, body)
     | Fun_type (param_vty, body_vty) ->
-        let param_ty = quote_vty ty_size param_vty in
-        let body_ty = quote_vty ty_size body_vty in
+        let param_ty = quote_vty size param_vty in
+        let body_ty = quote_vty size body_vty in
         Fun_type (param_ty, body_ty)
     | Int_type -> Int_type
     | Bool_type -> Bool_type
 
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote_vtm (ty_size : level) (tm_size : level) (vtm : vtm) : tm =
+  let rec quote_vtm (size : level) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_ntm ty_size tm_size ntm
+    | Neu ntm -> quote_ntm size ntm
     | Forall_lit (name, body) ->
-        let body = quote_vtm (ty_size + 1) tm_size (body (Local_var ty_size)) in
+        let body = quote_vtm (size + 1) (body (Local_var size)) in
         Forall_lit (name, body)
     | Fun_lit (name, param_vty, body) ->
-        let param_ty = quote_vty ty_size param_vty in
-        let body = quote_vtm ty_size (tm_size + 1) (body (Neu (Local_var tm_size))) in
+        let param_ty = quote_vty size param_vty in
+        let body = quote_vtm (size + 1) (body (Neu (Local_var size))) in
         Fun_lit (name, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_ntm (ty_size : level) (tm_size : level) (ntm : ntm) : tm =
+  and quote_ntm (size : level) (ntm : ntm) : tm =
     match ntm with
-    | Local_var tm_level ->
-        Local_var (level_to_index tm_size tm_level)
+    | Local_var level ->
+        Local_var (level_to_index size level)
     | Forall_app (head, arg) ->
-        Forall_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
+        Forall_app (quote_ntm size head, quote_vty size arg)
     | Fun_app (head, arg) ->
-        Fun_app (quote_ntm ty_size tm_size head, quote_vtm ty_size tm_size arg)
+        Fun_app (quote_ntm size head, quote_vtm size arg)
     | Bool_elim (head, vtm0, vtm1) ->
-        let tm0 = quote_vtm ty_size tm_size (Lazy.force vtm0) in
-        let tm1 = quote_vtm ty_size tm_size (Lazy.force vtm1) in
-        Bool_elim (quote_ntm ty_size tm_size head, tm0, tm1)
+        let tm0 = quote_vtm size (Lazy.force vtm0) in
+        let tm1 = quote_vtm size (Lazy.force vtm1) in
+        Bool_elim (quote_ntm size head, tm0, tm1)
     | Prim_app (prim, args) ->
-        Prim_app (prim, List.map (quote_vtm ty_size tm_size) args)
+        Prim_app (prim, List.map (quote_vtm size) args)
 
 
   (** {1 Normalisation} *)
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise_tm (ty_env : vty env) (tm_env : vtm list) (tm : tm) : tm =
-    quote_vtm (List.length ty_env) (List.length tm_env) (eval_tm ty_env tm_env tm)
+  let normalise_tm (env : defn env) (tm : tm) : tm =
+    quote_vtm (List.length env) (eval_tm env tm)
 
 end
 
 
 (** {1 Functions related to metavariables} *)
 
-(** Create a fresh, unsolved metavariable at a given level in the type environment *)
+(** Create a fresh, unsolved metavariable at a given level in the context *)
 let fresh_meta : level -> meta =
   let next_id = ref 0 in
-  fun ty_level ->
+  fun level ->
     let id = !next_id in
     incr next_id;
-    ref (Unsolved { id; ty_level })
+    ref (Unsolved { id; level })
 
 (** Force any solved meta variables on the outermost part of a type. Chains of
     meta variables will be collapsed to make forcing faster in the future. This
@@ -326,27 +347,27 @@ exception Escaping_scope of meta * vty
     - Scope check:
         This ensures that the candidate type does not refer to local type
         variables that are “to-the-right” of to-be-solved metavariable in
-        the type environment.
+        the context.
 
     - Level raising:
         This raises the levels of unsolved metavariables in the candidate type
         to match the level of the to-be-solved metavariable.
 *)
-let validate_meta_solution (ty_size : level) (m, ty_level : meta * level) (vty : vty) : unit =
+let validate_meta_solution (size : level) (m, level : meta * level) (vty : vty) : unit =
   (** Traverse the solution candidate type, using the size of the typing
       context to generate free variables under binders. *)
-  let rec go ty_size' (vty : vty) =
+  let rec go size' (vty : vty) =
     match vty with
     | Fun_type (param_ty, body_ty) ->
-        go ty_size' param_ty;
-        go ty_size' body_ty
+        go size' param_ty;
+        go size' body_ty
     | Forall_type (_, body_ty) ->
-        go (ty_size' + 1) (body_ty (Local_var ty_size'))
+        go (size' + 1) (body_ty (Local_var size'))
     | Int_type -> ()
     | Bool_type -> ()
-    | Local_var ty_level' ->
+    | Local_var level' ->
         (* Scope check *)
-        if ty_level <= ty_level' && ty_level' < ty_size then
+        if level <= level' && level' < size then
           (* Throw an error if a to-be-solved metavariable would depend on type
               variables to “the right” of it in the context. *)
           raise (Escaping_scope (m, vty))
@@ -356,35 +377,35 @@ let validate_meta_solution (ty_size : level) (m, ty_level : meta * level) (vty :
           raise (Infinite_type m);
         (* Level raising *)
         begin match !m' with
-        | Unsolved { id = id'; ty_level = ty_level' } ->
+        | Unsolved { id = id'; level = level' } ->
             (* Raise the level constraint on metavariables to match the level
               of the to-be-solved metavariable. *)
-            if ty_level < ty_level' then
-              m' := Unsolved { id = id'; ty_level }
+            if level < level' then
+              m' := Unsolved { id = id'; level }
         | Solved vty ->
-            go ty_size' vty
+            go size' vty
         end
   in
-  go ty_size vty
+  go size vty
 
-let rec unify_vtys (ty_size : level) (vty1 : vty) (vty2 : vty) : unit =
+let rec unify_vtys (size : level) (vty1 : vty) (vty2 : vty) : unit =
   match force_vty vty1, force_vty vty2 with
   | Local_var level1, Local_var level2 when level1 = level2 -> ()
   (* Use pointer equality to compare metavariables *)
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, vty | vty, Meta_var m ->
       begin match !m with
-      | Solved vty' -> unify_vtys ty_size vty vty'
-      | Unsolved { ty_level; _ } ->
-          validate_meta_solution ty_size (m, ty_level) vty;
+      | Solved vty' -> unify_vtys size vty vty'
+      | Unsolved { level; _ } ->
+          validate_meta_solution size (m, level) vty;
           m := Solved vty
       end
   | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
-      let x : vty = Local_var ty_size in
-      unify_vtys (ty_size + 1) (body_ty1 x) (body_ty2 x)
+      let x : vty = Local_var size in
+      unify_vtys (size + 1) (body_ty1 x) (body_ty2 x)
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
-      unify_vtys ty_size param_ty1 param_ty2;
-      unify_vtys ty_size body_ty1 body_ty2
+      unify_vtys size param_ty1 param_ty2;
+      unify_vtys size body_ty1 body_ty2
   | Int_type, Int_type -> ()
   | Bool_type, Bool_type -> ()
   | vty1, vty2 ->
@@ -404,41 +425,41 @@ let rec unify_vtys (ty_size : level) (vty1 : vty) (vty2 : vty) : unit =
 *)
 
 (* Deeply force a type, leaving only unsolved metavariables remaining *)
-let rec zonk_ty (ty_size : level) (ty : ty) : ty =
+let rec zonk_ty (size : level) (ty : ty) : ty =
   match ty with
   | Meta_var m ->
       begin match !m with
       | Unsolved _ -> Meta_var m
-      | Solved vty -> zonk_ty ty_size (Semantics.quote_vty ty_size vty)
+      | Solved vty -> zonk_ty size (Semantics.quote_vty size vty)
       end
-  | Local_var ty_index -> Local_var ty_index
+  | Local_var index -> Local_var index
   | Forall_type (name, body_ty) ->
-      Forall_type (name, zonk_ty (ty_size + 1) body_ty)
+      Forall_type (name, zonk_ty (size + 1) body_ty)
   | Fun_type (param_ty, body_ty) ->
-      Fun_type (zonk_ty ty_size param_ty, zonk_ty ty_size body_ty)
+      Fun_type (zonk_ty size param_ty, zonk_ty size body_ty)
   | Int_type -> Int_type
   | Bool_type -> Bool_type
 
 (** Force all metavariables in a term *)
-let rec zonk_tm (ty_size : level) (tm : tm) : tm =
+let rec zonk_tm (size : level) (tm : tm) : tm =
   match tm with
-  | Local_var tm_index -> Local_var tm_index
+  | Local_var index -> Local_var index
   | Let (name, def_ty, def, body) ->
-      Let (name, zonk_ty ty_size def_ty, zonk_tm ty_size def, zonk_tm ty_size body)
+      Let (name, zonk_ty size def_ty, zonk_tm size def, zonk_tm (size + 1) body)
   | Forall_lit (name, body) ->
-      Forall_lit (name, zonk_tm (ty_size + 1) body)
+      Forall_lit (name, zonk_tm (size + 1) body)
   | Forall_app (head, arg) ->
-      Forall_app (zonk_tm ty_size head, zonk_ty ty_size arg)
+      Forall_app (zonk_tm size head, zonk_ty size arg)
   | Fun_lit (name, param_ty, body) ->
-      Fun_lit (name, zonk_ty ty_size param_ty, zonk_tm ty_size body)
+      Fun_lit (name, zonk_ty size param_ty, zonk_tm (size + 1) body)
   | Fun_app (head, arg) ->
-      Fun_app (zonk_tm ty_size head, zonk_tm ty_size arg)
+      Fun_app (zonk_tm size head, zonk_tm size arg)
   | Int_lit i -> Int_lit i
   | Bool_lit b -> Bool_lit b
   | Bool_elim (head, tm1, tm2) ->
-      Bool_elim (zonk_tm ty_size head, zonk_tm ty_size tm1, zonk_tm ty_size tm2)
+      Bool_elim (zonk_tm size head, zonk_tm size tm1, zonk_tm size tm2)
   | Prim_app (prim, args) ->
-      Prim_app (prim, List.map (zonk_tm ty_size) args)
+      Prim_app (prim, List.map (zonk_tm size) args)
 
 
 (** {1 Pretty printing} *)
@@ -448,97 +469,97 @@ let pp_name fmt name =
   | Some name -> Format.pp_print_string fmt name
   | None -> Format.pp_print_string fmt "_"
 
-let rec pp_ty (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
+let rec pp_ty (names : name env) (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
   | Forall_type (name, body_ty) ->
       Format.fprintf fmt "[%a] -> %a"
         pp_name name
-        (pp_ty (name :: ty_names)) body_ty
+        (pp_ty (name :: names)) body_ty
   | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
-        (pp_atomic_ty ty_names) param_ty
-        (pp_ty ty_names) body_ty
+        (pp_atomic_ty names) param_ty
+        (pp_ty names) body_ty
   | ty ->
-      pp_atomic_ty ty_names fmt ty
-and pp_atomic_ty (ty_names : name env) (fmt : Format.formatter) (ty : ty) =
+      pp_atomic_ty names fmt ty
+and pp_atomic_ty (names : name env) (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | Local_var ty_index -> Format.fprintf fmt "%a" pp_name (List.nth ty_names ty_index)
+  | Local_var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
   | Meta_var m -> pp_meta fmt m
   | Int_type -> Format.fprintf fmt "Int"
   | Bool_type -> Format.fprintf fmt "Bool"
-  | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty ty_names) ty
+  | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty names) ty
 and pp_meta (fmt : Format.formatter) (m : meta) =
   match !m with
   | Solved _ -> failwith "expected forced meta"
   | Unsolved { id; _ } -> Format.fprintf fmt "?%i" id
 
-let pp_name_ann ty_names fmt (name, ty) =
-  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" pp_name name (pp_ty ty_names) ty
+let pp_name_ann names fmt (name, ty) =
+  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" pp_name name (pp_ty names) ty
 
-let pp_param ty_names fmt (name, ty) =
-  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" pp_name name (pp_ty ty_names) ty
+let pp_param names fmt (name, ty) =
+  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" pp_name name (pp_ty names) ty
 
-let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatter) (tm : tm) : unit =
-  let rec go_params ty_names tm_names fmt (tm : tm) =
+let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
+  let rec go_params names fmt (tm : tm) =
     match tm with
     | Forall_lit (name, body) ->
         Format.fprintf fmt "@ @[fun@ [%a]@ =>@]%a"
           pp_name name
-          (go_params (name :: ty_names) tm_names) body
+          (go_params (name :: names)) body
     | Fun_lit (name, param_ty, body) ->
         Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
-          (pp_param ty_names) (name, param_ty)
-          (go_params ty_names (name :: tm_names)) body
-    | tm -> Format.fprintf fmt "@]@ @[%a@]@]" (pp_tm ty_names tm_names) tm
+          (pp_param names) (name, param_ty)
+          (go_params (name :: names)) body
+    | tm -> Format.fprintf fmt "@]@ @[%a@]@]" (pp_tm names) tm
   in
   match tm with
   | Let _ as tm ->
-      let rec go tm_names fmt (tm : tm) =
+      let rec go names fmt (tm : tm) =
         match tm with
         | Let (name, def_ty, def, body) ->
             Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
-              (pp_name_ann ty_names) (name, def_ty)
-              (pp_tm ty_names tm_names) def
-              (go (name :: tm_names)) body
-        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm ty_names tm_names) tm
+              (pp_name_ann names) (name, def_ty)
+              (pp_tm names) def
+              (go (name :: names)) body
+        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
-      Format.fprintf fmt "@[<v>%a@]" (go tm_names) tm
+      Format.fprintf fmt "@[<v>%a@]" (go names) tm
   | Forall_lit (name, body) ->
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ [%a]@ =>@]%a"
         pp_name name
-        (go_params (name :: ty_names) tm_names) body
+        (go_params (name :: names)) body
   | Fun_lit (name, param_ty, body) ->
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
-        (pp_param ty_names) (name, param_ty)
-        (go_params ty_names (name :: tm_names)) body
+        (pp_param names) (name, param_ty)
+        (go_params (name :: names)) body
   | Bool_elim (head, tm0, tm1) ->
       Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
-        (pp_app_tm ty_names tm_names) head
-        (pp_app_tm ty_names tm_names) tm0
-        (pp_tm ty_names tm_names) tm1
+        (pp_app_tm names) head
+        (pp_app_tm names) tm0
+        (pp_tm names) tm1
   | tm ->
-      pp_app_tm ty_names tm_names fmt tm
-and pp_app_tm ty_names tm_names fmt tm =
+      pp_app_tm names fmt tm
+and pp_app_tm names fmt tm =
   match tm with
   | Forall_app (head, arg) ->
       Format.fprintf fmt "@[%a@ [%a]@]"
-        (pp_app_tm ty_names tm_names) head
-        (pp_ty ty_names) arg
+        (pp_app_tm names) head
+        (pp_ty names) arg
   | Fun_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
-        (pp_app_tm ty_names tm_names) head
-        (pp_atomic_tm ty_names tm_names) arg
+        (pp_app_tm names) head
+        (pp_atomic_tm names) arg
   | Prim_app (prim, args) ->
       let pp_sep fmt () = Format.fprintf fmt "@ " in
       Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.name prim)
-        (Format.pp_print_list ~pp_sep (pp_atomic_tm ty_names tm_names)) args
+        (Format.pp_print_list ~pp_sep (pp_atomic_tm names)) args
   | tm ->
-      pp_atomic_tm ty_names tm_names fmt tm
-and pp_atomic_tm ty_names tm_names fmt tm =
+      pp_atomic_tm names fmt tm
+and pp_atomic_tm names fmt tm =
   match tm with
-  | Local_var tm_index -> Format.fprintf fmt "%a" pp_name (List.nth tm_names tm_index)
+  | Local_var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
   | Int_lit i -> Format.fprintf fmt "%i" i
   | Bool_lit true -> Format.fprintf fmt "true"
   | Bool_lit false -> Format.fprintf fmt "false"
-  | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm ty_names tm_names) tm
+  | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
