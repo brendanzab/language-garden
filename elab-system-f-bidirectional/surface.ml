@@ -70,60 +70,55 @@ module Elab = struct
 
   (** The elaboration context *)
   type context = {
-    ty_size : Core.level;
-    ty_names : string option Core.env;
-    ty_env : Core.Semantics.vty Core.env;
-    tm_tys : (string option * Core.Semantics.vty) Core.env;
+    size : Core.level;
+    names : string option Core.env;
+    decls : Core.Semantics.decl Core.env;
+    defns : Core.Semantics.defn Core.env;
   }
 
   (** The empty context *)
   let empty : context = {
-    ty_size = 0;
-    ty_names = [];
-    ty_env = [];
-    tm_tys = [];
+    size = 0;
+    names = [];
+    decls = [];
+    defns = [];
   }
 
   (** The type variable that will be bound after calling {!extend_ty} *)
   let next_ty_var (ctx : context) : Core.Semantics.vty =
-    Var ctx.ty_size
+    Var ctx.size
 
   (** Extend the context with a type binding *)
   let extend_ty (ctx : context) (name : string option) : context = {
-    ctx with
-    ty_size = ctx.ty_size + 1;
-    ty_names = name :: ctx.ty_names;
-    ty_env = next_ty_var ctx :: ctx.ty_env;
+    size = ctx.size + 1;
+    names = name :: ctx.names;
+    decls = Ty_decl :: ctx.decls;
+    defns = Ty_defn (next_ty_var ctx) :: ctx.defns;
   }
 
   (** Extend the context with a term binding *)
   let extend_tm (ctx : context) (name : string option) (vty : Core.Semantics.vty) : context = {
-    ctx with
-    tm_tys = (name, vty) :: ctx.tm_tys;
+    size = ctx.size + 1;
+    names = name :: ctx.names;
+    decls = Tm_decl vty :: ctx.decls;
+    defns = Tm_defn (Neu (Var ctx.size)) :: ctx.defns;
   }
 
-  (** Lookup a type name in the context *)
-  let lookup_ty (ctx : context) (name : string) : Core.index option =
-    ctx.ty_names |> List.find_mapi @@ fun ty_index name' ->
+  (** Lookup a name in the context *)
+  let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.decl) option =
+    ctx.names |> List.find_mapi @@ fun index name' ->
       match Some name = name' with
-      | true -> Some ty_index
-      | false -> None
-
-  (** Lookup a term name in the context *)
-  let lookup_tm (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
-    ctx.tm_tys |> List.find_mapi @@ fun tm_index (name', ty) ->
-      match Some name = name' with
-      | true -> Some (tm_index, ty)
+      | true -> Some (index, List.nth ctx.decls index)
       | false -> None
 
   let eval_ty (ctx : context) (ty : Core.ty) : Core.Semantics.vty =
-    Core.Semantics.eval_ty ctx.ty_env ty
+    Core.Semantics.eval_ty ctx.defns ty
 
   let quote_vty (ctx : context) (vty : Core.Semantics.vty) : Core.ty =
-    Core.Semantics.quote_vty ctx.ty_size vty
+    Core.Semantics.quote_vty ctx.size vty
 
   let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Core.ty) : unit =
-    Core.pp_ty ctx.ty_names fmt ty
+    Core.pp_ty ctx.names fmt ty
 
 
   (** {2 Elaboration errors} *)
@@ -138,7 +133,7 @@ module Elab = struct
     raise (Error (loc, message))
 
   let equate_vtys (ctx : context) (loc : loc) (vty1 : Core.Semantics.vty) (vty2 : Core.Semantics.vty) =
-    if Core.Semantics.is_convertible ctx.ty_size vty1 vty2 then () else
+    if Core.Semantics.is_convertible ctx.size vty1 vty2 then () else
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
           (pp_ty ctx) (quote_vty ctx vty1)
@@ -159,8 +154,9 @@ module Elab = struct
   let rec check_ty (ctx : context) (ty : ty) : Core.ty =
     match ty.data with
     | Name name ->
-        begin match lookup_ty ctx name with
-        | Some ty_index -> Var ty_index
+        begin match lookup ctx name with
+        | Some (index, Ty_decl) -> Var index
+        | Some (_, Tm_decl _) -> error ty.loc (Format.asprintf "expected type, found `%s`" name)
         | None when name = "Bool" -> Bool_type
         | None when name = "Int" -> Int_type
         | None -> error ty.loc (Format.asprintf "unbound type `%s`" name)
@@ -202,8 +198,9 @@ module Elab = struct
   and infer_tm (ctx : context) (tm : tm) : Core.tm * Core.Semantics.vty =
     match tm.data with
     | Name name ->
-        begin match lookup_tm ctx name with
-        | Some (tm_index, vty) -> Var tm_index, vty
+        begin match lookup ctx name with
+        | Some (_, Ty_decl) -> error tm.loc (Format.asprintf "expected term, found `%s`" name)
+        | Some (index, Tm_decl vty) -> Var index, vty
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 
@@ -340,9 +337,10 @@ module Elab = struct
 
       | Param (name, Some param_ty) :: params, body_ty ->
           let param_ty = check_ty ctx param_ty in
-          let param_vty = eval_ty ctx param_ty in
-          let body, body_ty = go (extend_tm ctx name.data param_vty) params body_ty body in
-          Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
+          let body, body_ty =
+            let ctx = extend_tm ctx name.data (eval_ty ctx param_ty) in
+            infer_fun_lit ctx params body_ty body in
+          Fun_lit (name.data, param_ty, body), Fun_type (param_ty, quote_vty ctx body_ty)
     in
 
     let body, body_ty = go ctx params body_ty body in

@@ -133,6 +133,19 @@ module Semantics = struct
     | Prim_app of Prim.t * vtm list
 
 
+  (** {1 Environment entries} *)
+
+  (** Type and term declarations *)
+  type decl =
+    | Ty_decl
+    | Tm_decl of vty
+
+  (** Type and term definitions *)
+  type defn =
+    | Ty_defn of vty
+    | Tm_defn of vtm
+
+
   (** {1 Eliminators} *)
 
   let forall_app (head : vtm) (arg : vty) : vtm =
@@ -171,114 +184,122 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a type from the syntax into its semantic interpretation *)
-  let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
+  let rec eval_ty (env : defn env) (ty : ty) : vty =
     match ty with
-    | Var ty_index -> List.nth ty_env ty_index
+    | Var index ->
+        begin match List.nth env index with
+        | Ty_defn vty -> vty
+        | Tm_defn _ -> invalid_arg "expected type"
+        end
     | Forall_type (name, body_ty) ->
-        Forall_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
+        Forall_type (name, fun arg -> eval_ty (Ty_defn arg :: env) body_ty)
     | Fun_type (param_ty, body_ty) ->
-        let param_vty = eval_ty ty_env param_ty in
-        let body_vty = eval_ty ty_env body_ty in
+        let param_vty = eval_ty env param_ty in
+        let body_vty = eval_ty env body_ty in
         Fun_type (param_vty, body_vty)
     | Int_type -> Int_type
     | Bool_type -> Bool_type
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : tm) : vtm =
+  let rec eval_tm (env : defn env) (tm : tm) : vtm =
     match tm with
-    | Var tm_index -> List.nth tm_env tm_index
+    | Var index ->
+        begin match List.nth env index with
+        | Ty_defn _ -> invalid_arg "expected term"
+        | Tm_defn vtm -> vtm
+        end
     | Let (_, _, def, body) ->
-        let def = eval_tm ty_env tm_env def in
-        eval_tm ty_env (def :: tm_env) body
+        let def = eval_tm env def in
+        eval_tm (Tm_defn def :: env) body
     | Forall_lit (name, body) ->
-        Forall_lit (name, fun arg -> eval_tm (arg :: ty_env) tm_env body)
+        Forall_lit (name, fun arg -> eval_tm (Ty_defn arg :: env) body)
     | Forall_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_ty ty_env arg in
+        let head = eval_tm env head in
+        let arg = eval_ty env arg in
         forall_app head arg
     | Fun_lit (name, param_ty, body) ->
-        let param_vty = eval_ty ty_env param_ty in
-        Fun_lit (name, param_vty, fun arg -> eval_tm ty_env (arg :: tm_env) body)
+        let param_vty = eval_ty env param_ty in
+        Fun_lit (name, param_vty, fun arg -> eval_tm (Tm_defn arg :: env) body)
     | Fun_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_tm ty_env tm_env arg in
+        let head = eval_tm env head in
+        let arg = eval_tm env arg in
         fun_app head arg
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm0, tm1) ->
-        let head = eval_tm ty_env tm_env head in
-        let vtm0 = lazy (eval_tm ty_env tm_env tm0) in
-        let vtm1 = lazy (eval_tm ty_env tm_env tm1) in
+        let head = eval_tm env head in
+        let vtm0 = lazy (eval_tm env tm0) in
+        let vtm1 = lazy (eval_tm env tm1) in
         bool_elim head vtm0 vtm1
     | Prim_app (prim, args) ->
-        prim_app prim (List.map (eval_tm ty_env tm_env) args)
+        prim_app prim (List.map (eval_tm env) args)
 
 
   (** {1 Quotation} *)
 
   (** Convert types from the semantic domain back into syntax. *)
-  let rec quote_vty  (ty_size : level) (vty : vty) : ty =
+  let rec quote_vty  (size : level) (vty : vty) : ty =
     match vty with
-    | Var ty_level -> Var (level_to_index ty_size ty_level)
+    | Var level -> Var (level_to_index size level)
     | Forall_type (name, body_vty) ->
-        let body = quote_vty (ty_size + 1) (body_vty (Var ty_size)) in
+        let body = quote_vty (size + 1) (body_vty (Var size)) in
         Forall_type (name, body)
     | Fun_type (param_vty, body_vty) ->
-        let param_ty = quote_vty ty_size param_vty in
-        let body_ty = quote_vty ty_size body_vty in
+        let param_ty = quote_vty size param_vty in
+        let body_ty = quote_vty size body_vty in
         Fun_type (param_ty, body_ty)
     | Int_type -> Int_type
     | Bool_type -> Bool_type
 
   (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote_vtm (ty_size : level) (tm_size : level) (vtm : vtm) : tm =
+  let rec quote_vtm (size : level) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_ntm ty_size tm_size ntm
+    | Neu ntm -> quote_ntm size ntm
     | Forall_lit (name, body) ->
-        let body = quote_vtm (ty_size + 1) tm_size (body (Var ty_size)) in
+        let body = quote_vtm (size + 1) (body (Var size)) in
         Forall_lit (name, body)
     | Fun_lit (name, param_vty, body) ->
-        let param_ty = quote_vty ty_size param_vty in
-        let body = quote_vtm ty_size (tm_size + 1) (body (Neu (Var tm_size))) in
+        let param_ty = quote_vty size param_vty in
+        let body = quote_vtm (size + 1) (body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_ntm (ty_size : level) (tm_size : level) (ntm : ntm) : tm =
+  and quote_ntm (size : level) (ntm : ntm) : tm =
     match ntm with
-    | Var tm_level ->
-        Var (level_to_index tm_size tm_level)
+    | Var level ->
+        Var (level_to_index size level)
     | Forall_app (head, arg) ->
-        Forall_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
+        Forall_app (quote_ntm size head, quote_vty size arg)
     | Fun_app (head, arg) ->
-        Fun_app (quote_ntm ty_size tm_size head, quote_vtm ty_size tm_size arg)
+        Fun_app (quote_ntm size head, quote_vtm size arg)
     | Bool_elim (head, vtm0, vtm1) ->
-        let tm0 = quote_vtm ty_size tm_size (Lazy.force vtm0) in
-        let tm1 = quote_vtm ty_size tm_size (Lazy.force vtm1) in
-        Bool_elim (quote_ntm ty_size tm_size head, tm0, tm1)
+        let tm0 = quote_vtm size (Lazy.force vtm0) in
+        let tm1 = quote_vtm size (Lazy.force vtm1) in
+        Bool_elim (quote_ntm size head, tm0, tm1)
     | Prim_app (prim, args) ->
-        Prim_app (prim, List.map (quote_vtm ty_size tm_size) args)
+        Prim_app (prim, List.map (quote_vtm size) args)
 
 
   (** {1 Normalisation} *)
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise_tm (ty_env : vty env) (tm_env : vtm list) (tm : tm) : tm =
-    quote_vtm (List.length ty_env) (List.length tm_env) (eval_tm ty_env tm_env tm)
+  let normalise_tm (env : defn env) (tm : tm) : tm =
+    quote_vtm (List.length env) (eval_tm env tm)
 
 
   (** {1 Conversion Checking} *)
 
-  let rec is_convertible (ty_size : level) (vty1 : vty) (vty2 : vty) : bool =
+  let rec is_convertible (size : level) (vty1 : vty) (vty2 : vty) : bool =
     match vty1, vty2 with
-    | Var ty_level1, Var ty_level2 -> ty_level1 = ty_level2
+    | Var level1, Var level2 -> level1 = level2
     | Forall_type (_, body_ty1), Forall_type (_, body_ty2) ->
-        let x : vty = Var ty_size in
-        is_convertible (ty_size + 1) (body_ty1 x) (body_ty2 x)
+        let x : vty = Var size in
+        is_convertible (size + 1) (body_ty1 x) (body_ty2 x)
     | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
-        is_convertible ty_size param_ty1 param_ty2
-          && is_convertible ty_size body_ty1 body_ty2
+        is_convertible size param_ty1 param_ty2
+          && is_convertible size body_ty1 body_ty2
     | Int_type, Int_type -> true
     | Bool_type, Bool_type -> true
     | _, _ -> false
@@ -293,92 +314,92 @@ let pp_name fmt name =
   | Some name -> Format.pp_print_string fmt name
   | None -> Format.pp_print_string fmt "_"
 
-let rec pp_ty  (ty_names : name env) (fmt : Format.formatter) (ty : ty) : unit =
+let rec pp_ty (names : name env) (fmt : Format.formatter) (ty : ty) : unit =
   match ty with
   | Forall_type (name, body_ty) ->
       Format.fprintf fmt "[%a] -> %a"
         pp_name name
-        (pp_ty (name :: ty_names)) body_ty
+        (pp_ty (name :: names)) body_ty
   | Fun_type (param_ty, body_ty) ->
       Format.fprintf fmt "%a -> %a"
-        (pp_atomic_ty ty_names) param_ty
-        (pp_ty ty_names) body_ty
+        (pp_atomic_ty names) param_ty
+        (pp_ty names) body_ty
   | ty ->
-      pp_atomic_ty ty_names fmt ty
-and pp_atomic_ty ty_names fmt ty =
+      pp_atomic_ty names fmt ty
+and pp_atomic_ty (names : name env) (fmt : Format.formatter) (ty : ty) =
   match ty with
-  | Var ty_index -> Format.fprintf fmt "%a" pp_name (List.nth ty_names ty_index)
+  | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
   | Int_type -> Format.fprintf fmt "Int"
   | Bool_type -> Format.fprintf fmt "Bool"
-  | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty ty_names) ty
+  | ty -> Format.fprintf fmt "@[(%a)@]" (pp_ty names) ty
 
-let pp_name_ann ty_names fmt (name, ty) =
-  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" pp_name name (pp_ty ty_names) ty
+let pp_name_ann names fmt (name, ty) =
+  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" pp_name name (pp_ty names) ty
 
-let pp_param ty_names fmt (name, ty) =
-  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" pp_name name (pp_ty ty_names) ty
+let pp_param names fmt (name, ty) =
+  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" pp_name name (pp_ty names) ty
 
-let rec pp_tm (ty_names : name env) (tm_names : name env) (fmt : Format.formatter) (tm : tm) : unit =
-  let rec go_params ty_names tm_names fmt tm =
+let rec pp_tm (names : name env) (fmt : Format.formatter) (tm : tm) : unit =
+  let rec go_params names fmt (tm : tm) =
     match tm with
     | Forall_lit (name, body) ->
         Format.fprintf fmt "@ @[fun@ [%a]@ =>@]%a"
           pp_name name
-          (go_params (name :: ty_names) tm_names) body
+          (go_params (name :: names)) body
     | Fun_lit (name, param_ty, body) ->
         Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
-          (pp_param ty_names) (name, param_ty)
-          (go_params ty_names (name :: tm_names)) body
-    | tm -> Format.fprintf fmt "@]@ @[%a@]@]" (pp_tm ty_names tm_names) tm
+          (pp_param names) (name, param_ty)
+          (go_params (name :: names)) body
+    | tm -> Format.fprintf fmt "@]@ @[%a@]@]" (pp_tm names) tm
   in
   match tm with
   | Let _ as tm ->
-      let rec go tm_names fmt tm =
+      let rec go names fmt (tm : tm) =
         match tm with
         | Let (name, def_ty, def, body) ->
             Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
-              (pp_name_ann ty_names) (name, def_ty)
-              (pp_tm ty_names tm_names) def
-              (go (name :: tm_names)) body
-        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm ty_names tm_names) tm
+              (pp_name_ann names) (name, def_ty)
+              (pp_tm names) def
+              (go (name :: names)) body
+        | tm -> Format.fprintf fmt "@[%a@]" (pp_tm names) tm
       in
-      Format.fprintf fmt "@[<v>%a@]" (go tm_names) tm
+      Format.fprintf fmt "@[<v>%a@]" (go names) tm
   | Forall_lit (name, body) ->
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ [%a]@ =>@]%a"
         pp_name name
-        (go_params (name :: ty_names) tm_names) body
+        (go_params (name :: names)) body
   | Fun_lit (name, param_ty, body) ->
       Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
-        (pp_param ty_names) (name, param_ty)
-        (go_params ty_names (name :: tm_names)) body
+        (pp_param names) (name, param_ty)
+        (go_params (name :: names)) body
   | Bool_elim (head, tm0, tm1) ->
       Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
-        (pp_app_tm ty_names tm_names) head
-        (pp_app_tm ty_names tm_names) tm0
-        (pp_tm ty_names tm_names) tm1
+        (pp_app_tm names) head
+        (pp_app_tm names) tm0
+        (pp_tm names) tm1
   | tm ->
-      pp_app_tm ty_names tm_names fmt tm
-and pp_app_tm ty_names tm_names fmt tm =
+      pp_app_tm names fmt tm
+and pp_app_tm names fmt tm =
   match tm with
   | Forall_app (head, arg) ->
       Format.fprintf fmt "@[%a@ [%a]@]"
-        (pp_app_tm ty_names tm_names) head
-        (pp_ty ty_names) arg
+        (pp_app_tm names) head
+        (pp_ty names) arg
   | Fun_app (head, arg) ->
       Format.fprintf fmt "@[%a@ %a@]"
-        (pp_app_tm ty_names tm_names) head
-        (pp_atomic_tm ty_names tm_names) arg
+        (pp_app_tm names) head
+        (pp_atomic_tm names) arg
   | Prim_app (prim, args) ->
       let pp_sep fmt () = Format.fprintf fmt "@ " in
       Format.fprintf fmt "@[#%s@ %a@]"
         (Prim.name prim)
-        (Format.pp_print_list ~pp_sep (pp_atomic_tm ty_names tm_names)) args
+        (Format.pp_print_list ~pp_sep (pp_atomic_tm names)) args
   | tm ->
-      pp_atomic_tm ty_names tm_names fmt tm
-and pp_atomic_tm ty_names tm_names fmt tm =
+      pp_atomic_tm names fmt tm
+and pp_atomic_tm names fmt tm =
   match tm with
-  | Var tm_index -> Format.fprintf fmt "%a" pp_name (List.nth tm_names tm_index)
+  | Var index -> Format.fprintf fmt "%a" pp_name (List.nth names index)
   | Int_lit i -> Format.fprintf fmt "%i" i
   | Bool_lit true -> Format.fprintf fmt "true"
   | Bool_lit false -> Format.fprintf fmt "false"
-  | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm ty_names tm_names) tm
+  | tm -> Format.fprintf fmt "@[(%a)@]" (pp_tm names) tm
