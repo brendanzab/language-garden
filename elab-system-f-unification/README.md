@@ -49,7 +49,7 @@ test (fun [$a] => fun (x : $a) => x) : [a] -> a -> a
 
 Unification with higher-rank polymorphism is more complicated compared to
 [elab-stlc-unification](../elab-stlc-unification), as we need to ensure that we
-don’t introduce [escaping metavariables](https://counterexamples.org/scope-escape.html).
+don’t introduce [escaping type variables](https://counterexamples.org/scope-escape.html).
 We handle this by keeping track of level constraints on metavariables, which
 are raised during unification. More details can be found in the comments in the
 implementation.
