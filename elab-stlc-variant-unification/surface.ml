@@ -86,8 +86,6 @@ module Elab = struct
     | `Fun_param
     | `Fun_body
     | `Record_field
-    | `Record_lit
-    | `Variant_lit
     | `Match_clauses
     | `Pattern_binder
     | `If_branches
@@ -99,29 +97,37 @@ module Elab = struct
   let metas : (loc * meta_info * Core.meta_state ref) Dynarray.t =
     Dynarray.create ()
 
+  let row_metas : (Core.row_meta_state ref) Dynarray.t =
+    Dynarray.create ()
+
   (** Generate a fresh metavariable, recording it in the list of metavariables *)
-  let fresh_meta (loc: loc) (info : meta_info) (constr : Core.constr) : Core.ty =
-    let state = Core.fresh_meta constr in
+  let fresh_meta (loc: loc) (info : meta_info) : Core.ty =
+    let state = Core.fresh_meta () in
     Dynarray.add_last metas (loc, info, state);
     Meta_var state
+
+  let fresh_row_meta (row: Core.ty Core.Label_map.t) : Core.row_ty =
+    let state = Core.fresh_row_meta row in
+    Dynarray.add_last row_metas state;
+    Row_meta_var state
 
   (** Return a list of unsolved metavariables *)
   let unsolved_metas () : (loc * meta_info) list =
     let go (loc, info, m) acc =
       match !m with
-      | Core.Unsolved (_, Any) -> (loc, info) :: acc
-      | Core.Unsolved (_, Record row) ->
-          (* Default to a concrete record type *)
-          m := Solved (Record_type row);
-          acc
-      | Core.Unsolved (_, Variant row) ->
-          (* Default to a concrete variant type *)
-          m := Solved (Variant_type row);
-          acc
+      | Core.Unsolved _ -> (loc, info) :: acc
       | Core.Solved _ -> acc
     in
-    Dynarray.fold_right go metas []
 
+    (** Default unsolved rows to fixed row types *)
+    begin row_metas |> Dynarray.iter @@ fun m ->
+      match !m with
+      | Core.Unsolved_row (_, row) ->
+          m := Solved_row (Row_entries row);
+      | Core.Solved_row _ -> ()
+    end;
+
+    Dynarray.fold_right go metas []
 
   (** {2 Elaboration context} *)
 
@@ -148,10 +154,11 @@ module Elab = struct
     raise (Error (loc, message))
 
   let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
-    try Core.unify ty1 ty2 with
+    try Core.unify_tys ty1 ty2 with
     | Core.Infinite_type _ -> error loc "infinite type"
+    | Core.Infinite_row_type _ -> error loc "infinite row type"
     | Core.Mismatched_types (_, _)
-    | Core.Mismatched_constraints (_, _) ->
+    | Core.Mismatched_row_types (_, _) ->
         error loc
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
             Core.pp_ty ty1
@@ -177,7 +184,7 @@ module Elab = struct
     | Fun_type (ty1, ty2) -> Fun_type (check_ty ty1, check_ty ty2)
     | Record_type entries -> Record_type (check_ty_entries entries)
     | Variant_type entries -> Variant_type (check_ty_entries entries)
-    | Placeholder -> fresh_meta ty.loc `Placeholder Any
+    | Placeholder -> fresh_meta ty.loc `Placeholder
 
   and check_ty_entries entries =
     let rec go acc entries =
@@ -188,7 +195,7 @@ module Elab = struct
           | true -> error label.loc (Format.asprintf "duplicate label `%s`" label.data)
           | false -> go (Core.Label_map.add label.data (check_ty ty) acc) entries
     in
-    go Core.Label_map.empty entries
+    Row_entries (go Core.Label_map.empty entries)
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
@@ -201,7 +208,7 @@ module Elab = struct
     | Fun_lit (params, body), ty ->
         check_fun_lit ctx params body ty
 
-    | Variant_lit (label, tm), Variant_type row -> begin
+    | Variant_lit (label, tm), Variant_type (Row_entries row) -> begin
         match Core.Label_map.find_opt label.data row with
         | Some elem_ty ->
             Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
@@ -260,12 +267,12 @@ module Elab = struct
         in
         let entries = go Core.Label_map.empty entries in
         Record_lit (Core.Label_map.map fst entries),
-        Record_type (Core.Label_map.map snd entries)
+        Record_type (Row_entries (Core.Label_map.map snd entries))
 
     | Variant_lit (label, elem_tm) ->
         let elem_tm, elem_ty = infer_tm ctx elem_tm in
         let row = Core.Label_map.singleton label.data elem_ty in
-        let ty = fresh_meta tm.loc `Variant_lit (Variant row) in
+        let ty = Core.Variant_type (fresh_row_meta row) in
         Variant_lit (label.data, elem_tm, ty), ty
 
     | Int_lit i ->
@@ -281,8 +288,8 @@ module Elab = struct
           match Core.force head_ty with
           | Fun_type (param_ty, body_ty) -> param_ty, body_ty
           | head_ty ->
-              let param_ty = fresh_meta head_loc `Fun_param Any in
-              let body_ty = fresh_meta head_loc `Fun_body Any in
+              let param_ty = fresh_meta head_loc `Fun_param in
+              let body_ty = fresh_meta head_loc `Fun_body in
               unify head_loc head_ty (Fun_type (param_ty, body_ty));
               param_ty, body_ty
         in
@@ -290,29 +297,29 @@ module Elab = struct
         Fun_app (head, arg), body_ty
 
     | Match (head, clauses) ->
-        let body_ty = fresh_meta tm.loc `Match_clauses Any in
+        let body_ty = fresh_meta tm.loc `Match_clauses in
         check_tm_match ctx head clauses body_ty, body_ty
 
     | Proj (head, label) -> begin
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
         match Core.force head_ty with
-        | Record_type row -> begin
+        | Record_type (Row_entries row) -> begin
             match Core.Label_map.find_opt label.data row with
             | Some ty -> Record_proj (head, label.data), ty
             | None -> error head_loc (Format.asprintf "unknown field `%s`" label.data)
         end
         | head_ty ->
-            let field_ty = fresh_meta head_loc `Record_field Any in
+            let field_ty = fresh_meta head_loc `Record_field in
             let row = Core.Label_map.singleton label.data field_ty in
-            let record_ty = fresh_meta head_loc `Record_lit (Record row) in
+            let record_ty = Core.Record_type (fresh_row_meta row) in
             unify head_loc head_ty record_ty;
             Record_proj (head, label.data), field_ty
     end
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
-        let ty = fresh_meta tm.loc `If_branches Any in
+        let ty = fresh_meta tm.loc `If_branches in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
         Bool_elim (head, tm1, tm2), ty
@@ -373,7 +380,7 @@ module Elab = struct
         infer_tm context body
     | (name, param_ty) :: params, body_ty ->
         let param_ty = match param_ty with
-          | None -> fresh_meta name.loc `Fun_param Any
+          | None -> fresh_meta name.loc `Fun_param
           | Some ty -> check_ty ty
         in
         let body, body_ty = infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
@@ -385,7 +392,7 @@ module Elab = struct
     let head, head_ty = infer_tm ctx head in
     (* TDOD: Proper match compilation *)
     match Core.force head_ty with
-    | Variant_type row ->
+    | Variant_type (Row_entries row) ->
         (* iterate through clauses, accumulating cases *)
         let cases =
           List.fold_left
@@ -429,7 +436,7 @@ module Elab = struct
                 (* TODO: should be a warning? *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
-                let case_ty = fresh_meta name.loc `Pattern_binder Any in
+                let case_ty = fresh_meta name.loc `Pattern_binder in
                 let body_tm = check_tm ((name.data, case_ty) :: ctx) body_tm body_ty in
                 Core.Label_map.add label.data (name.data, body_tm) cases,
                 Core.Label_map.add label.data case_ty row)
@@ -437,7 +444,7 @@ module Elab = struct
             clauses
         in
         (* Unify head type with variant type *)
-        unify head_loc head_ty (Variant_type row);
+        unify head_loc head_ty (Variant_type (Row_entries row));
         (* return cases *)
         Variant_elim (head, cases)
 

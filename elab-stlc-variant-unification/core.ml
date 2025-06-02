@@ -46,34 +46,36 @@ type 'a env = 'a list
 
 (** {1 Syntax} *)
 
-(** Metavariable identifier *)
+(** Identifier used for pretty printing metavariables. *)
 type meta_id = int
+
+(** Identifier used for pretty printing row metavariables. *)
+type row_meta_id = int
 
 (** Type syntax *)
 type ty =
   | Meta_var of meta_state ref
   | Fun_type of ty * ty
-  | Record_type of ty Label_map.t
-  | Variant_type of ty Label_map.t
+  | Record_type of row_ty
+  | Variant_type of row_ty
   | Int_type
   | Bool_type
 
 (** The state of a metavariable, updated during unification *)
 and meta_state =
   | Solved of ty
-  | Unsolved of meta_id * constr
+  | Unsolved of meta_id
 
-(** Constraints on unsolved metavariables *)
-and constr =
-  | Any
-  (** Unifies with any type *)
+(** Row type syntax *)
+and row_ty =
+  | Row_meta_var of row_meta_state ref
+  | Row_entries of ty Label_map.t
 
-  | Record of ty Label_map.t
-  (** Unifies with record types that contain {i at least} all of the entries
-      recorded in the map. *)
-
-  | Variant of ty Label_map.t
-  (** Unifies with variant types that contain {i at least} all of the entries
+(** The state of a row metavariable, updated during unification *)
+and row_meta_state =
+  | Solved_row of row_ty
+  | Unsolved_row of row_meta_id * ty Label_map.t
+  (** Unifies with rows that contain {i at least} all of the entries
       recorded in the map. *)
 
 (** Term syntax *)
@@ -256,16 +258,24 @@ end
 (** {1 Functions related to metavariables} *)
 
 (** Create a fresh, unsolved metavariable *)
-let fresh_meta : constr -> meta_state ref =
+let fresh_meta : unit -> meta_state ref =
   let next_id = ref 0 in
-  fun constr ->
+  fun () ->
     let id = !next_id in
     incr next_id;
-    ref (Unsolved (id, constr))
+    ref (Unsolved id)
 
-(** Force any solved metavariables on the outermost part of a type. Chains of
-    metavariables will be collapsed to make forcing faster in the future. This
-    is sometimes referred to as {i path compression}. *)
+(** Create a fresh, unsolved row metavariable with an initial row constraint *)
+let fresh_row_meta : ty Label_map.t -> row_meta_state ref =
+  let next_id = ref 0 in
+  fun row ->
+    let id = !next_id in
+    incr next_id;
+    ref (Unsolved_row (id, row))
+
+(** Force any solved metavariables and row metavariables on the outermost part
+    of a type. Chains of metavariables will be collapsed to make forcing faster
+    in the future. This is sometimes referred to as {i path compression}. *)
 let rec force (ty : ty) : ty =
   match ty with
   | Meta_var m as ty ->
@@ -276,112 +286,134 @@ let rec force (ty : ty) : ty =
           ty
       | Unsolved _ -> ty
       end
+  | Record_type rty -> Record_type (force_row_ty rty)
+  | Variant_type rty -> Variant_type (force_row_ty rty)
   | ty -> ty
 
-(** Extract the identifier and constraint from a forced metavariable. *)
-let expect_forced (m : meta_state ref) : meta_id * constr =
-  match !m with
-  | Unsolved (id, c) -> id, c
-  | Solved _ -> invalid_arg "unforced meta"
+(** Force row metavariables on the on the outermost part of a row type  *)
+and force_row_ty (rty : row_ty) : row_ty =
+  match rty with
+  | Row_meta_var rm as rty ->
+      begin match !rm with
+      | Solved_row rty ->
+          let rty = force_row_ty rty in
+          rm := Solved_row rty;
+          rty
+      | Unsolved_row _ -> rty
+      end
+  | ty -> ty
 
 
 (** {1 Unification} *)
 
-exception Infinite_type of meta_id
+exception Infinite_type of meta_state ref
 exception Mismatched_types of ty * ty
-exception Mismatched_constraints of constr * constr
+exception Infinite_row_type of row_meta_state ref
+exception Mismatched_row_types of row_ty * row_ty
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
-let rec occurs (id : meta_id) (ty : ty) : unit =
+let rec occurs_ty (m : meta_state ref) (ty : ty) : unit =
   match force ty with
-  | Meta_var m -> occurs_meta id m
+  | Meta_var m' ->
+      if m == m' then
+        raise (Infinite_type m)
   | Fun_type (param_ty, body_ty) ->
-      occurs id param_ty;
-      occurs id body_ty
-  | Record_type row -> occurs_row id row
-  | Variant_type row -> occurs_row id row
+      occurs_ty m param_ty;
+      occurs_ty m body_ty
+  | Record_type rty | Variant_type rty ->
+      begin match force_row_ty rty with
+      | Row_entries row -> row |> Label_map.iter (fun _ -> occurs_ty m)
+      | Row_meta_var _ -> ()
+      end
   | Int_type -> ()
   | Bool_type -> ()
 
-and occurs_meta (id : meta_id) (m : meta_state ref) : unit =
-  match !m with
-  | Unsolved (id', _) when id = id' -> raise (Infinite_type id)
-  | Unsolved (_, Record row) -> occurs_row id row
-  | Unsolved (_, Variant row) -> occurs_row id row
-  | Unsolved (_, Any) | Solved _ -> ()
-
-and occurs_row (id : meta_id) (row : ty Label_map.t) : unit =
-  row |> Label_map.iter (fun _ -> occurs id)
+(** The same as [occurs_ty], but guards against self-referential row types *)
+let occurs_row_ty (rm : row_meta_state ref) (rty : row_ty) : unit =
+  let rec go_ty ty =
+    match force ty with
+    | Meta_var _ -> ()
+    | Fun_type (param_ty, body_ty) ->
+        go_ty param_ty;
+        go_ty body_ty
+    | Record_type rty -> go_row_ty rty
+    | Variant_type rty -> go_row_ty rty
+    | Int_type -> ()
+    | Bool_type -> ()
+  and go_row_ty rty =
+    match force_row_ty rty with
+    | Row_meta_var rm' ->
+        if rm == rm' then
+          raise (Infinite_row_type rm)
+    | Row_entries row ->
+        row |> Label_map.iter (fun _ -> go_ty)
+  in
+  go_row_ty rty
 
 (** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
-let rec unify (ty1 : ty) (ty2 : ty) : unit =
+let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
   match force ty1, force ty2 with
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
-      unify_meta m ty
+      occurs_ty m ty;
+      m := Solved ty
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
-      unify param_ty1 param_ty2;
-      unify body_ty1 body_ty2
-  | Record_type row1, Record_type row2
-  | Variant_type row1, Variant_type row2 ->
-      if not (Label_map.equal (fun ty1 ty2 -> unify ty1 ty2; true) row1 row2) then
-        raise (Mismatched_types (ty1, ty2))
+      unify_tys param_ty1 param_ty2;
+      unify_tys body_ty1 body_ty2
+  | Record_type rty1, Record_type rty2
+  | Variant_type rty1, Variant_type rty2 ->
+      unify_row_tys rty1 rty2
   | Int_type, Int_type -> ()
   | Bool_type, Bool_type -> ()
   | ty1, ty2 ->
       raise (Mismatched_types (ty1, ty2))
 
-(** Unify a forced metavariable with a forced type *)
-and unify_meta (m : meta_state ref) (ty : ty) : unit =
-  match expect_forced m, ty with
-  (* Unify with any type *)
-  | (id, Any), ty ->
-      occurs id ty;
-      m := Solved ty
-  (* Unify metavariable constraints *)
-  | (id, c), Meta_var m' ->
-      occurs_meta id m';
-      let _, c' = expect_forced m' in
-      m' := Unsolved (id, unify_constrs c c');
-      m := Solved ty
-  (* Unify a record/variant constraint against a concrete record/variant type *)
-  | (id, Record row), Record_type exact_row
-  | (id, Variant row), Variant_type exact_row ->
-      occurs_row id exact_row;
-      (* Unify the entries in the contraint row against the entries in the
-         concrete type row, failing if any are missing. *)
-      row |> Label_map.iter begin fun label row_ty ->
-        match Label_map.find_opt label exact_row with
-        | Some exact_row_ty -> unify row_ty exact_row_ty
-        | None -> raise (Mismatched_types (Meta_var m, ty))
-      end;
-      m := Solved ty
-  (* The type does not match the constraint, so raise an error *)
-  | (_, Record _), ty
-  | (_, Variant _), ty ->
-      raise (Mismatched_types (Meta_var m, ty))
-
-(** Unify two constraints, returning the combined constraint if successful. *)
-and unify_constrs (c1 : constr) (c2 : constr) : constr =
+(** Unify row types, updating row constraints as needed *)
+and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
+  (* Unifies the types in two row constraints, merging them into a single constraint *)
   let unify_rows =
     Label_map.merge @@ fun _ ty1 ty2 ->
       match ty1, ty2 with
-      | Some ty1, Some ty2 -> unify ty1 ty2; Some ty1
+      | Some ty1, Some ty2 -> unify_tys ty1 ty2; Some ty1
       | Some ty, None | None, Some ty -> Some ty
       | None, None  -> None
   in
-  match c1, c2 with
-  | Any, Any -> Any
-  | Variant row1, Variant row2 -> Variant (unify_rows row1 row2)
-  | Record row1, Record row2 -> Record (unify_rows row1 row2)
 
-  | Variant row, Any | Any, Variant row -> Variant row
-  | Record row, Any | Any, Record row -> Record row
+  match force_row_ty rty1, force_row_ty rty2 with
+  | Row_meta_var rm1, Row_meta_var rm2 when rm1 == rm2 -> ()
+  | Row_meta_var rm, rty | rty, Row_meta_var rm ->
+      occurs_row_ty rm rty;
 
-  | Variant _, Record _ | Record _, Variant _ ->
-      raise (Mismatched_constraints (c1, c2))
+      begin match !rm, rty with
+      (* Unify a row constraint against a concrete row type *)
+      | Unsolved_row (_, row), Row_entries exact_row ->
+          (* Unify the types in the unsolved row against the types in the concrete
+            row, failing if any are missing. *)
+          row |> Label_map.iter begin fun label row_ty ->
+            match Label_map.find_opt label exact_row with
+            | Some exact_row_ty -> unify_tys row_ty exact_row_ty
+            | None -> raise (Mismatched_row_types (Row_meta_var rm, rty))
+          end;
+          rm := Solved_row rty
+
+      (* Unify row constraints *)
+      | Unsolved_row (id, row), Row_meta_var rm' ->
+          begin match !rm' with
+          | Unsolved_row (_, row') ->
+              rm' := Unsolved_row (id, unify_rows row row');
+              rm := Solved_row rty
+          | Solved_row _ ->
+              failwith "expected forced row type"
+          end
+      | Solved_row _, _ ->
+          failwith "expected forced row type"
+      end
+
+  | Row_entries row1, Row_entries row2 ->
+      if not (Label_map.equal (fun ty1 ty2 -> unify_tys ty1 ty2; true) row1 row2) then
+        raise (Mismatched_row_types (rty1, rty2))
 
 
 (** {1 Pretty printing} *)
@@ -397,37 +429,45 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) : unit =
 and pp_atomic_ty ppf ty =
   match ty with
   | Meta_var m -> pp_meta ppf m
-  | Record_type row when Label_map.is_empty row ->
-      Format.fprintf ppf "{}"
-  | Record_type row ->
-      Format.fprintf ppf "@[{@ %a@ }@]"
-        (Format.pp_print_seq
+  | Record_type rty ->
+      let pp_row =
+        Format.pp_print_seq
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
-          (fun ppf (label, ty) ->
-            Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty))
-        (Label_map.to_seq row)
-  | Variant_type cases when Label_map.is_empty cases ->
-      Format.fprintf ppf "[|]"
-  | Variant_type row ->
-      Format.fprintf ppf "[%a]"
-        (Format.pp_print_seq
+          (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty)
+      in
+      begin match force_row_ty rty with
+      | Row_entries row when Label_map.is_empty row ->
+          Format.fprintf ppf "{}"
+      | Row_entries row ->
+          Format.fprintf ppf "@[{@ %a@ }@]" pp_row (Label_map.to_seq row)
+      | Row_meta_var { contents = Unsolved_row (id, row) } ->
+          Format.fprintf ppf "@[{@ ?%i..@ %a@ }@]" id pp_row (Label_map.to_seq row)
+      | Row_meta_var { contents = Solved_row _ } ->
+          failwith "expected forced row type"
+      end
+  | Variant_type rty ->
+      let pp_row =
+        Format.pp_print_seq
           ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ |@ ")
-          (fun ppf (label, ty) ->
-            Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty))
-        (Label_map.to_seq row)
+          (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty)
+      in
+      begin match force_row_ty rty with
+      | Row_entries row when Label_map.is_empty row ->
+          Format.fprintf ppf "[|]"
+      | Row_entries row ->
+          Format.fprintf ppf "[%a]" pp_row (Label_map.to_seq row)
+      | Row_meta_var { contents = Unsolved_row (id, row) } ->
+          Format.fprintf ppf "[?%i..@ %a]" id pp_row (Label_map.to_seq row)
+      | Row_meta_var { contents = Solved_row _ } ->
+          failwith "expected forced row type"
+      end
   | Int_type -> Format.fprintf ppf "Int"
   | Bool_type -> Format.fprintf ppf "Bool"
   | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty
 and pp_meta ppf m =
   match !m with
   | Solved ty -> pp_atomic_ty ppf ty
-  | Unsolved (id, Any) -> Format.fprintf ppf "?%i" id
-  | Unsolved (id, Record row) ->
-      Format.fprintf ppf "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
-        id pp_ty (Record_type row)
-  | Unsolved (id, Variant cases) ->
-      Format.fprintf ppf "@[<2>@[?{%i@ ~@]@ @[%a@]}@]"
-        id pp_ty (Variant_type cases)
+  | Unsolved id -> Format.fprintf ppf "?%i" id
 
 let pp_name ppf name =
   match name with

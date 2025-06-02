@@ -169,7 +169,7 @@ Mismatched variant constraint and variant type
   > EOF
   <input>:5:2: mismatched types:
     expected: [no : Int | yes : Int]
-    found: ?{4 ~ [no : Bool | yes : Int]}
+    found: [?0.. no : Bool | yes : Int]
   [1]
 
 Mismatched variant constraint and smaller variant type
@@ -184,7 +184,7 @@ Mismatched variant constraint and smaller variant type
   > EOF
   <input>:5:2: mismatched types:
     expected: [yes : Int]
-    found: ?{4 ~ [no : Bool | yes : Int]}
+    found: [?0.. no : Bool | yes : Int]
   [1]
 
 Mismatched variant constraint and non-variant type
@@ -199,7 +199,7 @@ Mismatched variant constraint and non-variant type
   > EOF
   <input>:5:2: mismatched types:
     expected: Bool
-    found: ?{4 ~ [no : Bool | yes : Int]}
+    found: [?0.. no : Bool | yes : Int]
   [1]
 
 Infinite type
