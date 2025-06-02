@@ -300,14 +300,10 @@ let fresh_meta : level -> meta =
     is sometimes referred to as {i path compression}. *)
 let rec force_vty (vty : vty) : vty =
   match vty with
-  | Meta_var m as vty ->
-      begin match !m with
-      | Solved vty ->
-          let vty = force_vty vty in
-          m := Solved vty;
-          vty
-      | Unsolved _ -> vty
-      end
+  | Meta_var ({ contents = Solved vty } as m) ->
+      let vty = force_vty vty in
+      m := Solved vty;
+      vty
   | vty -> vty
 
 

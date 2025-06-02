@@ -276,16 +276,12 @@ let fresh_row_meta : ty Label_map.t -> row_meta_state ref =
 (** Force any solved metavariables and row metavariables on the outermost part
     of a type. Chains of metavariables will be collapsed to make forcing faster
     in the future. This is sometimes referred to as {i path compression}. *)
-let rec force (ty : ty) : ty =
+let rec force_ty (ty : ty) : ty =
   match ty with
-  | Meta_var m as ty ->
-      begin match !m with
-      | Solved ty ->
-          let ty = force ty in
-          m := Solved ty;
-          ty
-      | Unsolved _ -> ty
-      end
+  | Meta_var ({ contents = Solved ty } as m) ->
+      let ty = force_ty ty in
+      m := Solved ty;
+      ty
   | Record_type rty -> Record_type (force_row_ty rty)
   | Variant_type rty -> Variant_type (force_row_ty rty)
   | ty -> ty
@@ -293,14 +289,10 @@ let rec force (ty : ty) : ty =
 (** Force row metavariables on the on the outermost part of a row type  *)
 and force_row_ty (rty : row_ty) : row_ty =
   match rty with
-  | Row_meta_var rm as rty ->
-      begin match !rm with
-      | Solved_row rty ->
-          let rty = force_row_ty rty in
-          rm := Solved_row rty;
-          rty
-      | Unsolved_row _ -> rty
-      end
+  | Row_meta_var ({ contents = Solved_row rty } as rm) ->
+      let rty = force_row_ty rty in
+      rm := Solved_row rty;
+      rty
   | ty -> ty
 
 
@@ -314,7 +306,7 @@ exception Mismatched_row_types of row_ty * row_ty
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
 let rec occurs_ty (m : meta_state ref) (ty : ty) : unit =
-  match force ty with
+  match force_ty ty with
   | Meta_var m' ->
       if m == m' then
         raise (Infinite_type m)
@@ -332,7 +324,7 @@ let rec occurs_ty (m : meta_state ref) (ty : ty) : unit =
 (** The same as [occurs_ty], but guards against self-referential row types *)
 let occurs_row_ty (rm : row_meta_state ref) (rty : row_ty) : unit =
   let rec go_ty ty =
-    match force ty with
+    match force_ty ty with
     | Meta_var _ -> ()
     | Fun_type (param_ty, body_ty) ->
         go_ty param_ty;
@@ -354,7 +346,7 @@ let occurs_row_ty (rm : row_meta_state ref) (rty : row_ty) : unit =
 (** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
 let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
-  match force ty1, force ty2 with
+  match force_ty ty1, force_ty ty2 with
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
       occurs_ty m ty;
@@ -419,7 +411,7 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
 (** {1 Pretty printing} *)
 
 let rec pp_ty (ppf : Format.formatter) (ty : ty) : unit =
-  match force ty with
+  match force_ty ty with
   | Fun_type (param_ty, body_ty) ->
       Format.fprintf ppf "%a -> %a"
         pp_atomic_ty param_ty

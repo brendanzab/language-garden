@@ -197,14 +197,10 @@ let fresh_meta : unit -> meta_state ref =
     is sometimes referred to as {i path compression}. *)
 let rec force (ty : ty) : ty =
   match ty with
-  | Meta_var m as ty ->
-      begin match !m with
-      | Solved ty ->
-          let ty = force ty in
-          m := Solved ty;
-          ty
-      | Unsolved _ -> ty
-      end
+  | Meta_var ({ contents = Solved ty } as m) ->
+      let ty = force ty in
+      m := Solved ty;
+      ty
   | ty -> ty
 
 

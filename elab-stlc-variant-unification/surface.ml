@@ -199,7 +199,7 @@ module Elab = struct
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
-    match tm.data, Core.force ty with
+    match tm.data, Core.force_ty ty with
     | Let (def_name, params, def_body_ty, def_body, body), body_ty ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
         let body = check_tm ((def_name.data, def_ty) :: ctx) body body_ty in
@@ -285,7 +285,7 @@ module Elab = struct
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
         let param_ty, body_ty =
-          match Core.force head_ty with
+          match Core.force_ty head_ty with
           | Fun_type (param_ty, body_ty) -> param_ty, body_ty
           | head_ty ->
               let param_ty = fresh_meta head_loc `Fun_param in
@@ -303,7 +303,7 @@ module Elab = struct
     | Proj (head, label) -> begin
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
-        match Core.force head_ty with
+        match Core.force_ty head_ty with
         | Record_type (Row_entries row) -> begin
             match Core.Label_map.find_opt label.data row with
             | Some ty -> Record_proj (head, label.data), ty
@@ -328,7 +328,7 @@ module Elab = struct
         let tm0, ty0 = infer_tm ctx tm0 in
         let tm1, ty1 = infer_tm ctx tm1 in
         unify tm.loc ty0 ty1;
-        begin match Core.force ty0 with
+        begin match Core.force_ty ty0 with
         | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
         | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
@@ -351,7 +351,7 @@ module Elab = struct
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
-    match params, Core.force ty with
+    match params, Core.force_ty ty with
     | [], ty ->
         check_tm ctx body ty
     | (name, None) :: params, Fun_type (param_ty, body_ty) ->
@@ -391,7 +391,7 @@ module Elab = struct
     let head_loc = head.loc in
     let head, head_ty = infer_tm ctx head in
     (* TDOD: Proper match compilation *)
-    match Core.force head_ty with
+    match Core.force_ty head_ty with
     | Variant_type (Row_entries row) ->
         (* Iterate through clauses, accumulating clauses *)
         let clauses =
