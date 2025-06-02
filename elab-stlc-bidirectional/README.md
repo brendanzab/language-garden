@@ -1,25 +1,32 @@
 # Bidirectional typing for a simply typed lambda calculus
 
-Bidirectional typing is a technique for implementing type checking and
-elaboration, allowing type annotations to be provided when checking terms to
-help to disambiguate terms. It is used in the implementation of many dependent
-and non-dependently typed programming languages, for example in Idris, Agda,
-Haskell, Scala, Typescript, etc.
-
-This project implements an elaborator for a simply typed lambda calculus with
-booleans and integers. We use bidirectional type checking during elaboration to
-allow the programmer to omit some type annotations, breaking elaboration into
-two mutually recursive functions:
+This project implements a bidirectional elaborator for a simply typed lambda
+calculus with booleans and integers. We use bidirectional type checking during
+elaboration to allow the programmer to omit some type annotations, without
+the need for more advanced techniques like unification. The idea is that we
+split type checking into into two mutually recursive functions, for “checking”
+and “inference”:
 
 <!-- $MDX skip -->
 ```ocaml
-val elab_check : context -> tm -> Core.ty -> Core.tm
-val elab_infer : context -> tm -> Core.tm * Core.ty
+(** checks a term in the presence of a type annotation *)
+val check_tm : context -> tm -> Core.ty -> Core.tm
+
+(** infers a type from a term *)
+val infer_tm : context -> tm -> Core.tm * Core.ty
 ```
 
-A similar approach is used in later projects, like [**elab-dependent**](../elab-dependent)
-and [**elab-record-patching**](../elab-record-patching) to implement more
-complicated type systems with dependent types and subtyping.
+The name “bidirectional” comes from how the type information flows up and down
+the stack when evaluating the type checker - upward when we’re in checking mode,
+and downward when we’re in inference mode (this corresponds to the information
+flow on the proof tree).
+
+Bidirectional typing comes in very handy for improving the locality of type
+errors, and when implementing fancier type systems where full type inference
+would be undecidable - for example when adding subtyping, dependent types, or
+higher rank types. You can find it in use in the implementation of many
+real world programming languages, for example in Idris, Agda, Haskell, Scala,
+Typescript, etc.
 
 ## Project overview
 
