@@ -184,8 +184,8 @@ module Elab = struct
         let tm1, ty1 = infer_tm ctx tm1 in
         equate_ty tm.loc ty0 ty1;
         begin match ty0 with
-        | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
-        | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
+        | Bool_type -> Fun_app (Fun_app (Prim Bool_eq, tm0), tm1), Bool_type
+        | Int_type -> Fun_app (Fun_app (Prim Int_eq, tm0), tm1), Bool_type
         | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
         end
 
@@ -198,11 +198,11 @@ module Elab = struct
         in
         let tm0 = check_tm ctx tm0 Int_type in
         let tm1 = check_tm ctx tm1 Int_type in
-        Prim_app (prim, [tm0; tm1]), Int_type
+        Fun_app (Fun_app (Prim prim, tm0), tm1), Int_type
 
     | Op1 (`Neg, tm) ->
         let tm = check_tm ctx tm Int_type in
-        Prim_app (Int_neg, [tm]), Int_type
+        Fun_app (Prim Int_neg, tm), Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =

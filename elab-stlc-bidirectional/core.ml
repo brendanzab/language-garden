@@ -91,7 +91,7 @@ type tm =
   | Int_lit of int
   | Bool_lit of bool
   | Bool_elim of tm * tm * tm
-  | Prim_app of Prim.t * tm list
+  | Prim of Prim.t
 
 
 module Semantics = struct
@@ -114,9 +114,9 @@ module Semantics = struct
   *)
   and ntm =
     | Var of level          (* A fresh variable (used when evaluating under a binder) *)
+    | Prim of Prim.t
     | Fun_app of ntm * vtm
     | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
-    | Prim_app of Prim.t * vtm list
 
 
   (** {1 Eliminators} *)
@@ -133,19 +133,6 @@ module Semantics = struct
     | Bool_lit true -> Lazy.force vtm0
     | Bool_lit false -> Lazy.force vtm1
     | _ -> invalid_arg "expected boolean"
-
-  let prim_app (prim : Prim.t) : vtm list -> vtm =
-    let guard f args =
-      try f args with
-      | Match_failure _ -> Neu (Prim_app (prim, args))
-    in
-    match prim with
-    | Bool_eq -> guard @@ fun[@warning "-partial-match"] [Bool_lit t1; Bool_lit t2] -> Bool_lit (t1 = t2)
-    | Int_eq -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Bool_lit (t1 = t2)
-    | Int_add -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 + t2)
-    | Int_sub -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 - t2)
-    | Int_mul -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (t1 * t2)
-    | Int_neg -> guard @@ fun[@warning "-partial-match"] [Int_lit t1] -> Int_lit (-t1)
 
 
   (** {1 Evaluation} *)
@@ -170,8 +157,47 @@ module Semantics = struct
         let vtm0 = lazy (eval env tm0) in
         let vtm1 = lazy (eval env tm1) in
         bool_elim head vtm0 vtm1
-    | Prim_app (prim, args) ->
-        prim_app prim (List.map (eval env) args)
+    | Prim prim ->
+        match prim with
+        | Bool_eq ->
+            Fun_lit ("x", Bool_type, function
+              | Bool_lit x as tm0 ->
+                  Fun_lit ("y", Bool_type, function
+                    | Bool_lit y -> Bool_lit (Bool.equal x y)
+                    | tm1 -> Neu (Fun_app (Fun_app (Prim prim, tm0), tm1)))
+              | tm0 -> Neu (Fun_app (Prim prim, tm0)))
+        | Int_eq ->
+            Fun_lit ("x", Int_type, function
+              | Int_lit x as tm0 ->
+                  Fun_lit ("y", Int_type, function
+                    | Int_lit y -> Bool_lit (Int.equal x y)
+                    | tm1 -> Neu (Fun_app (Fun_app (Prim prim, tm0), tm1)))
+              | tm0 -> Neu (Fun_app (Prim prim, tm0)))
+        | Int_add ->
+            Fun_lit ("x", Int_type, function
+              | Int_lit x as tm0 ->
+                  Fun_lit ("y", Int_type, function
+                    | Int_lit y -> Int_lit (Int.add x y)
+                    | tm1 -> Neu (Fun_app (Fun_app (Prim prim, tm0), tm1)))
+              | tm0 -> Neu (Fun_app (Prim prim, tm0)))
+        | Int_sub ->
+            Fun_lit ("x", Int_type, function
+              | Int_lit x as tm0 ->
+                  Fun_lit ("y", Int_type, function
+                    | Int_lit y -> Int_lit (Int.sub x y)
+                    | tm1 -> Neu (Fun_app (Fun_app (Prim prim, tm0), tm1)))
+              | tm0 -> Neu (Fun_app (Prim prim, tm0)))
+        | Int_mul ->
+            Fun_lit ("x", Int_type, function
+              | Int_lit x as tm0 ->
+                  Fun_lit ("y", Int_type, function
+                    | Int_lit y -> Int_lit (Int.mul x y)
+                    | tm1 -> Neu (Fun_app (Fun_app (Prim prim, tm0), tm1)))
+              | tm0 -> Neu (Fun_app (Prim prim, tm0)))
+        | Int_neg ->
+            Fun_lit ("x", Int_type, function
+              | Int_lit x -> Int_lit (Int.neg x)
+              | tm0 -> Neu (Fun_app (Prim prim, tm0)))
 
 
   (** {1 Quotation} *)
@@ -196,8 +222,7 @@ module Semantics = struct
         let tm0 = quote size (Lazy.force vtm0) in
         let tm1 = quote size (Lazy.force vtm1) in
         Bool_elim (quote_neu size head, tm0, tm1)
-    | Prim_app (prim, args) ->
-        Prim_app (prim, List.map (quote size) args)
+    | Prim prim -> Prim prim
 
 
   (** {1 Normalisation} *)
@@ -270,11 +295,6 @@ and pp_app_tm names ppf tm =
       Format.fprintf ppf "@[%a@ %a@]"
         (pp_app_tm names) head
         (pp_atomic_tm names) arg
-  | Prim_app (prim, args) ->
-      let pp_sep ppf () = Format.fprintf ppf "@ " in
-      Format.fprintf ppf "@[#%s@ %a@]"
-        (Prim.name prim)
-        (Format.pp_print_list ~pp_sep (pp_atomic_tm names)) args
   | tm ->
       pp_atomic_tm names ppf tm
 and pp_atomic_tm names ppf tm =
@@ -283,4 +303,5 @@ and pp_atomic_tm names ppf tm =
   | Int_lit i -> Format.fprintf ppf "%i" i
   | Bool_lit true -> Format.fprintf ppf "true"
   | Bool_lit false -> Format.fprintf ppf "false"
+  | Prim prim -> Format.fprintf ppf "#%s" (Prim.name prim)
   | tm -> Format.fprintf ppf "@[(%a)@]" (pp_tm names) tm
