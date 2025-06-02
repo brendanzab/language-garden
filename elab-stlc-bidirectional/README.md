@@ -17,9 +17,8 @@ val infer_tm : context -> tm -> Core.tm * Core.ty
 ```
 
 The name “bidirectional” comes from how the type information flows up and down
-the stack when evaluating the type checker - upward when we’re in checking mode,
-and downward when we’re in inference mode (this corresponds to the information
-flow on the proof tree).
+the stack when evaluating the type checker[^1] - upward when we’re in checking mode,
+and downward when we’re in inference mode.
 
 Bidirectional typing comes in very handy for improving the locality of type
 errors, and when implementing fancier type systems where full type inference
@@ -74,3 +73,10 @@ fun (x : Int) => fun (f : Int -> Int) => #int-mul (f x) x :
 ```
 
 More examples can be found in [`tests.t`](tests.t).
+
+[^1]: Note that conceptually a type checker can be seen as a program that walks
+      a [proof tree](https://en.wikipedia.org/wiki/Natural_deduction#Gentzen's_tree_notation)
+      that proves that a term is well-typed. The name “bidirectional” actually
+      comes from the information flow on this proof tree. For examples of these
+      proof trees, see David Christiansen’s “Bidirectional Typing Rules: A
+      Tutorial” listed in the [resources](#resources).
