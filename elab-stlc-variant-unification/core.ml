@@ -421,38 +421,8 @@ let rec pp_ty (ppf : Format.formatter) (ty : ty) : unit =
 and pp_atomic_ty ppf ty =
   match ty with
   | Meta_var m -> pp_meta ppf m
-  | Record_type rty ->
-      let pp_row =
-        Format.pp_print_seq
-          ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
-          (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty)
-      in
-      begin match force_row_ty rty with
-      | Row_entries row when Label_map.is_empty row ->
-          Format.fprintf ppf "{}"
-      | Row_entries row ->
-          Format.fprintf ppf "@[{@ %a@ }@]" pp_row (Label_map.to_seq row)
-      | Row_meta_var { contents = Unsolved_row (id, row) } ->
-          Format.fprintf ppf "@[{@ ?%i..@ %a@ }@]" id pp_row (Label_map.to_seq row)
-      | Row_meta_var { contents = Solved_row _ } ->
-          failwith "expected forced row type"
-      end
-  | Variant_type rty ->
-      let pp_row =
-        Format.pp_print_seq
-          ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ |@ ")
-          (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty)
-      in
-      begin match force_row_ty rty with
-      | Row_entries row when Label_map.is_empty row ->
-          Format.fprintf ppf "[|]"
-      | Row_entries row ->
-          Format.fprintf ppf "[%a]" pp_row (Label_map.to_seq row)
-      | Row_meta_var { contents = Unsolved_row (id, row) } ->
-          Format.fprintf ppf "[?%i..@ %a]" id pp_row (Label_map.to_seq row)
-      | Row_meta_var { contents = Solved_row _ } ->
-          failwith "expected forced row type"
-      end
+  | Record_type rty -> pp_record_row_ty ppf rty
+  | Variant_type rty -> pp_variant_row_ty ppf rty
   | Int_type -> Format.fprintf ppf "Int"
   | Bool_type -> Format.fprintf ppf "Bool"
   | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty
@@ -460,6 +430,36 @@ and pp_meta ppf m =
   match !m with
   | Solved ty -> pp_atomic_ty ppf ty
   | Unsolved id -> Format.fprintf ppf "?%i" id
+and pp_record_row_ty ppf rty =
+  let pp_row =
+    Format.pp_print_seq
+      ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
+      (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty)
+  in
+  match rty with
+  | Row_entries row when Label_map.is_empty row ->
+      Format.fprintf ppf "{}"
+  | Row_entries row ->
+      Format.fprintf ppf "@[{@ %a@ }@]" pp_row (Label_map.to_seq row)
+  | Row_meta_var { contents = Unsolved_row (id, row) } ->
+      Format.fprintf ppf "@[{@ ?%i..@ %a@ }@]" id pp_row (Label_map.to_seq row)
+  | Row_meta_var { contents = Solved_row rty } ->
+      pp_record_row_ty ppf rty
+and pp_variant_row_ty ppf rty =
+  let pp_row =
+    Format.pp_print_seq
+      ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ |@ ")
+      (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%a@]@]" label pp_ty ty)
+  in
+  match rty with
+  | Row_entries row when Label_map.is_empty row ->
+      Format.fprintf ppf "[|]"
+  | Row_entries row ->
+      Format.fprintf ppf "[%a]" pp_row (Label_map.to_seq row)
+  | Row_meta_var { contents = Unsolved_row (id, row) } ->
+      Format.fprintf ppf "[?%i..@ %a]" id pp_row (Label_map.to_seq row)
+  | Row_meta_var { contents = Solved_row rty } ->
+      pp_variant_row_ty ppf rty
 
 let pp_name ppf name =
   match name with
