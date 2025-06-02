@@ -137,11 +137,11 @@ module Semantics = struct
     | Record_lit fields -> Label_map.find label fields
     | _ -> invalid_arg "expected record"
 
-  let variant_elim head cases =
+  let variant_elim head clauses =
     match head with
-    | Neu ntm -> Neu (Variant_elim (ntm, cases))
+    | Neu ntm -> Neu (Variant_elim (ntm, clauses))
     | Variant_lit (label, vtm, _) ->
-        let _, body = Label_map.find label cases in
+        let _, body = Label_map.find label clauses in
         body vtm
     | _ -> invalid_arg "expected variant"
 
@@ -188,13 +188,13 @@ module Semantics = struct
         record_proj head label
     | Variant_lit (label, tm, ty) ->
         Variant_lit (label, eval env tm, ty)
-    | Variant_elim (head, cases) ->
+    | Variant_elim (head, clauses) ->
         let head = eval env head in
-        let cases =
-          cases |> Label_map.map (fun (name, body) ->
+        let clauses =
+          clauses |> Label_map.map (fun (name, body) ->
             name, fun arg -> eval (arg :: env) body)
         in
-        variant_elim head cases
+        variant_elim head clauses
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm0, tm1) ->
@@ -230,13 +230,13 @@ module Semantics = struct
         Fun_app (quote_neu size head, quote size arg)
     | Record_proj (head, label) ->
         Record_proj (quote_neu size head, label)
-    | Variant_elim (head, cases) ->
+    | Variant_elim (head, clauses) ->
         let head = quote_neu size head in
-        let cases =
-          cases |> Label_map.map (fun (name, body) ->
+        let clauses =
+          clauses |> Label_map.map (fun (name, body) ->
             name, quote (size + 1) (body (Neu (Var size))))
         in
-        Variant_elim (head, cases)
+        Variant_elim (head, clauses)
     | Bool_elim (head, vtm1, vtm2) ->
         let tm0 = quote size (Lazy.force vtm1) in
         let tm1 = quote size (Lazy.force vtm2) in
@@ -493,7 +493,7 @@ let rec pp_tm (names : name env) (ppf : Format.formatter) (tm : tm) : unit =
         | tm -> Format.fprintf ppf "@[%a@]" (pp_tm names) tm
       in
       Format.fprintf ppf "@[<v>%a@]" (go names) tm
-  | Variant_elim (head, cases) ->
+  | Variant_elim (head, clauses) ->
       Format.fprintf ppf "@[<hv>@[match@ @[%a@]@ with@]@ %aend@]"
         (pp_app_tm names) head
         (Format.pp_print_seq
@@ -503,7 +503,7 @@ let rec pp_tm (names : name env) (ppf : Format.formatter) (tm : tm) : unit =
               label
               pp_name name
               (pp_tm (name :: names)) body))
-        (Label_map.to_seq cases)
+        (Label_map.to_seq clauses)
   | Fun_lit (name, param_ty, body) ->
       let rec go names ppf tm =
         match tm with

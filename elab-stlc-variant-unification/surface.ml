@@ -393,59 +393,59 @@ module Elab = struct
     (* TDOD: Proper match compilation *)
     match Core.force head_ty with
     | Variant_type (Row_entries row) ->
-        (* iterate through clauses, accumulating cases *)
-        let cases =
+        (* Iterate through clauses, accumulating clauses *)
+        let clauses =
           List.fold_left
-            (fun cases ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
-              if Core.Label_map.mem label.data cases then
+            (fun clauses ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
+              if Core.Label_map.mem label.data clauses then
                 (* TODO: should be a warning *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
                 match Core.Label_map.find_opt label.data row with
                 | Some case_ty ->
                     let body_tm = check_tm ((name.data, case_ty) :: ctx) body_tm body_ty in
-                    Core.Label_map.add label.data (name.data, body_tm) cases
+                    Core.Label_map.add label.data (name.data, body_tm) clauses
                 | None ->
                     error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
             Core.Label_map.empty
             clauses
         in
-        (* check that labels in the cases match the labels in the row *)
-        let missing_cases =
+        (* Check that labels in the clauses match the labels in the row *)
+        let missing_clauses =
           Core.Label_map.to_seq row
-          |> Seq.filter (fun (label, _) -> not (Core.Label_map.mem label cases))
+          |> Seq.filter (fun (label, _) -> not (Core.Label_map.mem label clauses))
           |> List.of_seq
         in
-        if List.is_empty missing_cases then
-          (* return cases *)
-          Variant_elim (head, cases)
+        if List.is_empty missing_clauses then
+          (* Return the clauses *)
+          Variant_elim (head, clauses)
         else
           error head_loc
             (Format.asprintf "non-exhaustive match, missing %a"
               (Format.pp_print_list
                 ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
                 (fun ppf (label, _) -> Format.fprintf ppf "`%s`" label))
-              missing_cases)
+              missing_clauses)
 
     | head_ty ->
-        (* Build up the cases and the row from the clauses *)
-        let cases, row =
+        (* Build up the clauses and the row from the clauses *)
+        let clauses, row =
           List.fold_left
-            (fun (cases, row) ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
-              if Core.Label_map.mem label.data cases then
+            (fun (clauses, row) ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
+              if Core.Label_map.mem label.data clauses then
                 (* TODO: should be a warning? *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
                 let case_ty = fresh_meta name.loc `Pattern_binder in
                 let body_tm = check_tm ((name.data, case_ty) :: ctx) body_tm body_ty in
-                Core.Label_map.add label.data (name.data, body_tm) cases,
+                Core.Label_map.add label.data (name.data, body_tm) clauses,
                 Core.Label_map.add label.data case_ty row)
             (Core.Label_map.empty, Core.Label_map.empty)
             clauses
         in
         (* Unify head type with variant type *)
         unify head_loc head_ty (Variant_type (Row_entries row));
-        (* return cases *)
-        Variant_elim (head, cases)
+        (* Return the clauses *)
+        Variant_elim (head, clauses)
 
 end
