@@ -54,29 +54,36 @@ type row_meta_id = int
 
 (** Type syntax *)
 type ty =
-  | Meta_var of meta_state ref
+  | Meta_var of meta
   | Fun_type of ty * ty
   | Record_type of row_ty
   | Variant_type of row_ty
   | Int_type
   | Bool_type
 
-(** The state of a metavariable, updated during unification *)
+(** The current state of a metavariable *)
 and meta_state =
   | Solved of ty
   | Unsolved of meta_id
 
+(** Mutable representation of metavariables. These are updated in-place during
+    unification and when types are forced. Alternatively we could have
+    chosen to store these in a separate metacontext, like in the
+    elaboration-zoo. *)
+and meta = meta_state ref
+
 (** Row type syntax *)
 and row_ty =
-  | Row_meta_var of row_meta_state ref
+  | Row_meta_var of row_meta
   | Row_entries of ty Label_map.t
 
-(** The state of a row metavariable, updated during unification *)
+(** The current state of a row metavariable *)
 and row_meta_state =
   | Solved_row of row_ty
   | Unsolved_row of row_meta_id * ty Label_map.t
-  (** Unifies with rows that contain {i at least} all of the entries
-      recorded in the map. *)
+
+(* Mutable representation of row metavariables. *)
+and row_meta = row_meta_state ref
 
 (** Term syntax *)
 type tm =
@@ -258,7 +265,7 @@ end
 (** {1 Functions related to metavariables} *)
 
 (** Create a fresh, unsolved metavariable *)
-let fresh_meta : unit -> meta_state ref =
+let fresh_meta : unit -> meta =
   let next_id = ref 0 in
   fun () ->
     let id = !next_id in
@@ -266,7 +273,7 @@ let fresh_meta : unit -> meta_state ref =
     ref (Unsolved id)
 
 (** Create a fresh, unsolved row metavariable with an initial row constraint *)
-let fresh_row_meta : ty Label_map.t -> row_meta_state ref =
+let fresh_row_meta : ty Label_map.t -> row_meta =
   let next_id = ref 0 in
   fun row ->
     let id = !next_id in
@@ -298,14 +305,14 @@ and force_row_ty (rty : row_ty) : row_ty =
 
 (** {1 Unification} *)
 
-exception Infinite_type of meta_state ref
+exception Infinite_type of meta
 exception Mismatched_types of ty * ty
-exception Infinite_row_type of row_meta_state ref
+exception Infinite_row_type of row_meta
 exception Mismatched_row_types of row_ty * row_ty
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
-let rec occurs_ty (m : meta_state ref) (ty : ty) : unit =
+let rec occurs_ty (m : meta) (ty : ty) : unit =
   match force_ty ty with
   | Meta_var m' ->
       if m == m' then
@@ -322,7 +329,7 @@ let rec occurs_ty (m : meta_state ref) (ty : ty) : unit =
   | Bool_type -> ()
 
 (** The same as [occurs_ty], but guards against self-referential row types *)
-let occurs_row_ty (rm : row_meta_state ref) (rty : row_ty) : unit =
+let occurs_row_ty (rm : row_meta) (rty : row_ty) : unit =
   let rec go_ty ty =
     match force_ty ty with
     | Meta_var _ -> ()

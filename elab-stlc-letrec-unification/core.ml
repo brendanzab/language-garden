@@ -44,16 +44,22 @@ type meta_id = int
 
 (** Type syntax *)
 type ty =
-  | Meta_var of meta_state ref
+  | Meta_var of meta
   | Fun_type of ty * ty
   | Tuple_type of ty list
   | Int_type
   | Bool_type
 
-(** The state of a metavariable, updated during unification *)
+(** The current state of a metavariable *)
 and meta_state =
   | Solved of ty
   | Unsolved of meta_id
+
+(** Mutable representation of metavariables. These are updated in-place during
+    unification and when types are forced. Alternatively we could have
+    chosen to store these in a separate metacontext, like in the
+    elaboration-zoo. *)
+and meta = meta_state ref
 
 (** Term syntax *)
 type tm =
@@ -231,7 +237,7 @@ end
 (** {1 Functions related to metavariables} *)
 
 (** Create a fresh, unsolved metavariable *)
-let fresh_meta : unit -> meta_state ref =
+let fresh_meta : unit -> meta =
   let next_id = ref 0 in
   fun () ->
     let id = !next_id in
@@ -252,12 +258,12 @@ let rec force (ty : ty) : ty =
 
 (** {1 Unification} *)
 
-exception Infinite_type of meta_state ref
+exception Infinite_type of meta
 exception Mismatched_types of ty * ty
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
-let rec occurs (m : meta_state ref) (ty : ty) : unit =
+let rec occurs (m : meta) (ty : ty) : unit =
   match force ty with
   | Meta_var m' ->
       if m == m' then
