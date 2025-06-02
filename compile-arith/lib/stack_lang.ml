@@ -23,17 +23,17 @@ type code =
 
 (** {1 Pretty printing} *)
 
-let pp_inst fmt = function
-  | Int i -> Format.fprintf fmt "int %d" i
-  | Neg -> Format.fprintf fmt "neg"
-  | Add -> Format.fprintf fmt "add"
-  | Sub -> Format.fprintf fmt "sub"
-  | Mul -> Format.fprintf fmt "mul"
-  | Div -> Format.fprintf fmt "div"
-let rec pp_code fmt = function
+let pp_inst ppf = function
+  | Int i -> Format.fprintf ppf "int %d" i
+  | Neg -> Format.fprintf ppf "neg"
+  | Add -> Format.fprintf ppf "add"
+  | Sub -> Format.fprintf ppf "sub"
+  | Mul -> Format.fprintf ppf "mul"
+  | Div -> Format.fprintf ppf "div"
+let rec pp_code ppf = function
   | [] -> ()
-  | inst :: [] -> Format.fprintf fmt "%a;" pp_inst inst
-  | inst :: code -> Format.fprintf fmt "%a;@ %a" pp_inst inst pp_code code
+  | inst :: [] -> Format.fprintf ppf "%a;" pp_inst inst
+  | inst :: code -> Format.fprintf ppf "%a;@ %a" pp_inst inst pp_code code
 
 
 (** Semantics of arithmetic expressions *)

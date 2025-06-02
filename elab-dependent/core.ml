@@ -156,9 +156,9 @@ module Syntax = struct
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
   let pp ?(resugar = true) (names : string option env) : Format.formatter -> tm -> unit =
-    let pp_name fmt = function
-      | Some name -> Format.pp_print_string fmt name
-      | None -> Format.pp_print_string fmt "_"
+    let pp_name ppf = function
+      | Some name -> Format.pp_print_string ppf name
+      | None -> Format.pp_print_string ppf "_"
     in
 
     let rec pp_tm names ppf tm =

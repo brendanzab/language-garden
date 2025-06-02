@@ -45,67 +45,67 @@ let rec fvs : tm -> Var_set.t =
 
 let pp_ty = Lang__fun.pp_ty
 
-let pp_var (fmt : Format.formatter) (var : Var.t) =
-  Format.fprintf fmt "%s%i"
+let pp_var (ppf : Format.formatter) (var : Var.t) =
+  Format.fprintf ppf "%s%i"
     (Var.name var)
     (Var.to_int var)
 
-let pp_name_ann (fmt : Format.formatter) (var, ty) =
-  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]"
+let pp_name_ann (ppf : Format.formatter) (var, ty) =
+  Format.fprintf ppf "@[<2>@[%a :@]@ %a@]"
     pp_var var
     pp_ty ty
 
-let pp_param (fmt : Format.formatter) (var, ty) =
-  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]"
+let pp_param (ppf : Format.formatter) (var, ty) =
+  Format.fprintf ppf "@[<2>(@[%a :@]@ %a)@]"
     pp_var var
     pp_ty ty
 
-let rec pp_tm (fmt : Format.formatter) (tm : tm) =
+let rec pp_tm (ppf : Format.formatter) (tm : tm) =
   match tm with
   | Let _ as tm ->
-      let rec go fmt tm =
+      let rec go ppf tm =
         match tm with
         | Let (def_var, def_ty, def, body) ->
-            Format.fprintf fmt "@[<hv 2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+            Format.fprintf ppf "@[<hv 2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
               pp_name_ann (def_var, def_ty)
               pp_tm def
               go body
-        | tm -> Format.fprintf fmt "@[%a@]" pp_tm tm
+        | tm -> Format.fprintf ppf "@[%a@]" pp_tm tm
       in
-      go fmt tm
+      go ppf tm
   | Fun_lit (name, param_ty, body) ->
-      let rec go fmt tm =
+      let rec go ppf tm =
         match tm with
         | Fun_lit (name, param_ty, body) ->
-            Format.fprintf fmt "@ @[fun@ %a@ =>@]%a"
+            Format.fprintf ppf "@ @[fun@ %a@ =>@]%a"
               pp_param (name, param_ty)
               go body
-        | tm -> Format.fprintf fmt "@]@ @[%a@]@]" pp_tm tm
+        | tm -> Format.fprintf ppf "@]@ @[%a@]@]" pp_tm tm
       in
-      Format.fprintf fmt "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
+      Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
         pp_param (name, param_ty)
         go body
   | tm ->
-      pp_app_tm fmt tm
-and pp_app_tm (fmt : Format.formatter) (tm : tm) =
+      pp_app_tm ppf tm
+and pp_app_tm (ppf : Format.formatter) (tm : tm) =
   match tm with
   | Prim_app (head, args) ->
-      Format.fprintf fmt "@[#%s@ %a@]"
+      Format.fprintf ppf "@[#%s@ %a@]"
         (Prim.to_string head)
         (Format.pp_print_list pp_atomic_tm ~pp_sep:Format.pp_print_space) args
   | Fun_app (head, arg) ->
-      Format.fprintf fmt "@[%a@ %a@]"
+      Format.fprintf ppf "@[%a@ %a@]"
         pp_app_tm head
         pp_atomic_tm arg
   | tm ->
-      pp_atomic_tm fmt tm
-and pp_atomic_tm (fmt : Format.formatter) (tm : tm) =
+      pp_atomic_tm ppf tm
+and pp_atomic_tm (ppf : Format.formatter) (tm : tm) =
   match tm with
-  | Var var -> pp_var fmt var
-  | Bool_lit true -> Format.fprintf fmt "true"
-  | Bool_lit false -> Format.fprintf fmt "false"
-  | Int_lit i -> Format.fprintf fmt "%i" i
-  | tm -> Format.fprintf fmt "@[(%a)@]" pp_tm tm
+  | Var var -> pp_var ppf var
+  | Bool_lit true -> Format.fprintf ppf "true"
+  | Bool_lit false -> Format.fprintf ppf "false"
+  | Int_lit i -> Format.fprintf ppf "%i" i
+  | tm -> Format.fprintf ppf "@[(%a)@]" pp_tm tm
 
 
 module Semantics = struct

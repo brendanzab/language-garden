@@ -38,23 +38,23 @@ let atom a = Atom a
 
 (** {1 Pretty printing} *)
 
-let rec pp_expr fmt = function
+let rec pp_expr ppf = function
   | Let (n, c, e) ->
       let name = Format.sprintf "e%i" n in
-      Format.fprintf fmt "@[<2>@[let@ %s@ :=@]@ %a;@]@ %a" name
+      Format.fprintf ppf "@[<2>@[let@ %s@ :=@]@ %a;@]@ %a" name
         pp_comp c
         pp_expr e
-  | Comp c -> Format.fprintf fmt "@[%a@]" pp_comp c
-and pp_comp fmt = function
-  | Atom a -> pp_atom fmt a
-  | Neg a -> Format.fprintf fmt "neg %a" pp_atom a
-  | Add (a1, a2) -> Format.fprintf fmt "add@ %a@ %a" pp_atom a1 pp_atom a2
-  | Sub (a1, a2) -> Format.fprintf fmt "sub@ %a@ %a" pp_atom a1 pp_atom a2
-  | Mul (a1, a2) -> Format.fprintf fmt "mul@ %a@ %a" pp_atom a1 pp_atom a2
-  | Div (a1, a2) -> Format.fprintf fmt "div@ %a@ %a" pp_atom a1 pp_atom a2
-and pp_atom fmt = function
-  | Var n -> Format.fprintf fmt "e%i" n
-  | Int i -> Format.fprintf fmt "%d" i
+  | Comp c -> Format.fprintf ppf "@[%a@]" pp_comp c
+and pp_comp ppf = function
+  | Atom a -> pp_atom ppf a
+  | Neg a -> Format.fprintf ppf "neg %a" pp_atom a
+  | Add (a1, a2) -> Format.fprintf ppf "add@ %a@ %a" pp_atom a1 pp_atom a2
+  | Sub (a1, a2) -> Format.fprintf ppf "sub@ %a@ %a" pp_atom a1 pp_atom a2
+  | Mul (a1, a2) -> Format.fprintf ppf "mul@ %a@ %a" pp_atom a1 pp_atom a2
+  | Div (a1, a2) -> Format.fprintf ppf "div@ %a@ %a" pp_atom a1 pp_atom a2
+and pp_atom ppf = function
+  | Var n -> Format.fprintf ppf "e%i" n
+  | Int i -> Format.fprintf ppf "%d" i
 
 
 (** Semantics of arithmetic expressions *)

@@ -36,26 +36,26 @@ and code =
 
 (** {1 Pretty printing} *)
 
-let rec pp_inst fmt = function
-  | Int i -> Format.fprintf fmt "int %i" i
-  | Bool true -> Format.fprintf fmt "true"
-  | Bool false -> Format.fprintf fmt "false"
-  | Code [] -> Format.fprintf fmt "[]"
-  | Code c -> Format.fprintf fmt "code @[[@ %a@ ]@]" pp_code c
-  | Neg -> Format.fprintf fmt "neg"
-  | Add -> Format.fprintf fmt "add"
-  | Sub -> Format.fprintf fmt "sub"
-  | Mul -> Format.fprintf fmt "mul"
-  | Div -> Format.fprintf fmt "div"
-  | Eq -> Format.fprintf fmt "eq"
-  | If_then_else -> Format.fprintf fmt "if"
-  | Access n -> Format.fprintf fmt "access %i" n
-  | Begin_let -> Format.fprintf fmt "begin-let"
-  | End_let -> Format.fprintf fmt "end-let"
-and pp_code fmt = function
+let rec pp_inst ppf = function
+  | Int i -> Format.fprintf ppf "int %i" i
+  | Bool true -> Format.fprintf ppf "true"
+  | Bool false -> Format.fprintf ppf "false"
+  | Code [] -> Format.fprintf ppf "[]"
+  | Code c -> Format.fprintf ppf "code @[[@ %a@ ]@]" pp_code c
+  | Neg -> Format.fprintf ppf "neg"
+  | Add -> Format.fprintf ppf "add"
+  | Sub -> Format.fprintf ppf "sub"
+  | Mul -> Format.fprintf ppf "mul"
+  | Div -> Format.fprintf ppf "div"
+  | Eq -> Format.fprintf ppf "eq"
+  | If_then_else -> Format.fprintf ppf "if"
+  | Access n -> Format.fprintf ppf "access %i" n
+  | Begin_let -> Format.fprintf ppf "begin-let"
+  | End_let -> Format.fprintf ppf "end-let"
+and pp_code ppf = function
   | [] -> ()
-  | inst :: [] -> Format.fprintf fmt "%a;" pp_inst inst
-  | inst :: code -> Format.fprintf fmt "%a;@ %a" pp_inst inst pp_code code
+  | inst :: [] -> Format.fprintf ppf "%a;" pp_inst inst
+  | inst :: code -> Format.fprintf ppf "%a;@ %a" pp_inst inst pp_code code
 
 
 (** Semantics of arithmetic expressions *)

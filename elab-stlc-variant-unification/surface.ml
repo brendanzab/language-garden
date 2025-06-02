@@ -376,8 +376,8 @@ module Elab = struct
           error head_loc
             (Format.asprintf "non-exhaustive match, missing %a"
               (Format.pp_print_list
-                ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
-                (fun fmt (label, _) -> Format.fprintf fmt "`%s`" label))
+                ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
+                (fun ppf (label, _) -> Format.fprintf ppf "`%s`" label))
               missing_cases)
 
     | head_ty ->

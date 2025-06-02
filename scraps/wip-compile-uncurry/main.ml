@@ -58,35 +58,35 @@ module Curried = struct
 
 
   (** Pretty print an expression *)
-  let rec pp_expr names fmt =
-    let pp_parens ?(wrap = false) names fmt = function
+  let rec pp_expr names ppf =
+    let pp_parens ?(wrap = false) names ppf = function
       | (Let _ | Fun_lit _ | Fun_app _) as expr when wrap ->
-          Format.fprintf fmt "@[(%a)@]" (pp_expr names) expr
-      | expr -> pp_expr names fmt expr
+          Format.fprintf ppf "@[(%a)@]" (pp_expr names) expr
+      | expr -> pp_expr names ppf expr
     in
     function
     | Var index ->
-        Format.pp_print_string fmt (List.nth names index)
+        Format.pp_print_string ppf (List.nth names index)
     | Let (name, def, body) ->
-        let pp_name_def names fmt (name, def) =
-          Format.fprintf fmt "@[let@ %s@ :=@]@ @[%a@];" name (pp_expr names) def
-        and pp_lets names fmt = function
-          | Let (_, _, _) as expr -> pp_expr names fmt expr
-          | expr -> Format.fprintf fmt "@[%a@]" (pp_expr names) expr
+        let pp_name_def names ppf (name, def) =
+          Format.fprintf ppf "@[let@ %s@ :=@]@ @[%a@];" name (pp_expr names) def
+        and pp_lets names ppf = function
+          | Let (_, _, _) as expr -> pp_expr names ppf expr
+          | expr -> Format.fprintf ppf "@[%a@]" (pp_expr names) expr
         in
-        Format.fprintf fmt "@[<2>%a@]@ %a"
+        Format.fprintf ppf "@[<2>%a@]@ %a"
           (pp_name_def names) (name, def)
           (pp_lets (name :: names)) body
     | Fun_lit (_, _) as expr ->
-        let pp_sep fmt () = Format.fprintf fmt "@ " in
+        let pp_sep ppf () = Format.fprintf ppf "@ " in
         let params, body = fun_lits expr in
-        Format.fprintf fmt "@[<2>@[<4>fun@ %a@ :=@]@ @[%a@]@]"
+        Format.fprintf ppf "@[<2>@[<4>fun@ %a@ :=@]@ @[%a@]@]"
           (Format.pp_print_list ~pp_sep Format.pp_print_string) params
           (pp_expr (List.rev params @ names)) body
     | Fun_app (_, _) as expr ->
-        let pp_sep fmt () = Format.fprintf fmt "@ " in
+        let pp_sep ppf () = Format.fprintf ppf "@ " in
         let head, args = fun_apps expr in
-        Format.fprintf fmt "@[<2>%a@ %a@]"
+        Format.fprintf ppf "@[<2>%a@ %a@]"
           (pp_parens ~wrap:true names) head
           (Format.pp_print_list ~pp_sep (pp_parens ~wrap:true names)) args
 
@@ -169,27 +169,27 @@ module Uncurried = struct
 
 
   (** Pretty print an expression *)
-  let rec pp_expr names fmt = function
+  let rec pp_expr names ppf = function
     | Var (index, param) ->
-        Format.pp_print_string fmt (List.nth (List.nth names index) param)
+        Format.pp_print_string ppf (List.nth (List.nth names index) param)
     | Let (name, def, body) ->
-        let pp_name_def names fmt (name, def) =
-          Format.fprintf fmt "@[let@ %s@ :=@]@ @[%a@];" name (pp_expr names) def
-        and pp_lets names fmt = function
-          | Let (_, _, _) as expr -> pp_expr names fmt expr
-          | expr -> Format.fprintf fmt "@[%a@]" (pp_expr names) expr
+        let pp_name_def names ppf (name, def) =
+          Format.fprintf ppf "@[let@ %s@ :=@]@ @[%a@];" name (pp_expr names) def
+        and pp_lets names ppf = function
+          | Let (_, _, _) as expr -> pp_expr names ppf expr
+          | expr -> Format.fprintf ppf "@[%a@]" (pp_expr names) expr
         in
-        Format.fprintf fmt "@[<2>%a@]@ %a"
+        Format.fprintf ppf "@[<2>%a@]@ %a"
           (pp_name_def names) (name, def)
           (pp_lets ([name] :: names)) body
     | Fun_lit (params, body) ->
-        let pp_sep fmt () = Format.fprintf fmt ",@ " in
-        Format.fprintf fmt "@[<2>@[fun@ @[(%a)@]@ :=@]@ @[%a@]@]"
+        let pp_sep ppf () = Format.fprintf ppf ",@ " in
+        Format.fprintf ppf "@[<2>@[fun@ @[(%a)@]@ :=@]@ @[%a@]@]"
           (Format.pp_print_list ~pp_sep Format.pp_print_string) params
           (pp_expr (params :: names)) body
     | Fun_app (head, args) ->
-        let pp_sep fmt () = Format.fprintf fmt ",@ " in
-        Format.fprintf fmt "%a(%a)"
+        let pp_sep ppf () = Format.fprintf ppf ",@ " in
+        Format.fprintf ppf "%a(%a)"
           (pp_expr names) head
           (Format.pp_print_list ~pp_sep (pp_expr names)) args
 

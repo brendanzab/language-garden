@@ -36,12 +36,12 @@ let infer context tm =
       Printf.eprintf "error: %s\n" message;
       exit 1
 
-let pp_def ~resugar context fmt (name, ty, tm) =
+let pp_def ~resugar context ppf (name, ty, tm) =
   let pp_tm = Surface.pp ~resugar context in
-  let pp_name_ann fmt (name, ty) =
-    Format.fprintf fmt "@[<2>@[%s :@]@ @[%a@]@]" name pp_tm ty
+  let pp_name_ann ppf (name, ty) =
+    Format.fprintf ppf "@[<2>@[%s :@]@ @[%a@]@]" name pp_tm ty
   in
-  Format.fprintf fmt "@[<2>@[%a@ :=@]@ @[%a@]@]"
+  Format.fprintf ppf "@[<2>@[%a@ :=@]@ @[%a@]@]"
     pp_name_ann (name, ty)
     (Surface.pp ~resugar context) tm
 

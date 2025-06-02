@@ -52,48 +52,48 @@ exception Unbound_name of (Lexing.position * Lexing.position) * name
 
 (** {1 Pretty printing} *)
 
-let rec pp_expr names fmt expr =
-  pp_let_expr names fmt expr
-and  pp_let_expr names fmt = function
+let rec pp_expr names ppf expr =
+  pp_let_expr names ppf expr
+and  pp_let_expr names ppf = function
   | Let (n, e1, e2) ->
-      let pp_def names fmt (n, e1) =
-        Format.fprintf fmt "@[let@ %s@ :=@]@ @[%a@];" n (pp_expr names) e1
-      and pp_lets names fmt = function
-        | Let (_, _, _) as e -> pp_expr names fmt e
-        | e -> Format.fprintf fmt "@[%a@]" (pp_expr names) e
+      let pp_def names ppf (n, e1) =
+        Format.fprintf ppf "@[let@ %s@ :=@]@ @[%a@];" n (pp_expr names) e1
+      and pp_lets names ppf = function
+        | Let (_, _, _) as e -> pp_expr names ppf e
+        | e -> Format.fprintf ppf "@[%a@]" (pp_expr names) e
       in
-      Format.fprintf fmt "@[<2>%a@]@ %a"
+      Format.fprintf ppf "@[<2>%a@]@ %a"
         (pp_def names) (n, e1)
         (pp_lets (n :: names)) e2
   | If_then_else (e1, e2, e3) ->
-      Format.fprintf fmt "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
+      Format.fprintf ppf "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
         (pp_eq_expr names) e1
         (pp_eq_expr names) e2
         (pp_expr names) e3
-  | e -> pp_eq_expr names fmt e
+  | e -> pp_eq_expr names ppf e
 (* TODO: Let expressions *)
-and pp_eq_expr names fmt = function
-  | Eq (e1, e2) -> Format.fprintf fmt "%a@ =@ %a" (pp_add_expr names) e1 (pp_eq_expr names) e2
-  | e -> pp_add_expr names fmt e
-and pp_add_expr names fmt = function
-  | Add (e1, e2) -> Format.fprintf fmt "%a@ +@ %a" (pp_mul_expr names) e1 (pp_add_expr names) e2
-  | Sub (e1, e2) -> Format.fprintf fmt "%a@ -@ %a" (pp_mul_expr names) e1 (pp_add_expr names) e2
-  | e -> pp_mul_expr names fmt e
-and pp_mul_expr names fmt = function
-  | Mul (e1, e2) -> Format.fprintf fmt "%a@ *@ %a" (pp_atomic_expr names) e1 (pp_mul_expr names) e2
-  | Div (e1, e2) -> Format.fprintf fmt "%a@ /@ %a" (pp_atomic_expr names) e1 (pp_mul_expr names) e2
-  | e -> pp_atomic_expr names fmt e
-and pp_atomic_expr names fmt = function
-  | Var n -> Format.pp_print_string fmt (List.nth names n)
-  | Int i -> Format.fprintf fmt "%d" i
-  | Bool true -> Format.fprintf fmt "true"
-  | Bool false -> Format.fprintf fmt "false"
-  | Neg e -> Format.fprintf fmt "-%a" (pp_atomic_expr names) e
-  | e -> Format.fprintf fmt "@[<1>(%a)@]" (pp_expr names) e
+and pp_eq_expr names ppf = function
+  | Eq (e1, e2) -> Format.fprintf ppf "%a@ =@ %a" (pp_add_expr names) e1 (pp_eq_expr names) e2
+  | e -> pp_add_expr names ppf e
+and pp_add_expr names ppf = function
+  | Add (e1, e2) -> Format.fprintf ppf "%a@ +@ %a" (pp_mul_expr names) e1 (pp_add_expr names) e2
+  | Sub (e1, e2) -> Format.fprintf ppf "%a@ -@ %a" (pp_mul_expr names) e1 (pp_add_expr names) e2
+  | e -> pp_mul_expr names ppf e
+and pp_mul_expr names ppf = function
+  | Mul (e1, e2) -> Format.fprintf ppf "%a@ *@ %a" (pp_atomic_expr names) e1 (pp_mul_expr names) e2
+  | Div (e1, e2) -> Format.fprintf ppf "%a@ /@ %a" (pp_atomic_expr names) e1 (pp_mul_expr names) e2
+  | e -> pp_atomic_expr names ppf e
+and pp_atomic_expr names ppf = function
+  | Var n -> Format.pp_print_string ppf (List.nth names n)
+  | Int i -> Format.fprintf ppf "%d" i
+  | Bool true -> Format.fprintf ppf "true"
+  | Bool false -> Format.fprintf ppf "false"
+  | Neg e -> Format.fprintf ppf "-%a" (pp_atomic_expr names) e
+  | e -> Format.fprintf ppf "@[<1>(%a)@]" (pp_expr names) e
 
-let pp_ty fmt = function
-  | Ty_int -> Format.fprintf fmt "Int"
-  | Ty_bool -> Format.fprintf fmt "Bool"
+let pp_ty ppf = function
+  | Ty_int -> Format.fprintf ppf "Int"
+  | Ty_bool -> Format.fprintf ppf "Bool"
 
 
 (** Semantics of arithmetic expressions *)

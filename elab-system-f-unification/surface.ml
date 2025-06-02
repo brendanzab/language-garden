@@ -158,8 +158,8 @@ module Elab = struct
   let zonk_tm (ctx: context) (tm : Core.tm) : Core.tm =
     Core.zonk_tm ctx.ty_size tm
 
-  let pp_ty (ctx : context) (fmt : Format.formatter) (ty : Core.ty) : unit =
-    Core.pp_ty ctx.ty_names fmt (zonk_ty ctx ty)
+  let pp_ty (ctx : context) (ppf : Format.formatter) (ty : Core.ty) : unit =
+    Core.pp_ty ctx.ty_names ppf (zonk_ty ctx ty)
 
 
   (** {2 Elaboration errors} *)

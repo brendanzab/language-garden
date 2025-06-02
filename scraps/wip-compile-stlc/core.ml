@@ -24,90 +24,90 @@ type expr =
 
 (** {1 Pretty printing} *)
 
-let pp_comma_sep (fmt : Format.formatter) () =
-  Format.fprintf fmt ",@ "
+let pp_comma_sep (ppf : Format.formatter) () =
+  Format.fprintf ppf ",@ "
 
-let pp_tuple_elems (type a) (pp_elem : Format.formatter -> a -> unit) (fmt : Format.formatter) (elems : a list) =
+let pp_tuple_elems (type a) (pp_elem : Format.formatter -> a -> unit) (ppf : Format.formatter) (elems : a list) =
   match elems with
-  | [elem] -> Format.fprintf fmt "%a," pp_elem elem
+  | [elem] -> Format.fprintf ppf "%a," pp_elem elem
   | elems ->
-      Format.fprintf fmt "%a"
+      Format.fprintf ppf "%a"
         (Format.pp_print_list pp_elem ~pp_sep:pp_comma_sep) elems
 
-let rec pp_ty (fmt : Format.formatter) (ty : ty) =
+let rec pp_ty (ppf : Format.formatter) (ty : ty) =
   match ty with
   | Fun_ty (param_ty, body_ty) ->
-      Format.fprintf fmt "%a -> %a"
+      Format.fprintf ppf "%a -> %a"
         pp_atomic_ty param_ty
         pp_ty body_ty
   | ty ->
-      pp_atomic_ty fmt ty
-and pp_atomic_ty (fmt : Format.formatter) (ty : ty) =
+      pp_atomic_ty ppf ty
+and pp_atomic_ty (ppf : Format.formatter) (ty : ty) =
   match ty with
-  | Tuple_ty tys -> Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems pp_ty) tys
-  | Bool_ty -> Format.fprintf fmt "Bool"
-  | Int_ty -> Format.fprintf fmt "Int"
-  | ty -> Format.fprintf fmt "@[(%a)@]" pp_ty ty
+  | Tuple_ty tys -> Format.fprintf ppf "@[(%a)@]" (pp_tuple_elems pp_ty) tys
+  | Bool_ty -> Format.fprintf ppf "Bool"
+  | Int_ty -> Format.fprintf ppf "Int"
+  | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty
 
-let pp_name_ann (fmt : Format.formatter) (name, ty) =
-  Format.fprintf fmt "@[<2>@[%a :@]@ %a@]" Name.pp name pp_ty ty
+let pp_name_ann (ppf : Format.formatter) (name, ty) =
+  Format.fprintf ppf "@[<2>@[%a :@]@ %a@]" Name.pp name pp_ty ty
 
-let pp_param (fmt : Format.formatter) (name, ty) =
-  Format.fprintf fmt "@[<2>(@[%a :@]@ %a)@]" Name.pp name pp_ty ty
+let pp_param (ppf : Format.formatter) (name, ty) =
+  Format.fprintf ppf "@[<2>(@[%a :@]@ %a)@]" Name.pp name pp_ty ty
 
-let rec pp_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
+let rec pp_expr (names : Name.t list) (ppf : Format.formatter) (expr : expr) =
   match expr with
   | Let _ as expr ->
-      let rec go (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
+      let rec go (names : Name.t list) (ppf : Format.formatter) (expr : expr) =
         match expr with
         | Let (name, def_ty, def, body) ->
-            Format.fprintf fmt "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
+            Format.fprintf ppf "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
               pp_name_ann (name, def_ty)
               (pp_expr names) def
               (go (name :: names)) body
-        | expr -> Format.fprintf fmt "@[%a@]" (pp_expr names) expr
+        | expr -> Format.fprintf ppf "@[%a@]" (pp_expr names) expr
       in
-      go names fmt expr
+      go names ppf expr
   | Fun_lit (name, param_ty, body) ->
-      Format.fprintf fmt "@[@[fun@ %a@ =>@]@ %a@]"
+      Format.fprintf ppf "@[@[fun@ %a@ =>@]@ %a@]"
         pp_param (name, param_ty)
         (pp_expr (name :: names)) body
   | expr ->
-      pp_if_expr names fmt expr
-and pp_if_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
+      pp_if_expr names ppf expr
+and pp_if_expr (names : Name.t list) (ppf : Format.formatter) (expr : expr) =
   match expr with
   | Bool_elim (head, on_true, on_false) ->
-      Format.fprintf fmt "@[if@ %a@ then@]@ %a@ else@ %a"
+      Format.fprintf ppf "@[if@ %a@ then@]@ %a@ else@ %a"
         (pp_app_expr names) head
         (pp_app_expr names) on_true
         (pp_if_expr names) on_false
   | expr ->
-      pp_app_expr names fmt expr
-and pp_app_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
+      pp_app_expr names ppf expr
+and pp_app_expr (names : Name.t list) (ppf : Format.formatter) (expr : expr) =
   match expr with
   | Fun_app (head, arg) ->
-      Format.fprintf fmt "@[%a@ %a@]"
+      Format.fprintf ppf "@[%a@ %a@]"
         (pp_app_expr names) head
         (pp_proj_expr names) arg
   | expr ->
-      pp_proj_expr names fmt expr
-and pp_proj_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
+      pp_proj_expr names ppf expr
+and pp_proj_expr (names : Name.t list) (ppf : Format.formatter) (expr : expr) =
   match expr with
   | Tuple_proj (head, label) ->
-      Format.fprintf fmt "@[%a.%i@]"
+      Format.fprintf ppf "@[%a.%i@]"
         (pp_proj_expr names) head
         label
   | tm ->
-      pp_atomic_expr names fmt tm
-and pp_atomic_expr (names : Name.t list) (fmt : Format.formatter) (expr : expr) =
+      pp_atomic_expr names ppf tm
+and pp_atomic_expr (names : Name.t list) (ppf : Format.formatter) (expr : expr) =
   match expr with
-  | Var index -> Name.pp fmt (List.nth names index)
-  | Prim prim -> Format.fprintf fmt "#%s" (Prim.name prim)
-  | Tuple_lit exprs -> Format.fprintf fmt "@[(%a)@]" (pp_tuple_elems (pp_expr names)) exprs
-  | Bool_lit true -> Format.fprintf fmt "true"
-  | Bool_lit false -> Format.fprintf fmt "false"
-  | Int_lit i -> Format.fprintf fmt "%i" i
-  | expr -> Format.fprintf fmt "@[(%a)@]" (pp_expr names) expr
+  | Var index -> Name.pp ppf (List.nth names index)
+  | Prim prim -> Format.fprintf ppf "#%s" (Prim.name prim)
+  | Tuple_lit exprs -> Format.fprintf ppf "@[(%a)@]" (pp_tuple_elems (pp_expr names)) exprs
+  | Bool_lit true -> Format.fprintf ppf "true"
+  | Bool_lit false -> Format.fprintf ppf "false"
+  | Int_lit i -> Format.fprintf ppf "%i" i
+  | expr -> Format.fprintf ppf "@[(%a)@]" (pp_expr names) expr
 
 module Semantics = struct
 
