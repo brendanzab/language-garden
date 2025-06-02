@@ -1,4 +1,4 @@
-# Level-based unification for higher-rank polymorphism
+# Bidirectional typing with unification for higher-rank polymorphism
 
 - Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ rank-n types)
 - Extends [**elab-system-f-bidirectional**](../elab-system-f-bidirectional) (+ unification)
