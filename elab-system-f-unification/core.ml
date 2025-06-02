@@ -402,11 +402,9 @@ let rec unify_vtys (ty_size : level) (vty1 : vty) (vty2 : vty) : unit =
 (* Deeply force a type, leaving only unsolved metavariables remaining *)
 let rec zonk_ty (ty_size : level) (ty : ty) : ty =
   match ty with
-  | Meta_var m ->
-      begin match !m with
-      | Unsolved _ -> Meta_var m
-      | Solved vty -> zonk_ty ty_size (Semantics.quote_vty ty_size vty)
-      end
+  | Meta_var { contents = Unsolved _ } -> ty
+  | Meta_var { contents = Solved vty } ->
+      zonk_ty ty_size (Semantics.quote_vty ty_size vty)
   | Local_var ty_index -> Local_var ty_index
   | Forall_type (name, body_ty) ->
       Forall_type (name, zonk_ty (ty_size + 1) body_ty)
