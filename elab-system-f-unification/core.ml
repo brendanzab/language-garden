@@ -48,7 +48,7 @@ type 'a env = 'a list
 
 (** {2 Types} *)
 
-(** Identifier used to distinguish metavariables in in pretty printed types. *)
+(** Identifier used for pretty printing metavariables. *)
 type meta_id = int
 
 (** Type syntax *)

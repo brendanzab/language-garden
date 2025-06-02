@@ -39,7 +39,7 @@ type 'a env = 'a list
 
 (** {1 Syntax} *)
 
-(** Metavariable identifier *)
+(** Identifier used for pretty printing metavariables. *)
 type meta_id = int
 
 (** Type syntax *)
@@ -207,28 +207,22 @@ let rec force (ty : ty) : ty =
       end
   | ty -> ty
 
-(** Extract the identifier from a forced metavariable. *)
-let expect_forced (m : meta_state ref) : meta_id =
-  match !m with
-  | Unsolved id -> id
-  | Solved _ -> invalid_arg "unforced meta"
-
 
 (** {1 Unification} *)
 
-exception Infinite_type of meta_id
+exception Infinite_type of meta_state ref
 exception Mismatched_types of ty * ty
 
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
-let rec occurs (id : meta_id) (ty : ty) : unit =
+let rec occurs (m : meta_state ref) (ty : ty) : unit =
   match force ty with
-  | Meta_var m ->
-      if expect_forced m = id then
-        raise (Infinite_type id)
+  | Meta_var m' ->
+      if m == m' then
+        raise (Infinite_type m)
   | Fun_type (param_ty, body_ty) ->
-      occurs id param_ty;
-      occurs id body_ty
+      occurs m param_ty;
+      occurs m body_ty
   | Int_type -> ()
   | Bool_type -> ()
 
@@ -238,7 +232,7 @@ let rec unify (ty1 : ty) (ty2 : ty) : unit =
   match force ty1, force ty2 with
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
-      occurs (expect_forced m) ty;
+      occurs m ty;
       m := Solved ty
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
       unify param_ty1 param_ty2;
