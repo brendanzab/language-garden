@@ -390,7 +390,8 @@ module Elab = struct
   and check_tm_match (ctx : context) (head : tm) (clauses : (pattern * tm) list) (body_ty : Core.ty) : Core.tm =
     let head_loc = head.loc in
     let head, head_ty = infer_tm ctx head in
-    (* TDOD: Proper match compilation *)
+
+    (* TODO: Proper match compilation *)
     match Core.force_ty head_ty with
     | Variant_type (Row_entries row) ->
         (* Iterate through clauses, accumulating clauses *)
@@ -402,8 +403,8 @@ module Elab = struct
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
                 match Core.Label_map.find_opt label.data row with
-                | Some case_ty ->
-                    let body_tm = check_tm ((name.data, case_ty) :: ctx) body_tm body_ty in
+                | Some param_ty ->
+                    let body_tm = check_tm ((name.data, param_ty) :: ctx) body_tm body_ty in
                     Core.Label_map.add label.data (name.data, body_tm) clauses
                 | None ->
                     error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
@@ -436,10 +437,10 @@ module Elab = struct
                 (* TODO: should be a warning? *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
-                let case_ty = fresh_meta name.loc `Pattern_binder in
-                let body_tm = check_tm ((name.data, case_ty) :: ctx) body_tm body_ty in
+                let param_ty = fresh_meta name.loc `Pattern_binder in
+                let body_tm = check_tm ((name.data, param_ty) :: ctx) body_tm body_ty in
                 Core.Label_map.add label.data (name.data, body_tm) clauses,
-                Core.Label_map.add label.data case_ty row)
+                Core.Label_map.add label.data param_ty row)
             (Core.Label_map.empty, Core.Label_map.empty)
             clauses
         in
