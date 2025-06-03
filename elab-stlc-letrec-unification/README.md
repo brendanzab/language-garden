@@ -8,7 +8,7 @@ This is an implementation of recursive let bindings for the simply typed lambda
 calculus. Singly recursive functions are elaborated to fixed-points in the core
 language:
 
-<!-- $MDX file=examples/fact.txt -->
+<!-- $MDX file=examples/factorial.txt -->
 ```
 let rec fact n :=
   if n = 0 then 1 else n * fact (n - 1);
@@ -19,7 +19,7 @@ fact 5
 <details>
 <summary>Elaboration output</summary>
 
-<!-- $MDX file=examples/fact.stdout -->
+<!-- $MDX file=examples/factorial.stdout -->
 ```
 let fact : Int -> Int :=
   #fix (fact : Int -> Int) =>
