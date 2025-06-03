@@ -402,11 +402,11 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
       rm := Solved_row rty
 
   (* Unify two unsolved rows *)
-  | Row_meta_var ({ contents = Unsolved_row (id, row) } as rm),
-    (Row_meta_var ({ contents = Unsolved_row (_, row') } as rm') as rty)->
-      occurs_row_ty rm rty;
-      rm' := Unsolved_row (id, merge_rows row row');
-      rm := Solved_row rty
+  | Row_meta_var ({ contents = Unsolved_row (id, row1) } as rm1),
+    (Row_meta_var ({ contents = Unsolved_row (_, row2) } as rm2) as rty)->
+      occurs_row_ty rm1 rty;
+      rm2 := Unsolved_row (id, merge_rows row1 row2);
+      rm1 := Solved_row rty
 
   (* Unify concrete row types *)
   | Row_entries row1, Row_entries row2 ->
