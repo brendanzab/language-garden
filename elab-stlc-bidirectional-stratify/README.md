@@ -37,7 +37,11 @@ features like type parameters will result in elaboration errors, for example:
 
 ```sh
 $ stlc-bidirectional-stratify elab <<< "fun (A : Type) (x : A) => x"
-<input>:1:9: expected type, found universe
+error: expected type, found universe
+  ┌─ <stdin>:1:9
+  │
+1 │ fun (A : Type) (x : A) => x
+  │          ^^^^
 [1]
 ```
 

@@ -120,12 +120,20 @@ Lexer Errors
 
 Unexpected character
   $ stlc-bidirectional-stratify elab <<< "1 % 2"
-  <input>:1:2: unexpected character
+  error: unexpected character
+    ┌─ <stdin>:1:2
+    │
+  1 │ 1 % 2
+    │   ^
   [1]
 
 Unclosed block comment
   $ stlc-bidirectional-stratify elab <<< "/- hellooo"
-  <input>:2:0: unclosed block comment
+  error: unclosed block comment
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -134,7 +142,11 @@ Parse Errors
 
 Unclosed parenthesis
   $ stlc-bidirectional-stratify elab <<< "1 + (3 "
-  <input>:2:0: syntax error
+  error: syntax error
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -144,21 +156,33 @@ Elaboration Errors
 
 Unbound variable
   $ stlc-bidirectional-stratify elab <<< "let x := 1; y"
-  <input>:1:12: unbound name `y`
+  error: unbound name `y`
+    ┌─ <stdin>:1:12
+    │
+  1 │ let x := 1; y
+    │             ^
   [1]
 
 Mismatched definition type
   $ stlc-bidirectional-stratify elab <<< "let x : Bool := 1; x"
-  <input>:1:16: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:16
+    │
+  1 │ let x : Bool := 1; x
+    │                 ^
   [1]
 
 Mismatched argument
   $ stlc-bidirectional-stratify elab <<< "let f (x : Bool) := x; f 1"
-  <input>:1:25: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:25
+    │
+  1 │ let f (x : Bool) := x; f 1
+    │                          ^
   [1]
 
 Mismatched parameter
@@ -168,9 +192,13 @@ Mismatched parameter
   > 
   > f true
   > EOF
-  <input>:2:11: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Bool
+    ┌─ <stdin>:2:11
+    │
+  2 │   fun (x : Int) => x;
+    │            ^^^
   [1]
 
 Too many parameters
@@ -180,30 +208,54 @@ Too many parameters
   > 
   > f true
   > EOF
-  <input>:2:18: unexpected parameter
+  error: unexpected parameter
+    ┌─ <stdin>:2:18
+    │
+  2 │   fun (x : Bool) (y : Int) => x;
+    │                   ^
   [1]
 
 Ambiguous parameter type
   $ stlc-bidirectional-stratify elab <<< "fun x => x"
-  <input>:1:4: ambiguous parameter type
+  error: ambiguous parameter type
+    ┌─ <stdin>:1:4
+    │
+  1 │ fun x => x
+    │     ^
   [1]
 
 Ambiguous if expression
   $ stlc-bidirectional-stratify elab <<< "fun (x : Bool) => if x then true else 3"
-  <input>:1:18: ambiguous if expression
+  error: ambiguous if expression
+    ┌─ <stdin>:1:18
+    │
+  1 │ fun (x : Bool) => if x then true else 3
+    │                   ^^^^^^^^^^^^^^^^^^^^^
   [1]
 
 Type expressions
   $ stlc-bidirectional-stratify elab <<< "1 : Type"
-  <input>:1:0: expected type, found expression
+  error: expected type, found expression
+    ┌─ <stdin>:1:0
+    │
+  1 │ 1 : Type
+    │ ^
   [1]
 
   $ stlc-bidirectional-stratify elab <<< "Type : Int"
-  <input>:1:0: expected expression, found universe
+  error: expected expression, found universe
+    ┌─ <stdin>:1:0
+    │
+  1 │ Type : Int
+    │ ^^^^
   [1]
 
   $ stlc-bidirectional-stratify elab <<< "Type : Type"
-  <input>:1:0: expected type, found universe
+  error: expected type, found universe
+    ┌─ <stdin>:1:0
+    │
+  1 │ Type : Type
+    │ ^^^^
   [1]
 
 Local bindings
@@ -211,21 +263,33 @@ Local bindings
   > let x : 42 := 1;
   > x
   > EOF
-  <input>:1:8: expected type or universe, found expression
+  error: expected type or universe, found expression
+    ┌─ <stdin>:1:8
+    │
+  1 │ let x : 42 := 1;
+    │         ^^
   [1]
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let x : Int := Int;
   > x
   > EOF
-  <input>:1:15: expected expression, found type
+  error: expected expression, found type
+    ┌─ <stdin>:1:15
+    │
+  1 │ let x : Int := Int;
+    │                ^^^
   [1]
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let x : Int := Type;
   > x
   > EOF
-  <input>:1:15: expected expression, found universe
+  error: expected expression, found universe
+    ┌─ <stdin>:1:15
+    │
+  1 │ let x : Int := Type;
+    │                ^^^^
   [1]
 
 Parameterised bindings
@@ -233,31 +297,51 @@ Parameterised bindings
   > let id (A : Type) (x : A) : A := x;
   > id Int 1
   > EOF
-  <input>:1:12: expected type, found universe
+  error: expected type, found universe
+    ┌─ <stdin>:1:12
+    │
+  1 │ let id (A : Type) (x : A) : A := x;
+    │             ^^^^
   [1]
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let Foo (x : Int) : Type := Int;
   > 33 : Foo 42
   > EOF
-  <input>:1:28: expected expression, found type
+  error: expected expression, found type
+    ┌─ <stdin>:1:28
+    │
+  1 │ let Foo (x : Int) : Type := Int;
+    │                             ^^^
   [1]
 
   $ stlc-bidirectional-stratify elab <<EOF
   > let Foo (x : Int) : Type := Type;
   > Int : Foo 42
   > EOF
-  <input>:1:28: expected type, found universe
+  error: expected type, found universe
+    ┌─ <stdin>:1:28
+    │
+  1 │ let Foo (x : Int) : Type := Type;
+    │                             ^^^^
   [1]
 
 Mismatched equality
   $ stlc-bidirectional-stratify elab <<< "1 = false"
-  <input>:1:0: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Bool
+    ┌─ <stdin>:1:0
+    │
+  1 │ 1 = false
+    │ ^^^^^^^^^
   [1]
 
 Unsupported equality
   $ stlc-bidirectional-stratify elab <<< "let f (x : Bool) := x; f = f"
-  <input>:1:23: unsupported type: Bool -> Bool
+  error: unsupported type: Bool -> Bool
+    ┌─ <stdin>:1:23
+    │
+  1 │ let f (x : Bool) := x; f = f
+    │                        ^^^^^
   [1]

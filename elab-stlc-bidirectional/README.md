@@ -57,7 +57,11 @@ Typescript, etc.
 
 ```sh
 $ stlc-bidirectional elab <<< "fun x => x + 2"
-<input>:1:4: ambiguous parameter type
+error: ambiguous parameter type
+  ┌─ <stdin>:1:4
+  │
+1 │ fun x => x + 2
+  │     ^
 [1]
 ```
 

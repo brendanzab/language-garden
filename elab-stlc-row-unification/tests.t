@@ -110,12 +110,20 @@ Lexer Errors
 
 Unexpected character
   $ stlc-row-unification elab <<< "1 % 2"
-  <input>:1:2: unexpected character
+  error: unexpected character
+    ┌─ <stdin>:1:2
+    │
+  1 │ 1 % 2
+    │   ^
   [1]
 
 Unclosed block comment
   $ stlc-row-unification elab <<< "/- hellooo"
-  <input>:2:0: unclosed block comment
+  error: unclosed block comment
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -124,7 +132,11 @@ Parse Errors
 
 Unclosed parenthesis
   $ stlc-row-unification elab <<< "1 + (3 "
-  <input>:2:0: syntax error
+  error: syntax error
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -133,28 +145,44 @@ Elaboration Errors
 
 Unbound variable
   $ stlc-row-unification elab <<< "let x := 1; y"
-  <input>:1:12: unbound name `y`
+  error: unbound name `y`
+    ┌─ <stdin>:1:12
+    │
+  1 │ let x := 1; y
+    │             ^
   [1]
 
 Mismatched definition type
   $ stlc-row-unification elab <<< "let x : Bool := 1; x"
-  <input>:1:16: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:16
+    │
+  1 │ let x : Bool := 1; x
+    │                 ^
   [1]
 
 Mismatched argument
   $ stlc-row-unification elab <<< "let f x := x + 1; f f"
-  <input>:1:20: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Int -> Int
+    ┌─ <stdin>:1:20
+    │
+  1 │ let f x := x + 1; f f
+    │                     ^
   [1]
 
 Mismatched argument
   $ stlc-row-unification elab <<< "let f (x : Bool) := x; f 1"
-  <input>:1:25: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:25
+    │
+  1 │ let f (x : Bool) := x; f 1
+    │                          ^
   [1]
 
 Mismatched variant constraint and variant type
@@ -167,9 +195,13 @@ Mismatched variant constraint and variant type
   > 
   > result
   > EOF
-  <input>:5:2: mismatched types:
+  error: mismatched types:
     expected: [no : Int | yes : Int]
     found: [?0.. no : Bool | yes : Int]
+    ┌─ <stdin>:5:2
+    │
+  5 │   choose true 3 false;
+    │   ^^^^^^^^^^^^^^^^^^^
   [1]
 
 Mismatched variant constraint and smaller variant type
@@ -182,9 +214,13 @@ Mismatched variant constraint and smaller variant type
   > 
   > result
   > EOF
-  <input>:5:2: mismatched types:
+  error: mismatched types:
     expected: [yes : Int]
     found: [?0.. no : Bool | yes : Int]
+    ┌─ <stdin>:5:2
+    │
+  5 │   choose true 3 false;
+    │   ^^^^^^^^^^^^^^^^^^^
   [1]
 
 Mismatched variant constraint and non-variant type
@@ -197,62 +233,110 @@ Mismatched variant constraint and non-variant type
   > 
   > result
   > EOF
-  <input>:5:2: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: [?0.. no : Bool | yes : Int]
+    ┌─ <stdin>:5:2
+    │
+  5 │   choose true 3 false;
+    │   ^^^^^^^^^^^^^^^^^^^
   [1]
 
 Infinite type
   $ stlc-row-unification elab <<< "fun f => f f"
-  <input>:1:11: infinite type
+  error: infinite type
+    ┌─ <stdin>:1:11
+    │
+  1 │ fun f => f f
+    │            ^
   [1]
 
 Unexpected parameter
   $ stlc-unification elab <<< "(fun x y => x) : Int -> Int"
-  <input>:1:7: unexpected parameter
+  error: unexpected parameter
+    ┌─ <stdin>:1:7
+    │
+  1 │ (fun x y => x) : Int -> Int
+    │        ^
   [1]
 
 Ambiguous parameter type
   $ stlc-row-unification elab <<< "fun x => x"
-  <input>:1:4: ambiguous function parameter type
+  error: ambiguous function parameter type
+    ┌─ <stdin>:1:4
+    │
+  1 │ fun x => x
+    │     ^
   [1]
 
 Ambiguous return type
   $ stlc-row-unification elab <<< "fun f x => f x"
-  <input>:1:6: ambiguous function parameter type
-  <input>:1:11: ambiguous function return type
+  error: ambiguous function parameter type
+    ┌─ <stdin>:1:6
+    │
+  1 │ fun f x => f x
+    │       ^
+  error: ambiguous function return type
+    ┌─ <stdin>:1:11
+    │
+  1 │ fun f x => f x
+    │            ^
   [1]
 
 Ambiguous placeholder
   $ stlc-row-unification elab <<< "fun (x : _) => x"
-  <input>:1:9: unsolved placeholder
+  error: unsolved placeholder
+    ┌─ <stdin>:1:9
+    │
+  1 │ fun (x : _) => x
+    │          ^
   [1]
 
 Mismatched if expression branches
   $ stlc-row-unification elab <<< "fun x => if x then true else 3"
-  <input>:1:29: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:29
+    │
+  1 │ fun x => if x then true else 3
+    │                              ^
   [1]
 
 Unknown field
   $ stlc-row-unification elab <<< "{ x := 42 }.y"
-  <input>:1:0: unknown field `y`
+  error: unknown field `y`
+    ┌─ <stdin>:1:0
+    │
+  1 │ { x := 42 }.y
+    │ ^^^^^^^^^^^
   [1]
 
 Duplicate label
   $ stlc-row-unification elab <<< "{ x := 42; x := 2 }"
-  <input>:1:11: duplicate label `x`
+  error: duplicate label `x`
+    ┌─ <stdin>:1:11
+    │
+  1 │ { x := 42; x := 2 }
+    │            ^
   [1]
 
 Duplicate labels
   $ stlc-row-unification elab <<< "[some := 1] : [some : Int | some : Int]"
-  <input>:1:28: duplicate label `some`
+  error: duplicate label `some`
+    ┌─ <stdin>:1:28
+    │
+  1 │ [some := 1] : [some : Int | some : Int]
+    │                             ^^^^
   [1]
 
 Unexpected variant
   $ stlc-row-unification elab <<< "[some := 1] : [thing : Int]"
-  <input>:1:1: unexpected variant `some` in type `[thing : Int]`
+  error: unexpected variant `some` in type `[thing : Int]`
+    ┌─ <stdin>:1:1
+    │
+  1 │ [some := 1] : [thing : Int]
+    │  ^^^^
   [1]
 
 Redundant variant pattern
@@ -263,7 +347,11 @@ Redundant variant pattern
   >   | [some := x] => x
   >   end
   > EOF
-  <input>:4:5: redundant variant pattern `some`
+  error: redundant variant pattern `some`
+    ┌─ <stdin>:4:5
+    │
+  4 │   | [some := x] => x
+    │      ^^^^
   [1]
 
 Unexpected variant pattern
@@ -273,7 +361,11 @@ Unexpected variant pattern
   >   | [a := x] => x + 1
   >   end
   > EOF
-  <input>:3:5: unexpected variant pattern `a`
+  error: unexpected variant pattern `a`
+    ┌─ <stdin>:3:5
+    │
+  3 │   | [a := x] => x + 1
+    │      ^
   [1]
 
 Missing variant patterns
@@ -281,17 +373,29 @@ Missing variant patterns
   > fun (x : [a : Int | b : Bool]) =>
   >   match x with end
   > EOF
-  <input>:2:8: non-exhaustive match, missing `a`, `b`
+  error: non-exhaustive match, missing `a`, `b`
+    ┌─ <stdin>:2:8
+    │
+  2 │   match x with end
+    │         ^
   [1]
 
 Mismatched equality
   $ stlc-row-unification elab <<< "1 = false"
-  <input>:1:0: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Bool
+    ┌─ <stdin>:1:0
+    │
+  1 │ 1 = false
+    │ ^^^^^^^^^
   [1]
 
 Unsupported equality
   $ stlc-row-unification elab <<< "let f (x : Bool) := x; f = f"
-  <input>:1:23: unsupported type: Bool -> Bool
+  error: unsupported type: Bool -> Bool
+    ┌─ <stdin>:1:23
+    │
+  1 │ let f (x : Bool) := x; f = f
+    │                        ^^^^^
   [1]

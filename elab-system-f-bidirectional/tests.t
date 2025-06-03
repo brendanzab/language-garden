@@ -121,12 +121,20 @@ Lexer Errors
 
 Unexpected character
   $ system-f-bidirectional elab <<< "1 % 2"
-  <input>:1:2: unexpected character
+  error: unexpected character
+    ┌─ <stdin>:1:2
+    │
+  1 │ 1 % 2
+    │   ^
   [1]
 
 Unclosed block comment
   $ system-f-bidirectional elab <<< "/- hellooo"
-  <input>:2:0: unclosed block comment
+  error: unclosed block comment
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -135,7 +143,11 @@ Parse Errors
 
 Unclosed parenthesis
   $ system-f-bidirectional elab <<< "1 + (3 "
-  <input>:2:0: syntax error
+  error: syntax error
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -145,21 +157,33 @@ Elaboration Errors
 
 Unbound variable
   $ system-f-bidirectional elab <<< "let x := 1; y"
-  <input>:1:12: unbound name `y`
+  error: unbound name `y`
+    ┌─ <stdin>:1:12
+    │
+  1 │ let x := 1; y
+    │             ^
   [1]
 
 Mismatched definition type
   $ system-f-bidirectional elab <<< "let x : Bool := 1; x"
-  <input>:1:16: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:16
+    │
+  1 │ let x : Bool := 1; x
+    │                 ^
   [1]
 
 Mismatched argument
   $ system-f-bidirectional elab <<< "let f (x : Bool) := x; f 1"
-  <input>:1:25: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:25
+    │
+  1 │ let f (x : Bool) := x; f 1
+    │                          ^
   [1]
 
 Mismatched parameter
@@ -169,9 +193,13 @@ Mismatched parameter
   > 
   > f true
   > EOF
-  <input>:2:11: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Bool
+    ┌─ <stdin>:2:11
+    │
+  2 │   fun (x : Int) => x;
+    │            ^^^
   [1]
 
 Too many parameters
@@ -181,7 +209,11 @@ Too many parameters
   > 
   > f true
   > EOF
-  <input>:2:18: unexpected parameter
+  error: unexpected parameter
+    ┌─ <stdin>:2:18
+    │
+  2 │   fun (x : Bool) (y : Int) => x;
+    │                   ^
   [1]
 
 Too many type parameters
@@ -191,27 +223,47 @@ Too many type parameters
   > 
   > f true
   > EOF
-  <input>:2:7: unexpected type parameter
+  error: unexpected type parameter
+    ┌─ <stdin>:2:7
+    │
+  2 │   fun [a] (x : Bool) => x;
+    │        ^
   [1]
 
 Ambiguous parameter type
   $ system-f-bidirectional elab <<< "fun x => x"
-  <input>:1:4: ambiguous parameter type
+  error: ambiguous parameter type
+    ┌─ <stdin>:1:4
+    │
+  1 │ fun x => x
+    │     ^
   [1]
 
 Ambiguous if expression
   $ system-f-bidirectional elab <<< "fun (x : Bool) => if x then true else 3"
-  <input>:1:18: ambiguous if expression
+  error: ambiguous if expression
+    ┌─ <stdin>:1:18
+    │
+  1 │ fun (x : Bool) => if x then true else 3
+    │                   ^^^^^^^^^^^^^^^^^^^^^
   [1]
 
 Mismatched equality
   $ system-f-bidirectional elab <<< "1 = false"
-  <input>:1:0: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Bool
+    ┌─ <stdin>:1:0
+    │
+  1 │ 1 = false
+    │ ^^^^^^^^^
   [1]
 
 Unsupported equality
   $ system-f-bidirectional elab <<< "let f (x : Bool) := x; f = f"
-  <input>:1:23: unsupported type: Bool -> Bool
+  error: unsupported type: Bool -> Bool
+    ┌─ <stdin>:1:23
+    │
+  1 │ let f (x : Bool) := x; f = f
+    │                        ^^^^^
   [1]

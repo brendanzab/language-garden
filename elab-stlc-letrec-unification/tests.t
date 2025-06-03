@@ -322,12 +322,20 @@ Lexer Errors
 
 Unexpected character
   $ stlc-letrec-unification elab <<< "1 % 2"
-  <input>:1:2: unexpected character
+  error: unexpected character
+    ┌─ <stdin>:1:2
+    │
+  1 │ 1 % 2
+    │   ^
   [1]
 
 Unclosed block comment
   $ stlc-letrec-unification elab <<< "/- hellooo"
-  <input>:2:0: unclosed block comment
+  error: unclosed block comment
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -336,7 +344,11 @@ Parse Errors
 
 Unclosed parenthesis
   $ stlc-letrec-unification elab <<< "1 + (3 "
-  <input>:2:0: syntax error
+  error: syntax error
+    ┌─ <stdin>:2:0
+    │
+  2 │ 
+    │ ^
   [1]
 
 
@@ -345,76 +357,132 @@ Elaboration Errors
 
 Unbound variable
   $ stlc-letrec-unification elab <<< "let x := 1; y"
-  <input>:1:12: unbound name `y`
+  error: unbound name `y`
+    ┌─ <stdin>:1:12
+    │
+  1 │ let x := 1; y
+    │             ^
   [1]
 
 Mismatched definition type
   $ stlc-letrec-unification elab <<< "let x : Bool := 1; x"
-  <input>:1:16: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:16
+    │
+  1 │ let x : Bool := 1; x
+    │                 ^
   [1]
 
 Mismatched argument
   $ stlc-letrec-unification elab <<< "let f x := x + 1; f f"
-  <input>:1:20: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Int -> Int
+    ┌─ <stdin>:1:20
+    │
+  1 │ let f x := x + 1; f f
+    │                     ^
   [1]
 
 Mismatched argument
   $ stlc-letrec-unification elab <<< "let f (x : Bool) := x; f 1"
-  <input>:1:25: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:25
+    │
+  1 │ let f (x : Bool) := x; f 1
+    │                          ^
   [1]
 
 Recursive let bindings
   $ stlc-letrec-unification elab <<< "let rec x := x; x : Int"
-  <input>:1:8: expected function literal in recursive let binding
+  error: expected function literal in recursive let binding
+    ┌─ <stdin>:1:8
+    │
+  1 │ let rec x := x; x : Int
+    │         ^
   [1]
 
 Infinite type
   $ stlc-letrec-unification elab <<< "fun f => f f"
-  <input>:1:11: infinite type
+  error: infinite type
+    ┌─ <stdin>:1:11
+    │
+  1 │ fun f => f f
+    │            ^
   [1]
 
 Unexpected parameter
   $ stlc-unification elab <<< "(fun x y => x) : Int -> Int"
-  <input>:1:7: unexpected parameter
+  error: unexpected parameter
+    ┌─ <stdin>:1:7
+    │
+  1 │ (fun x y => x) : Int -> Int
+    │        ^
   [1]
 
 Ambiguous parameter type
   $ stlc-letrec-unification elab <<< "fun x => x"
-  <input>:1:4: ambiguous function parameter type
+  error: ambiguous function parameter type
+    ┌─ <stdin>:1:4
+    │
+  1 │ fun x => x
+    │     ^
   [1]
 
 Ambiguous return type
   $ stlc-letrec-unification elab <<< "fun f x => f x"
-  <input>:1:6: ambiguous function parameter type
-  <input>:1:11: ambiguous function return type
+  error: ambiguous function parameter type
+    ┌─ <stdin>:1:6
+    │
+  1 │ fun f x => f x
+    │       ^
+  error: ambiguous function return type
+    ┌─ <stdin>:1:11
+    │
+  1 │ fun f x => f x
+    │            ^
   [1]
 
 Ambiguous placeholder
   $ stlc-letrec-unification elab <<< "fun (x : _) => x"
-  <input>:1:9: unsolved placeholder
+  error: unsolved placeholder
+    ┌─ <stdin>:1:9
+    │
+  1 │ fun (x : _) => x
+    │          ^
   [1]
 
 Mismatched if expression branches
   $ stlc-letrec-unification elab <<< "fun x => if x then true else 3"
-  <input>:1:29: mismatched types:
+  error: mismatched types:
     expected: Bool
     found: Int
+    ┌─ <stdin>:1:29
+    │
+  1 │ fun x => if x then true else 3
+    │                              ^
   [1]
 
 Mismatched equality
   $ stlc-letrec-unification elab <<< "1 = false"
-  <input>:1:0: mismatched types:
+  error: mismatched types:
     expected: Int
     found: Bool
+    ┌─ <stdin>:1:0
+    │
+  1 │ 1 = false
+    │ ^^^^^^^^^
   [1]
 
 Unsupported equality
   $ stlc-letrec-unification elab <<< "let f (x : Bool) := x; f = f"
-  <input>:1:23: unsupported type: Bool -> Bool
+  error: unsupported type: Bool -> Bool
+    ┌─ <stdin>:1:23
+    │
+  1 │ let f (x : Bool) := x; f = f
+    │                        ^^^^^
   [1]
