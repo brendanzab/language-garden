@@ -191,9 +191,10 @@ module Elab = struct
       match entries with
       | [] -> acc
       | (label, ty) :: entries ->
-          match Core.Label_map.mem label.data acc with
+          begin match Core.Label_map.mem label.data acc with
           | true -> error label.loc (Format.asprintf "duplicate label `%s`" label.data)
           | false -> go (Core.Label_map.add label.data (check_ty ty) acc) entries
+          end
     in
     Row_entries (go Core.Label_map.empty entries)
 
@@ -208,8 +209,8 @@ module Elab = struct
     | Fun_lit (params, body), ty ->
         check_fun_lit ctx params body ty
 
-    | Variant_lit (label, tm), Variant_type (Row_entries row) -> begin
-        match Core.Label_map.find_opt label.data row with
+    | Variant_lit (label, tm), Variant_type (Row_entries row) ->
+        begin match Core.Label_map.find_opt label.data row with
         | Some elem_ty ->
             Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
         | None ->
@@ -217,7 +218,7 @@ module Elab = struct
               (Format.asprintf "unexpected variant `%s` in type `%a`"
                 label.data
                 Core.pp_ty ty)
-    end
+        end
 
     | Match (head, clauses), body_ty ->
         check_tm_match ctx head clauses body_ty
@@ -300,22 +301,22 @@ module Elab = struct
         let body_ty = fresh_meta tm.loc `Match_clauses in
         check_tm_match ctx head clauses body_ty, body_ty
 
-    | Proj (head, label) -> begin
+    | Proj (head, label) ->
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
-        match Core.force_ty head_ty with
-        | Record_type (Row_entries row) -> begin
-            match Core.Label_map.find_opt label.data row with
+        begin match Core.force_ty head_ty with
+        | Record_type (Row_entries row) ->
+            begin match Core.Label_map.find_opt label.data row with
             | Some ty -> Record_proj (head, label.data), ty
             | None -> error head_loc (Format.asprintf "unknown field `%s`" label.data)
-        end
+            end
         | head_ty ->
             let field_ty = fresh_meta head_loc `Record_field in
             let row = Core.Label_map.singleton label.data field_ty in
             let record_ty = Core.Record_type (fresh_row_meta row) in
             unify head_loc head_ty record_ty;
             Record_proj (head, label.data), field_ty
-    end
+        end
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
