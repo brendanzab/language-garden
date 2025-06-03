@@ -372,7 +372,7 @@ let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
 (** Unify row types, updating row constraints as needed *)
 and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
   (* Unifies the types in two row constraints, merging them into a single constraint *)
-  let unify_rows =
+  let merge_rows =
     Label_map.merge @@ fun _ ty1 ty2 ->
       match ty1, ty2 with
       | Some ty1, Some ty2 -> unify_tys ty1 ty2; Some ty1
@@ -382,34 +382,33 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
 
   match force_row_ty rty1, force_row_ty rty2 with
   | Row_meta_var rm1, Row_meta_var rm2 when rm1 == rm2 -> ()
-  | Row_meta_var rm, rty | rty, Row_meta_var rm ->
+
+  (* Should never occur *)
+  | Row_meta_var { contents = Solved_row _ }, _
+  | _, Row_meta_var { contents = Solved_row _ } ->
+      failwith "expected forced row type"
+
+  (* Unify a row constraint against a concrete row type *)
+  | Row_meta_var ({ contents = Unsolved_row (_, row) } as rm), (Row_entries exact_row as rty)
+  | (Row_entries exact_row as rty), Row_meta_var ({ contents = Unsolved_row (_, row) } as rm) ->
       occurs_row_ty rm rty;
+      (* Unify the types in the unsolved row against the types in the concrete
+        row, failing if any are missing. *)
+      row |> Label_map.iter begin fun label row_ty ->
+        match Label_map.find_opt label exact_row with
+        | Some exact_row_ty -> unify_tys row_ty exact_row_ty
+        | None -> raise (Mismatched_row_types (Row_meta_var rm, rty))
+      end;
+      rm := Solved_row rty
 
-      begin match !rm, rty with
-      (* Unify a row constraint against a concrete row type *)
-      | Unsolved_row (_, row), Row_entries exact_row ->
-          (* Unify the types in the unsolved row against the types in the concrete
-            row, failing if any are missing. *)
-          row |> Label_map.iter begin fun label row_ty ->
-            match Label_map.find_opt label exact_row with
-            | Some exact_row_ty -> unify_tys row_ty exact_row_ty
-            | None -> raise (Mismatched_row_types (Row_meta_var rm, rty))
-          end;
-          rm := Solved_row rty
+  (* Unify two unsolved rows *)
+  | Row_meta_var ({ contents = Unsolved_row (id, row) } as rm),
+    (Row_meta_var ({ contents = Unsolved_row (_, row') } as rm') as rty)->
+      occurs_row_ty rm rty;
+      rm' := Unsolved_row (id, merge_rows row row');
+      rm := Solved_row rty
 
-      (* Unify row constraints *)
-      | Unsolved_row (id, row), Row_meta_var rm' ->
-          begin match !rm' with
-          | Unsolved_row (_, row') ->
-              rm' := Unsolved_row (id, unify_rows row row');
-              rm := Solved_row rty
-          | Solved_row _ ->
-              failwith "expected forced row type"
-          end
-      | Solved_row _, _ ->
-          failwith "expected forced row type"
-      end
-
+  (* Unify concrete row types *)
   | Row_entries row1, Row_entries row2 ->
       if not (Label_map.equal (fun ty1 ty2 -> unify_tys ty1 ty2; true) row1 row2) then
         raise (Mismatched_row_types (rty1, rty2))
