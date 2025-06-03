@@ -34,7 +34,7 @@ digraph garden {
     "elab-stlc-bidirectional";
     "elab-stlc-unification";
     "elab-stlc-letrec-unification";
-    "elab-stlc-variant-unification";
+    "elab-stlc-row-unification";
     "elab-stlc-bidirectional-stratify";
     "elab-stlc-abstract";
   }
@@ -67,7 +67,7 @@ digraph garden {
   "elab-stlc-bidirectional" -> "elab-dependent";
   "elab-stlc-bidirectional" -> "lang-doc-templates";
   "elab-stlc-unification" -> "elab-stlc-letrec-unification";
-  "elab-stlc-unification" -> "elab-stlc-variant-unification";
+  "elab-stlc-unification" -> "elab-stlc-row-unification";
   "elab-stlc-unification" -> "elab-system-f-unification";
   "elab-system-f-bidirectional" -> "elab-system-f-unification";
   "elab-dependent" -> "elab-dependent-sugar";

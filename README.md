@@ -31,7 +31,7 @@ Simply typed:
   An elaborator for a simply typed lambda calculus where type annotations can be omitted.
 - [**elab-stlc-letrec-unification**](./elab-stlc-letrec-unification):
   Extends the simply typed lambda calculus with recursive let bindings.
-- [**elab-stlc-variant-unification**](./elab-stlc-variant-unification):
+- [**elab-stlc-row-unification**](./elab-stlc-row-unification):
   Extends the simply typed lambda calculus with structural record and variant
   types, inferring types eagerly using constraint based unification.
 

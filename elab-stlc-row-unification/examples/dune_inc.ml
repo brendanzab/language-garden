@@ -1,5 +1,5 @@
-let bin = "stlc-variant-unification"
-let package = "elab-stlc-variant-unification"
+let bin = "stlc-row-unification"
+let package = "elab-stlc-row-unification"
 
 let generate_rules base =
   Printf.printf

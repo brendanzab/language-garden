@@ -108,7 +108,7 @@
     (sedlex (>= "3.3"))))
 
 (package
-  (name elab-stlc-variant-unification)
+  (name elab-stlc-row-unification)
   (depends
     (cmdliner (>= "1.3"))
     (menhir (and (>= "20240715") :build))
