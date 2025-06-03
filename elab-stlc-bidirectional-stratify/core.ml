@@ -78,7 +78,7 @@ module Semantics = struct
   and nexpr =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | Fun_app of nexpr * vexpr
-    | Bool_elim of nexpr * vexpr Lazy.t * vexpr Lazy.t
+    | Bool_elim of nexpr * (unit -> vexpr) * (unit -> vexpr)
     | Prim_app of Prim.t * vexpr list
 
 
@@ -93,8 +93,8 @@ module Semantics = struct
   let bool_elim head vexpr0 vexpr1 =
     match head with
     | Neu nexpr -> Neu (Bool_elim (nexpr, vexpr0, vexpr1))
-    | Bool_lit true -> Lazy.force vexpr0
-    | Bool_lit false -> Lazy.force vexpr1
+    | Bool_lit true -> vexpr0 ()
+    | Bool_lit false -> vexpr1 ()
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vexpr list -> vexpr =
@@ -130,8 +130,8 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, e0, e1) ->
         let head = eval env head in
-        let ve0 = lazy (eval env e0) in
-        let ve1 = lazy (eval env e1) in
+        let ve0 () = eval env e0 in
+        let ve1 () = eval env e1 in
         bool_elim head ve0 ve1
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
@@ -156,8 +156,8 @@ module Semantics = struct
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
     | Bool_elim (head, vexpr0, vexpr1) ->
-        let e0 = quote size (Lazy.force vexpr0) in
-        let e1 = quote size (Lazy.force vexpr1) in
+        let e0 = quote size (vexpr0 ()) in
+        let e1 = quote size (vexpr1 ()) in
         Bool_elim (quote_neu size head, e0, e1)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)

@@ -139,7 +139,7 @@ and ntm =
   | Local_var of level              (* A fresh variable (used when evaluating under a binder) *)
   | Forall_app of ntm * vty
   | Fun_app of ntm * vtm
-  | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
+  | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
   | Prim_app of Prim.t * vtm list
 
 
@@ -160,11 +160,11 @@ module Semantics = struct
     | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim (head : vtm) (vtm0 : vtm Lazy.t) (vtm1 : vtm Lazy.t) : vtm =
+  let bool_elim (head : vtm) (vtm0 : unit -> vtm) (vtm1 : unit -> vtm) : vtm =
     match head with
     | Neu ntm -> Neu (Bool_elim (ntm, vtm0, vtm1))
-    | Bool_lit true -> Lazy.force vtm0
-    | Bool_lit false -> Lazy.force vtm1
+    | Bool_lit true -> vtm0 ()
+    | Bool_lit false -> vtm1 ()
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
@@ -221,8 +221,8 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm0, tm1) ->
         let head = eval_tm ty_env tm_env head in
-        let vtm0 = lazy (eval_tm ty_env tm_env tm0) in
-        let vtm1 = lazy (eval_tm ty_env tm_env tm1) in
+        let vtm0 () = eval_tm ty_env tm_env tm0 in
+        let vtm1 () = eval_tm ty_env tm_env tm1 in
         bool_elim head vtm0 vtm1
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval_tm ty_env tm_env) args)
@@ -268,8 +268,8 @@ module Semantics = struct
     | Fun_app (head, arg) ->
         Fun_app (quote_ntm ty_size tm_size head, quote_vtm ty_size tm_size arg)
     | Bool_elim (head, vtm0, vtm1) ->
-        let tm0 = quote_vtm ty_size tm_size (Lazy.force vtm0) in
-        let tm1 = quote_vtm ty_size tm_size (Lazy.force vtm1) in
+        let tm0 = quote_vtm ty_size tm_size (vtm0 ()) in
+        let tm1 = quote_vtm ty_size tm_size (vtm1 ()) in
         Bool_elim (quote_ntm ty_size tm_size head, tm0, tm1)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote_vtm ty_size tm_size) args)

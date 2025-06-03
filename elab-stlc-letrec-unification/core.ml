@@ -110,7 +110,7 @@ module Semantics = struct
     | Fix of name * ty * (eval_opts -> vtm -> vtm)
     | Fun_app of ntm * vtm
     | Tuple_proj of ntm * int
-    | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
+    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
     | Prim_app of Prim.t * vtm list
 
 
@@ -135,8 +135,8 @@ module Semantics = struct
   let bool_elim head vtm0 vtm1 =
     match head with
     | Neu ntm -> Neu (Bool_elim (ntm, vtm0, vtm1))
-    | Bool_lit true -> Lazy.force vtm0
-    | Bool_lit false -> Lazy.force vtm1
+    | Bool_lit true -> vtm0 ()
+    | Bool_lit false -> vtm1 ()
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
@@ -181,8 +181,8 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm0, tm1) ->
         let head = eval ~opts env head in
-        let vtm0 = lazy (eval ~opts env tm0) in
-        let vtm1 = lazy (eval ~opts env tm1) in
+        let vtm0 () = eval ~opts env tm0 in
+        let vtm1 () = eval ~opts env tm1 in
         bool_elim head vtm0 vtm1
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval ~opts env) args)
@@ -213,8 +213,8 @@ module Semantics = struct
     | Tuple_proj (head, elem_index) ->
         Tuple_proj (quote_neu ~opts size head, elem_index)
     | Bool_elim (head, vtm0, vtm1) ->
-        let tm0 = quote ~opts size (Lazy.force vtm0) in
-        let tm1 = quote ~opts size (Lazy.force vtm1) in
+        let tm0 = quote ~opts size (vtm0 ()) in
+        let tm1 = quote ~opts size (vtm1 ()) in
         Bool_elim (quote_neu ~opts size head, tm0, tm1)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote ~opts size) args)

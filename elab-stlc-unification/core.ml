@@ -92,7 +92,7 @@ module Semantics = struct
   *)
   and ntm =
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
-    | Bool_elim of ntm * vtm Lazy.t * vtm Lazy.t
+    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
     | Fun_app of ntm * vtm
     | Prim_app of Prim.t * vtm list
 
@@ -108,8 +108,8 @@ module Semantics = struct
   let bool_elim head vtm1 vtm2 =
     match head with
     | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> Lazy.force vtm1
-    | Bool_lit false -> Lazy.force vtm2
+    | Bool_lit true -> vtm1 ()
+    | Bool_lit false -> vtm2 ()
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
@@ -145,8 +145,8 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
         let head = eval env head in
-        let vtm1 = lazy (eval env tm1) in
-        let vtm2 = lazy (eval env tm2) in
+        let vtm1 () = eval env tm1 in
+        let vtm2 () = eval env tm2 in
         bool_elim head vtm1 vtm2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
@@ -171,8 +171,8 @@ module Semantics = struct
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
     | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote size (Lazy.force vtm1) in
-        let tm2 = quote size (Lazy.force vtm2) in
+        let tm1 = quote size (vtm1 ()) in
+        let tm2 = quote size (vtm2 ()) in
         Bool_elim (quote_neu size head, tm1, tm2)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)
