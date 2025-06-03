@@ -5,8 +5,12 @@
 ---
 
 This elaborator introduces structural record and variant types to a simply
-typed lambda calculus. In order to infer types, we introduce row constraints
-that accumulate maps of labelled types as the program is elaborated.
+typed lambda calculus. In order to allow programmers to write programs that use
+records and variants without many up-front type annotations, we use row
+metavariables to accumulate maps of labelled types during unification. This is
+similar to the “flexible records” approach used in some implementations of
+Standard ML. We could extend this to support [row polymorphism](https://en.wikipedia.org/wiki/Row_polymorphism)
+in a future project, but for now this is limited to inferring monomorphic rows.
 
 <!-- $MDX file=examples/readme.txt -->
 ```
