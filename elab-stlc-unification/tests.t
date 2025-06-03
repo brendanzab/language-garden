@@ -70,10 +70,10 @@ Unexpected character
 Unclosed block comment
   $ stlc-unification elab <<< "/- hellooo"
   error: unclosed block comment
-    ┌─ <stdin>:2:0
+    ┌─ <stdin>:1:10
     │
-  2 │ 
-    │ ^
+  1 │ /- hellooo
+    │           ^
   [1]
 
 
@@ -83,10 +83,10 @@ Parse Errors
 Unclosed parenthesis
   $ stlc-unification elab <<< "1 + (3 "
   error: syntax error
-    ┌─ <stdin>:2:0
+    ┌─ <stdin>:1:7
     │
-  2 │ 
-    │ ^
+  1 │ 1 + (3 
+    │        ^
   [1]
 
 

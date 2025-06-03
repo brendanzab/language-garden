@@ -1,22 +1,41 @@
 (** {0 Elaborator CLI} *)
 
-(** {1 Helper functions} *)
+module Source_file = struct
 
-let read_all (ch : in_channel) =
+  type t = {
+    name : string;
+    contents : string;
+    lines : (int * int) Dynarray.t
+  }
+
+  let from_channel (name : string) (ch : in_channel) : t =
     let buf = Buffer.create 16 in
+    let lines = Dynarray.create () in
+
     let rec loop () =
       try
-        Buffer.add_string buf (input_line ch);
-        Buffer.add_char buf '\n';
+        let line = input_line ch in
+        if not (Dynarray.is_empty lines) then Buffer.add_char buf '\n';
+        Dynarray.add_last lines (Buffer.length buf, String.length line);
+        Buffer.add_string buf line;
         loop ()
       with
-      | End_of_file -> Buffer.contents buf
+      | End_of_file ->
+          let contents = Buffer.contents buf in
+          { name; contents; lines }
     in
+
     loop ()
 
-let print_error (start, stop : Surface.loc) (input : string) message =
-  let filename = start.pos_fname in
+  let get_line (source : t) (line : int) : string =
+    let pos, len = Dynarray.get source.lines (line - 1) in
+    String.sub source.contents pos len
 
+end
+
+(** {1 Helper functions} *)
+
+let print_error (source : Source_file.t) (start, stop : Surface.loc) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -29,17 +48,14 @@ let print_error (start, stop : Surface.loc) (input : string) message =
       String.make (stop_column - start_column) '^'
   in
 
-  let input_lines = String.split_on_char '\n' input in (* FIXME: Windows line endings *)
-
   Printf.eprintf "error: %s\n" message;
-  Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad filename start_line start_column;
+  Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
-  Printf.eprintf "%s │ %s\n" gutter_num (List.nth input_lines (start_line - 1));
+  Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline
 
-let parse_tm (filename : string) (input : string) : Surface.tm =
-  let lexbuf = Sedlexing.Utf8.from_string input in
-  Sedlexing.set_filename lexbuf filename;
+let parse_tm (source : Source_file.t) : Surface.tm =
+  let lexbuf = Sedlexing.Utf8.from_string source.contents in
 
   try
     lexbuf
@@ -52,31 +68,31 @@ let parse_tm (filename : string) (input : string) : Surface.tm =
         | `Unexpected_char -> "unexpected character"
         | `Unclosed_block_comment -> "unclosed block comment"
       in
-      print_error (Sedlexing.lexing_positions lexbuf) input msg;
+      print_error source (Sedlexing.lexing_positions lexbuf) msg;
       exit 1
   | Parser.Error ->
-      print_error (Sedlexing.lexing_positions lexbuf) input "syntax error";
+      print_error source (Sedlexing.lexing_positions lexbuf) "syntax error";
       exit 1
 
-let elab_tm (input : string) (tm : Surface.tm) : Core.tm * Core.ty =
+let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   try Surface.Elab.infer_tm [] tm with
   | Surface.Elab.Error (pos, msg) ->
-      print_error pos input msg;
+      print_error source pos msg;
       exit 1
 
 
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
-  let input = read_all stdin in
-  let tm, ty = elab_tm input (parse_tm "<stdin>" input) in
+  let source = Source_file.from_channel "<stdin>" stdin in
+  let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
     (Core.pp_tm []) tm
     Core.pp_ty ty
 
 let norm_cmd () : unit =
-  let input = read_all stdin in
-  let tm, ty = elab_tm input (parse_tm "<stdin>" input) in
+  let source = Source_file.from_channel "<stdin>" stdin in
+  let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
     (Core.pp_tm []) (Core.Semantics.normalise [] tm)
     Core.pp_ty ty
