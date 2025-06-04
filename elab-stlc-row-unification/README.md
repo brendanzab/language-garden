@@ -5,12 +5,12 @@
 ---
 
 This elaborator introduces structural record and variant types to a simply
-typed lambda calculus. In order to allow programmers to write programs that use
-records and variants without many up-front type annotations, we use row
-metavariables to accumulate maps of labelled types during unification. This is
-similar to the “flexible records” approach used in some implementations of
-Standard ML. We could extend this to support [row polymorphism](https://en.wikipedia.org/wiki/Row_polymorphism)
-in a future project, but for now this is limited to inferring monomorphic rows.
+typed lambda calculus. In order to reduce the need for up-front type
+annotations, we use _row metavariables_[^row] to accumulate maps of labelled
+types during unification. This is similar to the “flexible records” approach
+used in some implementations of Standard ML. We could extend this to support
+[row polymorphism](https://en.wikipedia.org/wiki/Row_polymorphism) in a future
+project, but for now this is limited to inferring monomorphic rows.
 
 <!-- $MDX file=examples/readme.txt -->
 ```
@@ -84,3 +84,15 @@ apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 ## Examples
 
 More examples can be found in [`tests.t`](tests.t).
+
+[^row]: The term “row” purportedly comes from Algol 68 via Mitchell Wand:
+
+    > Let $L$ be a fixed countable set of _labels_ $a_1, a_2, \dots$. If
+    > $p: D \rarr X$, where $D$ is a finite subset of $L$, (that is a family of
+    > elements of $X$ indexed by a finite subset of $L$) then we call $\rho$ a
+    > _row_ of $X$’s (This terminology is stolen from Algol 68) p a row of X's.
+    > If we fix an ordering on L, then any row has a canonical finite
+    > representation $\langle (a_{i_1}, x_1), \dots, (a_{i_n}, x_n)\rangle$
+    > where the $a_{i_k}$ are in increasing order.
+    >
+    > -- Mitchell Wand, [Complete Type Inference for Simple Objects](http://www.ccs.neu.edu/home/wand/papers/wand-lics-87.pdf), 1987
