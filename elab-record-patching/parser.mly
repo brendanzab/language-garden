@@ -28,9 +28,8 @@ let main :=
 | t = located(tm); END;
     { t }
 
-let located(X) :=
-| data = X;
-    { Surface.{ loc = $loc; data } }
+
+(* Terms *)
 
 let tm :=
 | "let"; p = located(pattern); ps = list(param); t1 = option(":"; t1 = located(tm); { t1 }); ":=";
@@ -74,6 +73,9 @@ let atomic_tm :=
 | "{"; ds = nonempty_sequence(defn); "}";
     { Surface.Rec_lit ds }
 
+
+(* Binders *)
+
 let pattern :=
 | "_";
     { None }
@@ -91,6 +93,13 @@ let defn :=
     { l, None }
 | l = located(NAME); ps = list(param); ":="; t = located(tm);
     { l, Some (ps, t) }
+
+
+(* Utilities *)
+
+let located(X) :=
+| data = X;
+    { Surface.{ loc = $loc; data } }
 
 let nonempty_sequence(T) :=
 | t = T; option(";");

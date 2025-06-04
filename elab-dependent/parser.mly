@@ -22,9 +22,8 @@ let main :=
 | t = located(tm); END;
     { t }
 
-let located(X) :=
-| data = X;
-    { Surface.{ loc = $loc; data } }
+
+(* Terms *)
 
 let tm :=
 | "let"; p = located(pattern); ":"; t1 = located(tm); ":="; t2 = located(tm); ";"; t3 = located(tm);
@@ -52,6 +51,9 @@ let atomic_tm :=
 | "("; t = tm; ")";
     { t }
 
+
+(* Binders *)
+
 let pattern :=
 | "_";
     { None }
@@ -61,3 +63,10 @@ let pattern :=
 let param :=
 | "("; p = located(pattern); ":"; t = located(tm); ")";
     { p, t }
+
+
+(* Utilities *)
+
+let located(X) :=
+| data = X;
+    { Surface.{ loc = $loc; data } }

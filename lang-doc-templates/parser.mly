@@ -115,7 +115,7 @@ let unquote_fragment :=
     { Surface.Term_fragment tm }
 
 
-(* Utilities *)
+(* Binders *)
 
 let binder :=
 | located(NAME)
@@ -125,6 +125,9 @@ let param :=
     { n, None }
 | "("; n = binder; ":"; ty = located(ty); ")";
     { n, Some ty }
+
+
+(* Utilities *)
 
 let located(X) :=
 | data = X;

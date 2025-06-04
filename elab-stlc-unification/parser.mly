@@ -29,21 +29,8 @@ let main :=
 | tm = located(tm); END;
     { tm }
 
-let located(X) :=
-| data = X;
-    { Surface.{ loc = $loc; data } }
 
-let binder :=
-| n = NAME;
-    { Some n }
-| "_";
-    { None }
-
-let param :=
-| n = located(binder);
-    { n, None }
-| "("; n = located(binder); ":"; ty = located(ty); ")";
-    { n, Some ty }
+(* Types *)
 
 let ty :=
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
@@ -105,3 +92,25 @@ let atomic_tm :=
     { Surface.Bool_lit false }
 | i = NUMBER;
     { Surface.Int_lit i }
+
+
+(* Binders *)
+
+let binder :=
+| n = NAME;
+    { Some n }
+| "_";
+    { None }
+
+let param :=
+| n = located(binder);
+    { n, None }
+| "("; n = located(binder); ":"; ty = located(ty); ")";
+    { n, Some ty }
+
+
+(* Utilities *)
+
+let located(X) :=
+| data = X;
+    { Surface.{ loc = $loc; data } }

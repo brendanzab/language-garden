@@ -21,6 +21,9 @@ let main :=
 | e = located(tm); END;
     { e }
 
+
+(* Types *)
+
 let ty :=
 | ty1 = atomic_ty; "->"; ty2 = ty;
     { Surface.Fun_ty (ty1, ty2) }
@@ -35,6 +38,9 @@ let atomic_ty :=
     { Surface.B }
 | "C";
     { Surface.C }
+
+
+(* Terms *)
 
 let tm :=
 | "let"; n = located(NAME); ":"; ty = ty; ":="; tm1 = located(tm); ";"; tm2 = located(tm);
@@ -57,6 +63,9 @@ let atomic_tm :=
     { tm }
 | n = NAME;
     { Surface.Var n }
+
+
+(* Utilities *)
 
 let located(X) :=
 | data = X;

@@ -38,17 +38,8 @@ let main :=
 | tm = located(tm); END;
     { tm }
 
-let binder :=
-| n = NAME;
-    { Some n }
-| "_";
-    { None }
 
-let param :=
-| n = located(binder);
-    { n, None }
-| "("; n = located(binder); ":"; ty = located(ty); ")";
-    { n, Some ty }
+(* Types *)
 
 let ty :=
 | ty1 = located(atomic_ty); "->"; ty2 = located(ty);
@@ -69,12 +60,8 @@ let atomic_ty :=
 | UNDERSCORE;
     { Surface.Placeholder }
 
-let pattern :=
-| "["; l = located(NAME); ":="; n = located(binder); "]";
-    { Surface.Variant_lit (l, n) : Surface.pattern_data }
 
-let clause :=
-| p = located(pattern); "=>"; tm = located(tm); { p, tm }
+(* Terms *)
 
 let tm :=
 | "let"; n = located(binder); ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
@@ -135,7 +122,30 @@ let atomic_tm :=
 | i = NUMBER;
     { Surface.Int_lit i }
 
-// Utilities
+
+(* Binders *)
+
+let binder :=
+| n = NAME;
+    { Some n }
+| "_";
+    { None }
+
+let param :=
+| n = located(binder);
+    { n, None }
+| "("; n = located(binder); ":"; ty = located(ty); ")";
+    { n, Some ty }
+
+let pattern :=
+| "["; l = located(NAME); ":="; n = located(binder); "]";
+    { Surface.Variant_lit (l, n) : Surface.pattern_data }
+
+let clause :=
+| p = located(pattern); "=>"; tm = located(tm); { p, tm }
+
+
+(* Utilities *)
 
 let located(X) :=
   | data = X;
