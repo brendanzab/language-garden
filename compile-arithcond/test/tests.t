@@ -286,10 +286,10 @@ Weird arithmetic bindings
 Something broken
   $ arithcond compile --target=stack <<< "1 + 2 + (3 +"
   error: syntax error
-    ┌─ <stdin>:1:12
+    ┌─ <stdin>:2:0
     │
-  1 │ 1 + 2 + (3 +
-    │             ^
+  2 │ 
+    │ ^
   [1]
 
 Mismatched negation operands

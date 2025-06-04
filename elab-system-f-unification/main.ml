@@ -8,28 +8,23 @@ module Source_file = struct
     lines : (int * int) Dynarray.t
   }
 
-  let from_channel (name : string) (ch : in_channel) : t =
-    let buf = Buffer.create 16 in
+  let from_channel (name : string) (chan : in_channel) : t =
+    let contents = In_channel.input_all chan in
     let lines = Dynarray.create () in
 
-    let rec loop () =
-      try
-        let line = input_line ch in
-        if not (Dynarray.is_empty lines) then Buffer.add_char buf '\n';
-        Dynarray.add_last lines (Buffer.length buf, String.length line);
-        Buffer.add_string buf line;
-        loop ()
-      with
-      | End_of_file ->
-          let contents = Buffer.contents buf in
-          { name; contents; lines }
+    let add_line stop =
+      match Dynarray.find_last lines with
+      | None -> Dynarray.add_last lines (0, stop)
+      | Some (_, prev_stop) -> Dynarray.add_last lines (prev_stop + 1, stop)
     in
+    contents |> String.iteri (fun pos ch -> if ch = '\n' then add_line pos);
+    add_line (String.length contents);
 
-    loop ()
+    { name; contents; lines }
 
   let get_line (source : t) (line : int) : string =
-    let pos, len = Dynarray.get source.lines (line - 1) in
-    String.sub source.contents pos len
+    let start, stop = Dynarray.get source.lines (line - 1) in
+    String.sub source.contents start (stop - start)
 
 end
 
