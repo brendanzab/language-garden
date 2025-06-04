@@ -1,4 +1,4 @@
-<input> : Type :=
+<stdin> : Type :=
   let Category : Type :=
     {
       Ob : Type;

@@ -1,4 +1,4 @@
-<input> : Type :=
+<stdin> : Type :=
   let Eq : fun (A : Type) (_ : A) (_ : A) -> Type :=
     fun A x y => fun (P : fun (_ : A) -> Type) (_ : P x) -> P y;
   let refl : fun (A : Type) (x : A) -> Eq A x x := fun A x P px => px;

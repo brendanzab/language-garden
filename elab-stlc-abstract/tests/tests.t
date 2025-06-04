@@ -16,35 +16,63 @@ Elaboration Errors
 
 Unexpected function literal
   $ stlc-abstract <<< "(fun a => a) : B"
-  <input>:1:0: error: found function, expected `B`
+  error: found function, expected `B`
+    ┌─ <stdin>:1:0
+    │
+  1 │ (fun a => a) : B
+    │ ^^^^^^^^^^^^
   [1]
 
 Unexpected function literal
   $ stlc-abstract <<< "(fun (a : A) => a) : B"
-  <input>:1:0: error: found function, expected `B`
+  error: found function, expected `B`
+    ┌─ <stdin>:1:0
+    │
+  1 │ (fun (a : A) => a) : B
+    │ ^^^^^^^^^^^^^^^^^^
   [1]
 
 Unexpected parameter type
   $ stlc-abstract <<< "(fun (a : A) => a) : B -> B"
-  <input>:1:0: error: mismatched parameter type, found `A` expected `B`
+  error: mismatched parameter type, found `A` expected `B`
+    ┌─ <stdin>:1:0
+    │
+  1 │ (fun (a : A) => a) : B -> B
+    │ ^^^^^^^^^^^^^^^^^^
   [1]
 
 Unbound variable
   $ stlc-abstract <<< "fun (a : A) => b"
-  <input>:1:15: error: unbound variable `b`
+  error: unbound variable `b`
+    ┌─ <stdin>:1:15
+    │
+  1 │ fun (a : A) => b
+    │                ^
   [1]
 
 Type mismatch
   $ stlc-abstract <<< "fun (a : A) => a : B"
-  <input>:1:15: error: type mismatch, found `A` expected `B`
+  error: type mismatch, found `A` expected `B`
+    ┌─ <stdin>:1:15
+    │
+  1 │ fun (a : A) => a : B
+    │                ^
   [1]
 
 Missing parameter annotation
   $ stlc-abstract <<< "fun (f : A -> B) => fun a => f a"
-  <input>:1:24: error: annotation required
+  error: annotation required
+    ┌─ <stdin>:1:24
+    │
+  1 │ fun (f : A -> B) => fun a => f a
+    │                         ^
   [1]
 
 Mismatched argument
   $ stlc-abstract <<< "fun (f : A -> B) => fun (b : B) => f b"
-  <input>:1:37: error: mismatched argument type, found `B` expected `A`
+  error: mismatched argument type, found `B` expected `A`
+    ┌─ <stdin>:1:37
+    │
+  1 │ fun (f : A -> B) => fun (b : B) => f b
+    │                                      ^
   [1]

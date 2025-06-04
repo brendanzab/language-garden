@@ -1,4 +1,4 @@
-<input> : Type :=
+<stdin> : Type :=
   let Bool : Type :=
     fun (Out : Type) (_ : { true : Out; false : Out }) -> Out;
   let true : Bool := fun Out cases => cases.true;

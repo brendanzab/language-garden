@@ -8,9 +8,9 @@ Usage
 The identity function
   $ cat >id <<< "(fun A a => a) : fun (A : Type) -> A -> A"
   $ cat id | dependent elab
-  <input> : fun (A : Type) A -> A := (fun A a := a) : fun (A : Type) A -> A
+  <stdin> : fun (A : Type) A -> A := (fun A a := a) : fun (A : Type) A -> A
   $ cat id | dependent norm
-  <input> : fun (A : Type) A -> A := fun A a := a
+  <stdin> : fun (A : Type) A -> A := fun A a := a
 
 Church-encoded boolean type
   $ cat >bools <<EOF
@@ -24,7 +24,7 @@ Church-encoded boolean type
   > true Bool false
   > EOF
   $ cat bools | dependent elab
-  <input> :
+  <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
   :=
@@ -33,7 +33,7 @@ Church-encoded boolean type
     let false := fun Out true false := false;
     let not := fun b Out true false := b Out false true; true Bool false
   $ cat bools | dependent norm
-  <input> :
+  <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
   := fun false Out true false := false
@@ -53,7 +53,7 @@ Church-encoded option type
   > some (Option Type) (some Type (Type -> Type))
   > EOF
   $ cat options | dependent elab
-  <input> :
+  <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
           Out)
@@ -65,7 +65,7 @@ Church-encoded option type
     let some := fun A a Out some none := some a;
     some (Option Type) (some Type (Type -> Type))
   $ cat options | dependent norm
-  <input> :
+  <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
           Out)

@@ -1,4 +1,4 @@
-<input> : Type :=
+<stdin> : Type :=
   let F : Type := { A : Type; B : Type; f : fun (_ : A) -> B };
   let patch-1 :
         fun (_ : { A : Type; B : Type [= A]; f : fun (_ : A) -> A }) -> F

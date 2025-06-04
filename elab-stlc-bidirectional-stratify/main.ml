@@ -61,8 +61,11 @@ let parse_tm (source : Source_file.t) : Surface.tm =
     MenhirLib.Convert.Simplified.traditional2revised Parser.main
       (Sedlexing.with_tokenizer Lexer.token lexbuf)
   with
-  | Lexer.Error `Unexpected_char -> print_error source (lexpos ()) "unexpected character"; exit 1
-  | Lexer.Error `Unclosed_block_comment -> print_error source (lexpos ()) "unclosed block comment"; exit 1
+  | Lexer.Error error ->
+      begin match error with
+      | `Unexpected_char -> print_error source (lexpos ()) "unexpected character"; exit 1
+      | `Unclosed_block_comment -> print_error source (lexpos ()) "unclosed block comment"; exit 1
+      end
   | Parser.Error -> print_error source (lexpos ()) "syntax error"; exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Surface.Elab.elab_tm =

@@ -8,10 +8,10 @@ Usage
 The identity function
   $ cat >id <<< "fun (A : Type) (a : A) => a"
   $ cat id | dependent-sugar elab
-  <input> : fun (A : Type) (a : A) -> A :=
+  <stdin> : fun (A : Type) (a : A) -> A :=
     (fun A a => a) : fun (A : Type) (a : A) -> A
   $ cat id | dependent-sugar norm
-  <input> : fun (A : Type) (a : A) -> A := fun A a => a
+  <stdin> : fun (A : Type) (a : A) -> A := fun A a => a
 
 Church-encoded boolean type
   $ cat >bools <<EOF
@@ -25,7 +25,7 @@ Church-encoded boolean type
   > true Bool false
   > EOF
   $ cat bools | dependent-sugar elab
-  <input> :
+  <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
   :=
@@ -36,7 +36,7 @@ Church-encoded boolean type
       fun b Out true false => b Out false true;
     true Bool false
   $ cat bools | dependent-sugar norm
-  <input> :
+  <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
   := fun false Out true false => false
@@ -53,7 +53,7 @@ Church-encoded option type
   > some (Option Type) (some Type (Type -> Type))
   > EOF
   $ cat options | dependent-sugar elab
-  <input> :
+  <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
           Out)
@@ -66,7 +66,7 @@ Church-encoded option type
       fun A a Out some none => some a;
     some (Option Type) (some Type (Type -> Type))
   $ cat options | dependent-sugar norm
-  <input> :
+  <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
           Out)
@@ -80,7 +80,7 @@ Name not bound
 
 Function literal body annotations (checking)
   $ dependent-sugar elab <<< "(fun A (a : A) : A => a) : fun (A : Type) (a : A) -> A"
-  <input> : fun (A : Type) (a : A) -> A :=
+  <stdin> : fun (A : Type) (a : A) -> A :=
     (fun A a => a) : fun (A : Type) (a : A) -> A
 
 Mismatched function literal parameter (checking)
@@ -104,7 +104,7 @@ Too many parameters (checking)
 
 Function literal body annotations (inferring)
   $ dependent-sugar elab <<< "fun (A : Type) (a : A) : A => a"
-  <input> : fun (A : Type) (a : A) -> A :=
+  <stdin> : fun (A : Type) (a : A) -> A :=
     (fun A a => a) : fun (A : Type) (a : A) -> A
 
 Mismatched body annotation (inferring)

@@ -285,7 +285,11 @@ Weird arithmetic bindings
 
 Something broken
   $ arithcond compile --target=stack <<< "1 + 2 + (3 +"
-  <input>:2:0: syntax error
+  error: syntax error
+    ┌─ <stdin>:1:12
+    │
+  1 │ 1 + 2 + (3 +
+    │             ^
   [1]
 
 Mismatched negation operands
@@ -345,7 +349,11 @@ Mismatched if branches
 
 Unbound variable
   $ arithcond exec <<< "x"
-  <input>:1:0: unbound name `x`
+  error: unbound name `x`
+    ┌─ <stdin>:1:0
+    │
+  1 │ x
+    │ ^
   [1]
 
 Mismatched let definition

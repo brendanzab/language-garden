@@ -160,5 +160,9 @@ Complicated stuff
 
 Something broken
   $ arith compile --target=stack <<< "1 + 2 + (3 +"
-  <input>:2:0: syntax error
+  error: syntax error
+    ┌─ <stdin>:1:12
+    │
+  1 │ 1 + 2 + (3 +
+    │             ^
   [1]

@@ -1,4 +1,4 @@
-<input> : Type :=
+<stdin> : Type :=
   let Functor : Type :=
     {
       T : fun (_ : Type) -> Type;
