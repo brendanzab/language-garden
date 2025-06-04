@@ -85,7 +85,7 @@ apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 
 More examples can be found in [`tests.t`](tests.t).
 
-[^row]: The term “row” purportedly comes from Algol 68 via Mitchell Wand:
+[^row]: The term “row” purportedly comes from [Algol 68](https://www.softwarepreservation.org/projects/ALGOL/report/Algol68_revised_report-AB.pdf):
 
     > Let $L$ be a fixed countable set of _labels_ $a_1, a_2, \dots$. If
     > $p: D \rarr X$, where $D$ is a finite subset of $L$, (that is a family of
@@ -96,3 +96,6 @@ More examples can be found in [`tests.t`](tests.t).
     > where the $a_{i_k}$ are in increasing order.
     >
     > -- Mitchell Wand, [Complete Type Inference for Simple Objects](http://www.ccs.neu.edu/home/wand/papers/wand-lics-87.pdf), 1987
+
+    [Apparently](https://rosettacode.org/wiki/Category:ALGOL_68-rows) Algol 68
+    used the term “row” to refer to arrays.
