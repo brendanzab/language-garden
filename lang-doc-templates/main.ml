@@ -24,7 +24,7 @@ module Source_file = struct
 
 end
 
-let print_error (source : Source_file.t) (start, stop : Lexing.position * Lexing.position) (message : string) =
+let emit (source : Source_file.t) (severity : string) (start, stop : Lexing.position * Lexing.position) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -37,7 +37,7 @@ let print_error (source : Source_file.t) (start, stop : Lexing.position * Lexing
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "error: %s\n" message;
+  Printf.eprintf "%s: %s\n" severity message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
@@ -54,12 +54,12 @@ let parse_template (source : Source_file.t) : Surface.template =
   with
   | Lexer.Error error ->
       begin match error with
-      | `Unexpected_char -> print_error source (lexpos ()) "unexpected character"; exit 1
-      | `Unclosed_block_comment -> print_error source (lexpos ()) "unclosed block comment"; exit 1
-      | `Unclosed_text_literal -> print_error source (lexpos ()) "unclosed text literal"; exit 1
-      | `Invalid_escape_code s -> print_error source (lexpos ()) (Format.sprintf "invalid escape code `\\%s`" s); exit 1
+      | `Unexpected_char -> emit source "error" (lexpos ()) "unexpected character"; exit 1
+      | `Unclosed_block_comment -> emit source "error" (lexpos ()) "unclosed block comment"; exit 1
+      | `Unclosed_text_literal -> emit source "error" (lexpos ()) "unclosed text literal"; exit 1
+      | `Invalid_escape_code s -> emit source "error" (lexpos ()) (Format.sprintf "invalid escape code `\\%s`" s); exit 1
       end
-  | Parser.Error -> print_error source (lexpos ()) "syntax error"; exit 1
+  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let context = ref []
 let env = ref []
@@ -111,5 +111,5 @@ let () =
   | Core.Semantics.Text_lit s -> print_string s
   | _ -> failwith "text literal expected"
   | exception Surface.Elab.Error (pos, msg) ->
-      print_error source pos msg;
+      emit source "error" pos msg;
       exit 1

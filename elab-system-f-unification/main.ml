@@ -26,7 +26,7 @@ module Source_file = struct
 
 end
 
-let print_error (source : Source_file.t) (start, stop : Surface.loc) (message : string) =
+let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -39,7 +39,7 @@ let print_error (source : Source_file.t) (start, stop : Surface.loc) (message : 
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "error: %s\n" message;
+  Printf.eprintf "%s: %s\n" severity message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
@@ -56,10 +56,10 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   with
   | Lexer.Error error ->
       begin match error with
-      | `Unexpected_char -> print_error source (lexpos ()) "unexpected character"; exit 1
-      | `Unclosed_block_comment -> print_error source (lexpos ()) "unclosed block comment"; exit 1
+      | `Unexpected_char -> emit source "error" (lexpos ()) "unexpected character"; exit 1
+      | `Unclosed_block_comment -> emit source "error" (lexpos ()) "unclosed block comment"; exit 1
       end
-  | Parser.Error -> print_error source (lexpos ()) "syntax error"; exit 1
+  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   let ctx = Surface.Elab.empty in
@@ -67,7 +67,7 @@ let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   let tm, vty =
     try Surface.Elab.infer_tm ctx tm with
     | Surface.Elab.Error (pos, msg) ->
-        print_error source pos msg;
+        emit source "error" pos msg;
         exit 1
   in
 
@@ -77,11 +77,11 @@ let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
       Surface.Elab.zonk_ty ctx (Surface.Elab.quote_vty ctx vty)
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
-        | (pos, `Forall_arg) -> print_error source pos "ambiguous type argument"
-        | (pos, `Fun_param) -> print_error source pos "ambiguous parameter type"
-        | (pos, `Fun_body) -> print_error source pos "ambiguous return type"
-        | (pos, `If_branches) -> print_error source pos "ambiguous if expression branches"
-        | (pos, `Placeholder) -> print_error source pos "unsolved placeholder");
+        | (pos, `Forall_arg) -> emit source "error" pos "ambiguous type argument"
+        | (pos, `Fun_param) -> emit source "error" pos "ambiguous parameter type"
+        | (pos, `Fun_body) -> emit source "error" pos "ambiguous return type"
+        | (pos, `If_branches) -> emit source "error" pos "ambiguous if expression branches"
+        | (pos, `Placeholder) -> emit source "error" pos "unsolved placeholder");
       exit 1
 
 

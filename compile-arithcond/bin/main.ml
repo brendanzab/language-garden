@@ -33,7 +33,7 @@ module Source_file = struct
 
 end
 
-let print_error (source : Source_file.t) (start, stop : Lexing.position * Lexing.position) (message : string) =
+let emit (source : Source_file.t) (severity : string) (start, stop : Lexing.position * Lexing.position) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -46,7 +46,7 @@ let print_error (source : Source_file.t) (start, stop : Lexing.position * Lexing
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "error: %s\n" message;
+  Printf.eprintf "%s: %s\n" severity message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
@@ -61,9 +61,9 @@ let parse_expr (source : Source_file.t) : Tree_lang.expr =
     MenhirLib.Convert.Simplified.traditional2revised Tree_lang.Parser.main
       (Sedlexing.with_tokenizer Tree_lang.Lexer.token lexbuf)
   with
-  | Tree_lang.Lexer.Error -> print_error source (lexpos ()) "unexpected character"; exit 1
-  | Tree_lang.Unbound_name (loc, n) -> print_error source loc (Format.sprintf "unbound name `%s`" n); exit 1
-  | Tree_lang.Parser.Error -> print_error source (lexpos ()) "syntax error"; exit 1
+  | Tree_lang.Lexer.Error -> emit source "error" (lexpos ()) "unexpected character"; exit 1
+  | Tree_lang.Unbound_name (loc, n) -> emit source "error" loc (Format.sprintf "unbound name `%s`" n); exit 1
+  | Tree_lang.Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let synth_expr ctx e =
   try

@@ -26,7 +26,7 @@ module Source_file = struct
 
 end
 
-let print_error (severity : string) (source : Source_file.t) (start, stop : Lexing.position * Lexing.position) (message : string) =
+let emit (source : Source_file.t) (severity : string) (start, stop : Lexing.position * Lexing.position) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -56,10 +56,10 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   with
   | Lexer.Error error ->
       begin match error with
-      | `Unexpected_char -> print_error "error" source (lexpos ()) "unexpected character"; exit 1
-      | `Unclosed_block_comment -> print_error "error" source (lexpos ()) "unclosed block comment"; exit 1
+      | `Unexpected_char -> emit source "error" (lexpos ()) "unexpected character"; exit 1
+      | `Unclosed_block_comment -> emit source "error" (lexpos ()) "unclosed block comment"; exit 1
       end
-  | Parser.Error -> print_error "error" source (lexpos ()) "syntax error"; exit 1
+  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 
 (** {1 Main entrypoint} *)
@@ -74,9 +74,5 @@ let () =
       Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
         Core.pp_tm tm
         Core.pp_ty ty
-  | exception Surface.Error (loc, msg) ->
-      print_error "error" source loc msg;
-      exit 1
-  | exception Surface.Bug (loc, msg) ->
-      print_error "bug" source loc msg;
-      exit 1
+  | exception Surface.Error (loc, msg) -> emit source "error" loc msg; exit 1
+  | exception Surface.Bug (loc, msg) -> emit source "bug" loc msg; exit 1
