@@ -12,13 +12,11 @@ module Source_file = struct
   type t = {
     name : string;
     contents : string;
-    lines : (int * int) Dynarray.t
+    lines : (int * int) Dynarray.t;
   }
 
-  let from_channel (name : string) (chan : in_channel) : t =
-    let contents = In_channel.input_all chan in
+  let create (name : string) (contents : string) : t =
     let lines = Dynarray.create () in
-
     let add_line stop =
       match Dynarray.find_last lines with
       | None -> Dynarray.add_last lines (0, stop)
@@ -76,26 +74,26 @@ type exec_target = [`Tree | `Stack | `Anf]
 let compile : compile_target -> unit =
   function
   | `Stack ->
-      let e = parse_expr (Source_file.from_channel "<stdin>" stdin) in
+      let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let c = Tree_to_stack.translate e in
       Format.printf "@[<v>%a@]" Stack_lang.pp_code c
   | `Anf ->
-      let e = parse_expr (Source_file.from_channel "<stdin>" stdin) in
+      let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let e = Tree_to_anf.translate e in
       Format.printf "@[<v>%a@]" Anf_lang.pp_expr e
 
 let exec : exec_target -> unit =
   function
   | `Tree ->
-      let e = parse_expr (Source_file.from_channel "<stdin>" stdin) in
+      let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       Format.printf "%d" Tree_lang.Semantics.(eval e)
   | `Stack ->
-      let e = parse_expr (Source_file.from_channel "<stdin>" stdin) in
+      let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let c = Tree_to_stack.translate e in
       Format.printf "@[%a@]"
         Stack_lang.pp_code Stack_lang.Semantics.(normalise (c, []))
   | `Anf ->
-      let e = parse_expr (Source_file.from_channel "<stdin>" stdin) in
+      let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let e = Tree_to_anf.translate e in
       Format.printf "%d" Anf_lang.Semantics.(eval Env.empty e)
 

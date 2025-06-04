@@ -3,13 +3,11 @@ module Source_file = struct
   type t = {
     name : string;
     contents : string;
-    lines : (int * int) Dynarray.t
+    lines : (int * int) Dynarray.t;
   }
 
-  let from_channel (name : string) (chan : in_channel) : t =
-    let contents = In_channel.input_all chan in
+  let create (name : string) (contents : string) : t =
     let lines = Dynarray.create () in
-
     let add_line stop =
       match Dynarray.find_last lines with
       | None -> Dynarray.add_last lines (0, stop)
@@ -72,7 +70,7 @@ let () =
 
   (* TODO: Interactive REPL *)
 
-  let source = Source_file.from_channel "<stdin>" stdin in
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let program = parse_program source in
 
   (* Format.printf "────────────────────────────────────────────────────────────────────────────────@\n";

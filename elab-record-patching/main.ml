@@ -5,13 +5,11 @@ module Source_file = struct
   type t = {
     name : string;
     contents : string;
-    lines : (int * int) Dynarray.t
+    lines : (int * int) Dynarray.t;
   }
 
-  let from_channel (name : string) (chan : in_channel) : t =
-    let contents = In_channel.input_all chan in
+  let create (name : string) (contents : string) : t =
     let lines = Dynarray.create () in
-
     let add_line stop =
       match Dynarray.find_last lines with
       | None -> Dynarray.add_last lines (0, stop)
@@ -82,14 +80,14 @@ let pp_def ~resugar context ppf (name, ty, tm) =
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
-  let source = Source_file.from_channel "<stdin>" stdin in
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let ctx = Surface.initial_context in
   let (tm, ty) = elab_tm source ctx (parse_tm source) in
   Format.printf "%a@\n" (pp_def ~resugar:false ctx)
     ("<stdin>", Surface.quote ctx ty, tm)
 
 let norm_cmd () : unit =
-  let source = Source_file.from_channel "<stdin>" stdin in
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let ctx = Surface.initial_context in
   let (tm, ty) = elab_tm source ctx (parse_tm source) in
   Format.printf "%a@\n" (pp_def ~resugar:true ctx)

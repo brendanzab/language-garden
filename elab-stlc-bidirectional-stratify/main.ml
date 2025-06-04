@@ -5,13 +5,11 @@ module Source_file = struct
   type t = {
     name : string;
     contents : string;
-    lines : (int * int) Dynarray.t
+    lines : (int * int) Dynarray.t;
   }
 
-  let from_channel (name : string) (chan : in_channel) : t =
-    let contents = In_channel.input_all chan in
+  let create (name : string) (contents : string) : t =
     let lines = Dynarray.create () in
-
     let add_line stop =
       match Dynarray.find_last lines with
       | None -> Dynarray.add_last lines (0, stop)
@@ -79,7 +77,7 @@ let elab_expr (source : Source_file.t) (tm : Surface.tm) : Core.expr * Core.ty =
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
-  let source = Source_file.from_channel "<stdin>" stdin in
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let infer_tm = parse_tm source |> elab_tm source in
   match infer_tm with
   | Univ ->
@@ -98,7 +96,7 @@ let elab_cmd () : unit =
         Core.pp_ty t
 
 let norm_cmd () : unit =
-  let source = Source_file.from_channel "<stdin>" stdin in
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_expr source in
   Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
     (Core.pp_expr []) (Core.Semantics.normalise [] tm)
