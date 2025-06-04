@@ -33,8 +33,6 @@ module Source_file = struct
 
 end
 
-(** {1 Helper functions} *)
-
 let print_error (source : Source_file.t) (start, stop : Surface.loc) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
@@ -56,23 +54,16 @@ let print_error (source : Source_file.t) (start, stop : Surface.loc) (message : 
 
 let parse_tm (source : Source_file.t) : Surface.tm =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
+  let lexpos () = Sedlexing.lexing_positions lexbuf in
+  Sedlexing.set_filename lexbuf source.name;
 
   try
-    lexbuf
-    |> Sedlexing.with_tokenizer Lexer.token
-    |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
+    MenhirLib.Convert.Simplified.traditional2revised Parser.main
+      (Sedlexing.with_tokenizer Lexer.token lexbuf)
   with
-  | Lexer.Error error ->
-      let msg =
-        match error with
-        | `Unexpected_char -> "unexpected character"
-        | `Unclosed_block_comment -> "unclosed block comment"
-      in
-      print_error source (Sedlexing.lexing_positions lexbuf) msg;
-      exit 1
-  | Parser.Error ->
-      print_error source (Sedlexing.lexing_positions lexbuf) "syntax error";
-      exit 1
+  | Lexer.Error `Unexpected_char -> print_error source (lexpos ()) "unexpected character"; exit 1
+  | Lexer.Error `Unclosed_block_comment -> print_error source (lexpos ()) "unclosed block comment"; exit 1
+  | Parser.Error -> print_error source (lexpos ()) "syntax error"; exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.Semantics.vty =
   try Surface.Elab.infer_tm Surface.Elab.empty tm with
