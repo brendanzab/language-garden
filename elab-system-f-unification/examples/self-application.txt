@@ -1,0 +1,4 @@
+let f : ([a] -> a -> a) -> ([b] -> b -> b) :=
+  fun id => id id;
+
+f (fun x => x) 42

@@ -1,0 +1,3 @@
+let f : ([a] -> a -> a) -> [b] -> b -> b :=
+  fun (id : [a] -> a -> a) => id [[a] -> a -> a] id;
+f (fun [$a] => fun (x : $a) => x) [Int] 42 : Int
