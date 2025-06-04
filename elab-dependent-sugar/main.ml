@@ -33,7 +33,7 @@ module Source_file = struct
 
 end
 
-let print_error (source : Source_file.t) (start, stop : Lexing.position * Lexing.position) (message : string) =
+let print_error (source : Source_file.t) (start, stop : Surface.loc) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -68,10 +68,10 @@ let parse_tm (source : Source_file.t) : Surface.tm =
       end
   | Parser.Error -> print_error source (lexpos ()) "syntax error"; exit 1
 
-let infer context tm =
-  try Surface.infer context tm with
-  | Surface.Error message ->
-      Printf.eprintf "error: %s\n" message;
+let elab_tm (source : Source_file.t) (ctx : Surface.context) (tm : Surface.tm) =
+  try Surface.infer ctx tm with
+  | Surface.Error (pos, message) ->
+      print_error source pos message;
       exit 1
 
 let pp_def ~resugar context ppf (name, ty, tm) =
@@ -89,14 +89,14 @@ let pp_def ~resugar context ppf (name, ty, tm) =
 let elab_cmd (no_resugar : bool) : unit =
   let source = Source_file.from_channel "<stdin>" stdin in
   let ctx = Surface.initial_context in
-  let (tm, ty) = infer ctx (parse_tm source) in
+  let (tm, ty) = elab_tm source ctx (parse_tm source) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) ctx)
     ("<stdin>", Surface.quote ctx ty, tm)
 
 let norm_cmd (no_resugar : bool) : unit =
   let source = Source_file.from_channel "<stdin>" stdin in
   let ctx = Surface.initial_context in
-  let (tm, ty) = infer ctx (parse_tm source) in
+  let (tm, ty) = elab_tm source ctx (parse_tm source) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) ctx)
     ("<stdin>", Surface.quote ctx ty, Surface.normalise ctx tm)
 

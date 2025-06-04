@@ -75,11 +75,19 @@ Church-encoded option type
 Name not bound
   $ dependent elab <<< "(fun A a => foo) : fun (A : Type) -> A -> foo"
   error: `foo` is not bound in the current scope
+    ┌─ <stdin>:1:42
+    │
+  1 │ (fun A a => foo) : fun (A : Type) -> A -> foo
+    │                                           ^^^
   [1]
 
 Too many parameters (checking)
   $ dependent elab <<< "(fun A B a => a) : fun (A : Type) (a : A) -> A"
   error: too many parameters in function literal
+    ┌─ <stdin>:1:0
+    │
+  1 │ (fun A B a => a) : fun (A : Type) (a : A) -> A
+    │ ^^^^^^^^^^^^^^^^
   [1]
 
 An example of a type error
@@ -93,4 +101,8 @@ An example of a type error
   error: type mismatch
     expected: fun (Out : Type) (true : Out) (false : Out) -> Out
     found:    fun (true : Type) (false : Type) -> Type
+    ┌─ <stdin>:5:0
+    │
+  5 │ true Type : Bool
+    │ ^^^^^^^^^
   [1]

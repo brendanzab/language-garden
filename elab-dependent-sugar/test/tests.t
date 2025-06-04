@@ -76,6 +76,10 @@ Church-encoded option type
 Name not bound
   $ dependent-sugar elab <<< "fun (A : Type) (a : A) => foo"
   error: `foo` is not bound in the current scope
+    ┌─ <stdin>:1:26
+    │
+  1 │ fun (A : Type) (a : A) => foo
+    │                           ^^^
   [1]
 
 Function literal body annotations (checking)
@@ -88,6 +92,10 @@ Mismatched function literal parameter (checking)
   error: type mismatch
     expected: B
     found:    A
+    ┌─ <stdin>:1:10
+    │
+  1 │ (fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : B) -> A
+    │           ^
   [1]
 
 Mismatched function iteral body annotation (checking)
@@ -95,11 +103,19 @@ Mismatched function iteral body annotation (checking)
   error: type mismatch
     expected: B
     found:    A
+    ┌─ <stdin>:1:19
+    │
+  1 │ (fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : A) -> B
+    │                    ^
   [1]
 
 Too many parameters (checking)
   $ dependent-sugar elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (a : A) -> A"
   error: too many parameters in function literal
+    ┌─ <stdin>:1:10
+    │
+  1 │ (fun A B (a : A) : A => a) : fun (A : Type) (a : A) -> A
+    │           ^
   [1]
 
 Function literal body annotations (inferring)
@@ -112,6 +128,10 @@ Mismatched body annotation (inferring)
   error: type mismatch
     expected: A
     found:    Type
+    ┌─ <stdin>:1:30
+    │
+  1 │ fun (A : Type) (a : A) : A => A
+    │                               ^
   [1]
 
 An example of a type error
@@ -125,4 +145,8 @@ An example of a type error
   error: type mismatch
     expected: fun (Out : Type) (true : Out) (false : Out) -> Out
     found:    fun (true : Type) (false : Type) -> Type
+    ┌─ <stdin>:5:0
+    │
+  5 │ true Type : Bool
+    │ ^^^^^^^^^
   [1]

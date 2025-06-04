@@ -8,10 +8,23 @@
 
 (** {1 Surface Syntax} *)
 
-type pattern = string option
+(** The start and end position in a source file *)
+type loc =
+  Lexing.position * Lexing.position
+
+(** Located nodes *)
+type 'a located = {
+  loc : loc;
+  data : 'a;
+}
+
+type pattern = string option located
 
 (** Terms in the surface language *)
 type tm =
+  tm_data located
+
+and tm_data =
   | Let of pattern * params * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
   | Name of string                                  (** References to named things: [ x ] *)
   | Ann of tm * tm                                  (** Terms annotated with types: [ x : A ] *)
@@ -112,21 +125,21 @@ let pp ?(resugar = true) ctx =
 (** An error that will be raised if there was a problem in the surface syntax,
     usually as a result of type errors. This is normal, and should be rendered
     nicely to the programmer. *)
-exception Error of string
+exception Error of loc * string
 
 (** Raises an {!Error} exception *)
-let error message =
-  raise (Error message)
+let error (type a) (loc : loc) (message : string) : a =
+  raise (Error (loc, message))
 
-let type_mismatch ctx ~expected ~found =
+let type_mismatch (ctx : context) ~expected ~found : string =
   Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]@]"
     (pp ctx) expected
     (pp ctx) found
 
-let not_bound name =
+let not_bound (name : string) : string =
   Format.asprintf "`%s` is not bound in the current scope" name
 
-let ambiguous_param name =
+let ambiguous_param (name : string option) : string =
     Format.asprintf "ambiguous function parameter `%s`"
       (Option.value ~default:"_" name)
 
@@ -143,12 +156,12 @@ let ambiguous_param name =
 (** Elaborate a term in the surface language into a term in the core language
     in the presence of a type annotation. *)
 let rec check (ctx : context) (tm : tm) (expected_ty : Semantics.vty) : Syntax.tm =
-  match tm, expected_ty with
+  match tm.data, expected_ty with
   (* Let expressions *)
   | Let (name, params, def_ty, def, body), expected_ty ->
       let def, def_ty = infer_def ctx params def_ty def in
-      let ctx = bind_def ctx name def_ty (eval ctx def) in
-      Syntax.Let (name, def, check ctx body expected_ty)
+      let ctx = bind_def ctx name.data def_ty (eval ctx def) in
+      Syntax.Let (name.data, def, check ctx body expected_ty)
 
   (* Function literals *)
   | Fun_lit (params, body_ty, body), expected_ty ->
@@ -160,29 +173,30 @@ let rec check (ctx : context) (tm : tm) (expected_ty : Semantics.vty) : Syntax.t
       Instead of using conversion checking, extensions to this type system
       could trigger unification or try to coerce the term to the expected
       type here. *)
-  | tm, expected_ty ->
+  | _, expected_ty ->
+      let tm_loc = tm.loc in
       let tm, ty' = infer ctx tm in
       if is_convertible ctx ty' expected_ty then tm else
-        error (type_mismatch ctx
+        error tm_loc (type_mismatch ctx
           ~expected:(quote ctx expected_ty)
           ~found:(quote ctx ty'))
 
 (** Elaborate a term in the surface language into a term in the core language,
     inferring its type. *)
 and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
-  match tm with
+  match tm.data with
   (* Let expressions *)
   | Let (name, params, def_ty, def, body) ->
       let def, def_ty = infer_def ctx params def_ty def in
-      let ctx = bind_def ctx name def_ty (eval ctx def) in
+      let ctx = bind_def ctx name.data def_ty (eval ctx def) in
       let body, body_ty = infer ctx body in
-      Syntax.Let (name, def, body), body_ty
+      Syntax.Let (name.data, def, body), body_ty
 
   (* Named terms *)
   | Name name ->
       begin match lookup ctx name with
       | Some (index, vty) -> (Syntax.Var index, vty)
-      | None -> error (not_bound name)
+      | None -> error tm.loc (not_bound name)
       end
 
   (* Annotated terms *)
@@ -204,11 +218,11 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
       let rec go ctx = function
         | [] -> check ctx body_ty Semantics.Univ
         (* Function types always require annotations *)
-        | (name, None) :: _ -> error (ambiguous_param name)
+        | (name, None) :: _ -> error name.loc (ambiguous_param name.data)
         | (name, Some param_ty) :: params ->
             let param_ty = check ctx param_ty Semantics.Univ in
-            let ctx = bind_param ctx name (eval ctx param_ty) in
-            Syntax.Fun_type (name, param_ty, go ctx params)
+            let ctx = bind_param ctx name.data (eval ctx param_ty) in
+            Syntax.Fun_type (name.data, param_ty, go ctx params)
       in
       go ctx params, Semantics.Univ
 
@@ -232,7 +246,7 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
           | Semantics.Fun_type (_, param_ty, body_ty) ->
               let arg = check ctx arg (Lazy.force param_ty) in
               (Syntax.Fun_app (head, arg), body_ty (eval ctx arg))
-          | _ -> error "not a function")
+          | _ -> error arg.loc "unexpected argument")
         (infer ctx head)
         args
 
@@ -240,12 +254,12 @@ and infer (ctx : context) (tm : tm) : Syntax.tm * Semantics.vty =
 and check_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) (expected_ty : Semantics.vty) =
   match params, body_ty, expected_ty with
   | [], None, expected_ty -> check ctx body expected_ty
-  | [], Some body_ty, expected_ty ->
+  | [], Some ({ loc = body_ty_loc; _ } as body_ty), expected_ty ->
       let body_ty = check ctx body_ty Semantics.Univ in
       let body_ty' = eval ctx body_ty in
       if is_convertible ctx body_ty' expected_ty then
         check ctx body body_ty'
-      else error (type_mismatch ctx
+      else error body_ty_loc (type_mismatch ctx
         ~expected:(quote ctx expected_ty)
         ~found:body_ty)
   | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, expected_param_ty, expected_body_ty) ->
@@ -260,15 +274,15 @@ and check_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body 
             (* Check that the parameter annotation in the function literal
                 matches the expected parameter type. *)
             if is_convertible ctx param_ty' expected_param_ty then param_ty' else
-              error (type_mismatch ctx
+              error name.loc (type_mismatch ctx
                 ~expected:(quote ctx expected_param_ty)
                 ~found:param_ty)
       in
-      let ctx = bind_def ctx name param_ty var in
+      let ctx = bind_def ctx name.data param_ty var in
       let body = check_fun_lit ctx params body_ty body (expected_body_ty var) in
-      Syntax.Fun_lit (name, body)
-  | _, _, _ ->
-      error "too many parameters in function literal"
+      Syntax.Fun_lit (name.data, body)
+  | (name, _) :: _, _, _ ->
+      error name.loc "too many parameters in function literal"
 
 (** Elaborate a function literal in inference mode. *)
 and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
@@ -285,12 +299,12 @@ and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body 
         let param_ty =
           match param_ty with
           (* We’re in inference mode, so function parameters need annotations *)
-          | None -> error (ambiguous_param name)
+          | None -> error name.loc (ambiguous_param name.data)
           | Some param_ty -> check ctx param_ty Semantics.Univ
         in
-        let ctx = bind_def ctx name (eval ctx param_ty) var in
+        let ctx = bind_def ctx name.data (eval ctx param_ty) var in
         let body, body_ty = go ctx params body_ty body in
-        Syntax.Fun_lit (name, body), Syntax.Fun_type (name, param_ty, body_ty)
+        Syntax.Fun_lit (name.data, body), Syntax.Fun_type (name.data, param_ty, body_ty)
   in
   let fun_tm, fun_ty = go ctx params body_ty body in
   Syntax.Ann (fun_tm, fun_ty), eval ctx fun_ty
