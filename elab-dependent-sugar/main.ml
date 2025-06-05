@@ -61,37 +61,37 @@ let parse_tm (source : Source_file.t) : Surface.tm =
       end
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
-let elab_tm (source : Source_file.t) (ctx : Surface.context) (tm : Surface.tm) =
-  try Surface.infer ctx tm with
-  | Surface.Error (pos, message) ->
+let elab_tm (source : Source_file.t) (ctx : Surface.Elab.context) (tm : Surface.tm) =
+  try Surface.Elab.infer ctx tm with
+  | Surface.Elab.Error (pos, message) ->
       emit source "error" pos message;
       exit 1
 
 let pp_def ~resugar context ppf (name, ty, tm) =
-  let pp_tm = Surface.pp ~resugar context in
+  let pp_tm = Surface.Elab.pp ~resugar context in
   let pp_name_ann ppf (name, ty) =
     Format.fprintf ppf "@[<2>@[%s :@]@ @[%a@]@]" name pp_tm ty
   in
   Format.fprintf ppf "@[<2>@[%a@ :=@]@ @[%a@]@]"
     pp_name_ann (name, ty)
-    (Surface.pp ~resugar context) tm
+    (Surface.Elab.pp ~resugar context) tm
 
 
 (** {1 Subcommands} *)
 
 let elab_cmd (no_resugar : bool) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let ctx = Surface.initial_context in
+  let ctx = Surface.Elab.initial_context in
   let (tm, ty) = elab_tm source ctx (parse_tm source) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) ctx)
-    ("<stdin>", Surface.quote ctx ty, tm)
+    ("<stdin>", Surface.Elab.quote ctx ty, tm)
 
 let norm_cmd (no_resugar : bool) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let ctx = Surface.initial_context in
+  let ctx = Surface.Elab.initial_context in
   let (tm, ty) = elab_tm source ctx (parse_tm source) in
   Format.printf "%a@\n" (pp_def ~resugar:(not no_resugar) ctx)
-    ("<stdin>", Surface.quote ctx ty, Surface.normalise ctx tm)
+    ("<stdin>", Surface.Elab.quote ctx ty, Surface.Elab.normalise ctx tm)
 
 
 (** {1 CLI options} *)
