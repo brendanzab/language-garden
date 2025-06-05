@@ -61,26 +61,26 @@ type ty =
   | Int_type
   | Bool_type
 
+(** Row type syntax *)
+and row_ty =
+  | Row_meta_var of row_meta
+  | Row_entries of ty Label_map.t
+
 (** The current state of a metavariable *)
 and meta_state =
   | Solved of ty
   | Unsolved of meta_id
+
+(** The current state of a row metavariable *)
+and row_meta_state =
+  | Solved_row of row_ty
+  | Unsolved_row of row_meta_id * ty Label_map.t
 
 (** Mutable representation of metavariables. These are updated in-place during
     unification and when types are forced. Alternatively we could have
     chosen to store these in a separate metacontext, like in the
     elaboration-zoo. *)
 and meta = meta_state ref
-
-(** Row type syntax *)
-and row_ty =
-  | Row_meta_var of row_meta
-  | Row_entries of ty Label_map.t
-
-(** The current state of a row metavariable *)
-and row_meta_state =
-  | Solved_row of row_ty
-  | Unsolved_row of row_meta_id * ty Label_map.t
 
 (* Mutable representation of row metavariables. *)
 and row_meta = row_meta_state ref
@@ -371,15 +371,6 @@ let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
 
 (** Unify row types, updating row constraints as needed *)
 and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
-  (* Unifies the types in two row constraints, merging them into a single constraint *)
-  let merge_rows =
-    Label_map.merge @@ fun _ ty1 ty2 ->
-      match ty1, ty2 with
-      | Some ty1, Some ty2 -> unify_tys ty1 ty2; Some ty1
-      | Some ty, None | None, Some ty -> Some ty
-      | None, None  -> None
-  in
-
   match force_row_ty rty1, force_row_ty rty2 with
   | Row_meta_var rm1, Row_meta_var rm2 when rm1 == rm2 -> ()
 
@@ -387,6 +378,20 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
   | Row_meta_var { contents = Solved_row _ }, _
   | _, Row_meta_var { contents = Solved_row _ } ->
       failwith "expected forced row type"
+
+  (* Unify two unsolved rows *)
+  | Row_meta_var ({ contents = Unsolved_row (id, row1) } as rm1),
+    (Row_meta_var ({ contents = Unsolved_row (_, row2) } as rm2) as rty) ->
+      occurs_row_ty rm1 rty;
+      let merge_rows =
+        Label_map.merge @@ fun _ ty1 ty2 ->
+          match ty1, ty2 with
+          | Some ty1, Some ty2 -> unify_tys ty1 ty2; Some ty1
+          | Some ty, None | None, Some ty -> Some ty
+          | None, None  -> None
+      in
+      rm2 := Unsolved_row (id, merge_rows row1 row2);
+      rm1 := Solved_row rty
 
   (* Unify a row constraint against a concrete row type *)
   | Row_meta_var ({ contents = Unsolved_row (_, row) } as rm), (Row_entries exact_row as rty)
@@ -400,13 +405,6 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
         | None -> raise (Mismatched_row_types (Row_meta_var rm, rty))
       end;
       rm := Solved_row rty
-
-  (* Unify two unsolved rows *)
-  | Row_meta_var ({ contents = Unsolved_row (id, row1) } as rm1),
-    (Row_meta_var ({ contents = Unsolved_row (_, row2) } as rm2) as rty)->
-      occurs_row_ty rm1 rty;
-      rm2 := Unsolved_row (id, merge_rows row1 row2);
-      rm1 := Solved_row rty
 
   (* Unify concrete row types *)
   | Row_entries row1, Row_entries row2 ->
@@ -436,6 +434,7 @@ and pp_meta ppf m =
   match !m with
   | Solved ty -> pp_atomic_ty ppf ty
   | Unsolved id -> Format.fprintf ppf "?%i" id
+
 and pp_record_row_ty ppf rty =
   let pp_row =
     Format.pp_print_seq
@@ -451,6 +450,7 @@ and pp_record_row_ty ppf rty =
       Format.fprintf ppf "@[{@ ?%i..@ %a@ }@]" id pp_row (Label_map.to_seq row)
   | Row_meta_var { contents = Solved_row rty } ->
       pp_record_row_ty ppf rty
+
 and pp_variant_row_ty ppf rty =
   let pp_row =
     Format.pp_print_seq
