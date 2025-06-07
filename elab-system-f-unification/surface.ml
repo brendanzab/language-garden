@@ -152,14 +152,8 @@ module Elab = struct
   let quote_vty (ctx : context) (vty : Core.vty) : Core.ty =
     Semantics.quote_vty ctx.ty_size vty
 
-  let zonk_ty (ctx: context) (ty : Core.ty) : Core.ty =
-    Core.zonk_ty ctx.ty_size ty
-
-  let zonk_tm (ctx: context) (tm : Core.tm) : Core.tm =
-    Core.zonk_tm ctx.ty_size tm
-
   let pp_ty (ctx : context) (ty : Core.ty) (ppf : Format.formatter) : unit =
-    Core.pp_ty ctx.ty_names (zonk_ty ctx ty) ppf
+    Core.pp_ty ctx.ty_names ty ppf
 
 
   (** {2 Elaboration errors} *)

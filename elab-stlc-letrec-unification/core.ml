@@ -302,7 +302,8 @@ let rec unify (ty0 : ty) (ty1 : ty) : unit =
 
 let pp_ty : ty -> Format.formatter -> unit =
   let rec pp_ty ty ppf =
-    match force ty with
+    match ty with
+    | Meta_var m -> pp_meta pp_ty m ppf
     | Fun_type (param_ty, body_ty) ->
         Format.fprintf ppf "%t -> %t"
           (pp_atomic_ty param_ty)
@@ -311,7 +312,7 @@ let pp_ty : ty -> Format.formatter -> unit =
         pp_atomic_ty ty ppf
   and pp_atomic_ty ty ppf =
     match ty with
-    | Meta_var m -> pp_meta m ppf
+    | Meta_var m -> pp_meta pp_atomic_ty m ppf
     | Tuple_type [elem_ty] ->
         Format.fprintf ppf "(%t,)"
           (pp_ty elem_ty)
@@ -324,13 +325,11 @@ let pp_ty : ty -> Format.formatter -> unit =
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
     | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
-
-  and pp_meta (m : meta) (ppf : Format.formatter) : unit =
+  and pp_meta pp_ty m ppf =
     match !m with
-    | Solved ty -> pp_atomic_ty ty ppf
+    | Solved ty -> pp_ty ty ppf
     | Unsolved id -> Format.fprintf ppf "?%i" id
   in
-
   pp_ty
 
 let rec fresh (names : name env) (name : name) : name =

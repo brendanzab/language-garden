@@ -73,8 +73,7 @@ let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
 
   match Surface.Elab.unsolved_metas ctx with
   | [] ->
-      Surface.Elab.zonk_tm ctx tm,
-      Surface.Elab.zonk_ty ctx (Surface.Elab.quote_vty ctx vty)
+      tm, Surface.Elab.quote_vty ctx vty
   | unsolved_metas ->
       unsolved_metas |> List.iter (function
         | (pos, `Forall_arg) -> emit source "error" pos "ambiguous type argument"

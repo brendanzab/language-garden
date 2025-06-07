@@ -387,54 +387,6 @@ let rec unify_vtys (ty_size : level) (vty1 : vty) (vty2 : vty) : unit =
       raise (Mismatched_types (vty1, vty2))
 
 
-(** {1 Zonking} *)
-
-(** These functions flatten solved metavariables in types. This is important
-    for pretty printing types, as we want to be able to ‘see through’
-    metavariables to properly associate function types.
-
-    Resources:
-
-    - https://stackoverflow.com/questions/31889048/what-does-the-ghc-source-mean-by-zonk
-    - https://mail.haskell.org/pipermail/glasgow-haskell-users/2013-August/024209.html
-*)
-
-(* Deeply force a type, leaving only unsolved metavariables remaining *)
-let rec zonk_ty (ty_size : level) (ty : ty) : ty =
-  match ty with
-  | Meta_var { contents = Unsolved _ } -> ty
-  | Meta_var { contents = Solved vty } ->
-      zonk_ty ty_size (Semantics.quote_vty ty_size vty)
-  | Local_var ty_index -> Local_var ty_index
-  | Forall_type (name, body_ty) ->
-      Forall_type (name, zonk_ty (ty_size + 1) body_ty)
-  | Fun_type (param_ty, body_ty) ->
-      Fun_type (zonk_ty ty_size param_ty, zonk_ty ty_size body_ty)
-  | Int_type -> Int_type
-  | Bool_type -> Bool_type
-
-(** Force all metavariables in a term *)
-let rec zonk_tm (ty_size : level) (tm : tm) : tm =
-  match tm with
-  | Local_var tm_index -> Local_var tm_index
-  | Let (name, def_ty, def, body) ->
-      Let (name, zonk_ty ty_size def_ty, zonk_tm ty_size def, zonk_tm ty_size body)
-  | Forall_lit (name, body) ->
-      Forall_lit (name, zonk_tm (ty_size + 1) body)
-  | Forall_app (head, arg) ->
-      Forall_app (zonk_tm ty_size head, zonk_ty ty_size arg)
-  | Fun_lit (name, param_ty, body) ->
-      Fun_lit (name, zonk_ty ty_size param_ty, zonk_tm ty_size body)
-  | Fun_app (head, arg) ->
-      Fun_app (zonk_tm ty_size head, zonk_tm ty_size arg)
-  | Int_lit i -> Int_lit i
-  | Bool_lit b -> Bool_lit b
-  | Bool_elim (head, tm1, tm2) ->
-      Bool_elim (zonk_tm ty_size head, zonk_tm ty_size tm1, zonk_tm ty_size tm2)
-  | Prim_app (prim, args) ->
-      Prim_app (prim, List.map (zonk_tm ty_size) args)
-
-
 (** {1 Pretty printing} *)
 
 let pp_name (name : name) (ppf : Format.formatter) : unit =
@@ -445,6 +397,7 @@ let pp_name (name : name) (ppf : Format.formatter) : unit =
 let pp_ty : name env -> ty -> Format.formatter -> unit =
   let rec pp_ty ty_names ty ppf =
     match ty with
+    | Meta_var m -> pp_meta pp_ty ty_names m ppf
     | Forall_type (name, body_ty) ->
         Format.fprintf ppf "[%t] -> %t"
           (pp_name name)
@@ -458,17 +411,15 @@ let pp_ty : name env -> ty -> Format.formatter -> unit =
   and pp_atomic_ty ty_names ty ppf =
     match ty with
     | Local_var ty_index -> Format.fprintf ppf "%t" (pp_name (List.nth ty_names ty_index))
-    | Meta_var m -> pp_meta m ppf
+    | Meta_var m -> pp_meta pp_atomic_ty ty_names m ppf
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
     | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty_names ty)
-
-  and pp_meta m ppf =
+  and pp_meta pp_ty ty_names m ppf =
     match !m with
-    | Solved _ -> failwith "expected forced meta"
+    | Solved vty -> pp_ty ty_names (Semantics.quote_vty (List.length ty_names) vty) ppf
     | Unsolved { id; _ } -> Format.fprintf ppf "?%i" id
   in
-
   pp_ty
 
 let pp_name_ann (ty_names : name env) (name : name) (ty : ty) (ppf : Format.formatter) : unit =
