@@ -414,61 +414,65 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
 
 (** {1 Pretty printing} *)
 
-let rec pp_ty (ty : ty) (ppf : Format.formatter) : unit =
-  match force_ty ty with
-  | Fun_type (param_ty, body_ty) ->
-      Format.fprintf ppf "%t -> %t"
-        (pp_atomic_ty param_ty)
-        (pp_ty body_ty)
-  | ty ->
-      pp_atomic_ty ty ppf
-and pp_atomic_ty ty ppf =
-  match ty with
-  | Meta_var m -> pp_meta m ppf
-  | Record_type rty -> pp_record_row_ty rty ppf
-  | Variant_type rty -> pp_variant_row_ty rty ppf
-  | Int_type -> Format.fprintf ppf "Int"
-  | Bool_type -> Format.fprintf ppf "Bool"
-  | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+let pp_ty : ty -> Format.formatter -> unit =
+  let rec pp_ty ty ppf =
+    match force_ty ty with
+    | Fun_type (param_ty, body_ty) ->
+        Format.fprintf ppf "%t -> %t"
+          (pp_atomic_ty param_ty)
+          (pp_ty body_ty)
+    | ty ->
+        pp_atomic_ty ty ppf
+  and pp_atomic_ty ty ppf =
+    match ty with
+    | Meta_var m -> pp_meta m ppf
+    | Record_type rty -> pp_record_row_ty rty ppf
+    | Variant_type rty -> pp_variant_row_ty rty ppf
+    | Int_type -> Format.fprintf ppf "Int"
+    | Bool_type -> Format.fprintf ppf "Bool"
+    | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
 
-and pp_meta (m : meta) (ppf : Format.formatter) : unit =
-  match !m with
-  | Solved ty -> pp_atomic_ty ty ppf
-  | Unsolved id -> Format.fprintf ppf "?%i" id
+  and pp_meta m ppf =
+    match !m with
+    | Solved ty -> pp_atomic_ty ty ppf
+    | Unsolved id -> Format.fprintf ppf "?%i" id
 
-and pp_record_row_ty (rty : row_ty) (ppf : Format.formatter) : unit =
-  let pp_row row ppf =
-    Format.pp_print_seq
-      ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
-      (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%t@]@]" label (pp_ty ty))
-      ppf row
+  and pp_record_row_ty rty ppf =
+    let pp_row row ppf =
+      Format.pp_print_seq
+        ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
+        (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%t@]@]" label (pp_ty ty))
+        ppf row
+    in
+    match rty with
+    | Row_entries row when Label_map.is_empty row ->
+        Format.fprintf ppf "{}"
+    | Row_entries row ->
+        Format.fprintf ppf "@[{@ %t@ }@]" (pp_row (Label_map.to_seq row))
+    | Row_meta_var { contents = Unsolved_row (id, row) } ->
+        Format.fprintf ppf "@[{@ ?%i..@ %t@ }@]" id (pp_row (Label_map.to_seq row))
+    | Row_meta_var { contents = Solved_row rty } ->
+        pp_record_row_ty rty ppf
+
+  and pp_variant_row_ty rty ppf =
+    let pp_row row ppf =
+      Format.pp_print_seq
+        ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ |@ ")
+        (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%t@]@]" label (pp_ty ty))
+        ppf row
+    in
+    match rty with
+    | Row_entries row when Label_map.is_empty row ->
+        Format.fprintf ppf "[|]"
+    | Row_entries row ->
+        Format.fprintf ppf "[%t]" (pp_row (Label_map.to_seq row))
+    | Row_meta_var { contents = Unsolved_row (id, row) } ->
+        Format.fprintf ppf "[?%i..@ %t]" id (pp_row (Label_map.to_seq row))
+    | Row_meta_var { contents = Solved_row rty } ->
+        pp_variant_row_ty rty ppf
   in
-  match rty with
-  | Row_entries row when Label_map.is_empty row ->
-      Format.fprintf ppf "{}"
-  | Row_entries row ->
-      Format.fprintf ppf "@[{@ %t@ }@]" (pp_row (Label_map.to_seq row))
-  | Row_meta_var { contents = Unsolved_row (id, row) } ->
-      Format.fprintf ppf "@[{@ ?%i..@ %t@ }@]" id (pp_row (Label_map.to_seq row))
-  | Row_meta_var { contents = Solved_row rty } ->
-      pp_record_row_ty rty ppf
 
-and pp_variant_row_ty (rty : row_ty) (ppf : Format.formatter) : unit =
-  let pp_row row ppf =
-    Format.pp_print_seq
-      ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ |@ ")
-      (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%t@]@]" label (pp_ty ty))
-      ppf row
-  in
-  match rty with
-  | Row_entries row when Label_map.is_empty row ->
-      Format.fprintf ppf "[|]"
-  | Row_entries row ->
-      Format.fprintf ppf "[%t]" (pp_row (Label_map.to_seq row))
-  | Row_meta_var { contents = Unsolved_row (id, row) } ->
-      Format.fprintf ppf "[?%i..@ %t]" id (pp_row (Label_map.to_seq row))
-  | Row_meta_var { contents = Solved_row rty } ->
-      pp_variant_row_ty rty ppf
+  pp_ty
 
 let pp_name (name : name) (ppf : Format.formatter) : unit =
   match name with
@@ -481,89 +485,92 @@ let pp_name_ann (name : name) (ty : ty) (ppf : Format.formatter) : unit =
 let pp_param (name : name) (ty : ty) (ppf : Format.formatter) : unit =
   Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]" (pp_name name) (pp_ty ty)
 
-let rec pp_tm (names : name env) (tm : tm) (ppf : Format.formatter) : unit =
-  match tm with
-  | Let _ as tm ->
-      let rec go names tm ppf =
-        match tm with
-        | Let (name, def_ty, def, body) ->
-            Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
-              (pp_name_ann name def_ty)
-              (pp_tm names def)
-              (go (name :: names) body)
-        | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
-      in
-      Format.fprintf ppf "@[<v>%t@]" (go names tm)
-  | Variant_elim (head, clauses) ->
-      Format.fprintf ppf "@[<hv>@[match@ @[%t@]@ with@]@ %aend@]"
-        (pp_app_tm names head)
-        (Format.pp_print_seq
-          ~pp_sep:(fun ppf () -> Format.fprintf ppf "")
-          (fun ppf (label, (name, body)) ->
-            Format.fprintf ppf "@[@[<2>@[|@ [%s@ :=@]@ @[%t@]]@]@ =>@ @[%t@]@]@ "
-              label
-              (pp_name name)
-              (pp_tm (name :: names) body)))
-        (Label_map.to_seq clauses)
-  | Fun_lit (name, param_ty, body) ->
-      let rec go names tm ppf =
-        match tm with
-        | Fun_lit (name, param_ty, body) ->
-            Format.fprintf ppf "@ @[fun@ %t@ =>@]%t"
-              (pp_param name param_ty)
-              (go (name :: names) body)
-        | tm -> Format.fprintf ppf "@]@ @[%t@]@]" (pp_tm names tm)
-      in
-      Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %t@ =>@]%t"
-        (pp_param name param_ty)
-        (go (name :: names) body)
-  | Variant_lit (label, tm, ty) ->
-      Format.fprintf ppf "@[<2>@[@[<2>@[[%s@ :=@]@ @[%t@]]@]@ :@]@ @[%t@]@]"
-        label
-        (pp_tm names tm)
-        (pp_ty ty)
-  | Bool_elim (head, tm0, tm1) ->
-      Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
-        (pp_app_tm names head)
-        (pp_app_tm names tm0)
-        (pp_tm names tm1)
-  | tm ->
-      pp_app_tm names tm ppf
-and pp_app_tm names tm ppf =
-  match tm with
-  | Fun_app (head, arg) ->
-      Format.fprintf ppf "@[%t@ %t@]"
-        (pp_app_tm names head)
-        (pp_proj_tm names arg)
-  | Prim_app (prim, args) ->
-      let pp_sep ppf () = Format.fprintf ppf "@ " in
-      Format.fprintf ppf "@[#%s@ %t@]"
-        (Prim.name prim)
-        (fun ppf ->
-          Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names)) ppf args)
-  | tm ->
-      pp_proj_tm names tm ppf
-and pp_proj_tm names tm ppf =
-  match tm with
-  | Record_proj (head, label) ->
-      Format.fprintf ppf "%t.%s"
-        (pp_proj_tm names head)
-        label
-  | tm ->
-      pp_atomic_tm names tm ppf
-and pp_atomic_tm names tm ppf =
-  match tm with
-  | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
-  | Record_lit fields when Label_map.is_empty fields ->
-      Format.fprintf ppf "{}"
-  | Record_lit fields ->
-      Format.fprintf ppf "@[{@ %a@ }@]"
-        (Format.pp_print_seq
-          ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
-          (fun ppf (label, tm) ->
-            Format.fprintf ppf "@[<2>@[%s@ :=@]@ @[%t@]@]" label (pp_tm names tm)))
-        (Label_map.to_seq fields)
-  | Int_lit i -> Format.fprintf ppf "%i" i
-  | Bool_lit true -> Format.fprintf ppf "true"
-  | Bool_lit false -> Format.fprintf ppf "false"
-  | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
+let pp_tm : name env -> tm -> Format.formatter -> unit =
+  let rec pp_tm names tm ppf =
+    match tm with
+    | Let _ as tm ->
+        let rec go names tm ppf =
+          match tm with
+          | Let (name, def_ty, def, body) ->
+              Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+                (pp_name_ann name def_ty)
+                (pp_tm names def)
+                (go (name :: names) body)
+          | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
+        in
+        Format.fprintf ppf "@[<v>%t@]" (go names tm)
+    | Variant_elim (head, clauses) ->
+        Format.fprintf ppf "@[<hv>@[match@ @[%t@]@ with@]@ %aend@]"
+          (pp_app_tm names head)
+          (Format.pp_print_seq
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf "")
+            (fun ppf (label, (name, body)) ->
+              Format.fprintf ppf "@[@[<2>@[|@ [%s@ :=@]@ @[%t@]]@]@ =>@ @[%t@]@]@ "
+                label
+                (pp_name name)
+                (pp_tm (name :: names) body)))
+          (Label_map.to_seq clauses)
+    | Fun_lit (name, param_ty, body) ->
+        let rec go names tm ppf =
+          match tm with
+          | Fun_lit (name, param_ty, body) ->
+              Format.fprintf ppf "@ @[fun@ %t@ =>@]%t"
+                (pp_param name param_ty)
+                (go (name :: names) body)
+          | tm -> Format.fprintf ppf "@]@ @[%t@]@]" (pp_tm names tm)
+        in
+        Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %t@ =>@]%t"
+          (pp_param name param_ty)
+          (go (name :: names) body)
+    | Variant_lit (label, tm, ty) ->
+        Format.fprintf ppf "@[<2>@[@[<2>@[[%s@ :=@]@ @[%t@]]@]@ :@]@ @[%t@]@]"
+          label
+          (pp_tm names tm)
+          (pp_ty ty)
+    | Bool_elim (head, tm0, tm1) ->
+        Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
+          (pp_app_tm names head)
+          (pp_app_tm names tm0)
+          (pp_tm names tm1)
+    | tm ->
+        pp_app_tm names tm ppf
+  and pp_app_tm names tm ppf =
+    match tm with
+    | Fun_app (head, arg) ->
+        Format.fprintf ppf "@[%t@ %t@]"
+          (pp_app_tm names head)
+          (pp_proj_tm names arg)
+    | Prim_app (prim, args) ->
+        let pp_sep ppf () = Format.fprintf ppf "@ " in
+        Format.fprintf ppf "@[#%s@ %t@]"
+          (Prim.name prim)
+          (fun ppf ->
+            Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names)) ppf args)
+    | tm ->
+        pp_proj_tm names tm ppf
+  and pp_proj_tm names tm ppf =
+    match tm with
+    | Record_proj (head, label) ->
+        Format.fprintf ppf "%t.%s"
+          (pp_proj_tm names head)
+          label
+    | tm ->
+        pp_atomic_tm names tm ppf
+  and pp_atomic_tm names tm ppf =
+    match tm with
+    | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
+    | Record_lit fields when Label_map.is_empty fields ->
+        Format.fprintf ppf "{}"
+    | Record_lit fields ->
+        Format.fprintf ppf "@[{@ %a@ }@]"
+          (Format.pp_print_seq
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
+            (fun ppf (label, tm) ->
+              Format.fprintf ppf "@[<2>@[%s@ :=@]@ @[%t@]@]" label (pp_tm names tm)))
+          (Label_map.to_seq fields)
+    | Int_lit i -> Format.fprintf ppf "%i" i
+    | Bool_lit true -> Format.fprintf ppf "true"
+    | Bool_lit false -> Format.fprintf ppf "false"
+    | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
+  in
+  pp_tm

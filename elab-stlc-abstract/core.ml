@@ -20,20 +20,23 @@ type tm =
 
 (* Pretty printing *)
 
-let rec pp_ty (ty : ty) (ppf : Format.formatter) : unit =
-  match ty with
-  | Fun_ty (param_ty, body_ty) ->
-      Format.fprintf ppf "%t -> %t"
-        (pp_atomic_ty param_ty)
-        (pp_ty body_ty)
-  | ty ->
-      pp_atomic_ty ty ppf
-and pp_atomic_ty (ty : ty) (ppf : Format.formatter) : unit =
-  match ty with
-  | A -> Format.fprintf ppf "A"
-  | B -> Format.fprintf ppf "B"
-  | C -> Format.fprintf ppf "C"
-  | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+let pp_ty : ty -> Format.formatter -> unit =
+  let rec pp_ty ty ppf =
+    match ty with
+    | Fun_ty (param_ty, body_ty) ->
+        Format.fprintf ppf "%t -> %t"
+          (pp_atomic_ty param_ty)
+          (pp_ty body_ty)
+    | ty ->
+        pp_atomic_ty ty ppf
+  and pp_atomic_ty ty ppf =
+    match ty with
+    | A -> Format.fprintf ppf "A"
+    | B -> Format.fprintf ppf "B"
+    | C -> Format.fprintf ppf "C"
+    | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+  in
+  pp_ty
 
 let pp_name_ann (name : string) (ty : ty) (ppf : Format.formatter) : unit =
   Format.fprintf ppf "@[<2>@[%s :@]@ %t@]" name (pp_ty ty)
@@ -42,7 +45,7 @@ let pp_param (name : string) (ty : ty) (ppf : Format.formatter) : unit =
   Format.fprintf ppf "@[<2>(@[%s :@]@ %t)@]" name (pp_ty ty)
 
 let pp_tm : tm -> Format.formatter -> unit =
-  let rec pp_tm (names : string Env.t) (tm : tm) (ppf : Format.formatter) : unit =
+  let rec pp_tm names tm ppf =
     match tm with
     | Let _ as tm ->
         let rec go names tm ppf =
