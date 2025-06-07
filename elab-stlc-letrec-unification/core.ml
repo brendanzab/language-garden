@@ -247,10 +247,10 @@ let fresh_meta : unit -> meta =
 (** Force any solved metavariables on the outermost part of a type. Chains of
     metavariables will be collapsed to make forcing faster in the future. This
     is sometimes referred to as {i path compression}. *)
-let rec force (ty : ty) : ty =
+let rec force_ty (ty : ty) : ty =
   match ty with
   | Meta_var ({ contents = Solved ty } as m) ->
-      let ty = force ty in
+      let ty = force_ty ty in
       m := Solved ty;
       ty
   | ty -> ty
@@ -264,7 +264,7 @@ exception Mismatched_types of ty * ty
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
 let rec occurs (m : meta) (ty : ty) : unit =
-  match force ty with
+  match force_ty ty with
   | Meta_var m' ->
       if m == m' then
         raise (Infinite_type m)
@@ -278,17 +278,17 @@ let rec occurs (m : meta) (ty : ty) : unit =
 
 (** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
-let rec unify (ty0 : ty) (ty1 : ty) : unit =
-  match force ty0, force ty1 with
+let rec unify_tys (ty0 : ty) (ty1 : ty) : unit =
+  match force_ty ty0, force_ty ty1 with
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
       occurs m ty;
       m := Solved ty
   | Fun_type (param_ty0, body_ty0), Fun_type (param_ty1, body_ty1) ->
-      unify param_ty0 param_ty1;
-      unify body_ty0 body_ty1;
+      unify_tys param_ty0 param_ty1;
+      unify_tys body_ty0 body_ty1;
   | Tuple_type elem_tys0, Tuple_type elem_tys1  -> begin
-      try List.iter2 unify elem_tys0 elem_tys1 with
+      try List.iter2 unify_tys elem_tys0 elem_tys1 with
       | Invalid_argument _ ->
           raise (Mismatched_types (ty0, ty1))
   end

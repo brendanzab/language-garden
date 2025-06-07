@@ -201,10 +201,10 @@ let fresh_meta : unit -> meta =
 (** Force any solved metavariables on the outermost part of a type. Chains of
     metavariables will be collapsed to make forcing faster in the future. This
     is sometimes referred to as {i path compression}. *)
-let rec force (ty : ty) : ty =
+let rec force_ty (ty : ty) : ty =
   match ty with
   | Meta_var ({ contents = Solved ty } as m) ->
-      let ty = force ty in
+      let ty = force_ty ty in
       m := Solved ty;
       ty
   | ty -> ty
@@ -218,7 +218,7 @@ exception Mismatched_types of ty * ty
 (** Occurs check. This guards against self-referential unification problems
     that would result in infinite loops during unification. *)
 let rec occurs (m : meta) (ty : ty) : unit =
-  match force ty with
+  match force_ty ty with
   | Meta_var m' ->
       if m == m' then
         raise (Infinite_type m)
@@ -230,15 +230,15 @@ let rec occurs (m : meta) (ty : ty) : unit =
 
 (** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
-let rec unify (ty1 : ty) (ty2 : ty) : unit =
-  match force ty1, force ty2 with
+let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
+  match force_ty ty1, force_ty ty2 with
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
       occurs m ty;
       m := Solved ty
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
-      unify param_ty1 param_ty2;
-      unify body_ty1 body_ty2
+      unify_tys param_ty1 param_ty2;
+      unify_tys body_ty1 body_ty2
   | Int_type, Int_type -> ()
   | Bool_type, Bool_type -> ()
   | ty1, ty2 ->

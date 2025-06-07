@@ -153,7 +153,7 @@ module Elab = struct
   let error (type a) (loc : loc) (message : string) : a =
     raise (Error (loc, message))
 
-  let unify (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
+  let unify_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     try Core.unify_tys ty1 ty2 with
     | Core.Infinite_type _ -> error loc "infinite type"
     | Core.Infinite_row_type _ -> error loc "infinite row type"
@@ -233,7 +233,7 @@ module Elab = struct
     | _ ->
         let tm', ty' = infer_tm ctx tm in
         (* NOTE: We could add some subtyping coercions here *)
-        unify tm.loc ty ty';
+        unify_tys tm.loc ty ty';
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -291,7 +291,7 @@ module Elab = struct
           | head_ty ->
               let param_ty = fresh_meta head_loc `Fun_param in
               let body_ty = fresh_meta head_loc `Fun_body in
-              unify head_loc head_ty (Fun_type (param_ty, body_ty));
+              unify_tys head_loc head_ty (Fun_type (param_ty, body_ty));
               param_ty, body_ty
         in
         let arg = check_tm ctx arg param_ty in
@@ -314,7 +314,7 @@ module Elab = struct
             let field_ty = fresh_meta head_loc `Record_field in
             let row = Core.Label_map.singleton label.data field_ty in
             let record_ty = Core.Record_type (fresh_row_meta row) in
-            unify head_loc head_ty record_ty;
+            unify_tys head_loc head_ty record_ty;
             Record_proj (head, label.data), field_ty
         end
 
@@ -328,7 +328,7 @@ module Elab = struct
     | Op2 (`Eq, tm0, tm1) ->
         let tm0, ty0 = infer_tm ctx tm0 in
         let tm1, ty1 = infer_tm ctx tm1 in
-        unify tm.loc ty0 ty1;
+        unify_tys tm.loc ty0 ty1;
         begin match Core.force_ty ty0 with
         | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
@@ -361,12 +361,12 @@ module Elab = struct
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_loc = param_ty.loc in
         let param_ty = check_ty param_ty in
-        unify param_ty_loc param_ty param_ty';
+        unify_tys param_ty_loc param_ty param_ty';
         let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
-        unify name.loc ty ty';
+        unify_tys name.loc ty ty';
         tm'
     | (name, _) :: _, _ ->
         error name.loc "unexpected parameter"
@@ -446,7 +446,7 @@ module Elab = struct
             clauses
         in
         (* Unify head type with variant type *)
-        unify head_loc head_ty (Variant_type (Row_entries row));
+        unify_tys head_loc head_ty (Variant_type (Row_entries row));
         (* Return the clauses *)
         Variant_elim (head, clauses)
 
