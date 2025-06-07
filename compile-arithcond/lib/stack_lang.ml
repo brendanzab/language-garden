@@ -36,12 +36,13 @@ and code =
 
 (** {1 Pretty printing} *)
 
-let rec pp_inst ppf = function
+let rec pp_inst inst ppf =
+  match inst with
   | Int i -> Format.fprintf ppf "int %i" i
   | Bool true -> Format.fprintf ppf "true"
   | Bool false -> Format.fprintf ppf "false"
   | Code [] -> Format.fprintf ppf "[]"
-  | Code c -> Format.fprintf ppf "code @[[@ %a@ ]@]" pp_code c
+  | Code c -> Format.fprintf ppf "code @[[@ %t@ ]@]" (pp_code c)
   | Neg -> Format.fprintf ppf "neg"
   | Add -> Format.fprintf ppf "add"
   | Sub -> Format.fprintf ppf "sub"
@@ -52,10 +53,11 @@ let rec pp_inst ppf = function
   | Access n -> Format.fprintf ppf "access %i" n
   | Begin_let -> Format.fprintf ppf "begin-let"
   | End_let -> Format.fprintf ppf "end-let"
-and pp_code ppf = function
+and pp_code code ppf =
+  match code with
   | [] -> ()
-  | inst :: [] -> Format.fprintf ppf "%a;" pp_inst inst
-  | inst :: code -> Format.fprintf ppf "%a;@ %a" pp_inst inst pp_code code
+  | inst :: [] -> Format.fprintf ppf "%t;" (pp_inst inst)
+  | inst :: code -> Format.fprintf ppf "%t;@ %t" (pp_inst inst) (pp_code code)
 
 
 (** Semantics of arithmetic expressions *)

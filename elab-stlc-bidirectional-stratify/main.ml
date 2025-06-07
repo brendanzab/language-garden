@@ -81,26 +81,26 @@ let elab_cmd () : unit =
   let infer_tm = parse_tm source |> elab_tm source in
   match infer_tm with
   | Univ ->
-      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-        Format.pp_print_string "Type"
-        Format.pp_print_string "Type 1"
+      Format.printf "@[<2>@[%s@ :@]@ @[%s@]@]@."
+        "Type"
+        "Type 1"
 
   | Type t ->
-      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-        Core.pp_ty t
-        Format.pp_print_string "Type"
+      Format.printf "@[<2>@[%t@ :@]@ @[%s@]@]@."
+        (Core.pp_ty t)
+        "Type"
 
   | Expr (e, t) ->
-      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-        (Core.pp_expr []) e
-        Core.pp_ty t
+      Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+        (Core.pp_expr [] e)
+        (Core.pp_ty t)
 
 let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_expr source in
-  Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_expr []) (Core.Semantics.normalise [] tm)
-    Core.pp_ty ty
+  Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+    (Core.pp_expr [] (Core.Semantics.normalise [] tm))
+    (Core.pp_ty ty)
 
 
 (** {1 CLI options} *)

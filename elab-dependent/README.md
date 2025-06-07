@@ -36,7 +36,7 @@ $ cat ./test/readme/bools.txt | dependent norm
 <stdin> :
   fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
       (Out : Type) (true : Out) (false : Out) -> Out
-:= fun false Out true false := false
+:= fun false Out true false => false
 ```
 
 ## Some useful resources

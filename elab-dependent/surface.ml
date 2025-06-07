@@ -130,9 +130,9 @@ module Elab = struct
       raise (Error (loc, message))
 
   let type_mismatch (ctx : context) ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]@]"
-      (pp ctx) expected
-      (pp ctx) found
+    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
+      (pp ctx expected)
+      (pp ctx found)
 
   let not_bound (name : string) : string =
     Format.asprintf "`%s` is not bound in the current scope" name

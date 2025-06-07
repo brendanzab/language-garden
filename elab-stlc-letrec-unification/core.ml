@@ -305,119 +305,121 @@ let rec fresh (ns : name env) (n : name) : name =
   | Some n when List.mem (Some n) ns -> fresh ns (Some (n ^ "'"))
   | Some _ | None -> n
 
-let rec pp_ty (ppf : Format.formatter) (ty : ty) : unit =
+let rec pp_ty (ty : ty) (ppf : Format.formatter) : unit =
   match force ty with
   | Fun_type (param_ty, body_ty) ->
-      Format.fprintf ppf "%a -> %a"
-        pp_atomic_ty param_ty
-        pp_ty body_ty
+      Format.fprintf ppf "%t -> %t"
+        (pp_atomic_ty param_ty)
+        (pp_ty body_ty)
   | ty ->
-      pp_atomic_ty ppf ty
-and pp_atomic_ty ppf ty =
+      pp_atomic_ty ty ppf
+and pp_atomic_ty ty ppf =
   match ty with
-  | Meta_var m -> pp_meta ppf m
+  | Meta_var m -> pp_meta m ppf
   | Tuple_type [elem_ty] ->
-      Format.fprintf ppf "(%a,)"
-        pp_ty elem_ty
+      Format.fprintf ppf "(%t,)"
+        (pp_ty elem_ty)
   | Tuple_type elem_tys ->
       Format.fprintf ppf "(%a)"
         (Format.pp_print_list
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-          pp_ty)
+          (Fun.flip pp_ty))
         elem_tys
   | Int_type -> Format.fprintf ppf "Int"
   | Bool_type -> Format.fprintf ppf "Bool"
-  | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty
-and pp_meta ppf m =
+  | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+
+and pp_meta (m : meta) (ppf : Format.formatter) : unit =
   match !m with
-  | Solved ty -> pp_atomic_ty ppf ty
+  | Solved ty -> pp_atomic_ty ty ppf
   | Unsolved id -> Format.fprintf ppf "?%i" id
 
-let pp_name ppf name =
+let pp_name (name : name) (ppf : Format.formatter) : unit =
   match name with
   | Some name -> Format.pp_print_string ppf name
   | None -> Format.pp_print_string ppf "_"
 
-let pp_name_ann ppf (name, ty) =
-  Format.fprintf ppf "@[<2>@[%a :@]@ %a@]" pp_name name pp_ty ty
+let pp_name_ann (name : name) (ty : ty) (ppf : Format.formatter) : unit =
+  Format.fprintf ppf "@[<2>@[%t :@]@ %t@]" (pp_name name) (pp_ty ty)
 
-let pp_param ppf (name, ty) =
-  Format.fprintf ppf "@[<2>(@[%a :@]@ %a)@]" pp_name name pp_ty ty
+let pp_param (name : name) (ty : ty) (ppf : Format.formatter) : unit =
+  Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]" (pp_name name) (pp_ty ty)
 
-let rec pp_tm (names : name env) (ppf : Format.formatter) (tm : tm) : unit =
+let rec pp_tm (names : name env) (tm : tm) (ppf : Format.formatter) : unit =
   match tm with
   | Let _ as tm ->
-      let rec go names ppf tm =
+      let rec go names tm ppf =
         match tm with
         | Let (name, def_ty, def, body) ->
             let name = fresh names name in
-            Format.fprintf ppf "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
-              pp_name_ann (name, def_ty)
-              (pp_tm names) def
-              (go (name :: names)) body
-        | tm -> Format.fprintf ppf "@[%a@]" (pp_tm names) tm
+            Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+              (pp_name_ann name def_ty)
+              (pp_tm names def)
+              (go (name :: names) body)
+        | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
       in
-      Format.fprintf ppf "@[<v>%a@]" (go names) tm
+      Format.fprintf ppf "@[<v>%t@]" (go names tm)
   | Fix (name, self_ty, body) ->
       let name = fresh names name in
-      Format.fprintf ppf "@[<2>@[#fix@ %a@ =>@]@ %a@]"
-        pp_param (name, self_ty)
-        (pp_tm (name :: names)) body
+      Format.fprintf ppf "@[<2>@[#fix@ %t@ =>@]@ %t@]"
+        (pp_param name self_ty)
+        (pp_tm (name :: names) body)
   | Fun_lit (name, param_ty, body) ->
-      let rec go names ppf tm =
+      let rec go names tm ppf =
         match tm with
         | Fun_lit (name, param_ty, body) ->
             let name = fresh names name in
-            Format.fprintf ppf "@ @[fun@ %a@ =>@]%a"
-              pp_param (name, param_ty)
-              (go (name :: names)) body
-        | tm -> Format.fprintf ppf "@]@ @[%a@]@]" (pp_tm names) tm
+            Format.fprintf ppf "@ @[fun@ %t@ =>@]%t"
+              (pp_param name param_ty)
+              (go (name :: names) body)
+        | tm -> Format.fprintf ppf "@]@ @[%t@]@]" (pp_tm names tm)
       in
       let name = fresh names name in
-      Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %a@ =>@]%a"
-        pp_param (name, param_ty)
-        (go (name :: names)) body
+      Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %t@ =>@]%t"
+        (pp_param name param_ty)
+        (go (name :: names) body)
   | Bool_elim (head, tm0, tm1) ->
-      Format.fprintf ppf "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
-        (pp_app_tm names) head
-        (pp_app_tm names) tm0
-        (pp_tm names) tm1
+      Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
+        (pp_app_tm names head)
+        (pp_app_tm names tm0)
+        (pp_tm names tm1)
   | tm ->
-      pp_app_tm names ppf tm
-and pp_app_tm names ppf tm =
+      pp_app_tm names tm ppf
+and pp_app_tm names tm ppf =
   match tm with
   | Fun_app (head, arg) ->
-      Format.fprintf ppf "@[%a@ %a@]"
-        (pp_app_tm names) head
-        (pp_proj_tm names) arg
+      Format.fprintf ppf "@[%t@ %t@]"
+        (pp_app_tm names head)
+        (pp_proj_tm names arg)
   | Prim_app (prim, args) ->
       let pp_sep ppf () = Format.fprintf ppf "@ " in
-      Format.fprintf ppf "@[#%s@ %a@]"
+      Format.fprintf ppf "@[#%s@ %t@]"
         (Prim.name prim)
-        (Format.pp_print_list ~pp_sep (pp_atomic_tm names)) args
+        (fun ppf ->
+          Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names)) ppf args)
   | tm ->
-      pp_proj_tm names ppf tm
-and pp_proj_tm names ppf tm =
+      pp_proj_tm names tm ppf
+and pp_proj_tm names tm ppf =
   match tm with
   | Tuple_proj (head, elem_index) ->
-      Format.fprintf ppf "%a.%i"
-        (pp_proj_tm names) head
+      Format.fprintf ppf "%t.%i"
+        (pp_proj_tm names head)
         elem_index
   | tm ->
-      pp_atomic_tm names ppf tm
-and pp_atomic_tm names ppf tm =
+      pp_atomic_tm names tm ppf
+and pp_atomic_tm names tm ppf =
   match tm with
-  | Var index -> Format.fprintf ppf "%a" pp_name (List.nth names index)
+  | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
   | Tuple_lit [elem] ->
-      Format.fprintf ppf "(%a,)"
-        (pp_tm names) elem
+      Format.fprintf ppf "(%t,)"
+        (pp_tm names elem)
   | Tuple_lit elems ->
       Format.fprintf ppf "(%a)"
         (Format.pp_print_list
           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-          (pp_tm names))
+          (Fun.flip (pp_tm names)))
         elems
   | Int_lit i -> Format.fprintf ppf "%i" i
   | Bool_lit true -> Format.fprintf ppf "true"
   | Bool_lit false -> Format.fprintf ppf "false"
-  | tm -> Format.fprintf ppf "@[(%a)@]" (pp_tm names) tm
+  | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)

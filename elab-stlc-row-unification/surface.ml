@@ -160,9 +160,9 @@ module Elab = struct
     | Core.Mismatched_types (_, _)
     | Core.Mismatched_row_types (_, _) ->
         error loc
-          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            Core.pp_ty ty1
-            Core.pp_ty ty2)
+          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+            (Core.pp_ty ty1)
+            (Core.pp_ty ty2))
 
 
   (** {2 Bidirectional type checking} *)
@@ -215,9 +215,9 @@ module Elab = struct
             Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
         | None ->
             error label.loc
-              (Format.asprintf "unexpected variant `%s` in type `%a`"
+              (Format.asprintf "unexpected variant `%s` in type `%t`"
                 label.data
-                Core.pp_ty ty)
+                (Core.pp_ty ty))
         end
 
     | Match (head, clauses), body_ty ->
@@ -332,7 +332,7 @@ module Elab = struct
         begin match Core.force_ty ty0 with
         | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
-        | ty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
+        | ty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
         end
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->

@@ -76,11 +76,11 @@ let compile : compile_target -> unit =
   | `Stack ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let c = Tree_to_stack.translate e in
-      Format.printf "@[<v>%a@]" Stack_lang.pp_code c
+      Format.printf "@[<v>%t@]" (Stack_lang.pp_code c)
   | `Anf ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let e = Tree_to_anf.translate e in
-      Format.printf "@[<v>%a@]" Anf_lang.pp_expr e
+      Format.printf "@[<v>%t@]" (Anf_lang.pp_expr e)
 
 let exec : exec_target -> unit =
   function
@@ -90,8 +90,8 @@ let exec : exec_target -> unit =
   | `Stack ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let c = Tree_to_stack.translate e in
-      Format.printf "@[%a@]"
-        Stack_lang.pp_code Stack_lang.Semantics.(normalise (c, []))
+      Format.printf "@[%t@]"
+        (Stack_lang.pp_code Stack_lang.Semantics.(normalise (c, [])))
   | `Anf ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let e = Tree_to_anf.translate e in

@@ -20,72 +20,73 @@ type tm =
 
 (* Pretty printing *)
 
-let rec pp_ty (ppf : Format.formatter) (ty : ty) : unit =
+let rec pp_ty (ty : ty) (ppf : Format.formatter) : unit =
   match ty with
   | Fun_ty (param_ty, body_ty) ->
-      Format.fprintf ppf "%a -> %a"
-        pp_atomic_ty param_ty
-        pp_ty body_ty
+      Format.fprintf ppf "%t -> %t"
+        (pp_atomic_ty param_ty)
+        (pp_ty body_ty)
   | ty ->
-      pp_atomic_ty ppf ty
-and pp_atomic_ty (ppf : Format.formatter) (ty : ty) : unit =
+      pp_atomic_ty ty ppf
+and pp_atomic_ty (ty : ty) (ppf : Format.formatter) : unit =
   match ty with
   | A -> Format.fprintf ppf "A"
   | B -> Format.fprintf ppf "B"
   | C -> Format.fprintf ppf "C"
-  | ty -> Format.fprintf ppf "@[(%a)@]" pp_ty ty
+  | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
 
-let pp_name_ann (ppf : Format.formatter) (name, ty) =
-  Format.fprintf ppf "@[<2>@[%s :@]@ %a@]" name pp_ty ty
+let pp_name_ann (name : string) (ty : ty) (ppf : Format.formatter) : unit =
+  Format.fprintf ppf "@[<2>@[%s :@]@ %t@]" name (pp_ty ty)
 
-let pp_param (ppf : Format.formatter) (name, ty) =
-  Format.fprintf ppf "@[<2>(@[%s :@]@ %a)@]" name pp_ty ty
+let pp_param (name : string) (ty : ty) (ppf : Format.formatter) : unit =
+  Format.fprintf ppf "@[<2>(@[%s :@]@ %t)@]" name (pp_ty ty)
 
-let pp_tm (ppf : Format.formatter) (tm : tm) : unit =
-  let rec pp_tm (names : string Env.t) (ppf : Format.formatter) (tm : tm) : unit =
+let pp_tm : tm -> Format.formatter -> unit =
+  let rec pp_tm (names : string Env.t) (tm : tm) (ppf : Format.formatter) : unit =
     match tm with
     | Let _ as tm ->
-        let rec go names ppf = function
+        let rec go names tm ppf =
+          match tm with
           | Let (name, def_ty, def, body) ->
-              Format.fprintf ppf "@[<2>@[let %a@ :=@]@ @[%a;@]@]@ %a"
-                pp_name_ann (name, def_ty)
-                (pp_tm names) def
-                (go (Env.extend name names)) body
-          | tm -> Format.fprintf ppf "@[%a@]" (pp_tm names) tm
+              Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+                (pp_name_ann name def_ty)
+                (pp_tm names def)
+                (go (Env.extend name names) body)
+          | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
         in
-        Format.fprintf ppf "@[<v>%a@]" (go names) tm
+        Format.fprintf ppf "@[<v>%t@]" (go names tm)
   | Fun_lit _ as tm ->
-      let rec go names ppf tm =
+      let rec go names tm ppf =
         match tm with
         | Fun_lit (name, param_ty, (Fun_lit _ as body)) ->
-            Format.fprintf ppf "@[fun@ %a@ =>@]@ %a"
-              pp_param (name, param_ty)
-              (go (Env.extend name names)) body
+            Format.fprintf ppf "@[fun@ %t@ =>@]@ %t"
+              (pp_param name param_ty)
+              (go (Env.extend name names) body)
         | Fun_lit (name, param_ty, body) ->
-            Format.fprintf ppf "@[fun@ %a@ =>@]%a"
-              pp_param (name, param_ty)
-              (go (Env.extend name names)) body
-        | tm -> Format.fprintf ppf "@]@ @[%a@]@]" (pp_tm names) tm
+            Format.fprintf ppf "@[fun@ %t@ =>@]%t"
+              (pp_param name param_ty)
+              (go (Env.extend name names) body)
+        | tm -> Format.fprintf ppf "@]@ @[%t@]@]" (pp_tm names tm)
       in
-      Format.fprintf ppf "@[<hv 2>@[<hv>%a" (go names) tm
+      Format.fprintf ppf "@[<hv 2>@[<hv>%t" (go names tm)
     | tm ->
-        pp_app_tm names ppf tm
-  and pp_app_tm names ppf tm =
+        pp_app_tm names tm ppf
+  and pp_app_tm names tm ppf =
     match tm with
     | Fun_app (head, arg) ->
-        Format.fprintf ppf "@[%a@ %a@]"
-          (pp_app_tm names) head
-          (pp_atomic_tm names) arg
+        Format.fprintf ppf "@[%t@ %t@]"
+          (pp_app_tm names head)
+          (pp_atomic_tm names arg)
     | tm ->
-        pp_atomic_tm names ppf tm
-  and pp_atomic_tm names ppf tm =
+        pp_atomic_tm names tm ppf
+  and pp_atomic_tm names tm ppf =
     match tm with
     | Var index ->
         Format.fprintf ppf "%s" (Env.lookup index names)
     | tm ->
-        Format.fprintf ppf "@[(%a)@]" (pp_tm names) tm
+        Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
-  pp_tm Env.empty ppf tm
+  pp_tm Env.empty
 
 
 module Semantics = struct

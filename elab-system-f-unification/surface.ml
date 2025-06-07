@@ -158,8 +158,8 @@ module Elab = struct
   let zonk_tm (ctx: context) (tm : Core.tm) : Core.tm =
     Core.zonk_tm ctx.ty_size tm
 
-  let pp_ty (ctx : context) (ppf : Format.formatter) (ty : Core.ty) : unit =
-    Core.pp_ty ctx.ty_names ppf (zonk_ty ctx ty)
+  let pp_ty (ctx : context) (ty : Core.ty) (ppf : Format.formatter) : unit =
+    Core.pp_ty ctx.ty_names (zonk_ty ctx ty) ppf
 
 
   (** {2 Elaboration errors} *)
@@ -177,22 +177,22 @@ module Elab = struct
     try Core.unify_vtys ctx.ty_size vty1 vty2 with
     | Core.Mismatched_types (_, _) ->
         error loc
-          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            (pp_ty ctx) (quote_vty ctx vty1)
-            (pp_ty ctx) (quote_vty ctx vty2))
+          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+            (pp_ty ctx (quote_vty ctx vty1))
+            (pp_ty ctx (quote_vty ctx vty2)))
     | Core.Infinite_type m ->
         error loc
-          (Format.asprintf "@[<v 2>@[meta variable %a refers to itself:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            Core.pp_meta m
-            (pp_ty ctx) (quote_vty ctx vty1)
-            (pp_ty ctx) (quote_vty ctx vty2))
+          (Format.asprintf "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[found: %t@]@]"
+            (pp_ty ctx (Meta_var m))
+            (pp_ty ctx (quote_vty ctx vty1))
+            (pp_ty ctx (quote_vty ctx vty2)))
     | Core.Escaping_scope (m, vty) ->
         error loc
-          (Format.asprintf "@[<v 2>@[type variable %a escapes the scope of meta variable %a:@]@ @[expected: %a@]@ @[found: %a@]@]"
-            (pp_ty ctx) (quote_vty ctx vty)
-            Core.pp_meta m
-            (pp_ty ctx) (quote_vty ctx vty1)
-            (pp_ty ctx) (quote_vty ctx vty2))
+          (Format.asprintf "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[found: %t@]@]"
+            (pp_ty ctx (quote_vty ctx vty))
+            (pp_ty ctx (Meta_var m))
+            (pp_ty ctx (quote_vty ctx vty1))
+            (pp_ty ctx (quote_vty ctx vty2)))
 
 
   (** {2 Bidirectional type checking} *)
@@ -306,13 +306,13 @@ module Elab = struct
 
           | head_vty, Ty_arg _ ->
               error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: forall@]@ @[found: %a@]@]"
-                  (pp_ty ctx) (quote_vty ctx head_vty))
+                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: forall@]@ @[found: %t@]@]"
+                  (pp_ty ctx (quote_vty ctx head_vty)))
 
           | head_vty, Arg _ ->
               error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %a@]@]"
-                  (pp_ty ctx) (quote_vty ctx head_vty))
+                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
+                  (pp_ty ctx (quote_vty ctx head_vty)))
         in
 
         go head head_ty arg
@@ -331,7 +331,7 @@ module Elab = struct
         begin match Core.force_vty vty0 with
         | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
-        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" (pp_ty ctx) (quote_vty ctx vty))
+        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_ty ctx (quote_vty ctx vty)))
         end
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->

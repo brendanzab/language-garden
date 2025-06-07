@@ -143,7 +143,7 @@ module Elab = struct
   let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> bool =
     Semantics.is_convertible ctx.size
 
-  let pp ?(resugar = true) ctx : Format.formatter -> Syntax.tm -> unit =
+  let pp ?(resugar = true) ctx : Syntax.tm -> Format.formatter -> unit =
     Syntax.pp ~resugar ctx.names
 
 
@@ -159,15 +159,15 @@ module Elab = struct
     raise (Error (loc, message))
 
   let type_mismatch (ctx : context) ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %a@]@ @[found:    %a@]@]"
-      (pp ctx) expected
-      (pp ctx) found
+    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
+      (pp ctx expected)
+      (pp ctx found)
 
   let singleton_mismatch (ctx : context) ~expected ~found ~ty : string =
-    Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %a@]@ @[found:    %a@]@ @[type:     %a@]@]"
-      (pp ctx) expected
-      (pp ctx) found
-      (pp ctx) ty
+    Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %t@]@ @[found:    %t@]@ @[type:     %t@]@]"
+      (pp ctx expected)
+      (pp ctx found)
+      (pp ctx ty)
 
   let field_mismatch ~expected ~found : string =
     Format.asprintf "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[found label:    `%s`@]@]"

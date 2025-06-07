@@ -60,10 +60,10 @@ let parse_program (source : Source_file.t) : Datalog.program =
       end
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
-let pp_print_binding ppf (var, term) =
-  Format.fprintf ppf "@[%a@ :=@ %a@]"
-    Format.pp_print_string var
-    Datalog.pp_print_term term
+let pp_print_binding var term ppf =
+  Format.fprintf ppf "@[%s@ :=@ %t@]"
+    var
+    (Datalog.pp_print_term term)
 
 let () =
   Printexc.record_backtrace true;
@@ -85,23 +85,24 @@ let () =
   Format.printf "────────────────────────────────────────────────────────────────────────────────@\n";
   Format.printf "Knowledge Base@\n";
   Format.printf "────────────────────────────────────────────────────────────────────────────────@\n";
-  kb |> List.iter (Format.printf "@[%a.@]@\n" Datalog.pp_print_atom);
+  kb |> List.iter (fun a -> Format.printf "@[%t.@]@\n" (Datalog.pp_print_atom a));
   Format.printf "@\n";
 
   Format.printf "────────────────────────────────────────────────────────────────────────────────@\n";
   Format.printf "Query Results@\n";
   Format.printf "────────────────────────────────────────────────────────────────────────────────@\n";
-  program.queries |> List.iter (fun query ->
-    Format.printf "@[%a@]@\n" Datalog.pp_print_query query;
+  program.queries |> List.iter begin fun query ->
+    Format.printf "@[%t@]@\n" (Datalog.pp_print_query query);
     match Datalog.run_query query kb with
     | [] ->
         Format.printf "  no@\n";
         Format.printf "@\n";
     | solutions ->
         solutions |> List.iter (List.iteri
-          (function
-            | 0 -> Format.printf "@[  > %a@].@\n" pp_print_binding;
-            | _ -> Format.printf "@[    %a@].@\n" pp_print_binding));
+          (fun i (var, term) ->
+            match i with
+            | 0 -> Format.printf "@[  > %t@].@\n" (pp_print_binding var term);
+            | _ -> Format.printf "@[    %t@].@\n" (pp_print_binding var term)));
         Format.printf "  yes@\n";
         Format.printf "@\n";
-  );
+  end;

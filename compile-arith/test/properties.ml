@@ -22,8 +22,8 @@ let expr_gen = QCheck.Gen.(sized @@ fix
     ))
 
 let arbitrary_expr =
-  let print_expr expr =
-    Format.asprintf "%a" Tree_lang.pp_expr expr
+  let print_expr e =
+    Format.asprintf "%t" (Tree_lang.pp_expr e)
   in
   let rec shrink_expr = QCheck.Iter.(function
     | Tree_lang.Int i -> map Tree_lang.int (QCheck.Shrink.int i)
@@ -83,7 +83,7 @@ let compile_anf_correct =
 
 (** Pretty printed expr can always be parsed back into the same expr. *)
 let pretty_correct =
-  let pretty e = Format.asprintf "%a" Tree_lang.pp_expr e in
+  let pretty e = Format.asprintf "%t" (Tree_lang.pp_expr e) in
   let parse source =
     Sedlexing.Utf8.from_string source
     |> Sedlexing.with_tokenizer Tree_lang.Lexer.token

@@ -86,34 +86,34 @@ let compile : compile_target -> unit =
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let _ = synth_expr [] e in
       let c = Tree_to_stack.translate e in
-      Format.printf "@[<v>%a@]" Stack_lang.pp_code c
+      Format.printf "@[<v>%t@]" (Stack_lang.pp_code c)
   | `Anf ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let _ = synth_expr [] e in
       let e = Tree_to_anf.translate e in
-      Format.printf "@[<v>%a@]" (Anf_lang.pp_expr []) e
+      Format.printf "@[<v>%t@]" (Anf_lang.pp_expr [] e)
 
 let exec : exec_target -> unit =
   function
   | `Tree ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let t = synth_expr [] e in
-      Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-        (Tree_lang.pp_expr []) Tree_lang.Semantics.(normalise [] e)
-        Tree_lang.pp_ty t
+      Format.printf "@[<2>@[@[%t@]@ :@]@ %t@]"
+        (Tree_lang.pp_expr [] Tree_lang.Semantics.(normalise [] e))
+        (Tree_lang.pp_ty t)
   | `Stack ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let _ = synth_expr [] e in
       let c = Tree_to_stack.translate e in
-      Format.printf "@[%a@]"
-        Stack_lang.pp_code Stack_lang.Semantics.(normalise (c, [], []))
+      Format.printf "@[%t@]"
+        (Stack_lang.pp_code Stack_lang.Semantics.(normalise (c, [], [])))
   | `Anf ->
       let e = parse_expr (Source_file.create "<stdin>" (In_channel.input_all stdin)) in
       let t = synth_expr [] e in
       let e = Tree_to_anf.translate e in
-      Format.printf "@[<2>@[@[%a@]@ :@]@ %a@]"
-        (Anf_lang.pp_expr []) Anf_lang.Semantics.(normalise Env.empty e)
-        Tree_lang.pp_ty t
+      Format.printf "@[<2>@[@[%t@]@ :@]@ %t@]"
+        (Anf_lang.pp_expr [] Anf_lang.Semantics.(normalise Env.empty e))
+        (Tree_lang.pp_ty t)
 
 
 (** {1 CLI options} *)

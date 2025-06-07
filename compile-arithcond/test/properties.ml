@@ -248,12 +248,12 @@ let rec shrink_expr =
 
 let arbitrary_expr_untyped =
   QCheck.make gen_expr_untyped
-    ~print:(Format.asprintf "%a" (Tree_lang.pp_expr []))
+    ~print:(fun e -> Format.asprintf "%t" (Tree_lang.pp_expr [] e))
     ~shrink:shrink_expr
 
 let arbitrary_expr gen_ty =
   let gen = QCheck.Gen.(let* t = gen_ty in pair (gen_expr (pure t)) (pure t)) in
-  let print (e, t) = Format.asprintf "@[@[@[%a@]@ :@]@ %a@]" (Tree_lang.pp_expr []) e Tree_lang.pp_ty t in
+  let print (e, t) = Format.asprintf "@[@[@[%t@]@ :@]@ %t@]" (Tree_lang.pp_expr [] e) (Tree_lang.pp_ty t) in
   let shrink (e, t) = QCheck.Iter.(let+ e' = shrink_expr e in e', t) in
   QCheck.make gen ~print ~shrink
 
@@ -307,7 +307,7 @@ let check_correct =
 
 (** Pretty printed expression can always be parsed back into the same expression. *)
 let pretty_correct =
-  let pretty e = Format.asprintf "%a" (Tree_lang.pp_expr []) e in
+  let pretty e = Format.asprintf "%t" (Tree_lang.pp_expr [] e) in
   let parse source =
     Sedlexing.Utf8.from_string source
     |> Sedlexing.with_tokenizer Tree_lang.Lexer.token

@@ -73,16 +73,16 @@ let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.Semantic
 let elab_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, vty = parse_tm source |> elab_tm source in
-  Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm [] []) tm
-    (Core.pp_ty []) (Core.Semantics.quote_vty 0 vty)
+  Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+    (Core.pp_tm [] [] tm)
+    (Core.pp_ty [] (Core.Semantics.quote_vty 0 vty))
 
 let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, vty = parse_tm source |> elab_tm source in
-  Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-    (Core.pp_tm [] []) (Core.Semantics.normalise_tm [] [] tm)
-    (Core.pp_ty []) (Core.Semantics.quote_vty 0 vty)
+  Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+    (Core.pp_tm [] [] (Core.Semantics.normalise_tm [] [] tm))
+    (Core.pp_ty [] (Core.Semantics.quote_vty 0 vty))
 
 
 (** {1 CLI options} *)

@@ -97,9 +97,9 @@ module Elab = struct
   let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     if ty1 = ty2 then () else
       error loc
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          Core.pp_ty ty1
-          Core.pp_ty ty2)
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+          (Core.pp_ty ty1)
+          (Core.pp_ty ty2))
 
 
   (** {2 Bidirectional type checking} *)
@@ -199,8 +199,8 @@ module Elab = struct
           | Fun_type (param_t, body_t) -> param_t, body_t
           | head_t ->
               error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %a@]@]"
-                  Core.pp_ty head_t)
+                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
+                  (Core.pp_ty head_t))
         in
         let arg = check_expr ctx arg param_t in
         Expr (Fun_app (head, arg), body_t)
@@ -220,7 +220,7 @@ module Elab = struct
         begin match t0 with
         | Bool_type -> Expr (Prim_app (Bool_eq, [e0; e1]), Bool_type)
         | Int_type -> Expr (Prim_app (Int_eq, [e0; e1]), Bool_type)
-        | t -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty t)
+        | t -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty t))
         end
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->

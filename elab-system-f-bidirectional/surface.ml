@@ -122,8 +122,8 @@ module Elab = struct
   let quote_vty (ctx : context) (vty : Core.Semantics.vty) : Core.ty =
     Core.Semantics.quote_vty ctx.ty_size vty
 
-  let pp_ty (ctx : context) (ppf : Format.formatter) (ty : Core.ty) : unit =
-    Core.pp_ty ctx.ty_names ppf ty
+  let pp_ty (ctx : context) (ty : Core.ty) (ppf : Format.formatter) : unit =
+    Core.pp_ty ctx.ty_names ty ppf
 
 
   (** {2 Elaboration errors} *)
@@ -140,9 +140,9 @@ module Elab = struct
   let equate_vtys (ctx : context) (loc : loc) (vty1 : Core.Semantics.vty) (vty2 : Core.Semantics.vty) =
     if Core.Semantics.is_convertible ctx.ty_size vty1 vty2 then () else
       error loc
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
-          (pp_ty ctx) (quote_vty ctx vty1)
-          (pp_ty ctx) (quote_vty ctx vty2))
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+          (pp_ty ctx (quote_vty ctx vty1))
+          (pp_ty ctx (quote_vty ctx vty2)))
 
 
   (** {2 Bidirectional type checking} *)
@@ -234,8 +234,8 @@ module Elab = struct
           | Forall_type (_, body_ty) -> body_ty
           | head_vty ->
               error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: type function@]@ @[found: %a@]@]"
-                  (pp_ty ctx) (quote_vty ctx head_vty))
+                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: type function@]@ @[found: %t@]@]"
+                  (pp_ty ctx (quote_vty ctx head_vty)))
         in
         let arg = check_ty ctx arg in
         Forall_app (head, arg), body_ty (eval_ty ctx arg)
@@ -248,8 +248,8 @@ module Elab = struct
           | Fun_type (param_ty, body_ty) -> param_ty, body_ty
           | head_vty ->
               error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %a@]@]"
-                  (pp_ty ctx) (quote_vty ctx head_vty))
+                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
+                  (pp_ty ctx (quote_vty ctx head_vty)))
         in
         let arg = check_tm ctx arg param_ty in
         Fun_app (head, arg), body_ty
@@ -264,7 +264,7 @@ module Elab = struct
         begin match vty0 with
         | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
-        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %a@]" (pp_ty ctx) (quote_vty ctx vty))
+        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_ty ctx (quote_vty ctx vty)))
         end
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->

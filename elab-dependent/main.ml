@@ -70,11 +70,11 @@ let elab_tm (source : Source_file.t) (ctx : Surface.Elab.context) (tm : Surface.
 let pp_def ~resugar context ppf (name, ty, tm) =
   let pp_tm = Surface.Elab.pp ~resugar context in
   let pp_name_ann ppf (name, ty) =
-    Format.fprintf ppf "@[<2>@[%s :@]@ @[%a@]@]" name pp_tm ty
+    Format.fprintf ppf "@[<2>@[%s :@]@ @[%t@]@]" name (pp_tm ty)
   in
-  Format.fprintf ppf "@[<2>@[%a@ :=@]@ @[%a@]@]"
+  Format.fprintf ppf "@[<2>@[%a@ :=@]@ @[%t@]@]"
     pp_name_ann (name, ty)
-    (Surface.Elab.pp ~resugar context) tm
+    (Surface.Elab.pp ~resugar context tm)
 
 
 (** {1 Subcommands} *)

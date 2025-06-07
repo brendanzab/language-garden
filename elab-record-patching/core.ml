@@ -127,140 +127,140 @@ module Syntax = struct
       could move this dusugaring step into a {i delaborator}/{i distillation}
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
-  let pp ?(resugar = true) (names : name env) : Format.formatter -> tm -> unit =
-    let pp_name ppf name =
+  let pp ?(resugar = true) : name env -> tm -> Format.formatter -> unit =
+    let pp_name name ppf =
       match name with
       | Some name -> Format.pp_print_string ppf name
       | None -> Format.pp_print_string ppf "_"
     in
 
-    let rec pp_tm names ppf tm =
+    let rec pp_tm names tm ppf =
       match tm with
       | Let (_, _, _, _) as tm ->
-          let rec go names ppf tm =
+          let rec go names tm ppf =
             match tm with
             | Let (name, def_ty, def, body) ->
-                Format.fprintf ppf "@[<2>@[let @[<2>%a@]@ :=@]@ @[%a;@]@]@ %a"
-                  (pp_decl names) (name, def_ty)
-                  (pp_tm names) def
-                  (go (name :: names)) body
+                Format.fprintf ppf "@[<2>@[let @[<2>%t@]@ :=@]@ @[%t;@]@]@ %t"
+                  (pp_decl names name def_ty)
+                  (pp_tm names def)
+                  (go (name :: names) body)
             (* Final term should be grouped in a box *)
-            | tm -> Format.fprintf ppf "@[%a@]" (pp_tm names) tm
+            | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
           in
-          Format.fprintf ppf "@[<v>%a@]" (go names) tm
+          Format.fprintf ppf "@[<v>%t@]" (go names tm)
       | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-          Format.fprintf ppf "@[%a@ ->@]@ %a"
-            (pp_app_tm names) param_ty
-            (pp_tm (None :: names)) body_ty
+          Format.fprintf ppf "@[%t@ ->@]@ %t"
+            (pp_app_tm names param_ty)
+            (pp_tm (None :: names) body_ty)
       | Fun_type (_, _, _) as tm ->
-          let rec go names ppf tm =
+          let rec go names tm ppf =
             match tm with
             | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-                Format.fprintf ppf "@[%a@ ->@]@ %a"
-                  (pp_tm names) param_ty
-                  (pp_tm (None :: names)) body_ty
+                Format.fprintf ppf "@[%t@ ->@]@ %t"
+                  (pp_tm names param_ty)
+                  (pp_tm (None :: names) body_ty)
             | Fun_type (name, param_ty, body_ty) ->
-                Format.fprintf ppf "@[<2>(@[%a :@]@ %a)@]@ %a"
-                  pp_name name
-                  (pp_tm names) param_ty
-                  (go (name :: names)) body_ty
+                Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]@ %t"
+                  (pp_name name)
+                  (pp_tm names param_ty)
+                  (go (name :: names) body_ty)
             | body_ty ->
                 (* TODO: improve printing of record types *)
-                Format.fprintf ppf "@[->@ @[%a@]@]"
-                  (pp_tm names) body_ty
+                Format.fprintf ppf "@[->@ @[%t@]@]"
+                  (pp_tm names body_ty)
           in
-          Format.fprintf ppf "@[<4>fun %a@]" (go names) tm
+          Format.fprintf ppf "@[<4>fun %t@]" (go names tm)
       | Fun_lit (_, _) as tm ->
           let params, body = fun_lits tm in
           (* TODO: improve printing of record types and literals *)
-          Format.fprintf ppf "@[<2>@[<4>fun %a@ =>@]@ @[%a@]@]"
-            (Format.pp_print_list ~pp_sep:Format.pp_print_space pp_name) params
-            (pp_tm (List.rev_append params names)) body
+          Format.fprintf ppf "@[<2>@[<4>fun %a@ =>@]@ @[%t@]@]"
+            (Format.pp_print_list ~pp_sep:Format.pp_print_space (Fun.flip pp_name)) params
+            (pp_tm (List.rev_append params names) body)
       | tm ->
-          pp_app_tm names ppf tm
+          pp_app_tm names tm ppf
 
-    and pp_app_tm names ppf tm =
+    and pp_app_tm names tm ppf =
       match tm with
       | Fun_app (_, _) as tm ->
           let head, args = fun_apps tm in
-          Format.fprintf ppf "@[<2>%a@ %a@]"
-            (pp_proj_tm names) head
-            (Format.pp_print_list ~pp_sep:Format.pp_print_space (pp_proj_tm names)) args
+          Format.fprintf ppf "@[<2>%t@ %a@]"
+            (pp_proj_tm names head)
+            (Format.pp_print_list ~pp_sep:Format.pp_print_space (Fun.flip (pp_proj_tm names))) args
       | Sing_type (ty, sing_tm) ->
-          Format.fprintf ppf "@[<2>%a@ @[[=@ %a]@]@]"
-            (pp_proj_tm names) ty
-            (pp_tm names) sing_tm
+          Format.fprintf ppf "@[<2>%t@ @[[=@ %t]@]@]"
+            (pp_proj_tm names ty)
+            (pp_tm names sing_tm)
       | Sing_intro ->
           Format.fprintf ppf "#sing-intro"
       | tm ->
-          pp_proj_tm names ppf tm
+          pp_proj_tm names tm ppf
 
-    and pp_proj_tm names ppf tm =
+    and pp_proj_tm names tm ppf =
       match tm with
       | Rec_proj (_, _) as tm ->
           let head, labels = rec_projs tm in
-          Format.fprintf ppf "@[<2>%a@,%a@]"
-            (pp_proj_tm names) head
+          Format.fprintf ppf "@[<2>%t@,%a@]"
+            (pp_proj_tm names head)
             (Format.pp_print_list
               ~pp_sep:Format.pp_print_space
               (fun ppf label -> Format.fprintf ppf ".%s" label))
             labels
       | tm ->
-          pp_atomic_tm names ppf tm
+          pp_atomic_tm names tm ppf
 
-    and pp_atomic_tm names ppf tm =
+    and pp_atomic_tm names tm ppf =
       match tm with
-      | Var index -> Format.fprintf ppf "%a" pp_name (List.nth names index)
+      | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
       | Univ -> Format.fprintf ppf "Type"
       | Rec_type [] | Rec_lit [] -> Format.fprintf ppf "{}"
       | Rec_type decls ->
-          let rec go_decls names ppf tm =
+          let rec go_decls names tm ppf =
             match tm with
             | [] -> Format.fprintf ppf ""
             | [label, ty] ->
                 (* TODO: use trailing semicolons when splitting over multiple lines *)
-                Format.fprintf ppf "@;<1 2>@[<2>%a@]"
-                  (pp_decl names) (Some label, ty)
+                Format.fprintf ppf "@;<1 2>@[<2>%t@]"
+                  (pp_decl names (Some label) ty)
             | (label, ty) :: decls ->
-                Format.fprintf ppf "@;<1 2>@[<2>%a;@]%a"
-                  (pp_decl names) (Some label, ty)
-                  (go_decls (Some label :: names)) decls
+                Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
+                  (pp_decl names (Some label) ty)
+                  (go_decls (Some label :: names) decls)
           in
-          Format.fprintf ppf "@[<hv>{%a@ }@]"
-            (go_decls names) decls
+          Format.fprintf ppf "@[<hv>{%t@ }@]"
+            (go_decls names decls)
       | Rec_lit defns ->
-          let rec go_defns ppf tm =
+          let rec go_defns tm ppf =
             match tm with
             | [] -> Format.fprintf ppf ""
             | (label, ty) :: [] ->
                 (* TODO: use trailing semicolons when splitting over multiple lines *)
-                Format.fprintf ppf "@;<1 2>@[<2>%a@]"
-                  (pp_defn names) (Some label, ty)
+                Format.fprintf ppf "@;<1 2>@[<2>%t@]"
+                  (pp_defn names (Some label) ty)
             | (label, ty) :: decls ->
-                Format.fprintf ppf "@;<1 2>@[<2>%a;@]%a"
-                  (pp_defn names) (Some label, ty)
-                  go_defns decls
+                Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
+                  (pp_defn names (Some label) ty)
+                  (go_defns decls)
           in
-          Format.fprintf ppf "@[<hv>{%a@ }@]"
-            go_defns defns
-      | tm -> Format.fprintf ppf "@[(%a)@]" (pp_tm names) tm
+          Format.fprintf ppf "@[<hv>{%t@ }@]"
+            (go_defns defns)
+      | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
 
-    and pp_decl names ppf (name, ty) =
-      Format.fprintf ppf "@[%a@ :@]@ %a"
-        pp_name name
-        (pp_tm names) ty
+    and pp_decl names name ty ppf =
+      Format.fprintf ppf "@[%t@ :@]@ %t"
+        (pp_name name)
+        (pp_tm names ty)
 
-    and pp_defn names ppf defn =
-      match defn with
-      | name, Var index when resugar && name = List.nth names index ->
-          Format.fprintf ppf "%a" pp_name name
-      | name, tm ->
-          Format.fprintf ppf "@[%a@ :=@]@ %a"
-            pp_name name
-            (pp_tm names) tm
+    and pp_defn names name tm ppf =
+      match tm with
+      | Var index when resugar && name = List.nth names index ->
+          Format.fprintf ppf "%t" (pp_name name)
+      | tm ->
+          Format.fprintf ppf "@[%t@ :=@]@ %t"
+            (pp_name name)
+            (pp_tm names tm)
     in
 
-    pp_tm names
+    pp_tm
 
 end
 

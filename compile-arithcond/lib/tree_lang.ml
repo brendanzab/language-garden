@@ -52,46 +52,53 @@ exception Unbound_name of (Lexing.position * Lexing.position) * name
 
 (** {1 Pretty printing} *)
 
-let rec pp_expr names ppf expr =
-  pp_let_expr names ppf expr
-and  pp_let_expr names ppf = function
+let rec pp_expr names e ppf =
+  pp_let_expr names e ppf
+and  pp_let_expr names e ppf =
+  match e with
   | Let (n, e1, e2) ->
-      let pp_def names ppf (n, e1) =
-        Format.fprintf ppf "@[let@ %s@ :=@]@ @[%a@];" n (pp_expr names) e1
-      and pp_lets names ppf = function
-        | Let (_, _, _) as e -> pp_expr names ppf e
-        | e -> Format.fprintf ppf "@[%a@]" (pp_expr names) e
+      let pp_def names (n, e1) ppf =
+        Format.fprintf ppf "@[let@ %s@ :=@]@ @[%t@];" n (pp_expr names e1)
+      and pp_lets names e ppf =
+        match e with
+        | Let (_, _, _) as e -> pp_expr names e ppf
+        | e -> Format.fprintf ppf "@[%t@]" (pp_expr names e)
       in
-      Format.fprintf ppf "@[<2>%a@]@ %a"
-        (pp_def names) (n, e1)
-        (pp_lets (n :: names)) e2
+      Format.fprintf ppf "@[<2>%t@]@ %t"
+        (pp_def names (n, e1))
+        (pp_lets (n :: names) e2)
   | If_then_else (e1, e2, e3) ->
-      Format.fprintf ppf "@[<hv>@[if@ %a@ then@]@;<1 2>@[%a@]@ else@;<1 2>@[%a@]@]"
-        (pp_eq_expr names) e1
-        (pp_eq_expr names) e2
-        (pp_expr names) e3
-  | e -> pp_eq_expr names ppf e
+      Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
+        (pp_eq_expr names e1)
+        (pp_eq_expr names e2)
+        (pp_expr names e3)
+  | e -> pp_eq_expr names e ppf
 (* TODO: Let expressions *)
-and pp_eq_expr names ppf = function
-  | Eq (e1, e2) -> Format.fprintf ppf "%a@ =@ %a" (pp_add_expr names) e1 (pp_eq_expr names) e2
-  | e -> pp_add_expr names ppf e
-and pp_add_expr names ppf = function
-  | Add (e1, e2) -> Format.fprintf ppf "%a@ +@ %a" (pp_mul_expr names) e1 (pp_add_expr names) e2
-  | Sub (e1, e2) -> Format.fprintf ppf "%a@ -@ %a" (pp_mul_expr names) e1 (pp_add_expr names) e2
-  | e -> pp_mul_expr names ppf e
-and pp_mul_expr names ppf = function
-  | Mul (e1, e2) -> Format.fprintf ppf "%a@ *@ %a" (pp_atomic_expr names) e1 (pp_mul_expr names) e2
-  | Div (e1, e2) -> Format.fprintf ppf "%a@ /@ %a" (pp_atomic_expr names) e1 (pp_mul_expr names) e2
-  | e -> pp_atomic_expr names ppf e
-and pp_atomic_expr names ppf = function
+and pp_eq_expr names e ppf =
+  match e with
+  | Eq (e1, e2) -> Format.fprintf ppf "%t@ =@ %t" (pp_add_expr names e1) (pp_eq_expr names e2)
+  | e -> pp_add_expr names e ppf
+and pp_add_expr names e ppf =
+  match e with
+  | Add (e1, e2) -> Format.fprintf ppf "%t@ +@ %t" (pp_mul_expr names e1) (pp_add_expr names e2)
+  | Sub (e1, e2) -> Format.fprintf ppf "%t@ -@ %t" (pp_mul_expr names e1) (pp_add_expr names e2)
+  | e -> pp_mul_expr names e ppf
+and pp_mul_expr names e ppf =
+  match e with
+  | Mul (e1, e2) -> Format.fprintf ppf "%t@ *@ %t" (pp_atomic_expr names e1) (pp_mul_expr names e2)
+  | Div (e1, e2) -> Format.fprintf ppf "%t@ /@ %t" (pp_atomic_expr names e1) (pp_mul_expr names e2)
+  | e -> pp_atomic_expr names e ppf
+and pp_atomic_expr names e ppf =
+  match e with
   | Var n -> Format.pp_print_string ppf (List.nth names n)
   | Int i -> Format.fprintf ppf "%d" i
   | Bool true -> Format.fprintf ppf "true"
   | Bool false -> Format.fprintf ppf "false"
-  | Neg e -> Format.fprintf ppf "-%a" (pp_atomic_expr names) e
-  | e -> Format.fprintf ppf "@[<1>(%a)@]" (pp_expr names) e
+  | Neg e -> Format.fprintf ppf "-%t" (pp_atomic_expr names e)
+  | e -> Format.fprintf ppf "@[<1>(%t)@]" (pp_expr names e)
 
-let pp_ty ppf = function
+let pp_ty t ppf =
+  match t with
   | Ty_int -> Format.fprintf ppf "Int"
   | Ty_bool -> Format.fprintf ppf "Bool"
 
@@ -159,7 +166,11 @@ module Validation = struct
     | e, t ->
       let t' = synth ctx e in
       if t != t' then
-        let message = Format.asprintf "mismatched types: expected %a, found %a" pp_ty t pp_ty t' in
+        let message =
+          Format.asprintf "mismatched types: expected %t, found %t"
+            (pp_ty t)
+            (pp_ty t')
+        in
         raise (Error message)
 
   (** Synthesise the type of an expression *)

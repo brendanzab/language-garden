@@ -71,8 +71,8 @@ let () =
 
   match Surface.elab_synth (parse_tm source) with
   | tm, ty ->
-      Format.printf "@[<2>@[%a@ :@]@ @[%a@]@]@."
-        Core.pp_tm tm
-        Core.pp_ty ty
+      Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+        (Core.pp_tm tm)
+        (Core.pp_ty ty)
   | exception Surface.Error (loc, msg) -> emit source "error" loc msg; exit 1
   | exception Surface.Bug (loc, msg) -> emit source "bug" loc msg; exit 1

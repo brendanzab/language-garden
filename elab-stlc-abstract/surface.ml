@@ -50,21 +50,21 @@ let rec check (ctx : context) (tm : tm) : Core.check =
       |> Core.catch_check (function
         | `Unexpected_fun_lit expected_ty ->
             error tm.loc
-              (Format.asprintf "found function, expected `%a`"
-                Core.pp_ty expected_ty)
+              (Format.asprintf "found function, expected `%t`"
+                (Core.pp_ty expected_ty))
         | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
             error tm.loc
-              (Format.asprintf "mismatched parameter type, found `%a` expected `%a`"
-                Core.pp_ty found_ty
-                Core.pp_ty expected_ty))
+              (Format.asprintf "mismatched parameter type, found `%t` expected `%t`"
+                (Core.pp_ty found_ty)
+                (Core.pp_ty expected_ty)))
   | _ ->
       Core.conv (synth ctx tm)
       |> Core.catch_check (function
         | `Type_mismatch Core.{ found_ty; expected_ty } ->
             error tm.loc
-              (Format.asprintf "type mismatch, found `%a` expected `%a`"
-                Core.pp_ty found_ty
-                Core.pp_ty expected_ty))
+              (Format.asprintf "type mismatch, found `%t` expected `%t`"
+                (Core.pp_ty found_ty)
+                (Core.pp_ty expected_ty)))
 
 and synth (ctx : context) (tm : tm) : Core.synth =
   match tm.data with
@@ -94,13 +94,13 @@ and synth (ctx : context) (tm : tm) : Core.synth =
       |> Core.catch_synth (function
         | `Unexpected_arg head_ty ->
             error head_tm.loc
-              (Format.asprintf "unexpected argument applied to `%a`"
-                Core.pp_ty head_ty)
+              (Format.asprintf "unexpected argument applied to `%t`"
+                (Core.pp_ty head_ty))
         | `Type_mismatch Core.{ found_ty; expected_ty } ->
             error arg_tm.loc
-              (Format.asprintf "mismatched argument type, found `%a` expected `%a`"
-                Core.pp_ty found_ty
-                Core.pp_ty expected_ty))
+              (Format.asprintf "mismatched argument type, found `%t` expected `%t`"
+                (Core.pp_ty found_ty)
+                (Core.pp_ty expected_ty)))
 
 let elab_check (tm : tm) (ty : ty) : Core.tm =
   Core.run (check [] tm ty)

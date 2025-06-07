@@ -46,40 +46,40 @@ type program = {
 
 (** {2 Pretty printing} *)
 
-let pp_print_const (ppf : Format.formatter) : const -> unit =
-  function
+let pp_print_const (c : const) (ppf : Format.formatter) : unit =
+  match c with
   | String s -> Format.fprintf ppf "\"%s\"" s
   | Int i -> Format.fprintf ppf "%i" i
 
-let pp_print_term (ppf : Format.formatter) : term -> unit =
-  function
+let pp_print_term (t : term) (ppf : Format.formatter) : unit =
+  match t with
   | Var v -> Format.pp_print_string ppf v
-  | Const c -> pp_print_const ppf c
+  | Const c -> pp_print_const c ppf
 
-let pp_print_atom (ppf : Format.formatter) : atom -> unit =
-  function
+let pp_print_atom (a : atom) (ppf : Format.formatter) : unit =
+  match a with
   | { name; args = [] } ->
       Format.pp_print_string ppf name
   | { name; args } ->
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
       Format.fprintf ppf "@[%s(%a)@]" name
-        (Format.pp_print_list ~pp_sep pp_print_term) args
+        (Format.pp_print_list ~pp_sep (Fun.flip pp_print_term)) args
 
-let pp_print_rule (ppf : Format.formatter) : rule -> unit =
-  function
+let pp_print_rule (r : rule) (ppf : Format.formatter) : unit =
+  match r with
   | { head; body = [] } ->
-      Format.fprintf ppf "@[%a.@]"
-        pp_print_atom head
+      Format.fprintf ppf "@[%t.@]"
+        (pp_print_atom head)
   | { head; body } ->
       let pp_sep ppf () = Format.fprintf ppf ",@ " in
-      Format.fprintf ppf "@[<2>@[%a@ <-@]@ %a.@]"
-        pp_print_atom head
-        (Format.pp_print_list ~pp_sep pp_print_atom) body
+      Format.fprintf ppf "@[<2>@[%t@ <-@]@ %a.@]"
+        (pp_print_atom head)
+        (Format.pp_print_list ~pp_sep (Fun.flip pp_print_atom)) body
 
-let pp_print_query (ppf : Format.formatter) (query : atom list) : unit =
+let pp_print_query (query : atom list) (ppf : Format.formatter) : unit =
   let pp_sep ppf () = Format.fprintf ppf ",@ " in
   Format.fprintf ppf "@[<2>?@ %a.@]"
-    (Format.pp_print_list ~pp_sep pp_print_atom) query
+    (Format.pp_print_list ~pp_sep (Fun.flip pp_print_atom)) query
 
 
 module List : sig

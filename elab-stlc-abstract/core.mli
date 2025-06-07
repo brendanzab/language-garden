@@ -17,8 +17,8 @@ type tm
 
 (** {2 Pretty printing} *)
 
-val pp_ty : Format.formatter -> ty -> unit
-val pp_tm : Format.formatter -> tm -> unit
+val pp_ty : ty -> Format.formatter -> unit
+val pp_tm : tm -> Format.formatter -> unit
 
 
 (** {1 Elaboration effect} *)
