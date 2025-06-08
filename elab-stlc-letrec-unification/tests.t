@@ -400,7 +400,7 @@ Mismatched argument
 Unexpected function application
   $ stlc-letrec-unification elab <<< "true 3"
   error: mismatched types:
-    expected: ?0 -> ?1
+    expected: function
     found: Bool
     ┌─ <stdin>:1:0
     │

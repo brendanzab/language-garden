@@ -227,17 +227,22 @@ module Elab = struct
     | App (head, arg) ->
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
-        let param_ty, body_ty =
-          match Core.force_ty head_ty with
-          | Fun_type (param_ty, body_ty) -> param_ty, body_ty
-          | head_ty ->
-              let param_ty = fresh_meta head_loc `Fun_param in
-              let body_ty = fresh_meta head_loc `Fun_body in
-              unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
-              param_ty, body_ty
-        in
-        let arg = check_tm ctx arg param_ty in
-        Fun_app (head, arg), body_ty
+
+        begin match Core.force_ty head_ty with
+        | Fun_type (param_ty, body_ty) ->
+            let arg = check_tm ctx arg param_ty in
+            Fun_app (head, arg), body_ty
+        | Meta_var _ as head_ty ->
+            let param_ty = fresh_meta head_loc `Fun_param in
+            let body_ty = fresh_meta head_loc `Fun_body in
+            unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
+            let arg = check_tm ctx arg param_ty in
+            Fun_app (head, arg), body_ty
+        | head_ty ->
+            error head_loc
+              (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
+                (Core.pp_ty head_ty))
+        end
 
     | If_then_else (head, tm0, tm1) ->
         let head = check_tm ctx head Bool_type in

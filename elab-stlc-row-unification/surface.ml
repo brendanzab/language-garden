@@ -285,17 +285,22 @@ module Elab = struct
     | App (head, arg) ->
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
-        let param_ty, body_ty =
-          match Core.force_ty head_ty with
-          | Fun_type (param_ty, body_ty) -> param_ty, body_ty
-          | head_ty ->
-              let param_ty = fresh_meta head_loc `Fun_param in
-              let body_ty = fresh_meta head_loc `Fun_body in
-              unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
-              param_ty, body_ty
-        in
-        let arg = check_tm ctx arg param_ty in
-        Fun_app (head, arg), body_ty
+
+        begin match Core.force_ty head_ty with
+        | Fun_type (param_ty, body_ty) ->
+            let arg = check_tm ctx arg param_ty in
+            Fun_app (head, arg), body_ty
+        | Meta_var _ as head_ty ->
+            let param_ty = fresh_meta head_loc `Fun_param in
+            let body_ty = fresh_meta head_loc `Fun_body in
+            unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
+            let arg = check_tm ctx arg param_ty in
+            Fun_app (head, arg), body_ty
+        | head_ty ->
+            error head_loc
+              (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
+                (Core.pp_ty head_ty))
+        end
 
     | Match (head, clauses) ->
         let body_ty = fresh_meta tm.loc `Match_clauses in
@@ -304,17 +309,20 @@ module Elab = struct
     | Proj (head, label) ->
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
+
         begin match Core.force_ty head_ty with
-        | Record_type (Row_entries row) ->
-            begin match Core.Label_map.find_opt label.data row with
-            | Some ty -> Record_proj (head, label.data), ty
-            | None -> error head_loc (Format.asprintf "unknown field `%s`" label.data)
-            end
-        | head_ty ->
+        | Record_type (Row_entries row) when Core.Label_map.mem label.data row ->
+            Record_proj (head, label.data), Core.Label_map.find label.data row
+        | Record_type (Row_meta_var _) | Meta_var _ as head_ty ->
             let field_ty = fresh_meta head_loc `Record_field in
             let row = Core.Label_map.singleton label.data field_ty in
             unify_tys head_loc (Core.Record_type (fresh_row_meta row)) head_ty;
             Record_proj (head, label.data), field_ty
+        | head_ty ->
+            error head_loc
+              (Format.asprintf "@[<v 2>@[unknown field `%s`:@]@ @[found: %t@]@]"
+                label.data
+                (Core.pp_ty head_ty))
         end
 
     | If_then_else (head, tm1, tm2) ->
@@ -428,7 +436,7 @@ module Elab = struct
                 (fun ppf (label, _) -> Format.fprintf ppf "`%s`" label))
               missing_clauses)
 
-    | head_ty ->
+    | Variant_type (Row_meta_var _) | Meta_var _ as head_ty ->
         (* Build up the clauses and the row from the clauses *)
         let clauses, row =
           List.fold_left
@@ -448,5 +456,10 @@ module Elab = struct
         unify_tys head_loc (Variant_type (Row_entries row)) head_ty;
         (* Return the clauses *)
         Variant_elim (head, clauses)
+
+    | head_ty ->
+        error head_loc
+          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: variant@]@ @[found: %t@]@]"
+            (Core.pp_ty head_ty))
 
 end
