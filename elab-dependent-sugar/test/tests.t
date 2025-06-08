@@ -1,5 +1,7 @@
+  $ alias executable=dependent-sugar
+
 Usage
-  $ dependent-sugar
+  $ executable
   dependent-sugar: required COMMAND name is missing, must be either 'elab' or 'norm'.
   Usage: dependent-sugar COMMAND …
   Try 'dependent-sugar --help' for more information.
@@ -7,10 +9,10 @@ Usage
 
 The identity function
   $ cat >id <<< "fun (A : Type) (a : A) => a"
-  $ cat id | dependent-sugar elab
+  $ cat id | executable elab
   <stdin> : fun (A : Type) (a : A) -> A :=
     (fun A a => a) : fun (A : Type) (a : A) -> A
-  $ cat id | dependent-sugar norm
+  $ cat id | executable norm
   <stdin> : fun (A : Type) (a : A) -> A := fun A a => a
 
 Church-encoded boolean type
@@ -24,7 +26,7 @@ Church-encoded boolean type
   > 
   > true Bool false
   > EOF
-  $ cat bools | dependent-sugar elab
+  $ cat bools | executable elab
   <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
@@ -35,7 +37,7 @@ Church-encoded boolean type
     let not : fun (b : Bool) -> Bool :=
       fun b Out true false => b Out false true;
     true Bool false
-  $ cat bools | dependent-sugar norm
+  $ cat bools | executable norm
   <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
@@ -52,7 +54,7 @@ Church-encoded option type
   > 
   > some (Option Type) (some Type (Type -> Type))
   > EOF
-  $ cat options | dependent-sugar elab
+  $ cat options | executable elab
   <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
@@ -65,7 +67,7 @@ Church-encoded option type
     let some : fun (A : Type) (a : A) -> Option A :=
       fun A a Out some none => some a;
     some (Option Type) (some Type (Type -> Type))
-  $ cat options | dependent-sugar norm
+  $ cat options | executable norm
   <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
@@ -74,7 +76,7 @@ Church-encoded option type
   := fun Out some none => some (fun Out some none => some (Type -> Type))
 
 Name not bound
-  $ dependent-sugar elab <<< "fun (A : Type) (a : A) => foo"
+  $ executable elab <<< "fun (A : Type) (a : A) => foo"
   error: `foo` is not bound in the current scope
     ┌─ <stdin>:1:26
     │
@@ -83,12 +85,12 @@ Name not bound
   [1]
 
 Function literal body annotations (checking)
-  $ dependent-sugar elab <<< "(fun A (a : A) : A => a) : fun (A : Type) (a : A) -> A"
+  $ executable elab <<< "(fun A (a : A) : A => a) : fun (A : Type) (a : A) -> A"
   <stdin> : fun (A : Type) (a : A) -> A :=
     (fun A a => a) : fun (A : Type) (a : A) -> A
 
 Mismatched function literal parameter (checking)
-  $ dependent-sugar elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : B) -> A"
+  $ executable elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : B) -> A"
   error: type mismatch
     expected: B
     found:    A
@@ -99,7 +101,7 @@ Mismatched function literal parameter (checking)
   [1]
 
 Mismatched function iteral body annotation (checking)
-  $ dependent-sugar elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : A) -> B"
+  $ executable elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : A) -> B"
   error: type mismatch
     expected: B
     found:    A
@@ -110,7 +112,7 @@ Mismatched function iteral body annotation (checking)
   [1]
 
 Too many parameters (checking)
-  $ dependent-sugar elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (a : A) -> A"
+  $ executable elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (a : A) -> A"
   error: too many parameters in function literal
     ┌─ <stdin>:1:10
     │
@@ -119,12 +121,12 @@ Too many parameters (checking)
   [1]
 
 Function literal body annotations (inferring)
-  $ dependent-sugar elab <<< "fun (A : Type) (a : A) : A => a"
+  $ executable elab <<< "fun (A : Type) (a : A) : A => a"
   <stdin> : fun (A : Type) (a : A) -> A :=
     (fun A a => a) : fun (A : Type) (a : A) -> A
 
 Mismatched body annotation (inferring)
-  $ dependent-sugar elab <<< "fun (A : Type) (a : A) : A => A"
+  $ executable elab <<< "fun (A : Type) (a : A) : A => A"
   error: type mismatch
     expected: A
     found:    Type
@@ -135,7 +137,7 @@ Mismatched body annotation (inferring)
   [1]
 
 An example of a type error
-  $ dependent-sugar elab <<EOF
+  $ executable elab <<EOF
   > let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
   > let true : Bool := fun Out true false => true;
   > let false : Bool := fun Out true false => false;

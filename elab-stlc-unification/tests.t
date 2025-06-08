@@ -1,56 +1,58 @@
+  $ alias executable=stlc-unification
+
 Boolean equality
-  $ stlc-unification elab <<< "true = false"
+  $ executable elab <<< "true = false"
   #bool-eq true false : Bool
 
 Integer equality
-  $ stlc-unification elab <<< "1 = 2"
+  $ executable elab <<< "1 = 2"
   #int-eq 1 2 : Bool
 
 Integer Addition
-  $ stlc-unification elab <<< "1 + 2"
+  $ executable elab <<< "1 + 2"
   #int-add 1 2 : Int
 
 Add two function
-  $ stlc-unification elab <<< "fun x => x + 2"
+  $ executable elab <<< "fun x => x + 2"
   fun (x : Int) => #int-add x 2 : Int -> Int
 
 Function application
-  $ stlc-unification elab <<< "fun x f => f x * x"
+  $ executable elab <<< "fun x f => f x * x"
   fun (x : Int) => fun (f : Int -> Int) => #int-mul (f x) x :
     Int -> (Int -> Int) -> Int
 
 Function application
-  $ stlc-unification elab <<< "let f x := x; f 3"
+  $ executable elab <<< "let f x := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Explicit parameter type
-  $ stlc-unification elab <<< "let f (x : Int) := x; f 3"
+  $ executable elab <<< "let f (x : Int) := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Explicit return type
-  $ stlc-unification elab <<< "let f (x : Int) : Int := x; f 3"
+  $ executable elab <<< "let f (x : Int) : Int := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Unused parameter
-  $ stlc-unification elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
+  $ executable elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
   let f : Int -> Int -> Int := fun (x : Int) => fun (_ : Int) => x;
   f 3 : Int -> Int
 
 Placeholder types
-  $ stlc-unification elab <<< "let f (x : _) : _ := x; f 3"
+  $ executable elab <<< "let f (x : _) : _ := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Placeholder return type
-  $ stlc-unification elab <<< "let f : Int -> _ := fun x y => x; f 3 true"
+  $ executable elab <<< "let f : Int -> _ := fun x y => x; f 3 true"
   let f : Int -> Bool -> Int := fun (x : Int) => fun (y : Bool) => x;
   f 3 true : Int
 
 If expressions
-  $ stlc-unification elab <<< "fun x y => if x = 0 then y else 3"
+  $ executable elab <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3 :
     Int -> Int -> Int
 
@@ -59,7 +61,7 @@ Lexer Errors
 ------------
 
 Unexpected character
-  $ stlc-unification elab <<< "1 % 2"
+  $ executable elab <<< "1 % 2"
   error: unexpected character
     ┌─ <stdin>:1:2
     │
@@ -68,7 +70,7 @@ Unexpected character
   [1]
 
 Unclosed block comment
-  $ stlc-unification elab <<< "/- hellooo"
+  $ executable elab <<< "/- hellooo"
   error: unclosed block comment
     ┌─ <stdin>:2:0
     │
@@ -81,7 +83,7 @@ Parse Errors
 ------------
 
 Unclosed parenthesis
-  $ stlc-unification elab <<< "1 + (3 "
+  $ executable elab <<< "1 + (3 "
   error: syntax error
     ┌─ <stdin>:2:0
     │
@@ -95,7 +97,7 @@ Elaboration Errors
 ------------------
 
 Unbound variable
-  $ stlc-unification elab <<< "let x := 1; y"
+  $ executable elab <<< "let x := 1; y"
   error: unbound name `y`
     ┌─ <stdin>:1:12
     │
@@ -104,7 +106,7 @@ Unbound variable
   [1]
 
 Mismatched definition type
-  $ stlc-unification elab <<< "let x : Bool := 1; x"
+  $ executable elab <<< "let x : Bool := 1; x"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -115,7 +117,7 @@ Mismatched definition type
   [1]
 
 Mismatched argument
-  $ stlc-unification elab <<< "let f x := x + 1; f f"
+  $ executable elab <<< "let f x := x + 1; f f"
   error: mismatched types:
     expected: Int
     found: Int -> Int
@@ -126,7 +128,7 @@ Mismatched argument
   [1]
 
 Mismatched argument
-  $ stlc-unification elab <<< "let f (x : Bool) := x; f 1"
+  $ executable elab <<< "let f (x : Bool) := x; f 1"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -137,7 +139,7 @@ Mismatched argument
   [1]
 
 Unexpected function application
-  $ stlc-unification elab <<< "true 3"
+  $ executable elab <<< "true 3"
   error: mismatched types:
     expected: function
     found: Bool
@@ -148,7 +150,7 @@ Unexpected function application
   [1]
 
 Infinite type
-  $ stlc-unification elab <<< "fun f => f f"
+  $ executable elab <<< "fun f => f f"
   error: infinite type
     ┌─ <stdin>:1:11
     │
@@ -157,7 +159,7 @@ Infinite type
   [1]
 
 Unexpected parameter
-  $ stlc-unification elab <<< "(fun x y => x) : Int -> Int"
+  $ executable elab <<< "(fun x y => x) : Int -> Int"
   error: unexpected parameter
     ┌─ <stdin>:1:7
     │
@@ -166,7 +168,7 @@ Unexpected parameter
   [1]
 
 Ambiguous parameter type
-  $ stlc-unification elab <<< "fun x => x"
+  $ executable elab <<< "fun x => x"
   error: ambiguous function parameter type
     ┌─ <stdin>:1:4
     │
@@ -175,7 +177,7 @@ Ambiguous parameter type
   [1]
 
 Ambiguous return type
-  $ stlc-unification elab <<< "fun f x => f x"
+  $ executable elab <<< "fun f x => f x"
   error: ambiguous function parameter type
     ┌─ <stdin>:1:6
     │
@@ -189,7 +191,7 @@ Ambiguous return type
   [1]
 
 Ambiguous placeholder
-  $ stlc-unification elab <<< "fun (x : _) => x"
+  $ executable elab <<< "fun (x : _) => x"
   error: unsolved placeholder
     ┌─ <stdin>:1:9
     │
@@ -198,7 +200,7 @@ Ambiguous placeholder
   [1]
 
 Mismatched if expression branches
-  $ stlc-unification elab <<< "fun x => if x then true else 3"
+  $ executable elab <<< "fun x => if x then true else 3"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -209,7 +211,7 @@ Mismatched if expression branches
   [1]
 
 Mismatched equality
-  $ stlc-unification elab <<< "1 = false"
+  $ executable elab <<< "1 = false"
   error: mismatched types:
     expected: Int
     found: Bool
@@ -220,7 +222,7 @@ Mismatched equality
   [1]
 
 Unsupported equality
-  $ stlc-unification elab <<< "let f (x : Bool) := x; f = f"
+  $ executable elab <<< "let f (x : Bool) := x; f = f"
   error: unsupported type: Bool -> Bool
     ┌─ <stdin>:1:23
     │

@@ -1,21 +1,23 @@
+  $ alias executable=stlc-bidirectional-stratify
+
 Boolean equality
-  $ stlc-bidirectional-stratify elab <<< "true = false"
+  $ executable elab <<< "true = false"
   #bool-eq true false : Bool
 
 Integer equality
-  $ stlc-bidirectional-stratify elab <<< "1 = 2"
+  $ executable elab <<< "1 = 2"
   #int-eq 1 2 : Bool
 
 Integer Addition
-  $ stlc-bidirectional-stratify elab <<< "1 + 2"
+  $ executable elab <<< "1 + 2"
   #int-add 1 2 : Int
 
 Add two function
-  $ stlc-bidirectional-stratify elab <<< "fun (x : Int) => x + 2"
+  $ executable elab <<< "fun (x : Int) => x + 2"
   fun (x : Int) => #int-add x 2 : Int -> Int
 
 Function application
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > fun (x : Int) (f : Int -> Int) =>
   >   f x * x
   > EOF
@@ -23,7 +25,7 @@ Function application
     Int -> (Int -> Int) -> Int
 
 Function application
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let f : Int -> Int :=
   >   fun x => x;
   > 
@@ -33,17 +35,17 @@ Function application
   f 3 : Int
 
 Explicit parameter type
-  $ stlc-bidirectional-stratify elab <<< "let f (x : Int) := x; f 3"
+  $ executable elab <<< "let f (x : Int) := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Explicit return type
-  $ stlc-bidirectional-stratify elab <<< "let f (x : Int) : Int := x; f 3"
+  $ executable elab <<< "let f (x : Int) : Int := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Check let body type
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let f (x : Int) : Int -> Int :=
   >   let id (x : Int) : Int := x;
   >   let incr (x : Int) : Int := x + 1;
@@ -60,7 +62,7 @@ Check let body type
   f 4 3 : Int
 
 If expressions
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let f (x : Int) (y : Int) : Int :=
   >   if x = 0 then y else 3;
   > 
@@ -71,19 +73,19 @@ If expressions
   f 4 : Int -> Int
 
 Type expressions
-  $ stlc-bidirectional-stratify elab <<< "Int"
+  $ executable elab <<< "Int"
   Int : Type
 
-  $ stlc-bidirectional-stratify elab <<< "Int -> Int -> Bool"
+  $ executable elab <<< "Int -> Int -> Bool"
   Int -> Int -> Bool : Type
 
-  $ stlc-bidirectional-stratify elab <<< "Int : Type"
+  $ executable elab <<< "Int : Type"
   Int : Type
 
-  $ stlc-bidirectional-stratify elab <<< "Type"
+  $ executable elab <<< "Type"
   Type : Type 1
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let Univ := Type;
   > let x : Int := 1;
   > let Number : Univ := Int; 
@@ -92,7 +94,7 @@ Type expressions
   let x : Int := 1;
   #int-add x 2 : Int
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let x := 1;
   > let Number := Int; 
   > x + 2 : Number
@@ -100,14 +102,14 @@ Type expressions
   let x : Int := 1;
   #int-add x 2 : Int
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let Univ := Type;
   > let x : Int := 1;
   > Univ
   > EOF
   Type : Type 1
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let Univ := Type;
   > let x : Int := 1;
   > let Number : Univ := Int; 
@@ -119,7 +121,7 @@ Lexer Errors
 ------------
 
 Unexpected character
-  $ stlc-bidirectional-stratify elab <<< "1 % 2"
+  $ executable elab <<< "1 % 2"
   error: unexpected character
     ┌─ <stdin>:1:2
     │
@@ -128,7 +130,7 @@ Unexpected character
   [1]
 
 Unclosed block comment
-  $ stlc-bidirectional-stratify elab <<< "/- hellooo"
+  $ executable elab <<< "/- hellooo"
   error: unclosed block comment
     ┌─ <stdin>:2:0
     │
@@ -141,7 +143,7 @@ Parse Errors
 ------------
 
 Unclosed parenthesis
-  $ stlc-bidirectional-stratify elab <<< "1 + (3 "
+  $ executable elab <<< "1 + (3 "
   error: syntax error
     ┌─ <stdin>:2:0
     │
@@ -155,7 +157,7 @@ Elaboration Errors
 ------------------
 
 Unbound variable
-  $ stlc-bidirectional-stratify elab <<< "let x := 1; y"
+  $ executable elab <<< "let x := 1; y"
   error: unbound name `y`
     ┌─ <stdin>:1:12
     │
@@ -164,7 +166,7 @@ Unbound variable
   [1]
 
 Mismatched definition type
-  $ stlc-bidirectional-stratify elab <<< "let x : Bool := 1; x"
+  $ executable elab <<< "let x : Bool := 1; x"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -175,7 +177,7 @@ Mismatched definition type
   [1]
 
 Mismatched argument
-  $ stlc-bidirectional-stratify elab <<< "let f (x : Bool) := x; f 1"
+  $ executable elab <<< "let f (x : Bool) := x; f 1"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -186,7 +188,7 @@ Mismatched argument
   [1]
 
 Mismatched parameter
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let f : Bool -> Bool :=
   >   fun (x : Int) => x;
   > 
@@ -202,7 +204,7 @@ Mismatched parameter
   [1]
 
 Too many parameters
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let f : Bool -> Bool :=
   >   fun (x : Bool) (y : Int) => x;
   > 
@@ -216,7 +218,7 @@ Too many parameters
   [1]
 
 Ambiguous parameter type
-  $ stlc-bidirectional-stratify elab <<< "fun x => x"
+  $ executable elab <<< "fun x => x"
   error: ambiguous parameter type
     ┌─ <stdin>:1:4
     │
@@ -225,7 +227,7 @@ Ambiguous parameter type
   [1]
 
 Ambiguous if expression
-  $ stlc-bidirectional-stratify elab <<< "fun (x : Bool) => if x then true else 3"
+  $ executable elab <<< "fun (x : Bool) => if x then true else 3"
   error: ambiguous if expression
     ┌─ <stdin>:1:18
     │
@@ -234,7 +236,7 @@ Ambiguous if expression
   [1]
 
 Type expressions
-  $ stlc-bidirectional-stratify elab <<< "1 : Type"
+  $ executable elab <<< "1 : Type"
   error: expected type, found expression
     ┌─ <stdin>:1:0
     │
@@ -242,7 +244,7 @@ Type expressions
     │ ^
   [1]
 
-  $ stlc-bidirectional-stratify elab <<< "Type : Int"
+  $ executable elab <<< "Type : Int"
   error: expected expression, found universe
     ┌─ <stdin>:1:0
     │
@@ -250,7 +252,7 @@ Type expressions
     │ ^^^^
   [1]
 
-  $ stlc-bidirectional-stratify elab <<< "Type : Type"
+  $ executable elab <<< "Type : Type"
   error: expected type, found universe
     ┌─ <stdin>:1:0
     │
@@ -259,7 +261,7 @@ Type expressions
   [1]
 
 Local bindings
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let x : 42 := 1;
   > x
   > EOF
@@ -270,7 +272,7 @@ Local bindings
     │         ^^
   [1]
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let x : Int := Int;
   > x
   > EOF
@@ -281,7 +283,7 @@ Local bindings
     │                ^^^
   [1]
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let x : Int := Type;
   > x
   > EOF
@@ -293,7 +295,7 @@ Local bindings
   [1]
 
 Parameterised bindings
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let id (A : Type) (x : A) : A := x;
   > id Int 1
   > EOF
@@ -304,7 +306,7 @@ Parameterised bindings
     │             ^^^^
   [1]
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let Foo (x : Int) : Type := Int;
   > 33 : Foo 42
   > EOF
@@ -315,7 +317,7 @@ Parameterised bindings
     │                             ^^^
   [1]
 
-  $ stlc-bidirectional-stratify elab <<EOF
+  $ executable elab <<EOF
   > let Foo (x : Int) : Type := Type;
   > Int : Foo 42
   > EOF
@@ -327,7 +329,7 @@ Parameterised bindings
   [1]
 
 Mismatched equality
-  $ stlc-bidirectional-stratify elab <<< "1 = false"
+  $ executable elab <<< "1 = false"
   error: mismatched types:
     expected: Int
     found: Bool
@@ -338,7 +340,7 @@ Mismatched equality
   [1]
 
 Unsupported equality
-  $ stlc-bidirectional-stratify elab <<< "let f (x : Bool) := x; f = f"
+  $ executable elab <<< "let f (x : Bool) := x; f = f"
   error: unsupported type: Bool -> Bool
     ┌─ <stdin>:1:23
     │

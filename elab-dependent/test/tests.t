@@ -1,5 +1,7 @@
+  $ alias executable=dependent
+
 Usage
-  $ dependent
+  $ executable
   dependent: required COMMAND name is missing, must be either 'elab' or 'norm'.
   Usage: dependent COMMAND …
   Try 'dependent --help' for more information.
@@ -7,9 +9,9 @@ Usage
 
 The identity function
   $ cat >id <<< "(fun A a => a) : fun (A : Type) -> A -> A"
-  $ cat id | dependent elab
+  $ cat id | executable elab
   <stdin> : fun (A : Type) A -> A := (fun A a => a) : fun (A : Type) A -> A
-  $ cat id | dependent norm
+  $ cat id | executable norm
   <stdin> : fun (A : Type) A -> A := fun A a => a
 
 Church-encoded boolean type
@@ -23,7 +25,7 @@ Church-encoded boolean type
   > 
   > true Bool false
   > EOF
-  $ cat bools | dependent elab
+  $ cat bools | executable elab
   <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
@@ -32,7 +34,7 @@ Church-encoded boolean type
     let true := fun Out true false => true;
     let false := fun Out true false => false;
     let not := fun b Out true false => b Out false true; true Bool false
-  $ cat bools | dependent norm
+  $ cat bools | executable norm
   <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
@@ -52,7 +54,7 @@ Church-encoded option type
   > 
   > some (Option Type) (some Type (Type -> Type))
   > EOF
-  $ cat options | dependent elab
+  $ cat options | executable elab
   <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
@@ -64,7 +66,7 @@ Church-encoded option type
     let none := fun A Out some none => none;
     let some := fun A a Out some none => some a;
     some (Option Type) (some Type (Type -> Type))
-  $ cat options | dependent norm
+  $ cat options | executable norm
   <stdin> :
     fun (Out : Type)
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
@@ -73,7 +75,7 @@ Church-encoded option type
   := fun Out some none => some (fun Out some none => some (Type -> Type))
 
 Name not bound
-  $ dependent elab <<< "(fun A a => foo) : fun (A : Type) -> A -> foo"
+  $ executable elab <<< "(fun A a => foo) : fun (A : Type) -> A -> foo"
   error: `foo` is not bound in the current scope
     ┌─ <stdin>:1:42
     │
@@ -82,7 +84,7 @@ Name not bound
   [1]
 
 Too many parameters (checking)
-  $ dependent elab <<< "(fun A B a => a) : fun (A : Type) (a : A) -> A"
+  $ executable elab <<< "(fun A B a => a) : fun (A : Type) (a : A) -> A"
   error: too many parameters in function literal
     ┌─ <stdin>:1:0
     │
@@ -91,7 +93,7 @@ Too many parameters (checking)
   [1]
 
 An example of a type error
-  $ dependent elab <<EOF
+  $ executable elab <<EOF
   > let Bool : Type := fun (Out : Type) (true : Out) (false : Out) -> Out;
   > let true : Bool := fun Out true false => true;
   > let false : Bool := fun Out true false => false;

@@ -1,56 +1,58 @@
+  $ alias executable=stlc-letrec-unification
+
 Boolean equality
-  $ stlc-letrec-unification elab <<< "true = false"
+  $ executable elab <<< "true = false"
   #bool-eq true false : Bool
 
 Integer equality
-  $ stlc-letrec-unification elab <<< "1 = 2"
+  $ executable elab <<< "1 = 2"
   #int-eq 1 2 : Bool
 
 Integer Addition
-  $ stlc-letrec-unification elab <<< "1 + 2"
+  $ executable elab <<< "1 + 2"
   #int-add 1 2 : Int
 
 Add two function
-  $ stlc-letrec-unification elab <<< "fun x => x + 2"
+  $ executable elab <<< "fun x => x + 2"
   fun (x : Int) => #int-add x 2 : Int -> Int
 
 Function application
-  $ stlc-letrec-unification elab <<< "fun x f => f x * x"
+  $ executable elab <<< "fun x f => f x * x"
   fun (x : Int) => fun (f : Int -> Int) => #int-mul (f x) x :
     Int -> (Int -> Int) -> Int
 
 Function application
-  $ stlc-letrec-unification elab <<< "let f x := x; f 3"
+  $ executable elab <<< "let f x := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Explicit parameter type
-  $ stlc-letrec-unification elab <<< "let f (x : Int) := x; f 3"
+  $ executable elab <<< "let f (x : Int) := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Explicit return type
-  $ stlc-letrec-unification elab <<< "let f (x : Int) : Int := x; f 3"
+  $ executable elab <<< "let f (x : Int) : Int := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Unused parameter
-  $ stlc-unification elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
+  $ executable elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
   let f : Int -> Int -> Int := fun (x : Int) => fun (_ : Int) => x;
   f 3 : Int -> Int
 
 Placeholder types
-  $ stlc-letrec-unification elab <<< "let f (x : _) : _ := x; f 3"
+  $ executable elab <<< "let f (x : _) : _ := x; f 3"
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
 Placeholder return type
-  $ stlc-unification elab <<< "let f : Int -> _ := fun x y => x; f 3 true"
+  $ executable elab <<< "let f : Int -> _ := fun x y => x; f 3 true"
   let f : Int -> Bool -> Int := fun (x : Int) => fun (y : Bool) => x;
   f 3 true : Int
 
 If expressions
-  $ stlc-letrec-unification elab <<< "fun x y => if x = 0 then y else 3"
+  $ executable elab <<< "fun x y => if x = 0 then y else 3"
   fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3 :
     Int -> Int -> Int
 
@@ -63,14 +65,14 @@ Recursive bindings: Factorial
   > fact 5
   > EOF
 
-  $ cat fact.txt | stlc-letrec-unification elab
+  $ cat fact.txt | executable elab
   let fact : Int -> Int :=
     #fix (fact : Int -> Int) =>
       fun (n : Int) =>
         if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1));
   fact 5 : Int
 
-  $ cat fact.txt | stlc-letrec-unification norm
+  $ cat fact.txt | executable norm
   120 : Int
 
 
@@ -86,7 +88,7 @@ Recursive bindings: Factorial in terms of the fixed-point combinator
   > fact 5
   > EOF
 
-  $ cat fix.txt | stlc-letrec-unification elab
+  $ cat fix.txt | executable elab
   let fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
     #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
       fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x;
@@ -98,7 +100,7 @@ Recursive bindings: Factorial in terms of the fixed-point combinator
       n;
   fact 5 : Int
 
-  $ cat fix.txt | stlc-letrec-unification norm
+  $ cat fix.txt | executable norm
   120 : Int
 
 
@@ -110,13 +112,13 @@ Recursive bindings: Under-applying the fixed-point combinator
   > fix
   > EOF
 
-  $ cat fix.txt | stlc-letrec-unification elab
+  $ cat fix.txt | executable elab
   let fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
     #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
       fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x;
   fix : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
-  $ cat fix.txt | stlc-letrec-unification norm
+  $ cat fix.txt | executable norm
   #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
     fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x
   : ((Int -> Int) -> Int -> Int) -> Int -> Int
@@ -130,12 +132,12 @@ Recursive bindings: Naive fixed-point (this is useless in call-by-value!)
   > fix
   > EOF
 
-  $ cat fix-naive.txt | stlc-letrec-unification elab
+  $ cat fix-naive.txt | executable elab
   let fix : (Int -> Int) -> Int :=
     #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f);
   fix : (Int -> Int) -> Int
 
-  $ cat fix-naive.txt | stlc-letrec-unification norm
+  $ cat fix-naive.txt | executable norm
   #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f) :
     (Int -> Int) -> Int
 
@@ -153,7 +155,7 @@ Recursive bindings: Ackermann function
   > ack 1 0
   > EOF
 
-  $ cat ack.txt | stlc-letrec-unification elab
+  $ cat ack.txt | executable elab
   let ack : Int -> Int -> Int :=
     #fix (ack : Int -> Int -> Int) =>
       fun (m : Int) => fun (n : Int) =>
@@ -166,7 +168,7 @@ Recursive bindings: Ackermann function
             ack (#int-sub m 1) (ack m (#int-sub n 1));
   ack 1 0 : Int
 
-  $ cat ack.txt | stlc-letrec-unification norm
+  $ cat ack.txt | executable norm
   2 : Int
 
 
@@ -183,7 +185,7 @@ Recursive bindings: Ackermann function (partially applied)
   > ack 0
   > EOF
 
-  $ cat ack-partial-app.txt | stlc-letrec-unification elab
+  $ cat ack-partial-app.txt | executable elab
   let ack : Int -> Int -> Int :=
     #fix (ack : Int -> Int -> Int) =>
       fun (m : Int) => fun (n : Int) =>
@@ -196,7 +198,7 @@ Recursive bindings: Ackermann function (partially applied)
             ack (#int-sub m 1) (ack m (#int-sub n 1));
   ack 0 : Int -> Int
 
-  $ cat ack-partial-app.txt | stlc-letrec-unification norm
+  $ cat ack-partial-app.txt | executable norm
   fun (n : Int) => #int-add n 1 : Int -> Int
 
 
@@ -208,14 +210,14 @@ Recursive bindings: Count-down (partially applied)
   > count-down true
   > EOF
 
-  $ cat count-down.txt | stlc-letrec-unification elab
+  $ cat count-down.txt | executable elab
   let count-down : Bool -> Int -> Bool :=
     #fix (count-down : Bool -> Int -> Bool) =>
       fun (x : Bool) => fun (n : Int) =>
         if #int-eq n 0 then x else count-down x (#int-sub n 1);
   count-down true : Int -> Bool
 
-  $ cat count-down.txt | stlc-letrec-unification norm
+  $ cat count-down.txt | executable norm
   fun (n : Int) =>
     if #int-eq n 0 then
       true
@@ -236,7 +238,7 @@ Recursive bindings: Even/odd (partially applied)
   > even-odd true
   > EOF
 
-  $ cat even-odd-partial-app.txt | stlc-letrec-unification elab
+  $ cat even-odd-partial-app.txt | executable elab
   let even-odd : Bool -> Int -> Bool :=
     #fix (even-odd : Bool -> Int -> Bool) =>
       fun (b : Bool) => fun (n : Int) =>
@@ -246,7 +248,7 @@ Recursive bindings: Even/odd (partially applied)
           if #int-eq n 0 then false else even-odd true (#int-sub n 1);
   even-odd true : Int -> Bool
 
-  $ cat even-odd-partial-app.txt | stlc-letrec-unification norm
+  $ cat even-odd-partial-app.txt | executable norm
   fun (n : Int) =>
     if #int-eq n 0 then
       true
@@ -271,7 +273,7 @@ Mutually recursive bindings: Even/odd
   > is-even 6
   > EOF
 
-  $ cat even-odd.txt | stlc-letrec-unification elab
+  $ cat even-odd.txt | executable elab
   let $mutual-0 : (Int -> Bool, Int -> Bool) :=
     #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
       (fun (n : Int) =>
@@ -280,7 +282,7 @@ Mutually recursive bindings: Even/odd
         if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
   $mutual-0.0 6 : Bool
 
-  $ cat even-odd.txt | stlc-letrec-unification norm
+  $ cat even-odd.txt | executable norm
   true : Bool
 
 
@@ -294,7 +296,7 @@ Mutually recursive bindings: Even/odd (partially applied)
   > is-even
   > EOF
 
-  $ cat even-odd.txt | stlc-letrec-unification elab
+  $ cat even-odd.txt | executable elab
   let $mutual-0 : (Int -> Bool, Int -> Bool) :=
     #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
       (fun (n : Int) =>
@@ -303,7 +305,7 @@ Mutually recursive bindings: Even/odd (partially applied)
         if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
   $mutual-0.0 : Int -> Bool
 
-  $ cat even-odd.txt | stlc-letrec-unification norm
+  $ cat even-odd.txt | executable norm
   fun (n : Int) =>
     if #int-eq n 0 then
       true
@@ -321,7 +323,7 @@ Lexer Errors
 ------------
 
 Unexpected character
-  $ stlc-letrec-unification elab <<< "1 % 2"
+  $ executable elab <<< "1 % 2"
   error: unexpected character
     ┌─ <stdin>:1:2
     │
@@ -330,7 +332,7 @@ Unexpected character
   [1]
 
 Unclosed block comment
-  $ stlc-letrec-unification elab <<< "/- hellooo"
+  $ executable elab <<< "/- hellooo"
   error: unclosed block comment
     ┌─ <stdin>:2:0
     │
@@ -343,7 +345,7 @@ Parse Errors
 ------------
 
 Unclosed parenthesis
-  $ stlc-letrec-unification elab <<< "1 + (3 "
+  $ executable elab <<< "1 + (3 "
   error: syntax error
     ┌─ <stdin>:2:0
     │
@@ -356,7 +358,7 @@ Elaboration Errors
 ------------------
 
 Unbound variable
-  $ stlc-letrec-unification elab <<< "let x := 1; y"
+  $ executable elab <<< "let x := 1; y"
   error: unbound name `y`
     ┌─ <stdin>:1:12
     │
@@ -365,7 +367,7 @@ Unbound variable
   [1]
 
 Mismatched definition type
-  $ stlc-letrec-unification elab <<< "let x : Bool := 1; x"
+  $ executable elab <<< "let x : Bool := 1; x"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -376,7 +378,7 @@ Mismatched definition type
   [1]
 
 Mismatched argument
-  $ stlc-letrec-unification elab <<< "let f x := x + 1; f f"
+  $ executable elab <<< "let f x := x + 1; f f"
   error: mismatched types:
     expected: Int
     found: Int -> Int
@@ -387,7 +389,7 @@ Mismatched argument
   [1]
 
 Mismatched argument
-  $ stlc-letrec-unification elab <<< "let f (x : Bool) := x; f 1"
+  $ executable elab <<< "let f (x : Bool) := x; f 1"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -398,7 +400,7 @@ Mismatched argument
   [1]
 
 Unexpected function application
-  $ stlc-letrec-unification elab <<< "true 3"
+  $ executable elab <<< "true 3"
   error: mismatched types:
     expected: function
     found: Bool
@@ -409,7 +411,7 @@ Unexpected function application
   [1]
 
 Recursive let bindings
-  $ stlc-letrec-unification elab <<< "let rec x := x; x : Int"
+  $ executable elab <<< "let rec x := x; x : Int"
   error: expected function literal in recursive let binding
     ┌─ <stdin>:1:8
     │
@@ -418,7 +420,7 @@ Recursive let bindings
   [1]
 
 Infinite type
-  $ stlc-letrec-unification elab <<< "fun f => f f"
+  $ executable elab <<< "fun f => f f"
   error: infinite type
     ┌─ <stdin>:1:11
     │
@@ -427,7 +429,7 @@ Infinite type
   [1]
 
 Unexpected parameter
-  $ stlc-letrec-unification elab <<< "(fun x y => x) : Int -> Int"
+  $ executable elab <<< "(fun x y => x) : Int -> Int"
   error: unexpected parameter
     ┌─ <stdin>:1:7
     │
@@ -436,7 +438,7 @@ Unexpected parameter
   [1]
 
 Ambiguous parameter type
-  $ stlc-letrec-unification elab <<< "fun x => x"
+  $ executable elab <<< "fun x => x"
   error: ambiguous function parameter type
     ┌─ <stdin>:1:4
     │
@@ -445,7 +447,7 @@ Ambiguous parameter type
   [1]
 
 Ambiguous return type
-  $ stlc-letrec-unification elab <<< "fun f x => f x"
+  $ executable elab <<< "fun f x => f x"
   error: ambiguous function parameter type
     ┌─ <stdin>:1:6
     │
@@ -459,7 +461,7 @@ Ambiguous return type
   [1]
 
 Ambiguous placeholder
-  $ stlc-letrec-unification elab <<< "fun (x : _) => x"
+  $ executable elab <<< "fun (x : _) => x"
   error: unsolved placeholder
     ┌─ <stdin>:1:9
     │
@@ -468,7 +470,7 @@ Ambiguous placeholder
   [1]
 
 Mismatched if expression branches
-  $ stlc-letrec-unification elab <<< "fun x => if x then true else 3"
+  $ executable elab <<< "fun x => if x then true else 3"
   error: mismatched types:
     expected: Bool
     found: Int
@@ -479,7 +481,7 @@ Mismatched if expression branches
   [1]
 
 Mismatched equality
-  $ stlc-letrec-unification elab <<< "1 = false"
+  $ executable elab <<< "1 = false"
   error: mismatched types:
     expected: Int
     found: Bool
@@ -490,7 +492,7 @@ Mismatched equality
   [1]
 
 Unsupported equality
-  $ stlc-letrec-unification elab <<< "let f (x : Bool) := x; f = f"
+  $ executable elab <<< "let f (x : Bool) := x; f = f"
   error: unsupported type: Bool -> Bool
     ┌─ <stdin>:1:23
     │
