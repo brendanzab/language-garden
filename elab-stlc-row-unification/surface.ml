@@ -79,6 +79,9 @@ and param =
 *)
 module Elab = struct
 
+  module Label_map = Core.Label_map
+
+
   (** {2 Metavariables} *)
 
   (** The reason why a metavariable was inserted *)
@@ -106,7 +109,7 @@ module Elab = struct
     Dynarray.add_last metas (loc, info, state);
     Meta_var state
 
-  let fresh_row_meta (row: Core.ty Core.Label_map.t) : Core.row_ty =
+  let fresh_row_meta (row: Core.ty Label_map.t) : Core.row_ty =
     let state = Core.fresh_row_meta row in
     Dynarray.add_last row_metas state;
     Row_meta_var state
@@ -191,12 +194,12 @@ module Elab = struct
       match entries with
       | [] -> acc
       | (label, ty) :: entries ->
-          begin match Core.Label_map.mem label.data acc with
+          begin match Label_map.mem label.data acc with
           | true -> error label.loc (Format.asprintf "duplicate label `%s`" label.data)
-          | false -> go (Core.Label_map.add label.data (check_ty ty) acc) entries
+          | false -> go (Label_map.add label.data (check_ty ty) acc) entries
           end
     in
-    Row_entries (go Core.Label_map.empty entries)
+    Row_entries (go Label_map.empty entries)
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
@@ -210,7 +213,7 @@ module Elab = struct
         check_fun_lit ctx params body ty
 
     | Variant_lit (label, tm), Variant_type (Row_entries row) ->
-        begin match Core.Label_map.find_opt label.data row with
+        begin match Label_map.find_opt label.data row with
         | Some elem_ty ->
             Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
         | None ->
@@ -262,17 +265,17 @@ module Elab = struct
           match entries with
           | [] -> acc
           | (label, tm) :: entries ->
-              match Core.Label_map.mem label.data acc with
+              match Label_map.mem label.data acc with
               | true -> error label.loc (Format.asprintf "duplicate label `%s`" label.data)
-              | false -> go (Core.Label_map.add label.data (infer_tm ctx tm) acc) entries
+              | false -> go (Label_map.add label.data (infer_tm ctx tm) acc) entries
         in
-        let entries = go Core.Label_map.empty entries in
-        Record_lit (Core.Label_map.map fst entries),
-        Record_type (Row_entries (Core.Label_map.map snd entries))
+        let entries = go Label_map.empty entries in
+        Record_lit (Label_map.map fst entries),
+        Record_type (Row_entries (Label_map.map snd entries))
 
     | Variant_lit (label, elem_tm) ->
         let elem_tm, elem_ty = infer_tm ctx elem_tm in
-        let row = Core.Label_map.singleton label.data elem_ty in
+        let row = Label_map.singleton label.data elem_ty in
         let ty = Core.Variant_type (fresh_row_meta row) in
         Variant_lit (label.data, elem_tm, ty), ty
 
@@ -311,12 +314,12 @@ module Elab = struct
         let head, head_ty = infer_tm ctx head in
 
         begin match Core.force_ty head_ty with
-        | Record_type (Row_entries row) when Core.Label_map.mem label.data row ->
-            Record_proj (head, label.data), Core.Label_map.find label.data row
+        | Record_type (Row_entries row) when Label_map.mem label.data row ->
+            Record_proj (head, label.data), Label_map.find label.data row
         | Record_type (Row_meta_var _) | Meta_var _ as head_ty ->
             let field_ty = fresh_meta head_loc `Record_field in
-            let row = Core.Label_map.singleton label.data field_ty in
-            unify_tys head_loc (Core.Record_type (fresh_row_meta row)) head_ty;
+            let row = Label_map.singleton label.data field_ty in
+            unify_tys head_loc (Record_type (fresh_row_meta row)) head_ty;
             Record_proj (head, label.data), field_ty
         | head_ty ->
             error head_loc
@@ -406,23 +409,23 @@ module Elab = struct
         let clauses =
           List.fold_left
             (fun clauses ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
-              if Core.Label_map.mem label.data clauses then
+              if Label_map.mem label.data clauses then
                 (* TODO: should be a warning *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
-                match Core.Label_map.find_opt label.data row with
+                match Label_map.find_opt label.data row with
                 | Some param_ty ->
                     let body_tm = check_tm ((name.data, param_ty) :: ctx) body_tm body_ty in
-                    Core.Label_map.add label.data (name.data, body_tm) clauses
+                    Label_map.add label.data (name.data, body_tm) clauses
                 | None ->
                     error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
-            Core.Label_map.empty
+            Label_map.empty
             clauses
         in
         (* Check that labels in the clauses match the labels in the row *)
         let missing_clauses =
-          Core.Label_map.to_seq row
-          |> Seq.filter (fun (label, _) -> not (Core.Label_map.mem label clauses))
+          Label_map.to_seq row
+          |> Seq.filter (fun (label, _) -> not (Label_map.mem label clauses))
           |> List.of_seq
         in
         if List.is_empty missing_clauses then
@@ -441,15 +444,15 @@ module Elab = struct
         let clauses, row =
           List.fold_left
             (fun (clauses, row) ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
-              if Core.Label_map.mem label.data clauses then
+              if Label_map.mem label.data clauses then
                 (* TODO: should be a warning? *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
                 let param_ty = fresh_meta name.loc `Pattern_binder in
                 let body_tm = check_tm ((name.data, param_ty) :: ctx) body_tm body_ty in
-                Core.Label_map.add label.data (name.data, body_tm) clauses,
-                Core.Label_map.add label.data param_ty row)
-            (Core.Label_map.empty, Core.Label_map.empty)
+                Label_map.add label.data (name.data, body_tm) clauses,
+                Label_map.add label.data param_ty row)
+            (Label_map.empty, Label_map.empty)
             clauses
         in
         (* Unify variant type with head type *)
