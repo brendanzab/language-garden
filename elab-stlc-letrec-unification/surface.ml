@@ -233,7 +233,7 @@ module Elab = struct
           | head_ty ->
               let param_ty = fresh_meta head_loc `Fun_param in
               let body_ty = fresh_meta head_loc `Fun_body in
-              unify_tys head_loc head_ty (Fun_type (param_ty, body_ty));
+              unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
               param_ty, body_ty
         in
         let arg = check_tm ctx arg param_ty in

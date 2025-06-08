@@ -291,7 +291,7 @@ module Elab = struct
           | head_ty ->
               let param_ty = fresh_meta head_loc `Fun_param in
               let body_ty = fresh_meta head_loc `Fun_body in
-              unify_tys head_loc head_ty (Fun_type (param_ty, body_ty));
+              unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
               param_ty, body_ty
         in
         let arg = check_tm ctx arg param_ty in
@@ -313,8 +313,7 @@ module Elab = struct
         | head_ty ->
             let field_ty = fresh_meta head_loc `Record_field in
             let row = Core.Label_map.singleton label.data field_ty in
-            let record_ty = Core.Record_type (fresh_row_meta row) in
-            unify_tys head_loc head_ty record_ty;
+            unify_tys head_loc (Core.Record_type (fresh_row_meta row)) head_ty;
             Record_proj (head, label.data), field_ty
         end
 
@@ -445,8 +444,8 @@ module Elab = struct
             (Core.Label_map.empty, Core.Label_map.empty)
             clauses
         in
-        (* Unify head type with variant type *)
-        unify_tys head_loc head_ty (Variant_type (Row_entries row));
+        (* Unify variant type with head type *)
+        unify_tys head_loc (Variant_type (Row_entries row)) head_ty;
         (* Return the clauses *)
         Variant_elim (head, clauses)
 

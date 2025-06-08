@@ -294,7 +294,7 @@ module Elab = struct
           | Meta_var _ as head_ty, Arg arg ->
               let param_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_param) in
               let body_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_body) in
-              unify_vtys ctx head_loc head_ty (Fun_type (param_ty, body_ty));
+              unify_vtys ctx head_loc (Fun_type (param_ty, body_ty)) head_ty;
               let arg = check_tm ctx arg param_ty in
               Fun_app (head, arg), body_ty
 

@@ -188,8 +188,8 @@ Mismatched argument
 Unexpected function application
   $ stlc-row-unification elab <<< "true 3"
   error: mismatched types:
-    expected: Bool
-    found: ?0 -> ?1
+    expected: ?0 -> ?1
+    found: Bool
     ┌─ <stdin>:1:0
     │
   1 │ true 3
@@ -326,8 +326,8 @@ Unknown field
 Unexpected projection
   $ stlc-row-unification elab <<< "true.y"
   error: mismatched types:
-    expected: Bool
-    found: { ?0.. y : ?0 }
+    expected: { ?0.. y : ?0 }
+    found: Bool
     ┌─ <stdin>:1:0
     │
   1 │ true.y
@@ -405,8 +405,8 @@ Missing variant patterns
 Unexpected pattern match
   $ stlc-row-unification elab <<< "match true with [a := x] => x end"
   error: mismatched types:
-    expected: Bool
-    found: [a : ?1]
+    expected: [a : ?1]
+    found: Bool
     ┌─ <stdin>:1:6
     │
   1 │ match true with [a := x] => x end
