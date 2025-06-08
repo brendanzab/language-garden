@@ -185,6 +185,17 @@ Mismatched argument
     │                          ^
   [1]
 
+Unexpected function application
+  $ stlc-row-unification elab <<< "true 3"
+  error: mismatched types:
+    expected: Bool
+    found: ?0 -> ?1
+    ┌─ <stdin>:1:0
+    │
+  1 │ true 3
+    │ ^^^^
+  [1]
+
 Mismatched variant constraint and variant type
   $ stlc-row-unification elab <<EOF
   > let choose b y n :=
@@ -312,6 +323,17 @@ Unknown field
     │ ^^^^^^^^^^^
   [1]
 
+Unexpected projection
+  $ stlc-row-unification elab <<< "true.y"
+  error: mismatched types:
+    expected: Bool
+    found: { ?0.. y : ?0 }
+    ┌─ <stdin>:1:0
+    │
+  1 │ true.y
+    │ ^^^^
+  [1]
+
 Duplicate label
   $ stlc-row-unification elab <<< "{ x := 42; x := 2 }"
   error: duplicate label `x`
@@ -378,6 +400,17 @@ Missing variant patterns
     │
   2 │   match x with end
     │         ^
+  [1]
+
+Unexpected pattern match
+  $ stlc-row-unification elab <<< "match true with [a := x] => x end"
+  error: mismatched types:
+    expected: Bool
+    found: [a : ?1]
+    ┌─ <stdin>:1:6
+    │
+  1 │ match true with [a := x] => x end
+    │       ^^^^
   [1]
 
 Mismatched equality

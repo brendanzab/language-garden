@@ -136,6 +136,17 @@ Mismatched argument
     │                          ^
   [1]
 
+Unexpected function application
+  $ stlc-unification elab <<< "true 3"
+  error: mismatched types:
+    expected: Bool
+    found: ?0 -> ?1
+    ┌─ <stdin>:1:0
+    │
+  1 │ true 3
+    │ ^^^^
+  [1]
+
 Infinite type
   $ stlc-unification elab <<< "fun f => f f"
   error: infinite type

@@ -225,6 +225,28 @@ Mismatched argument
     │                          ^
   [1]
 
+Unexpected function application
+  $ system-f-unification elab <<< "true 3"
+  error: mismatched types:
+    expected: function
+    found: Bool
+    ┌─ <stdin>:1:0
+    │
+  1 │ true 3
+    │ ^^^^
+  [1]
+
+Unexpected function application
+  $ system-f-unification elab <<< "true [Int]"
+  error: mismatched types:
+    expected: forall
+    found: Bool
+    ┌─ <stdin>:1:0
+    │
+  1 │ true [Int]
+    │ ^^^^
+  [1]
+
 Mismatched parameter
   $ system-f-unification elab <<EOF
   > let f : Bool -> Bool :=

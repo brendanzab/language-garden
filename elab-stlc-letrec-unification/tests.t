@@ -397,6 +397,17 @@ Mismatched argument
     │                          ^
   [1]
 
+Unexpected function application
+  $ stlc-letrec-unification elab <<< "true 3"
+  error: mismatched types:
+    expected: Bool
+    found: ?0 -> ?1
+    ┌─ <stdin>:1:0
+    │
+  1 │ true 3
+    │ ^^^^
+  [1]
+
 Recursive let bindings
   $ stlc-letrec-unification elab <<< "let rec x := x; x : Int"
   error: expected function literal in recursive let binding
@@ -416,7 +427,7 @@ Infinite type
   [1]
 
 Unexpected parameter
-  $ stlc-unification elab <<< "(fun x y => x) : Int -> Int"
+  $ stlc-letrec-unification elab <<< "(fun x y => x) : Int -> Int"
   error: unexpected parameter
     ┌─ <stdin>:1:7
     │
