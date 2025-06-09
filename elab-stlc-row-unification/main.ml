@@ -62,25 +62,21 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
-  let tm, ty =
-    try Surface.Elab.infer_tm [] tm with
-    | Surface.Elab.Error (pos, msg) ->
-        emit source "error" pos msg;
-        exit 1
-  in
-
-  match Surface.Elab.unsolved_metas () with
-  | [] ->
-      tm, ty
-  | unsolved_metas ->
-      unsolved_metas |> List.iter (function
+  match Surface.Elab.infer_tm tm with
+  | tm, ty, [] -> tm, ty
+  | _, _, metas ->
+      metas |> List.iter begin function
         | (pos, `Fun_param) -> emit source "error" pos "ambiguous function parameter type"
         | (pos, `Fun_body) -> emit source "error" pos "ambiguous function return type"
         | (pos, `Record_field) -> emit source "error" pos "ambiguous record field"
         | (pos, `Match_clauses) -> emit source "error" pos "ambiguous match clauses"
         | (pos, `Pattern_binder) -> emit source "error" pos "ambiguous pattern binder"
         | (pos, `If_branches) -> emit source "error" pos "ambiguous if expression branches"
-        | (pos, `Placeholder) -> emit source "error" pos "unsolved placeholder");
+        | (pos, `Placeholder) -> emit source "error" pos "unsolved placeholder"
+      end;
+      exit 1
+  | exception Surface.Elab.Error (pos, msg) ->
+      emit source "error" pos msg;
       exit 1
 
 

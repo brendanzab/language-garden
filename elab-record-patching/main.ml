@@ -61,37 +61,45 @@ let parse_tm (source : Source_file.t) : Surface.tm =
       end
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
-let elab_tm (source : Source_file.t) (ctx : Surface.Elab.context) (tm : Surface.tm) =
-  try Surface.Elab.infer ctx tm with
+let elab_tm (source : Source_file.t) (tm : Surface.tm) =
+  try Surface.Elab.infer tm with
   | Surface.Elab.Error (pos, message) ->
       emit source "error" pos message;
       exit 1
 
-let pp_def ~resugar context ppf (name, ty, tm) =
-  let pp_tm = Surface.Elab.pp ~resugar context in
+let pp_tm ?resugar =
+  Core.Syntax.pp ?resugar []
+
+let pp_def ~resugar name ty tm ppf =
   let pp_name_ann ppf (name, ty) =
-    Format.fprintf ppf "@[<2>@[%s :@]@ @[%t@]@]" name (pp_tm ty)
+    Format.fprintf ppf "@[<2>@[%s :@]@ @[%t@]@]"
+      name
+      (pp_tm ~resugar ty)
   in
   Format.fprintf ppf "@[<2>@[%a@ :=@]@ @[%t@]@]"
     pp_name_ann (name, ty)
-    (Surface.Elab.pp ~resugar context tm)
+    (pp_tm ~resugar tm)
 
 
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let ctx = Surface.Elab.initial_context in
-  let (tm, ty) = elab_tm source ctx (parse_tm source) in
-  Format.printf "%a@\n" (pp_def ~resugar:false ctx)
-    ("<stdin>", Surface.Elab.quote ctx ty, tm)
+  let (tm, ty) = elab_tm source (parse_tm source) in
+  Format.printf "%t@\n"
+    (pp_def ~resugar:false
+      "<stdin>"
+      (Core.Semantics.quote 0 ty)
+      tm)
 
 let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let ctx = Surface.Elab.initial_context in
-  let (tm, ty) = elab_tm source ctx (parse_tm source) in
-  Format.printf "%a@\n" (pp_def ~resugar:true ctx)
-    ("<stdin>", Surface.Elab.quote ctx ty, Surface.Elab.normalise ctx tm)
+  let (tm, ty) = elab_tm source (parse_tm source) in
+  Format.printf "%t@\n"
+    (pp_def ~resugar:true
+      "<stdin>"
+      (Core.Semantics.quote 0 ty)
+      (Core.Semantics.normalise 0 [] tm))
 
 
 (** {1 CLI options} *)

@@ -58,7 +58,15 @@ and param =
     this to elaboration time we make it easier to report higher quality error
     messages that are more relevant to what the programmer originally wrote.
 *)
-module Elab = struct
+module Elab : sig
+
+  exception Error of loc * string
+
+  val check_ty : ty -> Core.ty
+  val check_tm : tm -> Core.ty -> Core.tm
+  val infer_tm : tm -> Core.tm * Core.ty
+
+end = struct
 
   (** {2 Elaboration context} *)
 
@@ -235,5 +243,14 @@ module Elab = struct
         let param_ty = check_ty param_ty in
         let body, body_ty = infer_fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
+
+
+  (** {2 Public API} *)
+
+  let check_tm : tm -> Core.ty -> Core.tm =
+    check_tm []
+
+  let infer_tm : tm -> Core.tm * Core.ty =
+    infer_tm []
 
 end

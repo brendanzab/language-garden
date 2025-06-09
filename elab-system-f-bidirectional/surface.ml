@@ -64,7 +64,15 @@ and arg =
     this to elaboration time we make it easier to report higher quality error
     messages that are more relevant to what the programmer originally wrote.
 *)
-module Elab = struct
+module Elab : sig
+
+  exception Error of loc * string
+
+  val check_ty : ty -> Core.ty
+  val check_tm : tm -> Core.Semantics.vty -> Core.tm
+  val infer_tm : tm -> Core.tm * Core.Semantics.vty
+
+end = struct
 
   (** {2 Elaboration context} *)
 
@@ -346,5 +354,17 @@ module Elab = struct
 
     let body, body_ty = go ctx params body_ty body in
     body, eval_ty ctx body_ty
+
+
+  (** {2 Public API} *)
+
+  let check_ty : ty -> Core.ty =
+    check_ty empty
+
+  let check_tm : tm -> Core.Semantics.vty -> Core.tm =
+    check_tm empty
+
+  let infer_tm : tm -> Core.tm * Core.Semantics.vty =
+    infer_tm empty
 
 end

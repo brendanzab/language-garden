@@ -62,13 +62,13 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Surface.Elab.elab_tm =
-  try Surface.Elab.infer [] tm with
+  try Surface.Elab.infer tm with
   | Surface.Elab.Error (pos, msg) ->
       emit source "error" pos msg;
       exit 1
 
 let elab_expr (source : Source_file.t) (tm : Surface.tm) : Core.expr * Core.ty =
-  try Surface.Elab.infer_expr [] tm with
+  try Surface.Elab.infer_expr tm with
   | Surface.Elab.Error (pos, msg) ->
       emit source "error" pos msg;
       exit 1

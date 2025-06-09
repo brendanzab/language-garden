@@ -59,9 +59,7 @@ and param =
     this to elaboration time we make it easier to report higher quality error
     messages that are more relevant to what the programmer originally wrote.
 *)
-module Elab = struct
-
-  (** {2 Metavariables} *)
+module Elab : sig
 
   (** The reason why a metavariable was inserted *)
   type meta_info = [
@@ -71,38 +69,68 @@ module Elab = struct
     | `Placeholder
   ]
 
-  (** A global list of the metavariables inserted during elaboration. This is used
-      to generate a list of unsolved metavariables at the end of elaboration. *)
-  let metas : (loc * meta_info * Core.meta_state ref) Dynarray.t =
-    Dynarray.create ()
+  exception Error of loc * string
 
-  (** Generate a fresh metavariable, recording it in the list of metavariables *)
-  let fresh_meta (loc: loc) (info : meta_info) : Core.ty =
-    let state = Core.fresh_meta () in
-    Dynarray.add_last metas (loc, info, state);
-    Meta_var state
+  val check_ty : ty -> Core.ty * (loc * meta_info) list
+  val check_tm : tm -> Core.ty -> Core.tm * (loc * meta_info) list
+  val infer_tm : tm -> Core.tm * Core.ty * (loc * meta_info) list
+
+end = struct
+
+  (** {2 Elaboration context} *)
+
+  (** The reason why a metavariable was inserted *)
+  type meta_info = [
+    | `Fun_param
+    | `Fun_body
+    | `If_branches
+    | `Placeholder
+  ]
+
+  (** The elaboration context *)
+  type context = {
+    tys : (string option * Core.ty) Core.env;
+    (** A stack of bindings currently in scope *)
+
+    metas : (loc * meta_info * Core.meta) Dynarray.t;
+    (** A list of the metavariables that have been inserted during elaboration.
+        This will be used to generate a list of unsolved metavariables once
+        elaboration is complete. *)
+  }
+
+  (** The empty context *)
+  let empty () : context = {
+    tys = [];
+    metas = Dynarray.create ();
+  }
+
+  (** Extend the context with a new binding *)
+  let extend (ctx : context) (name : string option) (ty : Core.ty) : context = {
+    ctx with
+    tys = (name, ty) :: ctx.tys;
+  }
+
+  (** Lookup a name in the context *)
+  let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
+    ctx.tys |> List.find_mapi @@ fun index (name', ty) ->
+      match Some name = name' with
+      | true -> Some (index, ty)
+      | false -> None
+
+  (** Generate a fresh metavariable *)
+  let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
+    let m = Core.fresh_meta () in
+    Dynarray.add_last ctx.metas (loc, info, m);
+    Meta_var m
 
   (** Return a list of unsolved metavariables *)
-  let unsolved_metas () : (loc * meta_info) list =
+  let unsolved_metas (ctx : context) : (loc * meta_info) list =
     let go (loc, info, m) acc =
       match !m with
       | Core.Unsolved _ -> (loc, info) :: acc
       | Core.Solved _ -> acc
     in
-    Dynarray.fold_right go metas []
-
-
-  (** {2 Elaboration context} *)
-
-  (** A stack of bindings currently in scope *)
-  type context = (string option * Core.ty) Core.env
-
-  (** Lookup a name in the context *)
-  let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
-    ctx |> List.find_mapi @@ fun index (name', ty) ->
-      match Some name = name' with
-      | true -> Some (index, ty)
-      | false -> None
+    Dynarray.fold_right go ctx.metas []
 
 
   (** {2 Elaboration errors} *)
@@ -137,23 +165,23 @@ module Elab = struct
       annotations where necessary. *)
 
   (** Elaborate a type, checking that it is well-formed. *)
-  let rec check_ty (ty : ty) : Core.ty =
+  let rec check_ty (ctx : context) (ty : ty) : Core.ty =
     match ty.data with
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
     | Name name ->
         error ty.loc (Format.asprintf "unbound type `%s`" name)
     | Fun_type (ty1, ty2) ->
-        Fun_type (check_ty ty1, check_ty ty2)
+        Fun_type (check_ty ctx ty1, check_ty ctx ty2)
     | Placeholder ->
-        fresh_meta ty.loc `Placeholder
+        fresh_meta ctx ty.loc `Placeholder
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
     match tm.data with
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
-        let body = check_tm ((def_name.data, def_ty) :: ctx) body ty in
+        let body = check_tm (extend ctx def_name.data def_ty) body ty in
         Let (def_name.data, def_ty, def, body)
 
     | Fun_lit (params, body) ->
@@ -182,11 +210,11 @@ module Elab = struct
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
-        let body, body_ty = infer_tm ((def_name.data, def_ty) :: ctx) body in
+        let body, body_ty = infer_tm (extend ctx def_name.data def_ty) body in
         Let (def_name.data, def_ty, def, body), body_ty
 
     | Ann (tm, ty) ->
-        let ty = check_ty ty in
+        let ty = check_ty ctx ty in
         check_tm ctx tm ty, ty
 
     | Fun_lit (params, body) ->
@@ -207,8 +235,8 @@ module Elab = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | Meta_var _ as head_ty ->
-            let param_ty = fresh_meta head_loc `Fun_param in
-            let body_ty = fresh_meta head_loc `Fun_body in
+            let param_ty = fresh_meta ctx head_loc `Fun_param in
+            let body_ty = fresh_meta ctx head_loc `Fun_body in
             unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
@@ -220,7 +248,7 @@ module Elab = struct
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
-        let ty = fresh_meta tm.loc `If_branches in
+        let ty = fresh_meta ctx tm.loc `If_branches in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
         Bool_elim (head, tm1, tm2), ty
@@ -256,13 +284,13 @@ module Elab = struct
     | [], ty ->
         check_tm ctx body ty
     | (name, None) :: params, Fun_type (param_ty, body_ty) ->
-        let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
+        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_loc = param_ty.loc in
-        let param_ty = check_ty param_ty in
+        let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_loc param_ty param_ty';
-        let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
+        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
@@ -275,16 +303,32 @@ module Elab = struct
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
     match params, body_ty with
     | [], Some body_ty ->
-        let body_ty = check_ty body_ty in
+        let body_ty = check_ty ctx body_ty in
         check_tm ctx body body_ty, body_ty
     | [], None ->
         infer_tm ctx body
     | (name, param_ty) :: params, body_ty ->
         let param_ty = match param_ty with
-          | None -> fresh_meta name.loc `Fun_param
-          | Some ty -> check_ty ty
+          | None -> fresh_meta ctx name.loc `Fun_param
+          | Some ty -> check_ty ctx ty
         in
-        let body, body_ty = infer_fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
+        let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
+
+
+  (** {2 Public API} *)
+
+  let check_ty (ty : ty) : Core.ty * (loc * meta_info) list =
+    let ctx = empty () in
+    check_ty ctx ty, unsolved_metas ctx
+
+  let check_tm (tm : tm) (ty : Core.ty) : Core.tm * (loc * meta_info) list =
+    let ctx = empty () in
+    check_tm ctx tm ty, unsolved_metas ctx
+
+  let infer_tm (tm : tm) : Core.tm * Core.ty * (loc * meta_info) list =
+    let ctx = empty () in
+    let tm, vty = infer_tm ctx tm in
+    tm, vty, unsolved_metas ctx
 
 end

@@ -65,7 +65,24 @@ and arg =
     this to elaboration time we make it easier to report higher quality error
     messages that are more relevant to what the programmer originally wrote.
 *)
-module Elab = struct
+module Elab : sig
+
+  (** The reason why a metavariable was inserted *)
+  type meta_info = [
+    | `Forall_arg
+    | `Fun_param
+    | `Fun_body
+    | `If_branches
+    | `Placeholder
+  ]
+
+  exception Error of loc * string
+
+  val check_ty : ty -> Core.ty * (loc * meta_info) list
+  val check_tm : tm -> Core.vty -> Core.tm * (loc * meta_info) list
+  val infer_tm : tm -> Core.tm * Core.vty * (loc * meta_info) list
+
+end = struct
 
   module Semantics = Core.Semantics
 
@@ -87,11 +104,11 @@ module Elab = struct
     ty_names : string option Core.env;
     ty_env : Core.vty Core.env;
     tm_tys : (string option * Core.vty) Core.env;
-    metas : (Core.meta * loc * meta_info) Dynarray.t;
+    metas : (loc * meta_info * Core.meta) Dynarray.t;
   }
 
   (** The empty context *)
-  let empty : context = {
+  let empty () : context = {
     ty_size = 0;
     ty_names = [];
     ty_env = [];
@@ -134,12 +151,12 @@ module Elab = struct
   (** Generate a fresh metavariable *)
   let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
     let m = Core.fresh_meta ctx.ty_size in
-    Dynarray.add_last ctx.metas (m, loc, info);
+    Dynarray.add_last ctx.metas (loc, info, m);
     Meta_var m
 
   (** Return a list of unsolved metavariables *)
   let unsolved_metas (ctx : context) : (loc * meta_info) list =
-    let go (m, loc, info) acc =
+    let go (loc, info, m) acc =
       match !m with
       | Core.Unsolved _ -> (loc, info) :: acc
       | Core.Solved _ -> acc
@@ -413,5 +430,21 @@ module Elab = struct
 
     let body, body_ty = go ctx params body_ty body in
     body, eval_ty ctx body_ty
+
+
+  (** {2 Public API} *)
+
+  let check_ty (ty : ty) : Core.ty * (loc * meta_info) list =
+    let ctx = empty () in
+    check_ty ctx ty, unsolved_metas ctx
+
+  let check_tm (tm : tm) (vty : Core.vty) : Core.tm * (loc * meta_info) list =
+    let ctx = empty () in
+    check_tm ctx tm vty, unsolved_metas ctx
+
+  let infer_tm (tm : tm) : Core.tm * Core.vty * (loc * meta_info) list =
+    let ctx = empty () in
+    let tm, vty = infer_tm ctx tm in
+    tm, vty, unsolved_metas ctx
 
 end

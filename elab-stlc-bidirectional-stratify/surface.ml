@@ -50,7 +50,21 @@ and param =
     this to elaboration time we make it easier to report higher quality error
     messages that are more relevant to what the programmer originally wrote.
 *)
-module Elab = struct
+module Elab : sig
+
+  type elab_tm =
+    | Univ
+    | Type of Core.ty
+    | Expr of Core.expr * Core.ty
+
+  exception Error of loc * string
+
+  val check_ty : tm -> Core.ty
+  val check_expr : tm -> Core.ty -> Core.expr
+  val infer_expr : tm -> Core.expr * Core.ty
+  val infer : tm -> elab_tm
+
+end = struct
 
   (** This type allows us to define a bidirectional type checking algorithm that
       works over multiple levels of our core language. Universes only exist as
@@ -113,13 +127,13 @@ module Elab = struct
       annotations where necessary. *)
 
   (** Elaborate a surface term into a core type. *)
-  let rec check_type (ctx : context) (tm : tm) : Core.ty =
+  let rec check_ty (ctx : context) (tm : tm) : Core.ty =
     match tm.data with
     | Let (def_name, params, def_body_t, def_body, body) ->
         begin match infer_fun_lit ctx params def_body_t def_body with
-        | Univ -> check_type (Univ_def def_name.data :: ctx) body
-        | Type def -> check_type (Type_def (def_name.data, def) :: ctx) body
-        | Expr (_, def_t) -> check_type (Expr_def (def_name.data, def_t) :: ctx) body
+        | Univ -> check_ty (Univ_def def_name.data :: ctx) body
+        | Type def -> check_ty (Type_def (def_name.data, def) :: ctx) body
+        | Expr (_, def_t) -> check_ty (Expr_def (def_name.data, def_t) :: ctx) body
         end
 
     | _ ->
@@ -180,7 +194,7 @@ module Elab = struct
 
     | Ann (tm, ty) ->
         begin match infer ctx ty with
-        | Univ -> Type (check_type ctx tm)
+        | Univ -> Type (check_ty ctx tm)
         | Type t -> Expr (check_expr ctx tm t, t)
         | Expr (_, _) -> error tm.loc "expected type or universe, found expression"
         end
@@ -209,8 +223,8 @@ module Elab = struct
         error tm.loc "ambiguous if expression"
 
     | Op2 (`Arrow, param_t, body_t) ->
-        let param_t = check_type ctx param_t in
-        let body_t = check_type ctx body_t in
+        let param_t = check_ty ctx param_t in
+        let body_t = check_ty ctx body_t in
         Type (Fun_type (param_t, body_t))
 
     | Op2 (`Eq, tm0, tm1) ->
@@ -258,7 +272,7 @@ module Elab = struct
 
     | (name, Some param_t) :: params, Fun_type (param_t', body_t) ->
         let param_t_loc = param_t.loc in
-        let param_t = check_type ctx param_t in
+        let param_t = check_ty ctx param_t in
         equate_ty param_t_loc param_t param_t';
         let body = check_fun_lit (Expr_def (name.data, param_t) :: ctx) params body body_t in
         Fun_lit (name.data, param_t, body)
@@ -274,7 +288,7 @@ module Elab = struct
 
     | [], Some body_t ->
         begin match infer ctx body_t with
-        | Univ -> Type (check_type ctx body)
+        | Univ -> Type (check_ty ctx body)
         | Type body_t -> Expr (check_expr ctx body body_t, body_t)
         | Expr (_, _) -> error body_t.loc "expected type or universe, found expression"
         end
@@ -283,7 +297,7 @@ module Elab = struct
         error name.loc "ambiguous parameter type"
 
     | (name, Some param_t) :: params, body_t ->
-        let param_t = check_type ctx param_t in
+        let param_t = check_ty ctx param_t in
         let body, body_t =
           match infer_fun_lit (Expr_def (name.data, param_t) :: ctx) params body_t body with
           | Univ -> error body.loc "expected expression, found universe"
@@ -291,5 +305,20 @@ module Elab = struct
           | Expr (e, t) -> e, t
         in
         Expr (Fun_lit (name.data, param_t, body), Fun_type (param_t, body_t))
+
+
+  (** {2 Public API} *)
+
+  let check_ty : tm -> Core.ty =
+    check_ty []
+
+  let check_expr : tm -> Core.ty -> Core.expr =
+    check_expr []
+
+  let infer_expr : tm -> Core.expr * Core.ty =
+    infer_expr []
+
+  let infer : tm -> elab_tm =
+    infer []
 
 end

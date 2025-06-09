@@ -77,12 +77,7 @@ and param =
     this to elaboration time we make it easier to report higher quality error
     messages that are more relevant to what the programmer originally wrote.
 *)
-module Elab = struct
-
-  module Label_map = Core.Label_map
-
-
-  (** {2 Metavariables} *)
+module Elab : sig
 
   (** The reason why a metavariable was inserted *)
   type meta_info = [
@@ -95,27 +90,80 @@ module Elab = struct
     | `Placeholder
   ]
 
-  (** A global list of the metavariables inserted during elaboration. This is used
-      to generate a list of unsolved metavariables at the end of elaboration. *)
-  let metas : (loc * meta_info * Core.meta_state ref) Dynarray.t =
-    Dynarray.create ()
+  exception Error of loc * string
 
-  let row_metas : (Core.row_meta_state ref) Dynarray.t =
-    Dynarray.create ()
+  val check_ty : ty -> Core.ty * (loc * meta_info) list
+  val check_tm : tm -> Core.ty -> Core.tm * (loc * meta_info) list
+  val infer_tm : tm -> Core.tm * Core.ty * (loc * meta_info) list
 
-  (** Generate a fresh metavariable, recording it in the list of metavariables *)
-  let fresh_meta (loc: loc) (info : meta_info) : Core.ty =
-    let state = Core.fresh_meta () in
-    Dynarray.add_last metas (loc, info, state);
-    Meta_var state
+end = struct
 
-  let fresh_row_meta (row: Core.ty Label_map.t) : Core.row_ty =
-    let state = Core.fresh_row_meta row in
-    Dynarray.add_last row_metas state;
-    Row_meta_var state
+  module Label_map = Core.Label_map
+
+
+  (** {2 Elaboration context} *)
+
+  (** The reason why a metavariable was inserted *)
+  type meta_info = [
+    | `Fun_param
+    | `Fun_body
+    | `Record_field
+    | `Match_clauses
+    | `Pattern_binder
+    | `If_branches
+    | `Placeholder
+  ]
+
+  (** The elaboration context *)
+  type context = {
+    tys : (string option * Core.ty) Core.env;
+    (** A stack of bindings currently in scope *)
+
+    metas : (loc * meta_info * Core.meta) Dynarray.t;
+    (** A list of the metavariables that have been inserted during elaboration.
+        This will be used to generate a list of unsolved metavariables once
+        elaboration is complete. *)
+
+    row_metas : Core.row_meta Dynarray.t;
+    (** A list of the row metavariables that have been inserted during
+        elaboration. Any unsolved row metavariables will be defaulted to their
+        row constraint at the end of elaboration. *)
+  }
+
+  (** The empty context *)
+  let empty () : context = {
+    tys = [];
+    metas = Dynarray.create ();
+    row_metas = Dynarray.create ();
+  }
+
+  (** Extend the context with a new binding *)
+  let extend (ctx : context) (name : string option) (ty : Core.ty) : context = {
+    ctx with
+    tys = (name, ty) :: ctx.tys;
+  }
+
+  (** Lookup a name in the context *)
+  let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
+    ctx.tys |> List.find_mapi @@ fun index (name', ty) ->
+      match Some name = name' with
+      | true -> Some (index, ty)
+      | false -> None
+
+  (** Generate a fresh metavariable *)
+  let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
+    let m = Core.fresh_meta () in
+    Dynarray.add_last ctx.metas (loc, info, m);
+    Meta_var m
+
+  (** Generate a fresh row metavariable *)
+  let fresh_row_meta (ctx : context) (row: Core.ty Label_map.t) : Core.row_ty =
+    let rm = Core.fresh_row_meta row in
+    Dynarray.add_last ctx.row_metas rm;
+    Row_meta_var rm
 
   (** Return a list of unsolved metavariables *)
-  let unsolved_metas () : (loc * meta_info) list =
+  let unsolved_metas (ctx : context) : (loc * meta_info) list =
     let go (loc, info, m) acc =
       match !m with
       | Core.Unsolved _ -> (loc, info) :: acc
@@ -123,26 +171,14 @@ module Elab = struct
     in
 
     (** Default unsolved rows to fixed row types *)
-    begin row_metas |> Dynarray.iter @@ fun m ->
+    begin ctx.row_metas |> Dynarray.iter @@ fun m ->
       match !m with
       | Core.Unsolved_row (_, row) ->
           m := Solved_row (Row_entries row);
       | Core.Solved_row _ -> ()
     end;
 
-    Dynarray.fold_right go metas []
-
-  (** {2 Elaboration context} *)
-
-  (** A stack of bindings currently in scope *)
-  type context = (string option * Core.ty) Core.env
-
-  (** Lookup a name in the context *)
-  let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
-    ctx |> List.find_mapi @@ fun index (name', ty) ->
-      match Some name = name' with
-      | true -> Some (index, ty)
-      | false -> None
+    Dynarray.fold_right go ctx.metas []
 
 
   (** {2 Elaboration errors} *)
@@ -179,24 +215,24 @@ module Elab = struct
       annotations where necessary. *)
 
   (** Elaborate a type, checking that it is well-formed. *)
-  let rec check_ty (ty : ty) : Core.ty =
+  let rec check_ty (ctx : context) (ty : ty) : Core.ty =
     match ty.data with
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
     | Name name -> error ty.loc (Format.asprintf "unbound type `%s`" name)
-    | Fun_type (ty1, ty2) -> Fun_type (check_ty ty1, check_ty ty2)
-    | Record_type entries -> Record_type (check_ty_entries entries)
-    | Variant_type entries -> Variant_type (check_ty_entries entries)
-    | Placeholder -> fresh_meta ty.loc `Placeholder
+    | Fun_type (ty1, ty2) -> Fun_type (check_ty ctx ty1, check_ty ctx ty2)
+    | Record_type entries -> Record_type (check_ty_entries ctx entries)
+    | Variant_type entries -> Variant_type (check_ty_entries ctx entries)
+    | Placeholder -> fresh_meta ctx ty.loc `Placeholder
 
-  and check_ty_entries entries =
+  and check_ty_entries ctx entries =
     let rec go acc entries =
       match entries with
       | [] -> acc
       | (label, ty) :: entries ->
           begin match Label_map.mem label.data acc with
           | true -> error label.loc (Format.asprintf "duplicate label `%s`" label.data)
-          | false -> go (Label_map.add label.data (check_ty ty) acc) entries
+          | false -> go (Label_map.add label.data (check_ty ctx ty) acc) entries
           end
     in
     Row_entries (go Label_map.empty entries)
@@ -206,7 +242,7 @@ module Elab = struct
     match tm.data, Core.force_ty ty with
     | Let (def_name, params, def_body_ty, def_body, body), body_ty ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
-        let body = check_tm ((def_name.data, def_ty) :: ctx) body body_ty in
+        let body = check_tm (extend ctx def_name.data def_ty) body body_ty in
         Let (def_name.data, def_ty, def, body)
 
     | Fun_lit (params, body), ty ->
@@ -250,11 +286,11 @@ module Elab = struct
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
-        let body, body_ty = infer_tm ((def_name.data, def_ty) :: ctx) body in
+        let body, body_ty = infer_tm (extend ctx def_name.data def_ty) body in
         Let (def_name.data, def_ty, def, body), body_ty
 
     | Ann (tm, ty) ->
-        let ty = check_ty ty in
+        let ty = check_ty ctx ty in
         check_tm ctx tm ty, ty
 
     | Fun_lit (params, body) ->
@@ -276,7 +312,7 @@ module Elab = struct
     | Variant_lit (label, elem_tm) ->
         let elem_tm, elem_ty = infer_tm ctx elem_tm in
         let row = Label_map.singleton label.data elem_ty in
-        let ty = Core.Variant_type (fresh_row_meta row) in
+        let ty = Core.Variant_type (fresh_row_meta ctx row) in
         Variant_lit (label.data, elem_tm, ty), ty
 
     | Int_lit i ->
@@ -294,8 +330,8 @@ module Elab = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | Meta_var _ as head_ty ->
-            let param_ty = fresh_meta head_loc `Fun_param in
-            let body_ty = fresh_meta head_loc `Fun_body in
+            let param_ty = fresh_meta ctx head_loc `Fun_param in
+            let body_ty = fresh_meta ctx head_loc `Fun_body in
             unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
@@ -306,7 +342,7 @@ module Elab = struct
         end
 
     | Match (head, clauses) ->
-        let body_ty = fresh_meta tm.loc `Match_clauses in
+        let body_ty = fresh_meta ctx tm.loc `Match_clauses in
         check_tm_match ctx head clauses body_ty, body_ty
 
     | Proj (head, label) ->
@@ -317,9 +353,9 @@ module Elab = struct
         | Record_type (Row_entries row) when Label_map.mem label.data row ->
             Record_proj (head, label.data), Label_map.find label.data row
         | Record_type (Row_meta_var _) | Meta_var _ as head_ty ->
-            let field_ty = fresh_meta head_loc `Record_field in
+            let field_ty = fresh_meta ctx head_loc `Record_field in
             let row = Label_map.singleton label.data field_ty in
-            unify_tys head_loc (Record_type (fresh_row_meta row)) head_ty;
+            unify_tys head_loc (Record_type (fresh_row_meta ctx row)) head_ty;
             Record_proj (head, label.data), field_ty
         | head_ty ->
             error head_loc
@@ -330,7 +366,7 @@ module Elab = struct
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
-        let ty = fresh_meta tm.loc `If_branches in
+        let ty = fresh_meta ctx tm.loc `If_branches in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
         Bool_elim (head, tm1, tm2), ty
@@ -366,13 +402,13 @@ module Elab = struct
     | [], ty ->
         check_tm ctx body ty
     | (name, None) :: params, Fun_type (param_ty, body_ty) ->
-        let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
+        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_loc = param_ty.loc in
-        let param_ty = check_ty param_ty in
+        let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_loc param_ty param_ty';
-        let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
+        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
@@ -382,19 +418,19 @@ module Elab = struct
         error name.loc "unexpected parameter"
 
   (** Elaborate a function literal, inferring its type. *)
-  and infer_fun_lit (context : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
+  and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
     match params, body_ty with
     | [], Some body_ty ->
-        let body_ty = check_ty body_ty in
-        check_tm context body body_ty, body_ty
+        let body_ty = check_ty ctx body_ty in
+        check_tm ctx body body_ty, body_ty
     | [], None ->
-        infer_tm context body
+        infer_tm ctx body
     | (name, param_ty) :: params, body_ty ->
         let param_ty = match param_ty with
-          | None -> fresh_meta name.loc `Fun_param
-          | Some ty -> check_ty ty
+          | None -> fresh_meta ctx name.loc `Fun_param
+          | Some ty -> check_ty ctx ty
         in
-        let body, body_ty = infer_fun_lit ((name.data, param_ty) :: context) params body_ty body in
+        let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
 
   (** Elaborate a pattern match, checking the clause bodies against an expected type. *)
@@ -415,7 +451,7 @@ module Elab = struct
               else
                 match Label_map.find_opt label.data row with
                 | Some param_ty ->
-                    let body_tm = check_tm ((name.data, param_ty) :: ctx) body_tm body_ty in
+                    let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
                     Label_map.add label.data (name.data, body_tm) clauses
                 | None ->
                     error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
@@ -448,8 +484,8 @@ module Elab = struct
                 (* TODO: should be a warning? *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
-                let param_ty = fresh_meta name.loc `Pattern_binder in
-                let body_tm = check_tm ((name.data, param_ty) :: ctx) body_tm body_ty in
+                let param_ty = fresh_meta ctx name.loc `Pattern_binder in
+                let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
                 Label_map.add label.data (name.data, body_tm) clauses,
                 Label_map.add label.data param_ty row)
             (Label_map.empty, Label_map.empty)
@@ -464,5 +500,21 @@ module Elab = struct
         error head_loc
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: variant@]@ @[found: %t@]@]"
             (Core.pp_ty head_ty))
+
+
+  (** {2 Public API} *)
+
+  let check_ty (ty : ty) : Core.ty * (loc * meta_info) list =
+    let ctx = empty () in
+    check_ty ctx ty, unsolved_metas ctx
+
+  let check_tm (tm : tm) (ty : Core.ty) : Core.tm * (loc * meta_info) list =
+    let ctx = empty () in
+    check_tm ctx tm ty, unsolved_metas ctx
+
+  let infer_tm (tm : tm) : Core.tm * Core.ty * (loc * meta_info) list =
+    let ctx = empty () in
+    let tm, vty = infer_tm ctx tm in
+    tm, vty, unsolved_metas ctx
 
 end

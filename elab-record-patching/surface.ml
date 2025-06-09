@@ -73,7 +73,14 @@ and params = param list
     this to elaboration time we make it easier to report higher quality error
     messages that are more relevant to what the programmer originally wrote.
 *)
-module Elab = struct
+module Elab : sig
+
+  exception Error of loc * string
+
+  val check : tm -> Core.Semantics.vty -> Core.Syntax.tm
+  val infer : tm -> Core.Syntax.tm * Core.Semantics.vty
+
+end = struct
 
   module Syntax = Core.Syntax
   module Semantics = Core.Semantics
@@ -91,8 +98,8 @@ module Elab = struct
     tms : Semantics.vtm Core.env;   (** Term environment *)
   }
 
-  (** The initial elaboration context, without any bindings *)
-  let initial_context = {
+  (** The empty context *)
+  let empty = {
     size = 0;
     names = [];
     tys = [];
@@ -136,9 +143,6 @@ module Elab = struct
 
   let quote ctx : Semantics.vtm -> Syntax.tm =
     Semantics.quote ctx.size
-
-  let normalise ctx : Syntax.tm -> Syntax.tm =
-    Semantics.normalise ctx.size ctx.tms
 
   let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> bool =
     Semantics.is_convertible ctx.size
@@ -534,5 +538,14 @@ module Elab = struct
     (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
       for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
     | ty -> tm, ty
+
+
+  (** {2 Public API} *)
+
+  let check : tm -> Semantics.vty -> Syntax.tm =
+    check empty
+
+  let infer : tm -> Syntax.tm * Semantics.vty =
+    infer empty
 
 end
