@@ -298,7 +298,7 @@ Ambiguous return type
 
 Ambiguous placeholder
   $ executable elab <<< "fun (x : _) => x"
-  error: unsolved placeholder
+  error: ambiguous placeholder
     ┌─ <stdin>:1:9
     │
   1 │ fun (x : _) => x

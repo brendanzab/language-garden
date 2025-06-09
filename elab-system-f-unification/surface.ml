@@ -80,22 +80,13 @@ end = struct
 
   (** {2 Elaboration context} *)
 
-  (** The reason why a metavariable was inserted *)
-  type meta_info = [
-    | `Forall_arg
-    | `Fun_param
-    | `Fun_body
-    | `If_branches
-    | `Placeholder
-  ]
-
   (** The elaboration context *)
   type context = {
     ty_size : Core.level;
     ty_names : string option Core.env;
     ty_env : Core.vty Core.env;
     tm_tys : (string option * Core.vty) Core.env;
-    metas : (loc * meta_info * Core.meta) Dynarray.t;
+    metas : (loc * string * Core.meta) Dynarray.t;
   }
 
   (** The empty context *)
@@ -140,7 +131,7 @@ end = struct
       | false -> None
 
   (** Generate a fresh metavariable *)
-  let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
+  let fresh_meta (ctx : context) (loc: loc) (info : string) : Core.ty =
     let m = Core.fresh_meta ctx.ty_size in
     Dynarray.add_last ctx.metas (loc, info, m);
     Meta_var m
@@ -209,7 +200,7 @@ end = struct
         | None -> error ty.loc (Format.asprintf "unbound type `%s`" name)
         end
     | Placeholder ->
-        fresh_meta ctx ty.loc `Placeholder
+        fresh_meta ctx ty.loc "placeholder"
     | Forall_type (names, body_ty) ->
         let rec go ctx names : Core.ty =
           match names with
@@ -283,7 +274,7 @@ end = struct
 
           (* Instantiate expected type parameters with metavariables *)
           | Forall_type (_, body_ty), Arg arg ->
-              let ty_arg = fresh_meta ctx head_loc `Forall_arg in
+              let ty_arg = fresh_meta ctx head_loc "type argument" in
               go (Forall_app (head, ty_arg)) (body_ty (eval_ty ctx ty_arg)) (Arg arg)
 
           | Fun_type (param_ty, body_ty), Arg arg ->
@@ -291,8 +282,8 @@ end = struct
               Fun_app (head, arg), body_ty
 
           | Meta_var _ as head_ty, Arg arg ->
-              let param_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_param) in
-              let body_ty = eval_ty ctx (fresh_meta ctx head_loc `Fun_body) in
+              let param_ty = eval_ty ctx (fresh_meta ctx head_loc "function parameter type") in
+              let body_ty = eval_ty ctx (fresh_meta ctx head_loc "function return type") in
               unify_vtys ctx head_loc (Fun_type (param_ty, body_ty)) head_ty;
               let arg = check_tm ctx arg param_ty in
               Fun_app (head, arg), body_ty
@@ -312,7 +303,7 @@ end = struct
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
-        let ty = eval_ty ctx (fresh_meta ctx tm.loc `If_branches) in
+        let ty = eval_ty ctx (fresh_meta ctx tm.loc "if expression branches") in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
         Bool_elim (head, tm1, tm2), ty
@@ -402,7 +393,7 @@ end = struct
 
       | Param (name, param_ty) :: params, body_ty ->
           let param_ty = match param_ty with
-            | None -> fresh_meta ctx name.loc `Fun_param
+            | None -> fresh_meta ctx name.loc "function parameter type"
             | Some ty -> check_ty ctx ty
           in
           let param_vty = eval_ty ctx param_ty in
@@ -413,15 +404,14 @@ end = struct
     let body, body_ty = go ctx params body_ty body in
     body, eval_ty ctx body_ty
 
+
+  (** {2 Handling ambiguities} *)
+
   (** Raise an error if any unsolved metavariables were found *)
   let check_metas (ctx : context) : unit =
     let go (loc, info, m) acc =
       match !m, info with
-      | Core.Unsolved _, `Forall_arg -> (loc, "ambiguous type argument") :: acc
-      | Core.Unsolved _, `Fun_param -> (loc, "ambiguous function parameter type") :: acc
-      | Core.Unsolved _, `Fun_body -> (loc, "ambiguous function return type") :: acc
-      | Core.Unsolved _, `If_branches -> (loc, "ambiguous if expression branches") :: acc
-      | Core.Unsolved _, `Placeholder -> (loc, "unsolved placeholder") :: acc
+      | Core.Unsolved _, info -> (loc, "ambiguous " ^ info) :: acc
       | Core.Solved _, _ -> acc
     in
     match Dynarray.fold_right go ctx.metas [] with

@@ -92,23 +92,12 @@ end = struct
 
   (** {2 Elaboration context} *)
 
-  (** The reason why a metavariable was inserted *)
-  type meta_info = [
-    | `Fun_param
-    | `Fun_body
-    | `Record_field
-    | `Match_clauses
-    | `Pattern_binder
-    | `If_branches
-    | `Placeholder
-  ]
-
   (** The elaboration context *)
   type context = {
     tys : (string option * Core.ty) Core.env;
     (** A stack of bindings currently in scope *)
 
-    metas : (loc * meta_info * Core.meta) Dynarray.t;
+    metas : (loc * string * Core.meta) Dynarray.t;
     (** A list of the metavariables that have been inserted during elaboration.
         This will be used to generate a list of unsolved metavariables once
         elaboration is complete. *)
@@ -140,7 +129,7 @@ end = struct
       | false -> None
 
   (** Generate a fresh metavariable *)
-  let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
+  let fresh_meta (ctx : context) (loc: loc) (info : string) : Core.ty =
     let m = Core.fresh_meta () in
     Dynarray.add_last ctx.metas (loc, info, m);
     Meta_var m
@@ -194,7 +183,7 @@ end = struct
     | Fun_type (ty1, ty2) -> Fun_type (check_ty ctx ty1, check_ty ctx ty2)
     | Record_type entries -> Record_type (check_ty_entries ctx entries)
     | Variant_type entries -> Variant_type (check_ty_entries ctx entries)
-    | Placeholder -> fresh_meta ctx ty.loc `Placeholder
+    | Placeholder -> fresh_meta ctx ty.loc "placeholder"
 
   and check_ty_entries ctx entries =
     let rec go acc entries =
@@ -301,8 +290,8 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | Meta_var _ as head_ty ->
-            let param_ty = fresh_meta ctx head_loc `Fun_param in
-            let body_ty = fresh_meta ctx head_loc `Fun_body in
+            let param_ty = fresh_meta ctx head_loc "function parameter type" in
+            let body_ty = fresh_meta ctx head_loc "function return type" in
             unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
@@ -313,7 +302,7 @@ end = struct
         end
 
     | Match (head, clauses) ->
-        let body_ty = fresh_meta ctx tm.loc `Match_clauses in
+        let body_ty = fresh_meta ctx tm.loc "match clauses" in
         check_tm_match ctx head clauses body_ty, body_ty
 
     | Proj (head, label) ->
@@ -324,7 +313,7 @@ end = struct
         | Record_type (Row_entries row) when Label_map.mem label.data row ->
             Record_proj (head, label.data), Label_map.find label.data row
         | Record_type (Row_meta_var _) | Meta_var _ as head_ty ->
-            let field_ty = fresh_meta ctx head_loc `Record_field in
+            let field_ty = fresh_meta ctx head_loc "record field" in
             let row = Label_map.singleton label.data field_ty in
             unify_tys head_loc (Record_type (fresh_row_meta ctx row)) head_ty;
             Record_proj (head, label.data), field_ty
@@ -337,7 +326,7 @@ end = struct
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
-        let ty = fresh_meta ctx tm.loc `If_branches in
+        let ty = fresh_meta ctx tm.loc "if expression branches" in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
         Bool_elim (head, tm1, tm2), ty
@@ -398,7 +387,7 @@ end = struct
         infer_tm ctx body
     | (name, param_ty) :: params, body_ty ->
         let param_ty = match param_ty with
-          | None -> fresh_meta ctx name.loc `Fun_param
+          | None -> fresh_meta ctx name.loc "function parameter type"
           | Some ty -> check_ty ctx ty
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
@@ -455,7 +444,7 @@ end = struct
                 (* TODO: should be a warning? *)
                 error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
               else
-                let param_ty = fresh_meta ctx name.loc `Pattern_binder in
+                let param_ty = fresh_meta ctx name.loc "pattern binder" in
                 let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
                 Label_map.add label.data (name.data, body_tm) clauses,
                 Label_map.add label.data param_ty row)
@@ -472,17 +461,14 @@ end = struct
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: variant@]@ @[found: %t@]@]"
             (Core.pp_ty head_ty))
 
+
+  (** {2 Handling ambiguities} *)
+
   (** Raise an error if any unsolved metavariables were found *)
   let check_metas (ctx : context) : unit =
     let go (loc, info, m) acc =
       match !m, info with
-      | Core.Unsolved _, `Fun_param -> (loc, "ambiguous function parameter type") :: acc
-      | Core.Unsolved _, `Fun_body -> (loc, "ambiguous function return type") :: acc
-      | Core.Unsolved _, `Record_field -> (loc, "ambiguous record field") :: acc
-      | Core.Unsolved _, `Match_clauses -> (loc, "ambiguous match clauses") :: acc
-      | Core.Unsolved _, `Pattern_binder -> (loc, "ambiguous pattern binder") :: acc
-      | Core.Unsolved _, `If_branches -> (loc, "ambiguous if expression branches") :: acc
-      | Core.Unsolved _, `Placeholder -> (loc, "unsolved placeholder") :: acc
+      | Core.Unsolved _, info -> (loc, "ambiguous " ^ info) :: acc
       | Core.Solved _, _ -> acc
     in
 

@@ -76,14 +76,6 @@ end = struct
 
   (** {2 Elaboration context} *)
 
-  (** The reason why a metavariable was inserted *)
-  type meta_info = [
-    | `Fun_param
-    | `Fun_body
-    | `If_branches
-    | `Placeholder
-  ]
-
   (** An entry in the context *)
   type entry =
     | Def of string option * Core.ty
@@ -94,7 +86,7 @@ end = struct
     tys : entry Core.env;
     (** A stack of bindings currently in scope *)
 
-    metas : (loc * meta_info * Core.meta) Dynarray.t;
+    metas : (loc * string * Core.meta) Dynarray.t;
     (** A list of the metavariables that have been inserted during elaboration.
         This will be used to generate a list of unsolved metavariables once
         elaboration is complete. *)
@@ -126,7 +118,7 @@ end = struct
             | false -> None
 
   (** Generate a fresh metavariable *)
-  let fresh_meta (ctx : context) (loc: loc) (info : meta_info) : Core.ty =
+  let fresh_meta (ctx : context) (loc: loc) (info : string) : Core.ty =
     let m = Core.fresh_meta () in
     Dynarray.add_last ctx.metas (loc, info, m);
     Meta_var m
@@ -171,7 +163,7 @@ end = struct
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ctx ty1, check_ty ctx ty2)
     | Placeholder ->
-        fresh_meta ctx ty.loc `Placeholder
+        fresh_meta ctx ty.loc "placeholder"
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
@@ -242,8 +234,8 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | Meta_var _ as head_ty ->
-            let param_ty = fresh_meta ctx head_loc `Fun_param in
-            let body_ty = fresh_meta ctx head_loc `Fun_body in
+            let param_ty = fresh_meta ctx head_loc "function parameter type" in
+            let body_ty = fresh_meta ctx head_loc "function return type" in
             unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
@@ -255,7 +247,7 @@ end = struct
 
     | If_then_else (head, tm0, tm1) ->
         let head = check_tm ctx head Bool_type in
-        let ty = fresh_meta ctx tm.loc `If_branches in
+        let ty = fresh_meta ctx tm.loc "if expression branches" in
         let tm0 = check_tm ctx tm0 ty in
         let tm1 = check_tm ctx tm1 ty in
         Bool_elim (head, tm0, tm1), ty
@@ -315,7 +307,7 @@ end = struct
     | [], None ->
         infer_tm ctx body
     | (name, None) :: params, body_ty ->
-        let param_ty = fresh_meta ctx name.loc `Fun_param in
+        let param_ty = fresh_meta ctx name.loc "function parameter type" in
         let body, body_ty = infer_fun_lit (extend ctx (Def (name.data, param_ty))) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
     | (name, Some param_ty) :: params, body_ty ->
@@ -329,9 +321,9 @@ end = struct
     let rec fresh_fun_ty ctx loc params body_ty =
       match params, body_ty with
       | [], Some body_ty -> check_ty ctx body_ty
-      | [], None -> fresh_meta ctx loc `Fun_body
+      | [], None -> fresh_meta ctx loc "function return type"
       | (name, _) :: params, body_ty ->
-          let param_ty = fresh_meta ctx name.loc `Fun_param in
+          let param_ty = fresh_meta ctx name.loc "function parameter type" in
           Fun_type (param_ty, fresh_fun_ty (extend ctx (Def (name.data, param_ty))) loc params body_ty)
     in
 
@@ -388,14 +380,14 @@ end = struct
 
         Some def_name, defs_entry, def_ty, def
 
+
+  (** {2 Handling ambiguities} *)
+
   (** Raise an error if any unsolved metavariables were found *)
   let check_metas (ctx : context) : unit =
     let go (loc, info, m) acc =
       match !m, info with
-      | Core.Unsolved _, `Fun_param -> (loc, "ambiguous function parameter type") :: acc
-      | Core.Unsolved _, `Fun_body -> (loc, "ambiguous function return type") :: acc
-      | Core.Unsolved _, `If_branches -> (loc, "ambiguous if expression branches") :: acc
-      | Core.Unsolved _, `Placeholder -> (loc, "unsolved placeholder") :: acc
+      | Core.Unsolved _, info -> (loc, "ambiguous " ^ info) :: acc
       | Core.Solved _, _ -> acc
     in
     match Dynarray.fold_right go ctx.metas [] with
