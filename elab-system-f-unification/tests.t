@@ -295,7 +295,7 @@ Too many type parameters
 
 Ambiguous parameter type
   $ executable elab <<< "fun x => x"
-  error: ambiguous parameter type
+  error: ambiguous function parameter type
     ┌─ <stdin>:1:4
     │
   1 │ fun x => x
@@ -335,7 +335,7 @@ Unsupported equality
 
 Ambiguous parameter type
   $ executable elab <<< "fun x => x"
-  error: ambiguous parameter type
+  error: ambiguous function parameter type
     ┌─ <stdin>:1:4
     │
   1 │ fun x => x
@@ -344,12 +344,12 @@ Ambiguous parameter type
 
 Ambiguous return type
   $ executable elab <<< "fun f x => f x"
-  error: ambiguous parameter type
+  error: ambiguous function parameter type
     ┌─ <stdin>:1:6
     │
   1 │ fun f x => f x
     │       ^
-  error: ambiguous return type
+  error: ambiguous function return type
     ┌─ <stdin>:1:11
     │
   1 │ fun f x => f x

@@ -66,19 +66,11 @@ and defn =
 *)
 module Elab : sig
 
-  (** The reason why a metavariable was inserted *)
-  type meta_info = [
-    | `Fun_param
-    | `Fun_body
-    | `If_branches
-    | `Placeholder
-  ]
+  exception Error of (loc * string) list
 
-  exception Error of loc * string
-
-  val check_ty : ty -> Core.ty * (loc * meta_info) list
-  val check_tm : tm -> Core.ty -> Core.tm * (loc * meta_info) list
-  val infer_tm : tm -> Core.tm * Core.ty * (loc * meta_info) list
+  val check_ty : ty -> Core.ty
+  val check_tm : tm -> Core.ty -> Core.tm
+  val infer_tm : tm -> Core.tm * Core.ty
 
 end = struct
 
@@ -139,26 +131,15 @@ end = struct
     Dynarray.add_last ctx.metas (loc, info, m);
     Meta_var m
 
-  (** Return a list of unsolved metavariables *)
-  let unsolved_metas (ctx : context) : (loc * meta_info) list =
-    let go (loc, info, m) acc =
-      match !m with
-      | Core.Unsolved _ -> (loc, info) :: acc
-      | Core.Solved _ -> acc
-    in
-    Dynarray.fold_right go ctx.metas []
-
 
   (** {2 Elaboration errors} *)
 
-  (** An error that will be raised if there was a problem in the surface syntax,
-      usually as a result of type errors. This is normal, and should be rendered
-      nicely to the programmer. *)
-  exception Error of loc * string
+  (** One or more errors found during elaboration. *)
+  exception Error of (loc * string) list
 
   (** Raises an {!Error} exception *)
   let error (type a) (loc : loc) (message : string) : a =
-    raise (Error (loc, message))
+    raise (Error [(loc, message)])
 
   let unify_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     try Core.unify_tys ty1 ty2 with
@@ -407,20 +388,39 @@ end = struct
 
         Some def_name, defs_entry, def_ty, def
 
+  (** Raise an error if any unsolved metavariables were found *)
+  let check_metas (ctx : context) : unit =
+    let go (loc, info, m) acc =
+      match !m, info with
+      | Core.Unsolved _, `Fun_param -> (loc, "ambiguous function parameter type") :: acc
+      | Core.Unsolved _, `Fun_body -> (loc, "ambiguous function return type") :: acc
+      | Core.Unsolved _, `If_branches -> (loc, "ambiguous if expression branches") :: acc
+      | Core.Unsolved _, `Placeholder -> (loc, "unsolved placeholder") :: acc
+      | Core.Solved _, _ -> acc
+    in
+    match Dynarray.fold_right go ctx.metas [] with
+    | [] -> ()
+    | errors -> raise (Error errors)
+
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : Core.ty * (loc * meta_info) list =
+  let check_ty (ty : ty) : Core.ty =
     let ctx = empty () in
-    check_ty ctx ty, unsolved_metas ctx
+    let ty = check_ty ctx ty in
+    check_metas ctx;
+    ty
 
-  let check_tm (tm : tm) (ty : Core.ty) : Core.tm * (loc * meta_info) list =
+  let check_tm (tm : tm) (ty : Core.ty) : Core.tm =
     let ctx = empty () in
-    check_tm ctx tm ty, unsolved_metas ctx
+    let tm = check_tm ctx tm ty in
+    check_metas ctx;
+    tm
 
-  let infer_tm (tm : tm) : Core.tm * Core.ty * (loc * meta_info) list =
+  let infer_tm (tm : tm) : Core.tm * Core.ty =
     let ctx = empty () in
     let tm, vty = infer_tm ctx tm in
-    tm, vty, unsolved_metas ctx
+    check_metas ctx;
+    tm, vty
 
 end

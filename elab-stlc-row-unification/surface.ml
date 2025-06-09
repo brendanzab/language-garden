@@ -79,22 +79,11 @@ and param =
 *)
 module Elab : sig
 
-  (** The reason why a metavariable was inserted *)
-  type meta_info = [
-    | `Fun_param
-    | `Fun_body
-    | `Record_field
-    | `Match_clauses
-    | `Pattern_binder
-    | `If_branches
-    | `Placeholder
-  ]
+  exception Error of (loc * string) list
 
-  exception Error of loc * string
-
-  val check_ty : ty -> Core.ty * (loc * meta_info) list
-  val check_tm : tm -> Core.ty -> Core.tm * (loc * meta_info) list
-  val infer_tm : tm -> Core.tm * Core.ty * (loc * meta_info) list
+  val check_ty : ty -> Core.ty
+  val check_tm : tm -> Core.ty -> Core.tm
+  val infer_tm : tm -> Core.tm * Core.ty
 
 end = struct
 
@@ -162,35 +151,17 @@ end = struct
     Dynarray.add_last ctx.row_metas rm;
     Row_meta_var rm
 
-  (** Return a list of unsolved metavariables *)
-  let unsolved_metas (ctx : context) : (loc * meta_info) list =
-    let go (loc, info, m) acc =
-      match !m with
-      | Core.Unsolved _ -> (loc, info) :: acc
-      | Core.Solved _ -> acc
-    in
-
-    (** Default unsolved rows to fixed row types *)
-    begin ctx.row_metas |> Dynarray.iter @@ fun m ->
-      match !m with
-      | Core.Unsolved_row (_, row) ->
-          m := Solved_row (Row_entries row);
-      | Core.Solved_row _ -> ()
-    end;
-
-    Dynarray.fold_right go ctx.metas []
-
 
   (** {2 Elaboration errors} *)
 
   (** An error that will be raised if there was a problem in the surface syntax,
       usually as a result of type errors. This is normal, and should be rendered
       nicely to the programmer. *)
-  exception Error of loc * string
+  exception Error of (loc * string) list
 
   (** Raises an {!Error} exception *)
   let error (type a) (loc : loc) (message : string) : a =
-    raise (Error (loc, message))
+    raise (Error [(loc, message)])
 
   let unify_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     try Core.unify_tys ty1 ty2 with
@@ -501,20 +472,51 @@ end = struct
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: variant@]@ @[found: %t@]@]"
             (Core.pp_ty head_ty))
 
+  (** Raise an error if any unsolved metavariables were found *)
+  let check_metas (ctx : context) : unit =
+    let go (loc, info, m) acc =
+      match !m, info with
+      | Core.Unsolved _, `Fun_param -> (loc, "ambiguous function parameter type") :: acc
+      | Core.Unsolved _, `Fun_body -> (loc, "ambiguous function return type") :: acc
+      | Core.Unsolved _, `Record_field -> (loc, "ambiguous record field") :: acc
+      | Core.Unsolved _, `Match_clauses -> (loc, "ambiguous match clauses") :: acc
+      | Core.Unsolved _, `Pattern_binder -> (loc, "ambiguous pattern binder") :: acc
+      | Core.Unsolved _, `If_branches -> (loc, "ambiguous if expression branches") :: acc
+      | Core.Unsolved _, `Placeholder -> (loc, "unsolved placeholder") :: acc
+      | Core.Solved _, _ -> acc
+    in
+
+    (** Default unsolved rows to fixed row types *)
+    begin ctx.row_metas |> Dynarray.iter @@ fun m ->
+      match !m with
+      | Core.Unsolved_row (_, row) ->
+          m := Solved_row (Row_entries row);
+      | Core.Solved_row _ -> ()
+    end;
+
+    match Dynarray.fold_right go ctx.metas [] with
+    | [] -> ()
+    | errors -> raise (Error errors)
+
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : Core.ty * (loc * meta_info) list =
+  let check_ty (ty : ty) : Core.ty =
     let ctx = empty () in
-    check_ty ctx ty, unsolved_metas ctx
+    let ty = check_ty ctx ty in
+    check_metas ctx;
+    ty
 
-  let check_tm (tm : tm) (ty : Core.ty) : Core.tm * (loc * meta_info) list =
+  let check_tm (tm : tm) (ty : Core.ty) : Core.tm =
     let ctx = empty () in
-    check_tm ctx tm ty, unsolved_metas ctx
+    let tm = check_tm ctx tm ty in
+    check_metas ctx;
+    tm
 
-  let infer_tm (tm : tm) : Core.tm * Core.ty * (loc * meta_info) list =
+  let infer_tm (tm : tm) : Core.tm * Core.ty =
     let ctx = empty () in
     let tm, vty = infer_tm ctx tm in
-    tm, vty, unsolved_metas ctx
+    check_metas ctx;
+    tm, vty
 
 end

@@ -63,19 +63,12 @@ let parse_tm (source : Source_file.t) : Surface.tm =
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   match Surface.Elab.infer_tm tm with
-  | tm, vty, [] ->
+  | tm, vty ->
       tm, Core.Semantics.quote_vty 0 vty
-  | _, _, metas ->
-      metas |> List.iter begin function
-        | (pos, `Forall_arg) -> emit source "error" pos "ambiguous type argument"
-        | (pos, `Fun_param) -> emit source "error" pos "ambiguous parameter type"
-        | (pos, `Fun_body) -> emit source "error" pos "ambiguous return type"
-        | (pos, `If_branches) -> emit source "error" pos "ambiguous if expression branches"
-        | (pos, `Placeholder) -> emit source "error" pos "unsolved placeholder"
+  | exception Surface.Elab.Error errors ->
+      errors |> List.iter begin fun (pos, reason) ->
+        emit source "error" pos reason
       end;
-      exit 1
-  | exception Surface.Elab.Error (pos, msg) ->
-      emit source "error" pos msg;
       exit 1
 
 
