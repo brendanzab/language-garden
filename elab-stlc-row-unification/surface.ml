@@ -467,9 +467,9 @@ end = struct
   (** Raise an error if any unsolved metavariables were found *)
   let check_metas (ctx : context) : unit =
     let go (loc, info, m) acc =
-      match !m, info with
-      | Core.Unsolved _, info -> (loc, "ambiguous " ^ info) :: acc
-      | Core.Solved _, _ -> acc
+      match !m with
+      | Core.Unsolved _ -> (loc, "ambiguous " ^ info) :: acc
+      | Core.Solved _ -> acc
     in
 
     (** Default unsolved rows to fixed row types *)
