@@ -69,10 +69,10 @@ let () =
 
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
 
-  match Surface.elab_synth (parse_tm source) with
+  match Surface.Elab.synth (parse_tm source) with
   | tm, ty ->
       Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
         (Core.pp_tm tm)
         (Core.pp_ty ty)
-  | exception Surface.Error (loc, msg) -> emit source "error" loc msg; exit 1
-  | exception Surface.Bug (loc, msg) -> emit source "bug" loc msg; exit 1
+  | exception Surface.Elab.Error (loc, msg) -> emit source "error" loc msg; exit 1
+  | exception Surface.Elab.Bug (loc, msg) -> emit source "bug" loc msg; exit 1
