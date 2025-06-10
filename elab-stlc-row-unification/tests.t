@@ -117,6 +117,8 @@ Unexpected character
     │
   1 │ 1 % 2
     │   ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unclosed block comment
@@ -126,6 +128,8 @@ Unclosed block comment
     │
   2 │ 
     │ ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 
@@ -139,6 +143,8 @@ Unclosed parenthesis
     │
   2 │ 
     │ ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 
@@ -152,6 +158,8 @@ Unbound variable
     │
   1 │ let x := 1; y
     │             ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched definition type
@@ -163,6 +171,8 @@ Mismatched definition type
     │
   1 │ let x : Bool := 1; x
     │                 ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched argument
@@ -174,6 +184,8 @@ Mismatched argument
     │
   1 │ let f x := x + 1; f f
     │                     ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched argument
@@ -185,6 +197,8 @@ Mismatched argument
     │
   1 │ let f (x : Bool) := x; f 1
     │                          ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unexpected function application
@@ -196,6 +210,8 @@ Unexpected function application
     │
   1 │ true 3
     │ ^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched variant constraint and variant type
@@ -215,6 +231,8 @@ Mismatched variant constraint and variant type
     │
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched variant constraint and smaller variant type
@@ -234,6 +252,8 @@ Mismatched variant constraint and smaller variant type
     │
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched variant constraint and non-variant type
@@ -253,6 +273,8 @@ Mismatched variant constraint and non-variant type
     │
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Infinite type
@@ -262,6 +284,8 @@ Infinite type
     │
   1 │ fun f => f f
     │            ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unexpected parameter
@@ -280,6 +304,8 @@ Ambiguous parameter type
     │
   1 │ fun x => x
     │     ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Ambiguous return type
@@ -294,6 +320,8 @@ Ambiguous return type
     │
   1 │ fun f x => f x
     │            ^
+  
+  error: <stdin> generated 2 errors
   [1]
 
 Ambiguous placeholder
@@ -303,6 +331,8 @@ Ambiguous placeholder
     │
   1 │ fun (x : _) => x
     │          ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched if expression branches
@@ -314,6 +344,8 @@ Mismatched if expression branches
     │
   1 │ fun x => if x then true else 3
     │                              ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unknown field
@@ -324,6 +356,8 @@ Unknown field
     │
   1 │ { x := 42 }.y
     │ ^^^^^^^^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unexpected projection
@@ -334,6 +368,8 @@ Unexpected projection
     │
   1 │ true.y
     │ ^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Duplicate label
@@ -343,6 +379,8 @@ Duplicate label
     │
   1 │ { x := 42; x := 2 }
     │            ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Duplicate labels
@@ -352,6 +390,8 @@ Duplicate labels
     │
   1 │ [some := 1] : [some : Int | some : Int]
     │                             ^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unexpected variant
@@ -361,6 +401,8 @@ Unexpected variant
     │
   1 │ [some := 1] : [thing : Int]
     │  ^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Redundant variant pattern
@@ -371,12 +413,15 @@ Redundant variant pattern
   >   | [some := x] => x
   >   end
   > EOF
-  error: redundant variant pattern `some`
+  fun (x : [some : Int]) => match x with | [some := x] => x end :
+    [some : Int] -> Int
+  warning: redundant variant pattern `some`
     ┌─ <stdin>:4:5
     │
   4 │   | [some := x] => x
     │      ^^^^
-  [1]
+  
+  warning: <stdin> generated 1 warning
 
 Unexpected variant pattern
   $ executable elab <<EOF
@@ -390,6 +435,8 @@ Unexpected variant pattern
     │
   3 │   | [a := x] => x + 1
     │      ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Missing variant patterns
@@ -402,6 +449,8 @@ Missing variant patterns
     │
   2 │   match x with end
     │         ^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unexpected pattern match
@@ -413,6 +462,8 @@ Unexpected pattern match
     │
   1 │ match true with [a := x] => x end
     │       ^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Mismatched equality
@@ -424,6 +475,8 @@ Mismatched equality
     │
   1 │ 1 = false
     │ ^^^^^^^^^
+  
+  error: <stdin> generated 1 error
   [1]
 
 Unsupported equality
@@ -433,4 +486,6 @@ Unsupported equality
     │
   1 │ let f (x : Bool) := x; f = f
     │                        ^^^^^
+  
+  error: <stdin> generated 1 error
   [1]
