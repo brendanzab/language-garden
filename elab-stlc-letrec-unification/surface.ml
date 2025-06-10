@@ -66,11 +66,9 @@ and defn =
 *)
 module Elab : sig
 
-  exception Error of (loc * string) list
-
-  val check_ty : ty -> Core.ty
-  val check_tm : tm -> Core.ty -> Core.tm
-  val infer_tm : tm -> Core.tm * Core.ty
+  val check_ty : ty -> (Core.ty, (loc * string) list) result
+  val check_tm : tm -> Core.ty -> (Core.tm, (loc * string) list) result
+  val infer_tm : tm -> (Core.tm * Core.ty, (loc * string) list) result
 
 end = struct
 
@@ -127,11 +125,11 @@ end = struct
   (** {2 Elaboration errors} *)
 
   (** One or more errors found during elaboration. *)
-  exception Error of (loc * string) list
+  exception Error of (loc * string)
 
   (** Raises an {!Error} exception *)
   let error (type a) (loc : loc) (message : string) : a =
-    raise (Error [(loc, message)])
+    raise (Error (loc, message))
 
   let unify_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     try Core.unify_tys ty1 ty2 with
@@ -381,38 +379,39 @@ end = struct
         Some def_name, defs_entry, def_ty, def
 
 
-  (** {2 Handling ambiguities} *)
+  (** {2 Running elaboration} *)
 
-  (** Raise an error if any unsolved metavariables were found *)
-  let check_metas (ctx : context) : unit =
-    let go (loc, info, m) acc =
+  let collect_ambiguities (ctx : context) : (loc * string) list =
+    let ambiguity_error (loc, info, m) =
       match !m with
-      | Core.Unsolved _ -> (loc, "ambiguous " ^ info) :: acc
-      | Core.Solved _ -> acc
+      | Core.Unsolved _ -> Some (loc, "ambiguous " ^ info)
+      | Core.Solved _ -> None
     in
-    match Dynarray.fold_right go ctx.metas [] with
-    | [] -> ()
-    | errors -> raise (Error errors)
+    Dynarray.to_seq ctx.metas
+    |> Seq.filter_map ambiguity_error
+    |> List.of_seq
+
+  let run_elab (type a) (prog : context -> a) : (a, (loc * string) list) result =
+    match
+      let ctx = empty () in
+      let result = prog ctx in
+      let ambiguity_errors = collect_ambiguities ctx in
+      result, ambiguity_errors
+    with
+    | result, [] -> Ok result
+    | _, errors -> Error errors
+    | exception Error (loc, message) -> Error [(loc, message)]
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : Core.ty =
-    let ctx = empty () in
-    let ty = check_ty ctx ty in
-    check_metas ctx;
-    ty
+  let check_ty (ty : ty) : (Core.ty, (loc * string) list) result =
+    run_elab (fun ctx -> check_ty ctx ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : Core.tm =
-    let ctx = empty () in
-    let tm = check_tm ctx tm ty in
-    check_metas ctx;
-    tm
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, (loc * string) list) result =
+    run_elab (fun ctx -> check_tm ctx tm ty)
 
-  let infer_tm (tm : tm) : Core.tm * Core.ty =
-    let ctx = empty () in
-    let tm, vty = infer_tm ctx tm in
-    check_metas ctx;
-    tm, vty
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, (loc * string) list) result =
+    run_elab (fun ctx -> infer_tm ctx tm)
 
 end

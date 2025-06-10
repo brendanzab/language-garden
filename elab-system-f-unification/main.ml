@@ -63,14 +63,11 @@ let parse_tm (source : Source_file.t) : Surface.tm =
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   match Surface.Elab.infer_tm tm with
-  | tm, vty ->
+  | Ok (tm, vty) ->
       tm, Core.Semantics.quote_vty 0 vty
-  | exception Surface.Elab.Error errors ->
-      errors |> List.iter begin fun (pos, reason) ->
-        emit source "error" pos reason
-      end;
+  | Error errors ->
+      errors |> List.iter (fun (pos, reason) -> emit source "error" pos reason);
       exit 1
-
 
 (** {1 Subcommands} *)
 
