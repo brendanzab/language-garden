@@ -45,42 +45,58 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline
 
-let parse_tm (source : Source_file.t) : Surface.tm =
+let elab_tm (source : Source_file.t) : Core.tm * Core.ty =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
-  let lexpos () = Sedlexing.lexing_positions lexbuf in
+  let lex_error msg = Surface.Diagnostic.error (Sedlexing.lexing_positions lexbuf) msg in
   Sedlexing.set_filename lexbuf source.name;
 
-  try
-    MenhirLib.Convert.Simplified.traditional2revised Parser.main
-      (Sedlexing.with_tokenizer Lexer.token lexbuf)
-  with
-  | Lexer.Error error ->
-      begin match error with
-      | `Unexpected_char -> emit source "error" (lexpos ()) "unexpected character"; exit 1
-      | `Unclosed_block_comment -> emit source "error" (lexpos ()) "unclosed block comment"; exit 1
-      end
-  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
+  let opt_tm, diagnostics =
+    match
+      MenhirLib.Convert.Simplified.traditional2revised Parser.main
+        (Sedlexing.with_tokenizer Lexer.token lexbuf)
+    with
+    | tm -> Surface.Elab.infer_tm tm
+    | exception Lexer.Error message -> None, [lex_error message]
+    | exception Parser.Error -> None, [lex_error "syntax error"]
+  in
 
-let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
-  match Surface.Elab.infer_tm tm with
-  | Ok (tm, ty) -> tm, ty
-  | Error errors ->
-      errors |> List.iter (fun (pos, reason) -> emit source "error" pos reason);
-      exit 1
+  let num_warnings = ref 0 in
+  let num_errors = ref 0 in
+
+  diagnostics |> List.iter begin fun (d : Surface.Diagnostic.t) ->
+    match d.severity with
+    | Warning -> emit source "warning" d.loc d.message; incr num_warnings
+    | Error -> emit source "error" d.loc d.message; incr num_errors
+  end;
+
+  let has_warnings = !num_warnings > 0 in
+  let has_errors = !num_errors > 0 in
+
+  let emit_severity_counts severity count =
+    let pluralised = if count = 1 then severity else severity ^ "s" in
+    Printf.eprintf "%s: %s generated %i %s\n" severity source.name count pluralised
+  in
+
+  if has_warnings || has_errors then Printf.eprintf "\n";
+  if has_warnings then emit_severity_counts "warning" !num_warnings;
+  if has_errors then emit_severity_counts "error" !num_errors;
+  if has_errors then exit 1;
+
+  Option.get opt_tm
 
 
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let tm, ty = parse_tm source |> elab_tm source in
+  let tm, ty = elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
     (Core.pp_tm [] tm)
     (Core.pp_ty ty)
 
 let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let tm, ty = parse_tm source |> elab_tm source in
+  let tm, ty = elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
     (Core.pp_tm [] (Core.Semantics.normalise [] tm))
     (Core.pp_ty ty)

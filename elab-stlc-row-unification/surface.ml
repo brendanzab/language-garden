@@ -68,6 +68,24 @@ and param =
   binder * ty option
 
 
+module Diagnostic = struct
+
+  type severity =
+    | Warning
+    | Error
+
+  type t = {
+    loc : loc;
+    severity : severity;
+    message : string;
+  }
+
+  let error loc message = { loc; severity = Error; message }
+  let warning loc message = { loc; severity = Warning; message }
+
+end
+
+
 (** Elaboration from the surface language into the core language
 
     This is where we implement user-facing type checking, while also translating
@@ -79,9 +97,9 @@ and param =
 *)
 module Elab : sig
 
-  val check_ty : ty -> (Core.ty, (loc * string) list) result
-  val check_tm : tm -> Core.ty -> (Core.tm, (loc * string) list) result
-  val infer_tm : tm -> (Core.tm * Core.ty, (loc * string) list) result
+  val check_ty : ty -> Core.ty option * Diagnostic.t list
+  val check_tm : tm -> Core.ty -> Core.tm option * Diagnostic.t list
+  val infer_tm : tm -> (Core.tm * Core.ty) option * Diagnostic.t list
 
 end = struct
 
@@ -104,6 +122,8 @@ end = struct
     (** A list of the row metavariables that have been inserted during
         elaboration. Any unsolved row metavariables will be defaulted to their
         row constraint at the end of elaboration. *)
+
+    diagnostics : Diagnostic.t Dynarray.t;
   }
 
   (** The empty context *)
@@ -111,6 +131,7 @@ end = struct
     tys = [];
     metas = Dynarray.create ();
     row_metas = Dynarray.create ();
+    diagnostics = Dynarray.create ();
   }
 
   (** Extend the context with a new binding *)
@@ -140,6 +161,9 @@ end = struct
 
 
   (** {2 Elaboration errors} *)
+
+  let report (ctx : context) (d : Diagnostic.t) : unit =
+    Dynarray.add_last ctx.diagnostics d
 
   (** An error that will be raised if there was a problem in the surface syntax,
       usually as a result of type errors. This is normal, and should be rendered
@@ -404,15 +428,15 @@ end = struct
           List.fold_left
             (fun clauses ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then
-                (* TODO: should be a warning *)
-                error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
-              else
-                match Label_map.find_opt label.data row with
-                | Some param_ty ->
-                    let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
-                    Label_map.add label.data (name.data, body_tm) clauses
-                | None ->
-                    error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
+                report ctx
+                  (Diagnostic.warning label.loc
+                    (Format.asprintf "redundant variant pattern `%s`" label.data));
+              match Label_map.find_opt label.data row with
+              | Some param_ty ->
+                  let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
+                  Label_map.add label.data (name.data, body_tm) clauses
+              | None ->
+                  error label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
             Label_map.empty
             clauses
         in
@@ -439,13 +463,13 @@ end = struct
           List.fold_left
             (fun (clauses, row) ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then
-                (* TODO: should be a warning? *)
-                error label.loc (Format.asprintf "redundant variant pattern `%s`" label.data)
-              else
-                let param_ty = fresh_meta ctx name.loc "pattern binder" in
-                let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
-                Label_map.add label.data (name.data, body_tm) clauses,
-                Label_map.add label.data param_ty row)
+                report ctx
+                  (Diagnostic.warning label.loc
+                    (Format.asprintf "redundant variant pattern `%s`" label.data));
+              let param_ty = fresh_meta ctx name.loc "pattern binder" in
+              let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
+              Label_map.add label.data (name.data, body_tm) clauses,
+              Label_map.add label.data param_ty row)
             (Label_map.empty, Label_map.empty)
             clauses
         in
@@ -462,45 +486,40 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let collect_ambiguities (ctx : context) : (loc * string) list =
-    let ambiguity_error (loc, info, m) =
-      match !m with
-      | Core.Unsolved _ -> Some (loc, "ambiguous " ^ info)
-      | Core.Solved _ -> None
-    in
-    Dynarray.to_seq ctx.metas
-    |> Seq.filter_map ambiguity_error
-    |> List.of_seq
-
-  let run_elab (type a) (prog : context -> a) : (a, (loc * string) list) result =
-    match
+  let run_elab (type a) (prog : context -> a) : a option * Diagnostic.t list =
+    try
       let ctx = empty () in
       let result = prog ctx in
+
+      ctx.metas |> Dynarray.iter begin fun (loc, info, m) ->
+        match !m with
+        | Core.Solved _ -> ()
+        | Core.Unsolved _ -> report ctx (Diagnostic.error loc ("ambiguous " ^ info))
+      end;
 
       (** Default unsolved rows to fixed row types *)
       ctx.row_metas |> Dynarray.iter begin fun m ->
         match !m with
+        | Core.Solved_row _ -> ()
         | Core.Unsolved_row (_, row) ->
             m := Solved_row (Row_entries row);
-        | Core.Solved_row _ -> ()
       end;
 
-      result, collect_ambiguities ctx
+      Some result, Dynarray.to_list ctx.diagnostics
     with
-    | result, [] -> Ok result
-    | _, errors -> Error errors
-    | exception Error (loc, message) -> Error [(loc, message)]
+    | Error (loc, message) ->
+        None, [Diagnostic.error loc message]
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, (loc * string) list) result =
+  let check_ty (ty : ty) : Core.ty option * Diagnostic.t list =
     run_elab (fun ctx -> check_ty ctx ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, (loc * string) list) result =
+  let check_tm (tm : tm) (ty : Core.ty) : Core.tm option * Diagnostic.t list =
     run_elab (fun ctx -> check_tm ctx tm ty)
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty, (loc * string) list) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty) option * Diagnostic.t list =
     run_elab (fun ctx -> infer_tm ctx tm)
 
 end
