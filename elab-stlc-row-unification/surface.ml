@@ -83,20 +83,6 @@ module Diagnostic = struct
   let error (loc : loc) (message : string) : t = { loc; severity = Error; message }
   let warning (loc : loc) (message : string) : t = { loc; severity = Warning; message }
 
-  type _ Effect.t +=
-    | Report : t -> unit Effect.t
-
-  let report (diagnostic : t) : unit =
-    Effect.perform (Report diagnostic)
-
-  let report_error (loc : loc) (message : string) : unit = report (error loc message)
-  let report_warning (loc : loc) (message : string) : unit = report (warning loc message)
-
-  let try_with (type a) (report : t -> unit) (prog : unit -> a) =
-    try prog () with
-    | effect Report d, k ->
-        Effect.Deep.continue k (report d)
-
 end
 
 
@@ -111,9 +97,17 @@ end
 *)
 module Elab : sig
 
-  val check_ty : ty -> Core.ty option
-  val check_tm : tm -> Core.ty -> Core.tm option
-  val infer_tm : tm -> (Core.tm * Core.ty) option
+  (** An elaboration action that accepts a callback for reporting diagnostics to
+      the caller. *)
+  type 'a elab = report:(Diagnostic.t -> unit) -> 'a
+
+  (** Entrypoints for elaboration. Callers can expect that if {!None} is
+      returned at leat one error diagnostic will have already been reported via
+      the callback provided. *)
+
+  val check_ty : ty -> Core.ty option elab
+  val check_tm : tm -> Core.ty -> Core.tm option elab
+  val infer_tm : tm -> (Core.tm * Core.ty) option elab
 
 end = struct
 
@@ -136,13 +130,17 @@ end = struct
     (** A list of the row metavariables that have been inserted during
         elaboration. Any unsolved row metavariables will be defaulted to their
         row constraint at the end of elaboration. *)
+
+    report : Diagnostic.t -> unit;
+    (** Callback used for reporting diagnostics during elaboration. *)
   }
 
   (** The empty context *)
-  let empty () : context = {
+  let empty ~(report : Diagnostic.t -> unit) : context = {
     tys = [];
     metas = Dynarray.create ();
     row_metas = Dynarray.create ();
+    report;
   }
 
   (** Extend the context with a new binding *)
@@ -178,18 +176,24 @@ end = struct
       we should be able to support continuing after many of these errors. *)
   exception Fatal
 
+  let report_warning (ctx : context) (loc : loc) (message : string) : unit =
+    ctx.report (Diagnostic.warning loc message)
+
+  let report_error (ctx : context) (loc : loc) (message : string) : unit =
+    ctx.report (Diagnostic.error loc message)
+
   (** Raises an {!Fatal} exception, reporting an error diagnostic *)
-  let fatal (type a) (loc : loc) (message : string) : a =
-    Diagnostic.report_error loc message;
+  let fatal (type a) (ctx : context) (loc : loc) (message : string) : a =
+    report_error ctx loc message;
     raise Fatal
 
-  let unify_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
+  let unify_tys (ctx : context) (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
     try Core.unify_tys ty1 ty2 with
-    | Core.Infinite_type _ -> fatal loc "infinite type"
-    | Core.Infinite_row_type _ -> fatal loc "infinite row type"
+    | Core.Infinite_type _ -> fatal ctx loc "infinite type"
+    | Core.Infinite_row_type _ -> fatal ctx loc "infinite row type"
     | Core.Mismatched_types (_, _)
     | Core.Mismatched_row_types (_, _) ->
-        fatal loc
+        fatal ctx loc
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (Core.pp_ty ty1)
             (Core.pp_ty ty2))
@@ -210,7 +214,7 @@ end = struct
     match ty.data with
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
-    | Name name -> fatal ty.loc (Format.asprintf "unbound type `%s`" name)
+    | Name name -> fatal ctx ty.loc (Format.asprintf "unbound type `%s`" name)
     | Fun_type (ty1, ty2) -> Fun_type (check_ty ctx ty1, check_ty ctx ty2)
     | Record_type entries -> Record_type (check_ty_entries ctx entries)
     | Variant_type entries -> Variant_type (check_ty_entries ctx entries)
@@ -222,7 +226,7 @@ end = struct
       | [] -> acc
       | (label, ty) :: entries ->
           begin match Label_map.mem label.data acc with
-          | true -> fatal label.loc (Format.asprintf "duplicate label `%s`" label.data)
+          | true -> fatal ctx label.loc (Format.asprintf "duplicate label `%s`" label.data)
           | false -> go (Label_map.add label.data (check_ty ctx ty) acc) entries
           end
     in
@@ -244,7 +248,7 @@ end = struct
         | Some elem_ty ->
             Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
         | None ->
-            fatal label.loc
+            fatal ctx label.loc
               (Format.asprintf "unexpected variant `%s` in type `%t`"
                 label.data
                 (Core.pp_ty ty))
@@ -263,7 +267,7 @@ end = struct
     | _ ->
         let tm', ty' = infer_tm ctx tm in
         (* NOTE: We could add some subtyping coercions here *)
-        unify_tys tm.loc ty ty';
+        unify_tys ctx tm.loc ty ty';
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -272,7 +276,7 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, vty) -> Var index, vty
-        | None -> fatal tm.loc (Format.asprintf "unbound name `%s`" name)
+        | None -> fatal ctx tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -293,7 +297,7 @@ end = struct
           | [] -> acc
           | (label, tm) :: entries ->
               match Label_map.mem label.data acc with
-              | true -> fatal label.loc (Format.asprintf "duplicate label `%s`" label.data)
+              | true -> fatal ctx label.loc (Format.asprintf "duplicate label `%s`" label.data)
               | false -> go (Label_map.add label.data (infer_tm ctx tm) acc) entries
         in
         let entries = go Label_map.empty entries in
@@ -323,11 +327,11 @@ end = struct
         | Meta_var _ as head_ty ->
             let param_ty = fresh_meta ctx head_loc "function parameter type" in
             let body_ty = fresh_meta ctx head_loc "function return type" in
-            unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
+            unify_tys ctx head_loc (Fun_type (param_ty, body_ty)) head_ty;
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | head_ty ->
-            fatal head_loc
+            fatal ctx head_loc
               (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
                 (Core.pp_ty head_ty))
         end
@@ -346,10 +350,10 @@ end = struct
         | Record_type (Row_meta_var _) | Meta_var _ as head_ty ->
             let field_ty = fresh_meta ctx head_loc "record field" in
             let row = Label_map.singleton label.data field_ty in
-            unify_tys head_loc (Record_type (fresh_row_meta ctx row)) head_ty;
+            unify_tys ctx head_loc (Record_type (fresh_row_meta ctx row)) head_ty;
             Record_proj (head, label.data), field_ty
         | head_ty ->
-            fatal head_loc
+            fatal ctx head_loc
               (Format.asprintf "@[<v 2>@[unknown field `%s`:@]@ @[found: %t@]@]"
                 label.data
                 (Core.pp_ty head_ty))
@@ -365,11 +369,11 @@ end = struct
     | Op2 (`Eq, tm0, tm1) ->
         let tm0, ty0 = infer_tm ctx tm0 in
         let tm1, ty1 = infer_tm ctx tm1 in
-        unify_tys tm.loc ty0 ty1;
+        unify_tys ctx tm.loc ty0 ty1;
         begin match Core.force_ty ty0 with
         | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
-        | ty -> fatal tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
+        | ty -> fatal ctx tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
         end
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
@@ -398,15 +402,15 @@ end = struct
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_loc = param_ty.loc in
         let param_ty = check_ty ctx param_ty in
-        unify_tys param_ty_loc param_ty param_ty';
+        unify_tys ctx param_ty_loc param_ty param_ty';
         let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
-        unify_tys name.loc ty ty';
+        unify_tys ctx name.loc ty ty';
         tm'
     | (name, _) :: _, _ ->
-        fatal name.loc "unexpected parameter"
+        fatal ctx name.loc "unexpected parameter"
 
   (** Elaborate a function literal, inferring its type. *)
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
@@ -437,13 +441,13 @@ end = struct
           List.fold_left
             (fun clauses ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then
-                Diagnostic.report_warning label.loc (Format.asprintf "redundant variant pattern `%s`" label.data);
+                report_warning ctx label.loc (Format.asprintf "redundant variant pattern `%s`" label.data);
               match Label_map.find_opt label.data row with
               | Some param_ty ->
                   let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
                   Label_map.add label.data (name.data, body_tm) clauses
               | None ->
-                  fatal label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
+                  fatal ctx label.loc (Format.asprintf "unexpected variant pattern `%s`" label.data))
             Label_map.empty
             clauses
         in
@@ -457,7 +461,7 @@ end = struct
           (* Return the clauses *)
           Variant_elim (head, clauses)
         else
-          fatal head_loc
+          fatal ctx head_loc
             (Format.asprintf "non-exhaustive match, missing %a"
               (Format.pp_print_list
                 ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
@@ -470,7 +474,7 @@ end = struct
           List.fold_left
             (fun (clauses, row) ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then
-                Diagnostic.report_warning label.loc (Format.asprintf "redundant variant pattern `%s`" label.data);
+                report_warning ctx label.loc (Format.asprintf "redundant variant pattern `%s`" label.data);
               let param_ty = fresh_meta ctx name.loc "pattern binder" in
               let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
               Label_map.add label.data (name.data, body_tm) clauses,
@@ -479,50 +483,51 @@ end = struct
             clauses
         in
         (* Unify variant type with head type *)
-        unify_tys head_loc (Variant_type (Row_entries row)) head_ty;
+        unify_tys ctx head_loc (Variant_type (Row_entries row)) head_ty;
         (* Return the clauses *)
         Variant_elim (head, clauses)
 
     | head_ty ->
-        fatal head_loc
+        fatal ctx head_loc
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: variant@]@ @[found: %t@]@]"
             (Core.pp_ty head_ty))
 
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : context -> a) : a option =
-    let ctx = empty () in
-    match prog ctx with
-    | result ->
-        ctx.metas |> Dynarray.iter begin fun (loc, info, m) ->
-          match !m with
-          | Core.Solved _ -> ()
-          | Core.Unsolved _ -> Diagnostic.report_error loc ("ambiguous " ^ info)
-        end;
+  type 'a elab = report:(Diagnostic.t -> unit) -> 'a
 
-        (** Default unsolved rows to fixed row types *)
-        ctx.row_metas |> Dynarray.iter begin fun m ->
-          match !m with
-          | Core.Solved_row _ -> ()
-          | Core.Unsolved_row (_, row) ->
-              m := Solved_row (Row_entries row);
-        end;
+  (** Call a program with an elaboration context. Afterwards report any unsolved
+      metavariables as errors, and default unsolved rows to fixed row types. *)
+  let with_context (type a) (prog : context -> a) : a option elab =
+    fun ~report ->
+      let ctx = empty ~report in
+      match prog ctx with
+      | result ->
+          ctx.metas |> Dynarray.iter begin fun (loc, info, m) ->
+            match !m with
+            | Core.Solved _ -> ()
+            | Core.Unsolved _ -> report_error ctx loc ("ambiguous " ^ info)
+          end;
 
-        Some result
-    | exception Fatal ->
-        None
+          ctx.row_metas |> Dynarray.iter begin fun m ->
+            match !m with
+            | Core.Solved_row _ -> ()
+            | Core.Unsolved_row (_, row) ->
+                m := Solved_row (Row_entries row);
+          end;
 
+          Some result
+      | exception Fatal ->
+          None
 
-  (** {2 Public API} *)
+  let check_ty (ty : ty) : Core.ty option elab =
+    with_context (fun ctx -> check_ty ctx ty)
 
-  let check_ty (ty : ty) : Core.ty option =
-    run_elab (fun ctx -> check_ty ctx ty)
+  let check_tm (tm : tm) (ty : Core.ty) : Core.tm option elab =
+    with_context (fun ctx -> check_tm ctx tm ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : Core.tm option =
-    run_elab (fun ctx -> check_tm ctx tm ty)
-
-  let infer_tm (tm : tm) : (Core.tm * Core.ty) option =
-    run_elab (fun ctx -> infer_tm ctx tm)
+  let infer_tm (tm : tm) : (Core.tm * Core.ty) option elab =
+    with_context (fun ctx -> infer_tm ctx tm)
 
 end

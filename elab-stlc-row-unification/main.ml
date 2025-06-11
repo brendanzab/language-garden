@@ -45,16 +45,17 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline
 
-let run_diagnostics (type a) (source : Source_file.t) (prog : unit -> a) : a =
+let run_diagnostics (type a) (source : Source_file.t) (prog : a Surface.Elab.elab) : a =
   let num_warnings = ref 0 in
   let num_errors = ref 0 in
 
-  let result =
-    prog |> Surface.Diagnostic.try_with @@ fun d ->
-      match d.severity with
-      | Warning -> emit source "warning" d.loc d.message; incr num_warnings
-      | Error -> emit source "error" d.loc d.message; incr num_errors
+  let report (d : Surface.Diagnostic.t) =
+    match d.severity with
+    | Warning -> emit source "warning" d.loc d.message; incr num_warnings
+    | Error -> emit source "error" d.loc d.message; incr num_errors
   in
+
+  let result = prog ~report in
 
   let has_warnings = !num_warnings > 0 in
   let has_errors = !num_errors > 0 in
@@ -71,32 +72,33 @@ let run_diagnostics (type a) (source : Source_file.t) (prog : unit -> a) : a =
 
   result
 
-let elab_tm (source : Source_file.t) : (Core.tm * Core.ty) option =
-  let lexbuf = Sedlexing.Utf8.from_string source.contents in
-  let lex_error msg = Surface.Diagnostic.report_error (Sedlexing.lexing_positions lexbuf) msg in
-  Sedlexing.set_filename lexbuf source.name;
+let elab_tm ~(source : Source_file.t) : (Core.tm * Core.ty) option Surface.Elab.elab =
+  fun ~report ->
+    let lexbuf = Sedlexing.Utf8.from_string source.contents in
+    let lex_error msg = report (Surface.Diagnostic.error (Sedlexing.lexing_positions lexbuf) msg) in
+    Sedlexing.set_filename lexbuf source.name;
 
-  match
-    MenhirLib.Convert.Simplified.traditional2revised Parser.main
-      (Sedlexing.with_tokenizer Lexer.token lexbuf)
-  with
-  | tm -> Surface.Elab.infer_tm tm
-  | exception Lexer.Error message -> lex_error message; None
-  | exception Parser.Error -> lex_error "syntax error"; None
+    match
+      MenhirLib.Convert.Simplified.traditional2revised Parser.main
+        (Sedlexing.with_tokenizer Lexer.token lexbuf)
+    with
+    | tm -> Surface.Elab.infer_tm tm ~report
+    | exception Lexer.Error message -> lex_error message; None
+    | exception Parser.Error -> lex_error "syntax error"; None
 
 
 (** {1 Subcommands} *)
 
 let elab_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let tm, ty = run_diagnostics source (fun () -> elab_tm source) |> Option.get in
+  let tm, ty = run_diagnostics source (elab_tm ~source) |> Option.get in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
     (Core.pp_tm [] tm)
     (Core.pp_ty ty)
 
 let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let tm, ty = run_diagnostics source (fun () -> elab_tm source) |> Option.get in
+  let tm, ty = run_diagnostics source (elab_tm ~source) |> Option.get in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
     (Core.pp_tm [] (Core.Semantics.normalise [] tm))
     (Core.pp_ty ty)
