@@ -1,11 +1,11 @@
 open Parser
 
-exception Error of [
-  | `Unexpected_char
-  | `Unclosed_block_comment
-  | `Unclosed_text_literal
-  | `Invalid_escape_code of string
-]
+exception Error of string
+
+let unexpected_char () = raise (Error "unexpected character")
+let unclosed_block_comment () = raise (Error "unclosed block comment")
+let unclosed_text_literal () = raise (Error "unclosed text literal")
+let invalid_escape_code (lexeme : string) = raise (Error (Format.sprintf "invalid escape code `\\%s`" lexeme))
 
 let whitespace = [%sedlex.regexp? Plus (' ' | '\t' | '\r' | '\n')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
@@ -76,7 +76,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | ')' -> CLOSE_PAREN
     | '}' -> pop_mode (); CLOSE_TERM
     | eof -> pop_mode (); END
-    | _ -> raise (Error `Unexpected_char)
+    | _ -> unexpected_char ()
 
   and template_token (lexbuf : Sedlexing.lexbuf) : token =
     let buf = Buffer.create 1 in
@@ -89,7 +89,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
           | "n" -> Buffer.add_string buf "\n"; go ()
           | "t" -> Buffer.add_string buf "\t"; go ()
           | "$" -> Buffer.add_string buf "$"; go ()
-          | _ -> raise (Error (`Invalid_escape_code (Sedlexing.Utf8.lexeme lexbuf)))
+          | _ -> invalid_escape_code (Sedlexing.Utf8.lexeme lexbuf)
       end
       | "$" -> begin
           match%sedlex lexbuf with
@@ -97,7 +97,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
               push_mode Term;
               push_token OPEN_TERM;
               TEMPLATE_TEXT (Buffer.contents buf)
-          | _ -> raise (Error `Unexpected_char)
+          | _ -> unexpected_char ()
       end
       | "\"" ->
           pop_mode ();
@@ -119,7 +119,7 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
           push_token END;
           TEMPLATE_TEXT (Buffer.contents buf)
       | any -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); go ()
-      | _ -> raise (Error `Unexpected_char)
+      | _ -> unexpected_char ()
     in
     go ()
 
@@ -128,15 +128,15 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
     | newline -> token lexbuf
     | any -> line_comment lexbuf
     | eof -> END
-    | _ -> raise (Error `Unexpected_char)
+    | _ -> unexpected_char ()
 
   and block_comment (lexbuf : Sedlexing.lexbuf) (level : int) : token =
     match%sedlex lexbuf with
     | "/-" -> block_comment lexbuf (level + 1)
     | "-/" -> if level = 0 then token lexbuf else block_comment lexbuf (level - 1)
     | any -> block_comment lexbuf level
-    | eof -> raise (Error `Unclosed_block_comment)
-    | _ -> raise (Error `Unexpected_char)
+    | eof -> unclosed_block_comment ()
+    | _ -> unexpected_char ()
 
   and text (lexbuf : Sedlexing.lexbuf) : token =
     let buf = Buffer.create 1 in
@@ -148,12 +148,12 @@ let create_token_lexer (initial_mode : mode) : Sedlexing.lexbuf -> token =
           | "\"" -> Buffer.add_string buf "\""; go ()
           | "n" -> Buffer.add_string buf "\n"; go ()
           | "t" -> Buffer.add_string buf "\t"; go ()
-          | _ -> raise (Error (`Invalid_escape_code (Sedlexing.Utf8.lexeme lexbuf)))
+          | _ -> invalid_escape_code (Sedlexing.Utf8.lexeme lexbuf)
       end
       | '"' -> Buffer.contents buf
       | any -> Buffer.add_string buf (Sedlexing.Utf8.lexeme lexbuf); go ()
-      | eof -> raise (Error `Unclosed_text_literal)
-      | _ -> raise (Error `Unexpected_char)
+      | eof -> unclosed_text_literal ()
+      | _ -> unexpected_char ()
     in
     TEXT (go ())
   in

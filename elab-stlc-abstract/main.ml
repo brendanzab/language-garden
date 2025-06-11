@@ -54,11 +54,7 @@ let parse_tm (source : Source_file.t) : Surface.tm =
     MenhirLib.Convert.Simplified.traditional2revised Parser.main
       (Sedlexing.with_tokenizer Lexer.token lexbuf)
   with
-  | Lexer.Error error ->
-      begin match error with
-      | `Unexpected_char -> emit source "error" (lexpos ()) "unexpected character"; exit 1
-      | `Unclosed_block_comment -> emit source "error" (lexpos ()) "unclosed block comment"; exit 1
-      end
+  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 

@@ -52,12 +52,7 @@ let parse_program (source : Source_file.t) : Datalog.program =
     MenhirLib.Convert.Simplified.traditional2revised Parser.program
       (Sedlexing.with_tokenizer Lexer.token lexbuf)
   with
-  | Lexer.Error error ->
-      begin match error with
-      | `Unexpected_char -> emit source "error" (lexpos ()) "unexpected character"; exit 1
-      | `Unclosed_string_literal -> emit source "error" (lexpos ()) "unclosed string literal"; exit 1
-      | `Invalid_escape_code s -> emit source "error" (lexpos ()) (Format.sprintf "invalid escape code `\\%s`" s); exit 1
-      end
+  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let pp_print_binding var term ppf =

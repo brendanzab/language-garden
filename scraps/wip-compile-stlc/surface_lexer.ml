@@ -1,7 +1,7 @@
-exception Error of [
-  | `Unexpected_char
-  | `Unclosed_block_comment
-]
+exception Error of string
+
+let unexpected_char () = raise (Error "unexpected character")
+let unclosed_block_comment () = raise (Error "unclosed block comment")
 
 let whitespace = [%sedlex.regexp? Plus (' ' | '\t' | '\r' | '\n')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
@@ -40,19 +40,19 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Surface_parser.token =
   | "("           -> OPEN_PAREN
   | ")"           -> CLOSE_PAREN
   | eof           -> END
-  | _             -> raise (Error `Unexpected_char)
+  | _             -> unexpected_char ()
 
 and line_comment (lexbuf : Sedlexing.lexbuf) : Surface_parser.token =
   match%sedlex lexbuf with
   | newline       -> token lexbuf
   | any           -> line_comment lexbuf
   | eof           -> END
-  | _             -> raise (Error `Unexpected_char)
+  | _             -> unexpected_char ()
 
 and block_comment (lexbuf : Sedlexing.lexbuf) (level : int) : Surface_parser.token =
   match%sedlex lexbuf with
   | "/-"          -> block_comment lexbuf (level + 1)
   | "-/"          -> if level = 0 then token lexbuf else block_comment lexbuf (level - 1)
   | any           -> block_comment lexbuf level
-  | eof           -> raise (Error `Unclosed_block_comment)
-  | _             -> raise (Error `Unexpected_char)
+  | eof           -> unclosed_block_comment ()
+  | _             -> unexpected_char ()

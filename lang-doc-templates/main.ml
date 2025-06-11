@@ -52,13 +52,7 @@ let parse_template (source : Source_file.t) : Surface.template =
     MenhirLib.Convert.Simplified.traditional2revised Parser.template_main
       (Sedlexing.with_tokenizer (Lexer.template_token ()) lexbuf)
   with
-  | Lexer.Error error ->
-      begin match error with
-      | `Unexpected_char -> emit source "error" (lexpos ()) "unexpected character"; exit 1
-      | `Unclosed_block_comment -> emit source "error" (lexpos ()) "unclosed block comment"; exit 1
-      | `Unclosed_text_literal -> emit source "error" (lexpos ()) "unclosed text literal"; exit 1
-      | `Invalid_escape_code s -> emit source "error" (lexpos ()) (Format.sprintf "invalid escape code `\\%s`" s); exit 1
-      end
+  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let context = ref []
