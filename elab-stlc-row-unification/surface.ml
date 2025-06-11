@@ -7,13 +7,9 @@
 
 (** {1 Syntax} *)
 
-(** The start and end position in a source file *)
-type loc =
-  Lexing.position * Lexing.position
-
 (** Located nodes *)
 type 'a located = {
-  loc : loc;
+  loc : Reporting.loc;
   data : 'a;
 }
 
@@ -68,36 +64,6 @@ and param =
   binder * ty option
 
 
-module Severity = struct
-
-  type t =
-    | Warning
-    | Error
-
-  let to_string ?(count : int option) (s : t) =
-    match s, count with
-    | Warning, None -> "warning"
-    | Error, None -> "error"
-    | Warning, Some n -> if n = 1 then "1 warning" else Format.sprintf "%i warnings" n
-    | Error, Some n -> if n = 1 then "1 error" else Format.sprintf "%i errors" n
-
-end
-
-
-module Diagnostic = struct
-
-  type t = {
-    loc : loc;
-    severity : Severity.t;
-    message : string;
-  }
-
-  let error (loc : loc) (message : string) : t = { loc; severity = Error; message }
-  let warning (loc : loc) (message : string) : t = { loc; severity = Warning; message }
-
-end
-
-
 (** Elaboration from the surface language into the core language
 
     This is where we implement user-facing type checking, while also translating
@@ -109,15 +75,9 @@ end
 *)
 module Elab : sig
 
-  (** An elaboration action that accepts a callback for reporting diagnostics to
-      the caller. *)
-  type 'a elab = report:(Diagnostic.t -> unit) -> 'a
-
-  (** Entrypoints for elaboration. *)
-
-  val check_ty : ty -> Core.ty elab
-  val check_tm : tm -> Core.ty -> Core.tm elab
-  val infer_tm : tm -> (Core.tm * Core.ty) elab
+  val check_ty : ty -> Core.ty Reporting.Effect.t
+  val check_tm : tm -> Core.ty -> Core.tm Reporting.Effect.t
+  val infer_tm : tm -> (Core.tm * Core.ty) Reporting.Effect.t
 
 end = struct
 
@@ -131,7 +91,7 @@ end = struct
     tys : (string option * Core.ty) Core.env;
     (** A stack of bindings currently in scope *)
 
-    metas : (loc * string * Core.meta) Dynarray.t;
+    metas : (Reporting.loc * string * Core.meta) Dynarray.t;
     (** A list of the metavariables that have been inserted during elaboration.
         This will be used to generate a list of unsolved metavariables once
         elaboration is complete. *)
@@ -141,12 +101,12 @@ end = struct
         elaboration. Any unsolved row metavariables will be defaulted to their
         row constraint at the end of elaboration. *)
 
-    report : Diagnostic.t -> unit;
+    report : Reporting.Diagnostic.t -> unit;
     (** Callback used for reporting diagnostics during elaboration. *)
   }
 
   (** The empty context *)
-  let empty ~(report : Diagnostic.t -> unit) : context = {
+  let empty ~(report : Reporting.Diagnostic.t -> unit) : context = {
     tys = [];
     metas = Dynarray.create ();
     row_metas = Dynarray.create ();
@@ -167,7 +127,7 @@ end = struct
       | false -> None
 
   (** Generate a fresh metavariable *)
-  let fresh_meta (ctx : context) (loc: loc) (info : string) : Core.ty =
+  let fresh_meta (ctx : context) (loc: Reporting.loc) (info : string) : Core.ty =
     let m = Core.fresh_meta () in
     Dynarray.add_last ctx.metas (loc, info, m);
     Meta_var m
@@ -178,13 +138,13 @@ end = struct
     Dynarray.add_last ctx.row_metas rm;
     Row_meta_var rm
 
-  let report_warning (ctx : context) (loc : loc) (message : string) : unit =
-    ctx.report (Diagnostic.warning loc message)
+  let report_warning (ctx : context) (loc : Reporting.loc) (message : string) : unit =
+    ctx.report (Reporting.Diagnostic.warning loc message)
 
-  let report_error (ctx : context) (loc : loc) (message : string) : unit =
-    ctx.report (Diagnostic.error loc message)
+  let report_error (ctx : context) (loc : Reporting.loc) (message : string) : unit =
+    ctx.report (Reporting.Diagnostic.error loc message)
 
-  let unify_tys (ctx : context) (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : bool =
+  let unify_tys (ctx : context) (loc : Reporting.loc) (ty1 : Core.ty) (ty2 : Core.ty) : bool =
     try Core.unify_tys ty1 ty2; true with
     | Core.Infinite_type _ -> report_error ctx loc "infinite type"; false
     | Core.Infinite_row_type _ -> report_error ctx loc "infinite row type"; false
@@ -516,11 +476,9 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  type 'a elab = report:(Diagnostic.t -> unit) -> 'a
-
   (** Call a function with an elaboration context and finalise any outstanding
       ambiguities on completion. *)
-  let with_context (type a) (prog : context -> a) : a elab =
+  let with_context (type a) (prog : context -> a) : a Reporting.Effect.t =
     fun ~report ->
       let ctx = empty ~report in
       let result = prog ctx in
@@ -544,13 +502,13 @@ end = struct
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : Core.ty elab =
+  let check_ty (ty : ty) : Core.ty Reporting.Effect.t =
     with_context (fun ctx -> check_ty ctx ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : Core.tm elab =
+  let check_tm (tm : tm) (ty : Core.ty) : Core.tm Reporting.Effect.t =
     with_context (fun ctx -> check_tm ctx tm ty)
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty) elab =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty) Reporting.Effect.t =
     with_context (fun ctx -> infer_tm ctx tm)
 
 end
