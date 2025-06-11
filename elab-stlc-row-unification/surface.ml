@@ -480,17 +480,30 @@ end = struct
       ambiguities on completion. *)
   let with_context (type a) (prog : context -> a) : a Reporting.Effect.t =
     fun ~report ->
+      (* Wrap diagnostic callback to remember if we’ve seen any errors *)
+      let seen_errors = ref false in
+      let report (d : Reporting.Diagnostic.t) =
+        seen_errors := d.severity = Error;
+        report d
+      in
+
+      (* Construct the context and run the function *)
       let ctx = empty ~report in
       let result = prog ctx in
 
-      ctx.metas |> Dynarray.iter begin fun (loc, info, m) ->
-        match !m with
-        | Core.Solved _ -> ()
-        | Core.Unsolved _ -> report_error ctx loc ("ambiguous " ^ info)
+      (* Only print ambiguity errors if no other errors have been seen during
+          elaboration. This ensures that we don’t report ambiguities errors about
+          erroneous code. *)
+      if not !seen_errors then begin
+        ctx.metas |> Dynarray.iter begin fun (loc, info, m) ->
+          match !m with
+          | Core.Solved _ -> ()
+          | Core.Unsolved _ -> report_error ctx loc ("ambiguous " ^ info)
+        end;
       end;
 
-      (* Default unsolved row metas to fixed row types. Alternatively we
-          could have chosen to report these as ambiguity errors instead. *)
+      (* Default unsolved row metas to concrete row types. Alternatively we
+          could choose to report these as ambiguity errors instead. *)
       ctx.row_metas |> Dynarray.iter begin fun m ->
         match !m with
         | Core.Solved_row _ -> ()
