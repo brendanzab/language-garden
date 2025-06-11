@@ -99,6 +99,7 @@ type tm =
   | Bool_lit of bool
   | Bool_elim of tm * tm * tm
   | Prim_app of Prim.t * tm list
+  | Reported_error
 
 
 module Semantics = struct
@@ -128,6 +129,7 @@ module Semantics = struct
     | Variant_elim of ntm * (name * (vtm -> vtm)) Label_map.t
     | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
     | Prim_app of Prim.t * vtm list
+    | Reported_error
 
 
   (** {1 Eliminators} *)
@@ -211,6 +213,8 @@ module Semantics = struct
         bool_elim head vtm1 vtm2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
+    | Reported_error ->
+        Neu Reported_error
 
 
   (** {1 Quotation} *)
@@ -250,6 +254,8 @@ module Semantics = struct
         Bool_elim (quote_neu size head, tm0, tm1)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)
+    | Reported_error ->
+        Reported_error
 
 
   (** {1 Normalisation} *)
@@ -572,6 +578,7 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
+    | Reported_error -> Format.fprintf ppf "#reported-error"
     | Let _ | Fun_lit _ | Fun_app _ | Record_proj _ | Variant_lit _
     | Variant_elim _ | Bool_elim _ | Prim_app _ as tm ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)

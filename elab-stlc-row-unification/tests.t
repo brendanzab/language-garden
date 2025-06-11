@@ -284,8 +284,18 @@ Infinite type
     │
   1 │ fun f => f f
     │            ^
+  error: ambiguous function parameter type
+    ┌─ <stdin>:1:9
+    │
+  1 │ fun f => f f
+    │          ^
+  error: ambiguous function return type
+    ┌─ <stdin>:1:9
+    │
+  1 │ fun f => f f
+    │          ^
   
-  error: <stdin> generated 1 error
+  error: <stdin> generated 3 errors
   [1]
 
 Unexpected parameter
@@ -435,8 +445,18 @@ Unexpected variant pattern
     │
   3 │   | [a := x] => x + 1
     │      ^
+  error: non-exhaustive match, missing `some`
+    ┌─ <stdin>:2:8
+    │
+  2 │   match x with
+    │         ^
+  error: ambiguous match expression
+    ┌─ <stdin>:2:2
+    │
+  2 │   match x with
+    │   ^
   
-  error: <stdin> generated 1 error
+  error: <stdin> generated 3 errors
   [1]
 
 Missing variant patterns
@@ -449,8 +469,13 @@ Missing variant patterns
     │
   2 │   match x with end
     │         ^
+  error: ambiguous match expression
+    ┌─ <stdin>:2:2
+    │
+  2 │   match x with end
+    │   ^^^^^^^^^^^^^^^^
   
-  error: <stdin> generated 1 error
+  error: <stdin> generated 2 errors
   [1]
 
 Unexpected pattern match
@@ -462,8 +487,13 @@ Unexpected pattern match
     │
   1 │ match true with [a := x] => x end
     │       ^^^^
+  error: ambiguous match expression
+    ┌─ <stdin>:1:0
+    │
+  1 │ match true with [a := x] => x end
+    │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   
-  error: <stdin> generated 1 error
+  error: <stdin> generated 2 errors
   [1]
 
 Mismatched equality
