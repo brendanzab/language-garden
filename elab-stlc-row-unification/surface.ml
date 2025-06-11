@@ -442,8 +442,13 @@ end = struct
                 ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
                 (fun ppf (label, _) -> Format.fprintf ppf "`%s`" label))
               missing_clauses);
-          (* TODO: Return variant elimination with the missing clauses added *)
-          Reported_error
+
+          (* Return elimination with the missing clauses added *)
+          let error_clauses =
+            List.to_seq missing_clauses
+            |> Seq.map (fun (l, _) -> l, (None, Core.Reported_error))
+          in
+          Variant_elim (head, clauses |> Label_map.add_seq error_clauses)
         end
 
     | Variant_type (Row_meta_var _) | Meta_var _ as head_ty ->
