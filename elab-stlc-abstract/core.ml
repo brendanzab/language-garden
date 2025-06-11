@@ -34,7 +34,7 @@ let pp_ty : ty -> Format.formatter -> unit =
     | A -> Format.fprintf ppf "A"
     | B -> Format.fprintf ppf "B"
     | C -> Format.fprintf ppf "C"
-    | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+    | Fun_ty _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
   in
   pp_ty
 
@@ -86,7 +86,7 @@ let pp_tm : tm -> Format.formatter -> unit =
     match tm with
     | Var index ->
         Format.fprintf ppf "%s" (Env.lookup index names)
-    | tm ->
+    | Ann _ | Let _ | Fun_lit _ | Fun_app _ ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
   pp_tm Env.empty

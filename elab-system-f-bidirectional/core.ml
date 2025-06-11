@@ -311,7 +311,8 @@ let pp_ty : name env -> ty -> Format.formatter -> unit =
     | Var ty_index -> Format.fprintf ppf "%t" (pp_name (List.nth ty_names ty_index))
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
-    | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty_names ty)
+    | Forall_type _ | Fun_type _ as ty ->
+        Format.fprintf ppf "@[(%t)@]" (pp_ty ty_names ty)
   in
   pp_ty
 
@@ -385,6 +386,8 @@ let pp_tm : name env -> name env -> tm -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm ty_names tm_names tm)
+    | Let _ | Forall_lit _ | Forall_app _ | Fun_lit _ | Fun_app _
+    | Bool_elim _ | Prim_app _ as tm ->
+        Format.fprintf ppf "@[(%t)@]" (pp_tm ty_names tm_names tm)
   in
   pp_tm

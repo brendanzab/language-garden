@@ -431,7 +431,7 @@ let pp_ty : ty -> Format.formatter -> unit =
     | Variant_type rty -> pp_variant_row_ty rty ppf
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
-    | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+    | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
 
   and pp_meta pp_ty m ppf =
     match !m with
@@ -572,6 +572,8 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
+    | Let _ | Fun_lit _ | Fun_app _ | Record_proj _ | Variant_lit _
+    | Variant_elim _ | Bool_elim _ | Prim_app _ as tm ->
+        Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
   pp_tm

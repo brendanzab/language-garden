@@ -262,7 +262,7 @@ let pp_ty : ty -> Format.formatter -> unit =
     | Meta_var m -> pp_meta pp_atomic_ty m ppf
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
-    | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+    | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
   and pp_meta pp_ty m ppf =
     match !m with
     | Solved ty -> pp_ty ty ppf
@@ -334,6 +334,7 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
+    | Let _ | Fun_lit _ | Fun_app _ | Bool_elim _ | Prim_app _ as tm ->
+        Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
   pp_tm

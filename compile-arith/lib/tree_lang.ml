@@ -43,7 +43,8 @@ and pp_atomic_expr e ppf =
   match e with
   | Int i -> Format.fprintf ppf "%d" i
   | Neg e -> Format.fprintf ppf "-%t" (pp_atomic_expr e)
-  | e -> Format.fprintf ppf "@[<1>(%t)@]" (pp_expr e)
+  | Add _ | Sub _ | Mul _ | Div _ as e ->
+      Format.fprintf ppf "@[<1>(%t)@]" (pp_expr e)
 
 
 (** Semantics of arithmetic expressions *)

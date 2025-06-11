@@ -243,7 +243,8 @@ module Syntax = struct
           in
           Format.fprintf ppf "@[<hv>{%t@ }@]"
             (go_defns defns)
-      | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
+      | Let _ | Fun_type _ | Fun_lit _ | Fun_app _ | Rec_proj _ | Sing_type _ | Sing_intro ->
+          Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
 
     and pp_decl names name ty ppf =
       Format.fprintf ppf "@[%t@ :@]@ %t"

@@ -188,7 +188,7 @@ let pp_ty : ty -> Format.formatter -> unit =
     match ty with
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
-    | ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+    | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
   in
   pp_ty
 
@@ -250,6 +250,7 @@ let pp_expr : name env -> expr -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | e -> Format.fprintf ppf "@[(%t)@]" (pp_expr names e)
+    | Let _ | Fun_lit _ | Fun_app _ | Bool_elim _ | Prim_app _ as e ->
+        Format.fprintf ppf "@[(%t)@]" (pp_expr names e)
   in
   pp_expr

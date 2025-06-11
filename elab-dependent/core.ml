@@ -228,7 +228,8 @@ module Syntax = struct
       match tm with
       | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
       | Univ -> Format.fprintf ppf "Type"
-      | tm -> Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
+      | Let _ | Ann _ | Fun_type _ | Fun_lit _ | Fun_app _ as tm ->
+          Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
 
     and pp_name_ann names name def_ty ppf =
       Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"

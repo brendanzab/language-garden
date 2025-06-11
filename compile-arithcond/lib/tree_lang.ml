@@ -95,7 +95,8 @@ and pp_atomic_expr names e ppf =
   | Bool true -> Format.fprintf ppf "true"
   | Bool false -> Format.fprintf ppf "false"
   | Neg e -> Format.fprintf ppf "-%t" (pp_atomic_expr names e)
-  | e -> Format.fprintf ppf "@[<1>(%t)@]" (pp_expr names e)
+  | Let _ | Add _ | Sub _ | Mul _ | Div _ | Eq _ | If_then_else _ as e ->
+      Format.fprintf ppf "@[<1>(%t)@]" (pp_expr names e)
 
 let pp_ty t ppf =
   match t with
