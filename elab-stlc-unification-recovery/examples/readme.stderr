@@ -1,0 +1,36 @@
+error: mismatched types:
+  expected: Int
+  found: Bool
+  ┌─ <stdin>:1:15
+  │
+1 │ let x : Int := true;
+  │                ^^^^
+error: unbound type `Foo`
+  ┌─ <stdin>:3:16
+  │
+3 │ let example-1 : Foo -> Int := 3;
+  │                 ^^^
+error: mismatched types:
+  expected: ?0 -> Int
+  found: Int
+  ┌─ <stdin>:3:30
+  │
+3 │ let example-1 : Foo -> Int := 3;
+  │                               ^
+error: unexpected parameter
+  ┌─ <stdin>:5:8
+  │
+5 │   fun x y x => x;
+  │         ^
+error: unexpected parameter
+  ┌─ <stdin>:5:10
+  │
+5 │   fun x y x => x;
+  │           ^
+error: mismatched types:
+  expected: Int
+  found: Bool
+  ┌─ <stdin>:7:4
+  │
+7 │ x + false
+  │     ^^^^^
