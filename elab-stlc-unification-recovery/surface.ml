@@ -113,20 +113,14 @@ end = struct
   let record_error (ctx : context) (loc: loc) (message : string) =
     Dynarray.add_last ctx.errors (loc, message)
 
-  (** Unify two types, calling the [error] callback if the types could not be
-      unified, or calling the [ok] callback if no errors were found. *)
-  let unify_tys (type a) (ty1 : Core.ty) (ty2 : Core.ty) (error : string -> a) (ok : unit -> a) : a =
-    try Core.unify_tys ty1 ty2; ok () with
-    | Core.Infinite_type _ -> error "infinite type"
+  let unify_tys (ty1 : Core.ty) (ty2 : Core.ty) : (unit, string) result =
+    try Core.unify_tys ty1 ty2; Ok () with
+    | Core.Infinite_type _ -> Error "infinite type"
     | Core.Mismatched_types (_, _) ->
-        error
+        Error
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (Core.pp_ty ty1)
             (Core.pp_ty ty2))
-
-  (** Binds a continuation. This is useful for continuing elaboration after
-      calling {!unify_tys}. *)
-  let ( let@ ) = ( @@ )
 
 
   (** {2 Bidirectional type checking} *)
@@ -191,8 +185,10 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        let@ () = unify_tys ty ty' (check_tm_error ctx tm.loc) in
-        tm'
+        begin match unify_tys ty ty' with
+        | Ok () -> tm'
+        | Error message -> check_tm_error ctx tm.loc message
+        end
 
   (** Elaborate a surface term into a core term, inferring its type. *)
   and infer_tm (ctx : context) (tm : tm) : Core.tm * Core.ty =
@@ -232,9 +228,10 @@ end = struct
         | Meta_var _ as head_ty ->
             let param_ty = fresh_meta ctx head_loc "function parameter type" in
             let body_ty = fresh_meta ctx head_loc "function return type" in
-            let@ () = unify_tys (Fun_type (param_ty, body_ty)) head_ty (synth_tm_error ctx head_loc) in
-            let arg = check_tm ctx arg param_ty in
-            Fun_app (head, arg), body_ty
+            begin match unify_tys (Fun_type (param_ty, body_ty)) head_ty with
+            | Ok () -> let arg = check_tm ctx arg param_ty in Fun_app (head, arg), body_ty
+            | Error message -> synth_tm_error ctx head_loc message
+            end
         | head_ty ->
             synth_tm_error ctx head_loc
               (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
@@ -251,13 +248,11 @@ end = struct
     | Op2 (`Eq, tm0, tm1) ->
         let tm0, ty0 = infer_tm ctx tm0 in
         let tm1, ty1 = infer_tm ctx tm1 in
-        let@ () = unify_tys ty0 ty1 (synth_tm_error ctx tm.loc) in
-        begin match Core.force_ty ty0 with
-        | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
-        | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
-        | ty ->
-            synth_tm_error ctx tm.loc
-              (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
+        begin match unify_tys ty0 ty1, Core.force_ty ty0 with
+        | Ok (), Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
+        | Ok (), Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
+        | Ok (), ty -> synth_tm_error ctx tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
+        | Error message, _ -> synth_tm_error ctx tm.loc message
         end
 
 
@@ -287,12 +282,19 @@ end = struct
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_loc = param_ty.loc in
         let param_ty = check_ty ctx param_ty in
-        let@ () = unify_tys param_ty param_ty' (check_tm_error ctx param_ty_loc) in
-        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
-        Fun_lit (name.data, param_ty, body)
+        begin match unify_tys param_ty param_ty' with
+        | Ok () ->
+            let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
+            Fun_lit (name.data, param_ty, body)
+        | Error message ->
+            check_tm_error ctx param_ty_loc message
+        end
     | (name, _) :: _, Meta_var _ ->
         let body', body_ty' = infer_fun_lit ctx params None body in
-        unify_tys body_ty body_ty' (check_tm_error ctx name.loc) (fun () -> body')
+        begin match unify_tys body_ty body_ty' with
+        | Ok () -> body'
+        | Error message -> check_tm_error ctx name.loc message
+        end
     | (name, _) :: params, body_ty ->
         record_error ctx name.loc "unexpected parameter";
         check_fun_lit ctx params body body_ty
