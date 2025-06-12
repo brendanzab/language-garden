@@ -5,9 +5,8 @@
 ---
 
 This extends [elab-stlc-unification](../elab-stlc-unification) with support for
-reporting multiple errors during type checking. This is important for real-world
-programming language implementations, as we don’t want our type checkers to stop
-on the first error, potentially hiding other errors.
+recovering from errors encountered during type checking. This is important for
+allowing programmers to fix multiple errors before re-checking their program.
 
 <!-- $MDX file=examples/readme.txt -->
 ```
