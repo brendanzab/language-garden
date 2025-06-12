@@ -229,7 +229,7 @@ end = struct
             let param_ty = fresh_meta ctx head_loc "function parameter type" in
             let body_ty = fresh_meta ctx head_loc "function return type" in
             begin match unify_tys (Fun_type (param_ty, body_ty)) head_ty with
-            | Ok () -> let arg = check_tm ctx arg param_ty in Fun_app (head, arg), body_ty
+            | Ok () -> Fun_app (head, check_tm ctx arg param_ty), body_ty
             | Error message -> synth_tm_error ctx head_loc message
             end
         | head_ty ->
@@ -277,16 +277,17 @@ end = struct
     | [], ty ->
         check_tm ctx body ty
     | (name, None) :: params, Fun_type (param_ty, body_ty) ->
-        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
-        Fun_lit (name.data, param_ty, body)
+        Fun_lit (name.data, param_ty,
+          check_fun_lit (extend ctx name.data param_ty) params body body_ty)
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_loc = param_ty.loc in
         let param_ty = check_ty ctx param_ty in
         begin match unify_tys param_ty param_ty' with
         | Ok () ->
-            let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
-            Fun_lit (name.data, param_ty, body)
+            Fun_lit (name.data, param_ty,
+              check_fun_lit (extend ctx name.data param_ty) params body body_ty)
         | Error message ->
+            (* TODO: Check other parameters *)
             check_tm_error ctx param_ty_loc message
         end
     | (name, _) :: _, Meta_var _ ->
