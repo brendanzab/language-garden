@@ -1,4 +1,4 @@
-# Simply typed lambda calculus with unification
+# Elaboration with error recovery
 
 - Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ error recovery)
 
