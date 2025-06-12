@@ -3,14 +3,17 @@
     - {{: https://en.wikipedia.org/wiki/S-expression} S-expression} on Wikipedia
 *)
 
+module Token = struct
 
-module Lexer = struct
-
-  type token =
+  type t =
     | Ident of string
     | Int of int
     | Left_paren
     | Right_paren
+
+end
+
+module Lexer = struct
 
   let is_digit (ch : char) : bool =
     match ch with
@@ -33,9 +36,8 @@ module Lexer = struct
 
   exception Unexpected_char of { found : char }
 
-  let take_while f init_ch input =
-    let buf = Buffer.create 1 in
-    Buffer.add_char buf init_ch;
+  let take_while (f : char -> bool) (input : char Seq.t) : string * char Seq.t =
+    let buf = Buffer.create 16 in
     let rec go input =
       match Seq.uncons input with
       | Some (ch, input) when f ch ->
@@ -46,40 +48,41 @@ module Lexer = struct
     in
     go input
 
-  let[@tail_mod_cons] rec tokens (input : char Seq.t) : token Seq.t =
+  let[@tail_mod_cons] rec tokens (input : char Seq.t) : Token.t Seq.t =
     match Seq.uncons input with
-    | Some (ch, input) ->
-        begin match ch with
-        | '(' -> Seq.cons Left_paren (tokens input)
-        | ')' -> Seq.cons Right_paren (tokens input)
-        | ch when is_digit ch ->
-            let (s, input) = take_while is_digit ch input in
-            Seq.cons (Int (int_of_string s)) (tokens input)
-        | ch when is_ident_start ch ->
-            let (s, input) = take_while is_ident_continue ch input in
-            Seq.cons (Ident s) (tokens input)
-        | ch when is_ascii_whitespace ch -> tokens input
-        | ch -> fun () -> raise (Unexpected_char { found = ch })
-        end
+    | Some ('(', input) -> Seq.cons Token.Left_paren (tokens input)
+    | Some (')', input) -> Seq.cons Token.Right_paren (tokens input)
+    | Some(ch, _) when is_digit ch ->
+        let (s, input) = take_while is_digit input in
+        Seq.cons (Token.Int (int_of_string s)) (tokens input)
+    | Some(ch, _) when is_ident_start ch ->
+        let (s, input) = take_while is_ident_continue input in
+        Seq.cons (Token.Ident s) (tokens input)
+    | Some (ch, input) when is_ascii_whitespace ch -> tokens input
+    | Some (ch, _) -> raise (Unexpected_char { found = ch })
     | None -> Seq.empty
+
+  let tokenise (input : string) : Token.t Seq.t =
+    tokens (String.to_seq input)
 
 end
 
+module Sexpr = struct
+
+  type t =
+    | Ident of string
+    | Int of int
+    | List of t list
+
+end
 
 module Parser = struct
 
-  open Lexer
-
-  exception Unexpected_token of { found : token }
+  exception Unexpected_token of { found : Token.t }
   exception Unexpected_eof
-  exception Unconsumed_tokens of { remaining : token Seq.t }
+  exception Unconsumed_tokens of { remaining : Token.t Seq.t }
 
-  type sexpr =
-    | Ident of string
-    | Int of int
-    | List of sexpr list
-
-  let rec parse_sexpr (tokens : token Seq.t) : sexpr * Lexer.token Seq.t =
+  let rec parse_sexpr (tokens : Token.t Seq.t) : Sexpr.t * Token.t Seq.t =
     match Seq.uncons tokens with
     | Some (Left_paren, tokens) -> parse_list tokens []
     | Some (Ident s, tokens) -> (Ident s, tokens)
@@ -87,7 +90,7 @@ module Parser = struct
     | Some (token, _) -> raise (Unexpected_token { found = token })
     | None -> raise Unexpected_eof
 
-  and parse_list (tokens : token Seq.t) (acc : sexpr list) : sexpr * token Seq.t =
+  and parse_list (tokens : Token.t Seq.t) (acc : Sexpr.t list) : Sexpr.t * Token.t Seq.t =
     match Seq.uncons tokens with
     | Some (Right_paren, tokens) ->
         (List (List.rev acc), tokens)
@@ -95,32 +98,28 @@ module Parser = struct
         let (sexpr, tokens) = parse_sexpr tokens in
         (parse_list [@tailcall]) tokens (sexpr :: acc)
 
-  let parse (tokens : token Seq.t) : sexpr =
+  let parse (tokens : Token.t Seq.t) : Sexpr.t =
     let (sexpr, tokens) = parse_sexpr tokens in
     if Seq.is_empty tokens then sexpr else
       raise (Unconsumed_tokens { remaining = tokens })
 
 end
 
-
 let () = begin
-
-  let tokenise input = String.to_seq input |> Lexer.tokens in
-  let parse input = tokenise input |> Parser.parse in
 
   Printexc.record_backtrace true;
 
   print_string "Running tests ...";
 
-  assert (tokenise "()" |> List.of_seq = [Left_paren; Right_paren]);
-  assert (tokenise "foo" |> List.of_seq = [Ident "foo"]);
+  assert (Lexer.tokenise "()" |> List.of_seq = [Left_paren; Right_paren]);
+  assert (Lexer.tokenise "foo" |> List.of_seq = [Ident "foo"]);
 
-  assert (parse "()" = List []);
-  assert (parse "foo" = Ident "foo");
-  assert (parse "(foo)" = List [Ident "foo"]);
-  assert (parse "(foo bar)" = List [Ident "foo"; Ident "bar"]);
-  assert (parse "(+ 1 2 (* 3 4))" = List [Ident "+"; Int 1; Int 2; List [Ident "*"; Int 3; Int 4]]);
-  assert (parse "(+ (* 1 2) 3 4)" = List [Ident "+"; List [Ident "*"; Int 1; Int 2]; Int 3; Int 4]);
+  assert (Parser.parse (Lexer.tokenise "()") = List []);
+  assert (Parser.parse (Lexer.tokenise "foo") = Ident "foo");
+  assert (Parser.parse (Lexer.tokenise "(foo)") = List [Ident "foo"]);
+  assert (Parser.parse (Lexer.tokenise "(foo bar)") = List [Ident "foo"; Ident "bar"]);
+  assert (Parser.parse (Lexer.tokenise "(+ 1 2 (* 3 4))") = List [Ident "+"; Int 1; Int 2; List [Ident "*"; Int 3; Int 4]]);
+  assert (Parser.parse (Lexer.tokenise "(+ (* 1 2) 3 4)") = List [Ident "+"; List [Ident "*"; Int 1; Int 2]; Int 3; Int 4]);
 
   print_string " ok!\n";
 
