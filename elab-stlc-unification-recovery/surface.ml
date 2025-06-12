@@ -200,9 +200,7 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, ty) -> Var index, ty
-        | None ->
-            record_error ctx tm.loc (Format.asprintf "unbound name `%s`" name);
-            Reported_error, Meta_var (Core.fresh_meta ())
+        | None -> synth_tm_error ctx tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -238,10 +236,9 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | head_ty ->
-            record_error ctx head_loc
+            synth_tm_error ctx head_loc
               (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
-                (Core.pp_ty head_ty));
-            Reported_error, Meta_var (Core.fresh_meta ())
+                (Core.pp_ty head_ty))
         end
 
     | If_then_else (head, tm1, tm2) ->
@@ -259,8 +256,8 @@ end = struct
         | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
         | ty ->
-            record_error ctx tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty));
-            Reported_error, Meta_var (Core.fresh_meta ())
+            synth_tm_error ctx tm.loc
+              (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
         end
 
 
