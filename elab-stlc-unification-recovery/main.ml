@@ -50,18 +50,15 @@ let emit (source : Source_file.t) (severity : string) (error : Surface.Elab.erro
       match i with
       | 0 -> Printf.eprintf "%s = %s\n" gutter_pad line
       | _ -> Printf.eprintf "%s   %s\n" gutter_pad line
-    end
+    end;
   end;
   Printf.eprintf "\n"
 
 let parse_tm (source : Source_file.t) : Surface.tm =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
   let report_fatal message =
-    emit source "error" {
-      loc = Sedlexing.lexing_positions lexbuf;
-      message;
-      details = [];
-    };
+    let loc = Sedlexing.lexing_positions lexbuf in
+    emit source "error" { loc; message; details = [] };
     exit 1
   in
   Sedlexing.set_filename lexbuf source.name;
