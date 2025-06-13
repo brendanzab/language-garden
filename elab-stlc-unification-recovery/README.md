@@ -16,9 +16,8 @@ elaboration.
 ```
 let x : Int := true;
 
-let example-1 : Foo -> Int := 3;
-let example-2 : Int -> Int :=
-  fun (x : Bool) y x => x;
+let example : Foo -> Int :=
+  fun x y => x + z;
 
 x + false
 ```
@@ -36,40 +35,26 @@ error: mismatched types:
 1 │ let x : Int := true;
   │                ^^^^
 error: unbound type `Foo`
-  ┌─ <stdin>:3:16
+  ┌─ <stdin>:3:14
   │
-3 │ let example-1 : Foo -> Int := 3;
-  │                 ^^^
-error: mismatched types:
-  expected: _ -> Int
-  found: Int
-  ┌─ <stdin>:3:30
-  │
-3 │ let example-1 : Foo -> Int := 3;
-  │                               ^
-error: mismatched types:
-  expected: Bool
-  found: Int
-  ┌─ <stdin>:5:11
-  │
-5 │   fun (x : Bool) y x => x;
-  │            ^^^^
+3 │ let example : Foo -> Int :=
+  │               ^^^
 error: unexpected parameter
-  ┌─ <stdin>:5:17
+  ┌─ <stdin>:4:8
   │
-5 │   fun (x : Bool) y x => x;
+4 │   fun x y => x + z;
+  │         ^
+error: unbound name `z`
+  ┌─ <stdin>:4:17
+  │
+4 │   fun x y => x + z;
   │                  ^
-error: unexpected parameter
-  ┌─ <stdin>:5:19
-  │
-5 │   fun (x : Bool) y x => x;
-  │                    ^
 error: mismatched types:
   expected: Int
   found: Bool
-  ┌─ <stdin>:7:4
+  ┌─ <stdin>:6:4
   │
-7 │ x + false
+6 │ x + false
   │     ^^^^^
 ```
 
