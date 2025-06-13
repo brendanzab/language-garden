@@ -2,9 +2,17 @@
 
 Some toy programming language implementations, mostly implemented in OCaml.
 
-These projects are mostly my attempt to understand different techniques and
-approaches to implementing programming languages. Perhaps from these seedlings
-something new and interesting might germinate?
+These projects are mostly my attempt to understand different techniques for
+implementing programming languages, and as a way to share these techniques with
+others.
+
+This is part of my ongoing work at [YesLogic](https://yeslogic.com/)[^fathom],
+but is also deeply rooted in my long-term interest in programming languages as
+tools for thought, and as works of computational world building. Perhaps from
+these seedlings something new and interesting might germinate?
+
+[^fathom]: [yeslogic/fathom](https://github.com/yeslogic/fathom):
+  A declarative data definition language for formally specifying binary data formats.xe
 
 ## The garden path
 
