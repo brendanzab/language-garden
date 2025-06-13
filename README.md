@@ -154,17 +154,16 @@ If you like this repository, you might find these interesting as well:
   Andrej Bauer’s minimnal programming language demonstrations
 - [github:AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/):
   Minimal implementations for dependent type checking and elaboration by Andras Kovacs
+- [github:gallais/potpourri](https://github.com/gallais/potpourri/): G. Allais’ research code
 - [github:mspertus/TAPL](https://github.com/mspertus/TAPL): Updated type system
   implementations from Benjamin Pierce's “Types and Programming Languages”
 - [github:pigworker/Samizdat](https://github.com/pigworker/Samizdat):
   Conor McBride’s programming scrapbook
-- [github:tomprimozic/type-systems](https://github.com/tomprimozic/type-systems)
+- [github:tomprimozic/type-systems](https://github.com/tomprimozic/type-systems):
   Implementations of various type systems in OCaml
 
 Other project gardens:
 
-- [github:cu1ch3n/type-inference-zoo](https://github.com/cu1ch3n/type-inference-zoo)
-  Implementations of various type inference algorithms and interactive playground
 - [github:jake-87/project-garden](https://github.com/jake-87/project-garden/):
   A garden for small projects
 - [github:jakob-schuster/language-scrapyard](https://github.com/jakob-schuster/language-scrapyard):
