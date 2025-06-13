@@ -9,8 +9,8 @@ recovering from errors encountered during type checking. This is important for
 allowing programmers to fix multiple errors before re-checking their program.
 
 To implement error recovery we add `Reported_error` sentinels to types and terms
-in our core language which are inserted whenever we run into errors during
-elaboration.
+in our core language. These are inserted whenever we run into elaboration errors,
+allowing us to continue elaborating other terms.
 
 <!-- $MDX file=examples/readme.txt -->
 ```
