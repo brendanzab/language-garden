@@ -11,7 +11,7 @@ error: unbound type `Foo`
 3 │ let example-1 : Foo -> Int := 3;
   │                 ^^^
 error: mismatched types:
-  expected: ?0 -> Int
+  expected: _ -> Int
   found: Int
   ┌─ <stdin>:3:30
   │

@@ -80,7 +80,12 @@ end = struct
         elaboration is complete. *)
 
     errors : (loc * string) Dynarray.t;
-    (** Error messages recorded during elaboration. *)
+    (** Error messages recorded during elaboration.
+
+        Alternatively we could have decided to store a error handler function,
+        or to use use OCaml’s effects and handlers fir this, but this approach
+        was chosen for its simplicity and directness.
+    *)
   }
 
   (** The empty context *)
@@ -136,11 +141,11 @@ end = struct
 
   (** First, we implement some wrappers around the {!record_error} function.
       These allow us to embed a failing type or term in other terms or types by
-      returning either error sentinels, or metavariables.  *)
+      returning error sentinels.  *)
 
   let check_ty_error (ctx : context) (loc : loc) (message : string) : Core.ty =
     record_error ctx loc message;
-    Meta_var (Core.fresh_meta ())
+    Reported_error
 
   let check_tm_error (ctx : context) (loc : loc) (message : string) : Core.tm =
     record_error ctx loc message;
@@ -148,7 +153,7 @@ end = struct
 
   let synth_tm_error (ctx : context) (loc : loc) (message : string) : Core.tm * Core.ty =
     record_error ctx loc message;
-    Reported_error, Meta_var (Core.fresh_meta ())
+    Reported_error, Reported_error
 
 
   (** Now we implement the main bidirectional typing algorithm *)
@@ -222,6 +227,8 @@ end = struct
         let head, head_ty = infer_tm ctx head in
 
         begin match Core.force_ty head_ty with
+        | Reported_error ->
+            Reported_error, Reported_error
         | Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
@@ -249,6 +256,7 @@ end = struct
         let tm0, ty0 = infer_tm ctx tm0 in
         let tm1, ty1 = infer_tm ctx tm1 in
         begin match unify_tys ty0 ty1, Core.force_ty ty0 with
+        | Ok (), Reported_error -> Reported_error, Reported_error
         | Ok (), Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Ok (), Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
         | Ok (), ty -> synth_tm_error ctx tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
@@ -274,6 +282,8 @@ end = struct
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (body_ty : Core.ty) : Core.tm =
     match params, Core.force_ty body_ty with
+    | _, Reported_error ->
+        Reported_error
     | [], ty ->
         check_tm ctx body ty
     | (name, None) :: params, Fun_type (param_ty, body_ty) ->

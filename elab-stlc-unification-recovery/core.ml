@@ -48,6 +48,7 @@ type ty =
   | Fun_type of ty * ty
   | Int_type
   | Bool_type
+  | Reported_error              (* Error sentinel *)
 
 (** The current state of a metavariable *)
 and meta_state =
@@ -233,11 +234,13 @@ let rec occurs (m : meta) (ty : ty) : unit =
       occurs m body_ty
   | Int_type -> ()
   | Bool_type -> ()
+  | Reported_error -> ()
 
 (** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
 let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
   match force_ty ty1, force_ty ty2 with
+  | Reported_error, _ | _, Reported_error -> ()
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
       occurs m ty;
@@ -268,6 +271,7 @@ let pp_ty : ty -> Format.formatter -> unit =
     | Meta_var m -> pp_meta pp_atomic_ty m ppf
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
+    | Reported_error -> Format.fprintf ppf "_"
     | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
   and pp_meta pp_ty m ppf =
     match !m with
