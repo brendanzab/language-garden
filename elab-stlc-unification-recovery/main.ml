@@ -26,7 +26,8 @@ module Source_file = struct
 
 end
 
-let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc) (message : string) =
+let emit (source : Source_file.t) (severity : string) (error : Surface.Elab.error) =
+  let start, stop = error.loc in
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -39,30 +40,44 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "%s: %s\n" severity message;
+  Printf.eprintf "%s: %s\n" severity error.message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
+  error.details |> List.iter begin fun message ->
+    String.split_on_char '\n' message |> List.iteri begin fun i line ->
+      match i with
+      | 0 -> Printf.eprintf "%s = %s\n" gutter_pad line
+      | _ -> Printf.eprintf "%s   %s\n" gutter_pad line
+    end
+  end;
   Printf.eprintf "\n"
 
 let parse_tm (source : Source_file.t) : Surface.tm =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
-  let lexpos () = Sedlexing.lexing_positions lexbuf in
+  let report_fatal message =
+    emit source "error" {
+      loc = Sedlexing.lexing_positions lexbuf;
+      message;
+      details = [];
+    };
+    exit 1
+  in
   Sedlexing.set_filename lexbuf source.name;
 
   try
     MenhirLib.Convert.Simplified.traditional2revised Parser.main
       (Sedlexing.with_tokenizer Lexer.token lexbuf)
   with
-  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
-  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
+  | Lexer.Error message -> report_fatal message
+  | Parser.Error -> report_fatal "syntax error"
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   match Surface.Elab.infer_tm tm with
   | Ok (tm, ty) -> tm, ty
   | Error errors ->
-      errors |> List.iter (fun (pos, reason) -> emit source "error" pos reason);
+      errors |> List.iter (emit source "error");
       exit 1
 
 

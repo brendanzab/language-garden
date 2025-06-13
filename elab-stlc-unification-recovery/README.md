@@ -27,13 +27,13 @@ x + false
 
 <!-- $MDX file=examples/readme.stderr -->
 ```
-error: mismatched types:
-  expected: Int
-  found: Bool
+error: mismatched types
   ┌─ <stdin>:1:15
   │
 1 │ let x : Int := true;
   │                ^^^^
+  = expected: Int
+       found: Bool
 
 error: unbound type `Foo`
   ┌─ <stdin>:3:14
@@ -53,13 +53,13 @@ error: unbound name `z`
 4 │   fun x y => x + z;
   │                  ^
 
-error: mismatched types:
-  expected: Int
-  found: Bool
+error: mismatched types
   ┌─ <stdin>:6:4
   │
 6 │ x + false
   │     ^^^^^
+  = expected: Int
+       found: Bool
 ```
 
 </details>
