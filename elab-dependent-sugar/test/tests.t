@@ -82,6 +82,7 @@ Name not bound
     │
   1 │ fun (A : Type) (a : A) => foo
     │                           ^^^
+  
   [1]
 
 Function literal body annotations (checking)
@@ -98,6 +99,7 @@ Mismatched function literal parameter (checking)
     │
   1 │ (fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : B) -> A
     │           ^
+  
   [1]
 
 Mismatched function iteral body annotation (checking)
@@ -109,6 +111,7 @@ Mismatched function iteral body annotation (checking)
     │
   1 │ (fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : A) -> B
     │                    ^
+  
   [1]
 
 Too many parameters (checking)
@@ -118,6 +121,7 @@ Too many parameters (checking)
     │
   1 │ (fun A B (a : A) : A => a) : fun (A : Type) (a : A) -> A
     │           ^
+  
   [1]
 
 Function literal body annotations (inferring)
@@ -134,6 +138,7 @@ Mismatched body annotation (inferring)
     │
   1 │ fun (A : Type) (a : A) : A => A
     │                               ^
+  
   [1]
 
 An example of a type error
@@ -151,4 +156,5 @@ An example of a type error
     │
   5 │ true Type : Bool
     │ ^^^^^^^^^
+  
   [1]

@@ -81,6 +81,7 @@ Name not bound
     │
   1 │ (fun A a => foo) : fun (A : Type) -> A -> foo
     │                                           ^^^
+  
   [1]
 
 Too many parameters (checking)
@@ -90,6 +91,7 @@ Too many parameters (checking)
     │
   1 │ (fun A B a => a) : fun (A : Type) (a : A) -> A
     │ ^^^^^^^^^^^^^^^^
+  
   [1]
 
 An example of a type error
@@ -107,4 +109,5 @@ An example of a type error
     │
   5 │ true Type : Bool
     │ ^^^^^^^^^
+  
   [1]

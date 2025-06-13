@@ -167,4 +167,5 @@ Something broken
     │
   2 │ 
     │ ^
+  
   [1]

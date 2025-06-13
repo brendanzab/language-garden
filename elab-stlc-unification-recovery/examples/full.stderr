@@ -5,21 +5,25 @@ error: mismatched types:
   │
 1 │ let x : Int := true;
   │                ^^^^
+
 error: unbound type `Foo`
   ┌─ <stdin>:3:16
   │
 3 │ let example-1 : Foo -> Int :=
   │                 ^^^
+
 error: unexpected parameter
   ┌─ <stdin>:4:8
   │
 4 │   fun x y => x + z;
   │         ^
+
 error: unbound name `z`
   ┌─ <stdin>:4:17
   │
 4 │   fun x y => x + z;
   │                  ^
+
 error: mismatched types:
   expected: Bool
   found: Int
@@ -27,16 +31,19 @@ error: mismatched types:
   │
 7 │   fun (x : Bool) y x => x;
   │            ^^^^
+
 error: unexpected parameter
   ┌─ <stdin>:7:17
   │
 7 │   fun (x : Bool) y x => x;
   │                  ^
+
 error: unexpected parameter
   ┌─ <stdin>:7:19
   │
 7 │   fun (x : Bool) y x => x;
   │                    ^
+
 error: mismatched types:
   expected: Int
   found: Bool
@@ -44,3 +51,4 @@ error: mismatched types:
   │
 9 │ x + false
   │     ^^^^^
+

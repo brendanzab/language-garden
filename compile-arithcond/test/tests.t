@@ -292,6 +292,7 @@ Something broken
     │
   2 │ 
     │ ^
+  
   [1]
 
 Mismatched negation operands
@@ -356,6 +357,7 @@ Unbound variable
     │
   1 │ x
     │ ^
+  
   [1]
 
 Mismatched let definition

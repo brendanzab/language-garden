@@ -23,6 +23,7 @@ Unexpected function literal
     │
   1 │ (fun a => a) : B
     │ ^^^^^^^^^^^^
+  
   [1]
 
 Unexpected function literal
@@ -32,6 +33,7 @@ Unexpected function literal
     │
   1 │ (fun (a : A) => a) : B
     │ ^^^^^^^^^^^^^^^^^^
+  
   [1]
 
 Unexpected parameter type
@@ -41,6 +43,7 @@ Unexpected parameter type
     │
   1 │ (fun (a : A) => a) : B -> B
     │ ^^^^^^^^^^^^^^^^^^
+  
   [1]
 
 Unbound variable
@@ -50,6 +53,7 @@ Unbound variable
     │
   1 │ fun (a : A) => b
     │                ^
+  
   [1]
 
 Type mismatch
@@ -59,6 +63,7 @@ Type mismatch
     │
   1 │ fun (a : A) => a : B
     │                ^
+  
   [1]
 
 Missing parameter annotation
@@ -68,6 +73,7 @@ Missing parameter annotation
     │
   1 │ fun (f : A -> B) => fun a => f a
     │                         ^
+  
   [1]
 
 Mismatched argument
@@ -77,4 +83,5 @@ Mismatched argument
     │
   1 │ fun (f : A -> B) => fun (b : B) => f b
     │                                      ^
+  
   [1]

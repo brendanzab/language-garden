@@ -34,21 +34,25 @@ error: mismatched types:
   │
 1 │ let x : Int := true;
   │                ^^^^
+
 error: unbound type `Foo`
   ┌─ <stdin>:3:14
   │
 3 │ let example : Foo -> Int :=
   │               ^^^
+
 error: unexpected parameter
   ┌─ <stdin>:4:8
   │
 4 │   fun x y => x + z;
   │         ^
+
 error: unbound name `z`
   ┌─ <stdin>:4:17
   │
 4 │   fun x y => x + z;
   │                  ^
+
 error: mismatched types:
   expected: Int
   found: Bool

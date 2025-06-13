@@ -42,6 +42,7 @@ error: expected type, found universe
   │
 1 │ fun (A : Type) (x : A) => x
   │          ^^^^
+
 [1]
 ```
 

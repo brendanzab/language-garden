@@ -67,6 +67,7 @@ Unexpected character
     │
   1 │ 1 % 2
     │   ^
+  
   [1]
 
 Unclosed block comment
@@ -76,6 +77,7 @@ Unclosed block comment
     │
   2 │ 
     │ ^
+  
   [1]
 
 
@@ -89,6 +91,7 @@ Unclosed parenthesis
     │
   2 │ 
     │ ^
+  
   [1]
 
 
@@ -103,6 +106,7 @@ Unbound variable
     │
   1 │ let x := 1; y
     │             ^
+  
   [1]
 
 Mismatched definition type
@@ -114,6 +118,7 @@ Mismatched definition type
     │
   1 │ let x : Bool := 1; x
     │                 ^
+  
   [1]
 
 Mismatched argument
@@ -125,6 +130,7 @@ Mismatched argument
     │
   1 │ let f x := x + 1; f f
     │                     ^
+  
   [1]
 
 Mismatched argument
@@ -136,6 +142,7 @@ Mismatched argument
     │
   1 │ let f (x : Bool) := x; f 1
     │                          ^
+  
   [1]
 
 Unexpected function application
@@ -147,6 +154,7 @@ Unexpected function application
     │
   1 │ true 3
     │ ^^^^
+  
   [1]
 
 Infinite type
@@ -156,6 +164,7 @@ Infinite type
     │
   1 │ fun f => f f
     │            ^
+  
   [1]
 
 Unexpected parameter
@@ -165,6 +174,7 @@ Unexpected parameter
     │
   1 │ (fun x y => x) : Int -> Int
     │        ^
+  
   [1]
 
 Ambiguous parameter type
@@ -174,6 +184,7 @@ Ambiguous parameter type
     │
   1 │ fun x => x
     │     ^
+  
   [1]
 
 Ambiguous return type
@@ -183,11 +194,13 @@ Ambiguous return type
     │
   1 │ fun f x => f x
     │       ^
+  
   error: ambiguous function return type
     ┌─ <stdin>:1:11
     │
   1 │ fun f x => f x
     │            ^
+  
   [1]
 
 Ambiguous placeholder
@@ -197,6 +210,7 @@ Ambiguous placeholder
     │
   1 │ fun (x : _) => x
     │          ^
+  
   [1]
 
 Mismatched if expression branches
@@ -208,6 +222,7 @@ Mismatched if expression branches
     │
   1 │ fun x => if x then true else 3
     │                              ^
+  
   [1]
 
 Mismatched equality
@@ -219,6 +234,7 @@ Mismatched equality
     │
   1 │ 1 = false
     │ ^^^^^^^^^
+  
   [1]
 
 Unsupported equality
@@ -228,4 +244,5 @@ Unsupported equality
     │
   1 │ let f (x : Bool) := x; f = f
     │                        ^^^^^
+  
   [1]

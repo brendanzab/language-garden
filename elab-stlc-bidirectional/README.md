@@ -62,6 +62,7 @@ error: ambiguous parameter type
   │
 1 │ fun x => x + 2
   │     ^
+
 [1]
 ```
 

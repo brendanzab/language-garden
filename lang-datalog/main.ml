@@ -41,7 +41,8 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Lexing.posi
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
-  Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline
+  Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
+  Printf.eprintf "\n"
 
 let parse_program (source : Source_file.t) : Datalog.program =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in

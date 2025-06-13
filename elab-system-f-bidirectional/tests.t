@@ -128,6 +128,7 @@ Unexpected character
     │
   1 │ 1 % 2
     │   ^
+  
   [1]
 
 Unclosed block comment
@@ -137,6 +138,7 @@ Unclosed block comment
     │
   2 │ 
     │ ^
+  
   [1]
 
 
@@ -150,6 +152,7 @@ Unclosed parenthesis
     │
   2 │ 
     │ ^
+  
   [1]
 
 
@@ -164,6 +167,7 @@ Unbound variable
     │
   1 │ let x := 1; y
     │             ^
+  
   [1]
 
 Mismatched definition type
@@ -175,6 +179,7 @@ Mismatched definition type
     │
   1 │ let x : Bool := 1; x
     │                 ^
+  
   [1]
 
 Mismatched argument
@@ -186,6 +191,7 @@ Mismatched argument
     │
   1 │ let f (x : Bool) := x; f 1
     │                          ^
+  
   [1]
 
 Mismatched parameter
@@ -202,6 +208,7 @@ Mismatched parameter
     │
   2 │   fun (x : Int) => x;
     │            ^^^
+  
   [1]
 
 Too many parameters
@@ -216,6 +223,7 @@ Too many parameters
     │
   2 │   fun (x : Bool) (y : Int) => x;
     │                   ^
+  
   [1]
 
 Too many type parameters
@@ -230,6 +238,7 @@ Too many type parameters
     │
   2 │   fun [a] (x : Bool) => x;
     │        ^
+  
   [1]
 
 Ambiguous parameter type
@@ -239,6 +248,7 @@ Ambiguous parameter type
     │
   1 │ fun x => x
     │     ^
+  
   [1]
 
 Ambiguous if expression
@@ -248,6 +258,7 @@ Ambiguous if expression
     │
   1 │ fun (x : Bool) => if x then true else 3
     │                   ^^^^^^^^^^^^^^^^^^^^^
+  
   [1]
 
 Mismatched equality
@@ -259,6 +270,7 @@ Mismatched equality
     │
   1 │ 1 = false
     │ ^^^^^^^^^
+  
   [1]
 
 Unsupported equality
@@ -268,4 +280,5 @@ Unsupported equality
     │
   1 │ let f (x : Bool) := x; f = f
     │                        ^^^^^
+  
   [1]
