@@ -93,12 +93,7 @@ end = struct
         elaboration is complete. *)
 
     errors : error Dynarray.t;
-    (** Error messages recorded during elaboration.
-
-        Alternatively we could have decided to store a error handler function,
-        or to use use OCaml’s effects and handlers fir this, but this approach
-        was chosen for its simplicity and directness.
-    *)
+    (** Error messages recorded during elaboration. *)
   }
 
   (** The empty context *)
