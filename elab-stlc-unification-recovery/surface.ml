@@ -200,6 +200,7 @@ end = struct
     match tm.data with
     | Name name ->
         begin match lookup ctx name with
+        | Some (_, Reported_error) -> Reported_error, Reported_error
         | Some (index, ty) -> Var index, ty
         | None -> synth_tm_error ctx tm.loc (Format.asprintf "unbound name `%s`" name)
         end
@@ -292,14 +293,13 @@ end = struct
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_loc = param_ty.loc in
         let param_ty = check_ty ctx param_ty in
-        begin match unify_tys param_ty param_ty' with
-        | Ok () ->
-            Fun_lit (name.data, param_ty,
-              check_fun_lit (extend ctx name.data param_ty) params body body_ty)
-        | Error message ->
-            (* TODO: Check other parameters *)
-            check_tm_error ctx param_ty_loc message
-        end
+        let param_ty =
+          match unify_tys param_ty param_ty' with
+          | Ok () -> param_ty
+          | Error message -> check_ty_error ctx param_ty_loc message
+        in
+        Fun_lit (name.data, param_ty,
+          check_fun_lit (extend ctx name.data param_ty) params body body_ty)
     | (name, _) :: _, Meta_var _ ->
         let body', body_ty' = infer_fun_lit ctx params None body in
         begin match unify_tys body_ty body_ty' with

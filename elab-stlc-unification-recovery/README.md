@@ -18,7 +18,7 @@ let x : Int := true;
 
 let example-1 : Foo -> Int := 3;
 let example-2 : Int -> Int :=
-  fun x y x => x;
+  fun (x : Bool) y x => x;
 
 x + false
 ```
@@ -47,16 +47,23 @@ error: mismatched types:
   │
 3 │ let example-1 : Foo -> Int := 3;
   │                               ^
-error: unexpected parameter
-  ┌─ <stdin>:5:8
+error: mismatched types:
+  expected: Bool
+  found: Int
+  ┌─ <stdin>:5:11
   │
-5 │   fun x y x => x;
-  │         ^
+5 │   fun (x : Bool) y x => x;
+  │            ^^^^
 error: unexpected parameter
-  ┌─ <stdin>:5:10
+  ┌─ <stdin>:5:17
   │
-5 │   fun x y x => x;
-  │           ^
+5 │   fun (x : Bool) y x => x;
+  │                  ^
+error: unexpected parameter
+  ┌─ <stdin>:5:19
+  │
+5 │   fun (x : Bool) y x => x;
+  │                    ^
 error: mismatched types:
   expected: Int
   found: Bool
