@@ -56,12 +56,12 @@ let emit (source : Source_file.t) (severity : string) (error : Surface.Elab.erro
 
 let parse_tm (source : Source_file.t) : Surface.tm =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
+  Sedlexing.set_filename lexbuf source.name;
   let report_fatal message =
     let loc = Sedlexing.lexing_positions lexbuf in
     emit source "error" { loc; message; details = [] };
     exit 1
   in
-  Sedlexing.set_filename lexbuf source.name;
 
   try
     MenhirLib.Convert.Simplified.traditional2revised Parser.main
