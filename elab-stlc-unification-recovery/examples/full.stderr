@@ -44,11 +44,23 @@ error: unexpected parameter
 7 │   fun (x : Bool) y x => x;
   │                    ^
 
-error: mismatched types
-  ┌─ <stdin>:9:4
+error: unbound type `Foo`
+  ┌─ <stdin>:9:16
   │
-9 │ x + false
-  │     ^^^^^
-  = expected: Int
-       found: Bool
+9 │ let example-3 : Foo :=
+  │                 ^^^
+
+error: unbound name `y`
+   ┌─ <stdin>:10:15
+   │
+10 │   fun x => x + y;
+   │                ^
+
+error: mismatched types
+   ┌─ <stdin>:12:4
+   │
+12 │ x + false
+   │     ^^^^^
+   = expected: Int
+        found: Bool
 

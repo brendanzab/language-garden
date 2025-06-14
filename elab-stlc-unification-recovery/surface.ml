@@ -314,38 +314,50 @@ end = struct
         Prim_app (Int_neg, [tm]), Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
-  and check_fun_lit (ctx : context) (params : param list) (body : tm) (body_ty : Core.ty) : Core.tm =
-    match params, Core.force_ty body_ty with
-    | _, Reported_error ->
-        Reported_error
+  and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
+    match params, Core.force_ty ty with
     | [], ty ->
         check_tm ctx body ty
-    | (name, None) :: params, Fun_type (param_ty, body_ty) ->
-        Fun_lit (name.data, param_ty,
-          check_fun_lit (extend ctx name.data param_ty) params body body_ty)
-    | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
-        let param_ty_loc = param_ty.loc in
-        let param_ty = check_ty ctx param_ty in
+
+    | (name, param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty =
-          match unify_tys param_ty_loc param_ty param_ty' with
-          | Ok () -> param_ty
-          | Error error -> check_ty_error ctx error
+          match param_ty with
+          | None -> param_ty'
+          | Some ({ loc; _ } as param_ty) ->
+              let param_ty = check_ty ctx param_ty in
+              match unify_tys loc param_ty param_ty' with
+              | Ok () -> param_ty
+              | Error error -> check_ty_error ctx error
         in
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body body_ty)
+
+    (* If the expected type is a metavariable, switch to inference mode *)
     | (name, _) :: _, Meta_var _ ->
-        let body', body_ty' = infer_fun_lit ctx params None body in
-        begin match unify_tys name.loc body_ty body_ty' with
-        | Ok () -> body'
+        let tm', ty' = infer_fun_lit ctx params None body in
+        begin match unify_tys name.loc ty ty' with
+        | Ok () -> tm'
         | Error error -> check_tm_error ctx error
         end
-    | (name, _) :: params, body_ty ->
+
+    (* If the expected type comes from a previously reported error, continue
+       checking parameters in a degraded state *)
+    | (name, param_ty) :: params, Reported_error ->
+        let param_ty = match param_ty with
+          | Some ty -> check_ty ctx ty
+          | None -> Reported_error
+        in
+        Fun_lit (name.data, param_ty,
+          check_fun_lit (extend ctx name.data param_ty) params body Reported_error)
+
+    | (name, param_ty) :: params, ty ->
         record_error ctx {
           loc = name.loc;
           message = "unexpected parameter";
           details = [];
         };
-        check_fun_lit ctx params body body_ty
+        param_ty |> Option.iter (fun ty -> ignore (check_ty ctx ty));
+        check_fun_lit ctx params body ty
 
 
   (** Elaborate a function literal, inferring its type. *)

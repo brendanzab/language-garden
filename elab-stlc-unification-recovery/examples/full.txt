@@ -6,4 +6,7 @@ let example-1 : Foo -> Int :=
 let example-2 : Int -> Int :=
   fun (x : Bool) y x => x;
 
+let example-3 : Foo :=
+  fun x => x + y;
+
 x + false
