@@ -218,8 +218,10 @@ end = struct
     match tm.data with
     | Name name ->
         begin match lookup ctx name with
-        | Some (_, Reported_error) -> Reported_error, Reported_error
-        | Some (index, ty) -> Var index, ty
+        | Some (_, Reported_error) ->
+            Reported_error, Reported_error  (* Propagate error sentinels *)
+        | Some (index, ty) ->
+            Var index, ty
         | None ->
             synth_tm_error ctx {
               loc = tm.loc;
@@ -246,13 +248,12 @@ end = struct
     | Bool_lit b ->
         Bool_lit b, Bool_type
 
-    | App (head, arg) ->
-        let head_loc = head.loc in
+    | App ({ loc = head_loc; _ } as head, arg) ->
         let head, head_ty = infer_tm ctx head in
 
         begin match Core.force_ty head_ty with
         | Reported_error ->
-            Reported_error, Reported_error
+            Reported_error, Reported_error    (* Propagate error sentinels *)
         | Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
@@ -285,7 +286,7 @@ end = struct
         let tm0, ty0 = infer_tm ctx tm0 in
         let tm1, ty1 = infer_tm ctx tm1 in
         begin match unify_tys tm.loc ty0 ty1, Core.force_ty ty0 with
-        | Ok (), Reported_error -> Reported_error, Reported_error
+        | Ok (), Reported_error -> Reported_error, Reported_error   (* Propagate error sentinels *)
         | Ok (), Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Ok (), Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
         | Ok (), ty ->
@@ -296,7 +297,6 @@ end = struct
             }
         | Error error, _ -> synth_tm_error ctx error
         end
-
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
         let prim =
