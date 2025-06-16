@@ -1,4 +1,4 @@
-  $ alias executable=stlc-unification-recovery
+  $ alias executable=stlc-bidirectional-recovery
 
 Boolean equality
   $ executable elab <<< "true = false"
@@ -13,16 +13,24 @@ Integer Addition
   #int-add 1 2 : Int
 
 Add two function
-  $ executable elab <<< "fun x => x + 2"
+  $ executable elab <<< "fun (x : Int) => x + 2"
   fun (x : Int) => #int-add x 2 : Int -> Int
 
 Function application
-  $ executable elab <<< "fun x f => f x * x"
+  $ executable elab <<EOF
+  > fun (x : Int) (f : Int -> Int) =>
+  >   f x * x
+  > EOF
   fun (x : Int) => fun (f : Int -> Int) => #int-mul (f x) x :
     Int -> (Int -> Int) -> Int
 
 Function application
-  $ executable elab <<< "let f x := x; f 3"
+  $ executable elab <<EOF
+  > let f : Int -> Int :=
+  >   fun x => x;
+  > 
+  > f 3
+  > EOF
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
@@ -36,25 +44,33 @@ Explicit return type
   let f : Int -> Int := fun (x : Int) => x;
   f 3 : Int
 
-Unused parameter
-  $ executable elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
-  let f : Int -> Int -> Int := fun (x : Int) => fun (_ : Int) => x;
-  f 3 : Int -> Int
-
-Placeholder types
-  $ executable elab <<< "let f (x : _) : _ := x; f 3"
-  let f : Int -> Int := fun (x : Int) => x;
-  f 3 : Int
-
-Placeholder return type
-  $ executable elab <<< "let f : Int -> _ := fun x y => x; f 3 true"
-  let f : Int -> Bool -> Int := fun (x : Int) => fun (y : Bool) => x;
-  f 3 true : Int
+Check let body type
+  $ executable elab <<EOF
+  > let f (x : Int) : Int -> Int :=
+  >   let id (x : Int) : Int := x;
+  >   let incr (x : Int) : Int := x + 1;
+  > 
+  >   if x = 0 then id else incr;
+  > 
+  > f 4 3
+  > EOF
+  let f : Int -> Int -> Int :=
+    fun (x : Int) =>
+      let id : Int -> Int := fun (x : Int) => x;
+      let incr : Int -> Int := fun (x : Int) => #int-add x 1;
+      if #int-eq x 0 then id else incr;
+  f 4 3 : Int
 
 If expressions
-  $ executable elab <<< "fun x y => if x = 0 then y else 3"
-  fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3 :
-    Int -> Int -> Int
+  $ executable elab <<EOF
+  > let f (x : Int) (y : Int) : Int :=
+  >   if x = 0 then y else 3;
+  > 
+  > f 4
+  > EOF
+  let f : Int -> Int -> Int :=
+    fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3;
+  f 4 : Int -> Int
 
 
 Lexer Errors
@@ -122,18 +138,6 @@ Mismatched definition type
   [1]
 
 Mismatched argument
-  $ executable elab <<< "let f x := x + 1; f f"
-  error: mismatched types
-    ┌─ <stdin>:1:20
-    │
-  1 │ let f x := x + 1; f f
-    │                     ^
-    = expected: Int
-         found: Int -> Int
-  
-  [1]
-
-Mismatched argument
   $ executable elab <<< "let f (x : Bool) := x; f 1"
   error: mismatched types
     ┌─ <stdin>:1:25
@@ -145,41 +149,41 @@ Mismatched argument
   
   [1]
 
-Unexpected function application
-  $ executable elab <<< "true 3"
+Mismatched parameter
+  $ executable elab <<EOF
+  > let f : Bool -> Bool :=
+  >   fun (x : Int) => x;
+  > 
+  > f true
+  > EOF
   error: mismatched types
-    ┌─ <stdin>:1:0
+    ┌─ <stdin>:2:11
     │
-  1 │ true 3
-    │ ^^^^
-    = expected: function
+  2 │   fun (x : Int) => x;
+    │            ^^^
+    = expected: Int
          found: Bool
   
   [1]
 
-Infinite type
-  $ executable elab <<< "fun f => f f"
-  error: infinite type
-    ┌─ <stdin>:1:11
-    │
-  1 │ fun f => f f
-    │            ^
-  
-  [1]
-
-Unexpected parameter
-  $ executable elab <<< "(fun x y => x) : Int -> Int"
+Too many parameters
+  $ executable elab <<EOF
+  > let f : Bool -> Bool :=
+  >   fun (x : Bool) (y : Int) => x;
+  > 
+  > f true
+  > EOF
   error: unexpected parameter
-    ┌─ <stdin>:1:7
+    ┌─ <stdin>:2:18
     │
-  1 │ (fun x y => x) : Int -> Int
-    │        ^
+  2 │   fun (x : Bool) (y : Int) => x;
+    │                   ^
   
   [1]
 
 Ambiguous parameter type
   $ executable elab <<< "fun x => x"
-  error: ambiguous function parameter type
+  error: ambiguous parameter type
     ┌─ <stdin>:1:4
     │
   1 │ fun x => x
@@ -187,41 +191,13 @@ Ambiguous parameter type
   
   [1]
 
-Ambiguous return type
-  $ executable elab <<< "fun f x => f x"
-  error: ambiguous function parameter type
-    ┌─ <stdin>:1:6
+Ambiguous if expression
+  $ executable elab <<< "fun (x : Bool) => if x then true else 3"
+  error: ambiguous if expression
+    ┌─ <stdin>:1:18
     │
-  1 │ fun f x => f x
-    │       ^
-  
-  error: ambiguous function return type
-    ┌─ <stdin>:1:11
-    │
-  1 │ fun f x => f x
-    │            ^
-  
-  [1]
-
-Ambiguous placeholder
-  $ executable elab <<< "fun (x : _) => x"
-  error: ambiguous placeholder
-    ┌─ <stdin>:1:9
-    │
-  1 │ fun (x : _) => x
-    │          ^
-  
-  [1]
-
-Mismatched if expression branches
-  $ executable elab <<< "fun x => if x then true else 3"
-  error: mismatched types
-    ┌─ <stdin>:1:29
-    │
-  1 │ fun x => if x then true else 3
-    │                              ^
-    = expected: Bool
-         found: Int
+  1 │ fun (x : Bool) => if x then true else 3
+    │                   ^^^^^^^^^^^^^^^^^^^^^
   
   [1]
 

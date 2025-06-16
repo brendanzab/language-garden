@@ -1,0 +1,21 @@
+(executable
+  (name main)
+  (public_name stlc-bidirectional-recovery)
+  (package elab-stlc-bidirectional-recovery)
+  (preprocess
+    (pps sedlex.ppx))
+  (libraries
+    cmdliner
+    menhirLib))
+
+(menhir
+  (modules parser)
+  (flags --explain --strict))
+
+(mdx
+  (package elab-stlc-bidirectional-recovery)
+  (deps %{bin:stlc-bidirectional-recovery}))
+
+(cram
+  (package elab-stlc-bidirectional-recovery)
+  (deps %{bin:stlc-bidirectional-recovery}))

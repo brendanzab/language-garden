@@ -1,5 +1,5 @@
-let bin = "stlc-unification-recovery"
-let package = "elab-stlc-unification-recovery"
+let bin = "stlc-bidirectional-recovery"
+let package = "elab-stlc-bidirectional-recovery"
 
 let generate_rules base =
   Printf.printf
