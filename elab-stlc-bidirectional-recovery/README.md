@@ -1,10 +1,10 @@
 # Elaboration with error recovery
 
-- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ error recovery)
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ error recovery)
 
 ---
 
-This extends [elab-stlc-unification](../elab-stlc-unification) with support for
+This extends [elab-stlc-bidirectional](../elab-stlc-bidirectional) with support for
 recovering from errors encountered during type checking. This is important for
 allowing programmers to fix multiple errors before re-checking their program.
 
@@ -72,7 +72,7 @@ error: mismatched types
 | [`Lexer`]     | Lexer for the surface language          |
 | [`Parser`]    | Parser for the surface language         |
 | [`Surface`]   | Surface language, including elaboration |
-| [`Core`]      | Core language, including normalisation, unification, and pretty printing |
+| [`Core`]      | Core language, including normalisation, and pretty printing |
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./main.ml

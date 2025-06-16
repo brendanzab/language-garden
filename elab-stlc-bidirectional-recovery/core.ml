@@ -4,7 +4,7 @@
 
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
-type name = string option
+type name = string
 
 
 (** {1 Nameless binding structure} *)
@@ -39,27 +39,12 @@ type 'a env = 'a list
 
 (** {1 Syntax} *)
 
-(** Identifier used for pretty printing metavariables. *)
-type meta_id = int
-
 (** Type syntax *)
 type ty =
-  | Meta_var of meta
   | Fun_type of ty * ty
   | Int_type
   | Bool_type
   | Reported_error              (* Error sentinel *)
-
-(** The current state of a metavariable *)
-and meta_state =
-  | Solved of ty
-  | Unsolved of meta_id
-
-(** Mutable representation of metavariables. These are updated in-place during
-    unification and when types are forced. Alternatively we could have
-    chosen to store these in a separate metacontext, like in the
-    elaboration-zoo. *)
-and meta = meta_state ref
 
 (** Term syntax *)
 type tm =
@@ -71,7 +56,7 @@ type tm =
   | Bool_lit of bool
   | Bool_elim of tm * tm * tm
   | Prim_app of Prim.t * tm list
-  | Reported_error                  (* Error sentinel *)
+  | Reported_error              (* Error sentinel *)
 
 
 module Semantics = struct
@@ -81,9 +66,9 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
+    | Fun_lit of name * ty * (vtm -> vtm)
     | Int_lit of int
     | Bool_lit of bool
-    | Fun_lit of name * ty * (vtm -> vtm)
 
   (** Neutral values that could not be reduced to a normal form as a result of
       being stuck on something else that would not reduce further.
@@ -94,21 +79,21 @@ module Semantics = struct
   *)
   and ntm =
     | Var of level                  (* A fresh variable (used when evaluating under a binder) *)
-    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
     | Fun_app of ntm * vtm
+    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
     | Prim_app of Prim.t * vtm list
     | Reported_error                (* Error sentinel *)
 
 
   (** {1 Eliminators} *)
 
-  let fun_app head arg =
+  let fun_app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu ntm -> Neu (Fun_app (ntm, arg))
     | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim head vtm1 vtm2 =
+  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
     match head with
     | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
     | Bool_lit true -> vtm1 ()
@@ -195,71 +180,11 @@ module Semantics = struct
 end
 
 
-(** {1 Functions related to metavariables} *)
-
-(** Create a fresh, unsolved metavariable *)
-let fresh_meta : unit -> meta =
-  let next_id = ref 0 in
-  fun () ->
-    let id = !next_id in
-    incr next_id;
-    ref (Unsolved id)
-
-(** Force any solved metavariables on the outermost part of a type. Chains of
-    metavariables will be collapsed to make forcing faster in the future. This
-    is sometimes referred to as {i path compression}. *)
-let rec force_ty (ty : ty) : ty =
-  match ty with
-  | Meta_var ({ contents = Solved ty } as m) ->
-      let ty = force_ty ty in
-      m := Solved ty;
-      ty
-  | ty -> ty
-
-
-(** {1 Unification} *)
-
-exception Infinite_type of meta
-exception Mismatched_types of ty * ty
-
-(** Occurs check. This guards against self-referential unification problems
-    that would result in infinite loops during unification. *)
-let rec occurs (m : meta) (ty : ty) : unit =
-  match force_ty ty with
-  | Meta_var m' ->
-      if m == m' then
-        raise (Infinite_type m)
-  | Fun_type (param_ty, body_ty) ->
-      occurs m param_ty;
-      occurs m body_ty
-  | Int_type -> ()
-  | Bool_type -> ()
-  | Reported_error -> ()
-
-(** Check if two types are the same, updating unsolved metavariables in one
-    type with known information from the other type if possible. *)
-let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
-  match force_ty ty1, force_ty ty2 with
-  | Reported_error, _ | _, Reported_error -> ()
-  | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
-  | Meta_var m, ty | ty, Meta_var m ->
-      occurs m ty;
-      m := Solved ty
-  | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
-      unify_tys param_ty1 param_ty2;
-      unify_tys body_ty1 body_ty2
-  | Int_type, Int_type -> ()
-  | Bool_type, Bool_type -> ()
-  | ty1, ty2 ->
-      raise (Mismatched_types (ty1, ty2))
-
-
 (** {1 Pretty printing} *)
 
 let pp_ty : ty -> Format.formatter -> unit =
   let rec pp_ty ty ppf =
     match ty with
-    | Meta_var m -> pp_meta pp_ty m ppf
     | Fun_type (param_ty, body_ty) ->
         Format.fprintf ppf "%t -> %t"
           (pp_atomic_ty param_ty)
@@ -268,28 +193,18 @@ let pp_ty : ty -> Format.formatter -> unit =
         pp_atomic_ty ty ppf
   and pp_atomic_ty ty ppf =
     match ty with
-    | Meta_var m -> pp_meta pp_atomic_ty m ppf
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
     | Reported_error -> Format.fprintf ppf "_"
     | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
-  and pp_meta pp_ty m ppf =
-    match !m with
-    | Solved ty -> pp_ty ty ppf
-    | Unsolved id -> Format.fprintf ppf "?%i" id
   in
   pp_ty
 
-let pp_name (name : name) (ppf : Format.formatter) : unit =
-  match name with
-  | Some name -> Format.pp_print_string ppf name
-  | None -> Format.pp_print_string ppf "_"
-
 let pp_name_ann (name : name) (ty : ty) (ppf : Format.formatter) : unit =
-  Format.fprintf ppf "@[<2>@[%t :@]@ %t@]" (pp_name name) (pp_ty ty)
+  Format.fprintf ppf "@[<2>@[%s :@]@ %t@]" name (pp_ty ty)
 
 let pp_param (name : name) (ty : ty) (ppf : Format.formatter) : unit =
-  Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]" (pp_name name) (pp_ty ty)
+  Format.fprintf ppf "@[<2>(@[%s :@]@ %t)@]" name (pp_ty ty)
 
 let pp_tm : name env -> tm -> Format.formatter -> unit =
   let rec pp_tm names tm ppf =
@@ -340,7 +255,7 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
         pp_atomic_tm names tm ppf
   and pp_atomic_tm names tm ppf =
     match tm with
-    | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
+    | Var index -> Format.fprintf ppf "%s" (List.nth names index)
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"

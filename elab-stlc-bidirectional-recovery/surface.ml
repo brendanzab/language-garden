@@ -24,10 +24,9 @@ type ty =
 and ty_data =
   | Name of string
   | Fun_type of ty * ty
-  | Placeholder
 
 (** Names that bind definitions or parameters *)
-type binder = string option located
+type binder = string located
 
 (** Terms in the surface language *)
 type tm =
@@ -38,8 +37,8 @@ and tm_data =
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
   | Fun_lit of param list * tm
-  | Int_lit of int
   | Bool_lit of bool
+  | Int_lit of int
   | App of tm * tm
   | If_then_else of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
@@ -89,27 +88,21 @@ end = struct
 
   (** The elaboration context *)
   type context = {
-    tys : (string option * Core.ty) Core.env;
+    tys : (string * Core.ty) Core.env;
     (** A stack of bindings currently in scope *)
 
-    metas : (loc * string * Core.meta) Dynarray.t;
-    (** A list of the metavariables that have been inserted during elaboration.
-        This will be used to generate a list of unsolved metavariables once
-        elaboration is complete. *)
-
     errors : error Dynarray.t;
-    (** Errors recorded during elaboration. *)
+    (** Error messages recorded during elaboration. *)
   }
 
   (** The empty context *)
   let empty () : context = {
     tys = [];
-    metas = Dynarray.create ();
     errors = Dynarray.create ();
   }
 
   (** Extend the context with a new binding *)
-  let extend (ctx : context) (name : string option) (ty : Core.ty) : context = {
+  let extend (ctx : context) (name : string) (ty : Core.ty) : context = {
     ctx with
     tys = (name, ty) :: ctx.tys;
   }
@@ -117,25 +110,19 @@ end = struct
   (** Lookup a name in the context *)
   let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
     ctx.tys |> List.find_mapi @@ fun index (name', ty) ->
-      match Some name = name' with
+      match name = name' with
       | true -> Some (index, ty)
       | false -> None
-
-  (** Generate a fresh metavariable *)
-  let fresh_meta (ctx : context) (loc: loc) (info : string) : Core.ty =
-    let m = Core.fresh_meta () in
-    Dynarray.add_last ctx.metas (loc, info, m);
-    Meta_var m
 
   (** Record an error in the elaboration context *)
   let report (ctx : context) (error : error) =
     Dynarray.add_last ctx.errors error
 
-  let unify_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, error) result =
-    try Core.unify_tys ty1 ty2; Ok () with
-    | Core.Infinite_type _ ->
-        Error (error loc "infinite type")
-    | Core.Mismatched_types (_, _) ->
+  let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, error) result =
+    match ty1, ty2 with
+    | Reported_error, _ | _, Reported_error -> Ok ()
+    | ty1, ty2 when ty1 = ty2 -> Ok ()
+    | ty1, ty2 ->
         Error {
           (error loc "mismatched types") with
           details = [
@@ -166,8 +153,6 @@ end = struct
         Reported_error
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ctx ty1, check_ty ctx ty2)
-    | Placeholder ->
-        fresh_meta ctx ty.loc "placeholder"
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
@@ -189,7 +174,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        begin match unify_tys tm.loc ty ty' with
+        begin match equate_ty tm.loc ty ty' with
         | Ok () -> tm'
         | Error error ->
             report ctx error;
@@ -201,8 +186,7 @@ end = struct
     match tm.data with
     | Name name ->
         begin match lookup ctx name with
-        | Some (index, ty) ->
-            Var index, ty
+        | Some (index, ty) -> Var index, ty
         | None ->
             report ctx (error tm.loc (Format.asprintf "unbound name `%s`" name));
             Reported_error, Reported_error
@@ -220,30 +204,20 @@ end = struct
     | Fun_lit (params, body) ->
         infer_fun_lit ctx params None body
 
-    | Int_lit i ->
-        Int_lit i, Int_type
-
     | Bool_lit b ->
         Bool_lit b, Bool_type
 
+    | Int_lit i ->
+        Int_lit i, Int_type
+
     | App ({ loc = head_loc; _ } as head, arg) ->
         let head, head_ty = infer_tm ctx head in
-
-        begin match Core.force_ty head_ty with
+        begin match head_ty with
         | Reported_error ->
             Reported_error, Reported_error
         | Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
-        | Meta_var _ as head_ty ->
-            let param_ty = fresh_meta ctx head_loc "function parameter type" in
-            let body_ty = fresh_meta ctx head_loc "function return type" in
-            begin match unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty with
-            | Ok () -> Fun_app (head, check_tm ctx arg param_ty), body_ty
-            | Error error ->
-                report ctx error;
-                Reported_error, Reported_error
-            end
         | head_ty ->
             report ctx {
               (error head_loc "mismatched types") with
@@ -255,17 +229,14 @@ end = struct
             Reported_error, Reported_error
         end
 
-    | If_then_else (head, tm1, tm2) ->
-        let head = check_tm ctx head Bool_type in
-        let ty = fresh_meta ctx tm.loc "if expression branches" in
-        let tm1 = check_tm ctx tm1 ty in
-        let tm2 = check_tm ctx tm2 ty in
-        Bool_elim (head, tm1, tm2), ty
+    | If_then_else (_, _, _) ->
+        report ctx (error tm.loc "ambiguous if expression");
+        Reported_error, Reported_error
 
     | Op2 (`Eq, tm0, tm1) ->
         let tm0, ty0 = infer_tm ctx tm0 in
         let tm1, ty1 = infer_tm ctx tm1 in
-        begin match unify_tys tm.loc ty0 ty1, Core.force_ty ty0 with
+        begin match equate_ty tm.loc ty0 ty1, ty0 with
         | Ok (), Reported_error -> Reported_error, Reported_error
         | Ok (), Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Ok (), Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
@@ -294,7 +265,7 @@ end = struct
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
-    match params, Core.force_ty ty with
+    match params, ty with
     | [], ty ->
         check_tm ctx body ty
 
@@ -304,7 +275,7 @@ end = struct
           | None -> param_ty'
           | Some ({ loc; _ } as param_ty) ->
               let param_ty = check_ty ctx param_ty in
-              match unify_tys loc param_ty param_ty' with
+              match equate_ty loc param_ty param_ty' with
               | Ok () -> param_ty
               | Error error ->
                   report ctx error;
@@ -312,16 +283,6 @@ end = struct
         in
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body body_ty)
-
-    (* If the expected type is a metavariable, switch to inference mode *)
-    | (name, _) :: _, Meta_var _ ->
-        let tm', ty' = infer_fun_lit ctx params None body in
-        begin match unify_tys name.loc ty ty' with
-        | Ok () -> tm'
-        | Error error ->
-            report ctx error;
-            Reported_error
-        end
 
     (* If the expected type comes from a previously reported error, continue
        checking parameters in a degraded state *)
@@ -338,8 +299,7 @@ end = struct
         param_ty |> Option.iter (fun ty -> ignore (check_ty ctx ty));
         check_fun_lit ctx params body ty
 
-
-  (** Elaborate a function literal, inferring its type. *)
+  (** Elaborate a function literal into a core term, inferring its type. *)
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
     match params, body_ty with
     | [], Some body_ty ->
@@ -348,9 +308,12 @@ end = struct
     | [], None ->
         infer_tm ctx body
     | (name, param_ty) :: params, body_ty ->
-        let param_ty = match param_ty with
-          | None -> fresh_meta ctx name.loc "function parameter type"
+        let param_ty =
+          match param_ty with
           | Some ty -> check_ty ctx ty
+          | None ->
+              report ctx (error name.loc "ambiguous parameter type");
+              Reported_error
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
@@ -361,18 +324,6 @@ end = struct
   let run_elab (type a) (prog : context -> a) : (a, error list) result =
     let ctx = empty () in
     let result = prog ctx in
-
-    (* Only record ambiguity errors if no other errors have been seen during
-        elaboration. This ensures that we don’t report ambiguities errors about
-        erroneous code. *)
-    if Dynarray.is_empty ctx.errors then begin
-      ctx.metas |> Dynarray.iter begin fun (loc, info, m) ->
-        match !m with
-        | Core.Unsolved _ ->
-            report ctx (error loc (Format.asprintf "ambiguous %s" info))
-        | Core.Solved _ -> ()
-      end;
-    end;
 
     match Dynarray.to_list ctx.errors with
     | [] -> Ok result
