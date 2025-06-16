@@ -73,11 +73,16 @@ module Elab : sig
 
 end = struct
 
+  (** {2 Elaboration errors} *)
+
   type error = {
     loc : loc;
     message : string;
     details : string list;
   }
+
+  let error (loc : loc) (message : string) : error =
+    { loc; message; details = [] }
 
 
   (** {2 Elaboration context} *)
@@ -93,7 +98,7 @@ end = struct
         elaboration is complete. *)
 
     errors : error Dynarray.t;
-    (** Error messages recorded during elaboration. *)
+    (** Errors recorded during elaboration. *)
   }
 
   (** The empty context *)
@@ -122,18 +127,17 @@ end = struct
     Dynarray.add_last ctx.metas (loc, info, m);
     Meta_var m
 
-  (** Record and error in the elaboration context *)
-  let record_error (ctx : context) (error : error) =
+  (** Record an error in the elaboration context *)
+  let report (ctx : context) (error : error) =
     Dynarray.add_last ctx.errors error
 
   let unify_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, error) result =
     try Core.unify_tys ty1 ty2; Ok () with
     | Core.Infinite_type _ ->
-        Error { loc; message = "infinite type"; details = [] }
+        Error (error loc "infinite type")
     | Core.Mismatched_types (_, _) ->
         Error {
-          loc;
-          message = "mismatched types";
+          (error loc "mismatched types") with
           details = [
             Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
               (Core.pp_ty ty1)
@@ -152,37 +156,14 @@ end = struct
       while maintaining decidability by allowing the programmer to supply
       annotations where necessary. *)
 
-
-  (** First, we implement some wrappers around the {!record_error} function.
-      These allow us to embed a failing type or term in other terms or types by
-      returning error sentinels.  *)
-
-  let check_ty_error (ctx : context) (error : error) : Core.ty =
-    record_error ctx error;
-    Reported_error
-
-  let check_tm_error (ctx : context) (error : error) : Core.tm =
-    record_error ctx error;
-    Reported_error
-
-  let synth_tm_error (ctx : context) (error : error) : Core.tm * Core.ty =
-    record_error ctx error;
-    Reported_error, Reported_error
-
-
-  (** Now we implement the main bidirectional typing algorithm *)
-
   (** Elaborate a type, checking that it is well-formed. *)
   let rec check_ty (ctx : context) (ty : ty) : Core.ty =
     match ty.data with
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
     | Name name ->
-        check_ty_error ctx {
-          loc = ty.loc;
-          message = Format.asprintf "unbound type `%s`" name;
-          details = [];
-        }
+        report ctx (error ty.loc (Format.asprintf "unbound type `%s`" name));
+        Reported_error
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ctx ty1, check_ty ctx ty2)
     | Placeholder ->
@@ -210,7 +191,9 @@ end = struct
         let tm', ty' = infer_tm ctx tm in
         begin match unify_tys tm.loc ty ty' with
         | Ok () -> tm'
-        | Error error -> check_tm_error ctx error
+        | Error error ->
+            report ctx error;
+            Reported_error
         end
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -221,11 +204,8 @@ end = struct
         | Some (index, ty) ->
             Var index, ty
         | None ->
-            synth_tm_error ctx {
-              loc = tm.loc;
-              message = Format.asprintf "unbound name `%s`" name;
-              details = [];
-            }
+            report ctx (error tm.loc (Format.asprintf "unbound name `%s`" name));
+            Reported_error, Reported_error
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -260,17 +240,19 @@ end = struct
             let body_ty = fresh_meta ctx head_loc "function return type" in
             begin match unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty with
             | Ok () -> Fun_app (head, check_tm ctx arg param_ty), body_ty
-            | Error error -> synth_tm_error ctx error
+            | Error error ->
+                report ctx error;
+                Reported_error, Reported_error
             end
         | head_ty ->
-            synth_tm_error ctx {
-              loc = head_loc;
-              message = "mismatched types";
+            report ctx {
+              (error head_loc "mismatched types") with
               details = [
                 Format.asprintf "@[<v>@[expected: function@]@ @[   found: %t@]@]"
                   (Core.pp_ty head_ty);
               ];
-            }
+            };
+            Reported_error, Reported_error
         end
 
     | If_then_else (head, tm1, tm2) ->
@@ -288,12 +270,11 @@ end = struct
         | Ok (), Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
         | Ok (), Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
         | Ok (), ty ->
-            synth_tm_error ctx {
-              loc = tm.loc;
-              message = Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty);
-              details = [];
-            }
-        | Error error, _ -> synth_tm_error ctx error
+            report ctx (error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty)));
+            Reported_error, Reported_error
+        | Error error, _ ->
+            report ctx error;
+            Reported_error, Reported_error
         end
 
     | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
@@ -325,7 +306,9 @@ end = struct
               let param_ty = check_ty ctx param_ty in
               match unify_tys loc param_ty param_ty' with
               | Ok () -> param_ty
-              | Error error -> check_ty_error ctx error
+              | Error error ->
+                  report ctx error;
+                  Reported_error
         in
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body body_ty)
@@ -335,7 +318,9 @@ end = struct
         let tm', ty' = infer_fun_lit ctx params None body in
         begin match unify_tys name.loc ty ty' with
         | Ok () -> tm'
-        | Error error -> check_tm_error ctx error
+        | Error error ->
+            report ctx error;
+            Reported_error
         end
 
     (* If the expected type comes from a previously reported error, continue
@@ -349,11 +334,7 @@ end = struct
           check_fun_lit (extend ctx name.data param_ty) params body Reported_error)
 
     | (name, param_ty) :: params, ty ->
-        record_error ctx {
-          loc = name.loc;
-          message = "unexpected parameter";
-          details = [];
-        };
+        report ctx (error name.loc "unexpected parameter");
         param_ty |> Option.iter (fun ty -> ignore (check_ty ctx ty));
         check_fun_lit ctx params body ty
 
@@ -388,11 +369,7 @@ end = struct
       ctx.metas |> Dynarray.iter begin fun (loc, info, m) ->
         match !m with
         | Core.Unsolved _ ->
-            record_error ctx {
-              loc;
-              message = "ambiguous " ^ info;
-              details = [];
-            }
+            report ctx (error loc (Format.asprintf "ambiguous %s" info))
         | Core.Solved _ -> ()
       end;
     end;
