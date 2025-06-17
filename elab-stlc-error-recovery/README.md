@@ -64,6 +64,15 @@ error: mismatched types
 
 </details>
 
+## Limitations and future work
+
+This approach was inspired by [`rustc`’s error recovery](https://rustc-dev-guide.rust-lang.org/ty.html#type-errors),
+and seems to work well enough in the testing I’ve done. That said, it’s an
+engineering-driven solution, and it might be worth exploring [Hazel’s error recovery](https://doi.org/10.1145/3632910)
+in the future, which seems to be more carefully considered from a formal perspective.
+This would become more important in the future if we allowed programmers to run
+partially broken code, e.g. in a similar way to GHC’s [deferred type errors](https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/defer_type_errors.html).
+
 ## Project overview
 
 | Module        | Description                             |
