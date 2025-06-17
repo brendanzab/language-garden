@@ -29,7 +29,7 @@ Simply typed:
 - [**elab-stlc-bidirectional**](./elab-stlc-bidirectional):
   An elaborator for a simply typed lambda calculus that uses bidirectional
   typing to allow some type annotations to be omitted.
-- [**elab-stlc-bidirectional-recovery**](./elab-stlc-bidirectional-recovery):
+- [**elab-stlc-error-recovery**](./elab-stlc-error-recovery):
   An elaborator for a simply typed lambda calculus with support for reporting
   multiple errors during type checking.
 - [**elab-stlc-bidirectional-stratify**](./elab-stlc-bidirectional):

@@ -37,7 +37,7 @@ digraph garden {
     "elab-stlc-abstract";
     "elab-stlc-row-unification";
     "elab-stlc-letrec-unification";
-    "elab-stlc-bidirectional-recovery";
+    "elab-stlc-error-recovery";
   }
 
   subgraph compile {
@@ -61,7 +61,7 @@ digraph garden {
     "lang-lc-interpreters";
   }
 
-  "elab-stlc-bidirectional" -> "elab-stlc-bidirectional-recovery";
+  "elab-stlc-bidirectional" -> "elab-stlc-error-recovery";
   "elab-stlc-bidirectional" -> "elab-stlc-bidirectional-stratify";
   "elab-stlc-bidirectional" -> "elab-stlc-unification";
   "elab-stlc-bidirectional" -> "elab-stlc-abstract";

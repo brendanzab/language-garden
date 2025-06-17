@@ -1,4 +1,4 @@
-  $ alias executable=stlc-bidirectional-recovery
+  $ alias executable=stlc-error-recovery
 
 Boolean equality
   $ executable elab <<< "true = false"
