@@ -292,6 +292,8 @@ end = struct
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body Reported_error)
 
+    (* If we see an unexpected parameter, we check the parameter type regardless
+       and continue checking the body of the function. *)
     | (name, param_ty) :: params, ty ->
         report ctx (error name.loc "unexpected parameter");
         param_ty |> Option.iter (fun ty -> ignore (check_ty ctx ty));
