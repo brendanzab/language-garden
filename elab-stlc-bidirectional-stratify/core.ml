@@ -84,13 +84,13 @@ module Semantics = struct
 
   (** {1 Eliminators} *)
 
-  let fun_app head arg =
+  let fun_app (head : vexpr) (arg : vexpr) : vexpr =
     match head with
     | Neu nexpr -> Neu (Fun_app (nexpr, arg))
     | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim head vexpr1 vexpr2 =
+  let bool_elim (head : vexpr) (vexpr1 : unit -> vexpr) (vexpr2 : unit -> vexpr) : vexpr =
     match head with
     | Neu nexpr -> Neu (Bool_elim (nexpr, vexpr1, vexpr2))
     | Bool_lit true -> vexpr1 ()
