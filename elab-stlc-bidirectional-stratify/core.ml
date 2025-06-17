@@ -90,11 +90,11 @@ module Semantics = struct
     | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim head vexpr0 vexpr1 =
+  let bool_elim head vexpr1 vexpr2 =
     match head with
-    | Neu nexpr -> Neu (Bool_elim (nexpr, vexpr0, vexpr1))
-    | Bool_lit true -> vexpr0 ()
-    | Bool_lit false -> vexpr1 ()
+    | Neu nexpr -> Neu (Bool_elim (nexpr, vexpr1, vexpr2))
+    | Bool_lit true -> vexpr1 ()
+    | Bool_lit false -> vexpr2 ()
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vexpr list -> vexpr =
@@ -128,11 +128,11 @@ module Semantics = struct
         fun_app head arg
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, e0, e1) ->
+    | Bool_elim (head, e1, e2) ->
         let head = eval env head in
-        let ve0 () = eval env e0 in
         let ve1 () = eval env e1 in
-        bool_elim head ve0 ve1
+        let ve2 () = eval env e2 in
+        bool_elim head ve1 ve2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
 
@@ -155,10 +155,10 @@ module Semantics = struct
         Var (level_to_index size level)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
-    | Bool_elim (head, vexpr0, vexpr1) ->
-        let e0 = quote size (vexpr0 ()) in
+    | Bool_elim (head, vexpr1, vexpr2) ->
         let e1 = quote size (vexpr1 ()) in
-        Bool_elim (quote_neu size head, e0, e1)
+        let e2 = quote size (vexpr2 ()) in
+        Bool_elim (quote_neu size head, e1, e2)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)
 
@@ -224,11 +224,11 @@ let pp_expr : name env -> expr -> Format.formatter -> unit =
         Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %t@ =>@]%t"
           (pp_param name param_ty)
           (go (name :: names) body)
-    | Bool_elim (head, e0, e1) ->
+    | Bool_elim (head, e1, e2) ->
         Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
           (pp_app_expr names head)
-          (pp_app_expr names e0)
-          (pp_expr names e1)
+          (pp_app_expr names e1)
+          (pp_expr names e2)
     | e ->
         pp_app_expr names e ppf
   and pp_app_expr names e ppf =

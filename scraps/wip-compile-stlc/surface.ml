@@ -123,11 +123,11 @@ let rec elab_check (ctx : context) (expr : expr) (ty : Core.ty) : Core.expr =
   | Fun_lit (params, body) ->
       elab_check_fun_lit ctx params body ty
 
-  | If_then_else (head, expr0, expr1) ->
+  | If_then_else (head, expr1, expr2) ->
       let head = elab_check ctx head Bool_ty in
-      let expr0 = elab_check ctx expr0 ty in
       let expr1 = elab_check ctx expr1 ty in
-      Bool_elim (head, expr0, expr1)
+      let expr2 = elab_check ctx expr2 ty in
+      Bool_elim (head, expr1, expr2)
 
   (* Fall back to type inference *)
   | _ ->
@@ -179,36 +179,36 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
   | If_then_else (_, _, _) ->
       error expr.loc "ambiguous if expression"
 
-  | Op2 (`Eq, expr0, expr1) ->
-      let expr0, ty0 = elab_infer ctx expr0 in
+  | Op2 (`Eq, expr1, expr2) ->
       let expr1, ty1 = elab_infer ctx expr1 in
-      equate_ty expr.loc ty0 ty1;
-      begin match ty0 with
-      | Bool_ty -> Fun_app (Prim Bool_eq, Tuple_lit [expr0; expr1]), Bool_ty
-      | Int_ty -> Fun_app (Prim Int_eq, Tuple_lit [expr0; expr1]), Bool_ty
+      let expr2, ty2 = elab_infer ctx expr2 in
+      equate_ty expr.loc ty1 ty2;
+      begin match ty1 with
+      | Bool_ty -> Fun_app (Prim Bool_eq, Tuple_lit [expr1; expr2]), Bool_ty
+      | Int_ty -> Fun_app (Prim Int_eq, Tuple_lit [expr1; expr2]), Bool_ty
       | ty -> error expr.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
       end
 
-  | Op2 ((`Add | `Sub | `Mul) as prim, expr0, expr1) ->
+  | Op2 ((`Add | `Sub | `Mul) as prim, expr1, expr2) ->
       let prim =
         match prim with
         | `Add -> Prim.Int_add
         | `Sub -> Prim.Int_sub
         | `Mul -> Prim.Int_mul
       in
-      let expr0 = elab_check ctx expr0 Int_ty in
       let expr1 = elab_check ctx expr1 Int_ty in
-      Fun_app (Prim prim, Tuple_lit [expr0; expr1]), Int_ty
+      let expr2 = elab_check ctx expr2 Int_ty in
+      Fun_app (Prim prim, Tuple_lit [expr1; expr2]), Int_ty
 
-  | Op2 (`And, expr0, expr1) ->
-      let expr0 = elab_check ctx expr0 Bool_ty in
+  | Op2 (`And, expr1, expr2) ->
       let expr1 = elab_check ctx expr1 Bool_ty in
-      Bool_elim (expr0, expr1, Bool_lit false), Bool_ty
+      let expr2 = elab_check ctx expr2 Bool_ty in
+      Bool_elim (expr1, expr2, Bool_lit false), Bool_ty
 
-  | Op2 (`Or, expr0, expr1) ->
-      let expr0 = elab_check ctx expr0 Bool_ty in
+  | Op2 (`Or, expr1, expr2) ->
       let expr1 = elab_check ctx expr1 Bool_ty in
-      Bool_elim (expr0, Bool_lit true, expr1), Bool_ty
+      let expr2 = elab_check ctx expr2 Bool_ty in
+      Bool_elim (expr1, Bool_lit true, expr2), Bool_ty
 
   | Op1 (`Neg, expr) ->
       let expr = elab_check ctx expr Int_ty in

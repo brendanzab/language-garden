@@ -157,11 +157,11 @@ end = struct
     | Fun_lit (params, body) ->
         check_fun_lit ctx params body t
 
-    | If_then_else (head, tm0, tm1) ->
+    | If_then_else (head, tm1, tm2) ->
         let head = check_expr ctx head Bool_type in
-        let e0 = check_expr ctx tm0 t in
         let e1 = check_expr ctx tm1 t in
-        Bool_elim (head, e0, e1)
+        let e2 = check_expr ctx tm2 t in
+        Bool_elim (head, e1, e2)
 
     | _ ->
         let e', t' = infer_expr ctx tm in
@@ -227,26 +227,26 @@ end = struct
         let body_t = check_ty ctx body_t in
         Type (Fun_type (param_t, body_t))
 
-    | Op2 (`Eq, tm0, tm1) ->
-        let e0, t0 = infer_expr ctx tm0 in
+    | Op2 (`Eq, tm1, tm2) ->
         let e1, t1 = infer_expr ctx tm1 in
-        equate_ty tm.loc t0 t1;
-        begin match t0 with
-        | Bool_type -> Expr (Prim_app (Bool_eq, [e0; e1]), Bool_type)
-        | Int_type -> Expr (Prim_app (Int_eq, [e0; e1]), Bool_type)
+        let e2, t2 = infer_expr ctx tm2 in
+        equate_ty tm.loc t1 t2;
+        begin match t1 with
+        | Bool_type -> Expr (Prim_app (Bool_eq, [e1; e2]), Bool_type)
+        | Int_type -> Expr (Prim_app (Int_eq, [e1; e2]), Bool_type)
         | t -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty t))
         end
 
-    | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
+    | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
         let prim =
           match prim with
           | `Add -> Prim.Int_add
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let e0 = check_expr ctx tm0 Int_type in
         let e1 = check_expr ctx tm1 Int_type in
-        Expr (Prim_app (prim, [e0; e1]), Int_type)
+        let e2 = check_expr ctx tm2 Int_type in
+        Expr (Prim_app (prim, [e1; e2]), Int_type)
 
     | Op1 (`Neg, tm) ->
         let e = check_expr ctx tm Int_type in

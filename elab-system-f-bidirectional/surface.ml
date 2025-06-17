@@ -193,11 +193,11 @@ end = struct
     | Fun_lit (params, body) ->
         check_fun_lit ctx params body vty
 
-    | If_then_else (head, tm0, tm1) ->
+    | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
-        let tm0 = check_tm ctx tm0 vty in
         let tm1 = check_tm ctx tm1 vty in
-        Bool_elim (head, tm0, tm1)
+        let tm2 = check_tm ctx tm2 vty in
+        Bool_elim (head, tm1, tm2)
 
     (* Fall back to type inference *)
     | _ ->
@@ -263,26 +263,26 @@ end = struct
     | If_then_else (_, _, _) ->
         error tm.loc "ambiguous if expression"
 
-    | Op2 (`Eq, tm0, tm1) ->
-        let tm0, vty0 = infer_tm ctx tm0 in
+    | Op2 (`Eq, tm1, tm2) ->
         let tm1, vty1 = infer_tm ctx tm1 in
-        equate_vtys ctx tm.loc vty0 vty1;
-        begin match vty0 with
-        | Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
-        | Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
+        let tm2, vty2 = infer_tm ctx tm2 in
+        equate_vtys ctx tm.loc vty1 vty2;
+        begin match vty1 with
+        | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
+        | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
         | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_ty ctx (quote_vty ctx vty)))
         end
 
-    | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
+    | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
         let prim =
           match prim with
           | `Add -> Prim.Int_add
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let tm0 = check_tm ctx tm0 Int_type in
         let tm1 = check_tm ctx tm1 Int_type in
-        Prim_app (prim, [tm0; tm1]), Int_type
+        let tm2 = check_tm ctx tm2 Int_type in
+        Prim_app (prim, [tm1; tm2]), Int_type
 
     | Op1 (`Neg, tm) ->
         let tm = check_tm ctx tm Int_type in

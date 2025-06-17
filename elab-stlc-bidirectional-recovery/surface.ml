@@ -231,13 +231,13 @@ end = struct
         report ctx (error tm.loc "ambiguous if expression");
         Reported_error, Reported_error
 
-    | Op2 (`Eq, tm0, tm1) ->
-        let tm0, ty0 = infer_tm ctx tm0 in
+    | Op2 (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in
-        begin match equate_ty tm.loc ty0 ty1, ty0 with
+        let tm2, ty2 = infer_tm ctx tm2 in
+        begin match equate_ty tm.loc ty1 ty2, ty1 with
         | Ok (), Reported_error -> Reported_error, Reported_error
-        | Ok (), Bool_type -> Prim_app (Bool_eq, [tm0; tm1]), Bool_type
-        | Ok (), Int_type -> Prim_app (Int_eq, [tm0; tm1]), Bool_type
+        | Ok (), Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
+        | Ok (), Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
         | Ok (), ty ->
             report ctx (error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty)));
             Reported_error, Reported_error
@@ -246,16 +246,16 @@ end = struct
             Reported_error, Reported_error
         end
 
-    | Op2 ((`Add | `Sub | `Mul) as prim, tm0, tm1) ->
+    | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
         let prim =
           match prim with
           | `Add -> Prim.Int_add
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let tm0 = check_tm ctx tm0 Int_type in
         let tm1 = check_tm ctx tm1 Int_type in
-        Prim_app (prim, [tm0; tm1]), Int_type
+        let tm2 = check_tm ctx tm2 Int_type in
+        Prim_app (prim, [tm1; tm2]), Int_type
 
     | Op1 (`Neg, tm) ->
         let tm = check_tm ctx tm Int_type in

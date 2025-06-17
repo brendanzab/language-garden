@@ -127,11 +127,11 @@ module Semantics = struct
     | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim (head : vtm) (vtm0 : unit -> vtm) (vtm1 : unit -> vtm) : vtm =
+  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
     match head with
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm0, vtm1))
-    | Bool_lit true -> vtm0 ()
-    | Bool_lit false -> vtm1 ()
+    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
+    | Bool_lit true -> vtm1 ()
+    | Bool_lit false -> vtm2 ()
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
@@ -165,11 +165,11 @@ module Semantics = struct
         fun_app head arg
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, tm0, tm1) ->
+    | Bool_elim (head, tm1, tm2) ->
         let head = eval env head in
-        let vtm0 () = eval env tm0 in
         let vtm1 () = eval env tm1 in
-        bool_elim head vtm0 vtm1
+        let vtm2 () = eval env tm2 in
+        bool_elim head vtm1 vtm2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
 
@@ -192,10 +192,10 @@ module Semantics = struct
         Var (level_to_index size level)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
-    | Bool_elim (head, vtm0, vtm1) ->
-        let tm0 = quote size (vtm0 ()) in
+    | Bool_elim (head, vtm1, vtm2) ->
         let tm1 = quote size (vtm1 ()) in
-        Bool_elim (quote_neu size head, tm0, tm1)
+        let tm2 = quote size (vtm2 ()) in
+        Bool_elim (quote_neu size head, tm1, tm2)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)
 
@@ -261,11 +261,11 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
         Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %t@ =>@]%t"
           (pp_param name param_ty)
           (go (name :: names) body)
-    | Bool_elim (head, tm0, tm1) ->
+    | Bool_elim (head, tm1, tm2) ->
         Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
           (pp_app_tm names head)
-          (pp_app_tm names tm0)
-          (pp_tm names tm1)
+          (pp_app_tm names tm1)
+          (pp_tm names tm2)
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =

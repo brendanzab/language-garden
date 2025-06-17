@@ -126,8 +126,8 @@ module Subst : sig
   (** [extend (v, c) subst] adds new variable-to-constant mapping to [subst]. *)
 
   val append : t -> t -> t
-  (** [append subst0 subst1] merges the mappings in [subst0] with the mappings
-      in [subst1]. *)
+  (** [append subst1 subst2] merges the mappings in [subst1] with the mappings
+      in [subst2]. *)
 
   val lookup : string -> t -> const option
   (** [lookup v subst] finds the corresponding constant mapped to the variable
@@ -150,8 +150,8 @@ end = struct
   let extend (v, c) subst =
     (v, c) :: subst
 
-  let append subst0 subst1 =
-    subst0 @ subst1
+  let append subst1 subst2 =
+    subst1 @ subst2
 
   let lookup = List.assoc_opt
 
@@ -173,24 +173,24 @@ end
 
 
 (** Unification between a body atom and a ground atom *)
-let unify (atom0 : atom) (atom1 : atom) : Subst.t option =
-  let rec go (terms0 : term list) (terms1 : term list) : Subst.t option =
-    match terms0, terms1 with
+let unify (atom1 : atom) (atom2 : atom) : Subst.t option =
+  let rec go (terms1 : term list) (terms2 : term list) : Subst.t option =
+    match terms1, terms2 with
     | [], _ | _, [] -> Some Subst.empty
-    | Const c0 :: rest0, Const c1 :: rest1 ->
-        if c0 = c1 then go rest0 rest1 else None
-    | Var v0 :: rest0, Const c1 :: rest1 ->
-        Option.bind (go rest0 rest1)
+    | Const c1 :: rest1, Const c2 :: rest2 ->
+        if c1 = c2 then go rest1 rest2 else None
+    | Var v1 :: rest1, Const c2 :: rest2 ->
+        Option.bind (go rest1 rest2)
           (fun subst ->
-            match Subst.lookup v0 subst with
-            | Some c0 when c0 <> c1 -> None
-            | _ -> Some (Subst.extend (v0, c1) subst))
+            match Subst.lookup v1 subst with
+            | Some c1 when c1 <> c2 -> None
+            | _ -> Some (Subst.extend (v1, c2) subst))
     | _ :: _, Var v :: _ ->
         (* Safe because the second atom was expected to be ground *)
         failwith ("the second atom `" ^ v ^ "` is assumed to be ground")
   in
-  if atom0.name = atom1.name then
-    go atom0.args atom1.args
+  if atom1.name = atom2.name then
+    go atom1.args atom2.args
   else
     None
 

@@ -57,46 +57,46 @@ let atomic_ty :=
 
 let expr :=
 | "let"; n = binder; ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
-    expr0 = located(expr); ";"; expr1 = located(expr);
-    { Surface.Let (n, ps, ty, expr0, expr1) }
+    expr1 = located(expr); ";"; expr2 = located(expr);
+    { Surface.Let (n, ps, ty, expr1, expr2) }
 | "fun"; ps = nonempty_list(param); "=>"; t = located(expr);
     { Surface.Fun_lit (ps, t) }
-| "if"; expr0 = located(or_expr); "then"; expr1 = located(expr); "else"; expr2 = located(expr);
-    { Surface.If_then_else (expr0, expr1, expr2) }
+| "if"; expr1 = located(or_expr); "then"; expr2 = located(expr); "else"; expr3 = located(expr);
+    { Surface.If_then_else (expr1, expr2, expr3) }
 | expr = located(or_expr); ":"; ty = located(ty);
     { Surface.Ann (expr, ty) }
 | or_expr
 
 let or_expr :=
-| expr0 = located(add_expr); "||"; expr1 = located(or_expr);
-    { Surface.Op2 (`Or, expr0, expr1) }
+| expr1 = located(add_expr); "||"; expr2 = located(or_expr);
+    { Surface.Op2 (`Or, expr1, expr2) }
 | and_expr
 
 let and_expr :=
-| expr0 = located(add_expr); "&&"; expr1 = located(and_expr);
-    { Surface.Op2 (`And, expr0, expr1) }
+| expr1 = located(add_expr); "&&"; expr2 = located(and_expr);
+    { Surface.Op2 (`And, expr1, expr2) }
 | eq_expr
 
 let eq_expr :=
-| expr0 = located(add_expr); "="; expr1 = located(eq_expr);
-    { Surface.Op2 (`Eq, expr0, expr1) }
+| expr1 = located(add_expr); "="; expr2 = located(eq_expr);
+    { Surface.Op2 (`Eq, expr1, expr2) }
 | add_expr
 
 let add_expr :=
-| expr0 = located(mul_expr); "+"; expr1 = located(add_expr);
-    { Surface.Op2 (`Add, expr0, expr1) }
-| expr0 = located(mul_expr); "-"; expr1 = located(add_expr);
-    { Surface.Op2 (`Sub, expr0, expr1) }
+| expr1 = located(mul_expr); "+"; expr2 = located(add_expr);
+    { Surface.Op2 (`Add, expr1, expr2) }
+| expr1 = located(mul_expr); "-"; expr2 = located(add_expr);
+    { Surface.Op2 (`Sub, expr1, expr2) }
 | mul_expr
 
 let mul_expr :=
-| expr0 = located(app_expr); "*"; expr1 = located(mul_expr);
-    { Surface.Op2 (`Mul, expr0, expr1) }
+| expr1 = located(app_expr); "*"; expr2 = located(mul_expr);
+    { Surface.Op2 (`Mul, expr1, expr2) }
 | app_expr
 
 let app_expr :=
-| expr0 = located(app_expr); expr1 = located(atomic_expr);
-    { Surface.App (expr0, expr1) }
+| expr1 = located(app_expr); expr2 = located(atomic_expr);
+    { Surface.App (expr1, expr2) }
 | "-"; expr = located(atomic_expr);
     { Surface.Op1 (`Neg, expr) }
 | "!"; expr = located(atomic_expr);

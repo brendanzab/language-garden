@@ -232,11 +232,11 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
         Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %t@ =>@]%t"
           (pp_param name param_ty)
           (go (name :: names) body)
-    | Bool_elim (head, tm0, tm1) ->
+    | Bool_elim (head, tm1, tm2) ->
         Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
           (pp_app_tm names head)
-          (pp_app_tm names tm0)
-          (pp_tm names tm1)
+          (pp_app_tm names tm1)
+          (pp_tm names tm2)
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =

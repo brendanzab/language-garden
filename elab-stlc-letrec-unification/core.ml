@@ -116,7 +116,7 @@ module Semantics = struct
 
   (** {1 Eliminators} *)
 
-  let rec fun_app opts head arg =
+  let rec fun_app (opts : eval_opts) (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu (Fix (_, _, body)) when opts.unfold_fix ->
         fun_app opts (body opts head) arg
@@ -124,7 +124,7 @@ module Semantics = struct
     | Fun_lit (_, _, body) -> body opts arg
     | _ -> invalid_arg "expected function"
 
-  let rec tuple_proj opts head elem_index =
+  let rec tuple_proj (opts : eval_opts) (head : vtm) (elem_index : int) =
     match head with
     | Neu (Fix (_, _, body)) when opts.unfold_fix ->
         tuple_proj opts (body opts head) elem_index
@@ -132,11 +132,11 @@ module Semantics = struct
     | Tuple_lit elems -> List.nth elems elem_index
     | _ -> invalid_arg "expected tuple"
 
-  let bool_elim head vtm0 vtm1 =
+  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
     match head with
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm0, vtm1))
-    | Bool_lit true -> vtm0 ()
-    | Bool_lit false -> vtm1 ()
+    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
+    | Bool_lit true -> vtm1 ()
+    | Bool_lit false -> vtm2 ()
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
@@ -179,11 +179,11 @@ module Semantics = struct
         tuple_proj opts head elem_index
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, tm0, tm1) ->
+    | Bool_elim (head, tm1, tm2) ->
         let head = eval ~opts env head in
-        let vtm0 () = eval ~opts env tm0 in
         let vtm1 () = eval ~opts env tm1 in
-        bool_elim head vtm0 vtm1
+        let vtm2 () = eval ~opts env tm2 in
+        bool_elim head vtm1 vtm2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval ~opts env) args)
 
@@ -212,10 +212,10 @@ module Semantics = struct
         Fun_app (quote_neu ~opts size head, quote ~opts size arg)
     | Tuple_proj (head, elem_index) ->
         Tuple_proj (quote_neu ~opts size head, elem_index)
-    | Bool_elim (head, vtm0, vtm1) ->
-        let tm0 = quote ~opts size (vtm0 ()) in
+    | Bool_elim (head, vtm1, vtm2) ->
         let tm1 = quote ~opts size (vtm1 ()) in
-        Bool_elim (quote_neu ~opts size head, tm0, tm1)
+        let tm2 = quote ~opts size (vtm2 ()) in
+        Bool_elim (quote_neu ~opts size head, tm1, tm2)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote ~opts size) args)
 
@@ -278,19 +278,19 @@ let rec occurs (m : meta) (ty : ty) : unit =
 
 (** Check if two types are the same, updating unsolved metavariables in one
     type with known information from the other type if possible. *)
-let rec unify_tys (ty0 : ty) (ty1 : ty) : unit =
-  match force_ty ty0, force_ty ty1 with
+let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
+  match force_ty ty1, force_ty ty2 with
   | Meta_var m1, Meta_var m2 when m1 == m2 -> ()
   | Meta_var m, ty | ty, Meta_var m ->
       occurs m ty;
       m := Solved ty
-  | Fun_type (param_ty0, body_ty0), Fun_type (param_ty1, body_ty1) ->
-      unify_tys param_ty0 param_ty1;
-      unify_tys body_ty0 body_ty1;
-  | Tuple_type elem_tys0, Tuple_type elem_tys1  -> begin
-      try List.iter2 unify_tys elem_tys0 elem_tys1 with
+  | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
+      unify_tys param_ty1 param_ty2;
+      unify_tys body_ty1 body_ty2;
+  | Tuple_type elem_tys1, Tuple_type elem_tys2  -> begin
+      try List.iter2 unify_tys elem_tys1 elem_tys2 with
       | Invalid_argument _ ->
-          raise (Mismatched_types (ty0, ty1))
+          raise (Mismatched_types (ty1, ty2))
   end
   | Int_type, Int_type -> ()
   | Bool_type, Bool_type -> ()
@@ -382,11 +382,11 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
         Format.fprintf ppf "@[<hv 2>@[<hv>@[fun@ %t@ =>@]%t"
           (pp_param name param_ty)
           (go (name :: names) body)
-    | Bool_elim (head, tm0, tm1) ->
+    | Bool_elim (head, tm1, tm2) ->
         Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
           (pp_app_tm names head)
-          (pp_app_tm names tm0)
-          (pp_tm names tm1)
+          (pp_app_tm names tm1)
+          (pp_tm names tm2)
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =

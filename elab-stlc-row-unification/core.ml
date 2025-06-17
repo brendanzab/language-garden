@@ -132,19 +132,19 @@ module Semantics = struct
 
   (** {1 Eliminators} *)
 
-  let fun_app head arg =
+  let fun_app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu ntm -> Neu (Fun_app (ntm, arg))
     | Fun_lit (_, _, body) -> body arg
     | _ -> invalid_arg "expected function"
 
-  let record_proj head label =
+  let record_proj (head : vtm) (label : label) : vtm =
     match head with
     | Neu ntm -> Neu (Record_proj (ntm, label))
     | Record_lit fields -> Label_map.find label fields
     | _ -> invalid_arg "expected record"
 
-  let variant_elim head clauses =
+  let variant_elim (head : vtm) (clauses : (name * (vtm -> vtm)) Label_map.t) : vtm =
     match head with
     | Neu ntm -> Neu (Variant_elim (ntm, clauses))
     | Variant_lit (label, vtm, _) ->
@@ -152,7 +152,7 @@ module Semantics = struct
         body vtm
     | _ -> invalid_arg "expected variant"
 
-  let bool_elim head vtm1 vtm2 =
+  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
     match head with
     | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
     | Bool_lit true -> vtm1 ()
@@ -204,10 +204,10 @@ module Semantics = struct
         variant_elim head clauses
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, tm0, tm1) ->
+    | Bool_elim (head, tm1, tm2) ->
         let head = eval env head in
-        let vtm1 () = eval env tm0 in
-        let vtm2 () = eval env tm1 in
+        let vtm1 () = eval env tm1 in
+        let vtm2 () = eval env tm2 in
         bool_elim head vtm1 vtm2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval env) args)
@@ -245,9 +245,9 @@ module Semantics = struct
         in
         Variant_elim (head, clauses)
     | Bool_elim (head, vtm1, vtm2) ->
-        let tm0 = quote size (vtm1 ()) in
-        let tm1 = quote size (vtm2 ()) in
-        Bool_elim (quote_neu size head, tm0, tm1)
+        let tm1 = quote size (vtm1 ()) in
+        let tm2 = quote size (vtm2 ()) in
+        Bool_elim (quote_neu size head, tm1, tm2)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote size) args)
 
@@ -528,11 +528,11 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
           label
           (pp_tm names tm)
           (pp_ty ty)
-    | Bool_elim (head, tm0, tm1) ->
+    | Bool_elim (head, tm1, tm2) ->
         Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
           (pp_app_tm names head)
-          (pp_app_tm names tm0)
-          (pp_tm names tm1)
+          (pp_app_tm names tm1)
+          (pp_tm names tm2)
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =
