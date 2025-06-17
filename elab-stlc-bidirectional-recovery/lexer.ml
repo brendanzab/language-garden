@@ -18,12 +18,10 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "/-"          -> block_comment lexbuf 0
   | digits        -> NUMBER (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
   | "else"        -> KEYWORD_ELSE
-  | "false"       -> KEYWORD_FALSE
   | "fun"         -> KEYWORD_FUN
   | "if"          -> KEYWORD_IF
   | "let"         -> KEYWORD_LET
   | "then"        -> KEYWORD_THEN
-  | "true"        -> KEYWORD_TRUE
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
   | "+"           -> ADD
   | "*"           -> ASTERISK

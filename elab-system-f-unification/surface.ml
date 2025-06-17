@@ -39,7 +39,6 @@ and tm_data =
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
   | Fun_lit of param list * tm
-  | Bool_lit of bool
   | Int_lit of int
   | App of tm * arg
   | If_then_else of tm * tm * tm
@@ -238,6 +237,8 @@ end = struct
     | Name name ->
         begin match lookup_tm ctx name with
         | Some (tm_index, vty) -> Local_var tm_index, vty
+        | None when name = "true" -> Bool_lit true, Bool_type
+        | None when name = "false" -> Bool_lit false, Bool_type
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 
@@ -250,9 +251,6 @@ end = struct
         let ty = check_ty ctx ty in
         let vty = eval_ty ctx ty in
         check_tm ctx tm vty, vty
-
-    | Bool_lit b ->
-        Bool_lit b, Bool_type
 
     | Int_lit i ->
         Int_lit i, Int_type

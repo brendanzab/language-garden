@@ -2,11 +2,9 @@
 %token <int> NUMBER
 %token KEYWORD_ELSE "else"
 %token KEYWORD_FUN "fun"
-%token KEYWORD_FALSE "false"
 %token KEYWORD_IF "if"
 %token KEYWORD_LET "let"
 %token KEYWORD_THEN "then"
-%token KEYWORD_TRUE "true"
 %token ADD "+"
 %token ASTERISK "*"
 %token COLON ":"
@@ -93,10 +91,6 @@ let atomic_tm :=
     { tm }
 | n = NAME;
     { Surface.Name n }
-| "true";
-    { Surface.Bool_lit true }
-| "false";
-    { Surface.Bool_lit false }
 | i = NUMBER;
     { Surface.Int_lit i }
 

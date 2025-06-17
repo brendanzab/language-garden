@@ -197,6 +197,8 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (tm, ty) -> tm, ty
+        | None when name = "true" -> Bool_lit true, Bool_type
+        | None when name = "false" -> Bool_lit false, Bool_type
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 

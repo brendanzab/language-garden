@@ -29,7 +29,6 @@ and tm_data =
   | Let of binder * param list * tm option * tm * tm
   | Ann of tm * tm
   | Fun_lit of param list * tm
-  | Bool_lit of bool
   | Int_lit of int
   | App of tm * tm
   | If_then_else of tm * tm * tm
@@ -177,6 +176,8 @@ end = struct
         | Some tm -> tm
         | None when n = "Type" -> Univ
         | None when n = "Bool" -> Type Bool_type
+        | None when n = "true" -> Expr (Bool_lit true, Bool_type)
+        | None when n = "false" -> Expr (Bool_lit false, Bool_type)
         | None when n = "Int" -> Type Int_type
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" n)
         end
@@ -199,7 +200,6 @@ end = struct
         | Expr (_, _) -> error tm.loc "expected type or universe, found expression"
         end
 
-    | Bool_lit b -> Expr (Bool_lit b, Bool_type)
     | Int_lit i -> Expr (Int_lit i, Int_type)
 
     | Fun_lit (params, body) ->

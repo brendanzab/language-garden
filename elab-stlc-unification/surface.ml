@@ -39,7 +39,6 @@ and tm_data =
   | Ann of tm * ty
   | Fun_lit of param list * tm
   | Int_lit of int
-  | Bool_lit of bool
   | App of tm * tm
   | If_then_else of tm * tm * tm
   | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
@@ -176,6 +175,8 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, ty) -> Var index, ty
+        | None when name = "true" -> Bool_lit true, Bool_type
+        | None when name = "false" -> Bool_lit false, Bool_type
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 
@@ -193,9 +194,6 @@ end = struct
 
     | Int_lit i ->
         Int_lit i, Int_type
-
-    | Bool_lit b ->
-        Bool_lit b, Bool_type
 
     | App (head, arg) ->
         let head_loc = head.loc in

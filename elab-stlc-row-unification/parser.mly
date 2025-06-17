@@ -3,12 +3,10 @@
 %token KEYWORD_ELSE "else"
 %token KEYWORD_END "end"
 %token KEYWORD_FUN "fun"
-%token KEYWORD_FALSE "false"
 %token KEYWORD_IF "if"
 %token KEYWORD_LET "let"
 %token KEYWORD_MATCH "match"
 %token KEYWORD_THEN "then"
-%token KEYWORD_TRUE "true"
 %token KEYWORD_WITH "with"
 %token ADD "+"
 %token ASTERISK "*"
@@ -115,10 +113,6 @@ let atomic_tm :=
     { Surface.Record_lit fs  }
 | "["; l = located(NAME); ":="; tm = located(tm); "]";
     { Surface.Variant_lit (l, tm) }
-| "true";
-    { Surface.Bool_lit true }
-| "false";
-    { Surface.Bool_lit false }
 | i = NUMBER;
     { Surface.Int_lit i }
 

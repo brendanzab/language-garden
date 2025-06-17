@@ -19,13 +19,11 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | digits        -> NUMBER (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
   | "else"        -> KEYWORD_ELSE
   | "end"         -> KEYWORD_END
-  | "false"       -> KEYWORD_FALSE
   | "fun"         -> KEYWORD_FUN
   | "if"          -> KEYWORD_IF
   | "let"         -> KEYWORD_LET
   | "match"       -> KEYWORD_MATCH
   | "then"        -> KEYWORD_THEN
-  | "true"        -> KEYWORD_TRUE
   | "with"        -> KEYWORD_WITH
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
   | "+"           -> ADD

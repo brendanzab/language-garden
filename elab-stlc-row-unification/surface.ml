@@ -55,7 +55,6 @@ and tm_data =
   | Record_lit of (label * tm) list
   | Variant_lit of label * tm
   | Int_lit of int
-  | Bool_lit of bool
   | App of tm * tm
   | Proj of tm * label
   | Match of tm * (pattern * tm) list
@@ -238,7 +237,9 @@ end = struct
     match tm.data with
     | Name name ->
         begin match lookup ctx name with
-        | Some (index, vty) -> Var index, vty
+        | Some (index, ty) -> Var index, ty
+        | None when name = "true" -> Bool_lit true, Bool_type
+        | None when name = "false" -> Bool_lit false, Bool_type
         | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
         end
 
@@ -275,9 +276,6 @@ end = struct
 
     | Int_lit i ->
         Int_lit i, Int_type
-
-    | Bool_lit b ->
-        Bool_lit b, Bool_type
 
     | App (head, arg) ->
         let head_loc = head.loc in
