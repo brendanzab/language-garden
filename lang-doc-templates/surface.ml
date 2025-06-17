@@ -109,7 +109,12 @@ module Elab = struct
   and synth (ctx : context) (tm : tm) : Core.tm * Core.ty =
     match tm.data with
     | Name name ->
-        Var name, List.assoc name ctx
+        begin match List.assoc_opt name ctx with
+        | Some ty -> Var name, ty
+        | None when name = "true" -> Bool_lit true, Bool_ty
+        | None when name = "false" -> Bool_lit false, Bool_ty
+        | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
+        end
     | Let (name, params, def_body_ty, def_tm, body_tm) ->
         let def_tm, def_ty = fun_lit ctx params def_body_ty def_tm in
         let body_tm, body_ty = synth ((name.data, def_ty) :: ctx) body_tm in
