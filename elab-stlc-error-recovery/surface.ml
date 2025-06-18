@@ -48,6 +48,23 @@ and param =
   binder * ty option
 
 
+(** {1 User-facing diagnostics} *)
+
+(** An error message that should be reported to the programmer *)
+module Error = struct
+
+  type t = {
+    loc : loc;
+    message : string;
+    details : string list;
+  }
+
+  let make ?(details = ([] : string list)) (loc : loc) (message : string) : t =
+    { loc; message; details }
+
+end
+
+
 (** Elaboration from the surface language into the core language
 
     This is where we implement user-facing type checking, while also translating
@@ -59,29 +76,11 @@ and param =
 *)
 module Elab : sig
 
-  type error = {
-    loc : loc;
-    message : string;
-    details : string list;
-  }
-
-  val check_ty : ty -> (Core.ty, error list) result
-  val check_tm : tm -> Core.ty -> (Core.tm, error list) result
-  val infer_tm : tm -> (Core.tm * Core.ty, error list) result
+  val check_ty : ty -> (Core.ty, Error.t list) result
+  val check_tm : tm -> Core.ty -> (Core.tm, Error.t list) result
+  val infer_tm : tm -> (Core.tm * Core.ty, Error.t list) result
 
 end = struct
-
-  (** {2 Elaboration errors} *)
-
-  type error = {
-    loc : loc;
-    message : string;
-    details : string list;
-  }
-
-  let error ?(details = ([] : string list)) (loc : loc) (message : string) : error =
-    { loc; message; details }
-
 
   (** {2 Elaboration context} *)
 
@@ -90,7 +89,7 @@ end = struct
     tys : (string * Core.ty) Core.env;
     (** A stack of bindings currently in scope *)
 
-    errors : error Dynarray.t;
+    errors : Error.t Dynarray.t;
     (** Error messages recorded during elaboration. *)
   }
 
@@ -114,15 +113,15 @@ end = struct
       | false -> None
 
   (** Record an error in the elaboration context *)
-  let report (ctx : context) (error : error) =
+  let report (ctx : context) (error : Error.t) =
     Dynarray.add_last ctx.errors error
 
-  let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, error) result =
+  let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, Error.t) result =
     match ty1, ty2 with
     | Reported_error, _ | _, Reported_error -> Ok ()
     | ty1, ty2 when ty1 = ty2 -> Ok ()
     | ty1, ty2 ->
-        Result.error @@ error loc "mismatched types"
+        Result.error @@ Error.make loc "mismatched types"
           ~details:[
             Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
               (Core.pp_ty ty1)
@@ -146,7 +145,7 @@ end = struct
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
     | Name name ->
-        report ctx @@ error ty.loc (Format.asprintf "unbound type `%s`" name);
+        report ctx @@ Error.make ty.loc (Format.asprintf "unbound type `%s`" name);
         Reported_error
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ctx ty1, check_ty ctx ty2)
@@ -187,7 +186,7 @@ end = struct
         | None when name = "true" -> Bool_lit true, Bool_type
         | None when name = "false" -> Bool_lit false, Bool_type
         | None ->
-            report ctx @@ error tm.loc (Format.asprintf "unbound name `%s`" name);
+            report ctx @@ Error.make tm.loc (Format.asprintf "unbound name `%s`" name);
             Reported_error, Reported_error
         end
 
@@ -215,7 +214,7 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | head_ty ->
-            report ctx @@ error head_loc "mismatched types"
+            report ctx @@ Error.make head_loc "mismatched types"
               ~details:[
                 Format.asprintf "@[<v>@[expected: function@]@ @[   found: %t@]@]"
                   (Core.pp_ty head_ty);
@@ -224,7 +223,7 @@ end = struct
         end
 
     | If_then_else (_, _, _) ->
-        report ctx @@ error tm.loc "ambiguous if expression";
+        report ctx @@ Error.make tm.loc "ambiguous if expression";
         Reported_error, Reported_error
 
     | Op2 (`Eq, tm1, tm2) ->
@@ -235,7 +234,7 @@ end = struct
         | Ok (), Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Ok (), Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
         | Ok (), ty ->
-            report ctx @@ error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty));
+            report ctx @@ Error.make tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty));
             Reported_error, Reported_error
         | Error error, _ ->
             report ctx error;
@@ -291,7 +290,7 @@ end = struct
     (* If we see an unexpected parameter, we check the parameter type regardless
        and continue checking the body of the function. *)
     | (name, param_ty) :: params, ty ->
-        report ctx @@ error name.loc "unexpected parameter";
+        report ctx @@ Error.make name.loc "unexpected parameter";
         param_ty |> Option.iter (fun ty -> ignore (check_ty ctx ty));
         check_fun_lit ctx params body ty
 
@@ -308,7 +307,7 @@ end = struct
           match param_ty with
           | Some ty -> check_ty ctx ty
           | None ->
-              report ctx @@ error name.loc "ambiguous parameter type";
+              report ctx @@ Error.make name.loc "ambiguous parameter type";
               Reported_error
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
@@ -317,7 +316,7 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : context -> a) : (a, error list) result =
+  let run_elab (type a) (prog : context -> a) : (a, Error.t list) result =
     let ctx = empty () in
     let result = prog ctx in
 
@@ -328,13 +327,13 @@ end = struct
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, error list) result =
+  let check_ty (ty : ty) : (Core.ty, Error.t list) result =
     run_elab (fun ctx -> check_ty ctx ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, error list) result =
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, Error.t list) result =
     run_elab (fun ctx -> check_tm ctx tm ty)
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty, error list) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, Error.t list) result =
     run_elab (fun ctx -> infer_tm ctx tm)
 
 end

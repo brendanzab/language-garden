@@ -26,7 +26,7 @@ module Source_file = struct
 
 end
 
-let emit (source : Source_file.t) (severity : string) (error : Surface.Elab.error) =
+let emit (source : Source_file.t) (error : Surface.Error.t) =
   let start, stop = error.loc in
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
@@ -40,7 +40,7 @@ let emit (source : Source_file.t) (severity : string) (error : Surface.Elab.erro
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "%s: %s\n" severity error.message;
+  Printf.eprintf "error: %s\n" error.message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
@@ -59,7 +59,7 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   Sedlexing.set_filename lexbuf source.name;
   let report_fatal message =
     let loc = Sedlexing.lexing_positions lexbuf in
-    emit source "error" { loc; message; details = [] };
+    emit source (Surface.Error.make loc message);
     exit 1
   in
 
@@ -74,7 +74,7 @@ let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   match Surface.Elab.infer_tm tm with
   | Ok (tm, ty) -> tm, ty
   | Error errors ->
-      errors |> List.iter (emit source "error");
+      errors |> List.iter (emit source);
       exit 1
 
 
