@@ -40,8 +40,8 @@ and tm_data =
   | Int_lit of int
   | App of tm * tm
   | If_then_else of tm * tm * tm
-  | Op2 of [`Eq | `Add | `Sub | `Mul] * tm * tm
-  | Op1 of [`Neg] * tm
+  | Infix of [`Eq | `Add | `Sub | `Mul] * tm * tm
+  | Prefix of [`Neg] * tm
 
 (** Parameters, with optional type annotations *)
 and param =
@@ -226,7 +226,7 @@ end = struct
         report ctx @@ Error.make tm.loc "ambiguous if expression";
         Reported_error, Reported_error
 
-    | Op2 (`Eq, tm1, tm2) ->
+    | Infix (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
         begin match equate_ty tm.loc ty1 ty2, ty1 with
@@ -241,7 +241,7 @@ end = struct
             Reported_error, Reported_error
         end
 
-    | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
+    | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
         let prim =
           match prim with
           | `Add -> Prim.Int_add
@@ -252,7 +252,7 @@ end = struct
         let tm2 = check_tm ctx tm2 Int_type in
         Prim_app (prim, [tm1; tm2]), Int_type
 
-    | Op1 (`Neg, tm) ->
+    | Prefix (`Neg, tm) ->
         let tm = check_tm ctx tm Int_type in
         Prim_app (Int_neg, [tm]), Int_type
 

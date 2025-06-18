@@ -37,7 +37,7 @@ and tm_data =
   | Text_lit of string
   | Int_lit of int
   | App of tm * tm
-  | Op2 of [`Add] * tm * tm
+  | Infix of [`Add] * tm * tm
 
 (** Templates *)
 and template =
@@ -140,7 +140,7 @@ module Elab = struct
         | _ ->
             error head_tm.loc "function expected"
     end
-    | Op2 (`Add, tm1, tm2) ->
+    | Infix (`Add, tm1, tm2) ->
         let tm1 = check ctx tm1 Test_ty in
         let tm2 = check ctx tm2 Test_ty in
         Prim_app (Test_concat, [tm1; tm2]), Test_ty

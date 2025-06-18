@@ -57,26 +57,26 @@ let tm :=
 
 let eq_tm :=
 | tm1 = located(add_tm); "="; tm2 = located(eq_tm);
-    { Surface.Op2 (`Eq, tm1, tm2) }
+    { Surface.Infix (`Eq, tm1, tm2) }
 | add_tm
 
 let add_tm :=
 | tm1 = located(mul_tm); "+"; tm2 = located(add_tm);
-    { Surface.Op2 (`Add, tm1, tm2) }
+    { Surface.Infix (`Add, tm1, tm2) }
 | tm1 = located(mul_tm); "-"; tm2 = located(add_tm);
-    { Surface.Op2 (`Sub, tm1, tm2) }
+    { Surface.Infix (`Sub, tm1, tm2) }
 | mul_tm
 
 let mul_tm :=
 | tm1 = located(app_tm); "*"; tm2 = located(mul_tm);
-    { Surface.Op2 (`Mul, tm1, tm2) }
+    { Surface.Infix (`Mul, tm1, tm2) }
 | app_tm
 
 let app_tm :=
 | tm1 = located(app_tm); tm2 = located(atomic_tm);
     { Surface.App (tm1, tm2) }
 | "-"; tm = located(atomic_tm);
-    { Surface.Op1 (`Neg, tm) }
+    { Surface.Prefix (`Neg, tm) }
 | atomic_tm
 
 let atomic_tm :=

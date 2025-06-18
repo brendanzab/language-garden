@@ -32,8 +32,8 @@ and tm_data =
   | Int_lit of int
   | App of tm * tm
   | If_then_else of tm * tm * tm
-  | Op2 of [`Arrow | `Eq | `Add | `Sub | `Mul] * tm * tm
-  | Op1 of [`Neg] * tm
+  | Infix of [`Arrow | `Eq | `Add | `Sub | `Mul] * tm * tm
+  | Prefix of [`Neg] * tm
 
 (** Parameters, with optional type annotations *)
 and param =
@@ -222,12 +222,12 @@ end = struct
     | If_then_else (_, _, _) ->
         error tm.loc "ambiguous if expression"
 
-    | Op2 (`Arrow, param_t, body_t) ->
+    | Infix (`Arrow, param_t, body_t) ->
         let param_t = check_ty ctx param_t in
         let body_t = check_ty ctx body_t in
         Type (Fun_type (param_t, body_t))
 
-    | Op2 (`Eq, tm1, tm2) ->
+    | Infix (`Eq, tm1, tm2) ->
         let e1, t1 = infer_expr ctx tm1 in
         let e2, t2 = infer_expr ctx tm2 in
         equate_ty tm.loc t1 t2;
@@ -237,7 +237,7 @@ end = struct
         | t -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty t))
         end
 
-    | Op2 ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
+    | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
         let prim =
           match prim with
           | `Add -> Prim.Int_add
@@ -248,7 +248,7 @@ end = struct
         let e2 = check_expr ctx tm2 Int_type in
         Expr (Prim_app (prim, [e1; e2]), Int_type)
 
-    | Op1 (`Neg, tm) ->
+    | Prefix (`Neg, tm) ->
         let e = check_expr ctx tm Int_type in
         Expr (Prim_app (Int_neg, [e]), Int_type)
 

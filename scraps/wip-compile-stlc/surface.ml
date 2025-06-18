@@ -41,8 +41,8 @@ and expr_data =
   | Int_lit of int
   | App of expr * expr
   | If_then_else of expr * expr * expr
-  | Op2 of [`Eq | `Add | `Sub | `Mul | `Or | `And] * expr * expr
-  | Op1 of [`Neg | `Not] * expr
+  | Infix of [`Eq | `Add | `Sub | `Mul | `Or | `And] * expr * expr
+  | Prefix of [`Neg | `Not] * expr
 
 (** Parameters, with optional type annotations *)
 and param =
@@ -179,7 +179,7 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
   | If_then_else (_, _, _) ->
       error expr.loc "ambiguous if expression"
 
-  | Op2 (`Eq, expr1, expr2) ->
+  | Infix (`Eq, expr1, expr2) ->
       let expr1, ty1 = elab_infer ctx expr1 in
       let expr2, ty2 = elab_infer ctx expr2 in
       equate_ty expr.loc ty1 ty2;
@@ -189,7 +189,7 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
       | ty -> error expr.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
       end
 
-  | Op2 ((`Add | `Sub | `Mul) as prim, expr1, expr2) ->
+  | Infix ((`Add | `Sub | `Mul) as prim, expr1, expr2) ->
       let prim =
         match prim with
         | `Add -> Prim.Int_add
@@ -200,21 +200,21 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
       let expr2 = elab_check ctx expr2 Int_ty in
       Fun_app (Prim prim, Tuple_lit [expr1; expr2]), Int_ty
 
-  | Op2 (`And, expr1, expr2) ->
+  | Infix (`And, expr1, expr2) ->
       let expr1 = elab_check ctx expr1 Bool_ty in
       let expr2 = elab_check ctx expr2 Bool_ty in
       Bool_elim (expr1, expr2, Bool_lit false), Bool_ty
 
-  | Op2 (`Or, expr1, expr2) ->
+  | Infix (`Or, expr1, expr2) ->
       let expr1 = elab_check ctx expr1 Bool_ty in
       let expr2 = elab_check ctx expr2 Bool_ty in
       Bool_elim (expr1, Bool_lit true, expr2), Bool_ty
 
-  | Op1 (`Neg, expr) ->
+  | Prefix (`Neg, expr) ->
       let expr = elab_check ctx expr Int_ty in
       Fun_app (Prim Int_neg, Tuple_lit [expr]), Int_ty
 
-  | Op1 (`Not, expr) ->
+  | Prefix (`Not, expr) ->
       let expr = elab_check ctx expr Bool_ty in
       Fun_app (Prim Bool_not, Tuple_lit [expr]), Bool_ty
 

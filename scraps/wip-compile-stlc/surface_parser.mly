@@ -69,38 +69,38 @@ let expr :=
 
 let or_expr :=
 | expr1 = located(add_expr); "||"; expr2 = located(or_expr);
-    { Surface.Op2 (`Or, expr1, expr2) }
+    { Surface.Infix (`Or, expr1, expr2) }
 | and_expr
 
 let and_expr :=
 | expr1 = located(add_expr); "&&"; expr2 = located(and_expr);
-    { Surface.Op2 (`And, expr1, expr2) }
+    { Surface.Infix (`And, expr1, expr2) }
 | eq_expr
 
 let eq_expr :=
 | expr1 = located(add_expr); "="; expr2 = located(eq_expr);
-    { Surface.Op2 (`Eq, expr1, expr2) }
+    { Surface.Infix (`Eq, expr1, expr2) }
 | add_expr
 
 let add_expr :=
 | expr1 = located(mul_expr); "+"; expr2 = located(add_expr);
-    { Surface.Op2 (`Add, expr1, expr2) }
+    { Surface.Infix (`Add, expr1, expr2) }
 | expr1 = located(mul_expr); "-"; expr2 = located(add_expr);
-    { Surface.Op2 (`Sub, expr1, expr2) }
+    { Surface.Infix (`Sub, expr1, expr2) }
 | mul_expr
 
 let mul_expr :=
 | expr1 = located(app_expr); "*"; expr2 = located(mul_expr);
-    { Surface.Op2 (`Mul, expr1, expr2) }
+    { Surface.Infix (`Mul, expr1, expr2) }
 | app_expr
 
 let app_expr :=
 | expr1 = located(app_expr); expr2 = located(atomic_expr);
     { Surface.App (expr1, expr2) }
 | "-"; expr = located(atomic_expr);
-    { Surface.Op1 (`Neg, expr) }
+    { Surface.Prefix (`Neg, expr) }
 | "!"; expr = located(atomic_expr);
-    { Surface.Op1 (`Not, expr) }
+    { Surface.Prefix (`Not, expr) }
 | atomic_expr
 
 let atomic_expr :=
