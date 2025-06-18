@@ -79,8 +79,8 @@ end = struct
     details : string list;
   }
 
-  let error (loc : loc) (message : string) : error =
-    { loc; message; details = [] }
+  let error ?(details = ([] : string list)) (loc : loc) (message : string) : error =
+    { loc; message; details }
 
 
   (** {2 Elaboration context} *)
@@ -122,14 +122,12 @@ end = struct
     | Reported_error, _ | _, Reported_error -> Ok ()
     | ty1, ty2 when ty1 = ty2 -> Ok ()
     | ty1, ty2 ->
-        Error {
-          (error loc "mismatched types") with
-          details = [
+        Result.error @@ error loc "mismatched types"
+          ~details:[
             Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
               (Core.pp_ty ty1)
               (Core.pp_ty ty2);
-          ];
-        }
+          ]
 
 
   (** {2 Bidirectional type checking} *)
@@ -148,7 +146,7 @@ end = struct
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
     | Name name ->
-        report ctx (error ty.loc (Format.asprintf "unbound type `%s`" name));
+        report ctx @@ error ty.loc (Format.asprintf "unbound type `%s`" name);
         Reported_error
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ctx ty1, check_ty ctx ty2)
@@ -189,7 +187,7 @@ end = struct
         | None when name = "true" -> Bool_lit true, Bool_type
         | None when name = "false" -> Bool_lit false, Bool_type
         | None ->
-            report ctx (error tm.loc (Format.asprintf "unbound name `%s`" name));
+            report ctx @@ error tm.loc (Format.asprintf "unbound name `%s`" name);
             Reported_error, Reported_error
         end
 
@@ -217,18 +215,16 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | head_ty ->
-            report ctx {
-              (error head_loc "mismatched types") with
-              details = [
+            report ctx @@ error head_loc "mismatched types"
+              ~details:[
                 Format.asprintf "@[<v>@[expected: function@]@ @[   found: %t@]@]"
                   (Core.pp_ty head_ty);
               ];
-            };
             Reported_error, Reported_error
         end
 
     | If_then_else (_, _, _) ->
-        report ctx (error tm.loc "ambiguous if expression");
+        report ctx @@ error tm.loc "ambiguous if expression";
         Reported_error, Reported_error
 
     | Op2 (`Eq, tm1, tm2) ->
@@ -239,7 +235,7 @@ end = struct
         | Ok (), Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Ok (), Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
         | Ok (), ty ->
-            report ctx (error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty)));
+            report ctx @@ error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty));
             Reported_error, Reported_error
         | Error error, _ ->
             report ctx error;
@@ -295,7 +291,7 @@ end = struct
     (* If we see an unexpected parameter, we check the parameter type regardless
        and continue checking the body of the function. *)
     | (name, param_ty) :: params, ty ->
-        report ctx (error name.loc "unexpected parameter");
+        report ctx @@ error name.loc "unexpected parameter";
         param_ty |> Option.iter (fun ty -> ignore (check_ty ctx ty));
         check_fun_lit ctx params body ty
 
@@ -312,7 +308,7 @@ end = struct
           match param_ty with
           | Some ty -> check_ty ctx ty
           | None ->
-              report ctx (error name.loc "ambiguous parameter type");
+              report ctx @@ error name.loc "ambiguous parameter type";
               Reported_error
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
