@@ -129,8 +129,11 @@ end = struct
   let quote_vty (ctx : context) (vty : Core.Semantics.vty) : Core.ty =
     Core.Semantics.quote_vty ctx.ty_size vty
 
-  let pp_ty (ctx : context) (ty : Core.ty) (ppf : Format.formatter) : unit =
-    Core.pp_ty ctx.ty_names ty ppf
+  let pp_ty (ctx : context) (ty : Core.ty) : Format.formatter -> unit =
+    Core.pp_ty ctx.ty_names ty
+
+  let pp_vty (ctx : context) (vty : Core.Semantics.vty) : Format.formatter -> unit =
+    pp_ty ctx (quote_vty ctx vty)
 
 
   (** {2 Elaboration errors} *)
@@ -148,8 +151,8 @@ end = struct
     if Core.Semantics.is_convertible ctx.ty_size vty1 vty2 then () else
       error loc
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
-          (pp_ty ctx (quote_vty ctx vty1))
-          (pp_ty ctx (quote_vty ctx vty2)))
+          (pp_vty ctx vty1)
+          (pp_vty ctx vty2))
 
 
   (** {2 Bidirectional type checking} *)
@@ -262,7 +265,7 @@ end = struct
         begin match vty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
-        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_ty ctx (quote_vty ctx vty)))
+        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_vty ctx vty))
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->

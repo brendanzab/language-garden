@@ -139,8 +139,11 @@ end = struct
   let quote_vty (ctx : context) (vty : Core.vty) : Core.ty =
     Semantics.quote_vty ctx.ty_size vty
 
-  let pp_ty (ctx : context) (ty : Core.ty) (ppf : Format.formatter) : unit =
-    Core.pp_ty ctx.ty_names ty ppf
+  let pp_ty (ctx : context) (ty : Core.ty) : Format.formatter -> unit =
+    Core.pp_ty ctx.ty_names ty
+
+  let pp_vty (ctx : context) (vty : Core.vty) : Format.formatter -> unit =
+    pp_ty ctx (quote_vty ctx vty)
 
 
   (** {2 Elaboration errors} *)
@@ -159,21 +162,21 @@ end = struct
     | Core.Mismatched_types (_, _) ->
         error loc
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
-            (pp_ty ctx (quote_vty ctx vty1))
-            (pp_ty ctx (quote_vty ctx vty2)))
+            (pp_vty ctx vty1)
+            (pp_vty ctx vty2))
     | Core.Infinite_type m ->
         error loc
           (Format.asprintf "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (pp_ty ctx (Meta_var m))
-            (pp_ty ctx (quote_vty ctx vty1))
-            (pp_ty ctx (quote_vty ctx vty2)))
+            (pp_vty ctx vty1)
+            (pp_vty ctx vty2))
     | Core.Escaping_scope (m, vty) ->
         error loc
           (Format.asprintf "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[found: %t@]@]"
-            (pp_ty ctx (quote_vty ctx vty))
+            (pp_vty ctx vty)
             (pp_ty ctx (Meta_var m))
-            (pp_ty ctx (quote_vty ctx vty1))
-            (pp_ty ctx (quote_vty ctx vty2)))
+            (pp_vty ctx vty1)
+            (pp_vty ctx vty2))
 
 
   (** {2 Bidirectional type checking} *)
@@ -304,7 +307,7 @@ end = struct
         begin match Core.force_vty vty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
-        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_ty ctx (quote_vty ctx vty)))
+        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_vty ctx vty))
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
