@@ -205,7 +205,7 @@ end = struct
     | Int_lit i ->
         Int_lit i, Int_type
 
-    | App ({ loc = head_loc; _ } as head, arg) ->
+    | App (head, arg) ->
         let head, head_ty = infer_tm ctx head in
         begin match head_ty with
         | Reported_error ->
@@ -213,12 +213,8 @@ end = struct
         | Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
-        | head_ty ->
-            report ctx @@ Error.make head_loc "mismatched types"
-              ~details:[
-                Format.asprintf "@[<v>@[expected: function@]@ @[   found: %t@]@]"
-                  (Core.pp_ty head_ty);
-              ];
+        | _ ->
+            report ctx @@ Error.make arg.loc "unexpected argument";
             Reported_error, Reported_error
         end
 

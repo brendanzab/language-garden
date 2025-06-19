@@ -39,7 +39,7 @@ and tm_data =
   | Ann of tm * ty
   | Fun_lit of param list * tm
   | Int_lit of int
-  | App of tm * arg
+  | App of tm * arg located
   | If_then_else of tm * tm * tm
   | Infix of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Prefix of [`Neg] * tm
@@ -232,30 +232,22 @@ end = struct
     | Fun_lit (params, body) ->
         infer_fun_lit ctx params None body
 
-    | App (head, Ty_arg arg) ->
-        let head_loc = head.loc in
+    | App (head, { loc = arg_loc; data = Ty_arg arg }) ->
         let head, head_ty = infer_tm ctx head in
         let body_ty =
           match head_ty with
           | Forall_type (_, body_ty) -> body_ty
-          | head_vty ->
-              error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: type function@]@ @[found: %t@]@]"
-                  (pp_ty ctx (quote_vty ctx head_vty)))
+          | _ -> error arg_loc "unexpected type argument"
         in
         let arg = check_ty ctx arg in
         Forall_app (head, arg), body_ty (eval_ty ctx arg)
 
-    | App (head, Arg arg) ->
-        let head_loc = head.loc in
+    | App (head, { loc = arg_loc; data = Arg arg }) ->
         let head, head_ty = infer_tm ctx head in
         let param_ty, body_ty =
           match head_ty with
           | Fun_type (param_ty, body_ty) -> param_ty, body_ty
-          | head_vty ->
-              error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
-                  (pp_ty ctx (quote_vty ctx head_vty)))
+          | _ -> error arg_loc "unexpected argument"
         in
         let arg = check_tm ctx arg param_ty in
         Fun_app (head, arg), body_ty

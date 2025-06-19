@@ -196,13 +196,11 @@ Mismatched argument
 
 Unexpected function application
   $ executable elab <<< "true 3"
-  error: mismatched types:
-    expected: function
-    found: Bool
-    ┌─ <stdin>:1:0
+  error: unexpected argument
+    ┌─ <stdin>:1:5
     │
   1 │ true 3
-    │ ^^^^
+    │      ^
   
   [1]
 

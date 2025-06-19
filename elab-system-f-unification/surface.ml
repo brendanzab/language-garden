@@ -40,7 +40,7 @@ and tm_data =
   | Ann of tm * ty
   | Fun_lit of param list * tm
   | Int_lit of int
-  | App of tm * arg
+  | App of tm * arg located
   | If_then_else of tm * tm * tm
   | Infix of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Prefix of [`Neg] * tm
@@ -262,16 +262,16 @@ end = struct
         let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
 
-        let rec go (head : Core.tm) (head_ty : Core.vty) (arg : arg) : Core.tm * Core.vty =
-          match Core.force_vty head_ty, arg with
+        let rec go (head : Core.tm) (head_ty : Core.vty) (arg : arg located) : Core.tm * Core.vty =
+          match Core.force_vty head_ty, arg.data with
           | Forall_type (_, body_ty), Ty_arg arg ->
               let arg = check_ty ctx arg in
               Forall_app (head, arg), body_ty (eval_ty ctx arg)
 
           (* Instantiate expected type parameters with metavariables *)
-          | Forall_type (_, body_ty), Arg arg ->
+          | Forall_type (_, body_ty), Arg _ ->
               let ty_arg = fresh_meta ctx head_loc "type argument" in
-              go (Forall_app (head, ty_arg)) (body_ty (eval_ty ctx ty_arg)) (Arg arg)
+              go (Forall_app (head, ty_arg)) (body_ty (eval_ty ctx ty_arg)) arg
 
           | Fun_type (param_ty, body_ty), Arg arg ->
               let arg = check_tm ctx arg param_ty in
@@ -284,15 +284,8 @@ end = struct
               let arg = check_tm ctx arg param_ty in
               Fun_app (head, arg), body_ty
 
-          | head_vty, Ty_arg _ ->
-              error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: forall@]@ @[found: %t@]@]"
-                  (pp_ty ctx (quote_vty ctx head_vty)))
-
-          | head_vty, Arg _ ->
-              error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
-                  (pp_ty ctx (quote_vty ctx head_vty)))
+          | _, Ty_arg _ -> error arg.loc "unexpected type argument"
+          | _, Arg _ -> error arg.loc "unexpected type argument"
         in
 
         go head head_ty arg

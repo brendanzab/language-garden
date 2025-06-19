@@ -80,10 +80,8 @@ let mul_tm :=
 | app_tm
 
 let app_tm :=
-| tm = located(app_tm); "["; ty = located(ty); "]";
-    { Surface.App (tm, Ty_arg ty) }
-| tm1 = located(app_tm); tm2 = located(atomic_tm);
-    { Surface.App (tm1, Arg tm2) }
+| tm = located(app_tm); arg = located(arg);
+    { Surface.App (tm, arg) }
 | "-"; tm = located(atomic_tm);
     { Surface.Prefix (`Neg, tm) }
 | atomic_tm
@@ -112,6 +110,15 @@ let param :=
     { Surface.Param (n, None) }
 | "("; n = located(binder); ":"; ty = located(ty); ")";
     { Surface.Param (n, Some ty) }
+
+
+(* Arguments *)
+
+let arg :=
+| "["; ty = located(ty); "]";
+    { Surface.Ty_arg ty }
+| tm = located(atomic_tm);
+    { Surface.Arg tm }
 
 
 (* Utilities *)

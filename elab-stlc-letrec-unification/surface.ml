@@ -225,10 +225,8 @@ end = struct
     | Bool_lit b ->
         Bool_lit b, Bool_type
 
-    | App (head, arg) ->
-        let head_loc = head.loc in
+    | App ({ loc = head_loc; _ } as head, arg) ->
         let head, head_ty = infer_tm ctx head in
-
         begin match Core.force_ty head_ty with
         | Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
@@ -239,10 +237,7 @@ end = struct
             unify_tys head_loc (Fun_type (param_ty, body_ty)) head_ty;
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
-        | head_ty ->
-            error head_loc
-              (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
-                (Core.pp_ty head_ty))
+        | _ -> error arg.loc "unexpected argument"
         end
 
     | If_then_else (head, tm1, tm2) ->

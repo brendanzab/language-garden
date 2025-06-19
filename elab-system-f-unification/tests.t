@@ -235,25 +235,21 @@ Mismatched argument
 
 Unexpected function application
   $ executable elab <<< "true 3"
-  error: mismatched types:
-    expected: function
-    found: Bool
-    ┌─ <stdin>:1:0
+  error: unexpected type argument
+    ┌─ <stdin>:1:5
     │
   1 │ true 3
-    │ ^^^^
+    │      ^
   
   [1]
 
 Unexpected function application
   $ executable elab <<< "true [Int]"
-  error: mismatched types:
-    expected: forall
-    found: Bool
-    ┌─ <stdin>:1:0
+  error: unexpected type argument
+    ┌─ <stdin>:1:5
     │
   1 │ true [Int]
-    │ ^^^^
+    │      ^^^^^
   
   [1]
 

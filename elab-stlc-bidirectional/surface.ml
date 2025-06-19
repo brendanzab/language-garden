@@ -169,15 +169,11 @@ end = struct
         infer_fun_lit ctx params None body
 
     | App (head, arg) ->
-        let head_loc = head.loc in
         let head, head_ty = infer_tm ctx head in
         let param_ty, body_ty =
           match head_ty with
           | Fun_type (param_ty, body_ty) -> param_ty, body_ty
-          | head_ty ->
-              error head_loc
-                (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: function@]@ @[found: %t@]@]"
-                  (Core.pp_ty head_ty))
+          | _ -> error arg.loc "unexpected argument"
         in
         let arg = check_tm ctx arg param_ty in
         Fun_app (head, arg), body_ty
