@@ -144,7 +144,7 @@ end = struct
     | Name "Int" -> Int_type
     | Name name ->
         report ctx @@ Error.make ty.loc (Format.asprintf "unbound type `%s`" name);
-        Reported_error
+        Unknown_type
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ctx ty1, check_ty ctx ty2)
 
@@ -185,7 +185,7 @@ end = struct
         | None when name = "false" -> Bool_lit false, Bool_type
         | None ->
             report ctx @@ Error.make tm.loc (Format.asprintf "unbound name `%s`" name);
-            Reported_error, Reported_error
+            Reported_error, Unknown_type
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -206,14 +206,14 @@ end = struct
     | App (head, arg) ->
         let head, head_ty = infer_tm ctx head in
         begin match head_ty with
-        | Reported_error ->
-            Reported_error, Reported_error
+        | Unknown_type ->
+            Reported_error, Unknown_type
         | Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | _ ->
             report ctx @@ Error.make arg.loc "unexpected argument";
-            Reported_error, Reported_error
+            Reported_error, Unknown_type
         end
 
     | If_then_else (head, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
@@ -229,21 +229,21 @@ end = struct
                   (Core.pp_ty ty1)
                   (Core.pp_ty ty2);
               ];
-            Reported_error, Reported_error
+            Reported_error, Unknown_type
         end
 
     | Infix (`Eq, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
         begin match Core.meet_tys ty1 ty2 with
-        | Some Reported_error -> Reported_error, Reported_error
+        | Some Unknown_type -> Reported_error, Unknown_type
         | Some Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Some Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
         | Some ty ->
             report ctx @@ Error.make tm.loc
               (Format.asprintf "@[<h>cannot compare operands of type `%t`@]" (Core.pp_ty ty))
               ~details:["expected `Bool` or `Int`"];
-            Reported_error, Reported_error
+            Reported_error, Unknown_type
         | None ->
             report ctx @@ Error.make tm2_loc "mismatched operands"
               ~details:[
@@ -251,7 +251,7 @@ end = struct
                   (Core.pp_ty ty1)
                   (Core.pp_ty ty2);
               ];
-            Reported_error, Reported_error
+            Reported_error, Unknown_type
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
@@ -285,20 +285,20 @@ end = struct
               | Ok () -> param_ty
               | Error error ->
                   report ctx error;
-                  Reported_error
+                  Unknown_type
         in
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body body_ty)
 
     (* If the expected type comes from a previously reported error, continue
        checking parameters in a degraded state *)
-    | (name, param_ty) :: params, Reported_error ->
+    | (name, param_ty) :: params, Unknown_type ->
         let param_ty = match param_ty with
           | Some ty -> check_ty ctx ty
-          | None -> Reported_error
+          | None -> Unknown_type
         in
         Fun_lit (name.data, param_ty,
-          check_fun_lit (extend ctx name.data param_ty) params body Reported_error)
+          check_fun_lit (extend ctx name.data param_ty) params body Unknown_type)
 
     (* If we see an unexpected parameter, we check the parameter type regardless
        and continue checking the body of the function. *)
@@ -321,7 +321,7 @@ end = struct
           | Some ty -> check_ty ctx ty
           | None ->
               report ctx @@ Error.make name.loc "ambiguous parameter type";
-              Reported_error
+              Unknown_type
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)

@@ -44,7 +44,7 @@ type ty =
   | Fun_type of ty * ty
   | Int_type
   | Bool_type
-  | Reported_error              (* Error sentinel *)
+  | Unknown_type            (* A type hole, used when recovering from errors *)
 
 (** Term syntax *)
 type tm =
@@ -56,7 +56,7 @@ type tm =
   | Bool_lit of bool
   | Bool_elim of tm * tm * tm
   | Prim_app of Prim.t * tm list
-  | Reported_error              (* Error sentinel *)
+  | Reported_error
 
 
 module Semantics = struct
@@ -82,7 +82,7 @@ module Semantics = struct
     | Fun_app of ntm * vtm
     | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
     | Prim_app of Prim.t * vtm list
-    | Reported_error                (* Error sentinel *)
+    | Reported_error
 
 
   (** {1 Eliminators} *)
@@ -185,7 +185,7 @@ end
 (** Check if two types are compatible with each other. *)
 let rec equate_tys (ty1 : ty) (ty2 : ty) : bool =
   match ty1, ty2 with
-  | Reported_error, _ | _, Reported_error -> true
+  | Unknown_type, _ | _, Unknown_type -> true
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
       equate_tys param_ty1 param_ty2
       && equate_tys body_ty1 body_ty2
@@ -200,7 +200,7 @@ let rec equate_tys (ty1 : ty) (ty2 : ty) : bool =
 let rec meet_tys (ty1 : ty) (ty2 : ty) : ty option =
   let ( let* ) = Option.bind in
   match ty1, ty2 with
-  | Reported_error, ty | ty, Reported_error -> Some ty
+  | Unknown_type, ty | ty, Unknown_type -> Some ty
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
       let* param_ty = meet_tys param_ty1 param_ty2 in
       let* body_ty = meet_tys body_ty1 body_ty2 in
@@ -225,7 +225,7 @@ let pp_ty : ty -> Format.formatter -> unit =
     match ty with
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
-    | Reported_error -> Format.fprintf ppf "_"
+    | Unknown_type -> Format.fprintf ppf "?"
     | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
   in
   pp_ty
