@@ -178,8 +178,12 @@ end = struct
         let arg = check_tm ctx arg param_ty in
         Fun_app (head, arg), body_ty
 
-    | If_then_else (_, _, _) ->
-        error tm.loc "ambiguous if expression"
+    | If_then_else (head, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
+        let head = check_tm ctx head Bool_type in
+        let tm1, ty1 = infer_tm ctx tm1 in
+        let tm2, ty2 = infer_tm ctx tm2 in
+        equate_ty tm2_loc ty1 ty2;
+        Bool_elim (head, tm1, tm2), ty1
 
     | Infix (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in

@@ -61,7 +61,7 @@ Check let body type
       if #int-eq x 0 then id else incr;
   f 4 3 : Int
 
-If expressions
+If expressions (checking)
   $ executable elab <<EOF
   > let f (x : Int) (y : Int) : Int :=
   >   if x = 0 then y else 3;
@@ -71,6 +71,10 @@ If expressions
   let f : Int -> Int -> Int :=
     fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3;
   f 4 : Int -> Int
+
+If expressions (inference)
+  $ executable elab <<< "fun (x : Bool) => if x then 2 else 5"
+  fun (x : Bool) => if x then 2 else 5 : Bool -> Int
 
 Type expressions
   $ executable elab <<< "Int"
@@ -235,13 +239,15 @@ Ambiguous parameter type
   
   [1]
 
-Ambiguous if expression
+Mismatched if expression branches
   $ executable elab <<< "fun (x : Bool) => if x then true else 3"
-  error: ambiguous if expression
-    ┌─ <stdin>:1:18
+  error: mismatched types:
+    expected: Bool
+    found: Int
+    ┌─ <stdin>:1:38
     │
   1 │ fun (x : Bool) => if x then true else 3
-    │                   ^^^^^^^^^^^^^^^^^^^^^
+    │                                       ^
   
   [1]
 

@@ -180,6 +180,36 @@ module Semantics = struct
 end
 
 
+(** {1 Comparing types} *)
+
+(** Check if two types are compatible with each other. *)
+let rec equate_tys (ty1 : ty) (ty2 : ty) : bool =
+  match ty1, ty2 with
+  | Reported_error, _ | _, Reported_error -> true
+  | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
+      equate_tys param_ty1 param_ty2
+      && equate_tys body_ty1 body_ty2
+  | Int_type, Int_type -> true
+  | Bool_type, Bool_type -> true
+  | _, _ -> false
+
+(** The “meet” of two types picks the most specific of two compatible types,
+    which is important for propagating as much type information as we can when
+    inferring the type of conditionals. This was inspired by section 2.1.6 of
+    “Total Type Error Localization and Recovery with Holes” by Zhao et. al. *)
+let rec meet_tys (ty1 : ty) (ty2 : ty) : ty option =
+  let ( let* ) = Option.bind in
+  match ty1, ty2 with
+  | Reported_error, ty | ty, Reported_error -> Some ty
+  | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
+      let* param_ty = meet_tys param_ty1 param_ty2 in
+      let* body_ty = meet_tys body_ty1 body_ty2 in
+      Some (Fun_type (param_ty, body_ty))
+  | Int_type, Int_type -> Some Int_type
+  | Bool_type, Bool_type -> Some Bool_type
+  | _, _ -> None
+
+
 (** {1 Pretty printing} *)
 
 let pp_ty : ty -> Format.formatter -> unit =

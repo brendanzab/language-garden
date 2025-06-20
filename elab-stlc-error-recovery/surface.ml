@@ -116,17 +116,15 @@ end = struct
   let report (ctx : context) (error : Error.t) =
     Dynarray.add_last ctx.errors error
 
-  let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, Error.t) result =
-    match ty1, ty2 with
-    | Reported_error, _ | _, Reported_error -> Ok ()
-    | ty1, ty2 when ty1 = ty2 -> Ok ()
-    | ty1, ty2 ->
-        Result.error @@ Error.make loc "mismatched types"
-          ~details:[
-            Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
-              (Core.pp_ty ty1)
-              (Core.pp_ty ty2);
-          ]
+  (** Check if two types are compatible with each other. *)
+  let equate_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, Error.t) result =
+    if Core.equate_tys ty1 ty2 then Ok () else
+      Result.error @@ Error.make loc "mismatched types"
+        ~details:[
+          Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+            (Core.pp_ty ty1)
+            (Core.pp_ty ty2);
+        ]
 
 
   (** {2 Bidirectional type checking} *)
@@ -170,7 +168,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        begin match equate_ty tm.loc ty ty' with
+        begin match equate_tys tm.loc ty ty' with
         | Ok () -> tm'
         | Error error ->
             report ctx error;
@@ -218,22 +216,41 @@ end = struct
             Reported_error, Reported_error
         end
 
-    | If_then_else (_, _, _) ->
-        report ctx @@ Error.make tm.loc "ambiguous if expression";
-        Reported_error, Reported_error
-
-    | Infix (`Eq, tm1, tm2) ->
+    | If_then_else (head, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
+        let head = check_tm ctx head Bool_type in
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
-        begin match equate_ty tm.loc ty1 ty2, ty1 with
-        | Ok (), Reported_error -> Reported_error, Reported_error
-        | Ok (), Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
-        | Ok (), Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
-        | Ok (), ty ->
-            report ctx @@ Error.make tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty));
+        begin match Core.meet_tys ty1 ty2 with
+        | Some ty -> Bool_elim (head, tm1, tm2), ty
+        | None ->
+            report ctx @@ Error.make tm2_loc "mismatched branches of if expression"
+              ~details:[
+                Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+                  (Core.pp_ty ty1)
+                  (Core.pp_ty ty2);
+              ];
             Reported_error, Reported_error
-        | Error error, _ ->
-            report ctx error;
+        end
+
+    | Infix (`Eq, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
+        let tm1, ty1 = infer_tm ctx tm1 in
+        let tm2, ty2 = infer_tm ctx tm2 in
+        begin match Core.meet_tys ty1 ty2 with
+        | Some Reported_error -> Reported_error, Reported_error
+        | Some Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
+        | Some Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
+        | Some ty ->
+            report ctx @@ Error.make tm.loc
+              (Format.asprintf "@[<h>cannot compare operands of type `%t`@]" (Core.pp_ty ty))
+              ~details:["expected `Bool` or `Int`"];
+            Reported_error, Reported_error
+        | None ->
+            report ctx @@ Error.make tm2_loc "mismatched operands"
+              ~details:[
+                Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+                  (Core.pp_ty ty1)
+                  (Core.pp_ty ty2);
+              ];
             Reported_error, Reported_error
         end
 
@@ -264,7 +281,7 @@ end = struct
           | None -> param_ty'
           | Some ({ loc; _ } as param_ty) ->
               let param_ty = check_ty ctx param_ty in
-              match equate_ty loc param_ty param_ty' with
+              match equate_tys loc param_ty param_ty' with
               | Ok () -> param_ty
               | Error error ->
                   report ctx error;
