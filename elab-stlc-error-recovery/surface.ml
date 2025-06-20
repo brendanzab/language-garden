@@ -271,41 +271,48 @@ end = struct
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
-    match params, ty with
-    | [], ty ->
+    (* Extract the parameter type and body type, if possible, propagating unknown
+       types as required. See section 2.1.4 of “Total Type Error Localization
+       and Recovery with Holes” by Zhao et. al. for more details. *)
+    let match_fun_ty (ty : Core.ty) =
+      match ty with
+      | Fun_type (param_ty, body_ty) -> Some (param_ty, body_ty)
+      | Unknown_type -> Some (Unknown_type, Unknown_type)
+      | _ -> None
+    in
+
+    match params, match_fun_ty ty with
+    | [], _ ->
         check_tm ctx body ty
 
-    | (name, param_ty) :: params, Fun_type (param_ty', body_ty) ->
-        let param_ty =
-          match param_ty with
-          | None -> param_ty'
-          | Some ({ loc; _ } as param_ty) ->
-              let param_ty = check_ty ctx param_ty in
-              match equate_tys loc param_ty param_ty' with
-              | Ok () -> param_ty
-              | Error error ->
-                  report ctx error;
-                  Unknown_type
-        in
+    | (name, None) :: params, Some (param_ty, body_ty) ->
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body body_ty)
 
-    (* If the expected type comes from a previously reported error, continue
-       checking parameters in a degraded state *)
-    | (name, param_ty) :: params, Unknown_type ->
-        let param_ty = match param_ty with
-          | Some ty -> check_ty ctx ty
-          | None -> Unknown_type
-        in
-        Fun_lit (name.data, param_ty,
-          check_fun_lit (extend ctx name.data param_ty) params body Unknown_type)
+    | (name, Some ({ loc = ann_loc ; _ } as param_ty)) :: params, Some (expected_param_ty, body_ty) ->
+        let param_ty = check_ty ctx param_ty in
+        begin match equate_tys ann_loc param_ty expected_param_ty with
+        | Ok () ->
+            Fun_lit (name.data, param_ty,
+              check_fun_lit (extend ctx name.data param_ty) params body body_ty)
+        (* The explicit parameter did not match the expected type. Continue
+           checking the body of the function regardless. *)
+        | Error error ->
+            report ctx error;
+            let _ = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
+            Reported_error
+        end
 
     (* If we see an unexpected parameter, we check the parameter type regardless
        and continue checking the body of the function. *)
-    | (name, param_ty) :: params, ty ->
+    | (name, param_ty) :: params, None ->
         report ctx @@ Error.make name.loc "unexpected parameter";
-        param_ty |> Option.iter (fun ty -> ignore (check_ty ctx ty));
-        check_fun_lit ctx params body ty
+        let param_ty = match param_ty with
+          | Some param_ty -> check_ty ctx param_ty
+          | None -> Unknown_type
+        in
+        let _ = check_fun_lit (extend ctx name.data param_ty) params body Unknown_type in
+        Reported_error
 
   (** Elaborate a function literal into a core term, inferring its type. *)
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =

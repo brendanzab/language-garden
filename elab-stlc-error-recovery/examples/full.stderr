@@ -38,12 +38,6 @@ error: unexpected parameter
 7 │   fun (x : Bool) y x => x;
   │                  ^
 
-error: unexpected parameter
-  ┌─ <stdin>:7:19
-  │
-7 │   fun (x : Bool) y x => x;
-  │                    ^
-
 error: unbound type `Foo`
   ┌─ <stdin>:9:16
   │
