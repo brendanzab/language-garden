@@ -96,6 +96,15 @@ partially broken programs, e.g. in a similar way to GHC’s [deferred type error
 - [The `ty` module: representing types - Type errors](https://rustc-dev-guide.rust-lang.org/ty.html#type-errors),
   Rust Compiler Development Guide
 
+- Eric Zhao et. al. [Total Type Error Localization and Recovery with Holes](https://doi.org/10.1145/3632910), 2024.
+
+  This paper documents a similar approach that is used in the [Hazel](https://hazel.org/)
+  language. I’ve adapted some of the ideas from the paper in this project, in
+  particular around the elaboration of if expressions and functions, but I’ve
+  not yet read it fully yet and there might be some differences. One major
+  difference is that I currently elaborate some terms to `Reported_error`
+  sentinels, as opposed to preserving erroneous terms inside holes.
+
 - Vladimir Keleshev, [Advanced Error Handling in OCaml](https://keleshev.com/advanced-error-handling-in-ocaml)
 
   I tried using this approach, but while it’s nice that it doesn’t pollute the
