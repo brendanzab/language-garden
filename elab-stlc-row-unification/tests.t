@@ -160,37 +160,37 @@ Unbound variable
 
 Mismatched definition type
   $ executable elab <<< "let x : Bool := 1; x"
-  error: mismatched types:
-    expected: Bool
-    found: Int
+  error: mismatched types
     ┌─ <stdin>:1:16
     │
   1 │ let x : Bool := 1; x
     │                 ^
+    = expected: Bool
+         found: Int
   
   [1]
 
 Mismatched argument
   $ executable elab <<< "let f x := x + 1; f f"
-  error: mismatched types:
-    expected: Int
-    found: Int -> Int
+  error: mismatched types
     ┌─ <stdin>:1:20
     │
   1 │ let f x := x + 1; f f
     │                     ^
+    = expected: Int
+         found: Int -> Int
   
   [1]
 
 Mismatched argument
   $ executable elab <<< "let f (x : Bool) := x; f 1"
-  error: mismatched types:
-    expected: Bool
-    found: Int
+  error: mismatched types
     ┌─ <stdin>:1:25
     │
   1 │ let f (x : Bool) := x; f 1
     │                          ^
+    = expected: Bool
+         found: Int
   
   [1]
 
@@ -214,13 +214,13 @@ Mismatched variant constraint and variant type
   > 
   > result
   > EOF
-  error: mismatched types:
-    expected: [no : Int | yes : Int]
-    found: [?0.. no : Bool | yes : Int]
+  error: mismatched types
     ┌─ <stdin>:5:2
     │
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
+    = expected: [no : Int | yes : Int]
+         found: [?0.. no : Bool | yes : Int]
   
   [1]
 
@@ -234,13 +234,13 @@ Mismatched variant constraint and smaller variant type
   > 
   > result
   > EOF
-  error: mismatched types:
-    expected: [yes : Int]
-    found: [?0.. no : Bool | yes : Int]
+  error: mismatched types
     ┌─ <stdin>:5:2
     │
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
+    = expected: [yes : Int]
+         found: [?0.. no : Bool | yes : Int]
   
   [1]
 
@@ -254,13 +254,13 @@ Mismatched variant constraint and non-variant type
   > 
   > result
   > EOF
-  error: mismatched types:
-    expected: Bool
-    found: [?0.. no : Bool | yes : Int]
+  error: mismatched types
     ┌─ <stdin>:5:2
     │
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
+    = expected: Bool
+         found: [?0.. no : Bool | yes : Int]
   
   [1]
 
@@ -322,13 +322,13 @@ Ambiguous placeholder
 
 Mismatched if expression branches
   $ executable elab <<< "fun x => if x then true else 3"
-  error: mismatched types:
-    expected: Bool
-    found: Int
+  error: mismatched types
     ┌─ <stdin>:1:29
     │
   1 │ fun x => if x then true else 3
     │                              ^
+    = expected: Bool
+         found: Int
   
   [1]
 
@@ -392,13 +392,14 @@ Redundant variant pattern
   >   | [some := x] => x
   >   end
   > EOF
-  error: redundant variant pattern `some`
+  fun (x : [some : Int]) => match x with | [some := x] => #int-add x 1 end :
+    [some : Int] -> Int
+  warning: redundant variant pattern `some`
     ┌─ <stdin>:4:5
     │
   4 │   | [some := x] => x
     │      ^^^^
   
-  [1]
 
 Unexpected variant pattern
   $ executable elab <<EOF
@@ -430,34 +431,35 @@ Missing variant patterns
 
 Unexpected pattern match
   $ executable elab <<< "match true with [a := x] => x end"
-  error: mismatched types:
-    expected: variant
-    found: Bool
+  error: mismatched types
     ┌─ <stdin>:1:6
     │
   1 │ match true with [a := x] => x end
     │       ^^^^
+    = expected: variant
+         found: Bool
   
   [1]
 
 Mismatched equality
   $ executable elab <<< "1 = false"
-  error: mismatched types:
-    expected: Int
-    found: Bool
+  error: mismatched types
     ┌─ <stdin>:1:0
     │
   1 │ 1 = false
     │ ^^^^^^^^^
+    = expected: Int
+         found: Bool
   
   [1]
 
 Unsupported equality
   $ executable elab <<< "let f (x : Bool) := x; f = f"
-  error: unsupported type: Bool -> Bool
+  error: cannot compare operands of type `Bool -> Bool`
     ┌─ <stdin>:1:23
     │
   1 │ let f (x : Bool) := x; f = f
     │                        ^^^^^
+    = expected `Bool` or `Int`
   
   [1]

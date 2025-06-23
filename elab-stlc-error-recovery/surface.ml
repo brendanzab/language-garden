@@ -241,7 +241,8 @@ end = struct
         | Some Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
         | Some ty ->
             report ctx @@ Error.make tm.loc
-              (Format.asprintf "@[<h>cannot compare operands of type `%t`@]" (Core.pp_ty ty))
+              (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
+                (Core.pp_ty ty))
               ~details:["expected `Bool` or `Int`"];
             Reported_error, Unknown_type
         | None ->

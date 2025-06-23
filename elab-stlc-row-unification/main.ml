@@ -26,7 +26,8 @@ module Source_file = struct
 
 end
 
-let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc) (message : string) =
+let emit (source : Source_file.t) (diagnostic : Surface.Diagnostic.t) =
+  let start, stop = diagnostic.loc in
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -39,11 +40,18 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "%s: %s\n" severity message;
+  Printf.eprintf "%s: %s\n" (Surface.Severity.to_string diagnostic.severity) diagnostic.message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
+  diagnostic.details |> List.iter begin fun message ->
+    String.split_on_char '\n' message |> List.iteri begin fun i line ->
+      match i with
+      | 0 -> Printf.eprintf "%s = %s\n" gutter_pad line
+      | _ -> Printf.eprintf "%s   %s\n" gutter_pad line
+    end;
+  end;
   Printf.eprintf "\n"
 
 let parse_tm (source : Source_file.t) : Surface.tm =
@@ -55,15 +63,21 @@ let parse_tm (source : Source_file.t) : Surface.tm =
     MenhirLib.Convert.Simplified.traditional2revised Parser.main
       (Sedlexing.with_tokenizer Lexer.token lexbuf)
   with
-  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
-  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
+  | Lexer.Error message -> emit source (Surface.Diagnostic.error (lexpos ()) message); exit 1
+  | Parser.Error -> emit source (Surface.Diagnostic.error (lexpos ()) "syntax error"); exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
-  match Surface.Elab.infer_tm tm with
-  | Ok (tm, ty) -> tm, ty
-  | Error errors ->
-      errors |> List.iter (fun (pos, reason) -> emit source "error" pos reason);
-      exit 1
+  let result, diagnostics = Surface.Elab.infer_tm tm in
+
+  let error_count = ref 0 in
+  diagnostics |> List.iter begin fun (d : Surface.Diagnostic.t) ->
+    match d.severity with
+    | Warning -> emit source d
+    | Error -> emit source d; incr error_count
+  end;
+  if !error_count > 0 then exit 1;
+
+  Option.get result
 
 
 (** {1 Subcommands} *)
