@@ -107,7 +107,13 @@ end = struct
 
   (** {2 Elaboration errors} *)
 
-  (** One or more errors found during elaboration. *)
+  (** An exception used internally when encountering errors. These are expected
+      to be caught later by the {!run_elab} function and should never escape
+      this module.
+
+      Real-world implementations should use error recovery so that elaboration
+      can proceed after errors have been encountered. See [elab-error-recovery]
+      for an example of how to implement this. *)
   exception Error of loc * string
 
   (** Raises an {!Error} exception *)

@@ -179,13 +179,13 @@ end = struct
 
   (** {2 Elaboration errors} *)
 
-  (** An exception used internally to finish elaboration upon encountering
-      errors. These will be caught later by the {!run_elab} function and should
-      never escape this module.
+  (** An exception used internally when encountering errors. These are expected
+      to be caught later by the {!run_elab} function and should never escape
+      this module.
 
-      Real-world implementations should use error recovery instead to allow
-      elaboration to proceed after errors have been encountered. See the
-      [elab-error-recovery] project for an example of how to implement this. *)
+      Real-world implementations should use error recovery so that elaboration
+      can proceed after errors have been encountered. See [elab-error-recovery]
+      for an example of how to implement this. *)
   exception Error
 
   (** Record a diagnostic in the elaboration context *)

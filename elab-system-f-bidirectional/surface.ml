@@ -140,7 +140,11 @@ end = struct
 
   (** An error that will be raised if there was a problem in the surface syntax,
       usually as a result of type errors. This is normal, and should be rendered
-      nicely to the programmer. *)
+      nicely to the programmer.
+
+      Real-world implementations should use error recovery so that elaboration
+      can proceed after errors have been encountered. See [elab-error-recovery]
+      for an example of how to implement this. *)
   exception Error of loc * string
 
   (** Raises an {!Error} exception *)

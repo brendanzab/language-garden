@@ -148,9 +148,13 @@ end = struct
 
   (** {2 Elaboration errors} *)
 
-  (** An error that will be raised if there was a problem in the surface syntax,
-      usually as a result of type errors. This is normal, and should be rendered
-      nicely to the programmer. *)
+  (** An exception used internally when encountering errors. These are expected
+      to be caught later by the {!run_elab} function and should never escape
+      this module.
+
+      Real-world implementations should use error recovery so that elaboration
+      can proceed after errors have been encountered. See [elab-error-recovery]
+      for an example of how to implement this. *)
   exception Error of (loc * string)
 
   (** Raises an {!Error} exception *)
