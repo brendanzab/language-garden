@@ -389,7 +389,11 @@ end = struct
             error ctx tm.loc
               (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
                 (Core.pp_ty ty))
-              ~details:["expected `Bool` or `Int`"]
+              ~details:[
+                Format.asprintf "expected `%t` or `%t`"
+                  (Core.pp_ty Bool_type)
+                  (Core.pp_ty Int_type);
+              ]
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->

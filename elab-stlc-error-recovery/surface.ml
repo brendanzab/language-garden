@@ -243,7 +243,11 @@ end = struct
             report ctx @@ Error.make tm.loc
               (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
                 (Core.pp_ty ty))
-              ~details:["expected `Bool` or `Int`"];
+              ~details:[
+                Format.asprintf "expected `%t` or `%t`"
+                  (Core.pp_ty Bool_type)
+                  (Core.pp_ty Int_type);
+              ];
             Reported_error, Unknown_type
         | None ->
             report ctx @@ Error.make tm2_loc "mismatched operands"
