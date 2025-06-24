@@ -83,7 +83,7 @@ module Severity = struct
 
 end
 
-(** An diagnostic message that should be reported to the programmer. *)
+(** A diagnostic message that should be reported to the programmer. *)
 module Diagnostic = struct
 
   type t = {
