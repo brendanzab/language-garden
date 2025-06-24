@@ -59,11 +59,9 @@ and param =
 *)
 module Elab : sig
 
-  exception Error of loc * string
-
-  val check_ty : ty -> Core.ty
-  val check_tm : tm -> Core.ty -> Core.tm
-  val infer_tm : tm -> Core.tm * Core.ty
+  val check_ty : ty -> (Core.ty, loc * string) result
+  val check_tm : tm -> Core.ty -> (Core.tm, loc * string) result
+  val infer_tm : tm -> (Core.tm * Core.ty, loc * string) result
 
 end = struct
 
@@ -82,9 +80,9 @@ end = struct
 
   (** {2 Elaboration errors} *)
 
-  (** An error that will be raised if there was a problem in the surface syntax,
-      usually as a result of type errors. This is normal, and should be rendered
-      nicely to the programmer.
+  (** An exception used internally when encountering errors. These are expected
+      to be caught later by the {!run_elab} function and should never escape
+      this module.
 
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
@@ -247,12 +245,23 @@ end = struct
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
 
 
+  (** {2 Running elaboration} *)
+
+  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+    match prog () with
+    | result -> Ok result
+    | exception Error (loc, message) -> Error (loc, message)
+
+
   (** {2 Public API} *)
 
-  let check_tm : tm -> Core.ty -> Core.tm =
-    check_tm []
+  let check_ty (ty : ty) : (Core.ty, loc * string) result =
+    run_elab (fun () -> check_ty ty)
 
-  let infer_tm : tm -> Core.tm * Core.ty =
-    infer_tm []
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, loc * string) result =
+    run_elab (fun () -> check_tm [] tm ty)
+
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, loc * string) result =
+    run_elab (fun () -> infer_tm [] tm)
 
 end

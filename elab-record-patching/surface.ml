@@ -75,10 +75,8 @@ and params = param list
 *)
 module Elab : sig
 
-  exception Error of loc * string
-
-  val check : tm -> Core.Semantics.vty -> Core.Syntax.tm
-  val infer : tm -> Core.Syntax.tm * Core.Semantics.vty
+  val check : tm -> Core.Semantics.vty -> (Core.Syntax.tm, loc * string) result
+  val infer : tm -> (Core.Syntax.tm * Core.Semantics.vty, loc * string) result
 
 end = struct
 
@@ -153,9 +151,13 @@ end = struct
 
   (** {2 Elaboration errors} *)
 
-  (** An error that will be raised if there was a problem in the surface syntax,
-      usually as a result of type errors. This is normal, and should be rendered
-      nicely to the programmer. *)
+  (** An exception used internally when encountering errors. These are expected
+      to be caught later by the {!run_elab} function and should never escape
+      this module.
+
+      Real-world implementations should use error recovery so that elaboration
+      can proceed after errors have been encountered. See [elab-error-recovery]
+      for an example of how to implement this. *)
   exception Error of loc * string
 
   (** Raises an {!Error} exception *)
@@ -540,12 +542,20 @@ end = struct
     | ty -> tm, ty
 
 
+  (** {2 Running elaboration} *)
+
+  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+    match prog () with
+    | result -> Ok result
+    | exception Error (loc, message) -> Error (loc, message)
+
+
   (** {2 Public API} *)
 
-  let check : tm -> Semantics.vty -> Syntax.tm =
-    check empty
+  let check (tm : tm) (vty : Semantics.vty) : (Core.Syntax.tm, loc * string) result =
+    run_elab (fun () -> check empty tm vty)
 
-  let infer : tm -> Syntax.tm * Semantics.vty =
-    infer empty
+  let infer (tm : tm) : (Core.Syntax.tm * Core.Semantics.vty, loc * string) result =
+    run_elab (fun () -> infer empty tm)
 
 end

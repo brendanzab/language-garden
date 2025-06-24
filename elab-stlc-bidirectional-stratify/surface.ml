@@ -56,12 +56,10 @@ module Elab : sig
     | Type of Core.ty
     | Expr of Core.expr * Core.ty
 
-  exception Error of loc * string
-
-  val check_ty : tm -> Core.ty
-  val check_expr : tm -> Core.ty -> Core.expr
-  val infer_expr : tm -> Core.expr * Core.ty
-  val infer : tm -> elab_tm
+  val check_ty : tm -> (Core.ty, loc * string) result
+  val check_expr : tm -> Core.ty -> (Core.expr, loc * string) result
+  val infer_expr : tm -> (Core.expr * Core.ty, loc * string) result
+  val infer : tm -> (elab_tm, loc * string) result
 
 end = struct
 
@@ -98,9 +96,9 @@ end = struct
 
   (** {2 Elaboration errors} *)
 
-  (** An error that will be raised if there was a problem in the surface syntax,
-      usually as a result of type errors. This is normal, and should be rendered
-      nicely to the programmer.
+  (** An exception used internally when encountering errors. These are expected
+      to be caught later by the {!run_elab} function and should never escape
+      this module.
 
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
@@ -311,18 +309,26 @@ end = struct
         Expr (Fun_lit (name.data, param_t, body), Fun_type (param_t, body_t))
 
 
+  (** {2 Running elaboration} *)
+
+  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+    match prog () with
+    | result -> Ok result
+    | exception Error (loc, message) -> Error (loc, message)
+
+
   (** {2 Public API} *)
 
-  let check_ty : tm -> Core.ty =
-    check_ty []
+  let check_ty (tm : tm) : (Core.ty, loc * string) result =
+    run_elab (fun () -> check_ty [] tm)
 
-  let check_expr : tm -> Core.ty -> Core.expr =
-    check_expr []
+  let check_expr (tm : tm) (ty : Core.ty) : (Core.expr, loc * string) result =
+    run_elab (fun () -> check_expr [] tm ty)
 
-  let infer_expr : tm -> Core.expr * Core.ty =
-    infer_expr []
+  let infer_expr (tm : tm) : (Core.expr * Core.ty, loc * string) result =
+    run_elab (fun () -> infer_expr [] tm)
 
-  let infer : tm -> elab_tm =
-    infer []
+  let infer (tm : tm) : (elab_tm, loc * string) result =
+    run_elab (fun () -> infer [] tm)
 
 end

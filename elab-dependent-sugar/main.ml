@@ -59,9 +59,10 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) =
-  try Surface.Elab.infer tm with
-  | Surface.Elab.Error (pos, message) ->
-      emit source "error" pos message;
+  match Surface.Elab.infer tm with
+  | Ok (tm, ty) -> tm, ty
+  | Error (pos, msg) ->
+      emit source "error" pos msg;
       exit 1
 
 let pp_tm ?resugar =
