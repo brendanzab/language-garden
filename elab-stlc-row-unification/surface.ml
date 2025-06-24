@@ -363,10 +363,12 @@ end = struct
             unify_tys ctx head_loc (Record_type (fresh_row_meta ctx row)) head_ty;
             Record_proj (head, label.data), field_ty
         | head_ty ->
-            error ctx head_loc
-              (Format.asprintf "@[<v 2>@[unknown field `%s`:@]@ @[found: %t@]@]"
-                label.data
-                (Core.pp_ty head_ty))
+            error ctx head_loc (Format.asprintf "unknown field `%s`" label.data)
+              ~details:[
+                Format.asprintf "@[<v>@[expected: { .. %s : _ }@]@ @[   found: %t@]@]"
+                  label.data
+                  (Core.pp_ty head_ty);
+              ]
         end
 
     | If_then_else (head, tm1, tm2) ->

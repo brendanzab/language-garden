@@ -334,23 +334,25 @@ Mismatched if expression branches
 
 Unknown field
   $ executable elab <<< "{ x := 42 }.y"
-  error: unknown field `y`:
-    found: { x : Int }
+  error: unknown field `y`
     ┌─ <stdin>:1:0
     │
   1 │ { x := 42 }.y
     │ ^^^^^^^^^^^
+    = expected: { .. y : _ }
+         found: { x : Int }
   
   [1]
 
 Unexpected projection
   $ executable elab <<< "true.y"
-  error: unknown field `y`:
-    found: Bool
+  error: unknown field `y`
     ┌─ <stdin>:1:0
     │
   1 │ true.y
     │ ^^^^
+    = expected: { .. y : _ }
+         found: Bool
   
   [1]
 
