@@ -36,7 +36,6 @@ module Elab : sig
   (* TODO: collect errors instead of failing at the first error *)
 
   exception Error of loc * string
-  exception Bug of loc * string
 
   val check_tm : tm -> Core.ty -> Core.tm
   val infer_tm : tm -> Core.tm * Core.ty
@@ -44,10 +43,8 @@ module Elab : sig
 end = struct
 
   exception Error of loc * string
-  exception Bug of loc * string
 
   let error loc msg = raise (Error (loc, msg))
-  let bug loc msg = raise (Bug (loc, msg))
 
   type context = (string * Core.var) list
 
@@ -105,11 +102,7 @@ end = struct
     match tm.data with
     | Name name ->
         begin match List.assoc_opt name ctx with
-        | Some index ->
-            Core.var index
-            |> Core.catch_infer_tm begin function
-              | `Unbound_var -> bug tm.loc "unbound core variable"
-            end
+        | Some var -> Core.lookup var
         | None when name = "true" -> Core.Bool.intro_true
         | None when name = "false" -> Core.Bool.intro_false
         | None -> error tm.loc (Format.asprintf "unbound variable `%s`" name)

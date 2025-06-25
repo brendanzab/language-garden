@@ -72,4 +72,3 @@ let () =
         (Core.pp_tm tm)
         (Core.pp_ty ty)
   | exception Surface.Elab.Error (loc, msg) -> emit source "error" loc msg; exit 1
-  | exception Surface.Elab.Bug (loc, msg) -> emit source "bug" loc msg; exit 1

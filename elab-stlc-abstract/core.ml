@@ -185,12 +185,10 @@ let ann (elab : check_tm) (ty : ty) : infer_tm =
 
 (* Structural rules *)
 
-let var (level : var) : [> `Unbound_var] infer_tm_err =
+let lookup (level : var) : infer_tm =
   fun ctx ->
     let index = Level.to_index ctx.size level in
-    match Env.lookup_opt index ctx.bindings with
-    | Some ty -> Ok (Var index, ty)
-    | None -> Error `Unbound_var
+    Var index, Env.lookup index ctx.bindings
 
 let let_synth (name, def_ty, def : name * ty * check_tm) (body : var -> infer_tm) : infer_tm =
   fun ctx ->
