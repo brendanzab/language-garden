@@ -18,13 +18,18 @@ and ty_data =
   | Name of string
   | Fun_ty of ty * ty
 
+(** Names that bind definitions or parameters *)
+type binder = string located
+
+(** Terms in the surface language *)
 type tm =
   tm_data located
+
 and tm_data =
   | Name of string
   | Ann of tm * ty
-  | Let of string located * ty * tm * tm
-  | Fun_lit of string located * ty option * tm
+  | Let of binder * ty * tm * tm
+  | Fun_lit of binder * ty option * tm
   | Fun_app of tm * tm
   | Int_lit of int
   | If_then_else of tm * tm * tm
@@ -33,19 +38,30 @@ and tm_data =
 (** Elaboration from the surface language into the core language *)
 module Elab : sig
 
-  (* TODO: collect errors instead of failing at the first error *)
-
   val check_ty : ty -> (Core.ty, loc * string) result
   val check_tm : tm -> Core.ty -> (Core.tm, loc * string) result
   val infer_tm : tm -> (Core.tm * Core.ty, loc * string) result
 
 end = struct
 
+  (** An exception used internally when encountering errors. These are expected
+      to be caught later by the {!run_elab} function and should never escape
+      this module.
+
+      Real-world implementations should use error recovery so that elaboration
+      can proceed after errors have been encountered. See [elab-error-recovery]
+      for an example of how to implement this. *)
   exception Error of loc * string
 
+  (** Raises an {!Error} exception *)
   let error loc msg = raise (Error (loc, msg))
 
+  (** The elaboration context only needs to map names to variables. The types of
+      those variables are handled internally in the {!Core} module. *)
   type context = (string * Core.var) list
+
+
+  (** {2 Bidirectional type checking} *)
 
   (** Elaborate a type, checking that it is well-formed. *)
   let rec check_ty (ty : ty) : Core.ty =
@@ -57,18 +73,19 @@ end = struct
     | Fun_ty (ty1, ty2) ->
         Core.Fun.form (check_ty ty1) (check_ty ty2)
 
+  (** Elaborate a surface term into a checkable term in the core language. *)
   let rec check_tm (ctx : context) (tm : tm) : Core.check_tm =
     match tm.data with
     | Let (name, def_ty, def, body) ->
         let def_ty = check_ty def_ty in
         Core.let_check
           (name.data, def_ty, check_tm ctx def)
-          (fun v -> check_tm ((name.data, v) :: ctx) body)
+          (fun var -> check_tm ((name.data, var) :: ctx) body)
 
-    | Fun_lit (n, param_ty, body) ->
-        let param_ty = Option.map check_ty param_ty in
-        Core.Fun.intro_check (n.data, param_ty) (fun v -> check_tm ((n.data, v) :: ctx) body)
-        (*                            ^^^^^^^^ TODO: insert a metavariable instead? *)
+    | Fun_lit (name, param_ty, body) ->
+        Core.Fun.intro_check
+          (name.data, Option.map check_ty param_ty)
+          (fun var -> check_tm ((name.data, var) :: ctx) body)
         |> Core.catch_check_tm begin function
           | `Unexpected_fun_lit expected_ty ->
               error tm.loc
@@ -97,6 +114,7 @@ end = struct
                   (Core.pp_ty expected_ty))
           end
 
+  (** Elaborate a surface term into an inferrable term in the core language. *)
   and infer_tm (ctx : context) (tm : tm) : Core.infer_tm =
     match tm.data with
     | Name name ->
@@ -111,7 +129,7 @@ end = struct
         let def_ty = check_ty def_ty in
         Core.let_synth
           (name.data, def_ty, check_tm ctx def)
-          (fun v -> infer_tm ((name.data, v) :: ctx) body)
+          (fun var -> infer_tm ((name.data, var) :: ctx) body)
 
     | Ann (tm, ty) ->
         let ty = check_ty ty in
@@ -127,7 +145,7 @@ end = struct
         let param_ty = check_ty param_ty in
         Core.Fun.intro_synth
           (name.data, param_ty)
-          (fun v -> infer_tm ((name.data, v) :: ctx) body)
+          (fun var -> infer_tm ((name.data, var) :: ctx) body)
 
     | Fun_app (head, arg) ->
         Core.Fun.elim (infer_tm ctx head) (infer_tm ctx arg)
