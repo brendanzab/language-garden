@@ -67,8 +67,10 @@ let () =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
 
   match Surface.Elab.infer_tm (parse_tm source) with
-  | tm, ty ->
+  | Ok (tm, ty) ->
       Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
         (Core.pp_tm tm)
         (Core.pp_ty ty)
-  | exception Surface.Elab.Error (loc, msg) -> emit source "error" loc msg; exit 1
+  | Error (loc, msg) ->
+      emit source "error" loc msg;
+      exit 1

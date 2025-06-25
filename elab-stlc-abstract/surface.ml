@@ -35,10 +35,9 @@ module Elab : sig
 
   (* TODO: collect errors instead of failing at the first error *)
 
-  exception Error of loc * string
-
-  val check_tm : tm -> Core.ty -> Core.tm
-  val infer_tm : tm -> Core.tm * Core.ty
+  val check_ty : ty -> (Core.ty, loc * string) result
+  val check_tm : tm -> Core.ty -> (Core.tm, loc * string) result
+  val infer_tm : tm -> (Core.tm * Core.ty, loc * string) result
 
 end = struct
 
@@ -158,12 +157,23 @@ end = struct
           end
 
 
-  (** Public API *)
+  (** {2 Running elaboration} *)
 
-  let check_tm (tm : tm) (ty : Core.ty) : Core.tm =
-    Core.run (check_tm [] tm ty)
+  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+    match prog () with
+    | result -> Ok result
+    | exception Error (loc, message) -> Error (loc, message)
 
-  let infer_tm (tm : tm) : Core.tm * Core.ty =
-    Core.run (infer_tm [] tm)
+
+  (** {2 Public API} *)
+
+  let check_ty (ty : ty) : (Core.ty, loc * string) result =
+    run_elab (fun () -> check_ty ty)
+
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, loc * string) result =
+    run_elab (fun () -> Core.run (check_tm [] tm ty))
+
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, loc * string) result =
+    run_elab (fun () -> Core.run (infer_tm [] tm))
 
 end
