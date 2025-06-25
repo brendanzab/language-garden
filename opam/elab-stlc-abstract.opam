@@ -7,7 +7,7 @@ depends: [
   "dune" {>= "3.16"}
   "menhir" {>= "20240715" & build}
   "menhirLib" {>= "20240715"}
-  "sedlex" {>= "3.3"}
+  "sedlex" {>= "3.6"}
   "odoc" {with-doc}
 ]
 build: [
