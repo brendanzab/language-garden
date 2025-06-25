@@ -66,7 +66,7 @@ let () =
 
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
 
-  match Surface.Elab.synth (parse_tm source) with
+  match Surface.Elab.infer_tm (parse_tm source) with
   | tm, ty ->
       Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
         (Core.pp_tm tm)

@@ -5,9 +5,9 @@ open De_bruijn
 type name = string
 
 type ty =
-  | Fun_ty of ty * ty
-  | Int_ty
-  | Bool_ty
+  | Fun_type of ty * ty
+  | Int_type
+  | Bool_type
 
 type tm =
   | Var of Index.t
@@ -25,7 +25,7 @@ type tm =
 let pp_ty : ty -> Format.formatter -> unit =
   let rec pp_ty ty ppf =
     match ty with
-    | Fun_ty (param_ty, body_ty) ->
+    | Fun_type (param_ty, body_ty) ->
         Format.fprintf ppf "%t -> %t"
           (pp_atomic_ty param_ty)
           (pp_ty body_ty)
@@ -33,9 +33,9 @@ let pp_ty : ty -> Format.formatter -> unit =
         pp_atomic_ty ty ppf
   and pp_atomic_ty ty ppf =
     match ty with
-    | Bool_ty -> Format.fprintf ppf "Bool"
-    | Int_ty -> Format.fprintf ppf "Int"
-    | Fun_ty _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+    | Bool_type -> Format.fprintf ppf "Bool"
+    | Int_type -> Format.fprintf ppf "Int"
+    | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
   in
   pp_ty
 
@@ -134,22 +134,22 @@ module Semantics = struct
     | Bool_lit false -> vtm2 ()
     | _ -> invalid_arg "expected boolean"
 
-  let rec eval (vtms : vtm Env.t) (tm : tm) : vtm =
+  let rec eval (env : vtm Env.t) (tm : tm) : vtm =
     match tm with
-    | Var i -> Env.lookup i vtms
-    | Ann (tm, _) -> eval vtms tm
-    | Let (_, _, def, body) -> eval (Env.extend (eval vtms def) vtms) body
-    | Fun_lit (x, param_ty, body) -> Fun_lit (x, param_ty, fun v -> eval (Env.extend v vtms) body)
+    | Var i -> Env.lookup i env
+    | Ann (tm, _) -> eval env tm
+    | Let (_, _, def, body) -> eval (Env.extend (eval env def) env) body
+    | Fun_lit (x, param_ty, body) -> Fun_lit (x, param_ty, fun v -> eval (Env.extend v env) body)
     | Fun_app (head, arg) ->
-        let head = eval vtms head in
-        let arg = eval vtms arg in
+        let head = eval env head in
+        let arg = eval env arg in
         fun_app head arg
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
-        let head = eval vtms head in
-        let vtm1 () = eval vtms tm1 in
-        let vtm2 () = eval vtms tm2 in
+        let head = eval env head in
+        let vtm1 () = eval env tm1 in
+        let vtm2 () = eval env tm2 in
         bool_elim head vtm1 vtm2
 
   let rec quote (size : Size.t) (vtm : vtm) : tm =
@@ -170,8 +170,8 @@ module Semantics = struct
         let tm2 = quote size (vtm2 ()) in
         Bool_elim (quote_ntm size head, tm1, tm2)
 
-  let normalise (vtms : vtm Env.t) (tm : tm) : tm =
-    quote (Env.size vtms) (eval vtms tm)
+  let normalise (env : vtm Env.t) (tm : tm) : tm =
+    quote (Env.size env) (eval env tm)
     [@@warning "-unused-value-declaration"]
 
 end
@@ -209,11 +209,11 @@ let run (type a) (elab : a elab) : a =
 
 type var = Level.t
 
-type check = ty -> tm elab
-type synth = (tm * ty) elab
+type check_tm = ty -> tm elab
+type infer_tm = (tm * ty) elab
 
-type 'e check_err = ty -> (tm, 'e) elab_err
-type 'e synth_err = (tm * ty, 'e) elab_err
+type 'e check_tm_err = ty -> (tm, 'e) elab_err
+type 'e infer_tm_err = (tm * ty, 'e) elab_err
 
 
 (* Error handling *)
@@ -227,13 +227,13 @@ let fail (type a e) (e : e) : (a, e) elab_err =
   fun _ ->
     Error e
 
-let catch_check (type e) (f : e -> check) (elab : e check_err) : check =
+let catch_check_tm (type e) (f : e -> check_tm) (elab : e check_tm_err) : check_tm =
   fun ty ctx ->
     match elab ty ctx with
     | Ok x -> x
     | Error e -> f e ty ctx
 
-let catch_synth (type e) (f : e -> synth) (elab : e synth_err) : synth =
+let catch_infer_tm (type e) (f : e -> infer_tm) (elab : e infer_tm_err) : infer_tm =
   fun ctx ->
     match elab ctx with
     | Ok x -> x
@@ -245,14 +245,14 @@ let ( let* ) = Result.bind
 
 (** Directional rules *)
 
-let conv (elab : synth) : [> `Type_mismatch of ty_mismatch] check_err =
+let conv (elab : infer_tm) : [> `Type_mismatch of ty_mismatch] check_tm_err =
   fun expected_ty ctx ->
     let tm, found_ty = elab ctx in
     match expected_ty = found_ty with
     | true -> Ok tm
     | false -> Error (`Type_mismatch { found_ty; expected_ty })
 
-let ann (elab : check) (ty : ty) : synth =
+let ann (elab : check_tm) (ty : ty) : infer_tm =
   fun ctx ->
     let tm = elab ty ctx in
     Ann (tm, ty), ty
@@ -260,20 +260,20 @@ let ann (elab : check) (ty : ty) : synth =
 
 (* Structural rules *)
 
-let var (l : var) : [> `Unbound_var] synth_err =
+let var (l : var) : [> `Unbound_var] infer_tm_err =
   fun ctx ->
     let i = Level.to_index ctx.size l in
     match Env.lookup_opt i ctx.bindings with
     | Some ty -> Ok (Var i, ty)
     | None -> Error `Unbound_var
 
-let let_synth (name, def_ty, def : name * ty * check) (body : var -> synth) : synth =
+let let_synth (name, def_ty, def : name * ty * check_tm) (body : var -> infer_tm) : infer_tm =
   fun ctx ->
     let def = def def_ty ctx in
     let body, body_ty = body (Level.next ctx.size) (add_bind def_ty ctx) in
     Let (name, def_ty, def, body), body_ty
 
-let let_check (name, def_ty, def : name * ty * check) (body : var -> check) : check =
+let let_check (name, def_ty, def : name * ty * check_tm) (body : var -> check_tm) : check_tm =
   fun body_ty ctx ->
     let def = def def_ty ctx in
     let body = body (Level.next ctx.size) body_ty (add_bind def_ty ctx) in
@@ -285,15 +285,15 @@ let let_check (name, def_ty, def : name * ty * check) (body : var -> check) : ch
 module Fun = struct
 
   let form (param_ty : ty) (body_ty : ty) : ty =
-    Fun_ty (param_ty, body_ty)
+    Fun_type (param_ty, body_ty)
 
-  let intro_check (name, param_ty : name * ty option) (body : var -> check) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err =
+  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err =
     fun fun_ty ctx ->
       match param_ty, fun_ty with
-      | None, Fun_ty (param_ty, body_ty) ->
+      | None, Fun_type (param_ty, body_ty) ->
           let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
           Ok (Fun_lit (name, param_ty, body) : tm)
-      | Some param_ty, Fun_ty (param_ty', body_ty) ->
+      | Some param_ty, Fun_type (param_ty', body_ty) ->
           if param_ty = param_ty' then
             let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
             Ok (Fun_lit (name, param_ty, body))
@@ -302,15 +302,15 @@ module Fun = struct
       | _ ->
           Error (`Unexpected_fun_lit fun_ty)
 
-  let intro_synth (name, param_ty : name * ty) (body : var -> synth) : synth =
+  let intro_synth (name, param_ty : name * ty) (body : var -> infer_tm) : infer_tm =
     fun ctx ->
       let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
-      Fun_lit (name, param_ty, body), Fun_ty (param_ty, body_ty)
+      Fun_lit (name, param_ty, body), Fun_type (param_ty, body_ty)
 
-  let elim (head : synth) (arg : synth) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err =
+  let elim (head : infer_tm) (arg : infer_tm) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] infer_tm_err =
     fun ctx ->
       match head ctx with
-      | head, Fun_ty (param_ty, body_ty) ->
+      | head, Fun_type (param_ty, body_ty) ->
           let* arg = conv arg param_ty ctx in
           Ok (Fun_app (head, arg), body_ty)
       | _, head_ty ->
@@ -321,34 +321,34 @@ end
 
 module Int = struct
 
-  let form : ty = Int_ty
+  let form : ty = Int_type
 
-  let intro (i : int) : synth =
-    fun _ -> (Int_lit i, Int_ty)
+  let intro (i : int) : infer_tm =
+    fun _ -> (Int_lit i, Int_type)
 
 end
 
 
 module Bool = struct
 
-  let form : ty = Bool_ty
+  let form : ty = Bool_type
 
-  let intro_true : synth =
-    fun _ -> (Bool_lit true, Bool_ty)
+  let intro_true : infer_tm =
+    fun _ -> (Bool_lit true, Bool_type)
 
-  let intro_false : synth =
-    fun _ -> (Bool_lit false, Bool_ty)
+  let intro_false : infer_tm =
+    fun _ -> (Bool_lit false, Bool_type)
 
-  let elim_check (head : check) (tm1 : check) (tm2 : check) : check =
+  let elim_check (head : check_tm) (tm1 : check_tm) (tm2 : check_tm) : check_tm =
     fun ty ctx ->
-      let head = head Bool_ty ctx in
+      let head = head Bool_type ctx in
       let tm1 = tm1 ty ctx in
       let tm2 = tm2 ty ctx in
       Bool_elim (head, tm1, tm2)
 
-  let elim_synth (head : check) (tm1 : synth) (tm2 : synth) : [`Mismatched_branches of ty_mismatch] synth_err =
+  let elim_synth (head : check_tm) (tm1 : infer_tm) (tm2 : infer_tm) : [`Mismatched_branches of ty_mismatch] infer_tm_err =
     fun ctx ->
-      let head = head Bool_ty ctx in
+      let head = head Bool_type ctx in
       let tm1, ty1 = tm1 ctx in
       let tm2, ty2 = tm2 ctx in
       match ty1 = ty2 with

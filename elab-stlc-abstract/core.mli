@@ -30,11 +30,11 @@ val run : 'a. 'a elab -> 'a
 
 type var
 
-type check = ty -> tm elab
-type synth = (tm * ty) elab
+type check_tm = ty -> tm elab
+type infer_tm = (tm * ty) elab
 
-type 'e check_err = ty -> (tm, 'e) elab_err
-type 'e synth_err = (tm * ty, 'e) elab_err
+type 'e check_tm_err = ty -> (tm, 'e) elab_err
+type 'e infer_tm_err = (tm * ty, 'e) elab_err
 
 (** {2 Error handling} *)
 
@@ -43,9 +43,9 @@ type ty_mismatch = {
   expected_ty : ty;
 }
 
-val fail : 'e. 'e -> 'e synth_err
-val catch_check : 'e. ('e -> check) -> 'e check_err -> check
-val catch_synth : 'e. ('e -> synth) -> 'e synth_err -> synth
+val fail : 'e. 'e -> 'e infer_tm_err
+val catch_check_tm : 'e. ('e -> check_tm) -> 'e check_tm_err -> check_tm
+val catch_infer_tm : 'e. ('e -> infer_tm) -> 'e infer_tm_err -> infer_tm
 
 
 (** {1 Inference rules} *)
@@ -70,39 +70,39 @@ val catch_synth : 'e. ('e -> synth) -> 'e synth_err -> synth
 
 (** {2 Directional rules} *)
 
-val conv : synth -> [> `Type_mismatch of ty_mismatch] check_err
-val ann : check -> ty -> synth
+val conv : infer_tm -> [> `Type_mismatch of ty_mismatch] check_tm_err
+val ann : check_tm -> ty -> infer_tm
 
 (** {2 Structural rules} *)
 
-val var : var -> [> `Unbound_var] synth_err
-val let_synth : name * ty * check -> (var -> synth) -> synth
-val let_check : name * ty * check -> (var -> check) -> check
+val var : var -> [> `Unbound_var] infer_tm_err
+val let_synth : name * ty * check_tm -> (var -> infer_tm) -> infer_tm
+val let_check : name * ty * check_tm -> (var -> check_tm) -> check_tm
 
 (** {2 Type connectives} *)
 
 module Fun : sig
 
   val form : ty -> ty -> ty
-  val intro_check : name * ty option -> (var -> check) -> [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err
-  val intro_synth : name * ty -> (var -> synth) -> synth
-  val elim : synth -> synth -> [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err
+  val intro_check : name * ty option -> (var -> check_tm) -> [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err
+  val intro_synth : name * ty -> (var -> infer_tm) -> infer_tm
+  val elim : infer_tm -> infer_tm -> [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] infer_tm_err
 
 end
 
 module Int : sig
 
   val form : ty
-  val intro : int -> synth
+  val intro : int -> infer_tm
 
 end
 
 module Bool : sig
 
   val form : ty
-  val intro_true : synth
-  val intro_false : synth
-  val elim_check : check -> check -> check -> check
-  val elim_synth : check -> synth -> synth -> [`Mismatched_branches of ty_mismatch] synth_err
+  val intro_true : infer_tm
+  val intro_false : infer_tm
+  val elim_check : check_tm -> check_tm -> check_tm -> check_tm
+  val elim_synth : check_tm -> infer_tm -> infer_tm -> [`Mismatched_branches of ty_mismatch] infer_tm_err
 
 end
