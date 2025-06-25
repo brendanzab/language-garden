@@ -147,11 +147,17 @@ type 'a error_handler = {
   run : 'b. 'a -> 'b;
 }
 
+type 'a mismatch = mismatch:ty_mismatch error_handler -> 'a
+type 'a mismatched_param_ty = mismatched_param_ty:ty_mismatch error_handler -> 'a
+type 'a unexpected_fun_lit = unexpected_fun_lit:ty error_handler -> 'a
+type 'a unexpected_arg = unexpected_arg:ty error_handler -> 'a
+type 'a mismatched_arg = mismatched_arg:ty_mismatch error_handler -> 'a
+
 
 (** Directional rules *)
 
-let conv (elab : infer_tm) ~(mismatch: ty_mismatch error) : check_tm =
-  fun expected_ty ctx ->
+let conv (elab : infer_tm) : check_tm mismatch =
+  fun ~mismatch expected_ty ctx ->
     let tm, found_ty = elab ctx in
     match expected_ty = found_ty with
     | true -> tm
@@ -190,8 +196,8 @@ module Fun = struct
   let form (param_ty : ty) (body_ty : ty) : ty =
     Fun_type (param_ty, body_ty)
 
-  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) ~(mismatched_param_ty : ty_mismatch error) ~(unexpected_fun_lit : ty error) : check_tm =
-    fun fun_ty ctx ->
+  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : check_tm unexpected_fun_lit mismatched_param_ty =
+    fun ~mismatched_param_ty ~unexpected_fun_lit fun_ty ctx ->
       match fun_ty with
       | Fun_type (expected_param_ty, body_ty) ->
           let param_ty =
@@ -214,8 +220,8 @@ module Fun = struct
       let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
       Fun_lit (name, param_ty, body), Fun_type (param_ty, body_ty)
 
-  let elim (head : infer_tm) (arg : infer_tm) ~(unexpected_arg : ty error)  ~(mismatched_arg: ty_mismatch error) : infer_tm =
-    fun ctx ->
+  let elim (head : infer_tm) (arg : infer_tm) : infer_tm mismatched_arg unexpected_arg =
+    fun ~unexpected_arg ~mismatched_arg ctx ->
       match head ctx with
       | head, Fun_type (param_ty, body_ty) ->
           let arg = conv arg param_ty ctx ~mismatch:mismatched_arg in

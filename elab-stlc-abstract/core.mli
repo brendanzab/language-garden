@@ -44,6 +44,12 @@ type 'a error_handler = {
   run : 'b. 'a -> 'b;
 }
 
+type 'a mismatch = mismatch:ty_mismatch error_handler -> 'a
+type 'a mismatched_param_ty = mismatched_param_ty:ty_mismatch error_handler -> 'a
+type 'a unexpected_fun_lit = unexpected_fun_lit:ty error_handler -> 'a
+type 'a unexpected_arg = unexpected_arg:ty error_handler -> 'a
+type 'a mismatched_arg = mismatched_arg:ty_mismatch error_handler -> 'a
+
 
 (** {1 Inference rules} *)
 
@@ -67,7 +73,7 @@ type 'a error_handler = {
 
 (** {2 Directional rules} *)
 
-val conv : infer_tm -> mismatch:(ty_mismatch error) -> check_tm
+val conv : infer_tm -> check_tm mismatch
 val ann : check_tm -> ty -> infer_tm
 
 (** {2 Structural rules} *)
@@ -81,15 +87,9 @@ val let_check : name * ty * check_tm -> (var -> check_tm) -> check_tm
 module Fun : sig
 
   val form : ty -> ty -> ty
-  val intro_check : name * ty option -> (var -> check_tm) ->
-    mismatched_param_ty:(ty_mismatch error) ->
-    unexpected_fun_lit:(ty error) ->
-    check_tm
+  val intro_check : name * ty option -> (var -> check_tm) -> check_tm unexpected_fun_lit mismatched_param_ty
   val intro_synth : name * ty -> (var -> infer_tm) -> infer_tm
-  val elim : infer_tm -> infer_tm ->
-    unexpected_arg:(ty error) ->
-    mismatched_arg:(ty_mismatch error) ->
-    infer_tm
+  val elim : infer_tm -> infer_tm -> infer_tm mismatched_arg unexpected_arg
 
 end
 
