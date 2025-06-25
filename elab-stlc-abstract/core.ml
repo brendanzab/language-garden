@@ -58,8 +58,11 @@ module Semantics = struct
     match tm with
     | Var i -> Env.lookup i env
     | Ann (tm, _) -> eval env tm
-    | Let (_, _, def, body) -> eval (Env.extend (eval env def) env) body
-    | Fun_lit (x, param_ty, body) -> Fun_lit (x, param_ty, fun v -> eval (Env.extend v env) body)
+    | Let (_, _, def, body) ->
+        let def = eval env def in
+        eval (Env.extend def env) body
+    | Fun_lit (x, param_ty, body) ->
+        Fun_lit (x, param_ty, fun v -> eval (Env.extend v env) body)
     | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
@@ -74,21 +77,23 @@ module Semantics = struct
 
   let rec quote (size : Size.t) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_ntm size ntm
+    | Neu ntm -> quote_neu size ntm
     | Fun_lit (x, param_ty, body) ->
-        Fun_lit (x, param_ty, quote (Size.succ size) (body (Neu (Var (Level.next size)))))
+        let body = quote (Size.succ size) (body (Neu (Var (Level.next size)))) in
+        Fun_lit (x, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
-  and quote_ntm (size : Size.t) (ntm : ntm) : tm =
+
+  and quote_neu (size : Size.t) (ntm : ntm) : tm =
     match ntm with
     | Var l ->
         Var (Level.to_index size l)
     | Fun_app (head, arg) ->
-        Fun_app (quote_ntm size head, quote size arg)
+        Fun_app (quote_neu size head, quote size arg)
     | Bool_elim (head, vtm1, vtm2) ->
         let tm1 = quote size (vtm1 ()) in
         let tm2 = quote size (vtm2 ()) in
-        Bool_elim (quote_ntm size head, tm1, tm2)
+        Bool_elim (quote_neu size head, tm1, tm2)
 
   let normalise (env : vtm Env.t) (tm : tm) : tm =
     quote (Env.size env) (eval env tm)
