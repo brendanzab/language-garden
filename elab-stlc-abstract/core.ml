@@ -212,18 +212,22 @@ module Fun = struct
   let form (param_ty : ty) (body_ty : ty) : ty =
     Fun_type (param_ty, body_ty)
 
-  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err =
+  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err =
     fun fun_ty ctx ->
-      match param_ty, fun_ty with
-      | None, Fun_type (param_ty, body_ty) ->
+      match fun_ty with
+      | Fun_type (expected_param_ty, body_ty) ->
+          let* param_ty =
+            match param_ty with
+            | None -> Ok expected_param_ty
+            | Some param_ty when param_ty = expected_param_ty -> Ok param_ty
+            | Some param_ty ->
+                Error (`Mismatched_param_ty {
+                  found_ty = param_ty;
+                  expected_ty = expected_param_ty;
+                })
+          in
           let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
           Ok (Fun_lit (name, param_ty, body) : tm)
-      | Some param_ty, Fun_type (param_ty', body_ty) ->
-          if param_ty = param_ty' then
-            let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-            Ok (Fun_lit (name, param_ty, body))
-          else
-            Error (`Mismatched_param_ty { found_ty = param_ty; expected_ty = param_ty' })
       | _ ->
           Error (`Unexpected_fun_lit fun_ty)
 
