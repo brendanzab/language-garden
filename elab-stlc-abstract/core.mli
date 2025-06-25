@@ -79,22 +79,30 @@ val var : var -> [> `Unbound_var] synth_err
 val let_synth : name * ty * check -> (var -> synth) -> synth
 val let_check : name * ty * check -> (var -> check) -> check
 
-(** {2 Function rules} *)
+(** {2 Type connectives} *)
 
-val fun_form : ty -> ty -> ty
-val fun_intro_check : name * ty option -> (var -> check) -> [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err
-val fun_intro_synth : name * ty -> (var -> synth) -> synth
-val fun_elim : synth -> synth -> [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err
+module Fun : sig
 
-(** {2 Integer rules} *)
+  val form : ty -> ty -> ty
+  val intro_check : name * ty option -> (var -> check) -> [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err
+  val intro_synth : name * ty -> (var -> synth) -> synth
+  val elim : synth -> synth -> [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err
 
-val int_form : ty
-val int_intro : int -> synth
+end
 
-(** {2 Boolean rules} *)
+module Int : sig
 
-val bool_form : ty
-val bool_true : synth
-val bool_false : synth
-val bool_elim_check : check -> check -> check -> check
-val bool_elim_synth : check -> synth -> synth -> [`Mismatched_branches of ty_mismatch] synth_err
+  val form : ty
+  val intro : int -> synth
+
+end
+
+module Bool : sig
+
+  val form : ty
+  val intro_true : synth
+  val intro_false : synth
+  val elim_check : check -> check -> check -> check
+  val elim_synth : check -> synth -> synth -> [`Mismatched_branches of ty_mismatch] synth_err
+
+end

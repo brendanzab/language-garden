@@ -54,12 +54,12 @@ end = struct
   (** Elaborate a type, checking that it is well-formed. *)
   let rec check_ty (ty : ty) : Core.ty =
     match ty.data with
-    | Name "Bool" -> Core.bool_form
-    | Name "Int" -> Core.int_form
+    | Name "Bool" -> Core.Bool.form
+    | Name "Int" -> Core.Int.form
     | Name name ->
         error ty.loc (Format.asprintf "unbound type `%s`" name)
     | Fun_ty (ty1, ty2) ->
-        Core.fun_form (check_ty ty1) (check_ty ty2)
+        Core.Fun.form (check_ty ty1) (check_ty ty2)
 
   let rec check (ctx : context) (tm : tm) : Core.check =
     match tm.data with
@@ -71,7 +71,7 @@ end = struct
 
     | Fun_lit (n, param_ty, body) ->
         let param_ty = Option.map check_ty param_ty in
-        Core.fun_intro_check (n.data, param_ty) (fun v -> check ((n.data, v) :: ctx) body)
+        Core.Fun.intro_check (n.data, param_ty) (fun v -> check ((n.data, v) :: ctx) body)
         (*                            ^^^^^^^^ TODO: insert a metavariable instead? *)
         |> Core.catch_check begin function
           | `Unexpected_fun_lit expected_ty ->
@@ -86,7 +86,7 @@ end = struct
           end
 
     | If_then_else (head, tm1, tm2) ->
-        Core.bool_elim_check
+        Core.Bool.elim_check
           (check ctx head)
           (check ctx tm1)
           (check ctx tm2)
@@ -110,8 +110,8 @@ end = struct
             |> Core.catch_synth begin function
               | `Unbound_var -> bug tm.loc "unbound core variable"
             end
-        | None when name = "true" -> Core.bool_true
-        | None when name = "false" -> Core.bool_false
+        | None when name = "true" -> Core.Bool.intro_true
+        | None when name = "false" -> Core.Bool.intro_false
         | None -> error tm.loc (Format.asprintf "unbound variable `%s`" name)
         end
 
@@ -126,19 +126,19 @@ end = struct
         Core.ann (check ctx tm) ty
 
     | Int_lit i ->
-        Core.int_intro i
+        Core.Int.intro i
 
     | Fun_lit (n, None, _) ->
         error n.loc "annotation required"
 
     | Fun_lit (name, Some param_ty, body) ->
         let param_ty = check_ty param_ty in
-        Core.fun_intro_synth
+        Core.Fun.intro_synth
           (name.data, param_ty)
           (fun v -> synth ((name.data, v) :: ctx) body)
 
     | Fun_app (head, arg) ->
-        Core.fun_elim (synth ctx head) (synth ctx arg)
+        Core.Fun.elim (synth ctx head) (synth ctx arg)
         |> Core.catch_synth begin function
           | `Unexpected_arg head_ty ->
               error head.loc
@@ -152,7 +152,7 @@ end = struct
           end
 
     | If_then_else (head, tm1, tm2) ->
-        Core.bool_elim_synth
+        Core.Bool.elim_synth
           (check ctx head)
           (synth ctx tm1)
           (synth ctx tm2)

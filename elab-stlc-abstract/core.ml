@@ -280,68 +280,79 @@ let let_check (name, def_ty, def : name * ty * check) (body : var -> check) : ch
     Let (name, def_ty, def, body)
 
 
-(** Function rules *)
+(* Type connectives *)
 
-let fun_form (param_ty : ty) (body_ty : ty) : ty =
-  Fun_ty (param_ty, body_ty)
+module Fun = struct
 
-let fun_intro_check (name, param_ty : name * ty option) (body : var -> check) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err =
-  fun fun_ty ctx ->
-    match param_ty, fun_ty with
-    | None, Fun_ty (param_ty, body_ty) ->
-        let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-        Ok (Fun_lit (name, param_ty, body) : tm)
-    | Some param_ty, Fun_ty (param_ty', body_ty) ->
-        if param_ty = param_ty' then
+  let form (param_ty : ty) (body_ty : ty) : ty =
+    Fun_ty (param_ty, body_ty)
+
+  let intro_check (name, param_ty : name * ty option) (body : var -> check) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err =
+    fun fun_ty ctx ->
+      match param_ty, fun_ty with
+      | None, Fun_ty (param_ty, body_ty) ->
           let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-          Ok (Fun_lit (name, param_ty, body))
-        else
-          Error (`Mismatched_param_ty { found_ty = param_ty; expected_ty = param_ty' })
-    | _ ->
-        Error (`Unexpected_fun_lit fun_ty)
+          Ok (Fun_lit (name, param_ty, body) : tm)
+      | Some param_ty, Fun_ty (param_ty', body_ty) ->
+          if param_ty = param_ty' then
+            let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
+            Ok (Fun_lit (name, param_ty, body))
+          else
+            Error (`Mismatched_param_ty { found_ty = param_ty; expected_ty = param_ty' })
+      | _ ->
+          Error (`Unexpected_fun_lit fun_ty)
 
-let fun_intro_synth (name, param_ty : name * ty) (body : var -> synth) : synth =
-  fun ctx ->
-    let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
-    Fun_lit (name, param_ty, body), Fun_ty (param_ty, body_ty)
+  let intro_synth (name, param_ty : name * ty) (body : var -> synth) : synth =
+    fun ctx ->
+      let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
+      Fun_lit (name, param_ty, body), Fun_ty (param_ty, body_ty)
 
-let fun_elim (head : synth) (arg : synth) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err =
-  fun ctx ->
-    match head ctx with
-    | head, Fun_ty (param_ty, body_ty) ->
-        let* arg = conv arg param_ty ctx in
-        Ok (Fun_app (head, arg), body_ty)
-    | _, head_ty ->
-        Error (`Unexpected_arg head_ty)
+  let elim (head : synth) (arg : synth) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err =
+    fun ctx ->
+      match head ctx with
+      | head, Fun_ty (param_ty, body_ty) ->
+          let* arg = conv arg param_ty ctx in
+          Ok (Fun_app (head, arg), body_ty)
+      | _, head_ty ->
+          Error (`Unexpected_arg head_ty)
 
-
-(** Integer rules *)
-
-let int_form : ty = Int_ty
-
-let int_intro (i : int) : synth =
-  Fun.const (Int_lit i, Int_ty)
+end
 
 
-(** Boolean rules *)
+module Int = struct
 
-let bool_form : ty = Bool_ty
+  let form : ty = Int_ty
 
-let bool_true : synth = Fun.const (Bool_lit true, Bool_ty)
-let bool_false : synth = Fun.const (Bool_lit false, Bool_ty)
+  let intro (i : int) : synth =
+    fun _ -> (Int_lit i, Int_ty)
 
-let bool_elim_check (head : check) (tm1 : check) (tm2 : check) : check =
-  fun ty ctx ->
-    let head = head Bool_ty ctx in
-    let tm1 = tm1 ty ctx in
-    let tm2 = tm2 ty ctx in
-    Bool_elim (head, tm1, tm2)
+end
 
-let bool_elim_synth (head : check) (tm1 : synth) (tm2 : synth) : [`Mismatched_branches of ty_mismatch] synth_err =
-  fun ctx ->
-    let head = head Bool_ty ctx in
-    let tm1, ty1 = tm1 ctx in
-    let tm2, ty2 = tm2 ctx in
-    match ty1 = ty2 with
-    | true -> Ok (Bool_elim (head, tm1, tm2), ty1)
-    | false -> Error (`Mismatched_branches { found_ty = ty2; expected_ty = ty1 })
+
+module Bool = struct
+
+  let form : ty = Bool_ty
+
+  let intro_true : synth =
+    fun _ -> (Bool_lit true, Bool_ty)
+
+  let intro_false : synth =
+    fun _ -> (Bool_lit false, Bool_ty)
+
+  let elim_check (head : check) (tm1 : check) (tm2 : check) : check =
+    fun ty ctx ->
+      let head = head Bool_ty ctx in
+      let tm1 = tm1 ty ctx in
+      let tm2 = tm2 ty ctx in
+      Bool_elim (head, tm1, tm2)
+
+  let elim_synth (head : check) (tm1 : synth) (tm2 : synth) : [`Mismatched_branches of ty_mismatch] synth_err =
+    fun ctx ->
+      let head = head Bool_ty ctx in
+      let tm1, ty1 = tm1 ctx in
+      let tm2, ty2 = tm2 ctx in
+      match ty1 = ty2 with
+      | true -> Ok (Bool_elim (head, tm1, tm2), ty1)
+      | false -> Error (`Mismatched_branches { found_ty = ty2; expected_ty = ty1 })
+
+end
