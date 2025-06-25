@@ -63,16 +63,17 @@ end = struct
 
   let rec check (ctx : context) (tm : tm) : Core.check =
     match tm.data with
-    | Let (n, def_ty, def, body) ->
+    | Let (name, def_ty, def, body) ->
         let def_ty = check_ty def_ty in
         Core.let_check
-          (n.data, def_ty, check ctx def)
-          (fun v -> check ((n.data, v) :: ctx) body)
+          (name.data, def_ty, check ctx def)
+          (fun v -> check ((name.data, v) :: ctx) body)
+
     | Fun_lit (n, param_ty, body) ->
         let param_ty = Option.map check_ty param_ty in
         Core.fun_intro_check (n.data, param_ty) (fun v -> check ((n.data, v) :: ctx) body)
         (*                            ^^^^^^^^ TODO: insert a metavariable instead? *)
-        |> Core.catch_check (function
+        |> Core.catch_check begin function
           | `Unexpected_fun_lit expected_ty ->
               error tm.loc
                 (Format.asprintf "found function, expected `%t`"
@@ -81,53 +82,64 @@ end = struct
               error tm.loc
                 (Format.asprintf "mismatched parameter type, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty)))
+                  (Core.pp_ty expected_ty))
+          end
+
     | If_then_else (head, tm1, tm2) ->
         Core.bool_elim_check
           (check ctx head)
           (check ctx tm1)
           (check ctx tm2)
+
     | _ ->
         Core.conv (synth ctx tm)
-        |> Core.catch_check (function
+        |> Core.catch_check begin function
           | `Type_mismatch Core.{ found_ty; expected_ty } ->
               error tm.loc
                 (Format.asprintf "type mismatch, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty)))
+                  (Core.pp_ty expected_ty))
+          end
 
   and synth (ctx : context) (tm : tm) : Core.synth =
     match tm.data with
-    | Name name -> begin
-        match List.assoc_opt name ctx with
+    | Name name ->
+        begin match List.assoc_opt name ctx with
         | Some index ->
             Core.var index
-            |> Core.catch_synth (function
-              | `Unbound_var -> bug tm.loc "unbound core variable")
+            |> Core.catch_synth begin function
+              | `Unbound_var -> bug tm.loc "unbound core variable"
+            end
         | None when name = "true" -> Core.bool_true
         | None when name = "false" -> Core.bool_false
         | None -> error tm.loc (Format.asprintf "unbound variable `%s`" name)
-    end
-    | Let (n, def_ty, def, body) ->
+        end
+
+    | Let (name, def_ty, def, body) ->
         let def_ty = check_ty def_ty in
         Core.let_synth
-          (n.data, def_ty, check ctx def)
-          (fun v -> synth ((n.data, v) :: ctx) body)
+          (name.data, def_ty, check ctx def)
+          (fun v -> synth ((name.data, v) :: ctx) body)
+
     | Ann (tm, ty) ->
         let ty = check_ty ty in
         Core.ann (check ctx tm) ty
+
     | Int_lit i ->
         Core.int_intro i
+
     | Fun_lit (n, None, _) ->
         error n.loc "annotation required"
-    | Fun_lit (n, Some param_ty, body) ->
+
+    | Fun_lit (name, Some param_ty, body) ->
         let param_ty = check_ty param_ty in
         Core.fun_intro_synth
-          (n.data, param_ty)
-          (fun v -> synth ((n.data, v) :: ctx) body)
+          (name.data, param_ty)
+          (fun v -> synth ((name.data, v) :: ctx) body)
+
     | Fun_app (head, arg) ->
         Core.fun_elim (synth ctx head) (synth ctx arg)
-        |> Core.catch_synth (function
+        |> Core.catch_synth begin function
           | `Unexpected_arg head_ty ->
               error head.loc
                 (Format.asprintf "unexpected argument applied to `%t`"
@@ -136,18 +148,21 @@ end = struct
               error arg.loc
                 (Format.asprintf "mismatched argument type, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty)))
+                  (Core.pp_ty expected_ty))
+          end
+
     | If_then_else (head, tm1, tm2) ->
         Core.bool_elim_synth
           (check ctx head)
           (synth ctx tm1)
           (synth ctx tm2)
-        |> Core.catch_synth (function
+        |> Core.catch_synth begin function
           | `Mismatched_branches Core.{ found_ty; expected_ty } ->
               error tm2.loc
                 (Format.asprintf "type mismatch, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty)))
+                  (Core.pp_ty expected_ty))
+          end
 
 
   (** Public API *)

@@ -267,17 +267,17 @@ let var (l : var) : [> `Unbound_var] synth_err =
     | Some ty -> Ok (Var i, ty)
     | None -> Error `Unbound_var
 
-let let_synth (def_name, def_ty, def : name * ty * check) (body : var -> synth) : synth =
+let let_synth (name, def_ty, def : name * ty * check) (body : var -> synth) : synth =
   fun ctx ->
     let def = def def_ty ctx in
     let body, body_ty = body (Level.next ctx.size) (add_bind def_ty ctx) in
-    Let (def_name, def_ty, def, body), body_ty
+    Let (name, def_ty, def, body), body_ty
 
-let let_check (def_name, def_ty, def : name * ty * check) (body : var -> check) : check =
+let let_check (name, def_ty, def : name * ty * check) (body : var -> check) : check =
   fun body_ty ctx ->
     let def = def def_ty ctx in
     let body = body (Level.next ctx.size) body_ty (add_bind def_ty ctx) in
-    Let (def_name, def_ty, def, body)
+    Let (name, def_ty, def, body)
 
 
 (** Function rules *)
@@ -285,25 +285,25 @@ let let_check (def_name, def_ty, def : name * ty * check) (body : var -> check) 
 let fun_form (param_ty : ty) (body_ty : ty) : ty =
   Fun_ty (param_ty, body_ty)
 
-let fun_intro_check (param_name, param_ty : name * ty option) (body : var -> check) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err =
+let fun_intro_check (name, param_ty : name * ty option) (body : var -> check) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err =
   fun fun_ty ctx ->
     match param_ty, fun_ty with
     | None, Fun_ty (param_ty, body_ty) ->
         let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-        Ok (Fun_lit (param_name, param_ty, body) : tm)
+        Ok (Fun_lit (name, param_ty, body) : tm)
     | Some param_ty, Fun_ty (param_ty', body_ty) ->
         if param_ty = param_ty' then
           let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-          Ok (Fun_lit (param_name, param_ty, body))
+          Ok (Fun_lit (name, param_ty, body))
         else
           Error (`Mismatched_param_ty { found_ty = param_ty; expected_ty = param_ty' })
     | _ ->
         Error (`Unexpected_fun_lit fun_ty)
 
-let fun_intro_synth (param_name, param_ty : name * ty) (body : var -> synth) : synth =
+let fun_intro_synth (name, param_ty : name * ty) (body : var -> synth) : synth =
   fun ctx ->
     let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
-    Fun_lit (param_name, param_ty, body), Fun_ty (param_ty, body_ty)
+    Fun_lit (name, param_ty, body), Fun_ty (param_ty, body_ty)
 
 let fun_elim (head : synth) (arg : synth) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err =
   fun ctx ->
