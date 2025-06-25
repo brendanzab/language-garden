@@ -103,6 +103,6 @@ module Bool : sig
   val intro_true : infer_tm
   val intro_false : infer_tm
   val elim_check : check_tm -> check_tm -> check_tm -> check_tm
-  val elim_synth : check_tm -> infer_tm -> infer_tm -> [`Mismatched_false_branch of ty_mismatch] infer_tm_err
+  val elim_synth : check_tm -> infer_tm -> check_tm -> infer_tm
 
 end

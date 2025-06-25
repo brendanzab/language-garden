@@ -273,14 +273,12 @@ module Bool = struct
       let tm2 = tm2 ty ctx in
       Bool_elim (head, tm1, tm2)
 
-  let elim_synth (head : check_tm) (tm1 : infer_tm) (tm2 : infer_tm) : [> `Mismatched_false_branch of ty_mismatch] infer_tm_err =
+  let elim_synth (head : check_tm) (tm1 : infer_tm) (tm2 : check_tm) : infer_tm =
     fun ctx ->
       let head = head Bool_type ctx in
-      let tm1, ty1 = tm1 ctx in
-      let tm2, ty2 = tm2 ctx in
-      match ty1 = ty2 with
-      | true -> Ok (Bool_elim (head, tm1, tm2), ty1)
-      | false -> Error (`Mismatched_false_branch { found_ty = ty2; expected_ty = ty1 })
+      let tm1, ty = tm1 ctx in
+      let tm2 = tm2 ty ctx in
+      Bool_elim (head, tm1, tm2), ty
 
 end
 
