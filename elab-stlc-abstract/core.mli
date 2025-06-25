@@ -7,12 +7,7 @@ type name = string
 
 (** {1 Syntax} *)
 
-type ty =
-  | A
-  | B
-  | C
-  | Fun_ty of ty * ty
-
+type ty
 type tm
 
 (** {2 Pretty printing} *)
@@ -86,6 +81,20 @@ val let_check : name * ty * check -> (var -> check) -> check
 
 (** {2 Function rules} *)
 
+val fun_form : ty -> ty -> ty
 val fun_intro_check : name * ty option -> (var -> check) -> [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err
 val fun_intro_synth : name * ty -> (var -> synth) -> synth
 val fun_elim : synth -> synth -> [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err
+
+(** {2 Integer rules} *)
+
+val int_form : ty
+val int_intro : int -> synth
+
+(** {2 Boolean rules} *)
+
+val bool_form : ty
+val bool_true : synth
+val bool_false : synth
+val bool_elim_check : check -> check -> check -> check
+val bool_elim_synth : check -> synth -> synth -> [`Mismatched_branches of ty_mismatch] synth_err

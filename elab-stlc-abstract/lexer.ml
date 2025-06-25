@@ -5,6 +5,7 @@ let unclosed_block_comment () = raise (Error "unclosed block comment")
 
 let whitespace = [%sedlex.regexp? Plus (' ' | '\t' | '\r' | '\n')]
 let newline = [%sedlex.regexp? '\r' | '\n' | "\r\n"]
+let digits = [%sedlex.regexp? Plus ('0'..'9')]
 
 let name_start = [%sedlex.regexp? 'a'..'z' | 'A'..'Z']
 let name_continue = [%sedlex.regexp? '-' | '_' | 'a'..'z' | 'A'..'Z' | '0'..'9']
@@ -15,11 +16,12 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | whitespace    -> token lexbuf
   | "--"          -> line_comment lexbuf
   | "/-"          -> block_comment lexbuf 0
-  | "A"           -> KEYWORD_A
-  | "B"           -> KEYWORD_B
-  | "C"           -> KEYWORD_C
+  | digits        -> NUMBER (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
+  | "else"        -> KEYWORD_ELSE
   | "fun"         -> KEYWORD_FUN
+  | "if"          -> KEYWORD_IF
   | "let"         -> KEYWORD_LET
+  | "then"        -> KEYWORD_THEN
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
   | ":"           -> COLON
   | ":="          -> COLON_EQUALS

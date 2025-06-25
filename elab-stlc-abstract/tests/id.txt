@@ -1,5 +1,5 @@
-let id : A -> A :=
+let id : Int -> Int :=
   fun x => x;
 
-fun (x : A) =>
+fun (x : Int) =>
   id x

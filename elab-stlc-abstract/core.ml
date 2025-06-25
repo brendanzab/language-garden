@@ -5,10 +5,9 @@ open De_bruijn
 type name = string
 
 type ty =
-  | A
-  | B
-  | C
   | Fun_ty of ty * ty
+  | Int_ty
+  | Bool_ty
 
 type tm =
   | Var of Index.t
@@ -16,6 +15,9 @@ type tm =
   | Let of name * ty * tm * tm
   | Fun_lit of name * ty * tm
   | Fun_app of tm * tm
+  | Int_lit of int
+  | Bool_lit of bool
+  | Bool_elim of tm * tm * tm
 
 
 (* Pretty printing *)
@@ -31,9 +33,8 @@ let pp_ty : ty -> Format.formatter -> unit =
         pp_atomic_ty ty ppf
   and pp_atomic_ty ty ppf =
     match ty with
-    | A -> Format.fprintf ppf "A"
-    | B -> Format.fprintf ppf "B"
-    | C -> Format.fprintf ppf "C"
+    | Bool_ty -> Format.fprintf ppf "Bool"
+    | Int_ty -> Format.fprintf ppf "Int"
     | Fun_ty _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
   in
   pp_ty
@@ -58,20 +59,25 @@ let pp_tm : tm -> Format.formatter -> unit =
           | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
         in
         Format.fprintf ppf "@[<v>%t@]" (go names tm)
-  | Fun_lit _ as tm ->
-      let rec go names tm ppf =
-        match tm with
-        | Fun_lit (name, param_ty, (Fun_lit _ as body)) ->
-            Format.fprintf ppf "@[fun@ %t@ =>@]@ %t"
-              (pp_param name param_ty)
-              (go (Env.extend name names) body)
-        | Fun_lit (name, param_ty, body) ->
-            Format.fprintf ppf "@[fun@ %t@ =>@]%t"
-              (pp_param name param_ty)
-              (go (Env.extend name names) body)
-        | tm -> Format.fprintf ppf "@]@ @[%t@]@]" (pp_tm names tm)
-      in
-      Format.fprintf ppf "@[<hv 2>@[<hv>%t" (go names tm)
+    | Fun_lit _ as tm ->
+        let rec go names tm ppf =
+          match tm with
+          | Fun_lit (name, param_ty, (Fun_lit _ as body)) ->
+              Format.fprintf ppf "@[fun@ %t@ =>@]@ %t"
+                (pp_param name param_ty)
+                (go (Env.extend name names) body)
+          | Fun_lit (name, param_ty, body) ->
+              Format.fprintf ppf "@[fun@ %t@ =>@]%t"
+                (pp_param name param_ty)
+                (go (Env.extend name names) body)
+          | tm -> Format.fprintf ppf "@]@ @[%t@]@]" (pp_tm names tm)
+        in
+        Format.fprintf ppf "@[<hv 2>@[<hv>%t" (go names tm)
+    | Bool_elim (head, tm1, tm2) ->
+        Format.fprintf ppf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
+          (pp_app_tm names head)
+          (pp_app_tm names tm1)
+          (pp_tm names tm2)
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =
@@ -84,9 +90,11 @@ let pp_tm : tm -> Format.formatter -> unit =
         pp_atomic_tm names tm ppf
   and pp_atomic_tm names tm ppf =
     match tm with
-    | Var index ->
-        Format.fprintf ppf "%s" (Env.lookup index names)
-    | Ann _ | Let _ | Fun_lit _ | Fun_app _ ->
+    | Var index -> Format.fprintf ppf "%s" (Env.lookup index names)
+    | Int_lit i -> Format.fprintf ppf "%i" i
+    | Bool_lit true -> Format.fprintf ppf "true"
+    | Bool_lit false -> Format.fprintf ppf "false"
+    | Ann _ | Let _ | Fun_lit _ | Fun_app _ | Bool_elim _ ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
   pp_tm Env.empty
@@ -98,6 +106,8 @@ module Semantics = struct
   type vtm =
     | Neu of ntm
     | Fun_lit of name * ty * (vtm -> vtm)
+    | Int_lit of int
+    | Bool_lit of bool
 
   (** Neutral values that could not be reduced to a normal form as a result of
       being stuck on something else that would not reduce further.
@@ -109,28 +119,56 @@ module Semantics = struct
   and ntm =
     | Var of Level.t              (* A fresh variable (used when evaluating under a binder) *)
     | Fun_app of ntm * vtm
+    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
+
+  let fun_app (head : vtm) (arg : vtm) : vtm =
+    match head with
+    | Neu ntm -> Neu (Fun_app (ntm, arg))
+    | Fun_lit (_, _, body) -> body arg
+    | _ -> invalid_arg "expected function"
+
+  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
+    match head with
+    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
+    | Bool_lit true -> vtm1 ()
+    | Bool_lit false -> vtm2 ()
+    | _ -> invalid_arg "expected boolean"
 
   let rec eval (vtms : vtm Env.t) (tm : tm) : vtm =
     match tm with
     | Var i -> Env.lookup i vtms
     | Ann (tm, _) -> eval vtms tm
-    | Let (_, _, def_tm, body_tm) -> eval (Env.extend (eval vtms def_tm) vtms) body_tm
-    | Fun_lit (x, param_ty, body_tm) -> Fun_lit (x, param_ty, fun v -> eval (Env.extend v vtms) body_tm)
-    | Fun_app (head_tm, arg_tm) -> begin
-        match eval vtms head_tm with
-        | Fun_lit (_, _, body) -> body (eval vtms arg_tm)
-        | Neu ntm -> Neu (Fun_app (ntm, eval vtms arg_tm))
-    end
+    | Let (_, _, def, body) -> eval (Env.extend (eval vtms def) vtms) body
+    | Fun_lit (x, param_ty, body) -> Fun_lit (x, param_ty, fun v -> eval (Env.extend v vtms) body)
+    | Fun_app (head, arg) ->
+        let head = eval vtms head in
+        let arg = eval vtms arg in
+        fun_app head arg
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
+    | Bool_elim (head, tm1, tm2) ->
+        let head = eval vtms head in
+        let vtm1 () = eval vtms tm1 in
+        let vtm2 () = eval vtms tm2 in
+        bool_elim head vtm1 vtm2
 
   let rec quote (size : Size.t) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_ntm size ntm
     | Fun_lit (x, param_ty, body) ->
         Fun_lit (x, param_ty, quote (Size.succ size) (body (Neu (Var (Level.next size)))))
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
   and quote_ntm (size : Size.t) (ntm : ntm) : tm =
     match ntm with
-    | Var l -> Var (Level.to_index size l)
-    | Fun_app (head, arg) -> Fun_app (quote_ntm size head, quote size arg)
+    | Var l ->
+        Var (Level.to_index size l)
+    | Fun_app (head, arg) ->
+        Fun_app (quote_ntm size head, quote size arg)
+    | Bool_elim (head, vtm1, vtm2) ->
+        let tm1 = quote size (vtm1 ()) in
+        let tm2 = quote size (vtm2 ()) in
+        Bool_elim (quote_ntm size head, tm1, tm2)
 
   let normalise (vtms : vtm Env.t) (tm : tm) : tm =
     quote (Env.size vtms) (eval vtms tm)
@@ -229,46 +267,81 @@ let var (l : var) : [> `Unbound_var] synth_err =
     | Some ty -> Ok (Var i, ty)
     | None -> Error `Unbound_var
 
-let let_synth (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> synth) : synth =
+let let_synth (def_name, def_ty, def : name * ty * check) (body : var -> synth) : synth =
   fun ctx ->
-    let def_tm = def_elab def_ty ctx in
-    let body_tm, body_ty = body_elab (Level.next ctx.size) (add_bind def_ty ctx) in
-    Let (def_n, def_ty, def_tm, body_tm), body_ty
+    let def = def def_ty ctx in
+    let body, body_ty = body (Level.next ctx.size) (add_bind def_ty ctx) in
+    Let (def_name, def_ty, def, body), body_ty
 
-let let_check (def_n, def_ty, def_elab : name * ty * check) (body_elab : var -> check) : check =
+let let_check (def_name, def_ty, def : name * ty * check) (body : var -> check) : check =
   fun body_ty ctx ->
-    let def_tm = def_elab def_ty ctx in
-    let body_tm = body_elab (Level.next ctx.size) body_ty (add_bind def_ty ctx) in
-    Let (def_n, def_ty, def_tm, body_tm)
+    let def = def def_ty ctx in
+    let body = body (Level.next ctx.size) body_ty (add_bind def_ty ctx) in
+    Let (def_name, def_ty, def, body)
 
 
 (** Function rules *)
 
-let fun_intro_check (param_n, param_ty : name * ty option) (body_elab : var -> check) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err =
+let fun_form (param_ty : ty) (body_ty : ty) : ty =
+  Fun_ty (param_ty, body_ty)
+
+let fun_intro_check (param_name, param_ty : name * ty option) (body : var -> check) :  [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_err =
   fun fun_ty ctx ->
     match param_ty, fun_ty with
     | None, Fun_ty (param_ty, body_ty) ->
-        let body_tm = body_elab (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-        Ok (Fun_lit (param_n, param_ty, body_tm) : tm)
+        let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
+        Ok (Fun_lit (param_name, param_ty, body) : tm)
     | Some param_ty, Fun_ty (param_ty', body_ty) ->
         if param_ty = param_ty' then
-          let body_tm = body_elab (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-          Ok (Fun_lit (param_n, param_ty, body_tm))
+          let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
+          Ok (Fun_lit (param_name, param_ty, body))
         else
           Error (`Mismatched_param_ty { found_ty = param_ty; expected_ty = param_ty' })
     | _ ->
         Error (`Unexpected_fun_lit fun_ty)
 
-let fun_intro_synth (param_n, param_ty : name * ty) (body_elab : var -> synth) : synth =
+let fun_intro_synth (param_name, param_ty : name * ty) (body : var -> synth) : synth =
   fun ctx ->
-    let body_tm, body_ty = body_elab (Level.next ctx.size) (add_bind param_ty ctx) in
-    Fun_lit (param_n, param_ty, body_tm), Fun_ty (param_ty, body_ty)
+    let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
+    Fun_lit (param_name, param_ty, body), Fun_ty (param_ty, body_ty)
 
-let fun_elim (head_elab : synth) (arg_elab : synth) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err =
+let fun_elim (head : synth) (arg : synth) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] synth_err =
   fun ctx ->
-    match head_elab ctx with
-    | head_tm, Fun_ty (param_ty, body_ty) ->
-        let* arg_tm = conv arg_elab param_ty ctx in
-        Ok (Fun_app (head_tm, arg_tm), body_ty)
+    match head ctx with
+    | head, Fun_ty (param_ty, body_ty) ->
+        let* arg = conv arg param_ty ctx in
+        Ok (Fun_app (head, arg), body_ty)
     | _, head_ty ->
         Error (`Unexpected_arg head_ty)
+
+
+(** Integer rules *)
+
+let int_form : ty = Int_ty
+
+let int_intro (i : int) : synth =
+  Fun.const (Int_lit i, Int_ty)
+
+
+(** Boolean rules *)
+
+let bool_form : ty = Bool_ty
+
+let bool_true : synth = Fun.const (Bool_lit true, Bool_ty)
+let bool_false : synth = Fun.const (Bool_lit false, Bool_ty)
+
+let bool_elim_check (head : check) (tm1 : check) (tm2 : check) : check =
+  fun ty ctx ->
+    let head = head Bool_ty ctx in
+    let tm1 = tm1 ty ctx in
+    let tm2 = tm2 ty ctx in
+    Bool_elim (head, tm1, tm2)
+
+let bool_elim_synth (head : check) (tm1 : synth) (tm2 : synth) : [`Mismatched_branches of ty_mismatch] synth_err =
+  fun ctx ->
+    let head = head Bool_ty ctx in
+    let tm1, ty1 = tm1 ctx in
+    let tm2, ty2 = tm2 ctx in
+    match ty1 = ty2 with
+    | true -> Ok (Bool_elim (head, tm1, tm2), ty1)
+    | false -> Error (`Mismatched_branches { found_ty = ty2; expected_ty = ty1 })
