@@ -157,7 +157,7 @@ end = struct
           (infer_tm ctx tm1)
           (infer_tm ctx tm2)
         |> Core.catch_infer_tm begin function
-          | `Mismatched_branches Core.{ found_ty; expected_ty } ->
+          | `Mismatched_false_branch Core.{ found_ty; expected_ty } ->
               error tm2.loc
                 (Format.asprintf "type mismatch, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)

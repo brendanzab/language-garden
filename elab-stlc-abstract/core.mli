@@ -70,12 +70,12 @@ val catch_infer_tm : 'e. ('e -> infer_tm) -> 'e infer_tm_err -> infer_tm
 
 (** {2 Directional rules} *)
 
-val conv : infer_tm -> [> `Type_mismatch of ty_mismatch] check_tm_err
+val conv : infer_tm -> [`Type_mismatch of ty_mismatch] check_tm_err
 val ann : check_tm -> ty -> infer_tm
 
 (** {2 Structural rules} *)
 
-val var : var -> [> `Unbound_var] infer_tm_err
+val var : var -> [`Unbound_var] infer_tm_err
 val let_synth : name * ty * check_tm -> (var -> infer_tm) -> infer_tm
 val let_check : name * ty * check_tm -> (var -> check_tm) -> check_tm
 
@@ -84,9 +84,9 @@ val let_check : name * ty * check_tm -> (var -> check_tm) -> check_tm
 module Fun : sig
 
   val form : ty -> ty -> ty
-  val intro_check : name * ty option -> (var -> check_tm) -> [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err
+  val intro_check : name * ty option -> (var -> check_tm) -> [`Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err
   val intro_synth : name * ty -> (var -> infer_tm) -> infer_tm
-  val elim : infer_tm -> infer_tm -> [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] infer_tm_err
+  val elim : infer_tm -> infer_tm -> [`Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] infer_tm_err
 
 end
 
@@ -103,6 +103,6 @@ module Bool : sig
   val intro_true : infer_tm
   val intro_false : infer_tm
   val elim_check : check_tm -> check_tm -> check_tm -> check_tm
-  val elim_synth : check_tm -> infer_tm -> infer_tm -> [`Mismatched_branches of ty_mismatch] infer_tm_err
+  val elim_synth : check_tm -> infer_tm -> infer_tm -> [`Mismatched_false_branch of ty_mismatch] infer_tm_err
 
 end
