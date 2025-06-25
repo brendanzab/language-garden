@@ -85,34 +85,33 @@ end = struct
     | Fun_lit (name, param_ty, body) ->
         Core.Fun.intro_check
           (name.data, Option.map check_ty param_ty)
-          (fun var -> check_tm ((name.data, var) :: ctx) body)
-        |> Core.catch_check_tm begin function
-          | `Unexpected_fun_lit expected_ty ->
+          (fun v -> check_tm ((name.data, v) :: ctx) body)
+          ~unexpected_fun_lit:{
+            run = fun expected_ty ->
               error tm.loc
                 (Format.asprintf "found function, expected `%t`"
-                  (Core.pp_ty expected_ty))
-          | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
+                  (Core.pp_ty expected_ty));
+          }
+          ~mismatched_param_ty:{
+            run = fun { found_ty; expected_ty } ->
               error tm.loc
                 (Format.asprintf "mismatched parameter type, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty))
-          end
+                  (Core.pp_ty expected_ty));
+          }
 
     | If_then_else (head, tm1, tm2) ->
-        Core.Bool.elim_check
-          (check_tm ctx head)
-          (check_tm ctx tm1)
-          (check_tm ctx tm2)
+        Core.Bool.elim_check (check_tm ctx head) (check_tm ctx tm1) (check_tm ctx tm2)
 
     | _ ->
         Core.conv (infer_tm ctx tm)
-        |> Core.catch_check_tm begin function
-          | `Type_mismatch Core.{ found_ty; expected_ty } ->
+          ~mismatch:{
+            run = fun { found_ty; expected_ty } ->
               error tm.loc
                 (Format.asprintf "type mismatch, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty))
-          end
+                  (Core.pp_ty expected_ty));
+          }
 
   (** Elaborate a surface term into an inferrable term in the core language. *)
   and infer_tm (ctx : context) (tm : tm) : Core.infer_tm =
@@ -149,17 +148,19 @@ end = struct
 
     | Fun_app (head, arg) ->
         Core.Fun.elim (infer_tm ctx head) (infer_tm ctx arg)
-        |> Core.catch_infer_tm begin function
-          | `Unexpected_arg head_ty ->
+          ~unexpected_arg:{
+            run = fun head_ty ->
               error head.loc
                 (Format.asprintf "unexpected argument applied to `%t`"
-                  (Core.pp_ty head_ty))
-          | `Type_mismatch Core.{ found_ty; expected_ty } ->
+                  (Core.pp_ty head_ty));
+          }
+          ~mismatched_arg:{
+            run = fun { found_ty; expected_ty } ->
               error arg.loc
                 (Format.asprintf "mismatched argument type, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty))
-          end
+                  (Core.pp_ty expected_ty));
+          }
 
     | If_then_else (head, tm1, tm2) ->
         Core.Bool.elim_synth

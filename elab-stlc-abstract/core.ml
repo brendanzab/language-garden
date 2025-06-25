@@ -124,8 +124,6 @@ let add_bind (ty : ty) (ctx : context) = {
 
 type 'a elab = context -> 'a
 
-type ('a, 'e) elab_err = ('a, 'e) result elab
-
 let run (type a) (elab : a elab) : a =
   elab empty
 
@@ -137,9 +135,6 @@ type var = Level.t
 type check_tm = ty -> tm elab
 type infer_tm = (tm * ty) elab
 
-type 'e check_tm_err = ty -> (tm, 'e) elab_err
-type 'e infer_tm_err = (tm * ty, 'e) elab_err
-
 
 (* Error handling *)
 
@@ -148,34 +143,19 @@ type ty_mismatch = {
   expected_ty : ty;
 }
 
-let fail (type a e) (e : e) : (a, e) elab_err =
-  fun _ ->
-    Error e
-
-let catch_check_tm (type e) (f : e -> check_tm) (elab : e check_tm_err) : check_tm =
-  fun ty ctx ->
-    match elab ty ctx with
-    | Ok x -> x
-    | Error e -> f e ty ctx
-
-let catch_infer_tm (type e) (f : e -> infer_tm) (elab : e infer_tm_err) : infer_tm =
-  fun ctx ->
-    match elab ctx with
-    | Ok x -> x
-    | Error e -> f e ctx
-
-
-let ( let* ) = Result.bind
+type 'a error_handler = {
+  run : 'b. 'a -> 'b;
+}
 
 
 (** Directional rules *)
 
-let conv (elab : infer_tm) : [> `Type_mismatch of ty_mismatch] check_tm_err =
+let conv (elab : infer_tm) ~(mismatch: ty_mismatch error) : check_tm =
   fun expected_ty ctx ->
     let tm, found_ty = elab ctx in
     match expected_ty = found_ty with
-    | true -> Ok tm
-    | false -> Error (`Type_mismatch { found_ty; expected_ty })
+    | true -> tm
+    | false -> mismatch.run { found_ty; expected_ty }
 
 let ann (elab : check_tm) (ty : ty) : infer_tm =
   fun ctx ->
@@ -210,38 +190,38 @@ module Fun = struct
   let form (param_ty : ty) (body_ty : ty) : ty =
     Fun_type (param_ty, body_ty)
 
-  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err =
+  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) ~(mismatched_param_ty : ty_mismatch error) ~(unexpected_fun_lit : ty error) : check_tm =
     fun fun_ty ctx ->
       match fun_ty with
       | Fun_type (expected_param_ty, body_ty) ->
-          let* param_ty =
+          let param_ty =
             match param_ty with
-            | None -> Ok expected_param_ty
-            | Some param_ty when param_ty = expected_param_ty -> Ok param_ty
+            | None -> expected_param_ty
+            | Some param_ty when param_ty = expected_param_ty -> param_ty
             | Some param_ty ->
-                Error (`Mismatched_param_ty {
+                mismatched_param_ty.run {
                   found_ty = param_ty;
                   expected_ty = expected_param_ty;
-                })
+                }
           in
           let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
-          Ok (Fun_lit (name, param_ty, body) : tm)
+          Fun_lit (name, param_ty, body)
       | _ ->
-          Error (`Unexpected_fun_lit fun_ty)
+          unexpected_fun_lit.run fun_ty
 
   let intro_synth (name, param_ty : name * ty) (body : var -> infer_tm) : infer_tm =
     fun ctx ->
       let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
       Fun_lit (name, param_ty, body), Fun_type (param_ty, body_ty)
 
-  let elim (head : infer_tm) (arg : infer_tm) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] infer_tm_err =
+  let elim (head : infer_tm) (arg : infer_tm) ~(unexpected_arg : ty error)  ~(mismatched_arg: ty_mismatch error) : infer_tm =
     fun ctx ->
       match head ctx with
       | head, Fun_type (param_ty, body_ty) ->
-          let* arg = conv arg param_ty ctx in
-          Ok (Fun_app (head, arg), body_ty)
+          let arg = conv arg param_ty ctx ~mismatch:mismatched_arg in
+          Fun_app (head, arg), body_ty
       | _, head_ty ->
-          Error (`Unexpected_arg head_ty)
+          unexpected_arg.run head_ty
 
 end
 
