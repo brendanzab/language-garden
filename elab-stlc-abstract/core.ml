@@ -56,7 +56,7 @@ module Semantics = struct
 
   let rec eval (env : vtm Env.t) (tm : tm) : vtm =
     match tm with
-    | Var i -> Env.lookup i env
+    | Var index -> Env.lookup index env
     | Ann (tm, _) -> eval env tm
     | Let (_, _, def, body) ->
         let def = eval env def in
@@ -86,8 +86,8 @@ module Semantics = struct
 
   and quote_neu (size : Size.t) (ntm : ntm) : tm =
     match ntm with
-    | Var l ->
-        Var (Level.to_index size l)
+    | Var level ->
+        Var (Level.to_index size level)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
     | Bool_elim (head, vtm1, vtm2) ->
@@ -185,11 +185,11 @@ let ann (elab : check_tm) (ty : ty) : infer_tm =
 
 (* Structural rules *)
 
-let var (l : var) : [> `Unbound_var] infer_tm_err =
+let var (level : var) : [> `Unbound_var] infer_tm_err =
   fun ctx ->
-    let i = Level.to_index ctx.size l in
-    match Env.lookup_opt i ctx.bindings with
-    | Some ty -> Ok (Var i, ty)
+    let index = Level.to_index ctx.size level in
+    match Env.lookup_opt index ctx.bindings with
+    | Some ty -> Ok (Var index, ty)
     | None -> Error `Unbound_var
 
 let let_synth (name, def_ty, def : name * ty * check_tm) (body : var -> infer_tm) : infer_tm =
