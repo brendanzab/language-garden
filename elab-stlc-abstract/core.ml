@@ -1,8 +1,9 @@
-open De_bruijn
-
 (* Syntax *)
 
 type name = string
+
+type index = int
+type level = int
 
 type ty =
   | Fun_type of ty * ty
@@ -10,7 +11,7 @@ type ty =
   | Bool_type
 
 type tm =
-  | Var of Index.t
+  | Var of index
   | Ann of tm * ty
   | Let of name * ty * tm * tm
   | Fun_lit of name * ty * tm
@@ -30,14 +31,9 @@ module Semantics = struct
     | Bool_lit of bool
 
   (** Neutral values that could not be reduced to a normal form as a result of
-      being stuck on something else that would not reduce further.
-
-      For simple (non-dependent) type systems these are not actually required,
-      however they allow us to {!quote} terms back to syntax, which is useful
-      for pretty printing under binders.
-  *)
+      being stuck on something else that would not reduce further. *)
   and ntm =
-    | Var of Level.t              (* A fresh variable (used when evaluating under a binder) *)
+    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | Fun_app of ntm * vtm
     | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
 
@@ -54,15 +50,15 @@ module Semantics = struct
     | Bool_lit false -> vtm2 ()
     | _ -> invalid_arg "expected boolean"
 
-  let rec eval (env : vtm Env.t) (tm : tm) : vtm =
+  let rec eval (env : vtm list) (tm : tm) : vtm =
     match tm with
-    | Var index -> Env.lookup index env
+    | Var index -> List.nth env index
     | Ann (tm, _) -> eval env tm
     | Let (_, _, def, body) ->
         let def = eval env def in
-        eval (Env.extend def env) body
+        eval (def :: env) body
     | Fun_lit (x, param_ty, body) ->
-        Fun_lit (x, param_ty, fun v -> eval (Env.extend v env) body)
+        Fun_lit (x, param_ty, fun v -> eval (v :: env) body)
     | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
@@ -75,19 +71,19 @@ module Semantics = struct
         let vtm2 () = eval env tm2 in
         bool_elim head vtm1 vtm2
 
-  let rec quote (size : Size.t) (vtm : vtm) : tm =
+  let rec quote (size : level) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_neu size ntm
     | Fun_lit (x, param_ty, body) ->
-        let body = quote (Size.succ size) (body (Neu (Var (Level.next size)))) in
+        let body = quote (size + 1) (body (Neu (Var size))) in
         Fun_lit (x, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_neu (size : Size.t) (ntm : ntm) : tm =
+  and quote_neu (size : level) (ntm : ntm) : tm =
     match ntm with
     | Var level ->
-        Var (Level.to_index size level)
+        Var (size - level - 1)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
     | Bool_elim (head, vtm1, vtm2) ->
@@ -95,8 +91,8 @@ module Semantics = struct
         let tm2 = quote size (vtm2 ()) in
         Bool_elim (quote_neu size head, tm1, tm2)
 
-  let normalise (env : vtm Env.t) (tm : tm) : tm =
-    quote (Env.size env) (eval env tm)
+  let normalise (env : vtm list) (tm : tm) : tm =
+    quote (List.length env) (eval env tm)
     [@@warning "-unused-value-declaration"]
 
 end
@@ -105,18 +101,18 @@ end
 (* Typing context *)
 
 type context = {
-  size : Size.t;
-  bindings : ty Env.t;
+  size : level;
+  bindings : ty list;
 }
 
 let empty = {
-  size = Size.zero;
-  bindings = Env.empty;
+  size = 0;
+  bindings = [];
 }
 
 let add_bind (ty : ty) (ctx : context) = {
-  size = Size.succ ctx.size;
-  bindings = Env.extend ty ctx.bindings;
+  size = ctx.size + 1;
+  bindings = ty :: ctx.bindings;
 }
 
 
@@ -132,7 +128,7 @@ let run (type a) (elab : a elab) : a =
 
 (* Forms of Judgement *)
 
-type var = Level.t
+type var = level
 
 type check_tm = ty -> tm elab
 type infer_tm = (tm * ty) elab
@@ -187,19 +183,19 @@ let ann (elab : check_tm) (ty : ty) : infer_tm =
 
 let lookup (level : var) : infer_tm =
   fun ctx ->
-    let index = Level.to_index ctx.size level in
-    Var index, Env.lookup index ctx.bindings
+    let index = ctx.size - level - 1 in
+    Var index, List.nth ctx.bindings index
 
 let let_synth (name, def_ty, def : name * ty * check_tm) (body : var -> infer_tm) : infer_tm =
   fun ctx ->
     let def = def def_ty ctx in
-    let body, body_ty = body (Level.next ctx.size) (add_bind def_ty ctx) in
+    let body, body_ty = body ctx.size (add_bind def_ty ctx) in
     Let (name, def_ty, def, body), body_ty
 
 let let_check (name, def_ty, def : name * ty * check_tm) (body : var -> check_tm) : check_tm =
   fun body_ty ctx ->
     let def = def def_ty ctx in
-    let body = body (Level.next ctx.size) body_ty (add_bind def_ty ctx) in
+    let body = body ctx.size body_ty (add_bind def_ty ctx) in
     Let (name, def_ty, def, body)
 
 
@@ -224,14 +220,14 @@ module Fun = struct
                   expected_ty = expected_param_ty;
                 })
           in
-          let body = body (Level.next ctx.size) body_ty (add_bind param_ty ctx) in
+          let body = body ctx.size body_ty (add_bind param_ty ctx) in
           Ok (Fun_lit (name, param_ty, body) : tm)
       | _ ->
           Error (`Unexpected_fun_lit fun_ty)
 
   let intro_synth (name, param_ty : name * ty) (body : var -> infer_tm) : infer_tm =
     fun ctx ->
-      let body, body_ty = body (Level.next ctx.size) (add_bind param_ty ctx) in
+      let body, body_ty = body ctx.size (add_bind param_ty ctx) in
       Fun_lit (name, param_ty, body), Fun_type (param_ty, body_ty)
 
   let elim (head : infer_tm) (arg : infer_tm) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] infer_tm_err =
@@ -318,7 +314,7 @@ let pp_tm : tm -> Format.formatter -> unit =
               Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
                 (pp_name_ann name def_ty)
                 (pp_tm names def)
-                (go (Env.extend name names) body)
+                (go (name :: names) body)
           | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
         in
         Format.fprintf ppf "@[<v>%t@]" (go names tm)
@@ -328,11 +324,11 @@ let pp_tm : tm -> Format.formatter -> unit =
           | Fun_lit (name, param_ty, (Fun_lit _ as body)) ->
               Format.fprintf ppf "@[fun@ %t@ =>@]@ %t"
                 (pp_param name param_ty)
-                (go (Env.extend name names) body)
+                (go (name :: names) body)
           | Fun_lit (name, param_ty, body) ->
               Format.fprintf ppf "@[fun@ %t@ =>@]%t"
                 (pp_param name param_ty)
-                (go (Env.extend name names) body)
+                (go (name :: names) body)
           | tm -> Format.fprintf ppf "@]@ @[%t@]@]" (pp_tm names tm)
         in
         Format.fprintf ppf "@[<hv 2>@[<hv>%t" (go names tm)
@@ -353,11 +349,11 @@ let pp_tm : tm -> Format.formatter -> unit =
         pp_atomic_tm names tm ppf
   and pp_atomic_tm names tm ppf =
     match tm with
-    | Var index -> Format.fprintf ppf "%s" (Env.lookup index names)
+    | Var index -> Format.fprintf ppf "%s" (List.nth names index)
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
     | Ann _ | Let _ | Fun_lit _ | Fun_app _ | Bool_elim _ ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
-  pp_tm Env.empty
+  pp_tm []
