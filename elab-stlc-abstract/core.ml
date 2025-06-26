@@ -247,7 +247,7 @@ module Int = struct
   let form : ty = Int_type
 
   let intro (i : int) : infer_tm =
-    fun _ -> (Int_lit i, Int_type)
+    fun _ -> Int_lit i, Int_type
 
 end
 
@@ -257,10 +257,10 @@ module Bool = struct
   let form : ty = Bool_type
 
   let intro_true : infer_tm =
-    fun _ -> (Bool_lit true, Bool_type)
+    fun _ -> Bool_lit true, Bool_type
 
   let intro_false : infer_tm =
-    fun _ -> (Bool_lit false, Bool_type)
+    fun _ -> Bool_lit false, Bool_type
 
   let elim_check (head : check_tm) (tm1 : check_tm) (tm2 : check_tm) : check_tm =
     fun ty ctx ->
