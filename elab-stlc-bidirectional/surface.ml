@@ -8,29 +8,29 @@
 (** {1 Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
 (** Types in the surface language *)
 type ty =
-  ty_data located
+  ty_data spanned
 
 and ty_data =
   | Name of string
   | Fun_type of ty * ty
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string spanned
 
 (** Terms in the surface language *)
 type tm =
-  tm_data located
+  tm_data spanned
 
 and tm_data =
   | Name of string
@@ -59,9 +59,9 @@ and param =
 *)
 module Elab : sig
 
-  val check_ty : ty -> (Core.ty, loc * string) result
-  val check_tm : tm -> Core.ty -> (Core.tm, loc * string) result
-  val infer_tm : tm -> (Core.tm * Core.ty, loc * string) result
+  val check_ty : ty -> (Core.ty, span * string) result
+  val check_tm : tm -> Core.ty -> (Core.tm, span * string) result
+  val infer_tm : tm -> (Core.tm * Core.ty, span * string) result
 
 end = struct
 
@@ -87,15 +87,15 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of loc * string
+  exception Error of span * string
 
   (** Raises an {!Error} exception *)
-  let error (type a) (loc : loc) (message : string) : a =
-    raise (Error (loc, message))
+  let error (type a) (span : span) (message : string) : a =
+    raise (Error (span, message))
 
-  let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
+  let equate_ty (span : span) (ty1 : Core.ty) (ty2 : Core.ty) =
     if ty1 = ty2 then () else
-      error loc
+      error span
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
           (Core.pp_ty ty1)
           (Core.pp_ty ty2))
@@ -117,7 +117,7 @@ end = struct
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
     | Name name ->
-        error ty.loc (Format.asprintf "unbound type `%s`" name)
+        error ty.span (Format.asprintf "unbound type `%s`" name)
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ty1, check_ty ty2)
 
@@ -141,7 +141,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        equate_ty tm.loc ty ty';
+        equate_ty tm.span ty ty';
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -152,7 +152,7 @@ end = struct
         | Some (index, ty) -> Var index, ty
         | None when name = "true" -> Bool_lit true, Bool_type
         | None when name = "false" -> Bool_lit false, Bool_type
-        | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -175,26 +175,26 @@ end = struct
         let param_ty, body_ty =
           match head_ty with
           | Fun_type (param_ty, body_ty) -> param_ty, body_ty
-          | _ -> error arg.loc "unexpected argument"
+          | _ -> error arg.span "unexpected argument"
         in
         let arg = check_tm ctx arg param_ty in
         Fun_app (head, arg), body_ty
 
-    | If_then_else (head, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
+    | If_then_else (head, tm1, ({ span = tm2_span; _ } as tm2)) ->
         let head = check_tm ctx head Bool_type in
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
-        equate_ty tm2_loc ty1 ty2;
+        equate_ty tm2_span ty1 ty2;
         Bool_elim (head, tm1, tm2), ty1
 
     | Infix (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
-        equate_ty tm.loc ty1 ty2;
+        equate_ty tm.span ty1 ty2;
         begin match ty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
-        | ty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
+        | ty -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
@@ -221,13 +221,13 @@ end = struct
         let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
-        let param_ty_loc = param_ty.loc in
+        let param_ty_span = param_ty.span in
         let param_ty = check_ty param_ty in
-        equate_ty param_ty_loc param_ty param_ty';
+        equate_ty param_ty_span param_ty param_ty';
         let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, _ ->
-        error name.loc "unexpected parameter"
+        error name.span "unexpected parameter"
 
   (** Elaborate a function literal into a core term, inferring its type. *)
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
@@ -238,7 +238,7 @@ end = struct
     | [], None ->
         infer_tm ctx body
     | (name, None) :: _, _ ->
-        error name.loc "ambiguous parameter type"
+        error name.span "ambiguous parameter type"
     | (name, Some param_ty) :: params, body_ty ->
         let param_ty = check_ty param_ty in
         let body, body_ty = infer_fun_lit ((name.data, param_ty) :: ctx) params body_ty body in
@@ -247,21 +247,21 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+  let run_elab (type a) (prog : unit -> a) : (a, span * string) result =
     match prog () with
     | result -> Ok result
-    | exception Error (loc, message) -> Error (loc, message)
+    | exception Error (span, message) -> Error (span, message)
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, loc * string) result =
+  let check_ty (ty : ty) : (Core.ty, span * string) result =
     run_elab (fun () -> check_ty ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, loc * string) result =
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, span * string) result =
     run_elab (fun () -> check_tm [] tm ty)
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty, loc * string) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, span * string) result =
     run_elab (fun () -> infer_tm [] tm)
 
 end

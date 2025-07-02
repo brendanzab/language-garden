@@ -8,21 +8,21 @@
 (** {1 Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
 (** Names that bind definitions or parameters *)
-type binder = string option located
+type binder = string option spanned
 
 (** Types in the surface language *)
 type ty =
-  ty_data located
+  ty_data spanned
 
 and ty_data =
   | Name of string
@@ -32,7 +32,7 @@ and ty_data =
 
 (** Terms in the surface language *)
 type tm =
-  tm_data located
+  tm_data spanned
 
 and tm_data =
   | Name of string
@@ -40,7 +40,7 @@ and tm_data =
   | Ann of tm * ty
   | Fun_lit of param list * tm
   | Int_lit of int
-  | App of tm * arg located
+  | App of tm * arg spanned
   | If_then_else of tm * tm * tm
   | Infix of [`Eq | `Add | `Sub | `Mul] * tm * tm
   | Prefix of [`Neg] * tm
@@ -66,9 +66,9 @@ and arg =
 *)
 module Elab : sig
 
-  val check_ty : ty -> (Core.ty, (loc * string) list) result
-  val check_tm : tm -> Core.vty -> (Core.tm, (loc * string) list) result
-  val infer_tm : tm -> (Core.tm * Core.vty, (loc * string) list) result
+  val check_ty : ty -> (Core.ty, (span * string) list) result
+  val check_tm : tm -> Core.vty -> (Core.tm, (span * string) list) result
+  val infer_tm : tm -> (Core.tm * Core.vty, (span * string) list) result
 
 end = struct
 
@@ -83,7 +83,7 @@ end = struct
     ty_names : string option Core.env;
     ty_env : Core.vty Core.env;
     tm_tys : (string option * Core.vty) Core.env;
-    metas : (loc * string * Core.meta) Dynarray.t;
+    metas : (span * string * Core.meta) Dynarray.t;
   }
 
   (** The empty context *)
@@ -128,9 +128,9 @@ end = struct
       | false -> None
 
   (** Generate a fresh metavariable *)
-  let fresh_meta (ctx : context) (loc: loc) (info : string) : Core.ty =
+  let fresh_meta (ctx : context) (span: span) (info : string) : Core.ty =
     let m = Core.fresh_meta ctx.ty_size in
-    Dynarray.add_last ctx.metas (loc, info, m);
+    Dynarray.add_last ctx.metas (span, info, m);
     Meta_var m
 
   let eval_ty (ctx : context) (ty : Core.ty) : Core.vty =
@@ -155,27 +155,27 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of (loc * string)
+  exception Error of (span * string)
 
   (** Raises an {!Error} exception *)
-  let error (type a) (loc : loc) (message : string) : a =
-    raise (Error (loc, message))
+  let error (type a) (span : span) (message : string) : a =
+    raise (Error (span, message))
 
-  let unify_vtys (ctx : context) (loc : loc) (vty1 : Core.vty) (vty2 : Core.vty) =
+  let unify_vtys (ctx : context) (span : span) (vty1 : Core.vty) (vty2 : Core.vty) =
     try Core.unify_vtys ctx.ty_size vty1 vty2 with
     | Core.Mismatched_types (_, _) ->
-        error loc
+        error span
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (pp_vty ctx vty1)
             (pp_vty ctx vty2))
     | Core.Infinite_type m ->
-        error loc
+        error span
           (Format.asprintf "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (pp_ty ctx (Meta_var m))
             (pp_vty ctx vty1)
             (pp_vty ctx vty2))
     | Core.Escaping_scope (m, vty) ->
-        error loc
+        error span
           (Format.asprintf "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (pp_vty ctx vty)
             (pp_ty ctx (Meta_var m))
@@ -201,10 +201,10 @@ end = struct
         | Some ty_index -> Local_var ty_index
         | None when name = "Bool" -> Bool_type
         | None when name = "Int" -> Int_type
-        | None -> error ty.loc (Format.asprintf "unbound type `%s`" name)
+        | None -> error ty.span (Format.asprintf "unbound type `%s`" name)
         end
     | Placeholder ->
-        fresh_meta ctx ty.loc "placeholder"
+        fresh_meta ctx ty.span "placeholder"
     | Forall_type (names, body_ty) ->
         let rec go ctx names : Core.ty =
           match names with
@@ -235,7 +235,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', vty' = infer_tm ctx tm in
-        unify_vtys ctx tm.loc vty vty';
+        unify_vtys ctx tm.span vty vty';
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -246,7 +246,7 @@ end = struct
         | Some (tm_index, vty) -> Local_var tm_index, vty
         | None when name = "true" -> Bool_lit true, Bool_type
         | None when name = "false" -> Bool_lit false, Bool_type
-        | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -266,10 +266,10 @@ end = struct
         infer_fun_lit ctx params None body
 
     | App (head, arg) ->
-        let head_loc = head.loc in
+        let head_span = head.span in
         let head, head_ty = infer_tm ctx head in
 
-        let rec go (head : Core.tm) (head_ty : Core.vty) (arg : arg located) : Core.tm * Core.vty =
+        let rec go (head : Core.tm) (head_ty : Core.vty) (arg : arg spanned) : Core.tm * Core.vty =
           match Core.force_vty head_ty, arg.data with
           | Forall_type (_, body_ty), Ty_arg arg ->
               let arg = check_ty ctx arg in
@@ -277,7 +277,7 @@ end = struct
 
           (* Instantiate expected type parameters with metavariables *)
           | Forall_type (_, body_ty), Arg _ ->
-              let ty_arg = fresh_meta ctx head_loc "type argument" in
+              let ty_arg = fresh_meta ctx head_span "type argument" in
               go (Forall_app (head, ty_arg)) (body_ty (eval_ty ctx ty_arg)) arg
 
           | Fun_type (param_ty, body_ty), Arg arg ->
@@ -285,21 +285,21 @@ end = struct
               Fun_app (head, arg), body_ty
 
           | Meta_var _ as head_ty, Arg arg ->
-              let param_ty = eval_ty ctx (fresh_meta ctx head_loc "function parameter type") in
-              let body_ty = eval_ty ctx (fresh_meta ctx head_loc "function return type") in
-              unify_vtys ctx head_loc (Fun_type (param_ty, body_ty)) head_ty;
+              let param_ty = eval_ty ctx (fresh_meta ctx head_span "function parameter type") in
+              let body_ty = eval_ty ctx (fresh_meta ctx head_span "function return type") in
+              unify_vtys ctx head_span (Fun_type (param_ty, body_ty)) head_ty;
               let arg = check_tm ctx arg param_ty in
               Fun_app (head, arg), body_ty
 
-          | _, Ty_arg _ -> error arg.loc "unexpected type argument"
-          | _, Arg _ -> error arg.loc "unexpected type argument"
+          | _, Ty_arg _ -> error arg.span "unexpected type argument"
+          | _, Arg _ -> error arg.span "unexpected type argument"
         in
 
         go head head_ty arg
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
-        let ty = eval_ty ctx (fresh_meta ctx tm.loc "if expression branches") in
+        let ty = eval_ty ctx (fresh_meta ctx tm.span "if expression branches") in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
         Bool_elim (head, tm1, tm2), ty
@@ -307,11 +307,11 @@ end = struct
     | Infix (`Eq, tm1, tm2) ->
         let tm1, vty1 = infer_tm ctx tm1 in
         let tm2, vty2 = infer_tm ctx tm2 in
-        unify_vtys ctx tm.loc vty1 vty2;
+        unify_vtys ctx tm.span vty1 vty2;
         begin match Core.force_vty vty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
-        | vty -> error tm.loc (Format.asprintf "@[unsupported type: %t@]" (pp_vty ctx vty))
+        | vty -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (pp_vty ctx vty))
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
@@ -352,24 +352,24 @@ end = struct
         Fun_lit (name.data, quote_vty ctx param_vty, body_tm)
 
     | Param (name, Some param_ty) :: params, Fun_type (param_vty', body_vty) ->
-        let param_ty_loc = param_ty.loc in
+        let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         let param_vty = eval_ty ctx param_ty in
-        unify_vtys ctx param_ty_loc param_vty param_vty';
+        unify_vtys ctx param_ty_span param_vty param_vty';
         let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
         Fun_lit (name.data, param_ty, body_tm)
 
     | Param (name, _) :: _, Meta_var _
     | Ty_param name :: _, Meta_var _ ->
         let tm', vty' = infer_fun_lit ctx params None body in
-        unify_vtys ctx name.loc vty vty';
+        unify_vtys ctx name.span vty vty';
         tm'
 
     | Ty_param name :: _, _ ->
-        error name.loc "unexpected type parameter"
+        error name.span "unexpected type parameter"
 
     | Param (name, _) :: _, _ ->
-        error name.loc "unexpected parameter"
+        error name.span "unexpected parameter"
 
   (** Elaborate a function literal into a core term, inferring its type. *)
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.vty =
@@ -389,7 +389,7 @@ end = struct
 
       | Param (name, param_ty) :: params, body_ty ->
           let param_ty = match param_ty with
-            | None -> fresh_meta ctx name.loc "function parameter type"
+            | None -> fresh_meta ctx name.span "function parameter type"
             | Some ty -> check_ty ctx ty
           in
           let param_vty = eval_ty ctx param_ty in
@@ -403,17 +403,17 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let collect_ambiguities (ctx : context) : (loc * string) list =
-    let ambiguity_error (loc, info, m) =
+  let collect_ambiguities (ctx : context) : (span * string) list =
+    let ambiguity_error (span, info, m) =
       match !m with
-      | Core.Unsolved _ -> Some (loc, "ambiguous " ^ info)
+      | Core.Unsolved _ -> Some (span, "ambiguous " ^ info)
       | Core.Solved _ -> None
     in
     Dynarray.to_seq ctx.metas
     |> Seq.filter_map ambiguity_error
     |> List.of_seq
 
-  let run_elab (type a) (prog : context -> a) : (a, (loc * string) list) result =
+  let run_elab (type a) (prog : context -> a) : (a, (span * string) list) result =
     match
       let ctx = empty () in
       let result = prog ctx in
@@ -422,18 +422,18 @@ end = struct
     with
     | result, [] -> Ok result
     | _, errors -> Error errors
-    | exception Error (loc, message) -> Error [(loc, message)]
+    | exception Error (span, message) -> Error [(span, message)]
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, (loc * string) list) result =
+  let check_ty (ty : ty) : (Core.ty, (span * string) list) result =
     run_elab (fun ctx -> check_ty ctx ty)
 
-  let check_tm (tm : tm) (vty : Core.vty) : (Core.tm, (loc * string) list) result =
+  let check_tm (tm : tm) (vty : Core.vty) : (Core.tm, (span * string) list) result =
     run_elab (fun ctx -> check_tm ctx tm vty)
 
-  let infer_tm (tm : tm) : (Core.tm * Core.vty, (loc * string) list) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.vty, (span * string) list) result =
     run_elab (fun ctx -> infer_tm ctx tm)
 
 end

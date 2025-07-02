@@ -25,37 +25,37 @@
 %%
 
 let main :=
-| t = located(tm); END;
+| t = spanned(tm); END;
     { t }
 
 
 (* Terms *)
 
 let tm :=
-| "let"; p = located(pattern); ps = list(param); t1 = option(":"; t1 = located(tm); { t1 }); ":=";
-    t2 = located(tm); ";"; t3 = located(tm);
+| "let"; p = spanned(pattern); ps = list(param); t1 = option(":"; t1 = spanned(tm); { t1 }); ":=";
+    t2 = spanned(tm); ";"; t3 = spanned(tm);
     { Surface.Let (p, ps, t1, t2, t3) }
-| t1 = located(app_tm); ":"; t2 = located(tm);
+| t1 = spanned(app_tm); ":"; t2 = spanned(tm);
     { Surface.Ann (t1, t2) }
-| t1 =  located(app_tm); "->"; t2 = located(tm);
+| t1 =  spanned(app_tm); "->"; t2 = spanned(tm);
     { Surface.Fun_arrow (t1, t2) }
-| "fun"; ps = nonempty_list(param); "->"; t = located(tm);
+| "fun"; ps = nonempty_list(param); "->"; t = spanned(tm);
     { Surface.Fun_type (ps, t) }
-| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = located(tm); { t1 }); "=>"; t2 = located(tm);
+| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = spanned(tm); { t1 }); "=>"; t2 = spanned(tm);
     { Surface.Fun_lit (ps, t1, t2) }
 | app_tm
 
 let app_tm :=
-| t = located(proj_tm); ts = nonempty_list(located(proj_tm));
+| t = spanned(proj_tm); ts = nonempty_list(spanned(proj_tm));
     { Surface.App (t, ts) }
-| t1 = located(app_tm); "["; "="; t2 = located(tm); "]";
+| t1 = spanned(app_tm); "["; "="; t2 = spanned(tm); "]";
     { Surface.Sing_type (t1, t2) }
-| t = located(app_tm); "["; ps = nonempty_sequence(l = NAME; ":="; t = located(tm); { l, t }); "]";
+| t = spanned(app_tm); "["; ps = nonempty_sequence(l = NAME; ":="; t = spanned(tm); { l, t }); "]";
     { Surface.Patch (t, ps) }
 | proj_tm
 
 let proj_tm :=
-| t = located(atomic_tm); ls = nonempty_list("."; l = located(NAME); { l });
+| t = spanned(atomic_tm); ls = nonempty_list("."; l = spanned(NAME); { l });
     { Surface.Proj (t, ls) }
 | atomic_tm
 
@@ -68,7 +68,7 @@ let atomic_tm :=
     { Surface.Univ }
 | "{"; "}";
     { Surface.Rec_unit }
-| "{"; ds = nonempty_sequence(l = located(NAME); ":"; t = located(tm); { l, t }); "}";
+| "{"; ds = nonempty_sequence(l = spanned(NAME); ":"; t = spanned(tm); { l, t }); "}";
     { Surface.Rec_type ds }
 | "{"; ds = nonempty_sequence(defn); "}";
     { Surface.Rec_lit ds }
@@ -83,23 +83,23 @@ let pattern :=
     { Some n }
 
 let param :=
-| "("; p = located(pattern); ":"; t = located(tm); ")";
+| "("; p = spanned(pattern); ":"; t = spanned(tm); ")";
     { p, Some t }
-| p = located(pattern);
+| p = spanned(pattern);
     { p, None }
 
 let defn :=
-| l = located(NAME);
+| l = spanned(NAME);
     { l, None }
-| l = located(NAME); ps = list(param); ":="; t = located(tm);
+| l = spanned(NAME); ps = list(param); ":="; t = spanned(tm);
     { l, Some (ps, t) }
 
 
 (* Utilities *)
 
-let located(X) :=
+let spanned(X) :=
 | data = X;
-    { Surface.{ loc = $loc; data } }
+    { Surface.{ span = $loc; data } }
 
 let nonempty_sequence(T) :=
 | t = T; option(";");

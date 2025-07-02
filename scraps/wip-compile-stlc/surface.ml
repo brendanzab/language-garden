@@ -8,29 +8,29 @@
 (** {1 Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
 (** Types in the surface language *)
 type ty =
-  ty_data located
+  ty_data spanned
 
 and ty_data =
   | Name of string
   | Fun_ty of ty * ty
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string spanned
 
 (** Terms in the surface language *)
 type expr =
-  expr_data located
+  expr_data spanned
 
 and expr_data =
   | Name of string
@@ -78,15 +78,15 @@ let lookup (ctx : context) (name : string) : (Core.index * Core.ty) option =
 (** An error that will be raised if there was a problem in the surface syntax,
     usually as a result of type errors. This is normal, and should be rendered
     nicely to the programmer. *)
-exception Error of loc * string
+exception Error of span * string
 
 (** Raises an {!Error} exception *)
-let error (type a) (loc : loc) (message : string) : a =
-  raise (Error (loc, message))
+let error (type a) (span : span) (message : string) : a =
+  raise (Error (span, message))
 
-let equate_ty (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) =
+let equate_ty (span : span) (ty1 : Core.ty) (ty2 : Core.ty) =
   if ty1 = ty2 then () else
-    error loc
+    error span
       (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %a@]@ @[found: %a@]@]"
         Core.pp_ty ty1
         Core.pp_ty ty2)
@@ -108,7 +108,7 @@ let rec elab_ty (ty : ty) : Core.ty =
   | Name "Bool" -> Bool_ty
   | Name "Int" -> Int_ty
   | Name name ->
-      error ty.loc (Format.asprintf "unbound type `%s`" name)
+      error ty.span (Format.asprintf "unbound type `%s`" name)
   | Fun_ty (ty1, ty2) ->
       Fun_ty (elab_ty ty1, elab_ty ty2)
 
@@ -132,7 +132,7 @@ let rec elab_check (ctx : context) (expr : expr) (ty : Core.ty) : Core.expr =
   (* Fall back to type inference *)
   | _ ->
       let expr', ty' = elab_infer ctx expr in
-      equate_ty expr.loc ty ty';
+      equate_ty expr.span ty ty';
       expr'
 
 (** Elaborate a surface term into a core term, inferring its type. *)
@@ -141,7 +141,7 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
   | Name name -> begin
       match lookup ctx name with
       | Some (index, ty) -> Var index, ty
-      | None -> error expr.loc (Format.asprintf "unbound name `%s`" name)
+      | None -> error expr.span (Format.asprintf "unbound name `%s`" name)
   end
 
   | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -167,22 +167,22 @@ and elab_infer (ctx : context) (expr : expr) : Core.expr * Core.ty =
       let param_ty, body_ty =
         match head_ty with
         | Fun_ty (param_ty, body_ty) -> param_ty, body_ty
-        | _ -> error arg.loc "unexpected argument"
+        | _ -> error arg.span "unexpected argument"
       in
       let arg = elab_check ctx arg param_ty in
       Fun_app (head, arg), body_ty
 
   | If_then_else (_, _, _) ->
-      error expr.loc "ambiguous if expression"
+      error expr.span "ambiguous if expression"
 
   | Infix (`Eq, expr1, expr2) ->
       let expr1, ty1 = elab_infer ctx expr1 in
       let expr2, ty2 = elab_infer ctx expr2 in
-      equate_ty expr.loc ty1 ty2;
+      equate_ty expr.span ty1 ty2;
       begin match ty1 with
       | Bool_ty -> Fun_app (Prim Bool_eq, Tuple_lit [expr1; expr2]), Bool_ty
       | Int_ty -> Fun_app (Prim Int_eq, Tuple_lit [expr1; expr2]), Bool_ty
-      | ty -> error expr.loc (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
+      | ty -> error expr.span (Format.asprintf "@[unsupported type: %a@]" Core.pp_ty ty)
       end
 
   | Infix ((`Add | `Sub | `Mul) as prim, expr1, expr2) ->
@@ -224,13 +224,13 @@ and elab_check_fun_lit (ctx : context) (params : param list) (body : expr) (ty :
       let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
       Fun_lit (User name.data, param_ty, body)
   | (name, Some param_ty) :: params, Fun_ty (param_ty', body_ty) ->
-      let param_ty_loc = param_ty.loc in
+      let param_ty_span = param_ty.span in
       let param_ty = elab_ty param_ty in
-      equate_ty param_ty_loc param_ty param_ty';
+      equate_ty param_ty_span param_ty param_ty';
       let body = elab_check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
       Fun_lit (User name.data, param_ty, body)
   | (name, _) :: _, _ ->
-      error name.loc "unexpected parameter"
+      error name.span "unexpected parameter"
 
 (** Elaborate a function literal into a core term, inferring its type. *)
 and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : expr) : Core.expr * Core.ty =
@@ -241,7 +241,7 @@ and elab_infer_fun_lit (ctx : context) (params : param list) (body_ty : ty optio
   | [], None ->
       elab_infer ctx body
   | (name, None) :: _, _ ->
-      error name.loc "ambiguous parameter type"
+      error name.span "ambiguous parameter type"
   | (name, Some param_ty) :: params, body_ty ->
       let param_ty = elab_ty param_ty in
       let body, body_ty = elab_infer_fun_lit ((name.data, param_ty) :: ctx) params body_ty body in

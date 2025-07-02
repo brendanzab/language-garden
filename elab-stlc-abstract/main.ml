@@ -71,6 +71,6 @@ let () =
       Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
         (Core.pp_tm tm)
         (Core.pp_ty ty)
-  | Error (loc, msg) ->
-      emit source "error" loc msg;
+  | Error (span, msg) ->
+      emit source "error" span msg;
       exit 1

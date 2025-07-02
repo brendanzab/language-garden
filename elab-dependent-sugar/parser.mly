@@ -19,28 +19,28 @@
 %%
 
 let main :=
-| t = located(tm); END;
+| t = spanned(tm); END;
     { t }
 
 
 (* Terms *)
 
 let tm :=
-| "let"; p = located(pattern); ps = list(param); t1 = option(":"; t1 = located(tm); { t1 }); ":=";
-    t2 = located(tm); ";"; t3 = located(tm);
+| "let"; p = spanned(pattern); ps = list(param); t1 = option(":"; t1 = spanned(tm); { t1 }); ":=";
+    t2 = spanned(tm); ";"; t3 = spanned(tm);
     { Surface.Let (p, ps, t1, t2, t3) }
-| t1 = located(app_tm); ":"; t2 = located(tm);
+| t1 = spanned(app_tm); ":"; t2 = spanned(tm);
     { Surface.Ann (t1, t2) }
-| t1 =  located(app_tm); "->"; t2 = located(tm);
+| t1 =  spanned(app_tm); "->"; t2 = spanned(tm);
     { Surface.Fun_arrow (t1, t2) }
-| "fun"; ps = nonempty_list(param); "->"; t = located(tm);
+| "fun"; ps = nonempty_list(param); "->"; t = spanned(tm);
     { Surface.Fun_type (ps, t) }
-| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = located(tm); { t1 }); "=>"; t2 = located(tm);
+| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = spanned(tm); { t1 }); "=>"; t2 = spanned(tm);
     { Surface.Fun_lit (ps, t1, t2) }
 | app_tm
 
 let app_tm :=
-| t = located(atomic_tm); ts = nonempty_list(located(atomic_tm));
+| t = spanned(atomic_tm); ts = nonempty_list(spanned(atomic_tm));
     { Surface.Fun_app (t, ts) }
 | atomic_tm
 
@@ -62,17 +62,17 @@ let pattern :=
     { Some n }
 
 let param :=
-| "("; p = located(pattern); ":"; t = located(tm); ")";
+| "("; p = spanned(pattern); ":"; t = spanned(tm); ")";
     { p, Some t }
-| p = located(pattern);
+| p = spanned(pattern);
     { p, None }
 
 
 (* Utilities *)
 
-let located(X) :=
+let spanned(X) :=
 | data = X;
-    { Surface.{ loc = $loc; data } }
+    { Surface.{ span = $loc; data } }
 
 let nonempty_sequence(T) :=
 | t = T; option(";");

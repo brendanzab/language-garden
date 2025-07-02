@@ -23,47 +23,47 @@
 %%
 
 let main :=
-| tm = located(tm); END;
+| tm = spanned(tm); END;
     { tm }
 
 
 (* Terms *)
 
 let tm :=
-| "let"; n = binder; ps = list(param); ty = option(":"; ty = located(tm); { ty }); ":=";
-    tm1 = located(tm); ";"; tm2 = located(tm);
+| "let"; n = binder; ps = list(param); ty = option(":"; ty = spanned(tm); { ty }); ":=";
+    tm1 = spanned(tm); ";"; tm2 = spanned(tm);
     { Surface.Let (n, ps, ty, tm1, tm2) }
-| "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
+| "fun"; ps = nonempty_list(param); "=>"; t = spanned(tm);
     { Surface.Fun_lit (ps, t) }
-| "if"; tm1 = located(eq_tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
+| "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
-| tm = located(eq_tm); ":"; ty = located(tm);
+| tm = spanned(eq_tm); ":"; ty = spanned(tm);
     { Surface.Ann (tm, ty) }
-| tm1 =  located(eq_tm); "->"; tm2 = located(tm);
+| tm1 =  spanned(eq_tm); "->"; tm2 = spanned(tm);
     { Surface.Infix (`Arrow, tm1, tm2) }
 | eq_tm
 
 let eq_tm :=
-| tm1 = located(add_tm); "="; tm2 = located(eq_tm);
+| tm1 = spanned(add_tm); "="; tm2 = spanned(eq_tm);
     { Surface.Infix (`Eq, tm1, tm2) }
 | add_tm
 
 let add_tm :=
-| tm1 = located(mul_tm); "+"; tm2 = located(add_tm);
+| tm1 = spanned(mul_tm); "+"; tm2 = spanned(add_tm);
     { Surface.Infix (`Add, tm1, tm2) }
-| tm1 = located(mul_tm); "-"; tm2 = located(add_tm);
+| tm1 = spanned(mul_tm); "-"; tm2 = spanned(add_tm);
     { Surface.Infix (`Sub, tm1, tm2) }
 | mul_tm
 
 let mul_tm :=
-| tm1 = located(app_tm); "*"; tm2 = located(mul_tm);
+| tm1 = spanned(app_tm); "*"; tm2 = spanned(mul_tm);
     { Surface.Infix (`Mul, tm1, tm2) }
 | app_tm
 
 let app_tm :=
-| tm1 = located(app_tm); tm2 = located(atomic_tm);
+| tm1 = spanned(app_tm); tm2 = spanned(atomic_tm);
     { Surface.App (tm1, tm2) }
-| "-"; tm = located(atomic_tm);
+| "-"; tm = spanned(atomic_tm);
     { Surface.Prefix (`Neg, tm) }
 | atomic_tm
 
@@ -79,17 +79,17 @@ let atomic_tm :=
 (* Binders *)
 
 let binder :=
-| located(NAME)
+| spanned(NAME)
 
 let param :=
 | n = binder;
     { n, None }
-| "("; n = binder; ":"; ty = located(tm); ")";
+| "("; n = binder; ":"; ty = spanned(tm); ")";
     { n, Some ty }
 
 
 (* Utilities *)
 
-let located(X) :=
+let spanned(X) :=
 | data = X;
-    { Surface.{ loc = $loc; data } }
+    { Surface.{ span = $loc; data } }

@@ -63,7 +63,7 @@ let parse_expr (source : Source_file.t) : Tree_lang.expr =
       (Sedlexing.with_tokenizer Tree_lang.Lexer.token lexbuf)
   with
   | Tree_lang.Lexer.Error -> emit source "error" (lexpos ()) "unexpected character"; exit 1
-  | Tree_lang.Unbound_name (loc, n) -> emit source "error" loc (Format.sprintf "unbound name `%s`" n); exit 1
+  | Tree_lang.Unbound_name (span, n) -> emit source "error" span (Format.sprintf "unbound name `%s`" n); exit 1
   | Tree_lang.Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let synth_expr ctx e =

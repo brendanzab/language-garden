@@ -9,20 +9,20 @@
 (** {1 Surface Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
-type pattern = string option located
+type pattern = string option spanned
 
 (** Terms in the surface language *)
 type tm =
-  tm_data located
+  tm_data spanned
 
 and tm_data =
   | Let of pattern * params * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
@@ -49,8 +49,8 @@ and params = param list
 *)
 module Elab : sig
 
-  val check : tm -> Core.Semantics.vty -> (Core.Syntax.tm, loc * string) result
-  val infer : tm -> (Core.Syntax.tm * Core.Semantics.vty, loc * string) result
+  val check : tm -> Core.Semantics.vty -> (Core.Syntax.tm, span * string) result
+  val infer : tm -> (Core.Syntax.tm * Core.Semantics.vty, span * string) result
 
 end = struct
 
@@ -132,11 +132,11 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of loc * string
+  exception Error of span * string
 
   (** Raises an {!Error} exception *)
-  let error (type a) (loc : loc) (message : string) : a =
-    raise (Error (loc, message))
+  let error (type a) (span : span) (message : string) : a =
+    raise (Error (span, message))
 
   let type_mismatch (ctx : context) ~expected ~found : string =
     Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
@@ -181,10 +181,10 @@ end = struct
         could trigger unification or try to coerce the term to the expected
         type here. *)
     | _, expected_ty ->
-        let tm_loc = tm.loc in
+        let tm_span = tm.span in
         let tm, ty' = infer ctx tm in
         if is_convertible ctx ty' expected_ty then tm else
-          error tm_loc (type_mismatch ctx
+          error tm_span (type_mismatch ctx
             ~expected:(quote ctx expected_ty)
             ~found:(quote ctx ty'))
 
@@ -203,7 +203,7 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, vty) -> (Syntax.Var index, vty)
-        | None -> error tm.loc (not_bound name)
+        | None -> error tm.span (not_bound name)
         end
 
     (* Annotated terms *)
@@ -225,7 +225,7 @@ end = struct
         let rec go ctx = function
           | [] -> check ctx body_ty Semantics.Univ
           (* Function types always require annotations *)
-          | (name, None) :: _ -> error name.loc (ambiguous_param name.data)
+          | (name, None) :: _ -> error name.span (ambiguous_param name.data)
           | (name, Some param_ty) :: params ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let ctx = bind_param ctx name.data (eval ctx param_ty) in
@@ -253,7 +253,7 @@ end = struct
             | Semantics.Fun_type (_, param_ty, body_ty) ->
                 let arg = check ctx arg (Lazy.force param_ty) in
                 (Syntax.Fun_app (head, arg), body_ty (eval ctx arg))
-            | _ -> error arg.loc "unexpected argument")
+            | _ -> error arg.span "unexpected argument")
           (infer ctx head)
           args
 
@@ -261,12 +261,12 @@ end = struct
   and check_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) (expected_ty : Semantics.vty) =
     match params, body_ty, expected_ty with
     | [], None, expected_ty -> check ctx body expected_ty
-    | [], Some ({ loc = body_ty_loc; _ } as body_ty), expected_ty ->
+    | [], Some ({ span = body_ty_span; _ } as body_ty), expected_ty ->
         let body_ty = check ctx body_ty Semantics.Univ in
         let body_ty' = eval ctx body_ty in
         if is_convertible ctx body_ty' expected_ty then
           check ctx body body_ty'
-        else error body_ty_loc (type_mismatch ctx
+        else error body_ty_span (type_mismatch ctx
           ~expected:(quote ctx expected_ty)
           ~found:body_ty)
     | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, expected_param_ty, expected_body_ty) ->
@@ -281,7 +281,7 @@ end = struct
               (* Check that the parameter annotation in the function literal
                   matches the expected parameter type. *)
               if is_convertible ctx param_ty' expected_param_ty then param_ty' else
-                error name.loc (type_mismatch ctx
+                error name.span (type_mismatch ctx
                   ~expected:(quote ctx expected_param_ty)
                   ~found:param_ty)
         in
@@ -289,7 +289,7 @@ end = struct
         let body = check_fun_lit ctx params body_ty body (expected_body_ty var) in
         Syntax.Fun_lit (name.data, body)
     | (name, _) :: _, _, _ ->
-        error name.loc "too many parameters in function literal"
+        error name.span "too many parameters in function literal"
 
   (** Elaborate a function literal in inference mode. *)
   and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
@@ -306,7 +306,7 @@ end = struct
           let param_ty =
             match param_ty with
             (* We’re in inference mode, so function parameters need annotations *)
-            | None -> error name.loc (ambiguous_param name.data)
+            | None -> error name.span (ambiguous_param name.data)
             | Some param_ty -> check ctx param_ty Semantics.Univ
           in
           let ctx = bind_def ctx name.data (eval ctx param_ty) var in
@@ -326,18 +326,18 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+  let run_elab (type a) (prog : unit -> a) : (a, span * string) result =
     match prog () with
     | result -> Ok result
-    | exception Error (loc, message) -> Error (loc, message)
+    | exception Error (span, message) -> Error (span, message)
 
 
   (** {2 Public API} *)
 
-  let check (tm : tm) (vty : Semantics.vty) : (Core.Syntax.tm, loc * string) result =
+  let check (tm : tm) (vty : Semantics.vty) : (Core.Syntax.tm, span * string) result =
     run_elab (fun () -> check empty tm vty)
 
-  let infer (tm : tm) : (Core.Syntax.tm * Core.Semantics.vty, loc * string) result =
+  let infer (tm : tm) : (Core.Syntax.tm * Core.Semantics.vty, span * string) result =
     run_elab (fun () -> infer empty tm)
 
 end

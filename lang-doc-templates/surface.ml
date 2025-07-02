@@ -3,21 +3,21 @@
 (** {1 Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string spanned
 
 (** Types in the surface language *)
 type ty =
-  ty_data located
+  ty_data spanned
 
 and ty_data =
   | Name of string * ty list
@@ -25,7 +25,7 @@ and ty_data =
 
 (** Terms in the surface language *)
 type tm =
-  tm_data located
+  tm_data spanned
 
 and tm_data =
   | Name of string
@@ -45,7 +45,7 @@ and template =
 
 (** Template fragments *)
 and fragment =
-  fragment_data located
+  fragment_data spanned
 
 and fragment_data =
   | Text_fragment of string
@@ -66,11 +66,11 @@ module Elab = struct
   (** An error that will be raised if there was a problem in the surface syntax,
       usually as a result of type errors. This is normal, and should be rendered
       nicely to the programmer. *)
-  exception Error of loc * string
+  exception Error of span * string
 
   (** Raises an {!Error} exception *)
-  let error (type a) (loc : loc) (message : string) : a =
-    raise (Error (loc, message))
+  let error (type a) (span : span) (message : string) : a =
+    raise (Error (span, message))
 
 
   (** {1 Bidirectional elaboration} *)
@@ -83,7 +83,7 @@ module Elab = struct
     | Name ("Bool", []) -> Bool_ty (* TODO: improve arity errors *)
     | Name ("Int", []) -> Int_ty (* TODO: improve arity errors *)
     | Name (name, _) ->
-        error ty.loc (Format.asprintf "unbound type `%s`" name)
+        error ty.span (Format.asprintf "unbound type `%s`" name)
     | Fun_ty (ty1, ty2) ->
         Fun_ty (check_ty ty1, check_ty ty2)
 
@@ -99,11 +99,11 @@ module Elab = struct
         check_list ctx tms
           (match ty with
             | List_ty ty -> ty
-            | _ -> error tm.loc "unexpected list literal")
+            | _ -> error tm.span "unexpected list literal")
     | _ ->
         let tm', ty' = synth ctx tm in
         if ty = ty' then tm' else
-          error tm.loc "type mismatch"
+          error tm.span "type mismatch"
 
   (** Elaborate a surface term into a core term, synthesising its type. *)
   and synth (ctx : context) (tm : tm) : Core.tm * Core.ty =
@@ -113,7 +113,7 @@ module Elab = struct
         | Some ty -> Var name, ty
         | None when name = "true" -> Bool_lit true, Bool_ty
         | None when name = "false" -> Bool_lit false, Bool_ty
-        | None -> error tm.loc (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
     | Let (name, params, def_body_ty, def_tm, body_tm) ->
         let def_tm, def_ty = fun_lit ctx params def_body_ty def_tm in
@@ -123,11 +123,11 @@ module Elab = struct
         let ty = check_ty ty in
         check ctx tm ty, ty
     | If_then_else (_, _, _) ->
-        error tm.loc "ambiguous if expression"
+        error tm.span "ambiguous if expression"
     | Template_lit template ->
         synth_template ctx template, Test_ty
     | List_lit _ ->
-        error tm.loc "ambiguous list literal"
+        error tm.span "ambiguous list literal"
     | Text_lit s ->
         Text_lit s, Test_ty
     | Int_lit n ->
@@ -138,7 +138,7 @@ module Elab = struct
             let arg_tm = check ctx arg_tm param_ty in
             Fun_app (head_tm, arg_tm), body_ty
         | _ ->
-            error head_tm.loc "function expected"
+            error head_tm.span "function expected"
     end
     | Infix (`Add, tm1, tm2) ->
         let tm1 = check ctx tm1 Test_ty in
@@ -154,7 +154,7 @@ module Elab = struct
     | [], None ->
         synth ctx body
     | (name, None) :: _, _ ->
-        error name.loc "type annotations required in function parameters"
+        error name.span "type annotations required in function parameters"
     | (name, Some param_ty) :: params, body_ty ->
         let param_ty = check_ty param_ty in
         let body, body_ty = fun_lit ((name.data, param_ty) :: ctx) params body_ty body in

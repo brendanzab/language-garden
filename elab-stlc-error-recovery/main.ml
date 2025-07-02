@@ -27,7 +27,7 @@ module Source_file = struct
 end
 
 let emit (source : Source_file.t) (error : Surface.Error.t) =
-  let start, stop = error.loc in
+  let start, stop = error.span in
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -58,8 +58,8 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
   Sedlexing.set_filename lexbuf source.name;
   let report_fatal message =
-    let loc = Sedlexing.lexing_positions lexbuf in
-    emit source (Surface.Error.make loc message);
+    let span = Sedlexing.lexing_positions lexbuf in
+    emit source (Surface.Error.make span message);
     exit 1
   in
 

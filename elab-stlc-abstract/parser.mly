@@ -19,14 +19,14 @@
 %%
 
 let main :=
-| e = located(tm); END;
+| e = spanned(tm); END;
     { e }
 
 
 (* Types *)
 
 let ty :=
-| ty1 = located(atomic_ty); "->"; ty2 = located(ty);
+| ty1 = spanned(atomic_ty); "->"; ty2 = spanned(ty);
     { Surface.Fun_ty (ty1, ty2) }
 | atomic_ty
 
@@ -40,20 +40,20 @@ let atomic_ty :=
 (* Terms *)
 
 let tm :=
-| "let"; n = located(NAME); ":"; ty = located(ty); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
+| "let"; n = spanned(NAME); ":"; ty = spanned(ty); ":="; tm1 = spanned(tm); ";"; tm2 = spanned(tm);
     { Surface.Let (n, ty, tm1, tm2) }
-| "fun"; n = located(NAME); "=>"; tm = located(tm);
+| "fun"; n = spanned(NAME); "=>"; tm = spanned(tm);
     { Surface.Fun_lit (n, None, tm) }
-| "fun"; "("; n = located(NAME); ":"; ty = located(ty); ")"; "=>"; tm = located(tm);
+| "fun"; "("; n = spanned(NAME); ":"; ty = spanned(ty); ")"; "=>"; tm = spanned(tm);
     { Surface.Fun_lit (n, Some ty, tm) }
-| "if"; tm1 = located(app_tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
+| "if"; tm1 = spanned(app_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
-| tm = located(app_tm); ":"; ty = located(ty);
+| tm = spanned(app_tm); ":"; ty = spanned(ty);
     { Surface.Ann (tm, ty) }
 | app_tm
 
 let app_tm :=
-| tm1 = located(app_tm); tm2 = located(atomic_tm);
+| tm1 = spanned(app_tm); tm2 = spanned(atomic_tm);
     { Surface.Fun_app (tm1, tm2) }
 | atomic_tm
 
@@ -68,6 +68,6 @@ let atomic_tm :=
 
 (* Utilities *)
 
-let located(X) :=
+let spanned(X) :=
 | data = X;
-    { Surface.{ loc = $loc; data } }
+    { Surface.{ span = $loc; data } }

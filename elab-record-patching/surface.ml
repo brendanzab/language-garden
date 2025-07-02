@@ -18,21 +18,21 @@ let find_dupes (type a) (xs : a list) : a list =
 (** {1 Surface Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
-type label = string located
-type pattern = string option located
+type label = string spanned
+type pattern = string option spanned
 
 (** Terms in the surface language *)
 type tm =
-  tm_data located
+  tm_data spanned
 
 and tm_data =
   | Let of pattern * params * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
@@ -75,8 +75,8 @@ and params = param list
 *)
 module Elab : sig
 
-  val check : tm -> Core.Semantics.vty -> (Core.Syntax.tm, loc * string) result
-  val infer : tm -> (Core.Syntax.tm * Core.Semantics.vty, loc * string) result
+  val check : tm -> Core.Semantics.vty -> (Core.Syntax.tm, span * string) result
+  val infer : tm -> (Core.Syntax.tm * Core.Semantics.vty, span * string) result
 
 end = struct
 
@@ -158,11 +158,11 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of loc * string
+  exception Error of span * string
 
   (** Raises an {!Error} exception *)
-  let error (type a) (loc : loc) (message : string) : a =
-    raise (Error (loc, message))
+  let error (type a) (span : span) (message : string) : a =
+    raise (Error (span, message))
 
   let type_mismatch (ctx : context) ~expected ~found : string =
     Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
@@ -196,7 +196,7 @@ end = struct
   (** Returns a coercion from a term of one type to a term of another type. By
       performing coercions during elaboration we avoid having to introduce
       subtyping in the core language. *)
-  let rec coerce (loc : loc) (ctx : context) (from_ty : Semantics.vty) (to_ty : Semantics.vty) (tm : Syntax.tm) : Syntax.tm =
+  let rec coerce (span : span) (ctx : context) (from_ty : Semantics.vty) (to_ty : Semantics.vty) (tm : Syntax.tm) : Syntax.tm =
     (* TODO: Return [tm] unchanged if no coercion was needed, avoiding unnecessary
       eta-expansions to the elaborated terms. An example of this can be seen here:
       https://github.com/AndrasKovacs/staged/blob/9e381eb162f44912d70fb843c4ca6567b0d1683a/demo/Elaboration.hs#L87-L140 *)
@@ -207,17 +207,17 @@ end = struct
     (* Coerce the term to a singleton with {!Syntax.Sing_intro}, if the term is
       convertible to the term expected by the singleton *)
     | from_ty, Semantics.Sing_type (to_ty, sing_tm) ->
-        let tm = coerce loc ctx from_ty to_ty tm in
+        let tm = coerce span ctx from_ty to_ty tm in
         let tm' = eval ctx tm in
         if is_convertible ctx sing_tm tm' then Syntax.Sing_intro else
-          error loc (singleton_mismatch ctx
+          error span (singleton_mismatch ctx
             ~expected:(quote ctx sing_tm)
             ~found:(quote ctx tm')
             ~ty:(quote ctx to_ty))
     (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
       and attempt further coercions from its underlying type *)
     | Semantics.Sing_type (from_ty, sing_tm), to_ty ->
-        coerce loc ctx from_ty to_ty (quote ctx sing_tm)
+        coerce span ctx from_ty to_ty (quote ctx sing_tm)
     (* Coerce the fields of a record with record eta expansion *)
     | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
         (* TODO: bind [tm] to a local variable to avoid duplicating records *)
@@ -228,7 +228,7 @@ end = struct
           | Semantics.Cons (from_label, from_ty, from_decls)
           , Semantics.Cons (to_label, to_ty, to_decls) when from_label = to_label ->
               let from_tm = eval ctx (Syntax.Rec_proj (tm, from_label)) in
-              let to_tm = coerce loc ctx from_ty to_ty (Syntax.Rec_proj (tm, from_label)) in
+              let to_tm = coerce span ctx from_ty to_ty (Syntax.Rec_proj (tm, from_label)) in
               (to_label, to_tm) :: go (from_decls from_tm) (to_decls (eval ctx to_tm))
           (* When the type of the target field is a singleton we can use it to
               fill in the definition of a missing field in the source term. This
@@ -237,13 +237,13 @@ end = struct
               let to_tm = Syntax.Sing_intro in
               (to_label, to_tm) :: go from_decls (to_decls (eval ctx to_tm))
           | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
-              error loc (field_mismatch ~expected:to_label ~found:from_label)
+              error span (field_mismatch ~expected:to_label ~found:from_label)
           | _, _ -> Semantics.error "mismatched telescope length"
         in
         Syntax.Rec_lit (go from_decls to_decls)
     (* TODO: subtyping for functions! *)
     | from_ty, to_ty  ->
-        error loc (type_mismatch ctx
+        error span (type_mismatch ctx
           ~expected:(quote ctx to_ty)
           ~found:(quote ctx from_ty))
 
@@ -283,7 +283,7 @@ end = struct
           | (label, tm) :: defns, Semantics.Cons (label', ty, decls) when label.data = label' ->
               let tm = match tm with
                 | Some (params, tm) -> check_fun_lit ctx params None tm ty (* explicit field definition *)
-                | None -> check ctx ({ loc = label.loc; data = Name label.data }) ty (* punned field definition *)
+                | None -> check ctx ({ span = label.span; data = Name label.data }) ty (* punned field definition *)
               in
               (label.data, tm) :: go defns (decls (eval ctx tm))
           (* When the expected type of a field is a singleton we can use it to
@@ -291,8 +291,8 @@ end = struct
           | defns, Semantics.Cons (label, Semantics.Sing_type (_, _), decls) ->
               let tm = Syntax.Sing_intro in
               (label, tm) :: go defns (decls (eval ctx tm))
-          | _, Semantics.Cons (label, _, _) -> error tm.loc (missing_field label)
-          | (label, _) :: _, Semantics.Nil -> error label.loc ("unexpected field `" ^ label.data ^ "` in record literal")
+          | _, Semantics.Cons (label, _, _) -> error tm.span (missing_field label)
+          | (label, _) :: _, Semantics.Nil -> error label.span ("unexpected field `" ^ label.data ^ "` in record literal")
         in
         Syntax.Rec_lit (go defns decls)
 
@@ -306,11 +306,11 @@ end = struct
     (* Singleton introduction. No need for any syntax in the surface language
         here, instead we use the type annotation to drive this. *)
     | _, Semantics.Sing_type (ty, sing_tm) ->
-        let tm_loc = tm.loc in
+        let tm_span = tm.span in
         let tm = check ctx tm ty in
         let tm' = eval ctx tm in
         if is_convertible ctx sing_tm tm' then Syntax.Sing_intro else
-          error tm_loc (singleton_mismatch ctx
+          error tm_span (singleton_mismatch ctx
             ~expected:(quote ctx sing_tm)
             ~found:(quote ctx tm')
             ~ty:(quote ctx ty))
@@ -318,10 +318,10 @@ end = struct
     (* For anything else, try inferring the type of the term, then attempting to
         coerce the term to the expected type. *)
     | _, expected_ty ->
-        let tm_loc = tm.loc in
+        let tm_span = tm.span in
         let tm, ty' = infer ctx tm in
         let tm, ty' = elim_implicits ctx tm ty' in
-        coerce tm_loc ctx ty' expected_ty tm
+        coerce tm_span ctx ty' expected_ty tm
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
@@ -338,7 +338,7 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, vty) -> (Syntax.Var index, vty)
-        | None -> error tm.loc (not_bound name)
+        | None -> error tm.span (not_bound name)
         end
 
     (* Annotated terms *)
@@ -360,7 +360,7 @@ end = struct
         let rec go ctx = function
           | [] -> check ctx body_ty Semantics.Univ
           (* Function types always require annotations *)
-          | (name, None) :: _ -> error name.loc (ambiguous_param name.data)
+          | (name, None) :: _ -> error name.span (ambiguous_param name.data)
           | (name, Some param_ty) :: params ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let ctx = bind_param ctx name.data (eval ctx param_ty) in
@@ -386,7 +386,7 @@ end = struct
         let rec go ctx seen_labels = function
           | [] -> []
           | (label, _) :: _ when List.mem label.data seen_labels ->
-              error label.loc ("duplicate label `" ^ label.data ^ "` in record type")
+              error label.span ("duplicate label `" ^ label.data ^ "` in record type")
           | (label, ty) :: decls ->
               let ty = check ctx ty Semantics.Univ in
               let ctx = bind_param ctx (Some label.data) (eval ctx ty) in
@@ -397,8 +397,8 @@ end = struct
     (* Unit records. These are ambiguous in inference mode. We could default to
         one or the other, and perhaps coerce between them, but we choose to throw
         an ambiguity error instead. *)
-    | Rec_lit _ -> error tm.loc "ambiguous record literal"
-    | Rec_unit -> error tm.loc "ambiguous unit record"
+    | Rec_lit _ -> error tm.span "ambiguous record literal"
+    | Rec_unit -> error tm.span "ambiguous unit record"
 
     (* Singleton types *)
     | Sing_type (ty, sing_tm) ->
@@ -414,7 +414,7 @@ end = struct
             | head, Semantics.Fun_type (_, param_ty, body_ty) ->
                 let arg = check ctx arg param_ty in
                 Syntax.Fun_app (head, arg), body_ty (eval ctx arg)
-            | _ -> error arg.loc "unexpected argument")
+            | _ -> error arg.span "unexpected argument")
           (infer ctx head)
           args
 
@@ -426,9 +426,9 @@ end = struct
             | head, Semantics.Rec_type decls ->
                 begin match Semantics.proj_ty (eval ctx head) decls label.data with
                 | Some ty -> Syntax.Rec_proj (head, label.data), ty
-                | None -> error label.loc (missing_field label.data)
+                | None -> error label.span (missing_field label.data)
                 end
-            | _ -> error label.loc (missing_field label.data))
+            | _ -> error label.span (missing_field label.data))
           (infer ctx head)
           labels
 
@@ -440,7 +440,7 @@ end = struct
           | Semantics.Nil, [] -> []
           | Semantics.Nil, (label, _) :: _ ->
               (* FIXME: use label location *)
-              error head.loc ("field `" ^ label ^ "` not found in record type")
+              error head.span ("field `" ^ label ^ "` not found in record type")
           | Semantics.Cons (label, ty, tys), patches ->
               let ty' = quote ctx ty in
               begin match List.assoc_opt label patches with
@@ -459,27 +459,27 @@ end = struct
 
         let dupes = find_dupes (List.map fst patches) in
         if List.compare_length_with dupes 0 <> 0 then
-          error head.loc ("duplicate labels in patches: `" ^ String.concat "`, `" dupes ^ "`")
+          error head.span ("duplicate labels in patches: `" ^ String.concat "`, `" dupes ^ "`")
         else
-          let head_loc = head.loc in
+          let head_span = head.span in
           let head = check ctx head Semantics.Univ in
           begin match eval ctx head with
           | Semantics.Rec_type decls ->
               let decls = go ctx decls patches in
               Syntax.Rec_type decls, Semantics.Univ
-          | _ -> error head_loc "can only patch record types"
+          | _ -> error head_span "can only patch record types"
           end
 
   (** Elaborate a function literal in checking mode. *)
   and check_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) (expected_ty : Semantics.vty) =
     match params, body_ty, expected_ty with
     | [], None, expected_ty -> check ctx body expected_ty
-    | [], Some ({ loc = body_ty_loc; _ } as body_ty), expected_ty ->
+    | [], Some ({ span = body_ty_span; _ } as body_ty), expected_ty ->
         let body_ty = check ctx body_ty Semantics.Univ in
         let body_ty' = eval ctx body_ty in
         if is_convertible ctx body_ty' expected_ty then
           check ctx body body_ty'
-        else error body_ty_loc (type_mismatch ctx
+        else error body_ty_span (type_mismatch ctx
           ~expected:(quote ctx expected_ty)
           ~found:body_ty)
     | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, expected_param_ty, expected_body_ty) ->
@@ -494,7 +494,7 @@ end = struct
               (* Check that the parameter annotation in the function literal
                   matches the expected parameter type. *)
               if is_convertible ctx param_ty' expected_param_ty then param_ty' else
-                error name.loc (type_mismatch ctx
+                error name.span (type_mismatch ctx
                   ~expected:(quote ctx expected_param_ty)
                   ~found:param_ty)
         in
@@ -502,7 +502,7 @@ end = struct
         let body = check_fun_lit ctx params body_ty body (expected_body_ty var) in
         Syntax.Fun_lit (name.data, body)
     | (name, _) :: _, _, _ ->
-        error name.loc "too many parameters in function literal"
+        error name.span "too many parameters in function literal"
 
   (** Elaborate a function literal in inference mode. *)
   and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
@@ -518,7 +518,7 @@ end = struct
         let param_ty =
           match param_ty with
           (* We’re in inference mode, so function parameters need annotations *)
-          | None -> error name.loc (ambiguous_param name.data)
+          | None -> error name.span (ambiguous_param name.data)
           | Some param_ty -> check ctx param_ty Semantics.Univ
         in
         let ctx = bind_def ctx name.data (eval ctx param_ty) var in
@@ -544,18 +544,18 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+  let run_elab (type a) (prog : unit -> a) : (a, span * string) result =
     match prog () with
     | result -> Ok result
-    | exception Error (loc, message) -> Error (loc, message)
+    | exception Error (span, message) -> Error (span, message)
 
 
   (** {2 Public API} *)
 
-  let check (tm : tm) (vty : Semantics.vty) : (Core.Syntax.tm, loc * string) result =
+  let check (tm : tm) (vty : Semantics.vty) : (Core.Syntax.tm, span * string) result =
     run_elab (fun () -> check empty tm vty)
 
-  let infer (tm : tm) : (Core.Syntax.tm * Core.Semantics.vty, loc * string) result =
+  let infer (tm : tm) : (Core.Syntax.tm * Core.Semantics.vty, span * string) result =
     run_elab (fun () -> infer empty tm)
 
 end

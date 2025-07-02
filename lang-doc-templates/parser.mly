@@ -29,7 +29,7 @@
 %%
 
 let tm_main :=
-| tm = located(tm); END;
+| tm = spanned(tm); END;
   { tm }
 
 let template_main :=
@@ -40,12 +40,12 @@ let template_main :=
 (* Types *)
 
 let ty :=
-| ty1 = located(app_ty); "->"; ty2 = located(ty);
+| ty1 = spanned(app_ty); "->"; ty2 = spanned(ty);
     { Surface.Fun_ty (ty1, ty2) }
 | app_ty
 
 let app_ty :=
-| n = NAME; tys = nonempty_list(located(atomic_ty));
+| n = NAME; tys = nonempty_list(spanned(atomic_ty));
     { Surface.Name (n, tys) }
 | atomic_ty
 
@@ -59,21 +59,21 @@ let atomic_ty :=
 (* Terms *)
 
 let tm :=
-| "let"; n = located(NAME); ps = list(param); ty = ioption(":"; ~ = located(ty); <>); ":="; tm1 = located(tm); ";"; tm2 = located(tm);
+| "let"; n = spanned(NAME); ps = list(param); ty = ioption(":"; ~ = spanned(ty); <>); ":="; tm1 = spanned(tm); ";"; tm2 = spanned(tm);
     { Surface.Let (n, ps, ty, tm1, tm2) }
-| "if"; tm1 = located(tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
+| "if"; tm1 = spanned(tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
-| tm = located(add_tm); ":"; ty = located(ty);
+| tm = spanned(add_tm); ":"; ty = spanned(ty);
     { Surface.Ann (tm, ty) }
 | add_tm
 
 let add_tm :=
-| tm1 = located(atomic_tm); "+"; tm2 = located(add_tm);
+| tm1 = spanned(atomic_tm); "+"; tm2 = spanned(add_tm);
     { Surface.Infix (`Add, tm1, tm2) }
 | app_tm
 
 let app_tm :=
-| tm1 = located(atomic_tm); tm2 = located(app_tm);
+| tm1 = spanned(atomic_tm); tm2 = spanned(app_tm);
     { Surface.App (tm1, tm2) }
 | atomic_tm
 
@@ -82,7 +82,7 @@ let atomic_tm :=
     { Surface.Template_lit t }
 | "("; tm = tm; ")";
     { tm }
-| "["; tms = trailing_list(",", located(tm));  "]";
+| "["; tms = trailing_list(",", spanned(tm));  "]";
     { Surface.List_lit tms }
 | s = TEXT;
     { Surface.Text_lit s }
@@ -96,12 +96,12 @@ let atomic_tm :=
 
 let template :=
     { [] }
-| f = located(text_fragment); t = unquote_template;
+| f = spanned(text_fragment); t = unquote_template;
     { f :: t }
 
 let unquote_template :=
     { [] }
-| OPEN_TERM; f = located(unquote_fragment); CLOSE_TERM; t = template;
+| OPEN_TERM; f = spanned(unquote_fragment); CLOSE_TERM; t = template;
     { f :: t }
 
 let text_fragment :=
@@ -109,29 +109,29 @@ let text_fragment :=
     { Surface.Text_fragment s }
 
 let unquote_fragment :=
-| "let"; n = located(NAME); ps = list(param); ty = ioption(":"; ~ = located(ty); <>); ":="; tm = located(tm);
+| "let"; n = spanned(NAME); ps = list(param); ty = ioption(":"; ~ = spanned(ty); <>); ":="; tm = spanned(tm);
     { Surface.Let_fragment (n, ps, ty, tm) }
-| tm = located(tm);
+| tm = spanned(tm);
     { Surface.Term_fragment tm }
 
 
 (* Binders *)
 
 let binder :=
-| located(NAME)
+| spanned(NAME)
 
 let param :=
 | n = binder;
     { n, None }
-| "("; n = binder; ":"; ty = located(ty); ")";
+| "("; n = binder; ":"; ty = spanned(ty); ")";
     { n, Some ty }
 
 
 (* Utilities *)
 
-let located(X) :=
+let spanned(X) :=
 | data = X;
-    { Surface.{ loc = $loc; data } }
+    { Surface.{ span = $loc; data } }
 
 let trailing_list(Sep, T) :=
     { [] }

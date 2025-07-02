@@ -1,29 +1,29 @@
 (** {1 Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
 (** Types in the surface language *)
 type ty =
-  ty_data located
+  ty_data spanned
 
 and ty_data =
   | Name of string
   | Fun_ty of ty * ty
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string spanned
 
 (** Terms in the surface language *)
 type tm =
-  tm_data located
+  tm_data spanned
 
 and tm_data =
   | Name of string
@@ -38,9 +38,9 @@ and tm_data =
 (** Elaboration from the surface language into the core language *)
 module Elab : sig
 
-  val check_ty : ty -> (Core.ty, loc * string) result
-  val check_tm : tm -> Core.ty -> (Core.tm, loc * string) result
-  val infer_tm : tm -> (Core.tm * Core.ty, loc * string) result
+  val check_ty : ty -> (Core.ty, span * string) result
+  val check_tm : tm -> Core.ty -> (Core.tm, span * string) result
+  val infer_tm : tm -> (Core.tm * Core.ty, span * string) result
 
 end = struct
 
@@ -51,10 +51,10 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of loc * string
+  exception Error of span * string
 
   (** Raises an {!Error} exception *)
-  let error loc msg = raise (Error (loc, msg))
+  let error span msg = raise (Error (span, msg))
 
   (** The elaboration context only needs to map names to variables. The types of
       those variables are handled internally in the {!Core} module. *)
@@ -69,7 +69,7 @@ end = struct
     | Name "Bool" -> Core.Bool.form
     | Name "Int" -> Core.Int.form
     | Name name ->
-        error ty.loc (Format.asprintf "unbound type `%s`" name)
+        error ty.span (Format.asprintf "unbound type `%s`" name)
     | Fun_ty (ty1, ty2) ->
         Core.Fun.form (check_ty ty1) (check_ty ty2)
 
@@ -88,11 +88,11 @@ end = struct
           (fun var -> check_tm ((name.data, var) :: ctx) body)
         |> Core.catch_check_tm begin function
           | `Unexpected_fun_lit expected_ty ->
-              error tm.loc
+              error tm.span
                 (Format.asprintf "found function, expected `%t`"
                   (Core.pp_ty expected_ty))
           | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
-              error tm.loc
+              error tm.span
                 (Format.asprintf "mismatched parameter type, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
                   (Core.pp_ty expected_ty))
@@ -108,7 +108,7 @@ end = struct
         Core.conv (infer_tm ctx tm)
         |> Core.catch_check_tm begin function
           | `Type_mismatch Core.{ found_ty; expected_ty } ->
-              error tm.loc
+              error tm.span
                 (Format.asprintf "type mismatch, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
                   (Core.pp_ty expected_ty))
@@ -122,7 +122,7 @@ end = struct
         | Some var -> Core.lookup var
         | None when name = "true" -> Core.Bool.intro_true
         | None when name = "false" -> Core.Bool.intro_false
-        | None -> error tm.loc (Format.asprintf "unbound variable `%s`" name)
+        | None -> error tm.span (Format.asprintf "unbound variable `%s`" name)
         end
 
     | Let (name, def_ty, def, body) ->
@@ -139,7 +139,7 @@ end = struct
         Core.Int.intro i
 
     | Fun_lit (n, None, _) ->
-        error n.loc "annotation required"
+        error n.span "annotation required"
 
     | Fun_lit (name, Some param_ty, body) ->
         let param_ty = check_ty param_ty in
@@ -151,11 +151,11 @@ end = struct
         Core.Fun.elim (infer_tm ctx head) (infer_tm ctx arg)
         |> Core.catch_infer_tm begin function
           | `Unexpected_arg head_ty ->
-              error head.loc
+              error head.span
                 (Format.asprintf "unexpected argument applied to `%t`"
                   (Core.pp_ty head_ty))
           | `Type_mismatch Core.{ found_ty; expected_ty } ->
-              error arg.loc
+              error arg.span
                 (Format.asprintf "mismatched argument type, found `%t` expected `%t`"
                   (Core.pp_ty found_ty)
                   (Core.pp_ty expected_ty))
@@ -170,21 +170,21 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : unit -> a) : (a, loc * string) result =
+  let run_elab (type a) (prog : unit -> a) : (a, span * string) result =
     match prog () with
     | result -> Ok result
-    | exception Error (loc, message) -> Error (loc, message)
+    | exception Error (span, message) -> Error (span, message)
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, loc * string) result =
+  let check_ty (ty : ty) : (Core.ty, span * string) result =
     run_elab (fun () -> check_ty ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, loc * string) result =
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, span * string) result =
     run_elab (fun () -> Core.run (check_tm [] tm ty))
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty, loc * string) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, span * string) result =
     run_elab (fun () -> Core.run (infer_tm [] tm))
 
 end

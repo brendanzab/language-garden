@@ -8,29 +8,29 @@
 (** {1 Syntax} *)
 
 (** The start and end position in a source file *)
-type loc =
+type span =
   Lexing.position * Lexing.position
 
-(** Located nodes *)
-type 'a located = {
-  loc : loc;
+(** Spanned nodes *)
+type 'a spanned = {
+  span : span;
   data : 'a;
 }
 
 (** Types in the surface language *)
 type ty =
-  ty_data located
+  ty_data spanned
 
 and ty_data =
   | Name of string
   | Fun_type of ty * ty
 
 (** Names that bind definitions or parameters *)
-type binder = string located
+type binder = string spanned
 
 (** Terms in the surface language *)
 type tm =
-  tm_data located
+  tm_data spanned
 
 and tm_data =
   | Name of string
@@ -54,13 +54,13 @@ and param =
 module Error = struct
 
   type t = {
-    loc : loc;
+    span : span;
     message : string;
     details : string list;
   }
 
-  let make ?(details = ([] : string list)) (loc : loc) (message : string) : t =
-    { loc; message; details }
+  let make ?(details = ([] : string list)) (span : span) (message : string) : t =
+    { span; message; details }
 
 end
 
@@ -117,9 +117,9 @@ end = struct
     Dynarray.add_last ctx.errors error
 
   (** Check if two types are compatible with each other. *)
-  let equate_tys (loc : loc) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, Error.t) result =
+  let equate_tys (span : span) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, Error.t) result =
     if Core.equate_tys ty1 ty2 then Ok () else
-      Result.error @@ Error.make loc "mismatched types"
+      Result.error @@ Error.make span "mismatched types"
         ~details:[
           Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
             (Core.pp_ty ty1)
@@ -143,7 +143,7 @@ end = struct
     | Name "Bool" -> Bool_type
     | Name "Int" -> Int_type
     | Name name ->
-        report ctx @@ Error.make ty.loc (Format.asprintf "unbound type `%s`" name);
+        report ctx @@ Error.make ty.span (Format.asprintf "unbound type `%s`" name);
         Unknown_type
     | Fun_type (ty1, ty2) ->
         Fun_type (check_ty ctx ty1, check_ty ctx ty2)
@@ -168,7 +168,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        begin match equate_tys tm.loc ty ty' with
+        begin match equate_tys tm.span ty ty' with
         | Ok () -> tm'
         | Error error ->
             report ctx error;
@@ -184,7 +184,7 @@ end = struct
         | None when name = "true" -> Bool_lit true, Bool_type
         | None when name = "false" -> Bool_lit false, Bool_type
         | None ->
-            report ctx @@ Error.make tm.loc (Format.asprintf "unbound name `%s`" name);
+            report ctx @@ Error.make tm.span (Format.asprintf "unbound name `%s`" name);
             Reported_error, Unknown_type
         end
 
@@ -212,18 +212,18 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | _ ->
-            report ctx @@ Error.make arg.loc "unexpected argument";
+            report ctx @@ Error.make arg.span "unexpected argument";
             Reported_error, Unknown_type
         end
 
-    | If_then_else (head, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
+    | If_then_else (head, tm1, ({ span = tm2_span; _ } as tm2)) ->
         let head = check_tm ctx head Bool_type in
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
         begin match Core.meet_tys ty1 ty2 with
         | Some ty -> Bool_elim (head, tm1, tm2), ty
         | None ->
-            report ctx @@ Error.make tm2_loc "mismatched branches of if expression"
+            report ctx @@ Error.make tm2_span "mismatched branches of if expression"
               ~details:[
                 Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
                   (Core.pp_ty ty1)
@@ -232,7 +232,7 @@ end = struct
             Reported_error, Unknown_type
         end
 
-    | Infix (`Eq, tm1, ({ loc = tm2_loc; _ } as tm2)) ->
+    | Infix (`Eq, tm1, ({ span = tm2_span; _ } as tm2)) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
         begin match Core.meet_tys ty1 ty2 with
@@ -240,7 +240,7 @@ end = struct
         | Some Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Some Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
         | Some ty ->
-            report ctx @@ Error.make tm.loc
+            report ctx @@ Error.make tm.span
               (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
                 (Core.pp_ty ty))
               ~details:[
@@ -250,7 +250,7 @@ end = struct
               ];
             Reported_error, Unknown_type
         | None ->
-            report ctx @@ Error.make tm2_loc "mismatched operands"
+            report ctx @@ Error.make tm2_span "mismatched operands"
               ~details:[
                 Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
                   (Core.pp_ty ty1)
@@ -294,9 +294,9 @@ end = struct
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body body_ty)
 
-    | (name, Some ({ loc = ann_loc ; _ } as param_ty)) :: params, Some (expected_param_ty, body_ty) ->
+    | (name, Some ({ span = ann_span ; _ } as param_ty)) :: params, Some (expected_param_ty, body_ty) ->
         let param_ty = check_ty ctx param_ty in
-        begin match equate_tys ann_loc param_ty expected_param_ty with
+        begin match equate_tys ann_span param_ty expected_param_ty with
         | Ok () ->
             Fun_lit (name.data, param_ty,
               check_fun_lit (extend ctx name.data param_ty) params body body_ty)
@@ -311,7 +311,7 @@ end = struct
     (* If we see an unexpected parameter, we check the parameter type regardless
        and continue checking the body of the function. *)
     | (name, param_ty) :: params, None ->
-        report ctx @@ Error.make name.loc "unexpected parameter";
+        report ctx @@ Error.make name.span "unexpected parameter";
         let param_ty = match param_ty with
           | Some param_ty -> check_ty ctx param_ty
           | None -> Unknown_type
@@ -332,7 +332,7 @@ end = struct
           match param_ty with
           | Some ty -> check_ty ctx ty
           | None ->
-              report ctx @@ Error.make name.loc "ambiguous parameter type";
+              report ctx @@ Error.make name.span "ambiguous parameter type";
               Unknown_type
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in

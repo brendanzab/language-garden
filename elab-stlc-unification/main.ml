@@ -26,7 +26,7 @@ module Source_file = struct
 
 end
 
-let emit (source : Source_file.t) (severity : string) (start, stop : Surface.loc) (message : string) =
+let emit (source : Source_file.t) (severity : string) (start, stop : Surface.span) (message : string) =
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 

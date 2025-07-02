@@ -33,25 +33,25 @@
 %%
 
 let main :=
-| tm = located(tm); END;
+| tm = spanned(tm); END;
     { tm }
 
 
 (* Types *)
 
 let ty :=
-| ty1 = located(atomic_ty); "->"; ty2 = located(ty);
+| ty1 = spanned(atomic_ty); "->"; ty2 = spanned(ty);
     { Surface.Fun_type (ty1, ty2) }
 | atomic_ty
 
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
-| "{"; fs = trailing_list(";", ~ = located(NAME); ":"; ~ = located(ty); <>); "}";
+| "{"; fs = trailing_list(";", ~ = spanned(NAME); ":"; ~ = spanned(ty); <>); "}";
     { Surface.Record_type fs  }
 | "["; "|"; "]";
     { Surface.Variant_type [] }
-| "["; option("|"); r = separated_nonempty_list("|", l = located(NAME); ":"; ty = located(ty); { l, ty }); "]";
+| "["; option("|"); r = separated_nonempty_list("|", l = spanned(NAME); ":"; ty = spanned(ty); { l, ty }); "]";
     { Surface.Variant_type r }
 | n = NAME;
     { Surface.Name n }
@@ -62,45 +62,45 @@ let atomic_ty :=
 (* Terms *)
 
 let tm :=
-| "let"; n = located(binder); ps = list(param); ty = option(":"; ty = located(ty); { ty }); ":=";
-    tm1 = located(tm); ";"; tm2 = located(tm);
+| "let"; n = spanned(binder); ps = list(param); ty = option(":"; ty = spanned(ty); { ty }); ":=";
+    tm1 = spanned(tm); ";"; tm2 = spanned(tm);
     { Surface.Let (n, ps, ty, tm1, tm2) }
-| "fun"; ps = nonempty_list(param); "=>"; t = located(tm);
+| "fun"; ps = nonempty_list(param); "=>"; t = spanned(tm);
     { Surface.Fun_lit (ps, t) }
-| "if"; tm1 = located(eq_tm); "then"; tm2 = located(tm); "else"; tm3 = located(tm);
+| "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
-| "match"; tm1 = located(eq_tm); "with"; option("|"); clauses = separated_list("|", clause); "end";
+| "match"; tm1 = spanned(eq_tm); "with"; option("|"); clauses = separated_list("|", clause); "end";
     { Surface.Match (tm1, clauses) }
-| tm = located(eq_tm); ":"; ty = located(ty);
+| tm = spanned(eq_tm); ":"; ty = spanned(ty);
     { Surface.Ann (tm, ty) }
 | eq_tm
 
 let eq_tm :=
-| tm1 = located(add_tm); "="; tm2 = located(eq_tm);
+| tm1 = spanned(add_tm); "="; tm2 = spanned(eq_tm);
     { Surface.Infix (`Eq, tm1, tm2) }
 | add_tm
 
 let add_tm :=
-| tm1 = located(mul_tm); "+"; tm2 = located(add_tm);
+| tm1 = spanned(mul_tm); "+"; tm2 = spanned(add_tm);
     { Surface.Infix (`Add, tm1, tm2) }
-| tm1 = located(mul_tm); "-"; tm2 = located(add_tm);
+| tm1 = spanned(mul_tm); "-"; tm2 = spanned(add_tm);
     { Surface.Infix (`Sub, tm1, tm2) }
 | mul_tm
 
 let mul_tm :=
-| tm1 = located(app_tm); "*"; tm2 = located(mul_tm);
+| tm1 = spanned(app_tm); "*"; tm2 = spanned(mul_tm);
     { Surface.Infix (`Mul, tm1, tm2) }
 | app_tm
 
 let app_tm :=
-| tm1 = located(app_tm); tm2 = located(proj_tm);
+| tm1 = spanned(app_tm); tm2 = spanned(proj_tm);
     { Surface.App (tm1, tm2) }
-| "-"; tm = located(proj_tm);
+| "-"; tm = spanned(proj_tm);
     { Surface.Prefix (`Neg, tm) }
 | proj_tm
 
 let proj_tm :=
-| tm = located(proj_tm); "."; l = located(NAME);
+| tm = spanned(proj_tm); "."; l = spanned(NAME);
     { Surface.Proj (tm, l) }
 | atomic_tm
 
@@ -109,9 +109,9 @@ let atomic_tm :=
     { tm }
 | n = NAME;
     { Surface.Name n }
-| "{"; fs = trailing_list(";", ~ = located(NAME); ":="; ~ = located(tm); <>); "}";
+| "{"; fs = trailing_list(";", ~ = spanned(NAME); ":="; ~ = spanned(tm); <>); "}";
     { Surface.Record_lit fs  }
-| "["; l = located(NAME); ":="; tm = located(tm); "]";
+| "["; l = spanned(NAME); ":="; tm = spanned(tm); "]";
     { Surface.Variant_lit (l, tm) }
 | i = NUMBER;
     { Surface.Int_lit i }
@@ -126,24 +126,24 @@ let binder :=
     { None }
 
 let param :=
-| n = located(binder);
+| n = spanned(binder);
     { n, None }
-| "("; n = located(binder); ":"; ty = located(ty); ")";
+| "("; n = spanned(binder); ":"; ty = spanned(ty); ")";
     { n, Some ty }
 
 let pattern :=
-| "["; l = located(NAME); ":="; n = located(binder); "]";
+| "["; l = spanned(NAME); ":="; n = spanned(binder); "]";
     { Surface.Variant_lit (l, n) : Surface.pattern_data }
 
 let clause :=
-| p = located(pattern); "=>"; tm = located(tm); { p, tm }
+| p = spanned(pattern); "=>"; tm = spanned(tm); { p, tm }
 
 
 (* Utilities *)
 
-let located(X) :=
+let spanned(X) :=
   | data = X;
-      { Surface.{ loc = $loc; data } }
+      { Surface.{ span = $loc; data } }
 
 let trailing_list(Sep, T) :=
   | { [] }
