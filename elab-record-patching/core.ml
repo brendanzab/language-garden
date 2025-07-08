@@ -156,6 +156,10 @@ module Syntax = struct
                 Format.fprintf ppf "%t@ %t"
                   (pp_param names name param_ty)
                   (go (name :: names) body_ty)
+            (* Open record types on same line as parameter list *)
+            | Rec_type (_ :: _ as decls) ->
+                Format.fprintf ppf "@[<hv>@[->@ {@]%t@ }@]"
+                  (pp_decls names decls)
             | body_ty ->
                 (* TODO: improve printing of record types *)
                 Format.fprintf ppf "@[->@ @[%t@]@]"
@@ -163,16 +167,24 @@ module Syntax = struct
           in
           Format.fprintf ppf "@[<4>fun %t@]" (go names tm)
       | Fun_lit (name, body) ->
-          (* TODO: improve printing of record types and literals *)
           let rec go names tm ppf =
             match tm with
             | Fun_lit (name, body) ->
                 Format.fprintf ppf "%t@ %t"
                   (pp_name name)
                   (go (name :: names) body)
-            | tm -> Format.fprintf ppf "=>@]@ @[%t@]@]" (pp_tm names tm)
+            (* Open record types and literals on same line as parameter list *)
+            | Rec_type (_ :: _ as decls) ->
+                Format.fprintf ppf "=>@ {@]%t@ }@]"
+                  (pp_decls names decls)
+            | Rec_lit (_ :: _ as defns) ->
+                Format.fprintf ppf "=>@ {@]%t@ }@]"
+                  (pp_defns names defns)
+            | tm ->
+                Format.fprintf ppf "=>@]@;<1 2>@[%t@]@]"
+                  (pp_tm names tm)
           in
-          Format.fprintf ppf "@[<hv 2>@[fun@ %t@ %t"
+          Format.fprintf ppf "@[<hv>@[fun@ %t@ %t"
             (pp_name name)
             (go (name :: names) body)
       | tm ->
@@ -213,35 +225,11 @@ module Syntax = struct
       | Univ -> Format.fprintf ppf "Type"
       | Rec_type [] | Rec_lit [] -> Format.fprintf ppf "{}"
       | Rec_type decls ->
-          let rec go_decls names tm ppf =
-            match tm with
-            | [] -> Format.fprintf ppf ""
-            | [label, ty] ->
-                (* TODO: use trailing semicolons when splitting over multiple lines *)
-                Format.fprintf ppf "@;<1 2>@[<2>%t@]"
-                  (pp_decl names (Some label) ty)
-            | (label, ty) :: decls ->
-                Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
-                  (pp_decl names (Some label) ty)
-                  (go_decls (Some label :: names) decls)
-          in
           Format.fprintf ppf "@[<hv>{%t@ }@]"
-            (go_decls names decls)
+            (pp_decls names decls)
       | Rec_lit defns ->
-          let rec go_defns tm ppf =
-            match tm with
-            | [] -> Format.fprintf ppf ""
-            | (label, ty) :: [] ->
-                (* TODO: use trailing semicolons when splitting over multiple lines *)
-                Format.fprintf ppf "@;<1 2>@[<2>%t@]"
-                  (pp_defn names (Some label) ty)
-            | (label, ty) :: decls ->
-                Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
-                  (pp_defn names (Some label) ty)
-                  (go_defns decls)
-          in
           Format.fprintf ppf "@[<hv>{%t@ }@]"
-            (go_defns defns)
+            (pp_defns names defns)
       | Let _ | Fun_type _ | Fun_lit _ | Fun_app _ | Rec_proj _ | Sing_type _ | Sing_intro ->
           Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
 
@@ -254,10 +242,35 @@ module Syntax = struct
       match tm with
       | Var index when resugar && name = List.nth names index ->
           Format.fprintf ppf "%t" (pp_name name)
+      (* TODO: start function literals  on same line *)
       | tm ->
           Format.fprintf ppf "@[%t@ :=@]@ %t"
             (pp_name name)
             (pp_tm names tm)
+
+    and pp_decls names tm ppf =
+      match tm with
+      | [] -> Format.fprintf ppf ""
+      | [label, ty] ->
+          (* TODO: use trailing semicolons when splitting over multiple lines *)
+          Format.fprintf ppf "@;<1 2>@[<2>%t@]"
+            (pp_decl names (Some label) ty)
+      | (label, ty) :: decls ->
+          Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
+            (pp_decl names (Some label) ty)
+            (pp_decls (Some label :: names) decls)
+
+    and pp_defns names tm ppf =
+      match tm with
+      | [] -> Format.fprintf ppf ""
+      | (label, ty) :: [] ->
+          (* TODO: use trailing semicolons when splitting over multiple lines *)
+          Format.fprintf ppf "@;<1 2>@[<2>%t@]"
+            (pp_defn names (Some label) ty)
+      | (label, ty) :: decls ->
+          Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
+            (pp_defn names (Some label) ty)
+            (pp_defns names decls)
 
     and pp_param names name def_ty ppf =
       Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]"

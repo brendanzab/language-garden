@@ -33,8 +33,7 @@
     };
   let eq-option :
         fun (eq-a : Eq)
-            ->
-            {
+            -> {
               T : Type [= Option eq-a.T];
               eq :
                 fun (_ :
@@ -50,19 +49,18 @@
                     (Out : Type) (_ : { true : Out; false : Out }) -> Out
             }
   :=
-    fun eq-a =>
-      {
-        T := #sing-intro;
-        eq :=
-          fun x y =>
-            x Bool
-              {
-                some :=
-                  fun x =>
-                    y Bool { some := fun y => eq-a.eq x y; none := false };
-                none := y Bool { some := fun _ => false; none := true }
-              }
-      };
+    fun eq-a => {
+      T := #sing-intro;
+      eq :=
+        fun x y =>
+          x Bool
+            {
+              some :=
+                fun x =>
+                  y Bool { some := fun y => eq-a.eq x y; none := false };
+              none := y Bool { some := fun _ => false; none := true }
+            }
+    };
   let Map : Type :=
     {
       Key : Type;
@@ -73,8 +71,7 @@
     };
   let eq-map :
         fun (key : Eq)
-            ->
-            {
+            -> {
               Key : Type [= key.T];
               Map : fun (_ : Type) -> Type;
               empty : fun (A : Type) -> Map A;
@@ -84,16 +81,15 @@
                     (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out
             }
   :=
-    fun key =>
-      {
-        Key := #sing-intro;
-        Map := fun A => fun (_ : key.T) -> Option A;
-        empty := fun A x => none A;
-        add :=
-          fun A k v map x =>
-            key.eq x k (Option A) { true := some A v; false := map x };
-        lookup := fun A k map => map k
-      };
+    fun key => {
+      Key := #sing-intro;
+      Map := fun A => fun (_ : key.T) -> Option A;
+      empty := fun A x => none A;
+      add :=
+        fun A k v map x =>
+          key.eq x k (Option A) { true := some A v; false := map x };
+      lookup := fun A k map => map k
+    };
   let empty : fun (key : Eq) (A : Type) -> (eq-map key).Map A :=
     fun key A => (eq-map key).empty A;
   let add :

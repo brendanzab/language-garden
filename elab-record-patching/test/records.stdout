@@ -49,8 +49,7 @@
   := fun C => { A := #sing-intro; B := #sing-intro; f := fun x => x };
   let coerce-missing-2 :
         fun (C : Type)
-            ->
-            {
+            -> {
               A : Type [= C];
               B : Type [= C];
               f : (fun (_ : C) -> C) [= fun x => x]
