@@ -154,7 +154,7 @@ end = struct
         let def_vty = eval ctx def_ty in
         let def = check ctx def def_vty in
         let body = check (bind_def ctx name.data def_vty (lazy (eval ctx def))) body vty in
-        Syntax.Let (name.data, def, body)
+        Syntax.Let (name.data, def_ty, def, body)
 
     (* Function literals *)
     | Fun_lit (names, body) ->
@@ -197,7 +197,7 @@ end = struct
         let def_vty = eval ctx def_ty in
         let def = check ctx def def_vty in
         let body, body_ty = infer (bind_def ctx name.data def_vty (lazy (eval ctx def))) body in
-        Syntax.Let (name.data, def, body), body_ty
+        Syntax.Let (name.data, def_ty, def, body), body_ty
 
     (* Named terms *)
     | Name name ->
@@ -214,7 +214,7 @@ end = struct
     | Ann (tm, ty) ->
         let ty = check ctx ty Semantics.Univ in
         let vty = eval ctx ty in
-        Syntax.Ann (check ctx tm vty, ty), vty
+        check ctx tm vty, vty
 
     (* Function types *)
     | Fun_type (params, body_ty) ->

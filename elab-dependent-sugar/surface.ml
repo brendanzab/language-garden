@@ -159,7 +159,7 @@ end = struct
     | Let (name, params, def_ty, def, body) ->
         let def, def_vty = infer_def ctx params def_ty def in
         let body = check (bind_def ctx name.data def_vty (lazy (eval ctx def))) body vty in
-        Syntax.Let (name.data, def, body)
+        Syntax.Let (name.data, quote ctx def_vty, def, body)
 
     (* Function literals *)
     | Fun_lit (params, body_ty, body) ->
@@ -185,7 +185,7 @@ end = struct
     | Let (name, params, def_ty, def, body) ->
         let def, def_vty = infer_def ctx params def_ty def in
         let body, body_vty = infer (bind_def ctx name.data def_vty (lazy (eval ctx def))) body in
-        Syntax.Let (name.data, def, body), body_vty
+        Syntax.Let (name.data, quote ctx def_vty, def, body), body_vty
 
     (* Named terms *)
     | Name name ->
@@ -202,7 +202,7 @@ end = struct
     | Ann (tm, ty) ->
         let ty = check ctx ty Semantics.Univ in
         let vty = eval ctx ty in
-        Syntax.Ann (check ctx tm vty, ty), vty
+        check ctx tm vty, vty
 
     (* Function types *)
     | Fun_type (params, body_ty) ->
@@ -272,7 +272,7 @@ end = struct
         error name.span "too many parameters in function literal"
 
   (** Elaborate a function literal in inference mode. *)
-  and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
+  and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) : Syntax.tm * Semantics.vty =
     let rec go ctx params body_ty body =
       match params, body_ty with
       (* Elaborate the body of the function literal *)
@@ -297,10 +297,10 @@ end = struct
           Syntax.Fun_lit (name.data, body), Syntax.Fun_type (name.data, param_ty, body_ty)
     in
     let fun_tm, fun_ty = go ctx params body_ty body in
-    Syntax.Ann (fun_tm, fun_ty), eval ctx fun_ty
+    fun_tm, eval ctx fun_ty
 
   (** Elaborate a (potentially) parameterised and annotated definition. *)
-  and infer_def ctx params def_ty def =
+  and infer_def ctx params def_ty def : Syntax.tm * Semantics.vty =
     (* Only annotate definitions when necessary *)
     match params, def_ty with
     | [], None -> infer ctx def

@@ -60,8 +60,7 @@ module Syntax = struct
 
   (** Terms *)
   and tm =
-    | Let of name * tm * tm       (** Let bindings (for sharing definitions inside terms) *)
-    | Ann of tm * ty              (** Terms annotated with types *)
+    | Let of name * ty * tm * tm  (** Let bindings (for sharing definitions inside terms) *)
     | Var of index                (** Variables *)
     | Univ                        (** Universe (i.e. the type of types) *)
     | Fun_type of name * ty * ty  (** Dependent function types *)
@@ -87,8 +86,7 @@ module Syntax = struct
   (** Returns [ true ] if the variable is bound anywhere in the term *)
   let rec is_bound (var : index) (tm : tm) : bool =
     match tm with
-    | Let (_, def, body) -> is_bound var def || is_bound (var + 1) body
-    | Ann (tm, ty) -> is_bound var tm || is_bound var ty
+    | Let (_, def_ty, def, body) -> is_bound var def_ty || is_bound var def || is_bound (var + 1) body
     | Var index -> index = var
     | Univ -> false
     | Fun_type (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
@@ -112,27 +110,18 @@ module Syntax = struct
 
     let rec pp_tm names tm ppf =
       match tm with
-      | Let _ as tm ->
+      | Let (_, _, _, _) as tm ->
           let rec go names tm ppf =
             match tm with
-            | Let (name, Ann (def, def_ty), body) when resugar ->
+            | Let (name, def_ty, def, body) ->
                 Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
                   (pp_name_ann names name def_ty)
-                  (pp_tm names def)
-                  (go (name :: names) body)
-            | Let (name, def, body) ->
-                Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
-                  (pp_name name)
                   (pp_tm names def)
                   (go (name :: names) body)
             (* Final term should be grouped in a box *)
             | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
           in
           go names tm ppf
-      | Ann (tm, ty) ->
-          Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"
-            (pp_app_tm names tm)
-            (pp_tm names ty)
       | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
           Format.fprintf ppf "@[%t@ ->@]@ %t"
             (pp_app_tm names param_ty)
@@ -188,7 +177,7 @@ module Syntax = struct
       match tm with
       | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
       | Univ -> Format.fprintf ppf "Type"
-      | Let _ | Ann _ | Fun_type _ | Fun_lit _ | Fun_app _ as tm ->
+      | Let _ | Fun_type _ | Fun_lit _ | Fun_app _ as tm ->
           Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
 
     and pp_name_ann names name def_ty ppf =
@@ -277,8 +266,7 @@ module Semantics = struct
   (** Evaluate a term from the syntax into its semantic interpretation *)
   let rec eval (env : vtm Lazy.t env) (tm : Syntax.tm) : vtm =
     match tm with
-    | Syntax.Let (_, def, body) -> eval (lazy (eval env def) :: env) body
-    | Syntax.Ann (tm, _) -> eval env tm
+    | Syntax.Let (_, _, def, body) -> eval (lazy (eval env def) :: env) body
     | Syntax.Var index -> Lazy.force (List.nth env index)
     | Syntax.Univ ->  Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
