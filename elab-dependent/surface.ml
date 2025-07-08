@@ -163,7 +163,7 @@ end = struct
         let def_ty' = eval ctx def_ty in
         let def = check ctx def def_ty' in
         let ctx = bind_def ctx name.data def_ty' (eval ctx def) in
-        Syntax.Let (name.data, def, check ctx body expected_ty)
+        Syntax.Let (name.data, def_ty, def, check ctx body expected_ty)
 
     (* Function literals *)
     | Fun_lit (names, body), expected_ty ->
@@ -206,7 +206,7 @@ end = struct
         let def = check ctx def def_ty' in
         let ctx = bind_def ctx name.data def_ty' (eval ctx def) in
         let body, body_ty = infer ctx body in
-        Syntax.Let (name.data, def, body), body_ty
+        Syntax.Let (name.data, def_ty, def, body), body_ty
 
     (* Named terms *)
     | Name name ->
@@ -220,7 +220,7 @@ end = struct
         let ty = check ctx ty Semantics.Univ in
         let ty' = eval ctx ty in
         let tm = check ctx tm ty' in
-        Syntax.Ann (tm, ty), ty'
+        tm, ty'
 
     (* Universes *)
     | Univ ->

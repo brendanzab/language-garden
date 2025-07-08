@@ -167,8 +167,8 @@ end = struct
     (* Let expressions *)
     | Let (name, params, def_ty, def, body), expected_ty ->
         let def, def_ty = infer_def ctx params def_ty def in
-        let ctx = bind_def ctx name.data def_ty (eval ctx def) in
-        Syntax.Let (name.data, def, check ctx body expected_ty)
+        let body = check (bind_def ctx name.data def_ty (eval ctx def)) body expected_ty in
+        Syntax.Let (name.data, quote ctx def_ty, def, body)
 
     (* Function literals *)
     | Fun_lit (params, body_ty, body), expected_ty ->
@@ -195,9 +195,8 @@ end = struct
     (* Let expressions *)
     | Let (name, params, def_ty, def, body) ->
         let def, def_ty = infer_def ctx params def_ty def in
-        let ctx = bind_def ctx name.data def_ty (eval ctx def) in
-        let body, body_ty = infer ctx body in
-        Syntax.Let (name.data, def, body), body_ty
+        let body, body_ty = infer (bind_def ctx name.data def_ty (eval ctx def)) body in
+        Syntax.Let (name.data, quote ctx def_ty, def, body), body_ty
 
     (* Named terms *)
     | Name name ->
@@ -211,7 +210,7 @@ end = struct
         let ty = check ctx ty Semantics.Univ in
         let ty' = eval ctx ty in
         let tm = check ctx tm ty' in
-        Syntax.Ann (tm, ty), ty'
+        tm, ty'
 
     (* Universes *)
     | Univ ->
@@ -292,7 +291,7 @@ end = struct
         error name.span "too many parameters in function literal"
 
   (** Elaborate a function literal in inference mode. *)
-  and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
+  and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) : Syntax.tm * Semantics.vty =
     let rec go ctx params body_ty body =
       match params, body_ty with
       | [], None ->
@@ -314,10 +313,10 @@ end = struct
           Syntax.Fun_lit (name.data, body), Syntax.Fun_type (name.data, param_ty, body_ty)
     in
     let fun_tm, fun_ty = go ctx params body_ty body in
-    Syntax.Ann (fun_tm, fun_ty), eval ctx fun_ty
+    fun_tm, eval ctx fun_ty
 
   (** Elaborate a (potentially) parameterised and annotated definition. *)
-  and infer_def ctx params def_ty def =
+  and infer_def ctx params def_ty def : Syntax.tm * Semantics.vty =
     (* Only annotate definitions when necessary *)
     match params, def_ty with
     | [], None -> infer ctx def
