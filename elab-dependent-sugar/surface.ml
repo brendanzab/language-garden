@@ -264,9 +264,11 @@ end = struct
               check_convertible ctx name.span ~found:param_vty ~expected:(Lazy.force param_vty');
               param_vty
         in
-        let ctx = bind_def ctx name.data param_ty var in
-        let body = check_fun_lit ctx params body_ty body (body_vty' var) in
-        Syntax.Fun_lit (name.data, body)
+        let body =
+          let ctx = bind_def ctx name.data param_ty var in
+          check_fun_lit ctx params body_ty body (body_vty' var)
+        in
+        Syntax.Fun_lit (name.data, quote ctx param_ty, body)
 
     | (name, _) :: _, _, _ ->
         error name.span "too many parameters in function literal"
@@ -292,9 +294,11 @@ end = struct
             | None -> error name.span "ambiguous function parameter type"
             | Some param_ty -> check ctx param_ty Semantics.Univ
           in
-          let ctx = bind_def ctx name.data (eval ctx param_ty) var in
-          let body, body_ty = go ctx params body_ty body in
-          Syntax.Fun_lit (name.data, body), Syntax.Fun_type (name.data, param_ty, body_ty)
+          let body, body_ty =
+            let ctx = bind_def ctx name.data (eval ctx param_ty) var in
+            go ctx params body_ty body
+          in
+          Syntax.Fun_lit (name.data, param_ty, body), Syntax.Fun_type (name.data, param_ty, body_ty)
     in
     let fun_tm, fun_ty = go ctx params body_ty body in
     fun_tm, eval ctx fun_ty

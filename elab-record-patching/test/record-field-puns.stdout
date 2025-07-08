@@ -1,8 +1,8 @@
 <stdin> : Type :=
   let _ : fun (A : Type) (B : Type) -> { A : Type; B : Type } :=
-    fun A B => { A := A; B := B };
+    fun (A : Type) (B : Type) => { A := A; B := B };
   let _ : fun (A : Type) (B : Type) -> { A : Type; B : Type } :=
-    fun A B => { A := A; B := B };
+    fun (A : Type) (B : Type) => { A := A; B := B };
   let _ : fun (A : Type) (B : Type) -> { A : Type; B : Type } :=
-    fun A B => { A := A; B := B };
+    fun (A : Type) (B : Type) => { A := A; B := B };
   Type
