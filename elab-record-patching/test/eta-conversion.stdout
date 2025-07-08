@@ -1,24 +1,37 @@
 <stdin> : Type :=
   let Eq : fun (A : Type) (_ : A) (_ : A) -> Type :=
-    fun A x y => fun (P : fun (_ : A) -> Type) (_ : P x) -> P y;
-  let refl : fun (A : Type) (x : A) -> Eq A x x := fun A x P px => px;
-  let eta : Eq (fun (_ : {}) (_ : {}) -> {}) (fun x y => x) (fun x y => x) :=
-    refl (fun (_ : {}) (_ : {}) -> {}) (fun _ _ => {});
-  let eta : fun (x : {}) (y : {}) -> Eq {} x y := fun x y => refl {} {};
+    fun (A : Type) (x : A) (y : A) =>
+      fun (P : fun (_ : A) -> Type) (_ : P x) -> P y;
+  let refl : fun (A : Type) (x : A) -> Eq A x x :=
+    fun (A : Type) (x : A) (P : fun (_ : A) -> Type) (px : P x) => px;
+  let eta :
+        Eq (fun (_ : {}) (_ : {}) -> {}) (fun (x : {}) (y : {}) => x)
+          (fun (x : {}) (y : {}) => x)
+  := refl (fun (_ : {}) (_ : {}) -> {}) (fun (_ : {}) (_ : {}) => {});
+  let eta : fun (x : {}) (y : {}) -> Eq {} x y :=
+    fun (x : {}) (y : {}) => refl {} {};
   let eta :
         fun (x : fun (_ : {}) -> {}) (y : fun (_ : {}) -> {})
             -> Eq (fun (_ : {}) -> {}) x y
-  := fun x y => refl (fun (_ : {}) -> {}) (fun _ => {});
+  :=
+    fun (x : fun (_ : {}) -> {}) (y : fun (_ : {}) -> {}) =>
+      refl (fun (_ : {}) -> {}) (fun (_ : {}) => {});
   let eta :
         fun (A : Type) (x : fun (_ : A) -> {}) (y : fun (_ : A) -> {})
             -> Eq (fun (_ : A) -> {}) x y
-  := fun A x y => refl (fun (_ : A) -> {}) (fun _ => {});
+  :=
+    fun (A : Type) (x : fun (_ : A) -> {}) (y : fun (_ : A) -> {}) =>
+      refl (fun (_ : A) -> {}) (fun (_ : A) => {});
   let eta :
         fun (A : Type) (B : Type) (r : { x : A; y : B })
             -> Eq { x : A; y : B } r { x := r.x; y := r.y }
-  := fun A B r => refl { x : A; y : B } r;
+  :=
+    fun (A : Type) (B : Type) (r : { x : A; y : B }) =>
+      refl { x : A; y : B } r;
   let eta :
         fun (A : Type) (B : Type) (r : { x : A; y : B })
             -> Eq { x : A; y : B } { x := r.x; y := r.y } r
-  := fun A B r => refl { x : A; y : B } r;
+  :=
+    fun (A : Type) (B : Type) (r : { x : A; y : B }) =>
+      refl { x : A; y : B } r;
   Type

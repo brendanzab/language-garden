@@ -11,8 +11,13 @@
   let types : Category :=
     {
       Ob := Type;
-      Hom := fun params => fun (_ : params.S) -> params.T;
-      id := fun A a => a;
-      seq := fun A B C f g a => g (f a)
+      Hom :=
+        fun (params : { S : Type; T : Type }) =>
+          fun (_ : params.S) -> params.T;
+      id := fun (A : Type) (a : A) => a;
+      seq :=
+        fun (A : Type) (B : Type) (C : Type) (f : fun (_ : A) -> B)
+        (g : fun (_ : B) -> C) (a : A) =>
+          g (f a)
     };
   Type

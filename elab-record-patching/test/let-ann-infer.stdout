@@ -1,4 +1,4 @@
 <stdin> : {} :=
   let Id : Type := fun (A : Type) (_ : A) -> A;
-  let id : fun (A : Type) (_ : A) -> A := fun A a => a;
+  let id : fun (A : Type) (_ : A) -> A := fun (A : Type) (a : A) => a;
   id {} {}

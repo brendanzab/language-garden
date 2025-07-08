@@ -1,6 +1,6 @@
 <stdin> : Type :=
   let _ : fun (A : Type) (x : A) -> A :=
-    fun A x =>
+    fun (A : Type) (x : A) =>
       let record : { x : A } [= { x := x }] := #sing-intro;
       { x := x }.x;
   Type

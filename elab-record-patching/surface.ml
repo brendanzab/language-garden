@@ -498,9 +498,11 @@ end = struct
                   ~expected:(quote ctx expected_param_ty)
                   ~found:param_ty)
         in
-        let ctx = bind_def ctx name.data param_ty var in
-        let body = check_fun_lit ctx params body_ty body (expected_body_ty var) in
-        Syntax.Fun_lit (name.data, body)
+        let body =
+          let ctx = bind_def ctx name.data param_ty var in
+          check_fun_lit ctx params body_ty body (expected_body_ty var)
+        in
+        Syntax.Fun_lit (name.data, quote ctx param_ty, body)
     | (name, _) :: _, _, _ ->
         error name.span "too many parameters in function literal"
 
@@ -521,9 +523,11 @@ end = struct
           | None -> error name.span (ambiguous_param name.data)
           | Some param_ty -> check ctx param_ty Semantics.Univ
         in
-        let ctx = bind_def ctx name.data (eval ctx param_ty) var in
-        let body, body_ty = infer_fun_lit ctx params body_ty body in
-        Syntax.Fun_lit (name.data, body), Syntax.Fun_type (name.data, param_ty, body_ty)
+        let body, body_ty =
+          let ctx = bind_def ctx name.data (eval ctx param_ty) var in
+          infer_fun_lit ctx params body_ty body
+        in
+        Syntax.Fun_lit (name.data, param_ty, body), Syntax.Fun_type (name.data, param_ty, body_ty)
 
 
   (** {2 Eliminating implicit connectives} *)

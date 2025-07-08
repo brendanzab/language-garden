@@ -10,9 +10,9 @@ Usage
 The identity function
   $ cat >id <<< "fun (A : Type) (a : A) => a"
   $ cat id | executable elab
-  <stdin> : fun (A : Type) (a : A) -> A := fun A a => a
+  <stdin> : fun (A : Type) (a : A) -> A := fun (A : Type) (a : A) => a
   $ cat id | executable norm
-  <stdin> : fun (A : Type) (a : A) -> A := fun A a => a
+  <stdin> : fun (A : Type) (a : A) -> A := fun (A : Type) (a : A) => a
 
 Church-encoded boolean type
   $ cat >bools <<EOF
@@ -32,18 +32,24 @@ Church-encoded boolean type
   :=
     let Bool : Type := fun (Out : Type) (true : Out) (false : Out) -> Out;
     let true : fun (Out : Type) (true : Out) (false : Out) -> Out :=
-      fun Out true false => true;
+      fun (Out : Type) (true : Out) (false : Out) => true;
     let false : fun (Out : Type) (true : Out) (false : Out) -> Out :=
-      fun Out true false => false;
+      fun (Out : Type) (true : Out) (false : Out) => false;
     let not :
           fun (b : fun (Out : Type) (true : Out) (false : Out) -> Out)
               (Out : Type) (true : Out) (false : Out) -> Out
-    := fun b Out true false => b Out false true; true Bool false
+    :=
+      fun (b : Bool) (Out : Type) (true : Out) (false : Out) =>
+        b Out false true;
+    true Bool false
   $ cat bools | executable norm
   <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
-  := fun false Out true false => false
+  :=
+    fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
+    (Out : Type) (true : Out) (false : Out) =>
+      false
 
 Church-encoded option type
   $ cat >options <<EOF
@@ -64,14 +70,16 @@ Church-encoded option type
         (none : Out) -> Out
   :=
     let Option : fun (A : Type) -> Type :=
-      fun A => fun (Out : Type) (some : A -> Out) (none : Out) -> Out;
+      fun (A : Type) => fun (Out : Type) (some : A -> Out) (none : Out) -> Out;
     let none :
           fun (A : Type) (Out : Type) (some : A -> Out) (none : Out) -> Out
-    := fun A Out some none => none;
+    := fun (A : Type) (Out : Type) (some : A -> Out) (none : Out) => none;
     let some :
           fun (A : Type) (a : A) (Out : Type) (some : A -> Out) (none : Out)
               -> Out
-    := fun A a Out some none => some a;
+    :=
+      fun (A : Type) (a : A) (Out : Type) (some : A -> Out) (none : Out) =>
+        some a;
     some (Option Type) (some Type (Type -> Type))
   $ cat options | executable norm
   <stdin> :
@@ -79,7 +87,13 @@ Church-encoded option type
         (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) ->
           Out)
         (none : Out) -> Out
-  := fun Out some none => some (fun Out some none => some (Type -> Type))
+  :=
+    fun (Out : Type)
+    (some : (fun (Out : Type) (some : Type -> Out) (none : Out) -> Out) -> Out)
+    (none : Out) =>
+      some
+        (fun (Out : Type) (some : Type -> Out) (none : Out) =>
+           some (Type -> Type))
 
 Name not bound
   $ executable elab <<< "fun (A : Type) (a : A) => foo"
@@ -93,7 +107,7 @@ Name not bound
 
 Function literal body annotations (checking)
   $ executable elab <<< "(fun A (a : A) : A => a) : fun (A : Type) (a : A) -> A"
-  <stdin> : fun (A : Type) (a : A) -> A := fun A a => a
+  <stdin> : fun (A : Type) (a : A) -> A := fun (A : Type) (a : A) => a
 
 Mismatched function literal parameter (checking)
   $ executable elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : B) -> A"
@@ -131,7 +145,7 @@ Too many parameters (checking)
 
 Function literal body annotations (inferring)
   $ executable elab <<< "fun (A : Type) (a : A) : A => a"
-  <stdin> : fun (A : Type) (a : A) -> A := fun A a => a
+  <stdin> : fun (A : Type) (a : A) -> A := fun (A : Type) (a : A) => a
 
 Mismatched body annotation (inferring)
   $ executable elab <<< "fun (A : Type) (a : A) : A => A"

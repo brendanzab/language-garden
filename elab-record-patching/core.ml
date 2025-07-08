@@ -58,7 +58,7 @@ module Syntax = struct
     | Var of index
     | Univ
     | Fun_type of name * ty * ty
-    | Fun_lit of name * tm
+    | Fun_lit of name * ty * tm
     | Fun_app of tm * tm
     | Rec_type of (label * ty) list
     | Rec_lit of (label * tm) list
@@ -83,7 +83,7 @@ module Syntax = struct
     | Var index -> index = var
     | Univ -> false
     | Fun_type (_, param_ty, body_ty) -> is_bound var param_ty || is_bound (var + 1) body_ty
-    | Fun_lit (_, body) -> is_bound (var + 1) body
+    | Fun_lit (_, param_ty, body) -> is_bound var param_ty || is_bound (var + 1) body
     | Fun_app (head, arg) -> is_bound var head || is_bound var arg
     | Rec_type decls -> is_bound_decls var decls
     | Rec_lit defns -> List.exists (fun (_, tm) -> is_bound var tm) defns
@@ -150,12 +150,12 @@ module Syntax = struct
                   (pp_tm names body_ty)
           in
           Format.fprintf ppf "@[<4>fun %t@]" (go names tm)
-      | Fun_lit (name, body) ->
+      | Fun_lit (name, param_ty, body) ->
           let rec go names tm ppf =
             match tm with
-            | Fun_lit (name, body) ->
+            | Fun_lit (name, param_ty, body) ->
                 Format.fprintf ppf "%t@ %t"
-                  (pp_name name)
+                  (pp_param names name param_ty)
                   (go (name :: names) body)
             (* Open record types and literals on same line as parameter list *)
             | Rec_type (_ :: _ as decls) ->
@@ -169,7 +169,7 @@ module Syntax = struct
                   (pp_tm names tm)
           in
           Format.fprintf ppf "@[<hv>@[fun@ %t@ %t"
-            (pp_name name)
+            (pp_param names name param_ty)
             (go (name :: names) body)
       | tm ->
           pp_app_tm names tm ppf
@@ -289,7 +289,7 @@ module Semantics = struct
     | Neu of neu                          (** Neutral terms *)
     | Univ
     | Fun_type of name * vty * (vtm -> vty)
-    | Fun_lit of name * (vtm -> vtm)
+    | Fun_lit of name * vty * (vtm -> vtm)
     | Rec_type of decls
     | Rec_lit of (label * vtm) list
     | Sing_type of vty * vtm
@@ -331,7 +331,7 @@ module Semantics = struct
   let app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu neu -> Neu (Fun_app (neu, arg))
-    | Fun_lit (_, body) -> body arg
+    | Fun_lit (_, _, body) -> body arg
     | _ -> error "invalid application"
 
   (** Compute a record projection *)
@@ -364,8 +364,13 @@ module Semantics = struct
     | Var index -> List.nth tms index
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
-        Fun_type (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
-    | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: tms) body)
+        let param_ty = eval tms param_ty in
+        let body_ty = fun x -> eval (x :: tms) body_ty in
+        Fun_type (name, param_ty, body_ty)
+    | Fun_lit (name, param_ty, body) ->
+        let param_ty = eval tms param_ty in
+        let body = fun x -> eval (x :: tms) body in
+        Fun_lit (name, param_ty, body)
     | Fun_app (head, arg) -> app (eval tms head) (eval tms arg)
     | Rec_type decls -> Rec_type (eval_decls tms decls)
     | Rec_lit defns ->
@@ -400,8 +405,10 @@ module Semantics = struct
         let param_ty = quote size param_ty in
         let body_ty = quote (size + 1) (body_ty (Neu (Var size))) in
         Fun_type (name, param_ty, body_ty)
-    | Fun_lit (name, body) ->
-        Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
+    | Fun_lit (name, param_ty, body) ->
+        let param_ty = quote size param_ty in
+        let body = quote (size + 1) (body (Neu (Var size))) in
+        Fun_lit (name, param_ty, body)
     | Rec_type decls -> Rec_type (quote_decls size decls)
     | Rec_lit defns -> Rec_lit (defns |> List.map (fun (label, tm) -> (label, quote size tm)))
     | Sing_type (ty, sing_tm) -> Sing_type (quote size ty, quote size sing_tm)
@@ -445,7 +452,9 @@ module Semantics = struct
         let var = Neu (Var size) in
         is_convertible size param_ty1 param_ty2
           && is_convertible (size + 1) (body_ty1 var) (body_ty2 var)
-    | Fun_lit (_, body1), Fun_lit (_, body2) ->
+    (* NOTE: there’s no need to compare parameter types, as we already assume
+       that both values have the same type *)
+    | Fun_lit (_, _, body1), Fun_lit (_,_,  body2) ->
         let x = Neu (Var size) in
         is_convertible (size + 1) (body1 x) (body2 x)
     | Rec_type decls1, Rec_type decls2 ->
@@ -456,7 +465,7 @@ module Semantics = struct
     | Sing_intro, Sing_intro -> true
 
     (* Eta rules *)
-    | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
+    | Fun_lit (_, _, body), fun_tm | fun_tm, Fun_lit (_, _, body)  ->
         let x = Neu (Var size) in
         is_convertible size (body x) (app fun_tm x)
     | Rec_lit decls, rec_tm | rec_tm, Rec_lit decls ->

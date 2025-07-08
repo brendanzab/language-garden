@@ -1,14 +1,21 @@
 <stdin> : Type :=
   let Bool : Type :=
     fun (Out : Type) (_ : { true : Out; false : Out }) -> Out;
-  let true : Bool := fun Out cases => cases.true;
-  let false : Bool := fun Out cases => cases.false;
+  let true : Bool :=
+    fun (Out : Type) (cases : { true : Out; false : Out }) => cases.true;
+  let false : Bool :=
+    fun (Out : Type) (cases : { true : Out; false : Out }) => cases.false;
   let Option : fun (A : Type) -> Type :=
-    fun A =>
+    fun (A : Type) =>
       fun (Out : Type) (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out;
-  let none : fun (A : Type) -> Option A := fun A Out cases => cases.none;
+  let none : fun (A : Type) -> Option A :=
+    fun (A : Type) (Out : Type)
+    (cases : { some : fun (_ : A) -> Out; none : Out }) =>
+      cases.none;
   let some : fun (A : Type) (a : A) -> Option A :=
-    fun A a Out cases => cases.some a;
+    fun (A : Type) (a : A) (Out : Type)
+    (cases : { some : fun (_ : A) -> Out; none : Out }) =>
+      cases.some a;
   let Eq : Type := { T : Type; eq : fun (_ : T) (_ : T) -> Bool };
   let eq-bool :
         {
@@ -24,7 +31,8 @@
     {
       T := #sing-intro;
       eq :=
-        fun x y =>
+        fun (x : fun (Out : Type) (_ : { true : Out; false : Out }) -> Out)
+        (y : fun (Out : Type) (_ : { true : Out; false : Out }) -> Out) =>
           x Bool
             {
               true := y Bool { true := true; false := false };
@@ -49,16 +57,28 @@
                     (Out : Type) (_ : { true : Out; false : Out }) -> Out
             }
   :=
-    fun eq-a => {
+    fun (eq-a : Eq) => {
       T := #sing-intro;
       eq :=
-        fun x y =>
+        fun
+        (x :
+          fun (Out : Type)
+              (_ : { some : fun (_ : eq-a.T) -> Out; none : Out }) -> Out)
+        (y :
+          fun (Out : Type)
+              (_ : { some : fun (_ : eq-a.T) -> Out; none : Out }) -> Out)
+        =>
           x Bool
             {
               some :=
-                fun x =>
-                  y Bool { some := fun y => eq-a.eq x y; none := false };
-              none := y Bool { some := fun _ => false; none := true }
+                fun (x : eq-a.T) =>
+                  y Bool
+                    {
+                      some := fun (y : eq-a.T) => eq-a.eq x y;
+                      none := false
+                    };
+              none :=
+                y Bool { some := fun (_ : eq-a.T) => false; none := true }
             }
     };
   let Map : Type :=
@@ -81,23 +101,33 @@
                     (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out
             }
   :=
-    fun key => {
+    fun (key : Eq) => {
       Key := #sing-intro;
-      Map := fun A => fun (_ : key.T) -> Option A;
-      empty := fun A x => none A;
+      Map := fun (A : Type) => fun (_ : key.T) -> Option A;
+      empty := fun (A : Type) (x : key.T) => none A;
       add :=
-        fun A k v map x =>
+        fun (A : Type) (k : key.T) (v : A)
+        (map :
+          fun (_ : key.T) (Out : Type)
+              (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out)
+        (x : key.T) =>
           key.eq x k (Option A) { true := some A v; false := map x };
-      lookup := fun A k map => map k
+      lookup :=
+        fun (A : Type) (k : key.T)
+        (map :
+          fun (_ : key.T) (Out : Type)
+              (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out)
+        =>
+          map k
     };
   let empty : fun (key : Eq) (A : Type) -> (eq-map key).Map A :=
-    fun key A => (eq-map key).empty A;
+    fun (key : Eq) (A : Type) => (eq-map key).empty A;
   let add :
         fun (key : Eq) (A : Type) (_ : key.T) (_ : A)
             (_ : (eq-map key).Map A) -> (eq-map key).Map A
-  := fun key A => (eq-map key).add A;
+  := fun (key : Eq) (A : Type) => (eq-map key).add A;
   let lookup :
         fun (key : Eq) (A : Type) (_ : key.T) (_ : (eq-map key).Map A)
             -> Option A
-  := fun key A => (eq-map key).lookup A;
+  := fun (key : Eq) (A : Type) => (eq-map key).lookup A;
   Type

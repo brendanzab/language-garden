@@ -174,8 +174,8 @@ end = struct
               begin match body_ty with
               | Semantics.Fun_type (_, param_ty, body_ty) ->
                   let var = next_var ctx in
-                  let ctx = bind_def ctx name.data (Lazy.force param_ty) var in
-                  Syntax.Fun_lit (name.data, go ctx names (body_ty var))
+                  let body = go (bind_def ctx name.data (Lazy.force param_ty) var) names (body_ty var) in
+                  Syntax.Fun_lit (name.data, quote ctx (Lazy.force param_ty), body)
               | _ -> error tm.span "too many parameters in function literal"
               end
         in
