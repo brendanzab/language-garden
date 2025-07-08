@@ -132,13 +132,6 @@ module Syntax = struct
     | Fun_lit (_, body) -> is_bound (var + 1) body
     | Fun_app (head, arg) -> is_bound var head || is_bound var arg
 
-  let rec fun_lits (tm : tm) : name list * ty =
-    match tm with
-    | Fun_lit (name, body) ->
-        let names, body = fun_lits body
-        in name :: names, body
-    | body -> [], body
-
   let fun_apps (tm : tm) : ty * ty list =
     let rec go args tm =
       match tm with
@@ -197,20 +190,26 @@ module Syntax = struct
                   (pp_tm names param_ty)
                   (pp_tm (None :: names) body_ty)
             | Fun_type (name, param_ty, body_ty) ->
-                Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]@ %t"
-                  (pp_name name)
-                  (pp_tm names param_ty)
+                Format.fprintf ppf "%t@ %t"
+                  (pp_param names name param_ty)
                   (go (name :: names) body_ty)
             | body_ty ->
                 Format.fprintf ppf "@[->@ @[%t@]@]"
                   (pp_tm names body_ty)
           in
           Format.fprintf ppf "@[<4>fun %t@]" (go names tm)
-      | Fun_lit (_, _) as tm ->
-          let params, body = fun_lits tm in
-          Format.fprintf ppf "@[<2>@[<4>fun %a@ =>@]@ @[%t@]@]"
-            (Format.pp_print_list ~pp_sep:Format.pp_print_space (Fun.flip pp_name)) params
-            (pp_tm (List.rev_append params names) body)
+      | Fun_lit (name, body) ->
+          let rec go names tm ppf =
+            match tm with
+            | Fun_lit (name, body) ->
+                Format.fprintf ppf "%t@ %t"
+                  (pp_name name)
+                  (go (name :: names) body)
+            | tm -> Format.fprintf ppf "=>@]@ @[%t@]@]" (pp_tm names tm)
+          in
+          Format.fprintf ppf "@[<hv 2>@[fun@ %t@ %t"
+            (pp_name name)
+            (go (name :: names) body)
       | tm ->
           pp_app_tm names tm ppf
 
@@ -233,6 +232,11 @@ module Syntax = struct
 
     and pp_name_ann names name def_ty ppf =
       Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"
+        (pp_name name)
+        (pp_tm names def_ty)
+
+    and pp_param names name def_ty ppf =
+      Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]"
         (pp_name name)
         (pp_tm names def_ty)
     in
