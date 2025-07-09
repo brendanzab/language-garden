@@ -383,8 +383,8 @@ module Semantics = struct
         let x = Neu (Var size) in
         is_convertible size (body x) (app fun_tm x)
     | _, _ -> false
-    and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
-      match neu1, neu2 with
+  and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
+    match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
     | Fun_app (neu1, arg1), Fun_app (neu2, arg2)  ->
         is_convertible_neu size neu1 neu2
