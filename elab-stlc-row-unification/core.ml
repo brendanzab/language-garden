@@ -536,25 +536,36 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =
+    let rec go tm ppf =
+      match tm with
+      | Fun_app (head, arg) ->
+          Format.fprintf ppf "%t@ %t"
+            (go head)
+            (pp_proj_tm names arg)
+      | Prim_app (prim, args) ->
+          let pp_sep ppf () = Format.fprintf ppf "@ " in
+          Format.fprintf ppf "#%s@ %t"
+            (Prim.name prim)
+            (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names))) args)
+      | tm ->
+          pp_proj_tm names tm ppf
+    in
     match tm with
-    | Fun_app (head, arg) ->
-        Format.fprintf ppf "@[%t@ %t@]"
-          (pp_app_tm names head)
-          (pp_proj_tm names arg)
-    | Prim_app (prim, args) ->
-        let pp_sep ppf () = Format.fprintf ppf "@ " in
-        Format.fprintf ppf "@[#%s@ %t@]"
-          (Prim.name prim)
-          (fun ppf ->
-            Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names)) ppf args)
+    | Fun_app _ | Prim_app _ as tm ->
+        Format.fprintf ppf "@[<hv 2>%t@]" (go tm)
     | tm ->
         pp_proj_tm names tm ppf
   and pp_proj_tm names tm ppf =
+    let rec go tm ppf =
+      match tm with
+      | Record_proj (head, label) ->
+            Format.fprintf ppf "%t@,.%s" (go head) label
+      | tm ->
+          pp_atomic_tm names tm ppf
+    in
     match tm with
-    | Record_proj (head, label) ->
-        Format.fprintf ppf "%t.%s"
-          (pp_proj_tm names head)
-          label
+    | Record_proj _ as tm ->
+        Format.fprintf ppf "@[<2>%t@]" (go tm)
     | tm ->
         pp_atomic_tm names tm ppf
   and pp_atomic_tm names tm ppf =

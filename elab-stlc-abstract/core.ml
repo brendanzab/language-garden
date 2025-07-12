@@ -340,11 +340,18 @@ let pp_tm : tm -> Format.formatter -> unit =
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =
+    let rec go tm ppf =
+      match tm with
+      | Fun_app (head, arg) ->
+          Format.fprintf ppf "%t@ %t"
+            (go head)
+            (pp_atomic_tm names arg)
+      | tm ->
+          pp_atomic_tm names tm ppf
+    in
     match tm with
-    | Fun_app (head, arg) ->
-        Format.fprintf ppf "@[%t@ %t@]"
-          (pp_app_tm names head)
-          (pp_atomic_tm names arg)
+    | Fun_app _ as tm ->
+        Format.fprintf ppf "@[<hv 2>%t@]" (go tm)
     | tm ->
         pp_atomic_tm names tm ppf
   and pp_atomic_tm names tm ppf =

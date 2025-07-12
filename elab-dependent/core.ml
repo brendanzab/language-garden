@@ -132,14 +132,6 @@ module Syntax = struct
     | Fun_lit (_, body) -> is_bound (var + 1) body
     | Fun_app (head, arg) -> is_bound var head || is_bound var arg
 
-  let fun_apps (tm : tm) : ty * ty list =
-    let rec go args tm =
-      match tm with
-      | Fun_app (head, arg) -> go (arg :: args) head
-      | head -> (head, args)
-    in
-    go [] tm
-
 
   (** {1 Pretty printing} *)
 
@@ -157,7 +149,7 @@ module Syntax = struct
 
     let rec pp_tm names tm ppf =
       match tm with
-      | Let (_, _, _) as tm ->
+      | Let _ as tm ->
           let rec go names tm ppf =
             match tm with
             | Let (name, Ann (def, def_ty), body) when resugar ->
@@ -182,7 +174,7 @@ module Syntax = struct
           Format.fprintf ppf "@[%t@ ->@]@ %t"
             (pp_app_tm names param_ty)
             (pp_tm (None :: names) body_ty)
-      | Fun_type (_, _, _) as tm ->
+      | Fun_type _ as tm ->
           let rec go names tm ppf =
             match tm with
             | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
@@ -214,12 +206,18 @@ module Syntax = struct
           pp_app_tm names tm ppf
 
     and pp_app_tm names tm ppf =
+      let rec go tm ppf =
+        match tm with
+        | Fun_app (head, arg) ->
+            Format.fprintf ppf "%t@ %t"
+              (go head)
+              (pp_atomic_tm names arg)
+        | tm ->
+            pp_atomic_tm names tm ppf
+      in
       match tm with
-      | Fun_app (_, _) as tm ->
-          let head, args = fun_apps tm in
-          Format.fprintf ppf "@[<2>%t@ %a@]"
-            (pp_atomic_tm names head)
-            (Format.pp_print_list ~pp_sep:Format.pp_print_space (Fun.flip (pp_atomic_tm names))) args
+      | Fun_app _ as tm ->
+          Format.fprintf ppf "@[<2>%t@]" (go tm)
       | tm ->
           pp_atomic_tm names tm ppf
 

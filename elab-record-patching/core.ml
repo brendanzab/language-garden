@@ -96,22 +96,6 @@ module Syntax = struct
     | (_, ty) :: decls ->
         is_bound var ty || is_bound_decls (var + 1) decls
 
-  let fun_apps (tm : tm) : ty * ty list =
-    let rec go args tm =
-      match tm with
-      | Fun_app (head, arg) -> go (arg :: args) head
-      | head -> (head, args)
-    in
-    go [] tm
-
-  let rec_projs (tm : tm) : ty * label env =
-    let rec go labels tm =
-      match tm with
-      | Rec_proj (head, label) -> go (label :: labels) head
-      | head -> (head, labels)
-    in
-    go [] tm
-
 
   (** {1 Pretty printing} *)
 
@@ -129,7 +113,7 @@ module Syntax = struct
 
     let rec pp_tm names tm ppf =
       match tm with
-      | Let (_, _, _, _) as tm ->
+      | Let _ as tm ->
           let rec go names tm ppf =
             match tm with
             | Let (name, def_ty, def, body) ->
@@ -145,7 +129,7 @@ module Syntax = struct
           Format.fprintf ppf "@[%t@ ->@]@ %t"
             (pp_app_tm names param_ty)
             (pp_tm (None :: names) body_ty)
-      | Fun_type (_, _, _) as tm ->
+      | Fun_type _ as tm ->
           let rec go names tm ppf =
             match tm with
             | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
@@ -191,31 +175,36 @@ module Syntax = struct
           pp_app_tm names tm ppf
 
     and pp_app_tm names tm ppf =
+      let rec go tm ppf =
+        match tm with
+        | Fun_app (head, arg) ->
+            Format.fprintf ppf "%t@ %t"
+              (go head)
+              (pp_proj_tm names arg)
+        | Sing_type (head, sing_tm) ->
+            Format.fprintf ppf "%t@ @[[=@ %t]@]"
+              (go head)
+              (pp_tm names sing_tm)
+        | tm ->
+            pp_proj_tm names tm ppf
+      in
       match tm with
-      | Fun_app (_, _) as tm ->
-          let head, args = fun_apps tm in
-          Format.fprintf ppf "@[<2>%t@ %a@]"
-            (pp_proj_tm names head)
-            (Format.pp_print_list ~pp_sep:Format.pp_print_space (Fun.flip (pp_proj_tm names))) args
-      | Sing_type (ty, sing_tm) ->
-          Format.fprintf ppf "@[<2>%t@ @[[=@ %t]@]@]"
-            (pp_proj_tm names ty)
-            (pp_tm names sing_tm)
-      | Sing_intro ->
-          Format.fprintf ppf "#sing-intro"
+      | Fun_app _ | Sing_type _ as tm ->
+          Format.fprintf ppf "@[<2>%t@]" (go tm)
       | tm ->
           pp_proj_tm names tm ppf
 
     and pp_proj_tm names tm ppf =
+      let rec go tm ppf =
+        match tm with
+        | Rec_proj (head, label) ->
+              Format.fprintf ppf "%t@,.%s" (go head) label
+        | tm ->
+            pp_atomic_tm names tm ppf
+      in
       match tm with
-      | Rec_proj (_, _) as tm ->
-          let head, labels = rec_projs tm in
-          Format.fprintf ppf "@[<2>%t@,%a@]"
-            (pp_proj_tm names head)
-            (Format.pp_print_list
-              ~pp_sep:Format.pp_print_space
-              (fun ppf label -> Format.fprintf ppf ".%s" label))
-            labels
+      | Rec_proj _ as tm ->
+          Format.fprintf ppf "@[<2>%t@]" (go tm)
       | tm ->
           pp_atomic_tm names tm ppf
 
@@ -230,7 +219,9 @@ module Syntax = struct
       | Rec_lit defns ->
           Format.fprintf ppf "@[<hv>{%t@ }@]"
             (pp_defns names defns)
-      | Let _ | Fun_type _ | Fun_lit _ | Fun_app _ | Rec_proj _ | Sing_type _ | Sing_intro ->
+      | Sing_intro ->
+          Format.fprintf ppf "#sing-intro"
+      | Let _ | Fun_type _ | Fun_lit _ | Fun_app _ | Rec_proj _ | Sing_type _ ->
           Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
 
     and pp_decl names name ty ppf =

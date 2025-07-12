@@ -232,16 +232,23 @@ let pp_expr : name env -> expr -> Format.formatter -> unit =
     | e ->
         pp_app_expr names e ppf
   and pp_app_expr names e ppf =
+    let rec go e ppf =
+      match e with
+      | Fun_app (head, arg) ->
+          Format.fprintf ppf "%t@ %t"
+            (go head)
+            (pp_atomic_expr names arg)
+      | Prim_app (prim, args) ->
+          let pp_sep ppf () = Format.fprintf ppf "@ " in
+          Format.fprintf ppf "#%s@ %t"
+            (Prim.name prim)
+            (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_atomic_expr names))) args)
+      | e ->
+          pp_atomic_expr names e ppf
+    in
     match e with
-    | Fun_app (head, arg) ->
-        Format.fprintf ppf "@[%t@ %t@]"
-          (pp_app_expr names head)
-          (pp_atomic_expr names arg)
-    | Prim_app (prim, args) ->
-        let pp_sep ppf () = Format.fprintf ppf "@ " in
-        Format.fprintf ppf "@[#%s@ %a@]"
-          (Prim.name prim)
-          (Format.pp_print_list ~pp_sep (Fun.flip (pp_atomic_expr names))) args
+    | Fun_app _ | Prim_app _ as e ->
+        Format.fprintf ppf "@[<hv 2>%t@]" (go e)
     | e ->
         pp_atomic_expr names e ppf
   and pp_atomic_expr names e ppf =

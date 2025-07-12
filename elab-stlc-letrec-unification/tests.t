@@ -95,9 +95,9 @@ Recursive bindings: Factorial in terms of the fixed-point combinator
   let fact : Int -> Int :=
     fun (n : Int) =>
       fix
-      (fun (fact : Int -> Int) => fun (n' : Int) =>
-         if #int-eq n' 0 then 1 else #int-mul n' (fact (#int-sub n' 1)))
-      n;
+        (fun (fact : Int -> Int) => fun (n' : Int) =>
+           if #int-eq n' 0 then 1 else #int-mul n' (fact (#int-sub n' 1)))
+        n;
   fact 5 : Int
 
   $ cat fix.txt | executable norm
@@ -225,7 +225,8 @@ Recursive bindings: Count-down (partially applied)
       (#fix (count-down : Bool -> Int -> Bool) =>
          fun (x : Bool) => fun (n' : Int) =>
            if #int-eq n' 0 then x else count-down x (#int-sub n' 1))
-      true (#int-sub n 1)
+        true
+        (#int-sub n 1)
   : Int -> Bool
 
 
@@ -259,7 +260,8 @@ Recursive bindings: Even/odd (partially applied)
              (if #int-eq n' 0 then true else even-odd false (#int-sub n' 1))
            else
              if #int-eq n' 0 then false else even-odd true (#int-sub n' 1))
-      false (#int-sub n 1)
+        false
+        (#int-sub n 1)
   : Int -> Bool
 
 
@@ -314,8 +316,9 @@ Mutually recursive bindings: Even/odd (partially applied)
          (fun (n' : Int) =>
             if #int-eq n' 0 then true else $mutual-0.1 (#int-sub n' 1),
          fun (n' : Int) =>
-           if #int-eq n' 0 then false else $mutual-0.0 (#int-sub n' 1))).1
-      (#int-sub n 1)
+           if #int-eq n' 0 then false else $mutual-0.0 (#int-sub n' 1)))
+        .1
+        (#int-sub n 1)
   : Int -> Bool
 
 

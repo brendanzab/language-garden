@@ -368,20 +368,27 @@ let pp_tm : name env -> name env -> tm -> Format.formatter -> unit =
     | tm ->
         pp_app_tm ty_names tm_names tm ppf
   and pp_app_tm ty_names tm_names tm ppf =
+    let rec go tm ppf =
+      match tm with
+      | Forall_app (head, arg) ->
+          Format.fprintf ppf "%t@ [%t]"
+            (go head)
+            (pp_ty ty_names arg)
+      | Fun_app (head, arg) ->
+          Format.fprintf ppf "%t@ %t"
+            (go head)
+            (pp_atomic_tm ty_names tm_names arg)
+      | Prim_app (prim, args) ->
+          let pp_sep ppf () = Format.fprintf ppf "@ " in
+          Format.fprintf ppf "#%s@ %t"
+            (Prim.name prim)
+            (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_atomic_tm ty_names tm_names))) args)
+      | tm ->
+          pp_atomic_tm ty_names tm_names tm ppf
+    in
     match tm with
-    | Forall_app (head, arg) ->
-        Format.fprintf ppf "@[%t@ [%t]@]"
-          (pp_app_tm ty_names tm_names head)
-          (pp_ty ty_names arg)
-    | Fun_app (head, arg) ->
-        Format.fprintf ppf "@[%t@ %t@]"
-          (pp_app_tm ty_names tm_names head)
-          (pp_atomic_tm ty_names tm_names arg)
-    | Prim_app (prim, args) ->
-        let pp_sep ppf () = Format.fprintf ppf "@ " in
-        Format.fprintf ppf "@[#%s@ %a@]"
-          (Prim.name prim)
-          (Format.pp_print_list ~pp_sep (Fun.flip (pp_atomic_tm ty_names tm_names))) args
+    | Forall_app _ | Fun_app _ | Prim_app _ as tm ->
+        Format.fprintf ppf "@[<hv 2>%t@]" (go tm)
     | tm ->
         pp_atomic_tm ty_names tm_names tm ppf
   and pp_atomic_tm ty_names tm_names tm ppf =
