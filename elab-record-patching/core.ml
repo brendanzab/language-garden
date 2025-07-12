@@ -291,7 +291,7 @@ module Semantics = struct
     | Fun_type of name * vty Lazy.t * (vtm Lazy.t -> vty)
     | Fun_lit of name * (vtm Lazy.t -> vtm)
     | Rec_type of decls
-    | Rec_lit of (label * vtm) list
+    | Rec_lit of (label * vtm Lazy.t) list
     | Sing_type of vty * vtm Lazy.t
     | Sing_intro                          (** Singleton introduction *)
 
@@ -337,7 +337,7 @@ module Semantics = struct
   (** Compute a record projection *)
   let proj (head : vtm) (label : label) : vtm =
     match head with
-    | Rec_lit defns -> defns |> List.find (fun (l, _) -> l = label) |> snd
+    | Rec_lit defns -> defns |> List.assoc label |> Lazy.force
     | Neu neu -> Neu (Rec_proj (neu, label))
     | _ -> error "invalid projection"
 
@@ -371,7 +371,7 @@ module Semantics = struct
     | Fun_app (head, arg) -> app (eval env head) (lazy (eval env arg))
     | Rec_type decls -> Rec_type (eval_decls env decls)
     | Rec_lit defns ->
-        Rec_lit (List.map (fun (label, expr) -> (label, eval env expr)) defns)
+        Rec_lit (List.map (fun (label, expr) -> (label, lazy (eval env expr))) defns)
     | Rec_proj (head, label) -> proj (eval env head) label
     | Sing_type (ty, sing_tm) ->
         Sing_type (eval env ty, lazy (eval env sing_tm))
@@ -408,7 +408,8 @@ module Semantics = struct
         let x = Lazy.from_val (Neu (Var size)) in
         Fun_lit (name, quote (size + 1) (body x))
     | Rec_type decls -> Rec_type (quote_decls size decls)
-    | Rec_lit defns -> Rec_lit (defns |> List.map (fun (label, vtm) -> (label, quote size vtm)))
+    | Rec_lit defns ->
+        Rec_lit (defns |> List.map (fun (label, vtm) -> (label, quote size (Lazy.force vtm))))
     | Sing_type (vty, sing_vtm) ->
         Sing_type (quote size vty, quote size (Lazy.force sing_vtm))
     | Sing_intro -> Sing_intro
@@ -470,7 +471,8 @@ module Semantics = struct
         let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size (body x) (app fun_tm x)
     | Rec_lit decls, rec_vtm | rec_vtm, Rec_lit decls ->
-        decls |> List.for_all (fun (label, elem) -> is_convertible size elem (proj rec_vtm label))
+        decls |> List.for_all (fun (label, elem) ->
+          is_convertible size (Lazy.force elem) (proj rec_vtm label))
     | Sing_intro, _ | _, Sing_intro -> true
 
     | _, _ -> false
