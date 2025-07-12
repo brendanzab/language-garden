@@ -132,14 +132,6 @@ module Syntax = struct
     | Fun_lit (_, body) -> is_bound (var + 1) body
     | Fun_app (head, arg) -> is_bound var head || is_bound var arg
 
-  let fun_apps (tm : tm) : ty * ty list =
-    let rec go args tm =
-      match tm with
-      | Fun_app (head, arg) -> go (arg :: args) head
-      | head -> (head, args)
-    in
-    go [] tm
-
 
   (** {1 Pretty printing} *)
 
@@ -214,12 +206,18 @@ module Syntax = struct
           pp_app_tm names tm ppf
 
     and pp_app_tm names tm ppf =
+      let rec go tm ppf =
+        match tm with
+        | Fun_app (head, arg) ->
+            Format.fprintf ppf "%t@ %t"
+              (go head)
+              (pp_atomic_tm names arg)
+        | tm ->
+            pp_atomic_tm names tm ppf
+      in
       match tm with
       | Fun_app (_, _) as tm ->
-          let head, args = fun_apps tm in
-          Format.fprintf ppf "@[<2>%t@ %a@]"
-            (pp_atomic_tm names head)
-            (Format.pp_print_list ~pp_sep:Format.pp_print_space (Fun.flip (pp_atomic_tm names))) args
+          Format.fprintf ppf "@[<2>%t@]" (go tm)
       | tm ->
           pp_atomic_tm names tm ppf
 
