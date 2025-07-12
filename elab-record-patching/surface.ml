@@ -280,10 +280,10 @@ end = struct
           | [], Semantics.Nil -> []
           (* When the labels match, check the term against the type, handling
             punned fields appropriately. *)
-          | (label, tm) :: defns, Semantics.Cons (label', ty, decls) when label.data = label' ->
+          | (label, tm) :: defns, Semantics.Cons (label', vty, decls) when label.data = label' ->
               let tm = match tm with
-                | Some (params, tm) -> check_fun_lit ctx params None tm ty (* explicit field definition *)
-                | None -> check ctx ({ span = label.span; data = Name label.data }) ty (* punned field definition *)
+                | Some (params, tm) -> check_fun_lit ctx params None tm vty (* explicit field definition *)
+                | None -> check ctx ({ span = label.span; data = Name label.data }) vty (* punned field definition *)
               in
               (label.data, tm) :: go defns (decls (lazy (eval ctx tm)))
           (* When the expected type of a field is a singleton we can use it to
