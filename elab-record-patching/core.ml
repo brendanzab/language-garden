@@ -364,9 +364,9 @@ module Semantics = struct
     | Var index -> List.nth env index
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
-        let param_ty = lazy (eval env param_ty) in
-        let body_ty = fun x -> eval (x :: env) body_ty in
-        Fun_type (name, param_ty, body_ty)
+        let param_vty = lazy (eval env param_ty) in
+        let body_vty = fun x -> eval (x :: env) body_ty in
+        Fun_type (name, param_vty, body_vty)
     | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
     | Fun_app (head, arg) -> app (eval env head) (eval env arg)
     | Rec_type decls -> Rec_type (eval_decls env decls)
@@ -398,15 +398,15 @@ module Semantics = struct
     match tm with
     | Neu neu -> quote_neu size neu
     | Univ -> Univ
-    | Fun_type (name, param_ty, body_ty) ->
-        let param_ty = quote size (Lazy.force param_ty) in
-        let body_ty = quote (size + 1) (body_ty (Neu (Var size))) in
+    | Fun_type (name, param_vty, body_vty) ->
+        let param_ty = quote size (Lazy.force param_vty) in
+        let body_ty = quote (size + 1) (body_vty (Neu (Var size))) in
         Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
         Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
     | Rec_type decls -> Rec_type (quote_decls size decls)
-    | Rec_lit defns -> Rec_lit (defns |> List.map (fun (label, tm) -> (label, quote size tm)))
-    | Sing_type (ty, sing_tm) -> Sing_type (quote size ty, quote size sing_tm)
+    | Rec_lit defns -> Rec_lit (defns |> List.map (fun (label, vtm) -> (label, quote size vtm)))
+    | Sing_type (vty, sing_vtm) -> Sing_type (quote size vty, quote size sing_vtm)
     | Sing_intro -> Sing_intro
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
@@ -442,30 +442,30 @@ module Semantics = struct
       functions and best-effort eta conversion for singletons and unit records,
       similar to the approach found in {{: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
       elaboration-zoo/03-holes-unit-eta}. *)
-  let rec is_convertible (size : level) (tm1 : vtm) (tm2 : vtm) : bool =
-    match tm1, tm2 with
-    | Neu n1, Neu n2 -> is_convertible_neu size n1 n2
+  let rec is_convertible (size : level) (vtm1 : vtm) (vtm2 : vtm) : bool =
+    match vtm1, vtm2 with
+    | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
-    | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
-        let var = Neu (Var size) in
-        is_convertible size (Lazy.force param_ty1) (Lazy.force param_ty2)
-          && is_convertible (size + 1) (body_ty1 var) (body_ty2 var)
+    | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
+        let x = Neu (Var size) in
+        is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
+          && is_convertible (size + 1) (body_vty1 x) (body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Neu (Var size) in
         is_convertible (size + 1) (body1 x) (body2 x)
     | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
-    | Sing_type (ty1, sing_tm1), Sing_type (ty2, sing_tm2) ->
-        is_convertible size ty1 ty2
-          && is_convertible size sing_tm1 sing_tm2
+    | Sing_type (vty1, sing_vtm1), Sing_type (vty2, sing_vtm2) ->
+        is_convertible size vty1 vty2
+          && is_convertible size sing_vtm1 sing_vtm2
     | Sing_intro, Sing_intro -> true
 
     (* Eta rules *)
     | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
         let x = Neu (Var size) in
         is_convertible size (body x) (app fun_tm x)
-    | Rec_lit decls, rec_tm | rec_tm, Rec_lit decls ->
-        decls |> List.for_all (fun (label, elem) -> is_convertible size elem (proj rec_tm label))
+    | Rec_lit decls, rec_vtm | rec_vtm, Rec_lit decls ->
+        decls |> List.for_all (fun (label, elem) -> is_convertible size elem (proj rec_vtm label))
     | Sing_intro, _ | _, Sing_intro -> true
 
     | _, _ -> false
@@ -481,10 +481,10 @@ module Semantics = struct
   and is_convertible_decls (size : level) (decls1 : decls) (decls2 : decls) =
     match decls1, decls2 with
     | Nil, Nil -> true
-    | Cons (label1, ty1, decls1), Cons (label2, ty2, decls2) when label1 = label2 ->
-        let var = Neu (Var size) in
-        is_convertible size ty1 ty2
-          && is_convertible_decls (size + 1) (decls1 var) (decls2 var)
+    | Cons (label1, vty1, decls1), Cons (label2, vty2, decls2) when label1 = label2 ->
+        let x = Neu (Var size) in
+        is_convertible size vty1 vty2
+          && is_convertible_decls (size + 1) (decls1 x) (decls2 x)
     | _, _ -> false
 
 end

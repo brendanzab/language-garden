@@ -61,18 +61,18 @@ end = struct
       the current scope in the program. The environments are unzipped to make it
       more efficient to call functions from {!Core.Semantics}. *)
   type context = {
-    size : Core.level;              (** Number of entries bound. *)
-    names : Core.name Core.env;     (** Name environment *)
-    tys : Semantics.vty Core.env;   (** Type environment *)
-    tms : Semantics.vtm Core.env;   (** Term environment *)
+    size : Core.level;                (** Number of entries bound. *)
+    names : Core.name Core.env;       (** Name environment *)
+    ty_env : Semantics.vty Core.env;  (** Type environment *)
+    tm_env : Semantics.vtm Core.env;  (** Term environment *)
   }
 
   (** The empty context *)
   let empty = {
     size = 0;
     names = [];
-    tys = [];
-    tms = [];
+    ty_env = [];
+    tm_env = [];
   }
 
   (** Returns the next variable that will be bound in the context after calling
@@ -81,16 +81,16 @@ end = struct
     Semantics.Neu (Semantics.Var ctx.size)
 
   (** Binds a definition in the context *)
-  let bind_def (ctx : context) (name : string option) (ty : Semantics.vty) (tm : Semantics.vtm) = {
+  let bind_def (ctx : context) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm) = {
     size = ctx.size + 1;
     names = name :: ctx.names;
-    tys = ty :: ctx.tys;
-    tms = tm :: ctx.tms;
+    ty_env = vty :: ctx.ty_env;
+    tm_env = vtm :: ctx.tm_env;
   }
 
   (** Binds a parameter in the context *)
-  let bind_param (ctx : context) (name : string option) (ty : Semantics.vty) =
-    bind_def ctx name ty (next_var ctx)
+  let bind_param (ctx : context) (name : string option) (vty : Semantics.vty) =
+    bind_def ctx name vty (next_var ctx)
 
   (** Lookup a name in the context *)
   let lookup (ctx : context) (name : string) : (Core.index * Core.Semantics.vty) option =
@@ -99,7 +99,7 @@ end = struct
         corresponding de Bruijn index of the variable. *)
     ctx.names |> List.find_mapi @@ fun index name' ->
       match Some name = name' with
-      | true -> Some (index, List.nth ctx.tys index)
+      | true -> Some (index, List.nth ctx.ty_env index)
       | false -> None
 
   (** {3 Functions related to the core semantics} *)
@@ -107,16 +107,16 @@ end = struct
   (** These wrapper functions make it easier to call functions from the
       {!Core.Semantics} using state from the elaboration context. *)
 
-  let eval ctx : Syntax.tm -> Semantics.vtm =
-    Semantics.eval ctx.tms
+  let eval (ctx : context) : Syntax.tm -> Semantics.vtm =
+    Semantics.eval ctx.tm_env
 
-  let quote ctx : Semantics.vtm -> Syntax.tm =
+  let quote (ctx : context) : Semantics.vtm -> Syntax.tm =
     Semantics.quote ctx.size
 
-  let is_convertible ctx : Semantics.vtm -> Semantics.vtm -> bool =
+  let is_convertible (ctx : context) : Semantics.vtm -> Semantics.vtm -> bool =
     Semantics.is_convertible ctx.size
 
-  let pp ?(resugar = true) ctx =
+  let pp ?(resugar = true) (ctx : context) =
     Syntax.pp ctx.names ~resugar
 
 
@@ -155,31 +155,31 @@ end = struct
 
   (** Elaborate a term in the surface language into a term in the core language
       in the presence of a type annotation. *)
-  let rec check (ctx : context) (tm : tm) (expected_ty : Semantics.vty) : Syntax.tm =
-    match tm.data, expected_ty with
+  let rec check (ctx : context) (tm : tm) (vty : Semantics.vty) : Syntax.tm =
+    match tm.data with
     (* Let expressions *)
-    | Let (name, def_ty, def, body), expected_ty ->
+    | Let (name, def_ty, def, body) ->
         let def_ty = check ctx def_ty Semantics.Univ in
-        let def_ty' = eval ctx def_ty in
-        let def = check ctx def def_ty' in
-        let ctx = bind_def ctx name.data def_ty' (eval ctx def) in
-        Syntax.Let (name.data, def, check ctx body expected_ty)
+        let def_vty = eval ctx def_ty in
+        let def = check ctx def def_vty in
+        let body = check (bind_def ctx name.data def_vty (eval ctx def)) body vty in
+        Syntax.Let (name.data, def, body)
 
     (* Function literals *)
-    | Fun_lit (names, body), expected_ty ->
-        let rec go ctx names body_ty =
+    | Fun_lit (names, body) ->
+        let rec go ctx names body_vty =
           match names with
-          | [] -> check ctx body body_ty
+          | [] -> check ctx body body_vty
           | name :: names ->
-              begin match body_ty with
-              | Semantics.Fun_type (_, param_ty, body_ty) ->
+              begin match body_vty with
+              | Semantics.Fun_type (_, param_vty, body_vty) ->
                   let var = next_var ctx in
-                  let ctx = bind_def ctx name.data (Lazy.force param_ty) var in
-                  Syntax.Fun_lit (name.data, go ctx names (body_ty var))
+                  let ctx = bind_def ctx name.data (Lazy.force param_vty) var in
+                  Syntax.Fun_lit (name.data, go ctx names (body_vty var))
               | _ -> error tm.span "too many parameters in function literal"
               end
         in
-        go ctx names expected_ty
+        go ctx names vty
 
     (* For anything else, try inferring the type of the term, then checking to
         see if the inferred type is the same as the expected type.
@@ -187,13 +187,13 @@ end = struct
         Instead of using conversion checking, extensions to this type system
         could trigger unification or try to coerce the term to the expected
         type here. *)
-    | _, expected_ty ->
+    | _ ->
         let tm_span = tm.span in
-        let tm, ty' = infer ctx tm in
-        if is_convertible ctx ty' expected_ty then tm else
+        let tm, found_vty = infer ctx tm in
+        if is_convertible ctx found_vty vty then tm else
           error tm_span (type_mismatch ctx
-            ~expected:(quote ctx expected_ty)
-            ~found:(quote ctx ty'))
+            ~expected:(quote ctx vty)
+            ~found:(quote ctx found_vty))
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
@@ -202,10 +202,9 @@ end = struct
     (* Let expressions *)
     | Let (name, def_ty, def, body) ->
         let def_ty = check ctx def_ty Semantics.Univ in
-        let def_ty' = eval ctx def_ty in
-        let def = check ctx def def_ty' in
-        let ctx = bind_def ctx name.data def_ty' (eval ctx def) in
-        let body, body_ty = infer ctx body in
+        let def_vty = eval ctx def_ty in
+        let def = check ctx def def_vty in
+        let body, body_ty = infer (bind_def ctx name.data def_vty (eval ctx def)) body in
         Syntax.Let (name.data, def, body), body_ty
 
     (* Named terms *)
@@ -218,9 +217,8 @@ end = struct
     (* Annotated terms *)
     | Ann (tm, ty) ->
         let ty = check ctx ty Semantics.Univ in
-        let ty' = eval ctx ty in
-        let tm = check ctx tm ty' in
-        Syntax.Ann (tm, ty), ty'
+        let vty = eval ctx ty in
+        Syntax.Ann (check ctx tm vty, ty), vty
 
     (* Universes *)
     | Univ ->
@@ -236,8 +234,8 @@ end = struct
           | [] -> check ctx body_ty Semantics.Univ
           | (name, param_ty) :: params ->
               let param_ty = check ctx param_ty Semantics.Univ in
-              let ctx = bind_param ctx name.data (eval ctx param_ty) in
-              Syntax.Fun_type (name.data, param_ty, go ctx params)
+              let body_ty = go (bind_param ctx name.data (eval ctx param_ty)) params in
+              Syntax.Fun_type (name.data, param_ty, body_ty)
         in
         go ctx params, Semantics.Univ
 
@@ -245,8 +243,7 @@ end = struct
         function types. *)
     | Fun_arrow (param_ty, body_ty) ->
         let param_ty = check ctx param_ty Semantics.Univ in
-        let ctx = bind_param ctx None (eval ctx param_ty) in
-        let body_ty = check ctx body_ty Semantics.Univ in
+        let body_ty = check (bind_param ctx None (eval ctx param_ty)) body_ty Semantics.Univ in
         Syntax.Fun_type (None, param_ty, body_ty), Semantics.Univ
 
     (* Function literals *)
@@ -256,11 +253,11 @@ end = struct
     (* Function application *)
     | Fun_app (head, args) ->
         List.fold_left
-          (fun (head, head_ty) arg ->
-            match head_ty with
-            | Semantics.Fun_type (_, param_ty, body_ty) ->
-                let arg = check ctx arg (Lazy.force param_ty) in
-                Syntax.Fun_app (head, arg), body_ty (eval ctx arg)
+          (fun (head, head_vty) arg ->
+            match head_vty with
+            | Semantics.Fun_type (_, param_vty, body_vty) ->
+                let arg = check ctx arg (Lazy.force param_vty) in
+                Syntax.Fun_app (head, arg), body_vty (eval ctx arg)
             | _ -> error arg.span "unexpected argument")
           (infer ctx head)
           args

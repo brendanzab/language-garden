@@ -60,7 +60,7 @@ let parse_tm (source : Source_file.t) : Surface.tm =
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) =
   match Surface.Elab.infer tm with
-  | Ok (tm, ty) -> tm, ty
+  | Ok (tm, vty) -> tm, vty
   | Error (pos, msg) ->
       emit source "error" pos msg;
       exit 1
@@ -83,20 +83,20 @@ let pp_def ~resugar name ty tm ppf =
 
 let elab_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let (tm, ty) = elab_tm source (parse_tm source) in
+  let (tm, vty) = elab_tm source (parse_tm source) in
   Format.printf "%t@\n"
     (pp_def ~resugar:false
       "<stdin>"
-      (Core.Semantics.quote 0 ty)
+      (Core.Semantics.quote 0 vty)
       tm)
 
 let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let (tm, ty) = elab_tm source (parse_tm source) in
+  let (tm, vty) = elab_tm source (parse_tm source) in
   Format.printf "%t@\n"
     (pp_def ~resugar:true
       "<stdin>"
-      (Core.Semantics.quote 0 ty)
+      (Core.Semantics.quote 0 vty)
       (Core.Semantics.normalise 0 [] tm))
 
 

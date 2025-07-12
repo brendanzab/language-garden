@@ -319,11 +319,13 @@ module Semantics = struct
     | Syntax.Var index -> List.nth env index
     | Syntax.Univ ->  Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
-        let param_ty = lazy (eval env param_ty) in
-        let body_ty = fun x -> eval (x :: env) body_ty in
-        Fun_type (name, param_ty, body_ty)
-    | Syntax.Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
-    | Syntax.Fun_app (head, arg) -> app (eval env head) (eval env arg)
+        let param_vty = lazy (eval env param_ty) in
+        let body_vty = fun x -> eval (x :: env) body_ty in
+        Fun_type (name, param_vty, body_vty)
+    | Syntax.Fun_lit (name, body) ->
+        Fun_lit (name, fun x -> eval (x :: env) body)
+    | Syntax.Fun_app (head, arg) ->
+        app (eval env head) (eval env arg)
 
 
   (** {1 Quotation} *)
@@ -341,16 +343,18 @@ module Semantics = struct
     match tm with
     | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
-    | Fun_type (name, param_ty, body_ty) ->
-        let x = Neu (Var size) in
-        Syntax.Fun_type (name, quote size (Lazy.force param_ty), quote (size + 1) (body_ty x))
+    | Fun_type (name, param_vty, body_vty) ->
+        let param_ty = quote size (Lazy.force param_vty) in
+        let body_ty = quote (size + 1) (body_vty (Neu (Var size))) in
+        Syntax.Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        let x = Neu (Var size) in
-        Syntax.Fun_lit (name, quote (size + 1) (body x))
+        Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
-    | Var level -> Syntax.Var (level_to_index size level)
-    | Fun_app (neu, arg) -> Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
+    | Var level ->
+        Syntax.Var (level_to_index size level)
+    | Fun_app (neu, arg) ->
+        Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
 
 
   (** {1 Normalisation} *)
@@ -370,21 +374,21 @@ module Semantics = struct
       A precondition of this function is that both values share the same type.
       This allows us to support cheap, syntax directed eta conversion for
       functions. *)
-  let rec is_convertible (size : level) (tm1 : vtm) (tm2 : vtm) : bool =
-    match tm1, tm2 with
+  let rec is_convertible (size : level) (vtm1 : vtm) (vtm2 : vtm) : bool =
+    match vtm1, vtm2 with
     | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
-    | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
+    | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
         let x = Neu (Var size) in
-        is_convertible size (Lazy.force param_ty1) (Lazy.force param_ty2)
-          && is_convertible (size + 1) (body_ty1 x) (body_ty2 x)
+        is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
+          && is_convertible (size + 1) (body_vty1 x) (body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Neu (Var size) in
         is_convertible (size + 1) (body1 x) (body2 x)
     (* Eta for functions *)
-    | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
+    | Fun_lit (_, body), fun_vtm | fun_vtm, Fun_lit (_, body)  ->
         let x = Neu (Var size) in
-        is_convertible size (body x) (app fun_tm x)
+        is_convertible size (body x) (app fun_vtm x)
     | _, _ -> false
   and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
     match neu1, neu2 with
