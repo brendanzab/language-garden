@@ -358,26 +358,26 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (tms : vtm env) (tm : Syntax.tm) : vtm =
+  let rec eval (env : vtm env) (tm : Syntax.tm) : vtm =
     match tm with
-    | Let (_, _, def, body) -> eval (eval tms def :: tms) body
-    | Var index -> List.nth tms index
+    | Let (_, _, def, body) -> eval (eval env def :: env) body
+    | Var index -> List.nth env index
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
-        Fun_type (name, eval tms param_ty, fun x -> eval (x :: tms) body_ty)
-    | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: tms) body)
-    | Fun_app (head, arg) -> app (eval tms head) (eval tms arg)
-    | Rec_type decls -> Rec_type (eval_decls tms decls)
+        Fun_type (name, eval env param_ty, fun x -> eval (x :: env) body_ty)
+    | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
+    | Fun_app (head, arg) -> app (eval env head) (eval env arg)
+    | Rec_type decls -> Rec_type (eval_decls env decls)
     | Rec_lit defns ->
-        Rec_lit (List.map (fun (label, expr) -> (label, eval tms expr)) defns)
-    | Rec_proj (head, label) -> proj (eval tms head) label
-    | Sing_type (ty, sing_tm) -> Sing_type (eval tms ty, eval tms sing_tm)
+        Rec_lit (List.map (fun (label, expr) -> (label, eval env expr)) defns)
+    | Rec_proj (head, label) -> proj (eval env head) label
+    | Sing_type (ty, sing_tm) -> Sing_type (eval env ty, eval env sing_tm)
     | Sing_intro -> Sing_intro
-  and eval_decls (tms : vtm env) (decls : (label * Syntax.ty) list) : decls =
+  and eval_decls (env : vtm env) (decls : (label * Syntax.ty) list) : decls =
     match decls with
     | [] -> Nil
     | (label, ty) :: decls ->
-        Cons (label, eval tms ty, fun x -> eval_decls (x :: tms) decls)
+        Cons (label, eval env ty, fun x -> eval_decls (x :: env) decls)
 
 
   (** {1 Quotation} *)
@@ -422,8 +422,8 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (size : level) (tms : vtm env) (tm : Syntax.tm) : Syntax.tm =
-    quote size (eval tms tm)
+  let normalise (size : level) (env : vtm env) (tm : Syntax.tm) : Syntax.tm =
+    quote size (eval env tm)
 
 
   (** {1 Conversion Checking} *)
