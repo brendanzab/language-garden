@@ -270,6 +270,10 @@ module Semantics = struct
 
   (** {1 Conversion Checking} *)
 
+  (** Checks that two types (in weak-head normal form) compute to the same type
+      in normal form. This could be implemented naively by quoting both types
+      and checking the resulting normal forms for alpha-equivalence, but it’s
+      faster to compare the types in WHNF directly. *)
   let rec is_convertible (ty_size : level) (vty1 : vty) (vty2 : vty) : bool =
     match vty1, vty2 with
     | Var ty_level1, Var ty_level2 -> ty_level1 = ty_level2

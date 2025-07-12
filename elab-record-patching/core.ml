@@ -437,16 +437,15 @@ module Semantics = struct
 
   (** {1 Conversion Checking} *)
 
-  (** Conversion checking tests to see if two terms are are equal by checking
-      if they compute to the same term. This could be implemented by reading
-      back both values and checking the terms for alpha-equivalence, but it’s
-      faster to compare the values directly.
+  (** Checks that two values compute to the same term. This could be implemented
+      naively by quoting both values and checking the resulting terms for
+      alpha-equivalence, but it’s faster to compare the values directly.
 
-      We support best-effort eta conversion for singletons and unit records,
-      similar to the approach found in the elaboration zoo in
-      {{: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
-      03-holes-unit-eta}.
-  *)
+      A precondition of this function is that both values share the same type.
+      This allows us to support cheap, syntax directed eta conversion for
+      functions and best-effort eta conversion for singletons and unit records,
+      similar to the approach found in {{: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/03-holes-unit-eta}
+      elaboration-zoo/03-holes-unit-eta}. *)
   let rec is_convertible (size : level) (tm1 : vtm) (tm2 : vtm) : bool =
     match tm1, tm2 with
     | Neu n1, Neu n2 -> is_convertible_neu size n1 n2

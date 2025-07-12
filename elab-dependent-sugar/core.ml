@@ -328,8 +328,13 @@ module Semantics = struct
 
   (** {1 Conversion Checking} *)
 
-  (** Checks that two values compute to the same term under the assumption that
-      both values have the same type. *)
+  (** Checks that two values compute to the same term. This could be implemented
+      naively by quoting both values and checking the resulting terms for
+      alpha-equivalence, but it’s faster to compare the values directly.
+
+      A precondition of this function is that both values share the same type.
+      This allows us to support cheap, syntax directed eta conversion for
+      functions. *)
   let rec is_convertible (size : level) (tm1 : vtm) (tm2 : vtm) : bool =
     match tm1, tm2 with
     | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2

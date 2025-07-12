@@ -363,6 +363,11 @@ let validate_meta_solution (ty_size : level) (m, ty_level : meta * level) (vty :
   in
   go ty_size vty
 
+(** Checks that two types (in weak-head normal form) compute to the same type
+    in normal form, while updating metavariables destructively. This could be
+    implemented by quoting both types and checking the resulting normal forms
+    for alpha-equivalence, but it’s faster to compare the types in WHNF
+    directly. *)
 let rec unify_vtys (ty_size : level) (vty1 : vty) (vty2 : vty) : unit =
   match force_vty vty1, force_vty vty2 with
   | Local_var level1, Local_var level2 when level1 = level2 -> ()
