@@ -61,10 +61,10 @@ end = struct
       the current scope in the program. The environments are unzipped to make it
       more efficient to call functions from {!Core.Semantics}. *)
   type context = {
-    size : Core.level;                (** Number of entries bound. *)
-    names : Core.name Core.env;       (** Name environment *)
-    ty_env : Semantics.vty Core.env;  (** Type environment *)
-    tm_env : Semantics.vtm Core.env;  (** Term environment *)
+    size : Core.level;                      (** Number of entries bound. *)
+    names : Core.name Core.env;             (** Name environment *)
+    ty_env : Semantics.vty Core.env;        (** Type environment *)
+    tm_env : Semantics.vtm Lazy.t Core.env; (** Term environment *)
   }
 
   (** The empty context *)
@@ -77,11 +77,11 @@ end = struct
 
   (** Returns the next variable that will be bound in the context after calling
       {!bind_def} or {!bind_param} *)
-  let next_var (ctx : context) : Semantics.vtm =
-    Semantics.Neu (Semantics.Var ctx.size)
+  let next_var (ctx : context) : Semantics.vtm Lazy.t =
+    Lazy.from_val (Semantics.Neu (Semantics.Var ctx.size))
 
   (** Binds a definition in the context *)
-  let bind_def (ctx : context) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm) = {
+  let bind_def (ctx : context) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm Lazy.t) = {
     size = ctx.size + 1;
     names = name :: ctx.names;
     ty_env = vty :: ctx.ty_env;
@@ -162,7 +162,7 @@ end = struct
         let def_ty = check ctx def_ty Semantics.Univ in
         let def_vty = eval ctx def_ty in
         let def = check ctx def def_vty in
-        let body = check (bind_def ctx name.data def_vty (eval ctx def)) body vty in
+        let body = check (bind_def ctx name.data def_vty (lazy (eval ctx def))) body vty in
         Syntax.Let (name.data, def, body)
 
     (* Function literals *)
@@ -204,7 +204,7 @@ end = struct
         let def_ty = check ctx def_ty Semantics.Univ in
         let def_vty = eval ctx def_ty in
         let def = check ctx def def_vty in
-        let body, body_ty = infer (bind_def ctx name.data def_vty (eval ctx def)) body in
+        let body, body_ty = infer (bind_def ctx name.data def_vty (lazy (eval ctx def))) body in
         Syntax.Let (name.data, def, body), body_ty
 
     (* Named terms *)
@@ -257,7 +257,7 @@ end = struct
             match head_vty with
             | Semantics.Fun_type (_, param_vty, body_vty) ->
                 let arg = check ctx arg (Lazy.force param_vty) in
-                Syntax.Fun_app (head, arg), body_vty (eval ctx arg)
+                Syntax.Fun_app (head, arg), body_vty (lazy (eval ctx arg))
             | _ -> error arg.span "unexpected argument")
           (infer ctx head)
           args

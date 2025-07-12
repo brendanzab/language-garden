@@ -90,10 +90,10 @@ end = struct
       the current scope in the program. The environments are unzipped to make it
       more efficient to call functions from {!Core.Semantics}. *)
   type context = {
-    size : Core.level;                (** Number of entries bound. *)
-    names : Core.name Core.env;       (** Name environment *)
-    ty_env : Semantics.vty Core.env;  (** Type environment *)
-    tm_env : Semantics.vtm Core.env;  (** Term environment *)
+    size : Core.level;                      (** Number of entries bound. *)
+    names : Core.name Core.env;             (** Name environment *)
+    ty_env : Semantics.vty Core.env;        (** Type environment *)
+    tm_env : Semantics.vtm Lazy.t Core.env; (** Term environment *)
   }
 
   (** The empty context *)
@@ -106,11 +106,11 @@ end = struct
 
   (** Returns the next variable that will be bound in the context after calling
       {!bind_def} or {!bind_param} *)
-  let next_var (ctx : context) : Semantics.vtm =
-    Semantics.Neu (Semantics.Var ctx.size)
+  let next_var (ctx : context) : Semantics.vtm Lazy.t =
+    Lazy.from_val (Semantics.Neu (Semantics.Var ctx.size))
 
   (** Binds a definition in the context *)
-  let bind_def (ctx : context) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm) = {
+  let bind_def (ctx : context) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm Lazy.t) = {
     size = ctx.size + 1;
     names = name :: ctx.names;
     ty_env = vty :: ctx.ty_env;
@@ -209,15 +209,15 @@ end = struct
     | from_vty, Semantics.Sing_type (to_vty, sing_tm) ->
         let tm = coerce span ctx from_vty to_vty tm in
         let vtm = eval ctx tm in
-        if is_convertible ctx sing_tm vtm then Syntax.Sing_intro else
+        if is_convertible ctx (Lazy.force sing_tm) vtm then Syntax.Sing_intro else
           error span (singleton_mismatch ctx
-            ~expected:(quote ctx sing_tm)
+            ~expected:(quote ctx (Lazy.force sing_tm))
             ~found:(quote ctx vtm)
             ~ty:(quote ctx to_vty))
     (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
       and attempt further coercions from its underlying type *)
     | Semantics.Sing_type (from_vty, sing_tm), to_vty ->
-        coerce span ctx from_vty to_vty (quote ctx sing_tm)
+        coerce span ctx from_vty to_vty (quote ctx (Lazy.force sing_tm))
     (* Coerce the fields of a record with record eta expansion *)
     | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
         (* TODO: bind [tm] to a local variable to avoid duplicating records *)
@@ -227,15 +227,15 @@ end = struct
           (* Use eta-expansion to coerce fields that share the same label *)
           | Semantics.Cons (from_label, from_vty, from_decls)
           , Semantics.Cons (to_label, to_vty, to_decls) when from_label = to_label ->
-              let from_vtm = eval ctx (Syntax.Rec_proj (tm, from_label)) in
+              let from_vtm = lazy (eval ctx (Syntax.Rec_proj (tm, from_label))) in
               let to_tm = coerce span ctx from_vty to_vty (Syntax.Rec_proj (tm, from_label)) in
-              (to_label, to_tm) :: go (from_decls from_vtm) (to_decls (eval ctx to_tm))
+              (to_label, to_tm) :: go (from_decls from_vtm) (to_decls (lazy (eval ctx to_tm)))
           (* When the type of the target field is a singleton we can use it to
               fill in the definition of a missing field in the source term. This
               is similar to how we handle missing fields in {!check}. *)
           | from_decls, Semantics.Cons (to_label, Semantics.Sing_type (_, _), to_decls) ->
               let to_tm = Syntax.Sing_intro in
-              (to_label, to_tm) :: go from_decls (to_decls (eval ctx to_tm))
+              (to_label, to_tm) :: go from_decls (to_decls (lazy (eval ctx to_tm)))
           | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
               error span (field_mismatch ~expected:to_label ~found:from_label)
           | _, _ -> Semantics.error "mismatched telescope length"
@@ -265,7 +265,7 @@ end = struct
     | Let (name, params, def_ty, def, body), vty ->
         let def, def_ty = infer_fun_lit ctx params def_ty def in
         let def_vty = eval ctx def_ty in
-        let body = check (bind_def ctx name.data def_vty (eval ctx def)) body vty in
+        let body = check (bind_def ctx name.data def_vty (lazy (eval ctx def))) body vty in
         Syntax.Let (name.data, def_ty, def, body)
 
     (* Function literals *)
@@ -285,12 +285,12 @@ end = struct
                 | Some (params, tm) -> check_fun_lit ctx params None tm ty (* explicit field definition *)
                 | None -> check ctx ({ span = label.span; data = Name label.data }) ty (* punned field definition *)
               in
-              (label.data, tm) :: go defns (decls (eval ctx tm))
+              (label.data, tm) :: go defns (decls (lazy (eval ctx tm)))
           (* When the expected type of a field is a singleton we can use it to
               fill in the definition of a missing fields in the record literal. *)
           | defns, Semantics.Cons (label, Semantics.Sing_type (_, _), decls) ->
               let tm = Syntax.Sing_intro in
-              (label, tm) :: go defns (decls (eval ctx tm))
+              (label, tm) :: go defns (decls (lazy (eval ctx tm)))
           | _, Semantics.Cons (label, _, _) -> error tm.span (missing_field label)
           | (label, _) :: _, Semantics.Nil -> error label.span ("unexpected field `" ^ label.data ^ "` in record literal")
         in
@@ -309,9 +309,9 @@ end = struct
         let tm_span = tm.span in
         let tm = check ctx tm vty in
         let vtm = eval ctx tm in
-        if is_convertible ctx sing_vtm vtm then Syntax.Sing_intro else
+        if is_convertible ctx (Lazy.force sing_vtm) vtm then Syntax.Sing_intro else
           error tm_span (singleton_mismatch ctx
-            ~expected:(quote ctx sing_vtm)
+            ~expected:(quote ctx (Lazy.force sing_vtm))
             ~found:(quote ctx vtm)
             ~ty:(quote ctx vty))
 
@@ -331,7 +331,7 @@ end = struct
     | Let (name, params, def_ty, def, body) ->
         let def, def_ty = infer_fun_lit ctx params def_ty def in
         let def_vty = eval ctx def_ty in
-        let body, body_ty = infer (bind_def ctx name.data def_vty (eval ctx def)) body in
+        let body, body_ty = infer (bind_def ctx name.data def_vty (lazy (eval ctx def))) body in
         Syntax.Let (name.data, def_ty, def, body), body_ty
 
     (* Named terms *)
@@ -411,7 +411,7 @@ end = struct
             match head_vty with
             | Semantics.Fun_type (_, param_vty, body_vty) ->
                 let arg = check ctx arg (Lazy.force param_vty) in
-                Syntax.Fun_app (head, arg), body_vty (eval ctx arg)
+                Syntax.Fun_app (head, arg), body_vty (lazy (eval ctx arg))
             | _ -> error arg.span "unexpected argument")
           (infer ctx head)
           args
@@ -444,7 +444,7 @@ end = struct
               begin match List.assoc_opt label patches with
               | Some patch_tm ->
                   let tm = check ctx patch_tm vty in
-                  let vtm = eval ctx tm in
+                  let vtm = lazy (eval ctx tm) in
                   let ctx = bind_def ctx (Some label) (Semantics.Sing_type (vty, vtm)) vtm in
                   let patches = List.remove_assoc label patches in
                   (label, Syntax.Sing_type (ty, tm)) :: go ctx (ty_env vtm) patches
@@ -532,7 +532,7 @@ end = struct
     match vty with
     (* Eliminate the singleton, converting it back to its underlying term *)
     | Sing_type (vty, sing_vtm) ->
-        elim_implicits ctx (quote ctx sing_vtm) vty
+        elim_implicits ctx (quote ctx (Lazy.force sing_vtm)) vty
     (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
       for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
     | vty -> tm, vty

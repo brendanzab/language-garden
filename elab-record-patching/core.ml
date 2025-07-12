@@ -288,17 +288,17 @@ module Semantics = struct
   and vtm =
     | Neu of neu                          (** Neutral terms *)
     | Univ
-    | Fun_type of name * vty Lazy.t * (vtm -> vty)
-    | Fun_lit of name * (vtm -> vtm)
+    | Fun_type of name * vty Lazy.t * (vtm Lazy.t -> vty)
+    | Fun_lit of name * (vtm Lazy.t -> vtm)
     | Rec_type of decls
     | Rec_lit of (label * vtm) list
-    | Sing_type of vty * vtm
+    | Sing_type of vty * vtm Lazy.t
     | Sing_intro                          (** Singleton introduction *)
 
   (** Field declarations *)
   and decls =
     | Nil
-    | Cons of label * vty * (vtm -> decls)
+    | Cons of label * vty * (vtm Lazy.t -> decls)
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
       result of being stuck on something else that would not reduce further.
@@ -328,9 +328,9 @@ module Semantics = struct
       term is in a neutral form. *)
 
   (** Compute a function application *)
-  let app (head : vtm) (arg : vtm) : vtm =
+  let app (head : vtm) (arg : vtm Lazy.t) : vtm =
     match head with
-    | Neu neu -> Neu (Fun_app (neu, Lazy.from_val arg))
+    | Neu neu -> Neu (Fun_app (neu, arg))
     | Fun_lit (_, body) -> body arg
     | _ -> error "invalid application"
 
@@ -350,7 +350,7 @@ module Semantics = struct
       match decls with
         | Nil -> None
         | Cons (l, ty, _) when l = label -> Some ty
-        | Cons (l, _, decls) -> go (decls (proj head l))
+        | Cons (l, _, decls) -> go (decls (lazy (proj head l)))
     in
     go decls
 
@@ -358,24 +358,25 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) (tm : Syntax.tm) : vtm =
+  let rec eval (env : vtm Lazy.t env) (tm : Syntax.tm) : vtm =
     match tm with
-    | Let (_, _, def, body) -> eval (eval env def :: env) body
-    | Var index -> List.nth env index
+    | Let (_, _, def, body) -> eval (lazy (eval env def) :: env) body
+    | Var index -> Lazy.force (List.nth env index)
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
         let param_vty = lazy (eval env param_ty) in
         let body_vty = fun x -> eval (x :: env) body_ty in
         Fun_type (name, param_vty, body_vty)
     | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
-    | Fun_app (head, arg) -> app (eval env head) (eval env arg)
+    | Fun_app (head, arg) -> app (eval env head) (lazy (eval env arg))
     | Rec_type decls -> Rec_type (eval_decls env decls)
     | Rec_lit defns ->
         Rec_lit (List.map (fun (label, expr) -> (label, eval env expr)) defns)
     | Rec_proj (head, label) -> proj (eval env head) label
-    | Sing_type (ty, sing_tm) -> Sing_type (eval env ty, eval env sing_tm)
+    | Sing_type (ty, sing_tm) ->
+        Sing_type (eval env ty, lazy (eval env sing_tm))
     | Sing_intro -> Sing_intro
-  and eval_decls (env : vtm env) (decls : (label * Syntax.ty) list) : decls =
+  and eval_decls (env : vtm Lazy.t env) (decls : (label * Syntax.ty) list) : decls =
     match decls with
     | [] -> Nil
     | (label, ty) :: decls ->
@@ -399,14 +400,17 @@ module Semantics = struct
     | Neu neu -> quote_neu size neu
     | Univ -> Univ
     | Fun_type (name, param_vty, body_vty) ->
+        let x = Lazy.from_val (Neu (Var size)) in
         let param_ty = quote size (Lazy.force param_vty) in
-        let body_ty = quote (size + 1) (body_vty (Neu (Var size))) in
+        let body_ty = quote (size + 1) (body_vty x) in
         Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
+        let x = Lazy.from_val (Neu (Var size)) in
+        Fun_lit (name, quote (size + 1) (body x))
     | Rec_type decls -> Rec_type (quote_decls size decls)
     | Rec_lit defns -> Rec_lit (defns |> List.map (fun (label, vtm) -> (label, quote size vtm)))
-    | Sing_type (vty, sing_vtm) -> Sing_type (quote size vty, quote size sing_vtm)
+    | Sing_type (vty, sing_vtm) ->
+        Sing_type (quote size vty, quote size (Lazy.force sing_vtm))
     | Sing_intro -> Sing_intro
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
@@ -420,14 +424,15 @@ module Semantics = struct
     match decls with
     | Nil -> []
     | Cons (label, ty, decls) ->
-        (label, quote size ty) :: quote_decls (size + 1) (decls (Neu (Var size)))
+        let x = Lazy.from_val (Neu (Var size)) in
+        (label, quote size ty) :: quote_decls (size + 1) (decls x)
 
 
   (** {1 Normalisation} *)
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (size : level) (env : vtm env) (tm : Syntax.tm) : Syntax.tm =
+  let normalise (size : level) (env : vtm Lazy.t env) (tm : Syntax.tm) : Syntax.tm =
     quote size (eval env tm)
 
 
@@ -447,22 +452,22 @@ module Semantics = struct
     | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
     | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
-        let x = Neu (Var size) in
+        let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
           && is_convertible (size + 1) (body_vty1 x) (body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
-        let x = Neu (Var size) in
+        let x = Lazy.from_val (Neu (Var size)) in
         is_convertible (size + 1) (body1 x) (body2 x)
     | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
     | Sing_type (vty1, sing_vtm1), Sing_type (vty2, sing_vtm2) ->
         is_convertible size vty1 vty2
-          && is_convertible size sing_vtm1 sing_vtm2
+          && is_convertible size (Lazy.force sing_vtm1) (Lazy.force sing_vtm2)
     | Sing_intro, Sing_intro -> true
 
     (* Eta rules *)
     | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
-        let x = Neu (Var size) in
+        let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size (body x) (app fun_tm x)
     | Rec_lit decls, rec_vtm | rec_vtm, Rec_lit decls ->
         decls |> List.for_all (fun (label, elem) -> is_convertible size elem (proj rec_vtm label))
@@ -482,7 +487,7 @@ module Semantics = struct
     match decls1, decls2 with
     | Nil, Nil -> true
     | Cons (label1, vty1, decls1), Cons (label2, vty2, decls2) when label1 = label2 ->
-        let x = Neu (Var size) in
+        let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size vty1 vty2
           && is_convertible_decls (size + 1) (decls1 x) (decls2 x)
     | _, _ -> false

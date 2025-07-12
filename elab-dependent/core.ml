@@ -276,8 +276,8 @@ module Semantics = struct
   and vtm =
     | Neu of neu                            (** Neutral terms *)
     | Univ
-    | Fun_type of name * vty Lazy.t * (vtm -> vty)
-    | Fun_lit of name * (vtm -> vtm)
+    | Fun_type of name * vty Lazy.t * (vtm Lazy.t -> vty)
+    | Fun_lit of name * (vtm Lazy.t -> vtm)
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
       result of being stuck on something else that would not reduce further.
@@ -302,9 +302,9 @@ module Semantics = struct
       term is in a neutral form. *)
 
   (** Compute a function application *)
-  let app (head : vtm) (arg : vtm) : vtm =
+  let app (head : vtm) (arg : vtm Lazy.t) : vtm =
     match head with
-    | Neu neu -> Neu (Fun_app (neu, Lazy.from_val arg))
+    | Neu neu -> Neu (Fun_app (neu, arg))
     | Fun_lit (_, body) -> body arg
     | _ -> raise (Error "invalid application")
 
@@ -312,11 +312,11 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) (tm : Syntax.tm) : vtm =
+  let rec eval (env : vtm Lazy.t env) (tm : Syntax.tm) : vtm =
     match tm with
-    | Syntax.Let (_, def, body) -> eval (eval env def :: env) body
+    | Syntax.Let (_, def, body) -> eval (lazy (eval env def) :: env) body
     | Syntax.Ann (tm, _) -> eval env tm
-    | Syntax.Var index -> List.nth env index
+    | Syntax.Var index -> Lazy.force (List.nth env index)
     | Syntax.Univ ->  Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
         let param_vty = lazy (eval env param_ty) in
@@ -325,7 +325,7 @@ module Semantics = struct
     | Syntax.Fun_lit (name, body) ->
         Fun_lit (name, fun x -> eval (x :: env) body)
     | Syntax.Fun_app (head, arg) ->
-        app (eval env head) (eval env arg)
+        app (eval env head) (lazy (eval env arg))
 
 
   (** {1 Quotation} *)
@@ -345,10 +345,10 @@ module Semantics = struct
     | Univ -> Syntax.Univ
     | Fun_type (name, param_vty, body_vty) ->
         let param_ty = quote size (Lazy.force param_vty) in
-        let body_ty = quote (size + 1) (body_vty (Neu (Var size))) in
+        let body_ty = quote (size + 1) (body_vty (Lazy.from_val (Neu (Var size)))) in
         Syntax.Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        Fun_lit (name, quote (size + 1) (body (Neu (Var size))))
+        Fun_lit (name, quote (size + 1) (body (Lazy.from_val (Neu (Var size)))))
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
     | Var level ->
@@ -361,7 +361,7 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (size : level) (env : vtm env) (tm : Syntax.tm) : Syntax.tm =
+  let normalise (size : level) (env : vtm Lazy.t env) (tm : Syntax.tm) : Syntax.tm =
     quote size (eval env tm)
 
 
@@ -379,15 +379,15 @@ module Semantics = struct
     | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
     | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
-        let x = Neu (Var size) in
+        let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
           && is_convertible (size + 1) (body_vty1 x) (body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
-        let x = Neu (Var size) in
+        let x = Lazy.from_val (Neu (Var size)) in
         is_convertible (size + 1) (body1 x) (body2 x)
     (* Eta for functions *)
     | Fun_lit (_, body), fun_vtm | fun_vtm, Fun_lit (_, body)  ->
-        let x = Neu (Var size) in
+        let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size (body x) (app fun_vtm x)
     | _, _ -> false
   and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
