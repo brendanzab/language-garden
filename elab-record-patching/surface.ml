@@ -412,7 +412,7 @@ end = struct
           (fun (head, head_ty) arg ->
             match elim_implicits ctx head head_ty with
             | head, Semantics.Fun_type (_, param_ty, body_ty) ->
-                let arg = check ctx arg param_ty in
+                let arg = check ctx arg (Lazy.force param_ty) in
                 Syntax.Fun_app (head, arg), body_ty (eval ctx arg)
             | _ -> error arg.span "unexpected argument")
           (infer ctx head)
@@ -486,11 +486,11 @@ end = struct
         let var = next_var ctx in
         let param_ty =
           match param_ty with
-          | None -> expected_param_ty
+          | None -> Lazy.force expected_param_ty
           | Some param_ty ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let param_ty' = eval ctx param_ty in
-              let expected_param_ty = expected_param_ty in
+              let expected_param_ty = Lazy.force expected_param_ty in
               (* Check that the parameter annotation in the function literal
                   matches the expected parameter type. *)
               if is_convertible ctx param_ty' expected_param_ty then param_ty' else

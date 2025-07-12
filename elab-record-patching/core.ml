@@ -288,7 +288,7 @@ module Semantics = struct
   and vtm =
     | Neu of neu                          (** Neutral terms *)
     | Univ
-    | Fun_type of name * vty * (vtm -> vty)
+    | Fun_type of name * vty Lazy.t * (vtm -> vty)
     | Fun_lit of name * (vtm -> vtm)
     | Rec_type of decls
     | Rec_lit of (label * vtm) list
@@ -306,7 +306,7 @@ module Semantics = struct
       ambivalent about what they might compute to? *)
   and neu =
     | Var of level                        (** Variable that could not be reduced further *)
-    | Fun_app of neu * vtm                (** Function application *)
+    | Fun_app of neu * vtm Lazy.t         (** Function application *)
     | Rec_proj of neu * label             (** Record projection *)
 
 
@@ -330,7 +330,7 @@ module Semantics = struct
   (** Compute a function application *)
   let app (head : vtm) (arg : vtm) : vtm =
     match head with
-    | Neu neu -> Neu (Fun_app (neu, arg))
+    | Neu neu -> Neu (Fun_app (neu, Lazy.from_val arg))
     | Fun_lit (_, body) -> body arg
     | _ -> error "invalid application"
 
@@ -364,7 +364,9 @@ module Semantics = struct
     | Var index -> List.nth env index
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
-        Fun_type (name, eval env param_ty, fun x -> eval (x :: env) body_ty)
+        let param_ty = lazy (eval env param_ty) in
+        let body_ty = fun x -> eval (x :: env) body_ty in
+        Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
     | Fun_app (head, arg) -> app (eval env head) (eval env arg)
     | Rec_type decls -> Rec_type (eval_decls env decls)
@@ -397,7 +399,7 @@ module Semantics = struct
     | Neu neu -> quote_neu size neu
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
-        let param_ty = quote size param_ty in
+        let param_ty = quote size (Lazy.force param_ty) in
         let body_ty = quote (size + 1) (body_ty (Neu (Var size))) in
         Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
@@ -408,9 +410,12 @@ module Semantics = struct
     | Sing_intro -> Sing_intro
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
-    | Var level -> Syntax.Var (level_to_index size level)
-    | Fun_app (head, arg) -> Syntax.Fun_app (quote_neu size head, quote size arg)
-    | Rec_proj (head, label) -> Syntax.Rec_proj (quote_neu size head, label)
+    | Var level ->
+        Syntax.Var (level_to_index size level)
+    | Fun_app (head, arg) ->
+        Syntax.Fun_app (quote_neu size head, quote size (Lazy.force arg))
+    | Rec_proj (head, label) ->
+        Syntax.Rec_proj (quote_neu size head, label)
   and quote_decls (size : level) (decls : decls) : (label * Syntax.ty) list =
     match decls with
     | Nil -> []
@@ -443,7 +448,7 @@ module Semantics = struct
     | Univ, Univ -> true
     | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
         let var = Neu (Var size) in
-        is_convertible size param_ty1 param_ty2
+        is_convertible size (Lazy.force param_ty1) (Lazy.force param_ty2)
           && is_convertible (size + 1) (body_ty1 var) (body_ty2 var)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Neu (Var size) in
@@ -468,7 +473,8 @@ module Semantics = struct
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
     | Fun_app (func1, arg1), Fun_app (func2, arg2) ->
-        is_convertible_neu size func1 func2 && is_convertible size arg1 arg2
+        is_convertible_neu size func1 func2
+          && is_convertible size (Lazy.force arg1) (Lazy.force arg2)
     | Rec_proj (record1, label1), Rec_proj (record2, label2) ->
         label1 = label2 && is_convertible_neu size record1 record2
     | _, _ -> false
