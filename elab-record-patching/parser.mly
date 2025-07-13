@@ -1,7 +1,6 @@
 %token UNDERSCORE "_"
 %token KEYWORD_FUN "fun"
 %token KEYWORD_LET "let"
-%token KEYWORD_TYPE "Type"
 %token <string> NAME
 %token COLON ":"
 %token COLON_EQUALS ":="
@@ -64,8 +63,6 @@ let atomic_tm :=
     { t }
 | n = NAME;
     { Surface.Name n }
-| "Type";
-    { Surface.Univ }
 | "{"; "}";
     { Surface.Rec_unit }
 | "{"; ds = nonempty_sequence(l = spanned(NAME); ":"; t = spanned(tm); { l, t }); "}";

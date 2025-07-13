@@ -18,7 +18,6 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "_"           -> UNDERSCORE
   | "fun"         -> KEYWORD_FUN
   | "let"         -> KEYWORD_LET
-  | "Type"        -> KEYWORD_TYPE
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
   | ":"           -> COLON
   | ":="          -> COLON_EQUALS

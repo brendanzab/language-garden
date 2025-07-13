@@ -38,7 +38,6 @@ and tm_data =
   | Let of pattern * params * tm option * tm * tm   (** Let expressions: [ let x : A := t; f x ] *)
   | Name of string                                  (** References to named things: [ x ] *)
   | Ann of tm * tm                                  (** Terms annotated with types: [ x : A ] *)
-  | Univ                                            (** Universe of types: [ Type ] *)
   | Fun_type of params * tm                         (** Function types: [ fun (x : A) -> B x ] *)
   | Fun_arrow of tm * tm                            (** Function arrow types: [ A -> B ] *)
   | Fun_lit of params * tm option * tm              (** Function literals: [ fun x => f x ] *)
@@ -336,6 +335,10 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, vty) -> (Syntax.Var index, vty)
+        (* We use [Type : Type] for simplicity, which means this type theory
+           is inconsistent. This is fine for a toy type system, but we should
+           use universe levels in an actual implementation. *)
+        | None when name = "Type" -> Syntax.Univ, Semantics.Univ
         | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
@@ -344,13 +347,6 @@ end = struct
         let ty = check ctx ty Semantics.Univ in
         let vty = eval ctx ty in
         check ctx tm vty, vty
-
-      (* Universes *)
-    | Univ ->
-        (* We use [Type : Type] here for simplicity, which means this type
-            theory is inconsistent. This is okay for a toy type system, but we’d
-            want look into using universe levels in an actual implementation. *)
-        Syntax.Univ, Semantics.Univ
 
     (* Function types *)
     | Fun_type (params, body_ty) ->
