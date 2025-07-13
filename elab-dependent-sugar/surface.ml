@@ -143,13 +143,6 @@ end = struct
       (pp ctx expected)
       (pp ctx found)
 
-  let not_bound (name : string) : string =
-    Format.asprintf "`%s` is not bound in the current scope" name
-
-  let ambiguous_param (name : string option) : string =
-      Format.asprintf "ambiguous function parameter `%s`"
-        (Option.value ~default:"_" name)
-
 
   (** {2 Bidirectional type checking} *)
 
@@ -202,7 +195,7 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, vty) -> (Syntax.Var index, vty)
-        | None -> error tm.span (not_bound name)
+        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
     (* Annotated terms *)
@@ -223,7 +216,8 @@ end = struct
         let rec go ctx = function
           | [] -> check ctx body_ty Semantics.Univ
           (* Function types always require annotations *)
-          | (name, None) :: _ -> error name.span (ambiguous_param name.data)
+          | (name, None) :: _ ->
+              error name.span "ambiguous function parameter type"
           | (name, Some param_ty) :: params ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let body_ty = go (bind_param ctx name.data (eval ctx param_ty)) params in
@@ -302,7 +296,7 @@ end = struct
           let param_ty =
             match param_ty with
             (* We’re in inference mode, so function parameters need annotations *)
-            | None -> error name.span (ambiguous_param name.data)
+            | None -> error name.span "ambiguous function parameter type"
             | Some param_ty -> check ctx param_ty Semantics.Univ
           in
           let ctx = bind_def ctx name.data (eval ctx param_ty) var in

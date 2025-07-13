@@ -140,9 +140,6 @@ end = struct
       (pp ctx expected)
       (pp ctx found)
 
-  let not_bound (name : string) : string =
-    Format.asprintf "`%s` is not bound in the current scope" name
-
 
   (** {2 Bidirectional type checking} *)
 
@@ -211,7 +208,7 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, vty) -> (Syntax.Var index, vty)
-        | None -> error tm.span (not_bound name)
+        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
     (* Annotated terms *)

@@ -183,9 +183,6 @@ end = struct
   let missing_field (label : string) : string =
     Format.asprintf "field with label `%s` not found in record" label
 
-  let not_bound (name : string) : string =
-    Format.asprintf "`%s` is not bound in the current scope" name
-
   let ambiguous_param (name : string option) : string =
       Format.asprintf "ambiguous function parameter `%s`"
         (Option.value ~default:"_" name)
@@ -292,7 +289,8 @@ end = struct
               let tm = Syntax.Sing_intro in
               (label, tm) :: go defns (decls (lazy (eval ctx tm)))
           | _, Semantics.Cons (label, _, _) -> error tm.span (missing_field label)
-          | (label, _) :: _, Semantics.Nil -> error label.span ("unexpected field `" ^ label.data ^ "` in record literal")
+          | (label, _) :: _, Semantics.Nil ->
+              error label.span (Format.sprintf "unexpected field `%s` in record literal" label.data)
         in
         Syntax.Rec_lit (go defns decls)
 
@@ -338,7 +336,7 @@ end = struct
     | Name name ->
         begin match lookup ctx name with
         | Some (index, vty) -> (Syntax.Var index, vty)
-        | None -> error tm.span (not_bound name)
+        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
     (* Annotated terms *)
@@ -384,7 +382,7 @@ end = struct
         let rec go ctx seen_labels = function
           | [] -> []
           | (label, _) :: _ when List.mem label.data seen_labels ->
-              error label.span ("duplicate label `" ^ label.data ^ "` in record type")
+              error label.span (Format.sprintf "duplicate label `%s` in record type" label.data)
           | (label, ty) :: decls ->
               let ty = check ctx ty Semantics.Univ in
               let ctx = bind_param ctx (Some label.data) (eval ctx ty) in
@@ -438,7 +436,7 @@ end = struct
           | Semantics.Nil, [] -> []
           | Semantics.Nil, (label, _) :: _ ->
               (* FIXME: use label location *)
-              error head.span ("field `" ^ label ^ "` not found in record type")
+              error head.span (Format.sprintf "field `%s` not found in record type" label)
           | Semantics.Cons (label, vty, ty_env), patches ->
               let ty = quote ctx vty in
               begin match List.assoc_opt label patches with

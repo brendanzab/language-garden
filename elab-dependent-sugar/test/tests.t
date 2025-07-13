@@ -77,7 +77,7 @@ Church-encoded option type
 
 Name not bound
   $ executable elab <<< "fun (A : Type) (a : A) => foo"
-  error: `foo` is not bound in the current scope
+  error: unbound name `foo`
     ┌─ <stdin>:1:26
     │
   1 │ fun (A : Type) (a : A) => foo
