@@ -244,12 +244,15 @@ end = struct
   (** Elaborate a function literal in checking mode. *)
   and check_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) (vty : Semantics.vty) =
     match params, body_ty, vty with
+    (* Elaborate the body of the function literal *)
     | [], None, vty -> check ctx body vty
     | [], Some ({ span = body_ty_span; _ } as body_ty), vty ->
         let body_ty = check ctx body_ty Semantics.Univ in
         let body_vty = eval ctx body_ty in
         check_convertible ctx body_ty_span ~found:body_vty ~expected:vty;
         check ctx body body_vty
+
+    (* Elaborate a new parameter *)
     | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, param_vty', body_vty') ->
         let var = next_var ctx in
         let param_ty =
@@ -264,6 +267,7 @@ end = struct
         let ctx = bind_def ctx name.data param_ty var in
         let body = check_fun_lit ctx params body_ty body (body_vty' var) in
         Syntax.Fun_lit (name.data, body)
+
     | (name, _) :: _, _, _ ->
         error name.span "too many parameters in function literal"
 
@@ -271,12 +275,15 @@ end = struct
   and infer_fun_lit (ctx : context) (params : params) (body_ty : tm option) (body : tm) =
     let rec go ctx params body_ty body =
       match params, body_ty with
+      (* Elaborate the body of the function literal *)
       | [], None ->
           let body, body_ty = infer ctx body in
           body, quote ctx body_ty
       | [], Some body_ty ->
           let body_ty = check ctx body_ty Semantics.Univ in
           check ctx body (eval ctx body_ty), body_ty
+
+      (* Elaborate a new parameter *)
       | (name, param_ty) :: params, body_ty ->
           let var = next_var ctx in
           let param_ty =
