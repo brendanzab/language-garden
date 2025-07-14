@@ -1,15 +1,27 @@
 ────────────────────────────────────────────────────────────────────────────────
 Knowledge Base
 ────────────────────────────────────────────────────────────────────────────────
+homepage("Caml", "https://caml.inria.fr/").
 homepage("OCaml", "https://ocaml.org").
 homepage("Haskell", "https://www.haskell.org/").
 homepage("Standard ML", "https://smlfamily.github.io/").
+implementation("Caml", "Caml Light").
+implementation("Caml", "Caml Special Light").
+implementation("Caml", "Heavy Caml").
 implementation("Haskell", "GHC").
+implementation("Haskell", "Hugs").
 implementation("OCaml", "ocamlc").
 implementation("Standard ML", "SML/NJ").
 implementation("Standard ML", "MLton").
 implementation("Standard ML", "MLKit").
 implementation("Standard ML", "Poly/ML").
+implementedIn("Caml Light", "C").
+implementedIn("GHC", "C").
+implementedIn("GHC", "Haskell").
+implementedIn("Hugs", "Haskell").
+implementedIn("Heavy Caml", "Lisp").
+implementedIn("OCaml", "C").
+implementedIn("OCaml", "OCaml").
 influencedBy("Caml", "ML").
 influencedBy("Haskell", "ISWIM").
 influencedBy("Haskell", "KRC").
@@ -22,7 +34,11 @@ influencedBy("Miranda", "Hope").
 influencedBy("Miranda", "KRC").
 influencedBy("Miranda", "ML").
 influencedBy("ML", "ISWIM").
+influencedBy("ML", "PAL").
+influencedBy("ML", "POP2").
+influencedBy("ML", "Gedanken").
 influencedBy("OCaml", "Caml").
+influencedBy("PAL", "ISWIM").
 influencedBy("SASL", "ISWIM").
 influencedBy("Standard ML", "Hope").
 influencedBy("Standard ML", "ML").
@@ -38,7 +54,11 @@ influenced("Hope", "Miranda").
 influenced("KRC", "Miranda").
 influenced("ML", "Miranda").
 influenced("ISWIM", "ML").
+influenced("PAL", "ML").
+influenced("POP2", "ML").
+influenced("Gedanken", "ML").
 influenced("Caml", "OCaml").
+influenced("ISWIM", "PAL").
 influenced("ISWIM", "SASL").
 influenced("Hope", "Standard ML").
 influenced("ML", "Standard ML").
@@ -49,6 +69,7 @@ Query Results
 ? influenced("ISWIM", A).
   > A := "Haskell".
   > A := "ML".
+  > A := "PAL".
   > A := "SASL".
   yes
 

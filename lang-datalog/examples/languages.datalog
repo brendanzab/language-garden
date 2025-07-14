@@ -1,14 +1,26 @@
+homepage("Caml", "https://caml.inria.fr/").
 homepage("OCaml", "https://ocaml.org").
 homepage("Haskell", "https://www.haskell.org/").
 homepage("Standard ML", "https://smlfamily.github.io/").
 
+implementation("Caml", "Caml Light").
+implementation("Caml", "Caml Special Light").
+implementation("Caml", "Heavy Caml").             % See: https://en.wikipedia.org/wiki/Caml#History
 implementation("Haskell", "GHC").
-implementation("Haskell", "GHC").
+implementation("Haskell", "Hugs").
 implementation("OCaml", "ocamlc").
 implementation("Standard ML", "SML/NJ").
 implementation("Standard ML", "MLton").
 implementation("Standard ML", "MLKit").
 implementation("Standard ML", "Poly/ML").
+
+implementedIn("Caml Light", "C").
+implementedIn("GHC", "C").
+implementedIn("GHC", "Haskell").
+implementedIn("Hugs", "Haskell").
+implementedIn("Heavy Caml", "Lisp").
+implementedIn("OCaml", "C").
+implementedIn("OCaml", "OCaml").
 
 influencedBy("Caml", "ML").
 influencedBy("Haskell", "ISWIM").
@@ -21,8 +33,12 @@ influencedBy("KRC", "SASL").
 influencedBy("Miranda", "Hope").
 influencedBy("Miranda", "KRC").
 influencedBy("Miranda", "ML").
-influencedBy("ML", "ISWIM").
+influencedBy("ML", "ISWIM").                      % See: “A Metalanguage for interactive proof in LCF”
+influencedBy("ML", "PAL").                        % See: “A Metalanguage for interactive proof in LCF”
+influencedBy("ML", "POP2").                       % See: “A Metalanguage for interactive proof in LCF”
+influencedBy("ML", "Gedanken").                   % See: “A Metalanguage for interactive proof in LCF”
 influencedBy("OCaml", "Caml").
+influencedBy("PAL", "ISWIM").                     % See: “PAL—a language designed for teaching programming linguistics”
 influencedBy("SASL", "ISWIM").
 influencedBy("Standard ML", "Hope").
 influencedBy("Standard ML", "ML").
