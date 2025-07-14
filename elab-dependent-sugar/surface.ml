@@ -115,9 +115,6 @@ end = struct
   let quote (ctx : context) : Semantics.vtm -> Syntax.tm =
     Semantics.quote ctx.size
 
-  let is_convertible (ctx : context) : Semantics.vtm -> Semantics.vtm -> bool =
-    Semantics.is_convertible ctx.size
-
   let pp ?(resugar = true) (ctx : context) =
     Syntax.pp ctx.names ~resugar
 
@@ -137,10 +134,12 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let type_mismatch (ctx : context) ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
-      (pp ctx expected)
-      (pp ctx found)
+  let check_convertible (ctx : context) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
+    if Semantics.is_convertible ctx.size found expected then () else
+      error span
+        (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
+          (pp ctx (quote ctx expected))
+          (pp ctx (quote ctx found)))
 
 
   (** {2 Bidirectional type checking} *)
@@ -175,10 +174,8 @@ end = struct
     | _ ->
         let tm_span = tm.span in
         let tm, found_vty = infer ctx tm in
-        if is_convertible ctx found_vty vty then tm else
-          error tm_span (type_mismatch ctx
-            ~expected:(quote ctx vty)
-            ~found:(quote ctx found_vty))
+        check_convertible ctx tm_span ~found:found_vty ~expected:vty;
+        tm
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
@@ -251,11 +248,8 @@ end = struct
     | [], Some ({ span = body_ty_span; _ } as body_ty), vty ->
         let body_ty = check ctx body_ty Semantics.Univ in
         let body_vty = eval ctx body_ty in
-        if is_convertible ctx body_vty vty then
-          check ctx body body_vty
-        else error body_ty_span (type_mismatch ctx
-          ~expected:(quote ctx vty)
-          ~found:body_ty)
+        check_convertible ctx body_ty_span ~found:body_vty ~expected:vty;
+        check ctx body body_vty
     | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, param_vty', body_vty') ->
         let var = next_var ctx in
         let param_ty =
@@ -264,12 +258,8 @@ end = struct
           | Some param_ty ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let param_vty = eval ctx param_ty in
-              (* Check that the parameter annotation in the function literal
-                  matches the expected parameter type. *)
-              if is_convertible ctx param_vty (Lazy.force param_vty') then param_vty else
-                error name.span (type_mismatch ctx
-                  ~expected:(quote ctx (Lazy.force param_vty'))
-                  ~found:param_ty)
+              check_convertible ctx name.span ~found:param_vty ~expected:(Lazy.force param_vty');
+              param_vty
         in
         let ctx = bind_def ctx name.data param_ty var in
         let body = check_fun_lit ctx params body_ty body (body_vty' var) in

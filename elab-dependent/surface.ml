@@ -134,11 +134,6 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let type_mismatch (ctx : context) ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
-      (pp ctx expected)
-      (pp ctx found)
-
 
   (** {2 Bidirectional type checking} *)
 
@@ -187,9 +182,10 @@ end = struct
         let tm_span = tm.span in
         let tm, found_vty = infer ctx tm in
         if is_convertible ctx found_vty vty then tm else
-          error tm_span (type_mismatch ctx
-            ~expected:(quote ctx vty)
-            ~found:(quote ctx found_vty))
+          error tm_span
+            (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
+              (pp ctx (quote ctx vty))
+              (pp ctx (quote ctx found_vty)))
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
