@@ -396,7 +396,7 @@ Redundant variant pattern
   > EOF
   fun (x : [some : Int]) => match x with | [some := x] => #int-add x 1 end :
     [some : Int] -> Int
-  warning: redundant variant pattern `some`
+  warning: redundant case pattern
     ┌─ <stdin>:4:5
     │
   4 │   | [some := x] => x
@@ -410,7 +410,7 @@ Unexpected variant pattern
   >   | [a := x] => x + 1
   >   end
   > EOF
-  error: unexpected variant pattern `a`
+  error: unexpected pattern
     ┌─ <stdin>:3:5
     │
   3 │   | [a := x] => x + 1
@@ -423,11 +423,13 @@ Missing variant patterns
   > fun (x : [a : Int | b : Bool]) =>
   >   match x with end
   > EOF
-  error: non-exhaustive match, missing `a`, `b`
+  error: non-exhaustive match
     ┌─ <stdin>:2:8
     │
   2 │   match x with end
     │         ^
+    = missing case pattern `a`
+    = missing case pattern `b`
   
   [1]
 
@@ -438,7 +440,7 @@ Unexpected pattern match
     │
   1 │ match true with [a := x] => x end
     │       ^^^^
-    = expected: variant
+    = expected: [a : ?1]
          found: Bool
   
   [1]

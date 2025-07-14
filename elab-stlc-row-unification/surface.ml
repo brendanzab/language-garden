@@ -461,7 +461,7 @@ end = struct
           List.fold_left
             (fun clauses ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then begin
-                warning ctx label.span (Format.asprintf "redundant variant pattern `%s`" label.data);
+                warning ctx label.span "redundant case pattern";
                 clauses
               end else
                 match Label_map.find_opt label.data row with
@@ -469,7 +469,7 @@ end = struct
                     let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
                     Label_map.add label.data (name.data, body_tm) clauses
                 | None ->
-                    error ctx label.span (Format.asprintf "unexpected variant pattern `%s`" label.data))
+                    error ctx label.span "unexpected pattern")
             Label_map.empty
             clauses
         in
@@ -483,20 +483,17 @@ end = struct
           (* Return the clauses *)
           Variant_elim (head, clauses)
         else
-          error ctx head_span
-            (Format.asprintf "non-exhaustive match, missing %a"
-              (Format.pp_print_list
-                ~pp_sep:(fun ppf () -> Format.fprintf ppf ", ")
-                (fun ppf (label, _) -> Format.fprintf ppf "`%s`" label))
-              missing_clauses)
+          error ctx head_span "non-exhaustive match"
+            ~details:(missing_clauses |> List.map (fun (label, _) ->
+              Format.sprintf "missing case pattern `%s`" label))
 
-    | Variant_type (Row_meta_var _) | Meta_var _ as head_ty ->
+    | head_ty ->
         (* Build up the clauses and the row from the clauses *)
         let clauses, row =
           List.fold_left
             (fun (clauses, row) ({ data = Variant_lit (label, name); _ }, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then begin
-                warning ctx label.span (Format.asprintf "redundant variant pattern `%s`" label.data);
+                warning ctx label.span "redundant case pattern";
                 clauses, row
               end else
                 let param_ty = fresh_meta ctx name.span "pattern binder" in
@@ -510,13 +507,6 @@ end = struct
         unify_tys ctx head_span (Variant_type (Row_entries row)) head_ty;
         (* Return the clauses *)
         Variant_elim (head, clauses)
-
-    | head_ty ->
-        error ctx head_span "mismatched types"
-          ~details:[
-            Format.asprintf "@[<v>@[expected: variant@]@ @[   found: %t@]@]"
-              (Core.pp_ty head_ty);
-          ]
 
 
   (** {2 Running elaboration} *)
