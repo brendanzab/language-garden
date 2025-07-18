@@ -1,9 +1,9 @@
 (mdx
-  (package wip-compile-closure-conv)
-  (deps %{bin:closure-conv}))
+ (package wip-compile-closure-conv)
+ (deps %{bin:closure-conv}))
 
 (env
-  (dev
-    ; see `ocamlc -warn-help` for information on warnings
-    (flags (:standard -w -unused-constructor
-                      -w -unused-value-declaration))))
+ (dev
+  ; see `ocamlc -warn-help` for information on warnings
+  (flags (:standard -w -unused-constructor
+                    -w -unused-value-declaration))))

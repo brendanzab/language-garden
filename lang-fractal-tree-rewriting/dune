@@ -1,22 +1,22 @@
 (include_subdirs qualified)
 
 (alias
-  (name lang-fractal-tree-rewriting)
-  (package lang-fractal-tree-rewriting))
+ (name lang-fractal-tree-rewriting)
+ (package lang-fractal-tree-rewriting))
 
 (alias
-  (name all)
-  (package lang-fractal-tree-rewriting)
-  (deps
-    (glob_files *.html)
-    index.bc.js))
+ (name all)
+ (package lang-fractal-tree-rewriting)
+ (deps
+  (glob_files *.html)
+  index.bc.js))
 
 (executable
-  (name index)
-  (modes js)
-  (libraries
-    lang-declarative-graphics.core
-    lang-declarative-graphics.jsoo
-    js_of_ocaml)
-  (preprocess
-    (pps js_of_ocaml-ppx)))
+ (name index)
+ (modes js)
+ (libraries
+  lang-declarative-graphics.core
+  lang-declarative-graphics.jsoo
+  js_of_ocaml)
+ (preprocess
+  (pps js_of_ocaml-ppx)))

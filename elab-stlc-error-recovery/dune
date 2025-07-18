@@ -1,21 +1,21 @@
 (executable
-  (name main)
-  (public_name stlc-error-recovery)
-  (package elab-stlc-error-recovery)
-  (preprocess
-    (pps sedlex.ppx))
-  (libraries
-    cmdliner
-    menhirLib))
+ (name main)
+ (public_name stlc-error-recovery)
+ (package elab-stlc-error-recovery)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries
+  cmdliner
+  menhirLib))
 
 (menhir
-  (modules parser)
-  (flags --explain --strict))
+ (modules parser)
+ (flags --explain --strict))
 
 (mdx
-  (package elab-stlc-error-recovery)
-  (deps %{bin:stlc-error-recovery}))
+ (package elab-stlc-error-recovery)
+ (deps %{bin:stlc-error-recovery}))
 
 (cram
-  (package elab-stlc-error-recovery)
-  (deps %{bin:stlc-error-recovery}))
+ (package elab-stlc-error-recovery)
+ (deps %{bin:stlc-error-recovery}))

@@ -1,4 +1,4 @@
 (executable
-  (name main)
-  (public_name stratify)
-  (package wip-compile-stratify))
+ (name main)
+ (public_name stratify)
+ (package wip-compile-stratify))

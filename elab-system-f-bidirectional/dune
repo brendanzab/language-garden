@@ -1,21 +1,21 @@
 (executable
-  (name main)
-  (public_name system-f-bidirectional)
-  (package elab-system-f-bidirectional)
-  (preprocess
-    (pps sedlex.ppx))
-  (libraries
-    cmdliner
-    menhirLib))
+ (name main)
+ (public_name system-f-bidirectional)
+ (package elab-system-f-bidirectional)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries
+  cmdliner
+  menhirLib))
 
 (menhir
-  (modules parser)
-  (flags --explain --strict))
+ (modules parser)
+ (flags --explain --strict))
 
 (mdx
-  (package elab-system-f-bidirectional)
-  (deps %{bin:system-f-bidirectional}))
+ (package elab-system-f-bidirectional)
+ (deps %{bin:system-f-bidirectional}))
 
 (cram
-  (package elab-system-f-bidirectional)
-  (deps %{bin:system-f-bidirectional}))
+ (package elab-system-f-bidirectional)
+ (deps %{bin:system-f-bidirectional}))

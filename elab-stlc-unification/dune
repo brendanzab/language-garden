@@ -1,21 +1,21 @@
 (executable
-  (name main)
-  (public_name stlc-unification)
-  (package elab-stlc-unification)
-  (preprocess
-    (pps sedlex.ppx))
-  (libraries
-    cmdliner
-    menhirLib))
+ (name main)
+ (public_name stlc-unification)
+ (package elab-stlc-unification)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries
+  cmdliner
+  menhirLib))
 
 (menhir
-  (modules parser)
-  (flags --explain --strict))
+ (modules parser)
+ (flags --explain --strict))
 
 (mdx
-  (package elab-stlc-unification)
-  (deps %{bin:stlc-unification}))
+ (package elab-stlc-unification)
+ (deps %{bin:stlc-unification}))
 
 (cram
-  (package elab-stlc-unification)
-  (deps %{bin:stlc-unification}))
+ (package elab-stlc-unification)
+ (deps %{bin:stlc-unification}))

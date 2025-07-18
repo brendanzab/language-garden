@@ -1,9 +1,9 @@
 (library
-  (name elab_builtins)
-  (public_name wip-elab-builtins))
+ (name elab_builtins)
+ (public_name wip-elab-builtins))
 
 (menhir
-  (modules surface_parser)
-  (flags --explain --strict))
+ (modules surface_parser)
+ (flags --explain --strict))
 
 (ocamllex surface_lexer)

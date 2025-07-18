@@ -1,9 +1,9 @@
 (executable
-  (name main)
-  (public_name closure-conv)
-  (package wip-compile-closure-conv)
-  (libraries
-    wip-compile-closure-conv
-    cmdliner
-    menhirLib
-    sedlex))
+ (name main)
+ (public_name closure-conv)
+ (package wip-compile-closure-conv)
+ (libraries
+  wip-compile-closure-conv
+  cmdliner
+  menhirLib
+  sedlex))

@@ -1,5 +1,5 @@
 (cram
-  (package lang-datalog)
-  (deps
-    %{bin:datalog}
-    (glob_files ./*.datalog)))
+ (package lang-datalog)
+ (deps
+  %{bin:datalog}
+  (glob_files ./*.datalog)))

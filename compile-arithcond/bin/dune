@@ -1,9 +1,9 @@
 (executable
-  (name main)
-  (public_name arithcond)
-  (package compile-arithcond)
-  (libraries
-    compile-arithcond
-    cmdliner
-    menhirLib
-    sedlex))
+ (name main)
+ (public_name arithcond)
+ (package compile-arithcond)
+ (libraries
+  compile-arithcond
+  cmdliner
+  menhirLib
+  sedlex))

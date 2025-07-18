@@ -1,16 +1,16 @@
 (executable
-  (name main)
-  (public_name datalog)
-  (package lang-datalog)
-  (preprocess
-    (pps sedlex.ppx))
-  (libraries
-    menhirLib))
+ (name main)
+ (public_name datalog)
+ (package lang-datalog)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries
+  menhirLib))
 
 (menhir
-  (modules parser)
-  (flags --explain --strict))
+ (modules parser)
+ (flags --explain --strict))
 
 (mdx
-  (package lang-datalog)
-  (deps %{bin:datalog}))
+ (package lang-datalog)
+ (deps %{bin:datalog}))

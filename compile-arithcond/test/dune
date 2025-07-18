@@ -1,15 +1,15 @@
 (cram
-  (package compile-arithcond)
-  (deps %{bin:arithcond}))
+ (package compile-arithcond)
+ (deps %{bin:arithcond}))
 
 (tests
-  (names properties)
-  (package compile-arithcond)
-  (libraries
-    compile-arithcond
-    alcotest
-    menhirLib
-    qcheck
-    qcheck-core
-    qcheck-alcotest
-    sedlex))
+ (names properties)
+ (package compile-arithcond)
+ (libraries
+  compile-arithcond
+  alcotest
+  menhirLib
+  qcheck
+  qcheck-core
+  qcheck-alcotest
+  sedlex))

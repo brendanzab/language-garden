@@ -1,5 +1,5 @@
 (cram
-  (package elab-stlc-abstract)
-  (deps
-    %{bin:stlc-abstract}
-    (glob_files ./*.txt)))
+ (package elab-stlc-abstract)
+ (deps
+  %{bin:stlc-abstract}
+  (glob_files ./*.txt)))

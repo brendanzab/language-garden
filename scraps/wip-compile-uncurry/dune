@@ -1,11 +1,11 @@
 (executable
-  (name main)
-  (public_name uncurry)
-  (package wip-compile-uncurry))
+ (name main)
+ (public_name uncurry)
+ (package wip-compile-uncurry))
 
 (env
-  (dev
-    ; see `ocamlc -warn-help` for information on warnings
-    (flags (:standard -w -unused-constructor
-                      -w -unused-type-declaration
-                      -w -unused-value-declaration))))
+ (dev
+  ; see `ocamlc -warn-help` for information on warnings
+  (flags (:standard -w -unused-constructor
+                    -w -unused-type-declaration
+                    -w -unused-value-declaration))))

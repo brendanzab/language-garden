@@ -1,9 +1,9 @@
 (executable
-  (name main)
-  (public_name shader-graphics)
-  (package lang-shader-graphics)
-  (libraries
-    lang-shader-graphics
-    lang-shader-graphics.examples
+ (name main)
+ (public_name shader-graphics)
+ (package lang-shader-graphics)
+ (libraries
+  lang-shader-graphics
+  lang-shader-graphics.examples
 
-    cmdliner))
+  cmdliner))

@@ -1,9 +1,9 @@
 (executable
-  (name main)
-  (public_name arith)
-  (package compile-arith)
-  (libraries
-    compile-arith
-    cmdliner
-    menhirLib
-    sedlex))
+ (name main)
+ (public_name arith)
+ (package compile-arith)
+ (libraries
+  compile-arith
+  cmdliner
+  menhirLib
+  sedlex))

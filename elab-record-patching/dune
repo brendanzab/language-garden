@@ -1,14 +1,14 @@
 (executable
-  (name main)
-  (public_name record-patching)
-  (package elab-record-patching)
-  (preprocess
-    (pps sedlex.ppx))
-  (libraries
-    cmdliner
-    menhirLib
-    sedlex))
+ (name main)
+ (public_name record-patching)
+ (package elab-record-patching)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries
+  cmdliner
+  menhirLib
+  sedlex))
 
 (menhir
-  (modules parser)
-  (flags --explain --strict))
+ (modules parser)
+ (flags --explain --strict))

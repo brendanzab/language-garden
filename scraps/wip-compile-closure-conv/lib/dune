@@ -1,8 +1,8 @@
 (library
-  (name closure_conv)
-  (public_name wip-compile-closure-conv)
-  (preprocess
-    (pps sedlex.ppx)))
+ (name closure_conv)
+ (public_name wip-compile-closure-conv)
+ (preprocess
+  (pps sedlex.ppx)))
 
 (menhir
-  (modules lang__fun__parser))
+ (modules lang__fun__parser))

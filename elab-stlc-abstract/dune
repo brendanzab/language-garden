@@ -1,12 +1,12 @@
 (executable
-  (name main)
-  (public_name stlc-abstract)
-  (package elab-stlc-abstract)
-  (preprocess
-    (pps sedlex.ppx))
-  (libraries
-    menhirLib))
+ (name main)
+ (public_name stlc-abstract)
+ (package elab-stlc-abstract)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries
+  menhirLib))
 
 (menhir
-  (modules parser)
-  (flags --explain --strict))
+ (modules parser)
+ (flags --explain --strict))

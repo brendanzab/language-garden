@@ -1,12 +1,12 @@
 (include_subdirs qualified)
 
 (library
-  (name shader_graphics)
-  (public_name lang-shader-graphics))
+ (name shader_graphics)
+ (public_name lang-shader-graphics))
 
 (env
-  (dev
-    ; see `ocamlc -warn-help` for information on warnings
-    (flags (:standard -w -unused-constructor
-                      -w -unused-type-declaration
-                      -w -unused-value-declaration))))
+ (dev
+  ; see `ocamlc -warn-help` for information on warnings
+  (flags (:standard -w -unused-constructor
+                    -w -unused-type-declaration
+                    -w -unused-value-declaration))))
