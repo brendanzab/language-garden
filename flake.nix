@@ -17,12 +17,6 @@
     # Externally extensible flake systems. See <https://github.com/nix-systems/nix-systems>.
     systems.url = "github:nix-systems/default";
 
-    # Follow the `systems` input in flakes that still use `flake-utils`.
-    flake-utils = {
-      url = "github:numtide/flake-utils";
-      inputs.systems.follows = "systems";
-    };
-
     # Main package repository for opam, the package manager of OCaml.
     opam-repository = {
       url = "github:ocaml/opam-repository";
@@ -32,9 +26,10 @@
     # Create nix derivations from opam package definitions.
     opam-nix = {
       url = "github:tweag/opam-nix";
-      inputs.flake-utils.follows = "flake-utils";
+      inputs.flake-utils.inputs.systems.follows = "systems";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.opam-repository.follows = "opam-repository";
+      inputs.opam2json.inputs.systems.follows = "systems";
     };
   };
 
