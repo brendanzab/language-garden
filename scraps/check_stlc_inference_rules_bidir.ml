@@ -1,6 +1,9 @@
 (** A demonstration of translating bidirectional inference rules for the STLC
     into a type inference algorithm.
 
+    For more information on this technique, see David Christiansen’s excellent
+    {{: https://davidchristiansen.dk/tutorials/bidirectional.pdf} tutorial}.
+
     Extends [check_stlc_inference_rules.ml].
 *)
 
@@ -19,6 +22,7 @@
     | e e
     | true
     | false
+    | if e then e else e
 
   Γ ::=
     | ∅
@@ -26,20 +30,21 @@
 *)
 
 type ty (* t *) =
-  | Bool                          (* Bool *)
-  | Fun of ty * ty                (* t -> t *)
+  | Bool                                (* Bool *)
+  | Fun of ty * ty                      (* t -> t *)
 
 type expr (* e *) =
-  | Var of string                 (* x *)
-  | Ann of expr * ty              (* e : t *)
-  | Lam of string * expr          (* \x. e *)
-  | App of expr * expr            (* e e *)
-  | True                          (* true *)
-  | False                         (* false *)
+  | Var of string                       (* x *)
+  | Ann of expr * ty                    (* e : t *)
+  | Lam of string * expr                (* \x. e *)
+  | App of expr * expr                  (* e e *)
+  | True                                (* true *)
+  | False                               (* false *)
+  | IfThenElse of expr * expr * expr    (* if e then e else e *)
 
 type ctx (* Γ *) =
-  | Empty                         (* ∅ *)
-  | Extend of ctx * string * ty   (* Γ, x : t *)
+  | Empty                               (* ∅ *)
+  | Extend of ctx * string * ty         (* Γ, x : t *)
 
 (*
   ┌───────────┐
@@ -74,6 +79,10 @@ let rec lookup (ctx : ctx) (x : string) =
   ──────────────────────── (C-Conv)
           Γ ⊢ e ⇐ t
 
+    Γ ⊢ e1 ⇐ Bool    Γ ⊢ e2 ⇐ t    Γ ⊢ e3 ⇐ t
+  ───────────────────────────────────────────── (C-IfThenElse)
+          Γ ⊢ if e1 then e2 else e3 ⇐ t
+
   ┌───────────┐
   │ Γ ⊢ e ⇒ t │
   └───────────┘
@@ -104,6 +113,13 @@ let rec check (ctx : ctx) (e : expr) (t : ty) : unit =
   (* C-Lam *)
   | Lam (x, e), Fun (t1, t2) ->
       check (Extend (ctx, x, t1)) e t2
+
+  (* C-IfThenElse *)
+  | IfThenElse (e1, e2, e3), t ->
+      check ctx e1 Bool;
+      check ctx e2 t;
+      check ctx e3 t;
+
   (* C-Conv *)
   | e, t ->
       if infer ctx e = t then () else
@@ -119,9 +135,6 @@ and infer (ctx : ctx) (e : expr) : ty =
   | Ann (e, t) ->
       check ctx e t; t
 
-  | Lam (_, _) ->
-      failwith "ambiguous"
-
   (* I-App *)
   | App (e1, e2) ->
       begin match infer ctx e1 with
@@ -131,3 +144,6 @@ and infer (ctx : ctx) (e : expr) : ty =
 
   (* I-True, I-False *)
   | True | False -> Bool
+
+  | Lam _ | IfThenElse _ ->
+      failwith "ambiguous"

@@ -18,6 +18,7 @@
     | e e
     | true
     | false
+    | if e then e else e
 
   Γ ::=
     | ∅
@@ -25,19 +26,20 @@
 *)
 
 type ty (* t *) =
-  | Bool                          (* Bool *)
-  | Fun of ty * ty                (* t -> t *)
+  | Bool                                (* Bool *)
+  | Fun of ty * ty                      (* t -> t *)
 
 type expr (* e *) =
-  | Var of string                 (* x *)
-  | Lam of string * ty * expr     (* \(x : t). e *)
-  | App of expr * expr            (* e e *)
-  | True                          (* true *)
-  | False                         (* false *)
+  | Var of string                       (* x *)
+  | Lam of string * ty * expr           (* \(x : t). e *)
+  | App of expr * expr                  (* e e *)
+  | True                                (* true *)
+  | False                               (* false *)
+  | IfThenElse of expr * expr * expr    (* if e then e else e *)
 
 type ctx (* Γ *) =
-  | Empty                         (* ∅ *)
-  | Extend of ctx * string * ty   (* Γ, x : t *)
+  | Empty                               (* ∅ *)
+  | Extend of ctx * string * ty         (* Γ, x : t *)
 
 (*
   ┌───────────┐
@@ -81,6 +83,10 @@ let rec lookup (ctx : ctx) (x : string) : ty =
 
   ─────────────────── (T-False)
     Γ ⊢ false : Bool
+
+    Γ ⊢ e1 : Bool    Γ ⊢ e2 : t    Γ ⊢ e3 : t
+  ───────────────────────────────────────────── (T-IfThenElse)
+          Γ ⊢ if e1 then e2 else e3 : t
 *)
 
 (* Γ ⊢ e : t *)
@@ -107,3 +113,11 @@ let rec infer (ctx : ctx) (e : expr) : ty =
 
   (* T-True, T-False *)
   | True | False -> Bool
+
+  (* T-IfThenElse *)
+  | IfThenElse (e1, e2, e3) ->
+      let t1 = infer ctx e1 in
+      let t2 = infer ctx e2 in
+      let t3 = infer ctx e3 in
+      if t1 = Bool && t2 = t3 then t2 else
+        failwith "type mismatch"
