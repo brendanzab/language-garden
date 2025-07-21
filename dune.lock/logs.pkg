@@ -1,0 +1,35 @@
+(version 0.9.0)
+
+(build
+ (run
+  ocaml
+  pkg/pkg.ml
+  build
+  --dev-pkg
+  %{pkg-self:dev}
+  --with-js_of_ocaml-compiler
+  %{pkg:js_of_ocaml-compiler:installed}
+  --with-fmt
+  %{pkg:fmt:installed}
+  --with-cmdliner
+  %{pkg:cmdliner:installed}
+  --with-lwt
+  %{pkg:lwt:installed}
+  --with-base-threads
+  %{pkg:base-threads:installed}))
+
+(depends
+ ocaml
+ ocamlfind
+ ocamlbuild
+ topkg
+ cmdliner
+ js_of_ocaml-compiler
+ fmt
+ base-threads)
+
+(source
+ (fetch
+  (url https://erratique.ch/software/logs/releases/logs-0.9.0.tbz)
+  (checksum
+   sha512=b75fb28e83f33461b06b5c9b60972c4a9a9a1599d637b4a0c7b1e86a87f34fe5361e817cb31f42ad7e7cbb822473b28fab9f58a02870eb189ebe88dae8e045ff)))

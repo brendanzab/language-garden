@@ -1,0 +1,11 @@
+(version 0.26)
+
+(build
+ (run dune build -p %{pkg-self:name} -j %{jobs}))
+
+(depends dune base-unix qcheck-core alcotest ocaml)
+
+(source
+ (fetch
+  (url https://github.com/c-cube/qcheck/archive/v0.26.tar.gz)
+  (checksum md5=3eba3b3b47ccfa48afd1ce7dbdd463f7)))

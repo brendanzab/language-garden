@@ -2,3 +2,4 @@
 # Raku! For more information see https://github.com/github/linguist/issues/1569
 *.t linguist-language=Cram
 *.pl linguist-language=Prolog
+dune.lock/* linguist-generated
