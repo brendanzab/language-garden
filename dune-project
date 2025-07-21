@@ -189,9 +189,9 @@
  (allow_empty)
  (depends
   lang-declarative-graphics
-  (js_of_ocaml-compiler (>= "6.0.1"))
-  (js_of_ocaml (>= "6.0.1"))
-  (js_of_ocaml-ppx (>= "6.0.1"))))
+  (js_of_ocaml-compiler (and (>= "6.0.1") (< "6.1.0")))
+  (js_of_ocaml (and (>= "6.0.1") (< "6.1.0")))
+  (js_of_ocaml-ppx (and (>= "6.0.1") (< "6.1.0")))))
 
 (package
  (name lang-lc-interpreters)
