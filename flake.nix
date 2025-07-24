@@ -77,11 +77,6 @@
               pkgs.netpbm
             ];
           });
-          utop = prev.utop.overrideAttrs (previousAttrs: {
-            # Fix for "unpacker produced multiple directories"
-            # See: https://stackoverflow.com/a/77161896
-            sourceRoot = ".";
-          });
         });
 
       buildOpamProject = system: options:
