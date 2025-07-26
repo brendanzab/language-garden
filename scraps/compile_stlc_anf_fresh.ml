@@ -1,5 +1,13 @@
 (** Compiling de Bruijn indexed lambda terms to freshly named lambda terms in
-    A-normal form *)
+    A-normal form.
+
+    - {{: https://en.wikipedia.org/wiki/A-normal_form}
+      A-Normal Form} on Wikipedia
+    - {{: https://doi.org/10.1145/173262.155113}
+      The essence of compiling with continuations} by Flanagan, et. al.
+    - {{: https://matt.might.net/articles/a-normalization/}
+      A-Normalization: Why and How (with code)} by Matt Might
+*)
 
 [@@@warning "-unused-value-declaration"]
 
@@ -142,7 +150,9 @@ end = struct
 
   let ( let@ ) : type a. a k -> a k = ( @@ )
 
-  (** Translate a term to A-normal form *)
+  (** Translate a term to A-normal form. The [src_env] parameter records the
+      bindings in the source terms we have passed over, mapping them to
+      variables in the target language. *)
   let rec translate (src_env : Anf.Id.t list) (src_tm : Core.tm) : Anf.comp_tm k k =
     fun k ->
       match src_tm with
@@ -204,4 +214,5 @@ end = struct
 end
 
 
+(* TODO: Closure conversion *)
 (* TODO: Tests *)

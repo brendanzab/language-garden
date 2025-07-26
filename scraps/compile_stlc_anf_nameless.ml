@@ -1,5 +1,13 @@
 (** Compiling de Bruijn indexed lambda terms to de Bruijn indexed terms in
-    A-normal form *)
+    A-normal form.
+
+    - {{: https://en.wikipedia.org/wiki/A-normal_form}
+      A-Normal Form} on Wikipedia
+    - {{: https://doi.org/10.1145/173262.155113}
+      The essence of compiling with continuations} by Flanagan, et. al.
+    - {{: https://matt.might.net/articles/a-normalization/}
+      A-Normalization: Why and How (with code)} by Matt Might
+*)
 
 [@@@warning "-unused-value-declaration"]
 
@@ -207,7 +215,9 @@ end = struct
 
   let ( let@ ) : type a. a k -> a k = ( @@ )
 
-  (** Translate a term to A-normal form *)
+  (** Translate a term to A-normal form. The [src_env] parameter records the
+      bindings in the source terms we have passed over, mapping them to
+      variables in the target language. *)
   let rec translate (src_env : Anf.atom_tm B.t list) (src_tm : Core.tm) : Anf.comp_tm B.t k k =
     fun k ->
       match src_tm with
@@ -238,6 +248,7 @@ end = struct
           let@ tgt_args = translate_defs src_env "arg" src_args in
           k (B.prim_app name tgt_args)
 
+  (** Translate a term to A-normal form, binding it to an intermediate definition. *)
   and translate_def (src_env : Anf.atom_tm B.t list) (name : string) (src_tm : Core.tm) : Anf.atom_tm B.t k k =
     fun k ->
       let@ tgt_tm = translate src_env src_tm in
@@ -250,6 +261,7 @@ end = struct
               B.let' (name, tgt_tm) k
       *)
 
+  (** Translate a sequence of terms, binding them to intermediate definitions. *)
   and translate_defs (src_env : Anf.atom_tm B.t list) (name : string) (src_tms : Core.tm list) : Anf.atom_tm B.t list k k =
     fun k ->
       match src_tms with
@@ -265,4 +277,5 @@ end = struct
 end
 
 
+(* TODO: Closure conversion *)
 (* TODO: Tests *)
