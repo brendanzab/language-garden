@@ -18,6 +18,7 @@ module Core = struct
     | Fun_lit of string * tm
     | Fun_app of tm * tm
     | Int_lit of int
+    | Prim_app of string * tm list
 
   (* TODO: Pretty printing *)
 
@@ -31,6 +32,7 @@ module Core = struct
     val fun_lit : string -> (tm t -> tm t) -> tm t
     val fun_app : tm t -> tm t -> tm t
     val int_lit : int -> tm t
+    val prim_app : string -> tm t list -> tm t
 
   end = struct
 
@@ -60,6 +62,10 @@ module Core = struct
     let int_lit (i : int) : tm t =
       fun ~size:_ ->
         Int_lit i
+
+    let prim_app (name : string) (args : tm t list) : tm t =
+      fun ~size ->
+        Prim_app (name, args |> List.map (fun arg -> arg ~size))
 
   end
 
@@ -91,6 +97,7 @@ module Anf = struct
 
   and comp_tm =
     | Fun_app of atomic_tm * atomic_tm
+    | Prim_app of string * atomic_tm list
     | Atom of atomic_tm
 
   and atomic_tm =
@@ -116,6 +123,7 @@ end = struct
 
   let ( let@ ) : type a. a k -> a k = ( @@ )
 
+  (** Translate a term to A-normal form *)
   let rec translate (src_env : Anf.Id.t list) (src_tm : Core.tm) : Anf.comp_tm k k =
     fun k ->
       match src_tm with
@@ -136,7 +144,11 @@ end = struct
           k (Anf.Fun_app (tgt_fn, tgt_arg))
       | Core.Int_lit i ->
           k (Anf.Atom (Int_lit i))
+      | Core.Prim_app (name, src_args) ->
+          let@ tgt_args = translate_defs src_env "arg" src_args in
+          k (Anf.Prim_app (name, tgt_args))
 
+  (** Translate a term to A-normal form, binding it to an intermediate definition if needed. *)
   and translate_def (src_env : Anf.Id.t list) (name : string) (src_tm : Core.tm) : Anf.atomic_tm k k =
     fun k ->
       let@ tgt_tm = translate src_env src_tm in
@@ -145,6 +157,16 @@ end = struct
       | tgt_tm ->
           let id = Anf.Id.fresh () in
           Anf.Let (name, id, tgt_tm, k (Anf.Var id))
+
+  (** Translate a sequence of terms, binding them to intermediate definitions if needed. *)
+  and translate_defs (src_env : Anf.Id.t list) (name : string) (src_tms : Core.tm list) : Anf.atomic_tm list k k =
+    fun k ->
+      match src_tms with
+      | [] -> k []
+      | src_tm :: src_tms ->
+          let@ tm = translate_def src_env name src_tm in
+          let@ tms = translate_defs src_env name src_tms in
+          k (tm :: tms)
 
   let translate (src_tm : Core.tm) : Anf.tm =
     translate [] src_tm comp_k

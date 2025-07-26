@@ -18,6 +18,7 @@ module Core = struct
     | Fun_lit of string * tm
     | Fun_app of tm * tm
     | Int_lit of int
+    | Prim_app of string * tm list
 
   (* TODO: Pretty printing *)
 
@@ -31,6 +32,7 @@ module Core = struct
     val fun_lit : string -> (tm t -> tm t) -> tm t
     val fun_app : tm t -> tm t -> tm t
     val int_lit : int -> tm t
+    val prim_app : string -> tm t list -> tm t
 
   end = struct
 
@@ -61,6 +63,10 @@ module Core = struct
       fun ~size:_ ->
         Int_lit i
 
+    let prim_app (name : string) (args : tm t list) : tm t =
+      fun ~size ->
+        Prim_app (name, args |> List.map (fun arg -> arg ~size))
+
   end
 
 end
@@ -81,6 +87,7 @@ module Anf = struct
 
   and comp_tm =
     | Fun_app of atomic_tm * atomic_tm
+    | Prim_app of string * atomic_tm list
     | Atom of atomic_tm
 
   and atomic_tm =
@@ -100,6 +107,7 @@ module Anf = struct
     val fun_lit : string -> (atomic_tm t -> tm t) -> atomic_tm t
     val fun_app : atomic_tm t -> atomic_tm t -> comp_tm t
     val int_lit : int -> atomic_tm t
+    val prim_app : string -> atomic_tm t list -> comp_tm t
 
     val comp : comp_tm t -> tm t
     val atom : atomic_tm t -> comp_tm t
@@ -133,6 +141,10 @@ module Anf = struct
       fun ~size:_ ->
         Int_lit i
 
+    let prim_app (name : string) (args : atomic_tm t list) : comp_tm t =
+      fun ~size ->
+        Prim_app (name, args |> List.map (fun arg -> arg ~size))
+
     let comp (tm : comp_tm t) : tm t =
       fun ~size -> Comp (tm ~size)
 
@@ -157,6 +169,7 @@ end = struct
 
   let ( let@ ) : type a. a k -> a k = ( @@ )
 
+  (** Translate a term to A-normal form *)
   let rec translate (src_env : Anf.atomic_tm Anf.Build.t list) (src_tm : Core.tm) : Anf.comp_tm Anf.Build.t k k =
     fun k ->
       match src_tm with
@@ -181,6 +194,17 @@ end = struct
               k Anf.Build.(fun_app tgt_fn tgt_arg)
       | Core.Int_lit i ->
           k Anf.Build.(atom (int_lit i))
+      | Core.Prim_app (name, src_args) ->
+          (* FIXME: Use [translate_defs] to avoid intermediate bindings *)
+          let rec go src_args tgt_args =
+            match src_args with
+            | [] -> k Anf.Build.(prim_app name (List.rev tgt_args))
+            | src_arg :: src_args ->
+                let@ tgt_arg = translate src_env src_arg in
+                Anf.Build.let' ("arg", tgt_arg) @@ fun tgt_arg ->
+                  go src_args (tgt_arg :: tgt_args)
+          in
+          go src_args []
 
   (*
   and translate_def (src_env : Anf.atomic_tm Anf.Build.t list) (name : string) (src_tm : Core.tm) : Anf.atomic_tm Anf.Build.t k k =
