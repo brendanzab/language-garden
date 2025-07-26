@@ -142,7 +142,9 @@ end = struct
 
   let ( let@ ) : type a. a k -> a k = ( @@ )
 
-  (** Translate a term to A-normal form *)
+  (** Translate a term to A-normal form. The [src_env] parameter records the
+      bindings in the source terms we have passed over, mapping them to
+      variables in the target language. *)
   let rec translate (src_env : Anf.Id.t list) (src_tm : Core.tm) : Anf.comp_tm k k =
     fun k ->
       match src_tm with
