@@ -1,0 +1,155 @@
+(** Compiling de Bruijn indexed lambda terms to freshly named lambda terms in
+    A-normal form *)
+
+[@@@warning "-unused-value-declaration"]
+
+(** De Bruijn indexed lambda terms *)
+module Core = struct
+
+  (** De Bruijn index*)
+  type index = int
+
+  (** De Bruijn level*)
+  type level = int
+
+  type tm =
+    | Var of index
+    | Let of string * tm * tm
+    | Fun_lit of string * tm
+    | Fun_app of tm * tm
+    | Int_lit of int
+
+  (* TODO: Pretty printing *)
+
+  module Build : sig
+
+    type 'a t
+
+    val run : 'a t -> 'a
+
+    val let' : string * tm t -> (tm t -> tm t) -> tm t
+    val fun_lit : string -> (tm t -> tm t) -> tm t
+    val fun_app : tm t -> tm t -> tm t
+    val int_lit : int -> tm t
+
+  end = struct
+
+    type 'a t = size:level -> 'a
+
+    let run (type a) (x : a t) : a =
+      x ~size:0
+
+    let var (level : level) : tm t =
+      fun ~size ->
+        Var (size - level - 1)
+
+    let let' (name, def) (body : tm t -> tm t) : tm t =
+      fun ~size ->
+        Let (name, def ~size,
+          body (var size) ~size:(size + 1))
+
+    let fun_lit name (body : tm t -> tm t) : tm t =
+      fun ~size ->
+        Fun_lit (name,
+          body (var size) ~size:(size + 1))
+
+    let fun_app (fn : tm t) (arg : tm t) : tm t =
+      fun ~size ->
+        Fun_app (fn ~size, arg ~size)
+
+    let int_lit (i : int) : tm t =
+      fun ~size:_ ->
+        Int_lit i
+
+  end
+
+end
+
+
+(** Freshly named lambda terms in A-normal form *)
+module Anf = struct
+
+  module Id : sig
+    type t
+    val fresh : unit -> t
+  end = struct
+
+    type t = int
+
+    let next_id = ref 0
+
+    let fresh () =
+      let id = !next_id in
+      incr next_id;
+      id
+
+  end
+
+  type tm =
+    | Let of string * Id.t * comp_tm * tm
+    | Comp of comp_tm
+
+  and comp_tm =
+    | Fun_app of atomic_tm * atomic_tm
+    | Atom of atomic_tm
+
+  and atomic_tm =
+    | Var of Id.t
+    | Fun_lit of string * Id.t * tm
+    | Int_lit of int
+
+  (* TODO: Pretty printing *)
+
+end
+
+
+module Anf_conv : sig
+
+  val translate : Core.tm -> Anf.tm
+
+end = struct
+
+  type 'a k = 'a -> Anf.tm
+
+  let comp_k : Anf.comp_tm k =
+    fun tm -> Comp tm
+
+  let ( let@ ) : type a. a k -> a k = ( @@ )
+
+  let rec translate (src_env : Anf.Id.t list) (src_tm : Core.tm) : Anf.comp_tm k k =
+    fun k ->
+      match src_tm with
+      | Core.Var src_index ->
+          k (Anf.Atom (Var (List.nth src_env src_index)))
+      | Core.Let (def_name, src_def, src_body) ->
+          let def_id = Anf.Id.fresh () in
+          let@ tgt_def = translate src_env src_def in
+          let tgt_body = translate (def_id :: src_env) src_body k in
+          Anf.Let (def_name, def_id, tgt_def, tgt_body)
+      | Core.Fun_lit (param_name, src_body) ->
+          let param_id = Anf.Id.fresh () in
+          let tgt_body = translate (param_id :: src_env) src_body comp_k in
+          k (Anf.Atom (Fun_lit (param_name, param_id, tgt_body)))
+      | Core.Fun_app (src_fn, src_arg) ->
+          let@ tgt_fn = translate_def src_env "fn" src_fn in
+          let@ tgt_arg = translate_def src_env "arg" src_arg in
+          k (Anf.Fun_app (tgt_fn, tgt_arg))
+      | Core.Int_lit i ->
+          k (Anf.Atom (Int_lit i))
+
+  and translate_def (src_env : Anf.Id.t list) (name : string) (src_tm : Core.tm) : Anf.atomic_tm k k =
+    fun k ->
+      let@ tgt_tm = translate src_env src_tm in
+      match tgt_tm with
+      | Anf.Atom tm -> k tm
+      | tgt_tm ->
+          let id = Anf.Id.fresh () in
+          Anf.Let (name, id, tgt_tm, k (Anf.Var id))
+
+  let translate (src_tm : Core.tm) : Anf.tm =
+    translate [] src_tm comp_k
+
+end
+
+
+(* TODO: Tests *)

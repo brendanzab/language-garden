@@ -18,6 +18,9 @@
 (executable (name elab_stlc_gadt))
 (executable (name elab_stlc_gadt_bidir))
 
+(executable (name compile_stlc_anf_fresh))
+(executable (name compile_stlc_anf_nameless))
+
 (executable (name misc_adt_properties))
 (executable (name misc_ast_folds))
 (executable (name misc_ast_submodules))
