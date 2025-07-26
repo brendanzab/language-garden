@@ -106,16 +106,16 @@ module Anf = struct
   type tm =
     | Let_comp of string * Id.t * comp_tm * tm
     | Let_join of string * Id.t * (string * Id.t) * tm * tm
-    | Join_app of Id.t * atomic_tm
-    | Bool_elim of atomic_tm * tm * tm
+    | Join_app of Id.t * atom_tm
+    | Bool_elim of atom_tm * tm * tm
     | Comp of comp_tm
 
   and comp_tm =
-    | Fun_app of atomic_tm * atomic_tm
-    | Prim_app of string * atomic_tm list
-    | Atom of atomic_tm
+    | Fun_app of atom_tm * atom_tm
+    | Prim_app of string * atom_tm list
+    | Atom of atom_tm
 
-  and atomic_tm =
+  and atom_tm =
     | Var of Id.t
     | Fun_lit of string * Id.t * tm
     | Int_lit of int
@@ -137,7 +137,7 @@ end = struct
   let comp_k : Anf.comp_tm k =
     fun tm -> Comp tm
 
-  let join_app_k (id : Anf.Id.t) : Anf.atomic_tm k =
+  let join_app_k (id : Anf.Id.t) : Anf.atom_tm k =
     fun expr -> Join_app (id, expr)
 
   let ( let@ ) : type a. a k -> a k = ( @@ )
@@ -179,7 +179,7 @@ end = struct
           k (Anf.Prim_app (name, tgt_args))
 
   (** Translate a term to A-normal form, binding it to an intermediate definition if needed. *)
-  and translate_def (src_env : Anf.Id.t list) (name : string) (src_tm : Core.tm) : Anf.atomic_tm k k =
+  and translate_def (src_env : Anf.Id.t list) (name : string) (src_tm : Core.tm) : Anf.atom_tm k k =
     fun k ->
       let@ tgt_tm = translate src_env src_tm in
       match tgt_tm with
@@ -189,7 +189,7 @@ end = struct
           Anf.Let_comp (name, id, tgt_tm, k (Anf.Var id))
 
   (** Translate a sequence of terms, binding them to intermediate definitions if needed. *)
-  and translate_defs (src_env : Anf.Id.t list) (name : string) (src_tms : Core.tm list) : Anf.atomic_tm list k k =
+  and translate_defs (src_env : Anf.Id.t list) (name : string) (src_tms : Core.tm list) : Anf.atom_tm list k k =
     fun k ->
       match src_tms with
       | [] -> k []

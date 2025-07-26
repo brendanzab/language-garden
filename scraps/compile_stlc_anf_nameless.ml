@@ -96,16 +96,16 @@ module Anf = struct
   type tm =
     | Let_comp of string * comp_tm * tm
     | Let_join of string * string * tm * tm
-    | Join_app of index * atomic_tm
-    | Bool_elim of atomic_tm * tm * tm
+    | Join_app of index * atom_tm
+    | Bool_elim of atom_tm * tm * tm
     | Comp of comp_tm
 
   and comp_tm =
-    | Fun_app of atomic_tm * atomic_tm
-    | Prim_app of string * atomic_tm list
-    | Atom of atomic_tm
+    | Fun_app of atom_tm * atom_tm
+    | Prim_app of string * atom_tm list
+    | Atom of atom_tm
 
-  and atomic_tm =
+  and atom_tm =
     | Var of index
     | Fun_lit of string * tm
     | Int_lit of int
@@ -119,17 +119,17 @@ module Anf = struct
 
     val run : 'a t -> 'a
 
-    val let_comp : string * comp_tm t -> (atomic_tm t -> tm t) -> tm t
-    val let_join : string * string * (atomic_tm t -> tm t) -> ((atomic_tm t -> tm t) -> tm t) -> tm t
-    val fun_lit : string -> (atomic_tm t -> tm t) -> atomic_tm t
-    val fun_app : atomic_tm t -> atomic_tm t -> comp_tm t
-    val int_lit : int -> atomic_tm t
-    val bool_lit : bool -> atomic_tm t
-    val bool_elim : atomic_tm t -> tm t -> tm t -> tm t
-    val prim_app : string -> atomic_tm t list -> comp_tm t
+    val let_comp : string * comp_tm t -> (atom_tm t -> tm t) -> tm t
+    val let_join : string * string * (atom_tm t -> tm t) -> ((atom_tm t -> tm t) -> tm t) -> tm t
+    val fun_lit : string -> (atom_tm t -> tm t) -> atom_tm t
+    val fun_app : atom_tm t -> atom_tm t -> comp_tm t
+    val int_lit : int -> atom_tm t
+    val bool_lit : bool -> atom_tm t
+    val bool_elim : atom_tm t -> tm t -> tm t -> tm t
+    val prim_app : string -> atom_tm t list -> comp_tm t
 
     val comp : comp_tm t -> tm t
-    val atom : atomic_tm t -> comp_tm t
+    val atom : atom_tm t -> comp_tm t
 
   end = struct
 
@@ -138,53 +138,53 @@ module Anf = struct
     let run (type a) (x : a t) : a =
       x ~size:0
 
-    let var (level : level) : atomic_tm t =
+    let var (level : level) : atom_tm t =
       fun ~size ->
         Var (size - level - 1)
 
-    let join_app (level : level) (arg : atomic_tm t) : tm t =
+    let join_app (level : level) (arg : atom_tm t) : tm t =
       fun ~size ->
         Join_app (size - level - 1, arg ~size)
 
-    let let_comp (name, def) (body : atomic_tm t -> tm t) : tm t =
+    let let_comp (name, def) (body : atom_tm t -> tm t) : tm t =
       fun ~size ->
         Let_comp (name, def ~size,
           body (var size) ~size:(size + 1))
 
-    let let_join (name, param_name, def) (body : (atomic_tm t -> tm t) -> tm t) : tm t =
+    let let_join (name, param_name, def) (body : (atom_tm t -> tm t) -> tm t) : tm t =
       fun ~size ->
         Let_join (name, param_name, def (var size) ~size,
           body (join_app size) ~size:(size + 1))
 
-    let fun_lit name (body : atomic_tm t -> tm t) : atomic_tm t =
+    let fun_lit name (body : atom_tm t -> tm t) : atom_tm t =
       fun ~size ->
         Fun_lit (name,
           body (var size) ~size:(size + 1))
 
-    let fun_app (fn : atomic_tm t) (arg : atomic_tm t) : comp_tm t =
+    let fun_app (fn : atom_tm t) (arg : atom_tm t) : comp_tm t =
       fun ~size ->
         Fun_app (fn ~size, arg ~size)
 
-    let int_lit (i : int) : atomic_tm t =
+    let int_lit (i : int) : atom_tm t =
       fun ~size:_ ->
         Int_lit i
 
-    let bool_lit (b : bool) : atomic_tm t =
+    let bool_lit (b : bool) : atom_tm t =
       fun ~size:_ ->
         Bool_lit b
 
-    let bool_elim (cond : atomic_tm t) (true_branch : tm t) (false_branch : tm t) : tm t =
+    let bool_elim (cond : atom_tm t) (true_branch : tm t) (false_branch : tm t) : tm t =
       fun ~size ->
         Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
 
-    let prim_app (name : string) (args : atomic_tm t list) : comp_tm t =
+    let prim_app (name : string) (args : atom_tm t list) : comp_tm t =
       fun ~size ->
         Prim_app (name, args |> List.map (fun arg -> arg ~size))
 
     let comp (tm : comp_tm t) : tm t =
       fun ~size -> Comp (tm ~size)
 
-    let atom (tm : atomic_tm t) : comp_tm t =
+    let atom (tm : atom_tm t) : comp_tm t =
       fun ~size -> Atom (tm ~size)
 
   end
@@ -208,7 +208,7 @@ end = struct
   let ( let@ ) : type a. a k -> a k = ( @@ )
 
   (** Translate a term to A-normal form *)
-  let rec translate (src_env : Anf.atomic_tm B.t list) (src_tm : Core.tm) : Anf.comp_tm B.t k k =
+  let rec translate (src_env : Anf.atom_tm B.t list) (src_tm : Core.tm) : Anf.comp_tm B.t k k =
     fun k ->
       match src_tm with
       | Core.Var src_index ->
@@ -238,7 +238,7 @@ end = struct
           let@ tgt_args = translate_defs src_env "arg" src_args in
           k (B.prim_app name tgt_args)
 
-  and translate_def (src_env : Anf.atomic_tm B.t list) (name : string) (src_tm : Core.tm) : Anf.atomic_tm B.t k k =
+  and translate_def (src_env : Anf.atom_tm B.t list) (name : string) (src_tm : Core.tm) : Anf.atom_tm B.t k k =
     fun k ->
       let@ tgt_tm = translate src_env src_tm in
       B.let_comp (name, tgt_tm) k
@@ -250,7 +250,7 @@ end = struct
               B.let' (name, tgt_tm) k
       *)
 
-  and translate_defs (src_env : Anf.atomic_tm B.t list) (name : string) (src_tms : Core.tm list) : Anf.atomic_tm B.t list k k =
+  and translate_defs (src_env : Anf.atom_tm B.t list) (name : string) (src_tms : Core.tm list) : Anf.atom_tm B.t list k k =
     fun k ->
       match src_tms with
       | [] -> k []
