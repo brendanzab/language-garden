@@ -18,6 +18,8 @@ module Core = struct
     | Fun_lit of string * tm
     | Fun_app of tm * tm
     | Int_lit of int
+    | Bool_lit of bool
+    | Bool_elim of tm * tm * tm
     | Prim_app of string * tm list
 
   (* TODO: Pretty printing *)
@@ -32,6 +34,8 @@ module Core = struct
     val fun_lit : string -> (tm t -> tm t) -> tm t
     val fun_app : tm t -> tm t -> tm t
     val int_lit : int -> tm t
+    val bool_lit : bool -> tm t
+    val bool_elim : tm t -> tm t -> tm t -> tm t
     val prim_app : string -> tm t list -> tm t
 
   end = struct
@@ -63,6 +67,14 @@ module Core = struct
       fun ~size:_ ->
         Int_lit i
 
+    let bool_lit (b : bool) : tm t =
+      fun ~size:_ ->
+        Bool_lit b
+
+    let bool_elim (cond : tm t) (true_branch : tm t) (false_branch : tm t) : tm t =
+      fun ~size ->
+        Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
+
     let prim_app (name : string) (args : tm t list) : tm t =
       fun ~size ->
         Prim_app (name, args |> List.map (fun arg -> arg ~size))
@@ -92,7 +104,10 @@ module Anf = struct
   end
 
   type tm =
-    | Let of string * Id.t * comp_tm * tm
+    | Let_comp of string * Id.t * comp_tm * tm
+    | Let_join of string * Id.t * (string * Id.t) * tm * tm
+    | Join_app of Id.t * atomic_tm
+    | Bool_elim of atomic_tm * tm * tm
     | Comp of comp_tm
 
   and comp_tm =
@@ -104,6 +119,7 @@ module Anf = struct
     | Var of Id.t
     | Fun_lit of string * Id.t * tm
     | Int_lit of int
+    | Bool_lit of bool
 
   (* TODO: Pretty printing *)
 
@@ -121,6 +137,9 @@ end = struct
   let comp_k : Anf.comp_tm k =
     fun tm -> Comp tm
 
+  let join_app_k (id : Anf.Id.t) : Anf.atomic_tm k =
+    fun expr -> Join_app (id, expr)
+
   let ( let@ ) : type a. a k -> a k = ( @@ )
 
   (** Translate a term to A-normal form *)
@@ -133,7 +152,7 @@ end = struct
           let def_id = Anf.Id.fresh () in
           let@ tgt_def = translate src_env src_def in
           let tgt_body = translate (def_id :: src_env) src_body k in
-          Anf.Let (def_name, def_id, tgt_def, tgt_body)
+          Anf.Let_comp (def_name, def_id, tgt_def, tgt_body)
       | Core.Fun_lit (param_name, src_body) ->
           let param_id = Anf.Id.fresh () in
           let tgt_body = translate (param_id :: src_env) src_body comp_k in
@@ -144,6 +163,17 @@ end = struct
           k (Anf.Fun_app (tgt_fn, tgt_arg))
       | Core.Int_lit i ->
           k (Anf.Atom (Int_lit i))
+      | Core.Bool_lit b ->
+          k (Anf.Atom (Bool_lit b))
+      | Core.Bool_elim (src_cond, src_true_branch, src_false_branch) ->
+          let@ tgt_cond = translate_def src_env "cond" src_cond in
+          let cont_id = Anf.Id.fresh () in
+          let param_id = Anf.Id.fresh () in
+          Anf.Let_join ("cont", cont_id, ("param", param_id),
+            k (Anf.Atom (Var param_id)),
+            Anf.Bool_elim (tgt_cond,
+              translate_def src_env "true-branch" src_true_branch (join_app_k cont_id),
+              translate_def src_env "false-branch" src_false_branch (join_app_k cont_id)))
       | Core.Prim_app (name, src_args) ->
           let@ tgt_args = translate_defs src_env "arg" src_args in
           k (Anf.Prim_app (name, tgt_args))
@@ -156,7 +186,7 @@ end = struct
       | Anf.Atom tm -> k tm
       | tgt_tm ->
           let id = Anf.Id.fresh () in
-          Anf.Let (name, id, tgt_tm, k (Anf.Var id))
+          Anf.Let_comp (name, id, tgt_tm, k (Anf.Var id))
 
   (** Translate a sequence of terms, binding them to intermediate definitions if needed. *)
   and translate_defs (src_env : Anf.Id.t list) (name : string) (src_tms : Core.tm list) : Anf.atomic_tm list k k =
