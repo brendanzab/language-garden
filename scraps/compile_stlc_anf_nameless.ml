@@ -54,38 +54,28 @@ module Core = struct
       x ~size:0
 
     let var (level : level) : tm t =
-      fun ~size ->
-        Var (size - level - 1)
+      fun ~size -> Var (size - level - 1)
 
     let let' (name, def) (body : tm t -> tm t) : tm t =
-      fun ~size ->
-        Let (name, def ~size,
-          body (var size) ~size:(size + 1))
+      fun ~size -> Let (name, def ~size, body (var size) ~size:(size + 1))
 
     let fun_lit name (body : tm t -> tm t) : tm t =
-      fun ~size ->
-        Fun_lit (name,
-          body (var size) ~size:(size + 1))
+      fun ~size -> Fun_lit (name, body (var size) ~size:(size + 1))
 
     let fun_app (fn : tm t) (arg : tm t) : tm t =
-      fun ~size ->
-        Fun_app (fn ~size, arg ~size)
+      fun ~size -> Fun_app (fn ~size, arg ~size)
 
     let int_lit (i : int) : tm t =
-      fun ~size:_ ->
-        Int_lit i
+      fun ~size:_ -> Int_lit i
 
     let bool_lit (b : bool) : tm t =
-      fun ~size:_ ->
-        Bool_lit b
+      fun ~size:_ -> Bool_lit b
 
     let bool_elim (cond : tm t) (true_branch : tm t) (false_branch : tm t) : tm t =
-      fun ~size ->
-        Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
+      fun ~size -> Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
 
     let prim_app (name : string) (args : tm t list) : tm t =
-      fun ~size ->
-        Prim_app (name, args |> List.map (fun arg -> arg ~size))
+      fun ~size -> Prim_app (name, args |> List.map (fun arg -> arg ~size))
 
   end
 
@@ -147,12 +137,10 @@ module Anf = struct
       x ~size:0
 
     let var (level : level) : atom_tm t =
-      fun ~size ->
-        Var (size - level - 1)
+      fun ~size -> Var (size - level - 1)
 
     let join_app (level : level) (arg : atom_tm t) : tm t =
-      fun ~size ->
-        Join_app (size - level - 1, arg ~size)
+      fun ~size -> Join_app (size - level - 1, arg ~size)
 
     let let_comp (name, def) (body : atom_tm t -> tm t) : tm t =
       fun ~size ->
@@ -165,29 +153,22 @@ module Anf = struct
           body (join_app size) ~size:(size + 1))
 
     let fun_lit name (body : atom_tm t -> tm t) : atom_tm t =
-      fun ~size ->
-        Fun_lit (name,
-          body (var size) ~size:(size + 1))
+      fun ~size -> Fun_lit (name, body (var size) ~size:(size + 1))
 
     let fun_app (fn : atom_tm t) (arg : atom_tm t) : comp_tm t =
-      fun ~size ->
-        Fun_app (fn ~size, arg ~size)
+      fun ~size -> Fun_app (fn ~size, arg ~size)
 
     let int_lit (i : int) : atom_tm t =
-      fun ~size:_ ->
-        Int_lit i
+      fun ~size:_ -> Int_lit i
 
     let bool_lit (b : bool) : atom_tm t =
-      fun ~size:_ ->
-        Bool_lit b
+      fun ~size:_ -> Bool_lit b
 
     let bool_elim (cond : atom_tm t) (true_branch : tm t) (false_branch : tm t) : tm t =
-      fun ~size ->
-        Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
+      fun ~size -> Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
 
     let prim_app (name : string) (args : atom_tm t list) : comp_tm t =
-      fun ~size ->
-        Prim_app (name, args |> List.map (fun arg -> arg ~size))
+      fun ~size -> Prim_app (name, args |> List.map (fun arg -> arg ~size))
 
     let comp (tm : comp_tm t) : tm t =
       fun ~size -> Comp (tm ~size)
