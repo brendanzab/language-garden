@@ -82,28 +82,48 @@ module Core = struct
 end
 
 
+(** Namespace of fresh identifiers *)
+module Id : sig
+
+  (** Type of identifiers *)
+  type t
+
+  (** Create a fresh identifier with a human-readable name *)
+  val fresh : string -> t
+
+  (** Access the human-readable name for this identifier. This is not
+      guaranteed to be unique. *)
+  val name : t -> string
+
+  module Set : Set.S with type elt = t
+  module Map : Map.S with type key = t
+
+end  = struct
+
+  type t = int
+
+  let names = Dynarray.create ()
+
+  let fresh name =
+    let id = Dynarray.length names in
+    Dynarray.add_last names name;
+    id
+
+  let name id =
+    Dynarray.get names id
+
+  module Set = Set.Make (Int)
+  module Map = Map.Make (Int)
+
+end
+
+
 (** Freshly named lambda terms in A-normal form *)
 module Anf = struct
 
-  module Id : sig
-    type t
-    val fresh : unit -> t
-  end = struct
-
-    type t = int
-
-    let next_id = ref 0
-
-    let fresh () =
-      let id = !next_id in
-      incr next_id;
-      id
-
-  end
-
   type tm =
-    | Let_comp of string * Id.t * comp_tm * tm
-    | Let_join of string * Id.t * (string * Id.t) * tm * tm
+    | Let_comp of Id.t * comp_tm * tm
+    | Let_join of Id.t * Id.t * tm * tm
     | Join_app of Id.t * atom_tm
     | Bool_elim of atom_tm * tm * tm
     | Comp of comp_tm
@@ -115,7 +135,7 @@ module Anf = struct
 
   and atom_tm =
     | Var of Id.t
-    | Fun_lit of string * Id.t * tm
+    | Fun_lit of Id.t * tm
     | Int_lit of int
     | Bool_lit of bool
 
@@ -135,7 +155,7 @@ end = struct
   let comp_k : Anf.comp_tm k =
     fun tm -> Comp tm
 
-  let join_app_k (id : Anf.Id.t) : Anf.atom_tm k =
+  let join_app_k (id : Id.t) : Anf.atom_tm k =
     fun expr -> Join_app (id, expr)
 
   let ( let@ ) : type a. a k -> a k = ( @@ )
@@ -143,20 +163,20 @@ end = struct
   (** Translate a term to A-normal form. The [src_env] parameter records the
       bindings in the source terms we have passed over, mapping them to
       variables in the target language. *)
-  let rec translate (src_env : Anf.Id.t list) (src_tm : Core.tm) : Anf.comp_tm k k =
+  let rec translate (src_env : Id.t list) (src_tm : Core.tm) : Anf.comp_tm k k =
     fun k ->
       match src_tm with
       | Core.Var src_index ->
           k (Anf.Atom (Var (List.nth src_env src_index)))
       | Core.Let (def_name, src_def, src_body) ->
-          let def_id = Anf.Id.fresh () in
+          let def_id = Id.fresh def_name in
           let@ tgt_def = translate src_env src_def in
           let tgt_body = translate (def_id :: src_env) src_body k in
-          Anf.Let_comp (def_name, def_id, tgt_def, tgt_body)
+          Anf.Let_comp (def_id, tgt_def, tgt_body)
       | Core.Fun_lit (param_name, src_body) ->
-          let param_id = Anf.Id.fresh () in
+          let param_id = Id.fresh param_name in
           let tgt_body = translate (param_id :: src_env) src_body comp_k in
-          k (Anf.Atom (Fun_lit (param_name, param_id, tgt_body)))
+          k (Anf.Atom (Fun_lit (param_id, tgt_body)))
       | Core.Fun_app (src_fn, src_arg) ->
           let@ tgt_fn = translate_def src_env "fn" src_fn in
           let@ tgt_arg = translate_def src_env "arg" src_arg in
@@ -167,10 +187,10 @@ end = struct
           k (Anf.Atom (Bool_lit b))
       | Core.Bool_elim (src_cond, src_true_branch, src_false_branch) ->
           let@ tgt_cond = translate_def src_env "cond" src_cond in
-          let cont_id = Anf.Id.fresh () in
-          let param_id = Anf.Id.fresh () in
-          Anf.Let_join ("cont", cont_id, ("param", param_id),
-            k (Anf.Atom (Var param_id)),
+          let cont_id = Id.fresh "cont" in
+          let param_id = Id.fresh "param" in
+          Anf.Let_join (cont_id, param_id,
+            k (Anf.Atom (Var cont_id)),
             Anf.Bool_elim (tgt_cond,
               translate_def src_env "true-branch" src_true_branch (join_app_k cont_id),
               translate_def src_env "false-branch" src_false_branch (join_app_k cont_id)))
@@ -179,17 +199,17 @@ end = struct
           k (Anf.Prim_app (name, tgt_args))
 
   (** Translate a term to A-normal form, binding it to an intermediate definition if needed. *)
-  and translate_def (src_env : Anf.Id.t list) (name : string) (src_tm : Core.tm) : Anf.atom_tm k k =
+  and translate_def (src_env : Id.t list) (name : string) (src_tm : Core.tm) : Anf.atom_tm k k =
     fun k ->
       let@ tgt_tm = translate src_env src_tm in
       match tgt_tm with
       | Anf.Atom tm -> k tm
       | tgt_tm ->
-          let id = Anf.Id.fresh () in
-          Anf.Let_comp (name, id, tgt_tm, k (Anf.Var id))
+          let id = Id.fresh name in
+          Anf.Let_comp (id, tgt_tm, k (Anf.Var id))
 
   (** Translate a sequence of terms, binding them to intermediate definitions if needed. *)
-  and translate_defs (src_env : Anf.Id.t list) (name : string) (src_tms : Core.tm list) : Anf.atom_tm list k k =
+  and translate_defs (src_env : Id.t list) (name : string) (src_tms : Core.tm list) : Anf.atom_tm list k k =
     fun k ->
       match src_tms with
       | [] -> k []
