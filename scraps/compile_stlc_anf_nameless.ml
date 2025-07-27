@@ -14,10 +14,10 @@
 (** De Bruijn indexed lambda terms *)
 module Core = struct
 
-  (** De Bruijn index*)
+  (** De Bruijn index *)
   type index = int
 
-  (** De Bruijn level*)
+  (** De Bruijn level *)
   type level = int
 
   type tm =
