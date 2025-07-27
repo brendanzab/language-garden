@@ -220,8 +220,8 @@ end = struct
       | Core.Bool_lit b ->
           k B.(atom (bool_lit b))
       | Core.Bool_elim (src_cond, src_true_branch, src_false_branch) ->
-          let@ join_app = B.let_join ("cont", "param", fun tm -> k B.(atom tm)) in
           let@ tgt_cond = translate_def src_env "cond" src_cond in
+          let@ join_app = B.let_join ("cont", "param", fun tm -> k B.(atom tm)) in
           B.bool_elim tgt_cond
             (translate_def src_env "true-branch" src_true_branch join_app)
             (translate_def src_env "false-branch" src_false_branch join_app)
