@@ -71,8 +71,8 @@ module Core = struct
     let bool_lit (b : bool) : tm t =
       fun ~size:_ -> Bool_lit b
 
-    let bool_elim (cond : tm t) (true_branch : tm t) (false_branch : tm t) : tm t =
-      fun ~size -> Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
+    let bool_elim (cond : tm t) (tm1 : tm t) (tm2 : tm t) : tm t =
+      fun ~size -> Bool_elim (cond ~size, tm1 ~size, tm2 ~size)
 
     let prim_app (name : string) (args : tm t list) : tm t =
       fun ~size -> Prim_app (name, args |> List.map (fun arg -> arg ~size))
@@ -164,8 +164,8 @@ module Anf = struct
     let bool_lit (b : bool) : atom_tm t =
       fun ~size:_ -> Bool_lit b
 
-    let bool_elim (cond : atom_tm t) (true_branch : tm t) (false_branch : tm t) : tm t =
-      fun ~size -> Bool_elim (cond ~size, true_branch ~size, false_branch ~size)
+    let bool_elim (cond : atom_tm t) (tm1 : tm t) (tm2 : tm t) : tm t =
+      fun ~size -> Bool_elim (cond ~size, tm1 ~size, tm2 ~size)
 
     let prim_app (name : string) (args : atom_tm t list) : comp_tm t =
       fun ~size -> Prim_app (name, args |> List.map (fun arg -> arg ~size))
@@ -219,12 +219,12 @@ end = struct
           k B.(atom (int_lit i))
       | Core.Bool_lit b ->
           k B.(atom (bool_lit b))
-      | Core.Bool_elim (src_cond, src_true_branch, src_false_branch) ->
+      | Core.Bool_elim (src_cond, src_tm1, src_tm2) ->
           let@ tgt_cond = translate_def src_env "cond" src_cond in
           let@ join_app = B.let_join ("cont", "param", fun tm -> k B.(atom tm)) in
           B.bool_elim tgt_cond
-            (translate_def src_env "true-branch" src_true_branch join_app)
-            (translate_def src_env "false-branch" src_false_branch join_app)
+            (translate_def src_env "branch1" src_tm1 join_app)
+            (translate_def src_env "branch2" src_tm2 join_app)
       | Core.Prim_app (name, src_args) ->
           let@ tgt_args = translate_defs src_env "arg" src_args in
           k (B.prim_app name tgt_args)
