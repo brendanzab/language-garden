@@ -23,7 +23,7 @@ module T = struct
 
   type ('a, 'b) func = Func
   type ('b1, 'b2) record = Record
-  type 'a comp = Comp
+  type 'a eff = Eff
 
   (* Contexts *)
 
@@ -67,8 +67,11 @@ and ('ctx, 'a) comp_tm =
       * (('a2, 'ctx) T.extend, 'b) comp_tm
       -> ('ctx, 'b) comp_tm
   | Void_elim : ('ctx, T.void) data_tm -> ('ctx, 'b) comp_tm
-  | Comp_bind : ('ctx, 'a T.comp) comp_tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
-  | Comp_pure : ('ctx, 'a) data_tm -> ('ctx, 'a T.comp) comp_tm
+  | Eff_bind : ('ctx, 'a T.eff) comp_tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
+  | Eff_pure : ('ctx, 'a) data_tm -> ('ctx, 'a T.eff) comp_tm
+  | Eff_print : ('ctx, T.string) data_tm -> ('ctx, T.unit T.eff) comp_tm
+  | Eff_read : ('ctx, T.string T.eff) comp_tm
+  | Eff_abort : ('ctx, T.void T.eff) comp_tm
 
 
 (* Semantic domain *)
@@ -85,7 +88,7 @@ type 'a data_vtm =
 and 'a comp_vtm =
   | Fun_lit : ('a data_vtm -> 'b comp_vtm) -> ('a, 'b) T.func comp_vtm
   | Record_lit : 'b1 comp_vtm * 'b2 comp_vtm -> ('b1, 'b2) T.record comp_vtm
-  | Comp_pure : 'a data_vtm -> 'a T.comp comp_vtm
+  | Eff_pure : 'a data_vtm -> 'a T.eff comp_vtm
 
 
 (* Environments *)
@@ -102,6 +105,12 @@ let rec lookup : type ctx a. (ctx, a) index -> ctx env -> a data_vtm =
 
 
 (* Evaluation *)
+
+exception Abort
+
+type _ Effect.t +=
+  | Print : string -> unit Effect.t
+  | Read : string Effect.t
 
 let rec eval_data : type ctx a. ctx env -> (ctx, a) data_tm -> a data_vtm =
   fun env tm ->
@@ -157,12 +166,25 @@ and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
         | _ -> .
         end
 
-    | Comp_bind (def, body) ->
-        let Comp_pure def = eval_comp env def in
+    | Eff_bind (def, body) ->
+        let Eff_pure def = eval_comp env def in
         eval_comp (def :: env) body
 
-    | Comp_pure tm ->
-        Comp_pure (eval_data env tm)
+    | Eff_pure tm ->
+        Eff_pure (eval_data env tm)
+
+    | Eff_print str ->
+        let String_lit str = eval_data env str in
+        Effect.perform (Print str);
+        Eff_pure Unit_lit
+
+    | Eff_read ->
+        let str = Effect.perform Read in
+        Eff_pure (String_lit str)
+
+    | Eff_abort ->
+        raise Abort
+
 
 
 
@@ -171,55 +193,71 @@ let () = begin
   print_string "Running tests ...";
 
   assert (eval_comp []
-    (Fun_app (Fun_lit (Comp_pure (Var Stop)), Int_lit 42))
-      = Comp_pure (Int_lit 42));
+    (Fun_app (Fun_lit (Eff_pure (Var Stop)), Int_lit 42))
+      = Eff_pure (Int_lit 42));
 
   assert (eval_comp []
-    (Let (Thunk_lit (Fun_lit (Comp_pure (Var Stop))),
+    (Let (Thunk_lit (Fun_lit (Eff_pure (Var Stop))),
       (Fun_app (Thunk_force (Var Stop), Unit_lit))))
-      = Comp_pure Unit_lit);
+      = Eff_pure Unit_lit);
 
   assert (eval_comp []
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
-      Comp_pure (Var (Pop Stop))))
-      = Comp_pure (String_lit "hello"));
+      Eff_pure (Var (Pop Stop))))
+      = Eff_pure (String_lit "hello"));
 
   assert (eval_comp []
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
-      Comp_pure (Var Stop)))
-      = Comp_pure (Int_lit 42));
+      Eff_pure (Var Stop)))
+      = Eff_pure (Int_lit 42));
 
   assert (eval_comp []
-    (Record_fst (Record_lit (Comp_pure (String_lit "hello"), Comp_pure (Int_lit 42))))
-      = Comp_pure (String_lit "hello"));
+    (Record_fst (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
+      = Eff_pure (String_lit "hello"));
 
   assert (eval_comp []
-    (Record_snd (Record_lit (Comp_pure (String_lit "hello"), Comp_pure (Int_lit 42))))
-      = Comp_pure (Int_lit 42));
+    (Record_snd (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
+      = Eff_pure (Int_lit 42));
 
   assert (eval_comp []
     (Either_match (Either_left (String_lit "hello"),
-      Comp_pure (Var Stop),
+      Eff_pure (Var Stop),
       Void_elim (Var Stop)))
-      = Comp_pure (String_lit "hello"));
+      = Eff_pure (String_lit "hello"));
 
   assert (eval_comp []
     (Either_match (Either_right Unit_lit,
-      Comp_pure (Var Stop),
-      Comp_pure (String_lit "goodbye")))
-      = Comp_pure (String_lit "goodbye"));
+      Eff_pure (Var Stop),
+      Eff_pure (String_lit "goodbye")))
+      = Eff_pure (String_lit "goodbye"));
 
   assert (eval_comp []
-    (Comp_bind (Comp_pure (Int_lit 42),
+    (Eff_bind (Eff_pure (Int_lit 42),
       Let (String_lit "hello",
-        Comp_pure (Var (Pop Stop)))))
-      = Comp_pure (Int_lit 42));
+        Eff_pure (Var (Pop Stop)))))
+      = Eff_pure (Int_lit 42));
 
   assert (eval_comp []
-    (Comp_bind (Comp_pure (Int_lit 42),
+    (Eff_bind (Eff_pure (Int_lit 42),
       Let (String_lit "hello",
-        Comp_pure (Var Stop))))
-      = Comp_pure (String_lit "hello"));
+        Eff_pure (Var Stop))))
+      = Eff_pure (String_lit "hello"));
+
+  begin try assert (eval_comp [] (Eff_print (String_lit "hello")) = Eff_pure Unit_lit)  with
+  | effect (Print str), k ->
+      assert (str = "hello");
+      Effect.Deep.continue k ()
+  end;
+
+  begin try assert (eval_comp [] Eff_read = Eff_pure (String_lit "howdy"))  with
+  | effect Read, k ->
+      Effect.Deep.continue k "howdy"
+  end;
+
+  begin match eval_comp [] Eff_abort with
+  | exception Abort -> ()
+  | _ -> failwith "expected abort"
+  end;
 
   print_string " ok!\n";
 
