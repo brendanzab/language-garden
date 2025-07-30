@@ -77,7 +77,7 @@ and ('ctx, 'a) comp_tm =
 (* Semantic domain *)
 
 type 'a data_vtm =
-  | Thunk_lit : 'a comp_vtm Lazy.t -> 'a T.thunk data_vtm
+  | Thunk_lit : (unit -> 'a comp_vtm) -> 'a T.thunk data_vtm
   | Pair_lit : 'a1 data_vtm * 'a2 data_vtm -> ('a1, 'a2) T.pair data_vtm
   | Either_left : 'a1 data_vtm -> ('a1, 'a2) T.either data_vtm
   | Either_right : 'a2 data_vtm -> ('a1, 'a2) T.either data_vtm
@@ -116,7 +116,7 @@ let rec eval_data : type ctx a. ctx env -> (ctx, a) data_tm -> a data_vtm =
   fun env tm ->
     match tm with
     | Var x -> lookup x env
-    | Thunk_lit tm -> Thunk_lit (lazy (eval_comp env tm))
+    | Thunk_lit tm -> Thunk_lit (fun () -> eval_comp env tm)
     | Pair_lit (fst, snd) -> Pair_lit (eval_data env fst, eval_data env snd)
     | Either_left left -> Either_left (eval_data env left)
     | Either_right right -> Either_right (eval_data env right)
@@ -133,7 +133,7 @@ and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
 
     | Thunk_force tm ->
         let Thunk_lit value = eval_data env tm in
-        Lazy.force value
+        value ()
 
     | Fun_lit body ->
         Fun_lit (fun param -> eval_comp (param :: env) body)
@@ -257,6 +257,22 @@ let () = begin
   begin match eval_comp [] Eff_abort with
   | exception Abort -> ()
   | _ -> failwith "expected abort"
+  end;
+
+  begin
+    let lines = Queue.create () in
+    lines |> Queue.push "hello";
+    lines |> Queue.push "goodbye";
+
+    try assert (eval_comp []
+      (Let (Thunk_lit Eff_read,
+        Eff_bind (Thunk_force (Var Stop),
+          Eff_bind (Thunk_force (Var (Pop Stop)),
+            Eff_pure (Pair_lit (Var (Pop Stop), Var Stop))))))
+        = Eff_pure (Pair_lit (String_lit "hello", String_lit "goodbye")))
+    with
+    | effect Read, k ->
+        Effect.Deep.continue k (Queue.pop lines)
   end;
 
   print_string " ok!\n";
