@@ -57,11 +57,11 @@ and ('ctx, 'a) comp_tm =
   | Record_lit : ('ctx, 'b1) comp_tm * ('ctx, 'b2) comp_tm -> ('ctx, ('b1, 'b2) T.record) comp_tm
   | Record_fst : ('ctx, ('b1, 'b2) T.record) comp_tm -> ('ctx, 'b1) comp_tm
   | Record_snd : ('ctx, ('b1, 'b2) T.record) comp_tm -> ('ctx, 'b2) comp_tm
-  | Pair_elim :
+  | Pair_match :
       ('ctx, ('a1, 'a2) T.pair) data_tm
       * (('a2, ('a1, 'ctx) T.extend) T.extend, 'b) comp_tm
       -> ('ctx, 'b) comp_tm
-  | Either_elim :
+  | Either_match :
       ('ctx, ('a1, 'a2) T.either) data_tm
       * (('a1, 'ctx) T.extend, 'b) comp_tm
       * (('a2, 'ctx) T.extend, 'b) comp_tm
@@ -142,11 +142,11 @@ and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
     | Record_snd record ->
         let Record_lit (_, snd) = eval_comp env record in snd
 
-    | Pair_elim (pair, body) ->
+    | Pair_match (pair, body) ->
         let Pair_lit (tm1, tm2) = eval_data env pair in
         eval_comp (tm2 :: tm1 :: env) body
 
-    | Either_elim (either, left, right) ->
+    | Either_match (either, left, right) ->
         begin match eval_data env either with
         | Either_left tm -> eval_comp (tm :: env) left
         | Either_right tm -> eval_comp (tm :: env) right
@@ -180,12 +180,12 @@ let () = begin
       = Comp_pure Unit_lit);
 
   assert (eval_comp []
-    (Pair_elim (Pair_lit (String_lit "hello", Int_lit 42),
+    (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
       Comp_pure (Var (Pop Stop))))
       = Comp_pure (String_lit "hello"));
 
   assert (eval_comp []
-    (Pair_elim (Pair_lit (String_lit "hello", Int_lit 42),
+    (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
       Comp_pure (Var Stop)))
       = Comp_pure (Int_lit 42));
 
@@ -198,13 +198,13 @@ let () = begin
       = Comp_pure (Int_lit 42));
 
   assert (eval_comp []
-    (Either_elim (Either_left (String_lit "hello"),
+    (Either_match (Either_left (String_lit "hello"),
       Comp_pure (Var Stop),
       Void_elim (Var Stop)))
       = Comp_pure (String_lit "hello"));
 
   assert (eval_comp []
-    (Either_elim (Either_right Unit_lit,
+    (Either_match (Either_right Unit_lit,
       Comp_pure (Var Stop),
       Comp_pure (String_lit "goodbye")))
       = Comp_pure (String_lit "goodbye"));
