@@ -21,6 +21,7 @@ module T = struct
   (* Computation types *)
 
   type ('a, 'b) func = Func
+  type ('b1, 'b2) record = Record
   type 'a comp = Comp
 
   (* Contexts *)
@@ -52,6 +53,9 @@ and ('ctx, 'a) comp_tm =
   | Thunk_force : ('ctx, 'b T.thunk) data_tm -> ('ctx, 'b) comp_tm
   | Fun_lit : (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, ('a, 'b) T.func) comp_tm
   | Fun_app : ('ctx, ('a, 'b) T.func) comp_tm * ('ctx, 'a) data_tm -> ('ctx, 'b) comp_tm
+  | Record_lit : ('ctx, 'b1) comp_tm * ('ctx, 'b2) comp_tm -> ('ctx, ('b1, 'b2) T.record) comp_tm
+  | Record_fst : ('ctx, ('b1, 'b2) T.record) comp_tm -> ('ctx, 'b1) comp_tm
+  | Record_snd : ('ctx, ('b1, 'b2) T.record) comp_tm -> ('ctx, 'b2) comp_tm
   | Pair_elim :
       ('ctx, ('a1, 'a2) T.pair) data_tm
       * (('a2, ('a1, 'ctx) T.extend) T.extend, 'b) comp_tm
@@ -78,6 +82,7 @@ type 'a data_vtm =
 
 and 'a comp_vtm =
   | Fun_lit : ('a data_vtm -> 'b comp_vtm) -> ('a, 'b) T.func comp_vtm
+  | Record_lit : 'b1 comp_vtm * 'b2 comp_vtm -> ('b1, 'b2) T.record comp_vtm
   | Comp_pure : 'a data_vtm -> 'a T.comp comp_vtm
 
 
@@ -111,21 +116,46 @@ let rec eval_data : type ctx a. ctx env -> (ctx, a) data_tm -> a data_vtm =
 and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
   fun env tm ->
     match tm with
-    | Let (def, body) -> let def = eval_data env def in eval_comp (def :: env) body
-    | Thunk_force tm -> let Thunk_lit value = eval_data env tm in Lazy.force value
-    | Fun_lit body -> Fun_lit (fun x -> eval_comp (x :: env) body)
-    | Fun_app (fn, arg) -> let Fun_lit fn = eval_comp env fn in fn (eval_data env arg)
+    | Let (def, body) ->
+        let def = eval_data env def in
+        eval_comp (def :: env) body
+
+    | Thunk_force tm ->
+        let Thunk_lit value = eval_data env tm in
+        Lazy.force value
+
+    | Fun_lit body ->
+        Fun_lit (fun param -> eval_comp (param :: env) body)
+
+    | Fun_app (fn, arg) ->
+        let Fun_lit fn = eval_comp env fn in
+        fn (eval_data env arg)
+
+    | Record_lit (fst, snd) ->
+        Record_lit (eval_comp env fst, eval_comp env snd)
+
+    | Record_fst record ->
+        let Record_lit (fst, _) = eval_comp env record in fst
+
+    | Record_snd record ->
+        let Record_lit (_, snd) = eval_comp env record in snd
+
     | Pair_elim (pair, body) ->
-        begin match eval_data env pair with
-        | Pair_lit (tm1, tm2) -> eval_comp (tm2 :: tm1 :: env) body
-        end
+        let Pair_lit (tm1, tm2) = eval_data env pair in
+        eval_comp (tm2 :: tm1 :: env) body
+
     | Either_elim (either, left, right) ->
         begin match eval_data env either with
         | Either_left tm -> eval_comp (tm :: env) left
         | Either_right tm -> eval_comp (tm :: env) right
         end
-    | Comp_bind (def, body) -> let Comp_pure def = eval_comp env def in eval_comp (def :: env) body
-    | Comp_pure tm -> Comp_pure (eval_data env tm)
+
+    | Comp_bind (def, body) ->
+        let Comp_pure def = eval_comp env def in
+        eval_comp (def :: env) body
+
+    | Comp_pure tm ->
+        Comp_pure (eval_data env tm)
 
 
 
@@ -150,6 +180,14 @@ let () = begin
   assert (eval_comp []
     (Pair_elim (Pair_lit (String_lit "hello", Int_lit 42),
       Comp_pure (Var Stop)))
+      = Comp_pure (Int_lit 42));
+
+  assert (eval_comp []
+    (Record_fst (Record_lit (Comp_pure (String_lit "hello"), Comp_pure (Int_lit 42))))
+      = Comp_pure (String_lit "hello"));
+
+  assert (eval_comp []
+    (Record_snd (Record_lit (Comp_pure (String_lit "hello"), Comp_pure (Int_lit 42))))
       = Comp_pure (Int_lit 42));
 
   assert (eval_comp []
