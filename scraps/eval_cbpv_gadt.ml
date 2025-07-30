@@ -15,6 +15,7 @@ module T = struct
   type ('a1, 'a2) pair = Pair
   type ('a1, 'a2) either = Either
   type unit = Unit
+  type void = Void
   type int = Int
   type string = String
 
@@ -65,6 +66,7 @@ and ('ctx, 'a) comp_tm =
       * (('a1, 'ctx) T.extend, 'b) comp_tm
       * (('a2, 'ctx) T.extend, 'b) comp_tm
       -> ('ctx, 'b) comp_tm
+  | Void_elim : ('ctx, T.void) data_tm -> ('ctx, 'b) comp_tm
   | Comp_bind : ('ctx, 'a T.comp) comp_tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
   | Comp_pure : ('ctx, 'a) data_tm -> ('ctx, 'a T.comp) comp_tm
 
@@ -150,6 +152,11 @@ and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
         | Either_right tm -> eval_comp (tm :: env) right
         end
 
+    | Void_elim void ->
+        begin match eval_data env void with
+        | _ -> .
+        end
+
     | Comp_bind (def, body) ->
         let Comp_pure def = eval_comp env def in
         eval_comp (def :: env) body
@@ -193,7 +200,7 @@ let () = begin
   assert (eval_comp []
     (Either_elim (Either_left (String_lit "hello"),
       Comp_pure (Var Stop),
-      Comp_pure (String_lit "goodbye")))
+      Void_elim (Var Stop)))
       = Comp_pure (String_lit "hello"));
 
   assert (eval_comp []
