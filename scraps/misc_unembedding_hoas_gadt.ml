@@ -56,10 +56,12 @@ end = struct
   let run (e : 'a t) : (unit, 'a) expr =
     e.run ~size:0
 
-  let rec index (type ctx a) (i : int) : (ctx, a) index =
-    Obj.magic (if i > 0 then Pop (index (i - 1)) else Stop)
-
+  (* If we had a fancier type system we might be able to do this without
+     resorting to unsafe casts, but this approach is simpler and cheaper. *)
   let var (type a) (level : int) : a t =
+    let rec index (type ctx a) (i : int) : (ctx, a) index =
+      Obj.magic (if i > 0 then Pop (index (i - 1)) else Stop)
+    in
     { run = fun ~size ->
         Var (index (size - level - 1));
     }
