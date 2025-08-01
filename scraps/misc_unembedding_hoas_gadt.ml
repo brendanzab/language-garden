@@ -9,6 +9,8 @@
 
     Resources:
 
+    - {{: https://gist.github.com/TOTBWF/9b2c071d2edb1c6596b785656c866fd6#file-micrott-ml-L133-L210}
+      TOTBWF/MicroTT.ml} by Reed Mullanix. See the [TB] module.
     - {{: https://homepages.inf.ed.ac.uk/slindley/papers/unembedding.pdf}
       Unembedding domain-specific languages} by Atkey, Lindley, and Yallop.
 *)
