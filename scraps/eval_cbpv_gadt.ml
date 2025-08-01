@@ -234,19 +234,21 @@ and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
 
 let () = begin
 
+  let ( $ ) f a = Fun_app (f, a) in
+
   print_string "Running tests ...";
 
   assert (eval_comp []
-    (Fun_app (Fun_lit (Eff_pure (Var Stop)), Int_lit 42))
+    (Fun_lit (Eff_pure (Var Stop)) $ Int_lit 42)
       = Eff_pure (Int_lit 42));
 
   assert (eval_comp []
-    (Fun_app (Prim_op Int_neg, Int_lit 42))
+    (Prim_op Int_neg $ Int_lit 42)
       = Eff_pure (Int_lit (-42)));
 
   assert (eval_comp []
     (Let (Thunk_lit (Fun_lit (Eff_pure (Var Stop))),
-      (Fun_app (Thunk_force (Var Stop), Unit_lit))))
+      Thunk_force (Var Stop) $ Unit_lit))
       = Eff_pure Unit_lit);
 
   assert (eval_comp []
@@ -291,13 +293,15 @@ let () = begin
         Eff_pure (Var Stop))))
       = Eff_pure (String_lit "hello"));
 
-  begin try assert (eval_comp [] (Eff_print (String_lit "hello")) = Eff_pure Unit_lit)  with
+  begin match eval_comp [] (Eff_print (String_lit "hello")) with
+  | result -> assert (result = Eff_pure Unit_lit)
   | effect (Print str), k ->
       assert (str = "hello");
       Effect.Deep.continue k ()
   end;
 
-  begin try assert (eval_comp [] Eff_read = Eff_pure (String_lit "howdy"))  with
+  begin match eval_comp [] Eff_read with
+  | result -> assert (result = Eff_pure (String_lit "howdy"))
   | effect Read, k ->
       Effect.Deep.continue k "howdy"
   end;
@@ -312,14 +316,14 @@ let () = begin
     lines |> Queue.push "hello ";
     lines |> Queue.push "world!";
 
-    try
-      assert (eval_comp []
+    match
+      eval_comp []
         (Let (Thunk_lit Eff_read,
           Eff_bind (Thunk_force (Var Stop),
             Eff_bind (Thunk_force (Var (Pop Stop)),
-              Fun_app (Fun_app (Prim_op String_cat, Var (Pop Stop)), Var Stop)))))
-          = Eff_pure (String_lit "hello world!"));
+              Prim_op String_cat $ Var (Pop Stop) $ Var Stop))))
     with
+    | result -> assert (result = Eff_pure (String_lit "hello world!"))
     | effect Read, k ->
         Effect.Deep.continue k (Queue.pop lines)
   end;
