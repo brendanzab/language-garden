@@ -31,3 +31,4 @@
 (executable (name misc_isorecursion_vs_equirecursion))
 (executable (name misc_option_shapes))
 (executable (name misc_set_objects))
+(executable (name misc_unembedding_typed_hoas))
