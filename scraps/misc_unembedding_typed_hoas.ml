@@ -29,18 +29,18 @@ module Build : sig
 
   type 'a t
 
+  val run : 'a t -> (unit, 'a) expr
+
   val let' : 'a t -> ('a t -> 'b t) -> 'b t
   val fun' : ('a t -> 'b t) -> ('a -> 'b) t
   val app : ('a -> 'b) t -> 'a t -> 'b t
-
-  val run : 'a t -> (unit, 'a) expr
 
   val int : int -> int t
   val string : string -> string t
 
   (** Notation *)
 
-  val ( let= ) : 'a t -> ('a t -> 'b t) -> 'b t
+  val ( let$ ) : 'a t -> ('a t -> 'b t) -> 'b t
   val ( $ ) : ('a -> 'b) t -> 'a t -> 'b t
 
 end = struct
@@ -82,7 +82,7 @@ end = struct
   let string (s : string) : string t =
     { run = fun ~size:_ -> String_lit s }
 
-  let ( let= ) = let'
+  let ( let$ ) = let'
   let ( $ ) = app
 
 end
@@ -95,8 +95,8 @@ let () = begin
   begin
 
     let expr = Build.(
-      let= id = fun' @@ fun x -> x in
-      let= const = fun' @@ fun x -> fun' @@ fun _ -> x in
+      let$ id = fun' @@ fun x -> x in
+      let$ const = fun' @@ fun x -> fun' @@ fun _ -> x in
       const $ (id $ string "hello") $ int 4
     ) in
 
