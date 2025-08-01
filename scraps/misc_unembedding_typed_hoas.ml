@@ -1,7 +1,9 @@
-(** It’s usually more convenient to construct lambda terms using higher-order
-    abstract syntax (HOAS), but de Bruijn indices are usually preferred for
-    performing intensional analysis on terms. This example shows how to
-    convert typed HOAS to a well-typed, de Bruijn-indexed representation.
+(** For embedded domain specific languages, it’s more convenient to construct
+    lambda terms using higher-order abstract syntax (HOAS), but de Bruijn
+    indices are usually preferred for performing intensional analysis on terms.
+
+    This file shows how to convert from typed HOAS to a well-typed, de Bruijn-
+    indexed representation.
 
     Resources:
 
