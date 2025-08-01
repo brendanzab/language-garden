@@ -1,4 +1,7 @@
-(** Unembedding well-typed HOAS-encoded lambda terms into de-Bruijn indexed terms.
+(** It’s usually more convenient to construct lambda terms using higher-order
+    abstract syntax (HOAS), but de Bruijn indices are usually preferred for
+    performing intensional analysis on terms. This example shows how to
+    convert typed HOAS to a well-typed, de Bruijn-indexed representation.
 
     Resources:
 
