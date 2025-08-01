@@ -95,7 +95,9 @@ Miscellaneous:
   exposing the underlying representation.
 - [**misc_set_objects.ml**](./misc_set_objects.ml):
   Comparing set ADTs vs. set objects in OCaml.
-- [**misc_unembedding_typed_hoas**](./misc_unembedding_typed_hoas.ml):
+- [**misc_unembedding_hoas**](./misc_unembedding_hoas.ml):
+  Converting HOAS-encoded lambda terms into a de Bruijn-indexed representation.
+- [**misc_unembedding_hoas_gadt**](./misc_unembedding_hoas_gadt.ml):
   Converting typed HOAS-encoded lambda terms into a well-typed, de Bruijn-indexed representation.
 
 Work in progress projects:

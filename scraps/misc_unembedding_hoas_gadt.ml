@@ -5,6 +5,8 @@
     This file shows how to convert from typed HOAS to a well-typed, de Bruijn-
     indexed representation.
 
+    Extends [misc_unembedding_hoas].
+
     Resources:
 
     - {{: https://homepages.inf.ed.ac.uk/slindley/papers/unembedding.pdf}
