@@ -55,7 +55,7 @@ end = struct
     run : 'ctx. size:int -> ('ctx, 'a) expr;
   }
 
-  let run (e : 'a t) : (unit, 'a) expr =
+  let run (type a) (e : a t) : (unit, a) expr =
     e.run ~size:0
 
   (* If we had a fancier type system we might be able to do this without
