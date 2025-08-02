@@ -163,6 +163,15 @@ let () = begin
 
   end;
 
+  begin
+
+    let expr = Build.(Int.(int 12 * int 34)) in
+
+    assert (Build.run expr =
+      Fun_app (Fun_app (Prim Int_mul, Int_lit 12), Int_lit 34));
+
+  end;
+
   print_string " ok!\n";
 
 end
