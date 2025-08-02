@@ -26,6 +26,16 @@ type ('ctx, 'a) expr =
   | Fun_app : ('ctx, 'a -> 'b) expr * ('ctx, 'a) expr -> ('ctx, 'b) expr
   | Int_lit : int -> ('ctx, int) expr
   | String_lit : string -> ('ctx, string) expr
+  | Prim : 'a prim -> ('ctx, 'a) expr
+
+and 'a prim =
+  | Int_eq : (int -> int -> bool) prim
+  | Int_add : (int -> int -> int) prim
+  | Int_sub : (int -> int -> int) prim
+  | Int_mul : (int -> int -> int) prim
+  | Int_neg : (int -> int) prim
+  | String_eq : (string -> string -> bool) prim
+  | String_cat : (string -> string -> string) prim
 
 
 (** Interface for building well-typed expressions using HOAS *)
@@ -40,14 +50,31 @@ module Build : sig
   val let' : 'a t -> ('a t -> 'b t) -> 'b t
   val fun' : ('a t -> 'b t) -> ('a -> 'b) t
   val app : ('a -> 'b) t -> 'a t -> 'b t
-
   val int : int -> int t
   val string : string -> string t
+  val prim : 'a prim -> 'a t
 
   (** Notation *)
 
   val ( let$ ) : 'a t -> ('a t -> 'b t) -> 'b t
   val ( $ ) : ('a -> 'b) t -> 'a t -> 'b t
+
+  module Int : sig
+
+    val ( = ) : int t -> int t -> bool t
+    val ( + ) : int t -> int t -> int t
+    val ( - ) : int t -> int t -> int t
+    val ( * ) : int t -> int t -> int t
+    val neg : int t -> int t
+
+  end
+
+  module String : sig
+
+    val ( = ) : string t -> string t -> bool t
+    val ( ^ ) : string t -> string t -> string t
+
+  end
 
 end = struct
 
@@ -90,8 +117,29 @@ end = struct
   let string (s : string) : string t =
     { run = fun ~size:_ -> String_lit s }
 
+  let prim (type a) (p : a prim) : a t =
+    { run = fun ~size:_ -> Prim p }
+
   let ( let$ ) = let'
   let ( $ ) = app
+
+  module Int = struct
+
+    let ( = ) x y = prim Int_eq $ x $ y
+    let ( + ) x y = prim Int_add $ x $ y
+    let ( - ) x y = prim Int_sub $ x $ y
+    let ( * ) x y = prim Int_mul $ x $ y
+
+    let neg x = prim Int_neg $ x
+
+  end
+
+  module String = struct
+
+    let ( = ) x y = prim String_eq $ x $ y
+    let ( ^ ) x y = prim String_cat $ x $ y
+
+  end
 
 end
 
