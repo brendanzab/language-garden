@@ -4,8 +4,12 @@
 
     Resources:
 
-    - https://pblevy.github.io/papers/thesisqmwphd.pdf
-    - https://github.com/andrejbauer/plzoo/tree/master/src/levy
+    - Paul Blain Levy, {{: https://web.archive.org/web/20241107133020/https://www.cs.bham.ac.uk/~pbl/cbpv.html}
+      Call-By-Push-Value FAQ}
+    - Paul Blain Levy, {{: https://pblevy.github.io/papers/thesisqmwphd.pdf}
+      Call-By-Push-Value}, PhD Thesis
+    - Andrej Bauer, {{: https://github.com/andrejbauer/plzoo/tree/master/src/levy}
+      plzoo/levy}
 *)
 
 [@@@warning "-unused-constructor"]
