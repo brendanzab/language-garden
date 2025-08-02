@@ -9,6 +9,7 @@
 (executable (name eval_stlc_gadt_values_hoas))
 (executable (name eval_stlc_gadt_values_closures))
 (executable (name eval_stlc_gadt_globals))
+(executable (name eval_stlc_gadt_prims))
 (executable (name eval_cbpv_gadt))
 (executable (name eval_triple_store))
 (executable (name eval_unsure_calculator))

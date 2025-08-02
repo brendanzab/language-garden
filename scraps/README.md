@@ -31,6 +31,8 @@ Evaluation:
   time using defunctionalised closures in the semantic domain.
 - [**eval_stlc_gadt_globals.ml**](./eval_stlc_gadt_globals.ml):
   A well-typed lambda calculus evaluator, extended with some global definitions.
+- [**eval_stlc_gadt_prims.ml**](./eval_stlc_gadt_primns.ml):
+  A well-typed lambda calculus evaluator, extended with some primitive operations.
 - [**eval_cbpv_gadt.ml**](./eval_cbpv_gadt.ml):
   A well-typed evaluator for a lambda calculus in the style of call-by-push-value.
 - [**eval_triple_store.ml**](./eval_triple_store.ml):
