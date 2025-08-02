@@ -45,6 +45,15 @@ type ('ctx, 'a) index =
   | Stop : (('a, 'ctx) T.extend, 'a) index
   | Pop : ('ctx, 'a1) index -> (('a2, 'ctx) T.extend, 'a1) index
 
+type 'a prim =
+  | Int_eq : (T.int, (T.int, T.bool T.eff) T.func) T.func prim
+  | Int_add : (T.int, (T.int, T.int T.eff) T.func) T.func prim
+  | Int_sub : (T.int, (T.int, T.int T.eff) T.func) T.func prim
+  | Int_mul : (T.int, (T.int, T.int T.eff) T.func) T.func prim
+  | Int_neg : (T.int, T.int T.eff) T.func prim
+  | String_eq : (T.string, (T.string, T.bool T.eff) T.func) T.func prim
+  | String_cat : (T.string, (T.string, T.string T.eff) T.func) T.func prim
+
 type ('ctx, 'a) data_tm =
   | Var : ('ctx, 'a) index -> ('ctx, 'a) data_tm
   | Thunk_lit : ('ctx, 'b) comp_tm -> ('ctx, 'b T.thunk) data_tm
@@ -81,16 +90,7 @@ and ('ctx, 'a) comp_tm =
   | Eff_print : ('ctx, T.string) data_tm -> ('ctx, T.unit T.eff) comp_tm
   | Eff_read : ('ctx, T.string T.eff) comp_tm
   | Eff_abort : ('ctx, T.void T.eff) comp_tm
-  | Prim_op : 'a prim_op -> ('ctx, 'a) comp_tm
-
-and 'a prim_op =
-  | Int_eq : (T.int, (T.int, T.bool T.eff) T.func) T.func prim_op
-  | Int_add : (T.int, (T.int, T.int T.eff) T.func) T.func prim_op
-  | Int_sub : (T.int, (T.int, T.int T.eff) T.func) T.func prim_op
-  | Int_mul : (T.int, (T.int, T.int T.eff) T.func) T.func prim_op
-  | Int_neg : (T.int, T.int T.eff) T.func prim_op
-  | String_eq : (T.string, (T.string, T.bool T.eff) T.func) T.func prim_op
-  | String_cat : (T.string, (T.string, T.string T.eff) T.func) T.func prim_op
+  | Prim : 'a prim -> ('ctx, 'a) comp_tm
 
 
 (* Semantic domain *)
@@ -117,12 +117,6 @@ type 'ctx env =
   | [] : T.empty env
   | ( :: ) : 'a data_vtm * 'ctx env -> ('a, 'ctx) T.extend env
 
-let rec lookup : type ctx a. (ctx, a) index -> ctx env -> a data_vtm =
-  fun x env ->
-    match x, env with
-    | Stop, v :: _ -> v
-    | Pop x, _ :: env -> lookup x env
-
 
 (* Evaluation *)
 
@@ -132,10 +126,30 @@ type _ Effect.t +=
   | Print : string -> unit Effect.t
   | Read : string Effect.t
 
+let rec eval_index : type ctx a. (ctx, a) index -> ctx env -> a data_vtm =
+  fun x env ->
+    match x, env with
+    | Stop, v :: _ -> v
+    | Pop x, _ :: env -> eval_index x env
+
+let eval_prim : type a. a prim -> a comp_vtm =
+  let int_fun f = Fun_lit (fun (Int_lit x) -> f x) in
+  let string_fun f = Fun_lit (fun (String_lit x) -> f x) in
+
+  fun prim ->
+    match prim with
+    | Int_eq -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Bool_lit (i1 = i2))
+    | Int_add -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 + i2))
+    | Int_sub -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 - i2))
+    | Int_mul -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 * i2))
+    | Int_neg -> int_fun @@ fun i -> Eff_pure (Int_lit (-i))
+    | String_eq -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (Bool_lit (s1 = s2))
+    | String_cat -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (String_lit (s1 ^ s2))
+
 let rec eval_data : type ctx a. ctx env -> (ctx, a) data_tm -> a data_vtm =
   fun env tm ->
     match tm with
-    | Var x -> lookup x env
+    | Var x -> eval_index x env
     | Thunk_lit tm -> Thunk_lit (fun () -> eval_comp env tm)
     | Pair_lit (left, right) -> Pair_lit (eval_data env left, eval_data env right)
     | Either_left left -> Either_left (eval_data env left)
@@ -215,19 +229,8 @@ and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
     | Eff_abort ->
         raise Abort
 
-    | Prim_op prim ->
-        let int_fun f = Fun_lit (fun (Int_lit x) -> f x) in
-        let string_fun f = Fun_lit (fun (String_lit x) -> f x) in
-
-        begin match prim with
-        | Int_eq -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Bool_lit (i1 = i2))
-        | Int_add -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 + i2))
-        | Int_sub -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 - i2))
-        | Int_mul -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 * i2))
-        | Int_neg -> int_fun @@ fun i -> Eff_pure (Int_lit (-i))
-        | String_eq -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (Bool_lit (s1 = s2))
-        | String_cat -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (String_lit (s1 ^ s2))
-        end
+    | Prim prim ->
+        eval_prim prim
 
 
 (* Evaluation tests *)
@@ -243,7 +246,7 @@ let () = begin
       = Eff_pure (Int_lit 42));
 
   assert (eval_comp []
-    (Prim_op Int_neg $ Int_lit 42)
+    (Prim Int_neg $ Int_lit 42)
       = Eff_pure (Int_lit (-42)));
 
   assert (eval_comp []
@@ -321,7 +324,7 @@ let () = begin
         (Let (Thunk_lit Eff_read,
           Eff_bind (Thunk_force (Var Stop),
             Eff_bind (Thunk_force (Var (Pop Stop)),
-              Prim_op String_cat $ Var (Pop Stop) $ Var Stop))))
+              Prim String_cat $ Var (Pop Stop) $ Var Stop))))
     with
     | result -> assert (result = Eff_pure (String_lit "hello world!"))
     | effect Read, k ->
