@@ -165,10 +165,14 @@ let () = begin
 
   begin
 
-    let expr = Build.(Int.(int 12 * int 34)) in
+    let expr = Build.(
+      let$ x = int 12 in
+      Int.(int 34 * x)
+    ) in
 
     assert (Build.run expr =
-      Fun_app (Fun_app (Prim Int_mul, Int_lit 12), Int_lit 34));
+      Let (Int_lit 12,
+      Fun_app (Fun_app (Prim Int_mul, Int_lit 34), Var Stop)));
 
   end;
 
