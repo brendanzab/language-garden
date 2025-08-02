@@ -5,9 +5,10 @@
 
     Resources:
 
-    - {{: https://discuss.ocaml.org/t/best-approach-for-implementing-open-recursion-over-extensible-types/11678}
-      Best approach for implementing open recursion over extensible types} by
-      Kiran Gopinathan
+    - Kiran Gopinathan, {{: https://discuss.ocaml.org/t/best-approach-for-implementing-open-recursion-over-extensible-types/11678}
+      Best approach for implementing open recursion over extensible types}
+    - Gaëtan Gilbert, {{: https://discuss.ocaml.org/t/playing-with-extensible-type/16613/9}
+      Comment on Playing with extensible type}
 *)
 
 module Global : sig
