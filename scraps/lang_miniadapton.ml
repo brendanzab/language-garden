@@ -154,11 +154,11 @@ end = struct
     let kv = Hashtbl.create 16 in
     fun x ->
       match Hashtbl.find_opt kv x with
-      | Some y -> y
+      | Some result -> result
       | None ->
-          let y = Thunk.create (fun () -> f x) in
-          Hashtbl.add kv x y;
-          y
+          let result = Thunk.create (fun () -> f x) in
+          Hashtbl.add kv x result;
+          result
 
   let memo (type a b) (f : a -> b) : a -> b =
     let f' = memo_lazy f in
