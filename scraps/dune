@@ -23,6 +23,8 @@
 (executable (name compile_stlc_anf_fresh))
 (executable (name compile_stlc_anf_nameless))
 
+(executable (name lang_miniadapton))
+
 (executable (name misc_adt_properties))
 (executable (name misc_ast_folds))
 (executable (name misc_ast_submodules))

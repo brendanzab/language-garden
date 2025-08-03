@@ -75,6 +75,11 @@ Compilation:
 - [**compile_stlc_anf_nameless.ml**](compile_stlc_anf_nameless.ml):
   Compiling de Bruijn indexed lambda terms to de Bruijn indexed lambda terms in A-normal form.
 
+Languages and embedded DSLs:
+
+- [**lang_miniadapton**](lang_miniadapton.ml):
+  An implementation of miniAdapton in OCaml.
+
 Miscellaneous:
 
 - [**misc_adt_properties.ml**](./misc_adt_properties.ml):
