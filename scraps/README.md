@@ -19,9 +19,6 @@ Evaluation:
   lambda calculus and arithmetic expressions.
 - [**eval_imp.ml**](./eval_imp.ml):
   A simple imperative language.
-- [**eval_landins_knot.ml**](./eval_landins_knot.ml):
-  Demonstration of Landin’s Knot, an approach to encoding general recursion
-  using higher-order references and backpatching.
 - [**eval_stlc_gadt.ml**](./eval_stlc_gadt.ml):
   A well-typed lambda calculus evaluator using GADTs.
 - [**eval_stlc_gadt_values_hoas.ml**](./eval_stlc_gadt_values_hoas.ml):
@@ -35,10 +32,6 @@ Evaluation:
   A well-typed lambda calculus evaluator, extended with some primitive operations.
 - [**eval_cbpv_gadt.ml**](./eval_cbpv_gadt.ml):
   A well-typed evaluator for a lambda calculus in the style of call-by-push-value.
-- [**eval_triple_store.ml**](./eval_triple_store.ml):
-  Example of inferring facts from a triple store.
-- [**eval_unsure_calculator**](./eval_unsure_calculator.ml):
-  Probabilistic calculator based on Filip Hracek’s _Unsure Calculator_.
 
 Type checking:
 
@@ -79,6 +72,10 @@ Languages and embedded DSLs:
 
 - [**lang_miniadapton**](lang_miniadapton.ml):
   An implementation of miniAdapton in OCaml.
+- [**lang_triple_store.ml**](./lang_triple_store.ml):
+  Example of inferring facts from a triple store.
+- [**lang_unsure_calculator**](./lang_unsure_calculator.ml):
+  Probabilistic calculator based on Filip Hracek’s _Unsure Calculator_.
 
 Miscellaneous:
 
@@ -97,6 +94,9 @@ Miscellaneous:
   State effect, implemented with algebraic effects and handlers.
 - [**misc_isorecursion_vs_equirecursion.ml**](./misc_isorecursion_vs_equirecursion.ml):
   Comparing isorecursive variant types with equirecursive variant types in OCaml.
+- [**misc_landins_knot.ml**](./misc_landins_knot.ml):
+  Demonstration of Landin’s Knot, an approach to encoding general recursion
+  using higher-order references and backpatching.
 - [**misc_option_shapes.ml**](./misc_option_shapes.ml):
   Exposing introduction and elimination forms for variant types, without
   exposing the underlying representation.

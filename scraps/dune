@@ -4,15 +4,12 @@
 (executable (name eval_control_flow_cps))
 (executable (name eval_extensible))
 (executable (name eval_imp))
-(executable (name eval_landins_knot))
 (executable (name eval_stlc_gadt))
 (executable (name eval_stlc_gadt_values_hoas))
 (executable (name eval_stlc_gadt_values_closures))
 (executable (name eval_stlc_gadt_globals))
 (executable (name eval_stlc_gadt_prims))
 (executable (name eval_cbpv_gadt))
-(executable (name eval_triple_store))
-(executable (name eval_unsure_calculator))
 
 (executable (name check_stlc_inference_rules))
 (executable (name check_stlc_inference_rules_bidir))
@@ -24,6 +21,8 @@
 (executable (name compile_stlc_anf_nameless))
 
 (executable (name lang_miniadapton))
+(executable (name lang_triple_store))
+(executable (name lang_unsure_calculator))
 
 (executable (name misc_adt_properties))
 (executable (name misc_ast_folds))
@@ -32,6 +31,7 @@
 (executable (name misc_effects_come_from))
 (executable (name misc_effects_state))
 (executable (name misc_isorecursion_vs_equirecursion))
+(executable (name misc_landins_knot))
 (executable (name misc_option_shapes))
 (executable (name misc_set_objects))
 (executable (name misc_unembedding_hoas))
