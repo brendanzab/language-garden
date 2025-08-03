@@ -5,19 +5,16 @@
     - https://github.com/LightAndLight/mini-adapton
 *)
 
-module rec Thunk : sig
+module Adapton : sig
 
-  type 'a t
+  module Thunk : sig
 
-  val create : (unit -> 'a) -> 'a t
-  val id : 'a t -> int
+    type 'a t
 
-  val add_dcg_edge : 'a t -> 'b t -> unit [@@warning "-unused-value-declaration"]
-  val remove_dcg_edge : 'a t -> 'b t -> unit [@@warning "-unused-value-declaration"]
+    val create : (unit -> 'a) -> 'a t
+    val force : 'a t -> 'a
 
-  val compute : 'a t -> 'a [@@warning "-unused-value-declaration"]
-  val dirty : 'a t -> unit [@@warning "-unused-value-declaration"]
-  val force : 'a t -> 'a
+  end
 
   module Ref : sig
 
@@ -29,134 +26,141 @@ module rec Thunk : sig
 
   end
 
-end = struct
+  module Var : sig
 
-  module Some_thunk = struct
+      type 'a t
 
-    type t =
-      | Some_thunk : 'a Thunk.t -> t
-
-    let compare (Some_thunk t1) (Some_thunk t2) : int =
-      Int.compare (Thunk.id t1) (Thunk.id t2)
+      val create : (unit -> 'a) -> 'a t
+      val set : 'a t -> (unit -> 'a) -> unit
+      val get : 'a t -> 'a
 
   end
 
-  module S = Set.Make (Some_thunk)
+end = struct
 
-  type 'a t = {
-    id : int;
-    compute : unit -> 'a;
-    mutable result : 'a option;
-    mutable sub : S.t;
-    mutable super : S.t;
-    mutable is_clean : bool;
-  }
+  module rec Base_thunk : sig
 
-  let fresh_id : unit -> int =
-    let next_id = ref 0 in
-    fun () ->
-      let id = !next_id in
-      incr next_id;
-      id
+    type 'a t = {
+      id : int;
+      compute : unit -> 'a;
+      mutable result : 'a option;
+      mutable sub : Thunk_set.t;
+      mutable super : Thunk_set.t;
+      mutable is_clean : bool;
+    }
 
-  let create (type a) (f : unit -> a) : a t = {
-    id = fresh_id ();
-    compute = f;
-    result = None;
-    sub = S.empty;
-    super = S.empty;
-    is_clean = false;
-  }
+    type some_t =
+      | Thunk : 'a t -> some_t
 
-  let id (type a) (t : a t) : int = t.id
+  end = Base_thunk
 
-  let add_dcg_edge (type a b) (t_super : a t) (t_sub : b t) =
-    t_super.sub <- S.add (Some_thunk t_sub) t_super.sub;
-    t_sub.super <- S.add (Some_thunk t_super) t_sub.super
+  and Thunk_set : Set.S
+    with type elt = Base_thunk.some_t
+  = Set.Make (struct
 
-  let remove_dcg_edge (type a b) (t_super : a t) (t_sub : b t) =
-    t_super.sub <- S.remove (Some_thunk t_sub) t_super.sub;
-    t_sub.super <- S.remove (Some_thunk t_super) t_sub.super
+    type t = Base_thunk.some_t
 
-  let rec compute : type a. a t -> a =
-    fun t ->
-      if t.is_clean then
-        t.result |> Option.get
-      else begin
-        t.sub |> S.iter (fun (Some_thunk t_sub) -> remove_dcg_edge t t_sub);
-        t.is_clean <- true;
-        t.result <- Some (t.compute ());
-        compute t
-      end
+    let compare (Thunk t1 : t) (Thunk t2 : t) : int =
+      Int.compare t1.id t2.id
 
-  let rec dirty : type a. a t -> unit =
-    fun t ->
-      if t.is_clean then
-        t.is_clean <- false;
-        t.super |> S.iter (fun (Some_thunk t_super) -> dirty t_super)
+  end)
 
-  let currently_adapting : Some_thunk.t option ref =
-    ref None
+  module Thunk = struct
 
-  let force (type a) (t : a t) : a =
-    let prev_adapting = !currently_adapting in
-    currently_adapting := Some (Some_thunk t);
-    let result = compute t in
-    currently_adapting := prev_adapting;
-    !currently_adapting |> Option.iter (fun (Some_thunk.Some_thunk t') -> add_dcg_edge t' t);
-    result
+    include Base_thunk
+
+    let fresh_id : unit -> int =
+      let next_id = ref 0 in
+      fun () ->
+        let id = !next_id in
+        incr next_id;
+        id
+
+    let create (type a) (f : unit -> a) : a t = {
+      id = fresh_id ();
+      compute = f;
+      result = None;
+      sub = Thunk_set.empty;
+      super = Thunk_set.empty;
+      is_clean = false;
+    }
+
+    let add_dcg_edge (type a b) (t_super : a t) (t_sub : b t) =
+      t_super.sub <- Thunk_set.add (Thunk t_sub) t_super.sub;
+      t_sub.super <- Thunk_set.add (Thunk t_super) t_sub.super
+
+    let remove_dcg_edge (type a b) (t_super : a t) (t_sub : b t) =
+      t_super.sub <- Thunk_set.remove (Thunk t_sub) t_super.sub;
+      t_sub.super <- Thunk_set.remove (Thunk t_super) t_sub.super
+
+    let rec compute : type a. a t -> a =
+      fun t ->
+        if t.is_clean then
+          Option.get t.result
+        else begin
+          t.sub |> Thunk_set.iter (fun (Thunk t_sub) -> remove_dcg_edge t t_sub);
+          t.is_clean <- true;
+          t.result <- Some (t.compute ());
+          compute t
+        end
+
+    let rec dirty : type a. a t -> unit =
+      fun t ->
+        if t.is_clean then
+          t.is_clean <- false;
+          t.super |> Thunk_set.iter (fun (Thunk t_super) -> dirty t_super)
+
+    let currently_adapting : some_t option ref =
+      ref None
+
+    let force (type a) (t : a t) : a =
+      let prev_adapting = !currently_adapting in
+      currently_adapting := Some (Thunk t);
+      let result = compute t in
+      currently_adapting := prev_adapting;
+      !currently_adapting |> Option.iter (fun (Thunk t') -> add_dcg_edge t' t);
+      result
+
+  end
 
   module Ref = struct
 
-    type 'a t = {
-      thunk : 'a Thunk.t;
-    }
+    type 'a t = 'a Thunk.t
 
     let create (type a) (x : a) : a t =
-      let rec t = {
-        id = fresh_id ();
-        compute = (fun () -> t.result |> Option.get);
+      let rec t = Thunk.{
+        id = Thunk.fresh_id ();
+        compute = (fun () -> Option.get t.result);
         result = Some x;
-        sub = S.empty;
-        super = S.empty;
+        sub = Thunk_set.empty;
+        super = Thunk_set.empty;
         is_clean = false;
       } in
-      { thunk = t }
+      t
 
     let set (type a) (t : a t) (x : a) : unit =
-      t.thunk.result <- Some x;
-      dirty t.thunk
+      t.result <- Some x;
+      Thunk.dirty t
 
     let get (type a) (t : a t) : a =
-      force t.thunk
+      Thunk.force t
 
   end
 
-end
+  module Var = struct
 
-module Var : sig
+    type 'a t = 'a Thunk.t Ref.t
 
-    type 'a t
+    let create (type a) (f : unit -> a) : a t =
+      Ref.create (Thunk.create f)
 
-    val create : (unit -> 'a) -> 'a t
-    val set : 'a t -> (unit -> 'a) -> unit
-    val get : 'a t -> 'a
+    let set (type a) (t : a t) (f : unit -> a) : unit =
+      Ref.set t (Thunk.create f)
 
-end = struct
+    let get (type a) (t : a t) : a =
+      Thunk.force (Ref.get t)
 
-  type 'a t = {
-    ref : 'a Thunk.t Thunk.Ref.t;
-  }
-
-  let create (type a) (f : unit -> a) : a t = {
-    ref = Thunk.Ref.create (Thunk.create f);
-  }
-
-  let set (type a) (t : a t) (f : unit -> a) : unit =
-    Thunk.Ref.set t.ref (Thunk.create f)
-
-  let get (type a) (t : a t) : a =
-    Thunk.force (Thunk.Ref.get t.ref)
+  end
 
 end
 
@@ -165,17 +169,21 @@ end
 
 let () = begin
 
-  let r = Thunk.Ref.create 5 in
-  let a = Thunk.create (fun () -> Thunk.Ref.get r + 3) in
+  let open Adapton in
+
+  let r = Ref.create 5 in
+  let a = Thunk.create (fun () -> Ref.get r + 3) in
 
   assert (Thunk.force a = 8);
-  Thunk.Ref.set r 2;
+  Ref.set r 2;
   assert (Thunk.force a = 5);
 
 end
 
 (* Spreadsheet example *)
 let () = begin
+
+  let open Adapton in
 
   let n1 = Var.create (fun () -> 1) in
   let n2 = Var.create (fun () -> 2) in
