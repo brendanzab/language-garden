@@ -26,6 +26,9 @@ module Adapton : sig
 
   end
 
+  val memo_lazy : ('a -> 'b) -> 'a -> 'b Thunk.t [@@warning "-unused-value-declaration"]
+  val memo : ('a -> 'b) -> 'a -> 'b [@@warning "-unused-value-declaration"]
+
   module Var : sig
 
       type 'a t
@@ -146,6 +149,20 @@ end = struct
       Thunk.force t
 
   end
+
+  let memo_lazy (type a b) (f : a -> b) : a -> b Thunk.t =
+    let kv = Hashtbl.create 16 in
+    fun x ->
+      match Hashtbl.find_opt kv x with
+      | Some y -> y
+      | None ->
+          let y = Thunk.create (fun () -> f x) in
+          Hashtbl.add kv x y;
+          y
+
+  let memo (type a b) (f : a -> b) : a -> b =
+    let f' = memo_lazy f in
+    fun x -> Thunk.force (f' x)
 
   module Var = struct
 
