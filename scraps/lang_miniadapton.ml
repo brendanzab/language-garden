@@ -292,7 +292,62 @@ let () = begin
 
 end
 
-(* Spreadsheet example *)
+(* Spreadsheet example using an AST and reference cells. From Section 2. of
+   “Adapton: composable, demand-driven incremental computation”. *)
+let () = begin
+
+  let open Miniadapton in
+
+  let open struct
+
+    type cell =
+      formula Ref.t
+
+    and formula =
+      | Num of int
+      | Plus of cell * cell
+
+    let rec eval (c : cell) : int Thunk.t =
+      Thunk.create @@ fun () ->
+        match Ref.get c with
+        | Num x -> x
+        | Plus (c1, c2) ->
+            Thunk.force (eval c1) + Thunk.force (eval c2)
+
+  end in
+
+  let n1 = Ref.create (Num 1) in
+  let n2 = Ref.create (Num 2) in
+  let n3 = Ref.create (Num 3) in
+  let p1 = Ref.create (Plus (n1, n2)) in
+  let p2 = Ref.create (Plus (p1, n3)) in
+
+  let t1 = eval p1 in
+  let t2 = eval p2 in
+
+  assert (Thunk.force t1 = 3);
+  assert (Thunk.force t2 = 6);
+
+  (* Update variable *)
+  Ref.set n1 (Num 5);
+  assert (Thunk.force t1 = 7);
+
+  (* Swap arguments *)
+  Ref.set p2 (Plus (n3, p1));
+  assert (Thunk.force t2 = 10);
+
+  (* Update variable *)
+  Ref.set p1 (Num 4);
+  assert (Thunk.force t2 = 7);
+
+  (* Change our mind and revert back *)
+  Ref.set p1 (Plus (n1, n2));
+  assert (Thunk.force t2 = 10);
+
+end
+
+(* Spreadsheet example using variables. From Appendix C. of “miniAdapton: A
+   Minimal Implementation of Incremental Computation in Scheme” *)
 let () = begin
 
   let open Miniadapton in
