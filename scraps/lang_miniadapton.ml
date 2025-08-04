@@ -1,12 +1,21 @@
 (** An implementation of miniAdapton in OCaml.
 
+    MiniAdapton is a library for demand-driven incremental computation that
+    trades space and startup time for faster incremental updates. Computation
+    graphs can be changed after-the-fact, while still maintaining incremental performance.
+
+    Resources:
+
     - {{: https://arxiv.org/abs/1609.05337} miniAdapton: A Minimal Implementation of Incremental Computation in Scheme}
-    - https://github.com/fisherdj/miniAdapton
-    - https://github.com/LightAndLight/mini-adapton
+      - {{: https://github.com/fisherdj/miniAdapton} Scheme implementation}
+      - {{: https://github.com/LightAndLight/mini-adapton} Haskell implementation}
+    - {{: https://web.archive.org/web/20250507163147/https://adapton.org/} Adapton Homepage}
+    - {{: https://https://vimeo.com/122066659/} Incremental Computation with Adapton / Matthew A Hammer}
 *)
 
 module Adapton : sig
 
+  (** Demand-driven, incremental computations *)
   module Thunk : sig
 
     type 'a t
@@ -16,6 +25,7 @@ module Adapton : sig
 
   end
 
+  (** Mutable references *)
   module Ref : sig
 
     type 'a t
@@ -26,9 +36,13 @@ module Adapton : sig
 
   end
 
+  (** Memoize a function, returning a thunk that can be forced later *)
   val memo_lazy : ('a -> 'b) -> 'a -> 'b Thunk.t [@@warning "-unused-value-declaration"]
+
+  (** Convenience function that uses {!memo_lazy} and returns the forced the result *)
   val memo : ('a -> 'b) -> 'a -> 'b [@@warning "-unused-value-declaration"]
 
+  (** Delayed computations that can be altered incrementally after the fact *)
   module Var : sig
 
       type 'a t
@@ -88,14 +102,19 @@ end = struct
       is_clean = false;
     }
 
+    (** DCG edges are recorded dynamically as we {!force} thunks *)
     let add_dcg_edge (type a b) (t_super : a t) (t_sub : b t) =
       t_super.sub <- Thunk_set.add (Thunk t_sub) t_super.sub;
       t_sub.super <- Thunk_set.add (Thunk t_super) t_sub.super
 
+    (** DCG edges are removed when we {!compute} the result of a thunked computation *)
     let remove_dcg_edge (type a b) (t_super : a t) (t_sub : b t) =
       t_super.sub <- Thunk_set.remove (Thunk t_sub) t_super.sub;
       t_sub.super <- Thunk_set.remove (Thunk t_super) t_sub.super
 
+    (** Return the result of a thunked computation quickly if it is in a clean
+        state, or restart the computation, removing any subcomputations that may
+        have been previously recorded. *)
     let rec compute : type a. a t -> a =
       fun t ->
         if t.is_clean then
@@ -107,6 +126,7 @@ end = struct
           compute t
         end
 
+    (** Mark a thunk as dirty along with all of its supercomputations *)
     let rec dirty : type a. a t -> unit =
       fun t ->
         if t.is_clean then
@@ -142,11 +162,11 @@ end = struct
       t
 
     let set (type a) (t : a t) (x : a) : unit =
-      t.result <- Some x;
-      Thunk.dirty t
+      t.result <- Some x;     (* Update the result with a new value *)
+      Thunk.dirty t           (* Mark the reference as dirty *)
 
     let get (type a) (t : a t) : a =
-      Thunk.force t
+      Thunk.force t           (* Force any dirtied computations *)
 
   end
 
