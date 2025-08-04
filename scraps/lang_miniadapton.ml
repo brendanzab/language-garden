@@ -59,11 +59,13 @@ module Microadapton : sig
 
 end = struct
 
-  (** Core type definitions *)
+  (** Delayed computations *)
 
-  module rec Thunk : sig
+  (** Core type definitions. OCaml makes this a little tricky thanks to the
+      mutual recursion between types and modules, but we’ll manage! *)
+  module rec Core : sig
 
-    type 'a t = {
+    type 'a thunk = {
       id : int;
       compute : unit -> 'a;
       mutable result : 'a option;
@@ -72,22 +74,19 @@ end = struct
       mutable is_clean : bool;
     }
 
-    type some_t =
-      | Thunk : 'a Thunk.t -> some_t
+    type some_thunk =
+      | Thunk : 'a Core.thunk -> some_thunk
 
-  end = Thunk
+  end = Core
 
-  and Thunk_set : Set.S with type elt = Thunk.some_t =
+  and Thunk_set : Set.S with type elt = Core.some_thunk =
     Set.Make (struct
-      type t = Thunk.some_t
+      type t = Core.some_thunk
       let compare (Thunk t1 : t) (Thunk t2 : t) =
         Int.compare t1.id t2.id
     end)
 
-
-  (** Delayed computations *)
-
-  type 'a thunk = 'a Thunk.t
+  include Core
 
   let fresh_id : unit -> int =
     let next_id = ref 0 in
@@ -96,15 +95,14 @@ end = struct
       incr next_id;
       id
 
-  let create (type a) (f : unit -> a) : a thunk =
-    Thunk.{
-      id = fresh_id ();
-      compute = f;
-      result = None;
-      sub = Thunk_set.empty;
-      super = Thunk_set.empty;
-      is_clean = false;
-    }
+  let create (type a) (f : unit -> a) : a thunk = {
+    id = fresh_id ();
+    compute = f;
+    result = None;
+    sub = Thunk_set.empty;
+    super = Thunk_set.empty;
+    is_clean = false;
+  }
 
   let add_dcg_edge (type a b) ~super:(t_super : a thunk) ~sub:(t_sub : b thunk) =
     t_super.sub <- Thunk_set.add (Thunk t_sub) t_super.sub;
@@ -138,7 +136,7 @@ end = struct
   type 'a thunk_ref = 'a thunk
 
   let create_ref (type a) (x : a) : a thunk =
-    let rec t = Thunk.{
+    let rec t = {
       id = fresh_id ();
       compute = (fun () -> Option.get t.result);
       result = Some x;
@@ -218,18 +216,17 @@ end = struct
 
     (** A thunk that is currently being forced. This is used for dynamically
         building the DCG during calls to {!force}. *)
-    let current_t_super : some_t option ref =
+    let currently_forcing : some_t option ref =
       ref None
 
     let force (type a) (t : a t) : a =
-      (* Run the current computation *)
-      let prev_t_super = !current_t_super in
-      current_t_super := Some (Thunk t);
+      let prev = !currently_forcing in
+      currently_forcing := Some (Thunk t);
       let result = Microadapton.compute t in
-      current_t_super := prev_t_super;
+      currently_forcing := prev;
 
-      (* Record this thunk in the DCG *)
-      !current_t_super |> Option.iter (fun (Thunk t_super) ->
+      (* Record this thunk as a subcomputation in the DCG *)
+      !currently_forcing |> Option.iter (fun (Thunk t_super) ->
         Microadapton.add_dcg_edge ~super:t_super ~sub:t);
 
       result
