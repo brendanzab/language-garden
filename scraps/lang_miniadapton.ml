@@ -212,7 +212,7 @@ end = struct
     let set = Microadapton.set_ref
 
     let get (type a) (t : a t) : a =
-      Thunk.force (t :> a Microadapton.thunk)
+      Thunk.force (t :> a Thunk.t)
 
   end
 
