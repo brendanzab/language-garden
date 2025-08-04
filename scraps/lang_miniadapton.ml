@@ -2,7 +2,8 @@
 
     MiniAdapton is a library for demand-driven incremental computation that
     trades space and startup time for faster incremental updates. Computation
-    graphs can be changed after-the-fact, while still maintaining incremental performance.
+    graphs can be changed after-the-fact, while still maintaining incremental
+    performance.
 
     Resources:
 
@@ -10,7 +11,7 @@
       - {{: https://github.com/fisherdj/miniAdapton} Scheme implementation}
       - {{: https://github.com/LightAndLight/mini-adapton} Haskell implementation}
     - {{: https://web.archive.org/web/20250507163147/https://adapton.org/} Adapton Homepage}
-    - {{: https://https://vimeo.com/122066659/} Incremental Computation with Adapton / Matthew A Hammer}
+    - {{: https://https://vimeo.com/122066659/} Incremental Computation with Adapton} by Matthew A Hammer
 *)
 
 (** Low-level interface used in the implementation of {!Miniadapton}. The
