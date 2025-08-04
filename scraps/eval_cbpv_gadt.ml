@@ -8,8 +8,9 @@
       Call-By-Push-Value FAQ}
     - Paul Blain Levy, {{: https://pblevy.github.io/papers/thesisqmwphd.pdf}
       Call-By-Push-Value}, PhD Thesis
-    - Andrej Bauer, {{: https://github.com/andrejbauer/plzoo/tree/master/src/levy}
-      plzoo/levy}
+    - Andrej Bauer, {{: https://github.com/andrejbauer/plzoo/tree/master/src/levy} plzoo/levy}
+    - Andras Kovacs, {{: https://www.reddit.com/r/ProgrammingLanguages/comments/1bam7bd/im_betting_on_callbypushvalue/ku4yel3}
+      Comment on “I'm betting on Call-by-Push-Value”}
 *)
 
 [@@@warning "-unused-constructor"]
