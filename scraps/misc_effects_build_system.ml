@@ -8,7 +8,7 @@
     remains somewhat of a of a dark art.
 
     Using algebraic effects is convenient in OCaml compared to the monadic
-    approach use in Build systems à la carte, but it limits how much static
+    approach used in Build systems à la carte, but it limits how much static
     analysis we can do to the build tasks without first executing them. For
     example, we cannot compute the dependencies of our build tasks without first
     running them. This would require effects and handlers that support

@@ -9,17 +9,18 @@
     in the {!Microadapton} module, and a high-level interface defined in the
     {!Miniadapton} module.
 
-    Resources:
+    {2 Resources}
 
     - {{: https://arxiv.org/abs/1609.05337} miniAdapton: A Minimal Implementation of Incremental Computation in Scheme}
-      - {{: https://github.com/fisherdj/miniAdapton} Scheme implementation}
-      - {{: https://github.com/LightAndLight/mini-adapton} Haskell implementation}
+      - {{: https://github.com/fisherdj/miniAdapton} Reference implementation in Scheme}
+      - {{: https://github.com/LightAndLight/mini-adapton} Third-party implementation in Haskell}
+    - {{: http://matthewhammer.org/adapton/} Adapton: composable, demand-driven incremental computation}
     - {{: https://web.archive.org/web/20250507163147/https://adapton.org/} Adapton Homepage}
     - {{: https://https://vimeo.com/122066659/} Incremental Computation with Adapton} by Matthew A Hammer
 *)
 
 (** Low-level interface used in the implementation of {!Miniadapton}. The
-    Dynamic Computation Graph (DCG) must be managed manually when using this
+    Demanded Computation Graph (DCG) must be managed manually when using this
     interface. *)
 module Microadapton : sig
 
@@ -37,7 +38,7 @@ module Microadapton : sig
   (** Remove an edge between two computations in the DCG *)
 
   val compute : 'a thunk -> 'a
-  (** Return the result of a thunked computation quickly if it is in a clean
+  (** Return the result of a thunked computation quickly if it’s in a clean
       state, or restart the computation, removing links to any subcomputations
       that may have been previously recorded. *)
 
@@ -180,20 +181,27 @@ module Miniadapton : sig
 
   end
 
-  (** Memoize a function, returning a thunk that can be forced later *)
   val memo_lazy : ('a -> 'b) -> 'a -> 'b Thunk.t [@@warning "-unused-value-declaration"]
+  (** [memo_lazy f] returns a function that caches each call to [f]. Computation
+      only occurs when the returned thunk is forced, with the result
+      propagating to other thunks that may have been returned previously. *)
 
-  (** Convenience function that uses {!memo_lazy} and returns the forced the result *)
   val memo : ('a -> 'b) -> 'a -> 'b [@@warning "-unused-value-declaration"]
+  (** [memo f] returns a function that caches each call to [f]. This is
+      implemented in terms of {!memo_lazy}, but it forces the result
+      immediately on each call. *)
 
-  (** Delayed computations that can be altered incrementally after the fact *)
+  (** Delayed computations that can be updated after they have been created. *)
   module Var : sig
 
-      type 'a t
+    type 'a t = 'a Thunk.t Ref.t
+    (** Variables are implemented as references to thunks. It should be safe to
+        manipulate the underlying reference and thunk, but convenience functions
+        are provided to make this pattern less verbose. *)
 
-      val create : (unit -> 'a) -> 'a t
-      val set : 'a t -> (unit -> 'a) -> unit
-      val get : 'a t -> 'a
+    val create : (unit -> 'a) -> 'a t
+    val set : 'a t -> (unit -> 'a) -> unit
+    val get : 'a t -> 'a
 
   end
 
