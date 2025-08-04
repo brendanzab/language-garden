@@ -19,7 +19,7 @@
 (** Phantom types *)
 module T = struct
 
-  (* Data types *)
+  (* Value types *)
 
   type 'b thunk = Thunk
   type ('a1, 'a2) pair = Pair
@@ -59,40 +59,40 @@ type 'a prim =
   | String_eq : (T.string, (T.string, T.bool T.eff) T.func) T.func prim
   | String_cat : (T.string, (T.string, T.string T.eff) T.func) T.func prim
 
-type ('ctx, 'a) data_tm =
-  | Var : ('ctx, 'a) index -> ('ctx, 'a) data_tm
-  | Thunk_lit : ('ctx, 'b) comp_tm -> ('ctx, 'b T.thunk) data_tm
-  | Pair_lit : ('ctx, 'a1) data_tm * ('ctx, 'a2) data_tm -> ('ctx, ('a1, 'a2) T.pair) data_tm
-  | Either_left : ('ctx, 'a1) data_tm -> ('ctx, ('a1, 'a2) T.either) data_tm
-  | Either_right : ('ctx, 'a2) data_tm -> ('ctx, ('a1, 'a2) T.either) data_tm
-  | Unit_lit : ('ctx, T.unit) data_tm
-  | Int_lit : int -> ('ctx, T.int) data_tm
-  | Bool_lit : bool -> ('ctx, T.bool) data_tm
-  | String_lit : string -> ('ctx, T.string) data_tm
+type ('ctx, 'a) tm =
+  | Var : ('ctx, 'a) index -> ('ctx, 'a) tm
+  | Thunk_lit : ('ctx, 'b) comp_tm -> ('ctx, 'b T.thunk) tm
+  | Pair_lit : ('ctx, 'a1) tm * ('ctx, 'a2) tm -> ('ctx, ('a1, 'a2) T.pair) tm
+  | Either_left : ('ctx, 'a1) tm -> ('ctx, ('a1, 'a2) T.either) tm
+  | Either_right : ('ctx, 'a2) tm -> ('ctx, ('a1, 'a2) T.either) tm
+  | Unit_lit : ('ctx, T.unit) tm
+  | Int_lit : int -> ('ctx, T.int) tm
+  | Bool_lit : bool -> ('ctx, T.bool) tm
+  | String_lit : string -> ('ctx, T.string) tm
 
 and ('ctx, 'a) comp_tm =
-  | Let : ('ctx, 'a) data_tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
+  | Let : ('ctx, 'a) tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
   | Fix : (('b T.thunk, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
-  | Thunk_force : ('ctx, 'b T.thunk) data_tm -> ('ctx, 'b) comp_tm
+  | Thunk_force : ('ctx, 'b T.thunk) tm -> ('ctx, 'b) comp_tm
   | Fun_lit : (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, ('a, 'b) T.func) comp_tm
-  | Fun_app : ('ctx, ('a, 'b) T.func) comp_tm * ('ctx, 'a) data_tm -> ('ctx, 'b) comp_tm
+  | Fun_app : ('ctx, ('a, 'b) T.func) comp_tm * ('ctx, 'a) tm -> ('ctx, 'b) comp_tm
   | Record_lit : ('ctx, 'b1) comp_tm * ('ctx, 'b2) comp_tm -> ('ctx, ('b1, 'b2) T.record) comp_tm
   | Record_left : ('ctx, ('b1, 'b2) T.record) comp_tm -> ('ctx, 'b1) comp_tm
   | Record_right : ('ctx, ('b1, 'b2) T.record) comp_tm -> ('ctx, 'b2) comp_tm
   | Pair_match :
-      ('ctx, ('a1, 'a2) T.pair) data_tm
+      ('ctx, ('a1, 'a2) T.pair) tm
       * (('a2, ('a1, 'ctx) T.extend) T.extend, 'b) comp_tm
       -> ('ctx, 'b) comp_tm
   | Either_match :
-      ('ctx, ('a1, 'a2) T.either) data_tm
+      ('ctx, ('a1, 'a2) T.either) tm
       * (('a1, 'ctx) T.extend, 'b) comp_tm
       * (('a2, 'ctx) T.extend, 'b) comp_tm
       -> ('ctx, 'b) comp_tm
-  | Bool_match : ('ctx, T.bool) data_tm * ('ctx, 'b) comp_tm * ('ctx, 'b) comp_tm -> ('ctx, 'b) comp_tm
-  | Void_elim : ('ctx, T.void) data_tm -> ('ctx, 'b) comp_tm
+  | Bool_match : ('ctx, T.bool) tm * ('ctx, 'b) comp_tm * ('ctx, 'b) comp_tm -> ('ctx, 'b) comp_tm
+  | Void_elim : ('ctx, T.void) tm -> ('ctx, 'b) comp_tm
   | Eff_bind : ('ctx, 'a T.eff) comp_tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
-  | Eff_pure : ('ctx, 'a) data_tm -> ('ctx, 'a T.eff) comp_tm
-  | Eff_print : ('ctx, T.string) data_tm -> ('ctx, T.unit T.eff) comp_tm
+  | Eff_pure : ('ctx, 'a) tm -> ('ctx, 'a T.eff) comp_tm
+  | Eff_print : ('ctx, T.string) tm -> ('ctx, T.unit T.eff) comp_tm
   | Eff_read : ('ctx, T.string T.eff) comp_tm
   | Eff_abort : ('ctx, T.void T.eff) comp_tm
   | Prim : 'a prim -> ('ctx, 'a) comp_tm
@@ -100,27 +100,27 @@ and ('ctx, 'a) comp_tm =
 
 (* Semantic domain *)
 
-type 'a data_vtm =
-  | Thunk_lit : (unit -> 'a comp_vtm) -> 'a T.thunk data_vtm
-  | Pair_lit : 'a1 data_vtm * 'a2 data_vtm -> ('a1, 'a2) T.pair data_vtm
-  | Either_left : 'a1 data_vtm -> ('a1, 'a2) T.either data_vtm
-  | Either_right : 'a2 data_vtm -> ('a1, 'a2) T.either data_vtm
-  | Unit_lit : T.unit data_vtm
-  | Int_lit : int -> T.int data_vtm
-  | Bool_lit : bool -> T.bool data_vtm
-  | String_lit : string -> T.string data_vtm
+type 'a vtm =
+  | Thunk_lit : (unit -> 'a comp_vtm) -> 'a T.thunk vtm
+  | Pair_lit : 'a1 vtm * 'a2 vtm -> ('a1, 'a2) T.pair vtm
+  | Either_left : 'a1 vtm -> ('a1, 'a2) T.either vtm
+  | Either_right : 'a2 vtm -> ('a1, 'a2) T.either vtm
+  | Unit_lit : T.unit vtm
+  | Int_lit : int -> T.int vtm
+  | Bool_lit : bool -> T.bool vtm
+  | String_lit : string -> T.string vtm
 
 and 'a comp_vtm =
-  | Fun_lit : ('a data_vtm -> 'b comp_vtm) -> ('a, 'b) T.func comp_vtm
+  | Fun_lit : ('a vtm -> 'b comp_vtm) -> ('a, 'b) T.func comp_vtm
   | Record_lit : 'b1 comp_vtm * 'b2 comp_vtm -> ('b1, 'b2) T.record comp_vtm
-  | Eff_pure : 'a data_vtm -> 'a T.eff comp_vtm
+  | Eff_pure : 'a vtm -> 'a T.eff comp_vtm
 
 
 (* Environments *)
 
 type 'ctx env =
   | [] : T.empty env
-  | ( :: ) : 'a data_vtm * 'ctx env -> ('a, 'ctx) T.extend env
+  | ( :: ) : 'a vtm * 'ctx env -> ('a, 'ctx) T.extend env
 
 
 (* Evaluation *)
@@ -131,7 +131,7 @@ type _ Effect.t +=
   | Print : string -> unit Effect.t
   | Read : string Effect.t
 
-let rec eval_index : type ctx a. (ctx, a) index -> ctx env -> a data_vtm =
+let rec eval_index : type ctx a. (ctx, a) index -> ctx env -> a vtm =
   fun x env ->
     match x, env with
     | Stop, v :: _ -> v
@@ -151,79 +151,79 @@ let eval_prim : type a. a prim -> a comp_vtm =
     | String_eq -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (Bool_lit (s1 = s2))
     | String_cat -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (String_lit (s1 ^ s2))
 
-let rec eval_data : type ctx a. ctx env -> (ctx, a) data_tm -> a data_vtm =
+let rec eval_tm : type ctx a. ctx env -> (ctx, a) tm -> a vtm =
   fun env tm ->
     match tm with
     | Var x -> eval_index x env
-    | Thunk_lit tm -> Thunk_lit (fun () -> eval_comp env tm)
-    | Pair_lit (left, right) -> Pair_lit (eval_data env left, eval_data env right)
-    | Either_left left -> Either_left (eval_data env left)
-    | Either_right right -> Either_right (eval_data env right)
+    | Thunk_lit tm -> Thunk_lit (fun () -> eval_comp_tm env tm)
+    | Pair_lit (left, right) -> Pair_lit (eval_tm env left, eval_tm env right)
+    | Either_left left -> Either_left (eval_tm env left)
+    | Either_right right -> Either_right (eval_tm env right)
     | Unit_lit -> Unit_lit
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | String_lit s -> String_lit s
 
-and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
+and eval_comp_tm : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
   fun env tm ->
     match tm with
     | Let (def, body) ->
-        let def = eval_data env def in
-        eval_comp (def :: env) body
+        let def = eval_tm env def in
+        eval_comp_tm (def :: env) body
 
     | Fix thunk ->
-        eval_comp (eval_data env (Thunk_lit tm) :: env) thunk
+        eval_comp_tm (eval_tm env (Thunk_lit tm) :: env) thunk
 
     | Thunk_force thunk ->
-        let Thunk_lit value = eval_data env thunk in
+        let Thunk_lit value = eval_tm env thunk in
         value ()
 
     | Fun_lit body ->
-        Fun_lit (fun param -> eval_comp (param :: env) body)
+        Fun_lit (fun param -> eval_comp_tm (param :: env) body)
 
     | Fun_app (fn, arg) ->
-        let Fun_lit fn = eval_comp env fn in
-        fn (eval_data env arg)
+        let Fun_lit fn = eval_comp_tm env fn in
+        fn (eval_tm env arg)
 
     | Record_lit (left, right) ->
-        Record_lit (eval_comp env left, eval_comp env right)
+        Record_lit (eval_comp_tm env left, eval_comp_tm env right)
 
     | Record_left record ->
-        let Record_lit (left, _) = eval_comp env record in left
+        let Record_lit (left, _) = eval_comp_tm env record in left
 
     | Record_right record ->
-        let Record_lit (_, right) = eval_comp env record in right
+        let Record_lit (_, right) = eval_comp_tm env record in right
 
     | Pair_match (pair, body) ->
-        let Pair_lit (left, right) = eval_data env pair in
-        eval_comp (right :: left :: env) body
+        let Pair_lit (left, right) = eval_tm env pair in
+        eval_comp_tm (right :: left :: env) body
 
     | Either_match (either, left, right) ->
-        begin match eval_data env either with
-        | Either_left tm -> eval_comp (tm :: env) left
-        | Either_right tm -> eval_comp (tm :: env) right
+        begin match eval_tm env either with
+        | Either_left tm -> eval_comp_tm (tm :: env) left
+        | Either_right tm -> eval_comp_tm (tm :: env) right
         end
 
     | Bool_match (bool, on_true, on_false) ->
-        begin match eval_data env bool with
-        | Bool_lit true -> eval_comp env on_true
-        | Bool_lit false -> eval_comp env on_false
+        begin match eval_tm env bool with
+        | Bool_lit true -> eval_comp_tm env on_true
+        | Bool_lit false -> eval_comp_tm env on_false
         end
 
     | Void_elim void ->
-        begin match eval_data env void with
+        begin match eval_tm env void with
         | _ -> .
         end
 
     | Eff_bind (def, body) ->
-        let Eff_pure def = eval_comp env def in
-        eval_comp (def :: env) body
+        let Eff_pure def = eval_comp_tm env def in
+        eval_comp_tm (def :: env) body
 
     | Eff_pure tm ->
-        Eff_pure (eval_data env tm)
+        Eff_pure (eval_tm env tm)
 
     | Eff_print str ->
-        let String_lit str = eval_data env str in
+        let String_lit str = eval_tm env str in
         Effect.perform (Print str);
         Eff_pure Unit_lit
 
@@ -249,7 +249,7 @@ let () = begin
   let success_count = ref 0 in
   let error_count = ref 0 in
 
-  let test_eval_comp (type a)
+  let test_eval_comp_tm (type a)
       ?(expected : a comp_vtm option)
       ?(expected_in : string list = [])
       ?(expected_out : string list = [])
@@ -262,7 +262,7 @@ let () = begin
     let expected_out = Queue.of_seq (List.to_seq expected_out) in
 
     match
-      begin match eval_comp [] tm, expected with
+      begin match eval_comp_tm [] tm, expected with
       | vtm, Some expected -> assert (vtm = expected)
       | _, None -> failwith "expected abort"
       | effect (Print str), k ->
@@ -291,75 +291,75 @@ let () = begin
 
   print_string "Running tests:\n\n";
 
-  test_eval_comp "apply id"
+  test_eval_comp_tm "apply id"
     (Fun_lit (Eff_pure (Var Stop)) $ Int_lit 42)
     ~expected:(Eff_pure (Int_lit 42));
 
-  test_eval_comp "apply neg"
+  test_eval_comp_tm "apply neg"
     (Prim Int_neg $ Int_lit 42)
     ~expected:(Eff_pure (Int_lit (-42)));
 
-  test_eval_comp "define and apply id"
+  test_eval_comp_tm "define and apply id"
     (Let (Thunk_lit (Fun_lit (Eff_pure (Var Stop))),
       Thunk_force (Var Stop) $ Unit_lit))
     ~expected:(Eff_pure Unit_lit);
 
-  test_eval_comp "match pair left"
+  test_eval_comp_tm "match pair left"
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
       Eff_pure (Var (Pop Stop))))
     ~expected:(Eff_pure (String_lit "hello"));
 
-  test_eval_comp  "match pair right"
+  test_eval_comp_tm  "match pair right"
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
       Eff_pure (Var Stop)))
     ~expected:(Eff_pure (Int_lit 42));
 
-  test_eval_comp "record left"
+  test_eval_comp_tm "record left"
     (Record_left (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
     ~expected:(Eff_pure (String_lit "hello"));
 
-  test_eval_comp "record right"
+  test_eval_comp_tm "record right"
     (Record_right (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
     ~expected:(Eff_pure (Int_lit 42));
 
-  test_eval_comp "match either left"
+  test_eval_comp_tm "match either left"
     (Either_match (Either_left (String_lit "hello"),
       Eff_pure (Var Stop),
       Void_elim (Var Stop)))
     ~expected:(Eff_pure (String_lit "hello"));
 
-  test_eval_comp "match eight right"
+  test_eval_comp_tm "match eight right"
     (Either_match (Either_right Unit_lit,
       Eff_pure (Var Stop),
       Eff_pure (String_lit "goodbye")))
     ~expected:(Eff_pure (String_lit "goodbye"));
 
-  test_eval_comp "bind value and let 1"
+  test_eval_comp_tm "bind value and let 1"
     (Eff_bind (Eff_pure (Int_lit 42),
       Let (String_lit "hello",
         Eff_pure (Var (Pop Stop)))))
     ~expected:(Eff_pure (Int_lit 42));
 
-  test_eval_comp "bind value and let 2"
+  test_eval_comp_tm "bind value and let 2"
     (Eff_bind (Eff_pure (Int_lit 42),
       Let (String_lit "hello",
         Eff_pure (Var Stop))))
     ~expected:(Eff_pure (String_lit "hello"));
 
-  test_eval_comp "print"
+  test_eval_comp_tm "print"
     (Eff_print (String_lit "hello"))
     ~expected:(Eff_pure Unit_lit)
     ~expected_out:["hello"];
 
-  test_eval_comp "read"
+  test_eval_comp_tm "read"
     Eff_read
     ~expected:(Eff_pure (String_lit "howdy"))
     ~expected_in:["howdy"];
 
-  test_eval_comp "abort"
+  test_eval_comp_tm "abort"
     Eff_abort;
 
-  test_eval_comp "hello world"
+  test_eval_comp_tm "hello world"
     (Let (Thunk_lit Eff_read,
       Eff_bind (Thunk_force (Var Stop),
         Eff_bind (Thunk_force (Var (Pop Stop)),
