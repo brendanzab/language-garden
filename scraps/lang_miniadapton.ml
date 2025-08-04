@@ -1,9 +1,13 @@
-(** An implementation of miniAdapton in OCaml.
+(** An implementation of {i miniAdapton} in OCaml.
 
-    MiniAdapton is a library for demand-driven incremental computation that
+    {i miniAdapton} is a library for demand-driven, incremental computation that
     trades space and startup time for faster incremental updates. Computation
     graphs can be changed after-the-fact, while still maintaining incremental
     performance.
+
+    The implementation is divided into a minimal, low-level interface, defined
+    in the {!Microadapton} module, and a high-level interface defined in the
+    {!Miniadapton} module.
 
     Resources:
 
@@ -24,17 +28,33 @@ module Microadapton : sig
   type 'a thunk
 
   val create : (unit -> 'a) -> 'a thunk
+  (** Create a thunked computation *)
+
   val add_dcg_edge : super:'a thunk -> sub:'b thunk -> unit
+  (** Add an edge between two computations in the DCG *)
+
   val remove_dcg_edge : super:'a thunk -> sub:'b thunk -> unit [@@warning "-unused-value-declaration"]
+  (** Remove an edge between two computations in the DCG *)
+
   val compute : 'a thunk -> 'a
+  (** Return the result of a thunked computation quickly if it is in a clean
+      state, or restart the computation, removing links to any subcomputations
+      that may have been previously recorded. *)
+
   val dirty : 'a thunk -> unit [@@warning "-unused-value-declaration"]
+  (** Mark a thunk as dirty along with all of its supercomputations *)
+
 
   (** Mutable references *)
 
   type 'a thunk_ref = private 'a thunk
 
   val create_ref : 'a -> 'a thunk_ref
+  (** Create a mutable reference cell *)
+
   val set_ref : 'a thunk_ref -> 'a -> unit
+  (** Update the contents of a reference cell, invalidating any
+      supercomputations that might be depending on it. *)
 
 end = struct
 
@@ -93,9 +113,6 @@ end = struct
     t_super.sub <- Thunk_set.remove (Thunk t_sub) t_super.sub;
     t_sub.super <- Thunk_set.remove (Thunk t_super) t_sub.super
 
-  (** Return the result of a thunked computation quickly if it is in a clean
-      state, or restart the computation, removing links to any subcomputations
-      that may have been previously recorded. *)
   let rec compute : type a. a thunk -> a =
     fun t ->
       if t.is_clean then
@@ -108,7 +125,6 @@ end = struct
         compute t
       end
 
-  (** Mark a thunk as dirty along with all of its supercomputations *)
   let rec dirty : type a. a thunk -> unit =
     fun t ->
       if t.is_clean then
@@ -138,7 +154,9 @@ end = struct
 end
 
 
-(** High-level interface for safely combining mutation and memoization *)
+(** High-level interface for manipulating incremental computations involving
+    mutation and memoization. The DCG is managed internally to this module,
+    preserving from-scratch consistency. *)
 module Miniadapton : sig
 
   (** Demand-driven, incremental computations *)
@@ -190,16 +208,22 @@ end = struct
     type some_t =
       | Thunk : 'a t -> some_t
 
-    let currently_adapting : some_t option ref =
+    (** A thunk that is currently being forced. This is used for dynamically
+        building the DCG during calls to {!force}. *)
+    let current_t_super : some_t option ref =
       ref None
 
     let force (type a) (t : a t) : a =
-      let prev_adapting = !currently_adapting in
-      currently_adapting := Some (Thunk t);
+      (* Run the current computation *)
+      let prev_t_super = !current_t_super in
+      current_t_super := Some (Thunk t);
       let result = Microadapton.compute t in
-      currently_adapting := prev_adapting;
-      !currently_adapting |> Option.iter (fun (Thunk t') ->
-        Microadapton.add_dcg_edge ~super:t' ~sub:t);
+      current_t_super := prev_t_super;
+
+      (* Record this thunk in the DCG *)
+      !current_t_super |> Option.iter (fun (Thunk t_super) ->
+        Microadapton.add_dcg_edge ~super:t_super ~sub:t);
+
       result
 
   end
