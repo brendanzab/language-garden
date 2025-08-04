@@ -139,6 +139,9 @@ end = struct
   let quote_vty (ctx : context) (vty : Core.vty) : Core.ty =
     Semantics.quote_vty ctx.ty_size vty
 
+  let close_vty ({ ty_env; ty_size; _ } : context) (body : Core.vty) : (Core.vty -> Core.vty) =
+    fun vty -> Semantics.(eval_ty (vty :: ty_env) (quote_vty (ty_size + 1) body))
+
   let pp_ty (ctx : context) (ty : Core.ty) : Format.formatter -> unit =
     Core.pp_ty ctx.ty_names ty
 
@@ -373,32 +376,26 @@ end = struct
 
   (** Elaborate a function literal into a core term, inferring its type. *)
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.vty =
-    let rec go ctx params body_ty body =
-      match params, body_ty with
-      | [], Some body_ty ->
-          let body_ty = check_ty ctx body_ty in
-          check_tm ctx body (eval_ty ctx body_ty), body_ty
+    match params, body_ty with
+    | [], Some body_ty ->
+        let body_ty = check_ty ctx body_ty in
+        check_tm ctx body (eval_ty ctx body_ty), eval_ty ctx body_ty
 
-      | [], None ->
-          let body, body_vty = infer_tm ctx body in
-          body, quote_vty ctx body_vty
+    | [], None ->
+        infer_tm ctx body
 
-      | Ty_param name :: params, body_ty ->
-          let body, body_ty = go (extend_ty ctx name.data) params body_ty body in
-          Forall_lit (name.data, body), Forall_type (name.data, body_ty)
+    | Ty_param name :: params, body_ty ->
+        let body, body_ty = infer_fun_lit (extend_ty ctx name.data) params body_ty body in
+        Forall_lit (name.data, body), Forall_type (name.data, close_vty ctx body_ty)
 
-      | Param (name, param_ty) :: params, body_ty ->
-          let param_ty = match param_ty with
-            | None -> fresh_meta ctx name.span "function parameter type"
-            | Some ty -> check_ty ctx ty
-          in
-          let param_vty = eval_ty ctx param_ty in
-          let body, body_ty = go (extend_tm ctx name.data param_vty) params body_ty body in
-          Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
-    in
-
-    let body, body_ty = go ctx params body_ty body in
-    body, eval_ty ctx body_ty
+    | Param (name, param_ty) :: params, body_ty ->
+        let param_ty = match param_ty with
+          | None -> fresh_meta ctx name.span "function parameter type"
+          | Some ty -> check_ty ctx ty
+        in
+        let param_vty = eval_ty ctx param_ty in
+        let body, body_ty = infer_fun_lit (extend_tm ctx name.data param_vty) params body_ty body in
+        Fun_lit (name.data, param_ty, body), Fun_type (param_vty, body_ty)
 
 
   (** {2 Running elaboration} *)
