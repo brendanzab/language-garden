@@ -242,100 +242,138 @@ and eval_comp : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
 
 let () = begin
 
+  Printexc.record_backtrace true;
+
   let ( $ ) f a = Fun_app (f, a) in
 
-  print_string "Running tests ...";
+  let success_count = ref 0 in
+  let error_count = ref 0 in
 
-  assert (eval_comp []
+  let test_eval_comp (type a)
+      ?(expected : a comp_vtm option)
+      ?(expected_in : string list = [])
+      ?(expected_out : string list = [])
+      (name : string)
+      (tm : (T.empty, a) comp_tm) : unit =
+
+    Printf.printf "test %s ... " name;
+
+    let expected_in = Queue.of_seq (List.to_seq expected_in) in
+    let expected_out = Queue.of_seq (List.to_seq expected_out) in
+
+    match
+      begin match eval_comp [] tm, expected with
+      | vtm, Some expected -> assert (vtm = expected)
+      | _, None -> failwith "expected abort"
+      | effect (Print str), k ->
+          assert (str = Queue.pop expected_out);
+          Effect.Deep.continue k ()
+      | effect Read, k ->
+          Effect.Deep.continue k (Queue.pop expected_in)
+      | exception Abort ->
+          begin match expected with
+          | Some _ -> failwith "expected value"
+          | None -> ()
+          end
+      end
+    with
+    | () ->
+        Printf.printf "ok\n";
+        incr success_count
+    | exception e ->
+        Printf.printf "error:\n\n";
+        Printf.printf "  %s\n\n" (Printexc.to_string e);
+        String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+          Printf.printf "  %s\n" line;
+        end;
+        incr error_count
+  in
+
+  print_string "Running tests:\n\n";
+
+  test_eval_comp "apply id"
     (Fun_lit (Eff_pure (Var Stop)) $ Int_lit 42)
-      = Eff_pure (Int_lit 42));
+    ~expected:(Eff_pure (Int_lit 42));
 
-  assert (eval_comp []
+  test_eval_comp "apply neg"
     (Prim Int_neg $ Int_lit 42)
-      = Eff_pure (Int_lit (-42)));
+    ~expected:(Eff_pure (Int_lit (-42)));
 
-  assert (eval_comp []
+  test_eval_comp "define and apply id"
     (Let (Thunk_lit (Fun_lit (Eff_pure (Var Stop))),
       Thunk_force (Var Stop) $ Unit_lit))
-      = Eff_pure Unit_lit);
+    ~expected:(Eff_pure Unit_lit);
 
-  assert (eval_comp []
+  test_eval_comp "match pair left"
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
       Eff_pure (Var (Pop Stop))))
-      = Eff_pure (String_lit "hello"));
+    ~expected:(Eff_pure (String_lit "hello"));
 
-  assert (eval_comp []
+  test_eval_comp  "match pair right"
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
       Eff_pure (Var Stop)))
-      = Eff_pure (Int_lit 42));
+    ~expected:(Eff_pure (Int_lit 42));
 
-  assert (eval_comp []
+  test_eval_comp "record left"
     (Record_left (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
-      = Eff_pure (String_lit "hello"));
+    ~expected:(Eff_pure (String_lit "hello"));
 
-  assert (eval_comp []
+  test_eval_comp "record right"
     (Record_right (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
-      = Eff_pure (Int_lit 42));
+    ~expected:(Eff_pure (Int_lit 42));
 
-  assert (eval_comp []
+  test_eval_comp "match either left"
     (Either_match (Either_left (String_lit "hello"),
       Eff_pure (Var Stop),
       Void_elim (Var Stop)))
-      = Eff_pure (String_lit "hello"));
+    ~expected:(Eff_pure (String_lit "hello"));
 
-  assert (eval_comp []
+  test_eval_comp "match eight right"
     (Either_match (Either_right Unit_lit,
       Eff_pure (Var Stop),
       Eff_pure (String_lit "goodbye")))
-      = Eff_pure (String_lit "goodbye"));
+    ~expected:(Eff_pure (String_lit "goodbye"));
 
-  assert (eval_comp []
+  test_eval_comp "bind value and let 1"
     (Eff_bind (Eff_pure (Int_lit 42),
       Let (String_lit "hello",
         Eff_pure (Var (Pop Stop)))))
-      = Eff_pure (Int_lit 42));
+    ~expected:(Eff_pure (Int_lit 42));
 
-  assert (eval_comp []
+  test_eval_comp "bind value and let 2"
     (Eff_bind (Eff_pure (Int_lit 42),
       Let (String_lit "hello",
         Eff_pure (Var Stop))))
-      = Eff_pure (String_lit "hello"));
+    ~expected:(Eff_pure (String_lit "hello"));
 
-  begin match eval_comp [] (Eff_print (String_lit "hello")) with
-  | result -> assert (result = Eff_pure Unit_lit)
-  | effect (Print str), k ->
-      assert (str = "hello");
-      Effect.Deep.continue k ()
+  test_eval_comp "print"
+    (Eff_print (String_lit "hello"))
+    ~expected:(Eff_pure Unit_lit)
+    ~expected_out:["hello"];
+
+  test_eval_comp "read"
+    Eff_read
+    ~expected:(Eff_pure (String_lit "howdy"))
+    ~expected_in:["howdy"];
+
+  test_eval_comp "abort"
+    Eff_abort;
+
+  test_eval_comp "hello world"
+    (Let (Thunk_lit Eff_read,
+      Eff_bind (Thunk_force (Var Stop),
+        Eff_bind (Thunk_force (Var (Pop Stop)),
+          Prim String_cat $ Var (Pop Stop) $ Var Stop))))
+    ~expected:(Eff_pure (String_lit "hello world!"))
+    ~expected_in:["hello "; "world!"];
+
+  print_string "\n";
+
+  if !error_count > 0 then begin
+    Printf.printf "Failed %i out of %i tests\n" !error_count (!success_count + !error_count);
+    exit 1
   end;
 
-  begin match eval_comp [] Eff_read with
-  | result -> assert (result = Eff_pure (String_lit "howdy"))
-  | effect Read, k ->
-      Effect.Deep.continue k "howdy"
-  end;
-
-  begin match eval_comp [] Eff_abort with
-  | exception Abort -> ()
-  | _ -> failwith "expected abort"
-  end;
-
-  begin
-    let lines = Queue.create () in
-    lines |> Queue.push "hello ";
-    lines |> Queue.push "world!";
-
-    match
-      eval_comp []
-        (Let (Thunk_lit Eff_read,
-          Eff_bind (Thunk_force (Var Stop),
-            Eff_bind (Thunk_force (Var (Pop Stop)),
-              Prim String_cat $ Var (Pop Stop) $ Var Stop))))
-    with
-    | result -> assert (result = Eff_pure (String_lit "hello world!"))
-    | effect Read, k ->
-        Effect.Deep.continue k (Queue.pop lines)
-  end;
-
-  print_string " ok!\n";
+  Printf.printf "Ran %i successful tests\n" !success_count;
 
 end
