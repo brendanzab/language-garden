@@ -334,7 +334,8 @@ end = struct
     match params, body_ty with
     | [], Some body_ty ->
         let body_ty = check_ty ctx body_ty in
-        check_tm ctx body (eval_ty ctx body_ty), eval_ty ctx body_ty
+        let body_vty = eval_ty ctx body_ty in
+        check_tm ctx body body_vty, body_vty
 
     | [], None ->
         infer_tm ctx body
