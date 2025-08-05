@@ -24,9 +24,9 @@
   (mdx (and (>= "2.5") :with-test))
   (menhir (and (>= "20240715") :build))
   (menhirLib (>= "20240715"))
-  (qcheck (and (>= "0.25") :with-test))
-  (qcheck-core (and (>= "0.25") :with-test))
-  (qcheck-alcotest (and (>= "0.25") :with-test))
+  (qcheck (and (>= "0.26") :with-test))
+  (qcheck-core (and (>= "0.26") :with-test))
+  (qcheck-alcotest (and (>= "0.26") :with-test))
   (sedlex (>= "3.6"))))
 
 (package
@@ -37,9 +37,9 @@
   (mdx (and (>= "2.5") :with-test))
   (menhir (and (>= "20240715") :build))
   (menhirLib (>= "20240715"))
-  (qcheck (and (>= "0.25") :with-test))
-  (qcheck-core (and (>= "0.25") :with-test))
-  (qcheck-alcotest (and (>= "0.25") :with-test))
+  (qcheck (and (>= "0.26") :with-test))
+  (qcheck-core (and (>= "0.26") :with-test))
+  (qcheck-alcotest (and (>= "0.26") :with-test))
   (sedlex (>= "3.6"))))
 
 
@@ -190,9 +190,9 @@
  (allow_empty)
  (depends
   lang-declarative-graphics
-  (js_of_ocaml-compiler (and (>= "6.0.1") (< "6.1.0")))
-  (js_of_ocaml (and (>= "6.0.1") (< "6.1.0")))
-  (js_of_ocaml-ppx (and (>= "6.0.1") (< "6.1.0")))))
+  (js_of_ocaml-compiler (>= "6.2.0"))
+  (js_of_ocaml (>= "6.2.0"))
+  (js_of_ocaml-ppx (>= "6.2.0"))))
 
 (package
  (name lang-lc-interpreters)

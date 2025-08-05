@@ -11,9 +11,9 @@ depends: [
   "mdx" {>= "2.5" & with-test}
   "menhir" {>= "20240715" & build}
   "menhirLib" {>= "20240715"}
-  "qcheck" {>= "0.25" & with-test}
-  "qcheck-core" {>= "0.25" & with-test}
-  "qcheck-alcotest" {>= "0.25" & with-test}
+  "qcheck" {>= "0.26" & with-test}
+  "qcheck-core" {>= "0.26" & with-test}
+  "qcheck-alcotest" {>= "0.26" & with-test}
   "sedlex" {>= "3.6"}
   "odoc" {with-doc}
 ]
