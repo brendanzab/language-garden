@@ -4,6 +4,7 @@
 
 (source (github brendanzab/language-garden))
 (authors "Brendan Zabarauskas")
+(license MIT)
 
 (using mdx 0.4)
 (using menhir 2.1)
