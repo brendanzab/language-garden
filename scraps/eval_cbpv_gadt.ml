@@ -34,7 +34,7 @@ module T = struct
 
   type ('a, 'b) func = Func
   type ('b1, 'b2) record = Record
-  type 'a eff = Eff
+  type 'a comp = Comp
 
   (* Contexts *)
 
@@ -51,13 +51,13 @@ type ('ctx, 'a) index =
   | Pop : ('ctx, 'a1) index -> (('a2, 'ctx) T.extend, 'a1) index
 
 type 'a prim =
-  | Int_eq : (T.int, (T.int, T.bool T.eff) T.func) T.func prim
-  | Int_add : (T.int, (T.int, T.int T.eff) T.func) T.func prim
-  | Int_sub : (T.int, (T.int, T.int T.eff) T.func) T.func prim
-  | Int_mul : (T.int, (T.int, T.int T.eff) T.func) T.func prim
-  | Int_neg : (T.int, T.int T.eff) T.func prim
-  | String_eq : (T.string, (T.string, T.bool T.eff) T.func) T.func prim
-  | String_cat : (T.string, (T.string, T.string T.eff) T.func) T.func prim
+  | Int_eq : (T.int, (T.int, T.bool T.comp) T.func) T.func prim
+  | Int_add : (T.int, (T.int, T.int T.comp) T.func) T.func prim
+  | Int_sub : (T.int, (T.int, T.int T.comp) T.func) T.func prim
+  | Int_mul : (T.int, (T.int, T.int T.comp) T.func) T.func prim
+  | Int_neg : (T.int, T.int T.comp) T.func prim
+  | String_eq : (T.string, (T.string, T.bool T.comp) T.func) T.func prim
+  | String_cat : (T.string, (T.string, T.string T.comp) T.func) T.func prim
 
 type ('ctx, 'a) tm =
   | Var : ('ctx, 'a) index -> ('ctx, 'a) tm
@@ -90,11 +90,11 @@ and ('ctx, 'a) comp_tm =
       -> ('ctx, 'b) comp_tm
   | Bool_match : ('ctx, T.bool) tm * ('ctx, 'b) comp_tm * ('ctx, 'b) comp_tm -> ('ctx, 'b) comp_tm
   | Void_elim : ('ctx, T.void) tm -> ('ctx, 'b) comp_tm
-  | Eff_bind : ('ctx, 'a T.eff) comp_tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
-  | Eff_pure : ('ctx, 'a) tm -> ('ctx, 'a T.eff) comp_tm
-  | Eff_print : ('ctx, T.string) tm -> ('ctx, T.unit T.eff) comp_tm
-  | Eff_read : ('ctx, T.string T.eff) comp_tm
-  | Eff_abort : ('ctx, T.void T.eff) comp_tm
+  | Comp_bind : ('ctx, 'a T.comp) comp_tm * (('a, 'ctx) T.extend, 'b) comp_tm -> ('ctx, 'b) comp_tm
+  | Comp_pure : ('ctx, 'a) tm -> ('ctx, 'a T.comp) comp_tm
+  | Comp_print : ('ctx, T.string) tm -> ('ctx, T.unit T.comp) comp_tm
+  | Comp_read : ('ctx, T.string T.comp) comp_tm
+  | Comp_abort : ('ctx, T.void T.comp) comp_tm
   | Prim : 'a prim -> ('ctx, 'a) comp_tm
 
 
@@ -113,7 +113,7 @@ type 'a vtm =
 and 'a comp_vtm =
   | Fun_lit : ('a vtm -> 'b comp_vtm) -> ('a, 'b) T.func comp_vtm
   | Record_lit : 'b1 comp_vtm * 'b2 comp_vtm -> ('b1, 'b2) T.record comp_vtm
-  | Eff_pure : 'a vtm -> 'a T.eff comp_vtm
+  | Comp_pure : 'a vtm -> 'a T.comp comp_vtm
 
 
 (* Environments *)
@@ -143,13 +143,13 @@ let eval_prim : type a. a prim -> a comp_vtm =
 
   fun prim ->
     match prim with
-    | Int_eq -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Bool_lit (i1 = i2))
-    | Int_add -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 + i2))
-    | Int_sub -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 - i2))
-    | Int_mul -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Eff_pure (Int_lit (i1 * i2))
-    | Int_neg -> int_fun @@ fun i -> Eff_pure (Int_lit (-i))
-    | String_eq -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (Bool_lit (s1 = s2))
-    | String_cat -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Eff_pure (String_lit (s1 ^ s2))
+    | Int_eq -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Comp_pure (Bool_lit (i1 = i2))
+    | Int_add -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Comp_pure (Int_lit (i1 + i2))
+    | Int_sub -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Comp_pure (Int_lit (i1 - i2))
+    | Int_mul -> int_fun @@ fun i1 -> int_fun @@ fun i2 -> Comp_pure (Int_lit (i1 * i2))
+    | Int_neg -> int_fun @@ fun i -> Comp_pure (Int_lit (-i))
+    | String_eq -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Comp_pure (Bool_lit (s1 = s2))
+    | String_cat -> string_fun @@ fun s1 -> string_fun @@ fun s2 -> Comp_pure (String_lit (s1 ^ s2))
 
 let rec eval_tm : type ctx a. ctx env -> (ctx, a) tm -> a vtm =
   fun env tm ->
@@ -215,23 +215,23 @@ and eval_comp_tm : type ctx a. ctx env -> (ctx, a) comp_tm -> a comp_vtm =
         | _ -> .
         end
 
-    | Eff_bind (def, body) ->
-        let Eff_pure def = eval_comp_tm env def in
+    | Comp_bind (def, body) ->
+        let Comp_pure def = eval_comp_tm env def in
         eval_comp_tm (def :: env) body
 
-    | Eff_pure tm ->
-        Eff_pure (eval_tm env tm)
+    | Comp_pure tm ->
+        Comp_pure (eval_tm env tm)
 
-    | Eff_print str ->
+    | Comp_print str ->
         let String_lit str = eval_tm env str in
         Effect.perform (Print str);
-        Eff_pure Unit_lit
+        Comp_pure Unit_lit
 
-    | Eff_read ->
+    | Comp_read ->
         let str = Effect.perform Read in
-        Eff_pure (String_lit str)
+        Comp_pure (String_lit str)
 
-    | Eff_abort ->
+    | Comp_abort ->
         raise Abort
 
     | Prim prim ->
@@ -249,34 +249,10 @@ let () = begin
   let success_count = ref 0 in
   let error_count = ref 0 in
 
-  let test_eval_comp_tm (type a)
-      ?(expected : a comp_vtm option)
-      ?(expected_in : string list = [])
-      ?(expected_out : string list = [])
-      (name : string)
-      (tm : (T.empty, a) comp_tm) : unit =
-
+  let test (name : string) (f : unit -> unit) : unit =
     Printf.printf "test %s ... " name;
 
-    let expected_in = Queue.of_seq (List.to_seq expected_in) in
-    let expected_out = Queue.of_seq (List.to_seq expected_out) in
-
-    match
-      begin match eval_comp_tm [] tm, expected with
-      | vtm, Some expected -> assert (vtm = expected)
-      | _, None -> failwith "expected abort"
-      | effect (Print str), k ->
-          assert (str = Queue.pop expected_out);
-          Effect.Deep.continue k ()
-      | effect Read, k ->
-          Effect.Deep.continue k (Queue.pop expected_in)
-      | exception Abort ->
-          begin match expected with
-          | Some _ -> failwith "expected value"
-          | None -> ()
-          end
-      end
-    with
+    match f () with
     | () ->
         Printf.printf "ok\n";
         incr success_count
@@ -289,82 +265,108 @@ let () = begin
         incr error_count
   in
 
+  let test_eval_comp_tm (type a)
+      ?(expected : a comp_vtm option)
+      ?(expected_in : string list = [])
+      ?(expected_out : string list = [])
+      (name : string)
+      (tm : (T.empty, a) comp_tm) : unit =
+
+    let expected_in = Queue.of_seq (List.to_seq expected_in) in
+    let expected_out = Queue.of_seq (List.to_seq expected_out) in
+
+    test name @@ fun () ->
+      match eval_comp_tm [] tm, expected with
+      | vtm, Some expected -> assert (vtm = expected)
+      | _, None -> failwith "expected abort"
+      | effect (Print str), k ->
+          assert (str = Queue.pop expected_out);
+          Effect.Deep.continue k ()
+      | effect Read, k ->
+          Effect.Deep.continue k (Queue.pop expected_in)
+      | exception Abort ->
+          begin match expected with
+          | Some _ -> failwith "expected value"
+          | None -> ()
+          end
+  in
+
   print_string "Running tests:\n\n";
 
   test_eval_comp_tm "apply id"
-    (Fun_lit (Eff_pure (Var Stop)) $ Int_lit 42)
-    ~expected:(Eff_pure (Int_lit 42));
+    (Fun_lit (Comp_pure (Var Stop)) $ Int_lit 42)
+    ~expected:(Comp_pure (Int_lit 42));
 
   test_eval_comp_tm "apply neg"
     (Prim Int_neg $ Int_lit 42)
-    ~expected:(Eff_pure (Int_lit (-42)));
+    ~expected:(Comp_pure (Int_lit (-42)));
 
   test_eval_comp_tm "define and apply id"
-    (Let (Thunk_lit (Fun_lit (Eff_pure (Var Stop))),
+    (Let (Thunk_lit (Fun_lit (Comp_pure (Var Stop))),
       Thunk_force (Var Stop) $ Unit_lit))
-    ~expected:(Eff_pure Unit_lit);
+    ~expected:(Comp_pure Unit_lit);
 
   test_eval_comp_tm "match pair left"
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
-      Eff_pure (Var (Pop Stop))))
-    ~expected:(Eff_pure (String_lit "hello"));
+      Comp_pure (Var (Pop Stop))))
+    ~expected:(Comp_pure (String_lit "hello"));
 
   test_eval_comp_tm  "match pair right"
     (Pair_match (Pair_lit (String_lit "hello", Int_lit 42),
-      Eff_pure (Var Stop)))
-    ~expected:(Eff_pure (Int_lit 42));
+      Comp_pure (Var Stop)))
+    ~expected:(Comp_pure (Int_lit 42));
 
   test_eval_comp_tm "record left"
-    (Record_left (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
-    ~expected:(Eff_pure (String_lit "hello"));
+    (Record_left (Record_lit (Comp_pure (String_lit "hello"), Comp_pure (Int_lit 42))))
+    ~expected:(Comp_pure (String_lit "hello"));
 
   test_eval_comp_tm "record right"
-    (Record_right (Record_lit (Eff_pure (String_lit "hello"), Eff_pure (Int_lit 42))))
-    ~expected:(Eff_pure (Int_lit 42));
+    (Record_right (Record_lit (Comp_pure (String_lit "hello"), Comp_pure (Int_lit 42))))
+    ~expected:(Comp_pure (Int_lit 42));
 
   test_eval_comp_tm "match either left"
     (Either_match (Either_left (String_lit "hello"),
-      Eff_pure (Var Stop),
+      Comp_pure (Var Stop),
       Void_elim (Var Stop)))
-    ~expected:(Eff_pure (String_lit "hello"));
+    ~expected:(Comp_pure (String_lit "hello"));
 
   test_eval_comp_tm "match eight right"
     (Either_match (Either_right Unit_lit,
-      Eff_pure (Var Stop),
-      Eff_pure (String_lit "goodbye")))
-    ~expected:(Eff_pure (String_lit "goodbye"));
+      Comp_pure (Var Stop),
+      Comp_pure (String_lit "goodbye")))
+    ~expected:(Comp_pure (String_lit "goodbye"));
 
   test_eval_comp_tm "bind value and let 1"
-    (Eff_bind (Eff_pure (Int_lit 42),
+    (Comp_bind (Comp_pure (Int_lit 42),
       Let (String_lit "hello",
-        Eff_pure (Var (Pop Stop)))))
-    ~expected:(Eff_pure (Int_lit 42));
+        Comp_pure (Var (Pop Stop)))))
+    ~expected:(Comp_pure (Int_lit 42));
 
   test_eval_comp_tm "bind value and let 2"
-    (Eff_bind (Eff_pure (Int_lit 42),
+    (Comp_bind (Comp_pure (Int_lit 42),
       Let (String_lit "hello",
-        Eff_pure (Var Stop))))
-    ~expected:(Eff_pure (String_lit "hello"));
+        Comp_pure (Var Stop))))
+    ~expected:(Comp_pure (String_lit "hello"));
 
   test_eval_comp_tm "print"
-    (Eff_print (String_lit "hello"))
-    ~expected:(Eff_pure Unit_lit)
+    (Comp_print (String_lit "hello"))
+    ~expected:(Comp_pure Unit_lit)
     ~expected_out:["hello"];
 
   test_eval_comp_tm "read"
-    Eff_read
-    ~expected:(Eff_pure (String_lit "howdy"))
+    Comp_read
+    ~expected:(Comp_pure (String_lit "howdy"))
     ~expected_in:["howdy"];
 
   test_eval_comp_tm "abort"
-    Eff_abort;
+    Comp_abort;
 
   test_eval_comp_tm "hello world"
-    (Let (Thunk_lit Eff_read,
-      Eff_bind (Thunk_force (Var Stop),
-        Eff_bind (Thunk_force (Var (Pop Stop)),
+    (Let (Thunk_lit Comp_read,
+      Comp_bind (Thunk_force (Var Stop),
+        Comp_bind (Thunk_force (Var (Pop Stop)),
           Prim String_cat $ Var (Pop Stop) $ Var Stop))))
-    ~expected:(Eff_pure (String_lit "hello world!"))
+    ~expected:(Comp_pure (String_lit "hello world!"))
     ~expected_in:["hello "; "world!"];
 
   print_string "\n";
