@@ -14,11 +14,11 @@ let id [a] (x : a) := x;
 let always [a] (x : a) [b] (y : b) := x;
 
 let _ := id 3;
-let _ := id id;
-let _ := always id 3;
+let _ := id id : [a] -> a -> a;
+let _ := always [[a] -> a -> a] id 3;
 
 -- Call a polymorphic argument with different types
-let test (f : [a] -> a -> a) : _ :=
+let test (f : [a] -> a -> a) : [a] -> a -> a :=
   let _ := f 3;     -- integers
   let _ := f true;  -- boolean
   f f;              -- itself
@@ -35,13 +35,14 @@ let id : [a] -> a -> a := fun [a] => fun (x : a) => x;
 let always : [a] -> a -> [b] -> b -> a :=
   fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
 let _ : Int := id [Int] 3;
-let _ : [a] -> a -> a := id [[a] -> a -> a] id;
-let _ : [a] -> a -> a := always [[a] -> a -> a] id [Int] 3;
+let _ : [a] -> a -> a := fun [$a] => id [$a -> $a] (id [$a]);
+let _ : [a] -> a -> a :=
+  always [[a] -> a -> a] (fun [$a] => id [$a]) [Int] 3;
 let test : ([a] -> a -> a) -> [a] -> a -> a :=
   fun (f : [a] -> a -> a) =>
     let _ : Int := f [Int] 3;
     let _ : Bool := f [Bool] true;
-    f [[a] -> a -> a] f;
+    fun [$a] => f [$a -> $a] (f [$a]);
 test (fun [$a] => fun (x : $a) => x) : [a] -> a -> a
 ```
 

@@ -220,24 +220,29 @@ end = struct
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (vty : Core.vty) : Core.tm =
-    match tm.data with
-    | Let (def_name, params, def_body_ty, def_body, body) ->
+    match tm.data, Core.force_vty vty with
+    | Let (def_name, params, def_body_ty, def_body, body), vty ->
         let def, def_vty = infer_fun_lit ctx params def_body_ty def_body in
         let body = check_tm (extend_tm ctx def_name.data def_vty) body vty in
         Let (def_name.data, quote_vty ctx def_vty, def, body)
 
-    | Fun_lit (params, body) ->
+    | Fun_lit (params, body), vty ->
         check_fun_lit ctx params body vty
 
-    | If_then_else (head, tm1, tm2) ->
+    | _, Forall_type (name, body_ty) ->
+        let name = name |> Option.map (fun n -> "$" ^ n) in
+        Forall_lit (name, check_tm (extend_ty ctx name) tm (body_ty (next_ty_var ctx)))
+
+    | If_then_else (head, tm1, tm2), vty ->
         let head = check_tm ctx head Bool_type in
         let tm1 = check_tm ctx tm1 vty in
         let tm2 = check_tm ctx tm2 vty in
         Bool_elim (head, tm1, tm2)
 
     (* Fall back to type inference *)
-    | _ ->
+    | _, vty ->
         let tm', vty' = infer_tm ctx tm in
+        let tm', vty' = insert ctx tm.span tm' vty' in
         unify_vtys ctx tm.span vty vty';
         tm'
 
@@ -397,6 +402,20 @@ end = struct
         let param_vty = eval_ty ctx param_ty in
         let body, body_ty = infer_fun_lit (extend_tm ctx name.data param_vty) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_vty, body_ty)
+
+  and insert (ctx : context) (span : span) (tm : Core.tm) (vty : Core.vty) : Core.tm * Core.vty =
+    let rec go (tm : Core.tm) (vty : Core.vty) : Core.tm * Core.vty =
+      match Core.force_vty vty with
+      | Forall_type (name, body_ty) ->
+          let info = Format.asprintf "type argument `%s`" (Option.value name ~default:"_") in
+          let arg_vty = fresh_meta ctx span info in
+          go (Forall_app (tm, arg_vty)) (body_ty (eval_ty ctx arg_vty))
+      | vty -> tm, vty
+    in
+    match tm with
+    | Forall_lit (name, body) -> Forall_lit (name, body), vty
+    | tm -> go tm vty
+
 
 
   (** {2 Running elaboration} *)

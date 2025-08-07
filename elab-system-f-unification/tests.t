@@ -116,7 +116,8 @@ Polymorphic identity and constant functions
   let always : [a] -> a -> [b] -> b -> a :=
     fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
   let example-1 : [b] -> b -> Int -> Int := always [Int -> Int] (id [Int]);
-  let example-2 : [b] -> b -> [a] -> a -> a := always [[a] -> a -> a] id;
+  let example-2 : [b] -> b -> [a] -> a -> a :=
+    always [[a] -> a -> a] (fun [$a] => id [$a]);
   false : Bool
 
 Polymorphic identity and constant functions (inferred)
@@ -125,7 +126,7 @@ Polymorphic identity and constant functions (inferred)
   > let always [a] (x : a) [b] (y : b) := x;
   > 
   > let example-1 := always (id [Int]);
-  > let example-2 := always id;
+  > let example-2 := always (id [[a] -> a -> a]);
   > 
   > false
   > EOF
@@ -133,7 +134,8 @@ Polymorphic identity and constant functions (inferred)
   let always : [a] -> a -> [b] -> b -> a :=
     fun [a] => fun (x : a) => fun [b] => fun (y : b) => x;
   let example-1 : [b] -> b -> Int -> Int := always [Int -> Int] (id [Int]);
-  let example-2 : [b] -> b -> [a] -> a -> a := always [[a] -> a -> a] id;
+  let example-2 : [b] -> b -> ([a] -> a -> a) -> [a] -> a -> a :=
+    always [([a] -> a -> a) -> [a] -> a -> a] (id [[a] -> a -> a]);
   false : Bool
 
 Self application
@@ -141,15 +143,15 @@ Self application
   > fun (x : [a] -> a -> a) =>
   >   x [[a] -> a -> a] x
   > EOF
-  fun (x : [a] -> a -> a) => x [[a] -> a -> a] x :
+  fun (x : [a] -> a -> a) => x [[a] -> a -> a] (fun [$a] => x [$a]) :
     ([a] -> a -> a) -> [a] -> a -> a
 
-Self application (inferred)
+Self application (alternate)
   $ executable elab <<EOF
   > fun (x : [a] -> a -> a) =>
-  >   x x
+  >   x x : [a] -> a -> a
   > EOF
-  fun (x : [a] -> a -> a) => x [[a] -> a -> a] x :
+  fun (x : [a] -> a -> a) => fun [$a] => x [$a -> $a] (x [$a]) :
     ([a] -> a -> a) -> [a] -> a -> a
 
 Missing type parameter insertion
