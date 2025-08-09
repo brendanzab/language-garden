@@ -84,9 +84,9 @@ let () = begin
 
   let ( $ ) f x = Fun_app (f, x) in
 
-  let zero : int Global.t = Global.define @@ 0 in
-  let id (type a) : (a -> a) Global.t = Global.define @@ Fun.id in
-  let const (type a b) : (a -> b -> a) Global.t = Global.define @@ Fun.const in
+  let zero : int Global.t = Global.define 0 in
+  let id (type a) : (a -> a) Global.t = Global.define Fun.id in
+  let const (type a b) : (a -> b -> a) Global.t = Global.define Fun.const in
 
   print_string "Running tests ...";
 
