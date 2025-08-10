@@ -12,7 +12,12 @@ module Tree = struct
     | Tip of 'a
     | Fork of 'a t * 'a t
 
-  let rec equal (tip : 'a -> 'b -> bool) (t1 : 'a t) (t2 : 'b t) : bool =
+  let rec map (type a b) (f : 'a -> 'b) (t : 'a t) : 'b t =
+    match t with
+    | Tip n -> Tip (f n)
+    | Fork (l, r) -> Fork (map f l, map f r)
+
+  let rec equal (type a b) (tip : 'a -> 'b -> bool) (t1 : 'a t) (t2 : 'b t) : bool =
     match t1, t2 with
     | Tip n1, Tip n2 -> tip n1 n2
     | Fork (l1, r1), Fork (l2, r2) -> equal tip l1 l2 && equal tip r1 r2
@@ -79,32 +84,20 @@ module Tests = struct
 
   Printexc.record_backtrace true
 
-  let () = begin
+  let tree = Tree.Fork (Tip 3, Fork (Tip 2, Tip 4))
+  let expected = Tree.Fork (Tip 2, Fork (Tip 2, Tip 2))
 
-    let tree = Tree.Fork (Tip (ref 3), Fork (Tip (ref 2), Tip (ref 4))) in
+  let () =
+    let tree = Tree.map ref tree in
     Single_traversal_procedural.transform tree;
-    let expected = Tree.Fork (Tip 2, Fork (Tip 2, Tip 2)) in
+    assert (Tree.equal (fun n1 n2 -> !n1 = n2) tree expected)
 
-    assert (Tree.equal (fun n1 n2 -> !n1 = n2) tree expected);
+  let () =
+    let result = Multiple_traversals_functional.transform tree in
+    assert (Tree.equal ( = ) result expected)
 
-  end
-
-  let () = begin
-
-    let result = Multiple_traversals_functional.transform (Fork (Tip 3, Fork (Tip 2, Tip 4))) in
-    let expected = Tree.Fork (Tip 2, Fork (Tip 2, Tip 2)) in
-
-    assert (Tree.equal Int.equal result expected);
-
-  end
-
-  let () = begin
-
-    let result = Single_traversal_functional.transform (Fork (Tip 3, Fork (Tip 2, Tip 4))) in
-    let expected = Tree.Fork (Tip 2, Fork (Tip 2, Tip 2)) in
-
-    assert (Tree.equal (fun n1 n2 -> Lazy.force n1 = n2) result expected);
-
-  end
+  let () =
+    let result = Single_traversal_functional.transform tree in
+    assert (Tree.equal (fun n1 n2 -> Lazy.force n1 = n2) result expected)
 
 end
