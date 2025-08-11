@@ -13,16 +13,18 @@ module Tree = struct
     | Tip of 'a
     | Fork of 'a t * 'a t
 
-  let rec map (type a b) (f : 'a -> 'b) (t : 'a t) : 'b t =
-    match t with
-    | Tip n -> Tip (f n)
-    | Fork (l, r) -> Fork (map f l, map f r)
+  let rec map : type a b. (a -> b) -> a t -> b t =
+    fun f t ->
+      match t with
+      | Tip n -> Tip (f n)
+      | Fork (l, r) -> Fork (map f l, map f r)
 
-  let rec equal (type a b) (tip : 'a -> 'b -> bool) (t1 : 'a t) (t2 : 'b t) : bool =
-    match t1, t2 with
-    | Tip n1, Tip n2 -> tip n1 n2
-    | Fork (l1, r1), Fork (l2, r2) -> equal tip l1 l2 && equal tip r1 r2
-    | _, _ -> false
+  let rec equal : type a b. (a -> b -> bool) -> a t -> b t -> bool =
+    fun tip t1 t2 ->
+      match t1, t2 with
+      | Tip n1, Tip n2 -> tip n1 n2
+      | Fork (l1, r1), Fork (l2, r2) -> equal tip l1 l2 && equal tip r1 r2
+      | _, _ -> false
 
 end
 
