@@ -87,7 +87,8 @@ Miscellaneous:
   A pattern for nesting mutually recursive datatypes in submodules without
   duplicating the datatype definitions.
 - [**misc_circular_traversals.ml**](./misc_circular_traversals.ml):
-  Avoiding multiple traversals of data with lazy evaluation.
+  Using laziness to patch up a data structure after-the-fact in a single
+  traversal, without using mutable references.
 - [**misc_effects_build_system.ml**](./misc_effects_build_system.ml):
   Memoized build system using OCaml 5’s algebraic effects and handlers.
 - [**misc_effects_come_from.ml**](./misc_effects_come_from.ml):

@@ -1,9 +1,10 @@
-(** An example of avoiding multiple traversals of data with lazy evaluation.
+(** This file demonstrates how to use laziness to patch up a data structure
+    after-the-fact in a single traversal, without using mutable references.
 
-    This technique was described in {{: https://gwern.net/doc/cs/haskell/1984-bird.pdf}
-    “Using Circular Programs to Eliminate Multiple Traversals of Data”} and is
-    intended to be a stepping stone towards implementing “Using circular
-    programs for higher-order syntax: functional pearl”.
+    This technique was described by R.S. Bird’ in {{: https://gwern.net/doc/cs/haskell/1984-bird.pdf}
+    “Using Circular Programs to Eliminate Multiple Traversals of Data”} and
+    could be used as a stepping stone towards implementing {{: https://emilaxelsson.github.io/documents/axelsson2013using.pdf}
+    “Using circular programs for higher-order syntax: functional pearl”} in OCaml.
 *)
 
 module Tree = struct
