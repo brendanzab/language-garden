@@ -201,8 +201,8 @@ end = struct
     report ctx (Diagnostic.error span message ?details);
     raise Error
 
-  let unify_tys (ctx : context) (span : span) (ty1 : Core.ty) (ty2 : Core.ty) =
-    try Core.unify_tys ty1 ty2 with
+  let unify_tys (ctx : context) (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
+    try Core.unify_tys found expected with
     | Core.Infinite_type _ -> error ctx span "infinite type"
     | Core.Infinite_row_type _ -> error ctx span "infinite row type"
     | Core.Mismatched_types (_, _)
@@ -210,8 +210,8 @@ end = struct
         error ctx span "mismatched types"
           ~details:[
             Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
-              (Core.pp_ty ty1)
-              (Core.pp_ty ty2);
+              (Core.pp_ty expected)
+              (Core.pp_ty found);
           ]
 
 
@@ -283,7 +283,7 @@ end = struct
     | _ ->
         let tm', ty' = infer_tm ctx tm in
         (* NOTE: We could add some subtyping coercions here *)
-        unify_tys ctx tm.span ty ty';
+        unify_tys ctx tm.span ~found:ty' ~expected:ty;
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -340,7 +340,7 @@ end = struct
         | Meta_var _ as head_ty ->
             let param_ty = fresh_meta ctx head_span "function parameter type" in
             let body_ty = fresh_meta ctx head_span "function return type" in
-            unify_tys ctx head_span (Fun_type (param_ty, body_ty)) head_ty;
+            unify_tys ctx head_span ~found:head_ty ~expected:(Fun_type (param_ty, body_ty));
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | _ -> error ctx arg.span "unexpected argument"
@@ -360,7 +360,7 @@ end = struct
         | Record_type (Row_meta_var _) | Meta_var _ as head_ty ->
             let field_ty = fresh_meta ctx head_span "record field" in
             let row = Label_map.singleton label.data field_ty in
-            unify_tys ctx head_span (Record_type (fresh_row_meta ctx row)) head_ty;
+            unify_tys ctx head_span ~found:head_ty ~expected:(Record_type (fresh_row_meta ctx row));
             Record_proj (head, label.data), field_ty
         | head_ty ->
             error ctx head_span (Format.asprintf "unknown field `%s`" label.data)
@@ -381,7 +381,7 @@ end = struct
     | Infix (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
-        unify_tys ctx tm.span ty1 ty2;
+        unify_tys ctx tm.span ~found:ty2 ~expected:ty1;
         begin match Core.force_ty ty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
@@ -422,12 +422,12 @@ end = struct
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
-        unify_tys ctx param_ty_span param_ty param_ty';
+        unify_tys ctx param_ty_span ~found:param_ty ~expected:param_ty';
         let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
-        unify_tys ctx name.span ty ty';
+        unify_tys ctx name.span ~found:ty' ~expected:ty;
         tm'
     | (name, _) :: _, _ ->
         error ctx name.span "unexpected parameter"
@@ -504,7 +504,7 @@ end = struct
             clauses
         in
         (* Unify variant type with head type *)
-        unify_tys ctx head_span (Variant_type (Row_entries row)) head_ty;
+        unify_tys ctx head_span ~found:head_ty ~expected:(Variant_type (Row_entries row));
         (* Return the clauses *)
         Variant_elim (head, clauses)
 

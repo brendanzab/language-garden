@@ -164,26 +164,26 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let unify_vtys (ctx : context) (span : span) (vty1 : Core.vty) (vty2 : Core.vty) =
-    try Core.unify_vtys ctx.ty_size vty1 vty2 with
+  let unify_vtys (ctx : context) (span : span) ~(found : Core.vty) ~(expected : Core.vty) =
+    try Core.unify_vtys ctx.ty_size found expected with
     | Core.Mismatched_types (_, _) ->
         error span
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
-            (pp_vty ctx vty1)
-            (pp_vty ctx vty2))
+            (pp_vty ctx expected)
+            (pp_vty ctx found))
     | Core.Infinite_type m ->
         error span
           (Format.asprintf "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (pp_ty ctx (Meta_var m))
-            (pp_vty ctx vty1)
-            (pp_vty ctx vty2))
+            (pp_vty ctx expected)
+            (pp_vty ctx found))
     | Core.Escaping_scope (m, vty) ->
         error span
           (Format.asprintf "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[found: %t@]@]"
             (pp_vty ctx vty)
             (pp_ty ctx (Meta_var m))
-            (pp_vty ctx vty1)
-            (pp_vty ctx vty2))
+            (pp_vty ctx expected)
+            (pp_vty ctx found))
 
 
   (** {2 Bidirectional type checking} *)
@@ -243,7 +243,7 @@ end = struct
     | _, vty ->
         let tm', vty' = infer_tm ctx tm in
         let tm', vty' = insert ctx tm.span tm' vty' in
-        unify_vtys ctx tm.span vty vty';
+        unify_vtys ctx tm.span ~found:vty' ~expected:vty;
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -295,7 +295,7 @@ end = struct
           | Meta_var _ as head_ty, Arg arg ->
               let param_ty = eval_ty ctx (fresh_meta ctx head_span "function parameter type") in
               let body_ty = eval_ty ctx (fresh_meta ctx head_span "function return type") in
-              unify_vtys ctx head_span (Fun_type (param_ty, body_ty)) head_ty;
+              unify_vtys ctx head_span ~expected:head_ty ~found:(Fun_type (param_ty, body_ty));
               let arg = check_tm ctx arg param_ty in
               Fun_app (head, arg), body_ty
 
@@ -315,7 +315,7 @@ end = struct
     | Infix (`Eq, tm1, tm2) ->
         let tm1, vty1 = infer_tm ctx tm1 in
         let tm2, vty2 = infer_tm ctx tm2 in
-        unify_vtys ctx tm.span vty1 vty2;
+        unify_vtys ctx tm.span ~found:vty2 ~expected:vty1;
         begin match Core.force_vty vty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
@@ -363,14 +363,14 @@ end = struct
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         let param_vty = eval_ty ctx param_ty in
-        unify_vtys ctx param_ty_span param_vty param_vty';
+        unify_vtys ctx param_ty_span ~found:param_vty ~expected:param_vty';
         let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
         Fun_lit (name.data, param_ty, body_tm)
 
     | Param (name, _) :: _, Meta_var _
     | Ty_param name :: _, Meta_var _ ->
         let tm', vty' = infer_fun_lit ctx params None body in
-        unify_vtys ctx name.span vty vty';
+        unify_vtys ctx name.span ~found:vty' ~expected:vty;
         tm'
 
     | Ty_param name :: _, _ ->

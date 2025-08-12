@@ -137,14 +137,14 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let unify_tys (span : span) (ty1 : Core.ty) (ty2 : Core.ty) =
-    try Core.unify_tys ty1 ty2 with
+  let unify_tys (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
+    try Core.unify_tys found expected with
     | Core.Infinite_type _ -> error span "infinite type"
     | Core.Mismatched_types (_, _) ->
         error span
           (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
-            (Core.pp_ty ty1)
-            (Core.pp_ty ty2))
+            (Core.pp_ty expected)
+            (Core.pp_ty found))
 
 
   (** {2 Bidirectional type checking} *)
@@ -194,7 +194,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        unify_tys tm.span ty ty';
+        unify_tys tm.span ~found:ty' ~expected:ty;
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -240,7 +240,7 @@ end = struct
         | Meta_var _ as head_ty ->
             let param_ty = fresh_meta ctx head_span "function parameter type" in
             let body_ty = fresh_meta ctx head_span "function return type" in
-            unify_tys head_span (Fun_type (param_ty, body_ty)) head_ty;
+            unify_tys head_span ~found:head_ty ~expected:(Fun_type (param_ty, body_ty));
             let arg = check_tm ctx arg param_ty in
             Fun_app (head, arg), body_ty
         | _ -> error arg.span "unexpected argument"
@@ -256,7 +256,7 @@ end = struct
     | Infix (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
-        unify_tys tm.span ty1 ty2;
+        unify_tys tm.span ~found:ty2 ~expected:ty1;
         begin match Core.force_ty ty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
@@ -289,12 +289,12 @@ end = struct
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
-        unify_tys param_ty_span param_ty param_ty';
+        unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
         let body = check_fun_lit (extend ctx (Def (name.data, param_ty))) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
-        unify_tys name.span ty ty';
+        unify_tys name.span ~found:ty' ~expected:ty;
         tm'
     | (name, _) :: _, _ ->
         error name.span "unexpected parameter"

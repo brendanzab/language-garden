@@ -93,12 +93,12 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let equate_ty (span : span) (ty1 : Core.ty) (ty2 : Core.ty) =
-    if ty1 = ty2 then () else
+  let equate_ty (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
+    if found = expected then () else
       error span
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
-          (Core.pp_ty ty1)
-          (Core.pp_ty ty2))
+          (Core.pp_ty expected)
+          (Core.pp_ty found))
 
 
   (** {2 Bidirectional type checking} *)
@@ -141,7 +141,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        equate_ty tm.span ty ty';
+        equate_ty tm.span ~found:ty' ~expected:ty;
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -184,13 +184,13 @@ end = struct
         let head = check_tm ctx head Bool_type in
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
-        equate_ty tm2_span ty1 ty2;
+        equate_ty tm2_span ~found:ty2 ~expected:ty1;
         Bool_elim (head, tm1, tm2), ty1
 
     | Infix (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
-        equate_ty tm.span ty1 ty2;
+        equate_ty tm.span ~found:ty2 ~expected:ty1;
         begin match ty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
@@ -223,7 +223,7 @@ end = struct
     | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty param_ty in
-        equate_ty param_ty_span param_ty param_ty';
+        equate_ty param_ty_span ~found:param_ty ~expected:param_ty';
         let body = check_fun_lit ((name.data, param_ty) :: ctx) params body body_ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, _ ->

@@ -29,8 +29,8 @@ error: mismatched types
   │
 7 │   fun (x : Bool) y x => x;
   │            ^^^^
-  = expected: Bool
-       found: Int
+  = expected: Int
+       found: Bool
 
 error: unexpected parameter
   ┌─ <stdin>:7:17

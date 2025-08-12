@@ -109,12 +109,12 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let equate_ty (span : span) (ty1 : Core.ty) (ty2 : Core.ty) =
-    if ty1 = ty2 then () else
+  let equate_ty (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
+    if found = expected then () else
       error span
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
-          (Core.pp_ty ty1)
-          (Core.pp_ty ty2))
+          (Core.pp_ty expected)
+          (Core.pp_ty found))
 
 
   (** {2 Bidirectional type checking} *)
@@ -167,7 +167,7 @@ end = struct
 
     | _ ->
         let e', t' = infer_expr ctx tm in
-        equate_ty tm.span t t';
+        equate_ty tm.span ~found:t' ~expected:t;
         e'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -219,10 +219,10 @@ end = struct
 
     | If_then_else (head, expr1, ({ span = expr2_span; _ } as expr2)) ->
         let head = check_expr ctx head Bool_type in
-        let expr1, ty1 = infer_expr ctx expr1 in
-        let expr2, ty2 = infer_expr ctx expr2 in
-        equate_ty expr2_span ty1 ty2;
-        Expr (Bool_elim (head, expr1, expr2), ty1)
+        let e1, t1 = infer_expr ctx expr1 in
+        let e2, t2 = infer_expr ctx expr2 in
+        equate_ty expr2_span ~found:t2 ~expected:t1;
+        Expr (Bool_elim (head, e1, e2), t1)
 
     | Infix (`Arrow, param_t, body_t) ->
         let param_t = check_ty ctx param_t in
@@ -232,7 +232,7 @@ end = struct
     | Infix (`Eq, tm1, tm2) ->
         let e1, t1 = infer_expr ctx tm1 in
         let e2, t2 = infer_expr ctx tm2 in
-        equate_ty tm.span t1 t2;
+        equate_ty tm.span ~found:t2 ~expected:t1;
         begin match t1 with
         | Bool_type -> Expr (Prim_app (Bool_eq, [e1; e2]), Bool_type)
         | Int_type -> Expr (Prim_app (Int_eq, [e1; e2]), Bool_type)
@@ -275,7 +275,7 @@ end = struct
     | (name, Some param_t) :: params, Fun_type (param_t', body_t) ->
         let param_t_span = param_t.span in
         let param_t = check_ty ctx param_t in
-        equate_ty param_t_span param_t param_t';
+        equate_ty param_t_span ~found:param_t ~expected:param_t';
         let body = check_fun_lit (Expr_def (name.data, param_t) :: ctx) params body body_t in
         Fun_lit (name.data, param_t, body)
 

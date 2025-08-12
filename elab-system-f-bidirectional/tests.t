@@ -206,8 +206,8 @@ Mismatched parameter
   > f true
   > EOF
   error: mismatched types:
-    expected: Int
-    found: Bool
+    expected: Bool
+    found: Int
     ┌─ <stdin>:2:11
     │
   2 │   fun (x : Int) => x;

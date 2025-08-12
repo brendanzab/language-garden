@@ -153,12 +153,12 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let equate_vtys (ctx : context) (span : span) (vty1 : Core.Semantics.vty) (vty2 : Core.Semantics.vty) =
-    if Core.Semantics.is_convertible ctx.ty_size vty1 vty2 then () else
+  let equate_vtys (ctx : context) (span : span) ~(found : Core.Semantics.vty) ~(expected : Core.Semantics.vty) =
+    if Core.Semantics.is_convertible ctx.ty_size found expected then () else
       error span
         (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
-          (pp_vty ctx vty1)
-          (pp_vty ctx vty2))
+          (pp_vty ctx expected)
+          (pp_vty ctx found))
 
 
   (** {2 Bidirectional type checking} *)
@@ -211,7 +211,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', vty' = infer_tm ctx tm in
-        equate_vtys ctx tm.span vty vty';
+        equate_vtys ctx tm.span ~found:vty' ~expected:vty;
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -263,15 +263,15 @@ end = struct
 
     | If_then_else (head, tm1, ({ span = tm2_span; _ } as tm2)) ->
         let head = check_tm ctx head Bool_type in
-        let tm1, ty1 = infer_tm ctx tm1 in
-        let tm2, ty2 = infer_tm ctx tm2 in
-        equate_vtys ctx tm2_span ty1 ty2;
-        Bool_elim (head, tm1, tm2), ty1
+        let tm1, vty1 = infer_tm ctx tm1 in
+        let tm2, vty2 = infer_tm ctx tm2 in
+        equate_vtys ctx tm2_span ~found:vty2 ~expected:vty1;
+        Bool_elim (head, tm1, tm2), vty1
 
     | Infix (`Eq, tm1, tm2) ->
         let tm1, vty1 = infer_tm ctx tm1 in
         let tm2, vty2 = infer_tm ctx tm2 in
-        equate_vtys ctx tm.span vty1 vty2;
+        equate_vtys ctx tm.span ~found:vty2 ~expected:vty1;
         begin match vty1 with
         | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
         | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
@@ -319,7 +319,7 @@ end = struct
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         let param_vty = eval_ty ctx param_ty in
-        equate_vtys ctx param_ty_span param_vty param_vty';
+        equate_vtys ctx param_ty_span ~found:param_vty ~expected:param_vty';
         let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
         Fun_lit (name.data, param_ty, body_tm)
 

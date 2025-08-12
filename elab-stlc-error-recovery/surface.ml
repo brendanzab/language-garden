@@ -117,13 +117,13 @@ end = struct
     Dynarray.add_last ctx.errors error
 
   (** Check if two types are compatible with each other. *)
-  let equate_tys (span : span) (ty1 : Core.ty) (ty2 : Core.ty) : (unit, Error.t) result =
-    if Core.equate_tys ty1 ty2 then Ok () else
+  let equate_tys (span : span) ~(found : Core.ty) ~(expected : Core.ty) : (unit, Error.t) result =
+    if Core.equate_tys found expected then Ok () else
       Result.error @@ Error.make span "mismatched types"
         ~details:[
           Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
-            (Core.pp_ty ty1)
-            (Core.pp_ty ty2);
+            (Core.pp_ty expected)
+            (Core.pp_ty found);
         ]
 
 
@@ -168,7 +168,7 @@ end = struct
     (* Fall back to type inference *)
     | _ ->
         let tm', ty' = infer_tm ctx tm in
-        begin match equate_tys tm.span ty ty' with
+        begin match equate_tys tm.span ~found:ty' ~expected:ty with
         | Ok () -> tm'
         | Error error ->
             report ctx error;
@@ -294,9 +294,9 @@ end = struct
         Fun_lit (name.data, param_ty,
           check_fun_lit (extend ctx name.data param_ty) params body body_ty)
 
-    | (name, Some ({ span = ann_span ; _ } as param_ty)) :: params, Some (expected_param_ty, body_ty) ->
+    | (name, Some ({ span = ann_span ; _ } as param_ty)) :: params, Some (param_ty', body_ty) ->
         let param_ty = check_ty ctx param_ty in
-        begin match equate_tys ann_span param_ty expected_param_ty with
+        begin match equate_tys ann_span ~found:param_ty ~expected:param_ty' with
         | Ok () ->
             Fun_lit (name.data, param_ty,
               check_fun_lit (extend ctx name.data param_ty) params body body_ty)

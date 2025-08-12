@@ -165,8 +165,8 @@ Mismatched parameter
     │
   2 │   fun (x : Int) => x;
     │            ^^^
-    = expected: Int
-         found: Bool
+    = expected: Bool
+         found: Int
   
   error: mismatched types
     ┌─ <stdin>:2:19

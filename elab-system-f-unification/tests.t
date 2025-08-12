@@ -263,8 +263,8 @@ Mismatched parameter
   > f true
   > EOF
   error: mismatched types:
-    expected: Int
-    found: Bool
+    expected: Bool
+    found: Int
     ┌─ <stdin>:2:11
     │
   2 │   fun (x : Int) => x;
@@ -359,10 +359,10 @@ Ambiguous parameter type
 Ambiguous return type
   $ executable elab <<< "fun f x => f x"
   error: ambiguous function parameter type
-    ┌─ <stdin>:1:6
+    ┌─ <stdin>:1:11
     │
   1 │ fun f x => f x
-    │       ^
+    │            ^
   
   error: ambiguous function return type
     ┌─ <stdin>:1:11

@@ -220,7 +220,7 @@ Mismatched variant constraint and variant type
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
     = expected: [no : Int | yes : Int]
-         found: [?0.. no : Bool | yes : Int]
+         found: [?1.. no : Bool | yes : Int]
   
   [1]
 
@@ -240,7 +240,7 @@ Mismatched variant constraint and smaller variant type
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
     = expected: [yes : Int]
-         found: [?0.. no : Bool | yes : Int]
+         found: [?1.. no : Bool | yes : Int]
   
   [1]
 
@@ -260,7 +260,7 @@ Mismatched variant constraint and non-variant type
   5 │   choose true 3 false;
     │   ^^^^^^^^^^^^^^^^^^^
     = expected: Bool
-         found: [?0.. no : Bool | yes : Int]
+         found: [?1.. no : Bool | yes : Int]
   
   [1]
 
@@ -297,10 +297,10 @@ Ambiguous parameter type
 Ambiguous return type
   $ executable elab <<< "fun f x => f x"
   error: ambiguous function parameter type
-    ┌─ <stdin>:1:6
+    ┌─ <stdin>:1:11
     │
   1 │ fun f x => f x
-    │       ^
+    │            ^
   
   error: ambiguous function return type
     ┌─ <stdin>:1:11
@@ -440,7 +440,7 @@ Unexpected pattern match
     │
   1 │ match true with [a := x] => x end
     │       ^^^^
-    = expected: [a : ?1]
+    = expected: [a : ?0]
          found: Bool
   
   [1]
