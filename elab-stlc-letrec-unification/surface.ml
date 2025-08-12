@@ -142,7 +142,7 @@ end = struct
     | Core.Infinite_type _ -> error span "infinite type"
     | Core.Mismatched_types (_, _) ->
         error span
-          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
             (Core.pp_ty expected)
             (Core.pp_ty found))
 

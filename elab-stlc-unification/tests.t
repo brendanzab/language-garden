@@ -113,7 +113,7 @@ Mismatched definition type
   $ executable elab <<< "let x : Bool := 1; x"
   error: mismatched types:
     expected: Bool
-    found: Int
+       found: Int
     ┌─ <stdin>:1:16
     │
   1 │ let x : Bool := 1; x
@@ -125,7 +125,7 @@ Mismatched argument
   $ executable elab <<< "let f x := x + 1; f f"
   error: mismatched types:
     expected: Int
-    found: Int -> Int
+       found: Int -> Int
     ┌─ <stdin>:1:20
     │
   1 │ let f x := x + 1; f f
@@ -137,7 +137,7 @@ Mismatched argument
   $ executable elab <<< "let f (x : Bool) := x; f 1"
   error: mismatched types:
     expected: Bool
-    found: Int
+       found: Int
     ┌─ <stdin>:1:25
     │
   1 │ let f (x : Bool) := x; f 1
@@ -215,7 +215,7 @@ Mismatched if expression branches
   $ executable elab <<< "fun x => if x then true else 3"
   error: mismatched types:
     expected: Bool
-    found: Int
+       found: Int
     ┌─ <stdin>:1:29
     │
   1 │ fun x => if x then true else 3
@@ -227,7 +227,7 @@ Mismatched equality
   $ executable elab <<< "1 = false"
   error: mismatched types:
     expected: Int
-    found: Bool
+       found: Bool
     ┌─ <stdin>:1:0
     │
   1 │ 1 = false

@@ -156,7 +156,7 @@ end = struct
   let equate_vtys (ctx : context) (span : span) ~(found : Core.Semantics.vty) ~(expected : Core.Semantics.vty) =
     if Core.Semantics.is_convertible ctx.ty_size found expected then () else
       error span
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
           (pp_vty ctx expected)
           (pp_vty ctx found))
 

@@ -137,7 +137,7 @@ end = struct
   let check_convertible (ctx : context) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
     if Semantics.is_convertible ctx.size found expected then () else
       error span
-        (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
+        (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[   found: %t@]@]"
           (pp ctx (quote ctx expected))
           (pp ctx (quote ctx found)))
 

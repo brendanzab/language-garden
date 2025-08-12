@@ -168,18 +168,18 @@ end = struct
     try Core.unify_vtys ctx.ty_size found expected with
     | Core.Mismatched_types (_, _) ->
         error span
-          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
             (pp_vty ctx expected)
             (pp_vty ctx found))
     | Core.Infinite_type m ->
         error span
-          (Format.asprintf "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[found: %t@]@]"
+          (Format.asprintf "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[   found: %t@]@]"
             (pp_ty ctx (Meta_var m))
             (pp_vty ctx expected)
             (pp_vty ctx found))
     | Core.Escaping_scope (m, vty) ->
         error span
-          (Format.asprintf "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[found: %t@]@]"
+          (Format.asprintf "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[   found: %t@]@]"
             (pp_vty ctx vty)
             (pp_ty ctx (Meta_var m))
             (pp_vty ctx expected)

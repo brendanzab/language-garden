@@ -104,7 +104,7 @@ An example of a type error
   > EOF
   error: type mismatch
     expected: fun (Out : Type) (true : Out) (false : Out) -> Out
-    found:    fun (true : Type) (false : Type) -> Type
+       found: fun (true : Type) (false : Type) -> Type
     ┌─ <stdin>:5:0
     │
   5 │ true Type : Bool

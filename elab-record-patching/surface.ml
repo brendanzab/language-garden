@@ -164,18 +164,18 @@ end = struct
     raise (Error (span, message))
 
   let type_mismatch (ctx : context) ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
+    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[   found: %t@]@]"
       (pp ctx expected)
       (pp ctx found)
 
   let singleton_mismatch (ctx : context) ~expected ~found ~ty : string =
-    Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %t@]@ @[found:    %t@]@ @[type:     %t@]@]"
+    Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %t@]@ @[   found: %t@]@ @[    type: %t@]@]"
       (pp ctx expected)
       (pp ctx found)
       (pp ctx ty)
 
   let field_mismatch ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[found label:    `%s`@]@]"
+    Format.asprintf "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[   found label: `%s`@]@]"
       expected
       found
 

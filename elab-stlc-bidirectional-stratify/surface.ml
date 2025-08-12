@@ -112,7 +112,7 @@ end = struct
   let equate_ty (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     if found = expected then () else
       error span
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[found: %t@]@]"
+        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
           (Core.pp_ty expected)
           (Core.pp_ty found))
 

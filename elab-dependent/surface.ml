@@ -183,7 +183,7 @@ end = struct
         let tm, found_vty = infer ctx tm in
         if is_convertible ctx found_vty vty then tm else
           error tm_span
-            (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[found:    %t@]@]"
+            (Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[   found: %t@]@]"
               (pp ctx (quote ctx vty))
               (pp ctx (quote ctx found_vty)))
 

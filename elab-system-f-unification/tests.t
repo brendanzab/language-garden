@@ -215,7 +215,7 @@ Mismatched definition type
   $ executable elab <<< "let x : Bool := 1; x"
   error: mismatched types:
     expected: Bool
-    found: Int
+       found: Int
     ┌─ <stdin>:1:16
     │
   1 │ let x : Bool := 1; x
@@ -227,7 +227,7 @@ Mismatched argument
   $ executable elab <<< "let f (x : Bool) := x; f 1"
   error: mismatched types:
     expected: Bool
-    found: Int
+       found: Int
     ┌─ <stdin>:1:25
     │
   1 │ let f (x : Bool) := x; f 1
@@ -264,7 +264,7 @@ Mismatched parameter
   > EOF
   error: mismatched types:
     expected: Bool
-    found: Int
+       found: Int
     ┌─ <stdin>:2:11
     │
   2 │   fun (x : Int) => x;
@@ -316,7 +316,7 @@ Mismatched if expression branches
   $ executable elab <<< "fun (x : Bool) => if x then true else 3"
   error: mismatched types:
     expected: Bool
-    found: Int
+       found: Int
     ┌─ <stdin>:1:38
     │
   1 │ fun (x : Bool) => if x then true else 3
@@ -328,7 +328,7 @@ Mismatched equality
   $ executable elab <<< "1 = false"
   error: mismatched types:
     expected: Int
-    found: Bool
+       found: Bool
     ┌─ <stdin>:1:0
     │
   1 │ 1 = false
@@ -386,7 +386,7 @@ Infinite type
   $ executable elab <<< "fun f => f f"
   error: meta variable ?1 refers to itself:
     expected: ?1
-    found: ?1 -> ?2
+       found: ?1 -> ?2
     ┌─ <stdin>:1:11
     │
   1 │ fun f => f f
@@ -403,7 +403,7 @@ Scope escape (see https://counterexamples.org/scope-escape.html)
   > EOF
   error: type variable $a escapes the scope of meta variable ?2:
     expected: ?2
-    found: $a
+       found: $a
     ┌─ <stdin>:4:35
     │
   4 │ fun f => test (fun x => let y := f x; x)
