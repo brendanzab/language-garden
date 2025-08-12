@@ -163,20 +163,23 @@ end = struct
   let error (type a) (span : span) (message : string) : a =
     raise (Error (span, message))
 
-  let type_mismatch (ctx : context) ~expected ~found : string =
+  let type_mismatch (ctx : context) ~(found : Semantics.vty) ~(expected : Semantics.vty) : string =
     Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
       (pp ctx (quote ctx expected))
       (pp ctx (quote ctx found))
 
-  let check_convertible (ctx : context) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
+  let term_mismatch (ctx : context) ~(found : Semantics.vtm) ~(expected : Semantics.vtm) : string =
+    Format.asprintf "@[<v 2>@[mismatched terms:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+      (pp ctx (quote ctx expected))
+      (pp ctx (quote ctx found))
+
+  let check_convertible_vtys (ctx : context) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
     if Semantics.is_convertible ctx.size found expected then () else
       error span (type_mismatch ctx ~found ~expected)
 
-  let intro_sing ctx span ~found ~expected =
-    if is_convertible ctx found expected then Syntax.Sing_intro else
-      error span (Format.asprintf "@[<v 2>@[mismatched terms:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-        (pp ctx (quote ctx expected))
-        (pp ctx (quote ctx found)))
+  let check_convertible_vtms (ctx : context) (span : span) ~(found : Semantics.vtm) ~(expected : Semantics.vtm) =
+    if is_convertible ctx found expected then () else
+      error span (term_mismatch ctx ~found ~expected)
 
 
   (** {2 Coercive subtyping} *)
@@ -196,9 +199,10 @@ end = struct
     (* Coerce the term to a singleton with {!Syntax.Sing_intro}, if the term is
       convertible to the term expected by the singleton *)
     | from_vty, Semantics.Sing_type (to_vty, sing_vtm) ->
-        intro_sing ctx span
+        check_convertible_vtms ctx span
           ~found:(eval ctx (coerce span ctx from_vty to_vty tm))
-          ~expected:(Lazy.force sing_vtm)
+          ~expected:(Lazy.force sing_vtm);
+        Syntax.Sing_intro
 
     (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
       and attempt further coercions from its underlying type *)
@@ -296,9 +300,10 @@ end = struct
     (* Singleton introduction. No need for any syntax in the surface language
         here, instead we use the type annotation to drive this. *)
     | _, Semantics.Sing_type (vty, sing_vtm) ->
-        intro_sing ctx tm.span
+        check_convertible_vtms ctx tm.span
           ~found:(eval ctx (check ctx tm vty))
-          ~expected:(Lazy.force sing_vtm)
+          ~expected:(Lazy.force sing_vtm);
+        Syntax.Sing_intro
 
     (* For anything else, try inferring the type of the term, then attempting to
         coerce the term to the expected type. *)
@@ -457,7 +462,7 @@ end = struct
     | [], Some ({ span = body_ty_span; _ } as body_ty), vty ->
         let body_ty = check ctx body_ty Semantics.Univ in
         let body_vty = eval ctx body_ty in
-        check_convertible ctx body_ty_span ~found:body_vty ~expected:vty;
+        check_convertible_vtys ctx body_ty_span ~found:body_vty ~expected:vty;
         check ctx body body_vty
 
     | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, param_vty', body_vty') ->
@@ -468,7 +473,7 @@ end = struct
           | Some param_ty ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let param_vty = eval ctx param_ty in
-              check_convertible ctx name.span ~found:param_vty ~expected:(Lazy.force param_vty');
+              check_convertible_vtys ctx name.span ~found:param_vty ~expected:(Lazy.force param_vty');
               param_vty
         in
         let ctx = bind_def ctx name.data param_ty var in
