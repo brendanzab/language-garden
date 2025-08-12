@@ -92,7 +92,7 @@ Function literal body annotations (checking)
 
 Mismatched function literal parameter (checking)
   $ executable elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : B) -> A"
-  error: type mismatch
+  error: mismatched types:
     expected: B
        found: A
     ┌─ <stdin>:1:10
@@ -104,7 +104,7 @@ Mismatched function literal parameter (checking)
 
 Mismatched function iteral body annotation (checking)
   $ executable elab <<< "(fun A B (a : A) : A => a) : fun (A : Type) (B : Type) (a : A) -> B"
-  error: type mismatch
+  error: mismatched types:
     expected: B
        found: A
     ┌─ <stdin>:1:19
@@ -131,7 +131,7 @@ Function literal body annotations (inferring)
 
 Mismatched body annotation (inferring)
   $ executable elab <<< "fun (A : Type) (a : A) : A => A"
-  error: type mismatch
+  error: mismatched types:
     expected: A
        found: Type
     ┌─ <stdin>:1:30
@@ -149,7 +149,7 @@ An example of a type error
   > 
   > true Type : Bool
   > EOF
-  error: type mismatch
+  error: mismatched types:
     expected: fun (Out : Type) (true : Out) (false : Out) -> Out
        found: fun (true : Type) (false : Type) -> Type
     ┌─ <stdin>:5:0

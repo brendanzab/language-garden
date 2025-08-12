@@ -164,7 +164,7 @@ end = struct
     raise (Error (span, message))
 
   let type_mismatch (ctx : context) ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[   found: %t@]@]"
+    Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
       (pp ctx (quote ctx expected))
       (pp ctx (quote ctx found))
 
@@ -174,7 +174,7 @@ end = struct
 
   let intro_sing ctx span ~found ~expected =
     if is_convertible ctx found expected then Syntax.Sing_intro else
-      error span (Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %t@]@ @[   found: %t@]@]"
+      error span (Format.asprintf "@[<v 2>@[mismatched terms:@]@ @[expected: %t@]@ @[   found: %t@]@]"
         (pp ctx (quote ctx expected))
         (pp ctx (quote ctx found)))
 
