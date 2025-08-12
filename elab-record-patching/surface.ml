@@ -165,26 +165,18 @@ end = struct
 
   let type_mismatch (ctx : context) ~expected ~found : string =
     Format.asprintf "@[<v 2>@[type mismatch@]@ @[expected: %t@]@ @[   found: %t@]@]"
-      (pp ctx expected)
-      (pp ctx found)
+      (pp ctx (quote ctx expected))
+      (pp ctx (quote ctx found))
 
-  let singleton_mismatch (ctx : context) ~expected ~found ~ty : string =
-    Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %t@]@ @[   found: %t@]@ @[    type: %t@]@]"
-      (pp ctx expected)
-      (pp ctx found)
-      (pp ctx ty)
+  let check_convertible (ctx : context) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
+    if Semantics.is_convertible ctx.size found expected then () else
+      error span (type_mismatch ctx ~found ~expected)
 
-  let field_mismatch ~expected ~found : string =
-    Format.asprintf "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[   found label: `%s`@]@]"
-      expected
-      found
-
-  let missing_field (label : string) : string =
-    Format.asprintf "field with label `%s` not found in record" label
-
-  let ambiguous_param (name : string option) : string =
-      Format.asprintf "ambiguous function parameter `%s`"
-        (Option.value ~default:"_" name)
+  let intro_sing ctx span ~found ~expected =
+    if is_convertible ctx found expected then Syntax.Sing_intro else
+      error span (Format.asprintf "@[<v 2>@[singleton mismatch@]@ @[expected: %t@]@ @[   found: %t@]@]"
+        (pp ctx (quote ctx expected))
+        (pp ctx (quote ctx found)))
 
 
   (** {2 Coercive subtyping} *)
@@ -200,20 +192,19 @@ end = struct
     match from_vty, to_vty with
     (* No need to coerce the term if both types are already the same! *)
     | from_vty, to_vty when is_convertible ctx from_vty to_vty -> tm
+
     (* Coerce the term to a singleton with {!Syntax.Sing_intro}, if the term is
       convertible to the term expected by the singleton *)
-    | from_vty, Semantics.Sing_type (to_vty, sing_tm) ->
-        let tm = coerce span ctx from_vty to_vty tm in
-        let vtm = eval ctx tm in
-        if is_convertible ctx (Lazy.force sing_tm) vtm then Syntax.Sing_intro else
-          error span (singleton_mismatch ctx
-            ~expected:(quote ctx (Lazy.force sing_tm))
-            ~found:(quote ctx vtm)
-            ~ty:(quote ctx to_vty))
+    | from_vty, Semantics.Sing_type (to_vty, sing_vtm) ->
+        intro_sing ctx span
+          ~found:(eval ctx (coerce span ctx from_vty to_vty tm))
+          ~expected:(Lazy.force sing_vtm)
+
     (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
       and attempt further coercions from its underlying type *)
     | Semantics.Sing_type (from_vty, sing_tm), to_vty ->
         coerce span ctx from_vty to_vty (quote ctx (Lazy.force sing_tm))
+
     (* Coerce the fields of a record with record eta expansion *)
     | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
         (* TODO: bind [tm] to a local variable to avoid duplicating records *)
@@ -233,15 +224,16 @@ end = struct
               let to_tm = Syntax.Sing_intro in
               (to_label, to_tm) :: go from_decls (to_decls (lazy (eval ctx to_tm)))
           | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
-              error span (field_mismatch ~expected:to_label ~found:from_label)
+              error span
+                (Format.asprintf "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[   found label: `%s`@]@]"
+                  to_label from_label)
           | _, _ -> Semantics.error "mismatched telescope length"
         in
         Syntax.Rec_lit (go from_decls to_decls)
+
     (* TODO: subtyping for functions! *)
-    | from_vty, to_vty  ->
-        error span (type_mismatch ctx
-          ~expected:(quote ctx to_vty)
-          ~found:(quote ctx from_vty))
+    | from_vty, to_vty ->
+        error span (type_mismatch ctx ~expected:to_vty ~found:from_vty)
 
 
   (** {2 Bidirectional type checking} *)
@@ -287,7 +279,8 @@ end = struct
           | defns, Semantics.Cons (label, Semantics.Sing_type (_, _), decls) ->
               let tm = Syntax.Sing_intro in
               (label, tm) :: go defns (decls (lazy (eval ctx tm)))
-          | _, Semantics.Cons (label, _, _) -> error tm.span (missing_field label)
+          | _, Semantics.Cons (label, _, _) ->
+              error tm.span (Format.asprintf "field with label `%s` not found in record" label)
           | (label, _) :: _, Semantics.Nil ->
               error label.span (Format.sprintf "unexpected field `%s` in record literal" label.data)
         in
@@ -303,14 +296,9 @@ end = struct
     (* Singleton introduction. No need for any syntax in the surface language
         here, instead we use the type annotation to drive this. *)
     | _, Semantics.Sing_type (vty, sing_vtm) ->
-        let tm_span = tm.span in
-        let tm = check ctx tm vty in
-        let vtm = eval ctx tm in
-        if is_convertible ctx (Lazy.force sing_vtm) vtm then Syntax.Sing_intro else
-          error tm_span (singleton_mismatch ctx
-            ~expected:(quote ctx (Lazy.force sing_vtm))
-            ~found:(quote ctx vtm)
-            ~ty:(quote ctx vty))
+        intro_sing ctx tm.span
+          ~found:(eval ctx (check ctx tm vty))
+          ~expected:(Lazy.force sing_vtm)
 
     (* For anything else, try inferring the type of the term, then attempting to
         coerce the term to the expected type. *)
@@ -353,7 +341,8 @@ end = struct
         let rec go ctx = function
           | [] -> check ctx body_ty Semantics.Univ
           (* Function types always require annotations *)
-          | (name, None) :: _ -> error name.span (ambiguous_param name.data)
+          | (name, None) :: _ ->
+              error name.span "ambiguous function parameter type"
           | (name, Some param_ty) :: params ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let body_ty = go (bind_param ctx name.data (eval ctx param_ty)) params in
@@ -418,9 +407,9 @@ end = struct
             | head, Semantics.Rec_type decls ->
                 begin match Semantics.proj_ty (eval ctx head) decls label.data with
                 | Some vty -> Syntax.Rec_proj (head, label.data), vty
-                | None -> error label.span (missing_field label.data)
+                | None -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data)
                 end
-            | _ -> error label.span (missing_field label.data))
+            | _ -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data))
           (infer ctx head)
           labels
 
@@ -468,11 +457,9 @@ end = struct
     | [], Some ({ span = body_ty_span; _ } as body_ty), vty ->
         let body_ty = check ctx body_ty Semantics.Univ in
         let body_vty = eval ctx body_ty in
-        if is_convertible ctx body_vty vty then
-          check ctx body body_vty
-        else error body_ty_span (type_mismatch ctx
-          ~expected:(quote ctx vty)
-          ~found:body_ty)
+        check_convertible ctx body_ty_span ~found:body_vty ~expected:vty;
+        check ctx body body_vty
+
     | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, param_vty', body_vty') ->
         let var = next_var ctx in
         let param_ty =
@@ -481,16 +468,13 @@ end = struct
           | Some param_ty ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let param_vty = eval ctx param_ty in
-              (* Check that the parameter annotation in the function literal
-                  matches the expected parameter type. *)
-              if is_convertible ctx param_vty (Lazy.force param_vty') then param_vty else
-                error name.span (type_mismatch ctx
-                  ~expected:(quote ctx (Lazy.force param_vty'))
-                  ~found:param_ty)
+              check_convertible ctx name.span ~found:param_vty ~expected:(Lazy.force param_vty');
+              param_vty
         in
         let ctx = bind_def ctx name.data param_ty var in
         let body = check_fun_lit ctx params body_ty body (body_vty' var) in
         Syntax.Fun_lit (name.data, body)
+
     | (name, _) :: _, _, _ ->
         error name.span "too many parameters in function literal"
 
@@ -508,7 +492,7 @@ end = struct
         let param_ty =
           match param_ty with
           (* We’re in inference mode, so function parameters need annotations *)
-          | None -> error name.span (ambiguous_param name.data)
+          | None -> error name.span "ambiguous function parameter type"
           | Some param_ty -> check ctx param_ty Semantics.Univ
         in
         let ctx = bind_def ctx name.data (eval ctx param_ty) var in
