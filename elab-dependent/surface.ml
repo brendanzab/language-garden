@@ -241,15 +241,17 @@ end = struct
 
     (* Function application *)
     | Fun_app (head, args) ->
-        List.fold_left
-          (fun (head, head_vty) arg ->
-            match head_vty with
-            | Semantics.Fun_type (_, param_vty, body_vty) ->
-                let arg = check ctx arg (Lazy.force param_vty) in
-                Syntax.Fun_app (head, arg), body_vty (lazy (eval ctx arg))
-            | _ -> error arg.span "unexpected argument")
-          (infer ctx head)
-          args
+        let rec go ctx (head, head_vty) args =
+          match args with
+          | [] -> head, head_vty
+          | arg :: args ->
+              match head_vty with
+              | Semantics.Fun_type (_, param_vty, body_vty) ->
+                  let arg = check ctx arg (Lazy.force param_vty) in
+                  go ctx (Syntax.Fun_app (head, arg), body_vty (lazy (eval ctx arg))) args
+              | _ -> error arg.span "unexpected argument"
+        in
+        go ctx (infer ctx head) args
 
 
   (** {2 Running elaboration} *)

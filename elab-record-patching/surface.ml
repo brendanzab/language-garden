@@ -394,29 +394,33 @@ end = struct
 
     (* Application *)
     | App (head, args) ->
-        List.fold_left
-          (fun (head, head_vty) arg ->
-            match head_vty with
-            | Semantics.Fun_type (_, param_vty, body_vty) ->
-                let arg = check ctx arg (Lazy.force param_vty) in
-                Syntax.Fun_app (head, arg), body_vty (lazy (eval ctx arg))
-            | _ -> error arg.span "unexpected argument")
-          (infer ctx head)
-          args
+        let rec go ctx (head, head_vty) args =
+          match args with
+          | [] -> head, head_vty
+          | arg :: args ->
+              match elim_implicits ctx head head_vty with
+              | head, Semantics.Fun_type (_, param_vty, body_vty) ->
+                  let arg = check ctx arg (Lazy.force param_vty) in
+                  go ctx (Syntax.Fun_app (head, arg), body_vty (lazy (eval ctx arg))) args
+              | _ -> error arg.span "unexpected argument"
+        in
+        go ctx (infer ctx head) args
 
     (* Field projection *)
     | Proj (head, labels) ->
-        List.fold_left
-          (fun (head, head_vty) label ->
-            match elim_implicits ctx head head_vty with
-            | head, Semantics.Rec_type decls ->
-                begin match Semantics.proj_ty (eval ctx head) decls label.data with
-                | Some vty -> Syntax.Rec_proj (head, label.data), vty
-                | None -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data)
-                end
-            | _ -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data))
-          (infer ctx head)
-          labels
+        let rec go ctx (head, head_vty) labels =
+          match labels with
+          | [] -> head, head_vty
+          | label :: labels ->
+              match elim_implicits ctx head head_vty with
+              | head, Semantics.Rec_type decls ->
+                  begin match Semantics.proj_ty (eval ctx head) decls label.data with
+                  | Some vty -> go ctx (Syntax.Rec_proj (head, label.data), vty) labels
+                  | None -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data)
+                  end
+              | _ -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data)
+        in
+        go ctx (infer ctx head) labels
 
     (* Patches. Here we add patches to record types by creating a copy of the
         type with singletons in place of the patched fields  *)
