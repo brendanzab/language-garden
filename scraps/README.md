@@ -104,6 +104,8 @@ Miscellaneous:
 - [**misc_landins_knot.ml**](./misc_landins_knot.ml):
   Demonstration of Landin’s Knot, an approach to encoding general recursion
   using higher-order references and backpatching.
+- [**misc_local_datatypes.ml**](./misc_local_datatypes.ml):
+  Demonstration local datatype definitions in OCaml.
 - [**misc_option_shapes.ml**](./misc_option_shapes.ml):
   Exposing introduction and elimination forms for variant types, without
   exposing the underlying representation.
