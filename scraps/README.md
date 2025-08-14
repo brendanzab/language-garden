@@ -9,9 +9,11 @@ Parsing:
 
 Evaluation:
 
-- [**eval_cek.ml**](./eval_cek.ml): A tree-walking interpreter for the lambda
-  calculus, refactored into continuation-passing-style in the style of the
-  CEK machine.
+- [**eval_lc_cps.ml**](./eval_lc_cek.ml): A tree-walking interpreter for the
+  lambda calculus, refactored into continuation-passing-style.
+- [**eval_lc_cek.ml**](./eval_lc_cek.ml): A tree-walking interpreter for the
+  lambda calculus, refactored into continuation-passing-style in the style of
+  the CEK machine.
 - [**eval_control_flow_cps.ml**](./eval_control_flow_cps.ml):
   An evaluator for imperative control flow (loop, break, continue) implemented
   using continuation passing style

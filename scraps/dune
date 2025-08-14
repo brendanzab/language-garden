@@ -1,6 +1,7 @@
 (executable (name parse_sexpr))
 
-(executable (name eval_cek))
+(executable (name eval_lc_cps))
+(executable (name eval_lc_cek))
 (executable (name eval_control_flow_cps))
 (executable (name eval_extensible))
 (executable (name eval_imp))
