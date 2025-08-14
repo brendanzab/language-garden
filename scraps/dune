@@ -13,6 +13,7 @@
 
 (executable (name check_stlc_inference_rules))
 (executable (name check_stlc_inference_rules_bidir))
+(executable (name check_plain_data))
 
 (executable (name elab_stlc_gadt))
 (executable (name elab_stlc_gadt_bidir))
