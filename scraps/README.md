@@ -99,6 +99,8 @@ Miscellaneous:
   COMEFROM in OCaml, implemented with algebraic effects and handlers.
 - [**misc_effects_state.ml**](./misc_effects_state.ml):
   State effect, implemented with algebraic effects and handlers.
+- [**misc_functional_unparsing.ml**](./misc_functional_unparsing.ml):
+  Type-safe formatting strings with continuation passing.
 - [**misc_isorecursion_vs_equirecursion.ml**](./misc_isorecursion_vs_equirecursion.ml):
   Comparing isorecursive variant types with equirecursive variant types in OCaml.
 - [**misc_landins_knot.ml**](./misc_landins_knot.ml):
