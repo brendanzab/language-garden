@@ -29,7 +29,7 @@ end = struct
   let int k s = spec string_of_int k s
   let string k s = spec Fun.id k s
 
-  let ( ++ ) f g x = f (g x)
+  let ( ++ ) = Fun.compose
 
   let sprintf p = p Fun.id ""
   let printf p = p Out_channel.(output_string stdout) ""
