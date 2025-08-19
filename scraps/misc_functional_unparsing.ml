@@ -41,6 +41,6 @@ let () = begin
   assert (Format.(sprintf (lit "Hello world!" ++ eol)) = "Hello world!\n");
   assert (Format.(sprintf (string ++ lit " world!" ++ eol)) "Hello" = "Hello world!\n");
   assert (Format.(sprintf (int ++ int)) 3 4 = "34");
-  assert (Format.(sprintf (spec string_of_int ++ lit " is " ++ string ++ eol)) 3 "x" = "3 is x\n");
+  assert (Format.(sprintf (spec string_of_float ++ lit " is " ++ string ++ eol)) 3.4 "x" = "3.4 is x\n");
 
 end
