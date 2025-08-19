@@ -18,6 +18,7 @@ module Format : sig
 
   val sprintf : (string, 'a) formatter -> 'a
   val printf : (unit, 'a) formatter -> 'a [@@warning "-unused-value-declaration"]
+  val kprintf : (string -> 'a) -> ('a, 'b) formatter -> 'b [@@warning "-unused-value-declaration"]
 
 end = struct
 
@@ -31,8 +32,9 @@ end = struct
 
   let ( ++ ) = Fun.compose
 
-  let sprintf p = p Fun.id ""
-  let printf p = p Out_channel.(output_string stdout) ""
+  let kprintf k p = p k ""
+  let sprintf p = kprintf Fun.id p
+  let printf p = kprintf Out_channel.(output_string stdout) p
 
 end
 
