@@ -14,6 +14,7 @@
 
 (executable (name check_stlc_inference_rules))
 (executable (name check_stlc_inference_rules_bidir))
+(executable (name check_stlc_union_find))
 (executable (name check_plain_data))
 
 (executable (name elab_stlc_gadt))
@@ -38,6 +39,7 @@
 (executable (name misc_landins_knot))
 (executable (name misc_local_datatypes))
 (executable (name misc_option_shapes))
+(executable (name misc_retry_loop_retry) (libraries unix))
 (executable (name misc_set_objects))
 (executable (name misc_unembedding_hoas))
 (executable (name misc_unembedding_hoas_gadt))
