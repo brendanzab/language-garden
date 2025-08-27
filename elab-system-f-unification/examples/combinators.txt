@@ -1,0 +1,13 @@
+-- Common combinator definitions
+--
+-- * https://en.wikipedia.org/wiki/Combinatory_logic
+-- * https://www.angelfire.com/tx4/cus/combinator/birds.html
+-- * https://dkeenan.com/Lambda/index.htm
+
+let I : [a] -> a -> a                                       := fun x => x;              -- identity
+let K : [a] [b] -> a -> b -> a                              := fun x y => x;            -- constant
+let S : [a] [b] [c] -> (a -> b -> c) -> (a -> b) -> a -> c  := fun f g x => f x (g x);  -- substitution
+let B : [a] [b] [c] -> (b -> c) -> (a -> b) -> a -> c       := fun f g x => f (g x);
+let C : [a] [b] [c] -> (a -> b -> c) -> b -> a -> c         := fun f g x => (f x) g;
+
+true

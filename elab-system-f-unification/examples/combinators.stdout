@@ -1,0 +1,28 @@
+let I : [a] -> a -> a := fun [$a] => fun (x : $a) => x;
+let K : [a] -> [b] -> a -> b -> a :=
+  fun [$a] => fun [$b] => fun (x : $a) => fun (y : $b) => x;
+let S : [a] -> [b] -> [c] -> (a -> b -> c) -> (a -> b) -> a -> c :=
+  fun [$a] =>
+  fun [$b] =>
+  fun [$c] =>
+  fun (f : $a -> $b -> $c) =>
+  fun (g : $a -> $b) =>
+  fun (x : $a) =>
+    f x (g x);
+let B : [a] -> [b] -> [c] -> (b -> c) -> (a -> b) -> a -> c :=
+  fun [$a] =>
+  fun [$b] =>
+  fun [$c] =>
+  fun (f : $b -> $c) =>
+  fun (g : $a -> $b) =>
+  fun (x : $a) =>
+    f (g x);
+let C : [a] -> [b] -> [c] -> (a -> b -> c) -> b -> a -> c :=
+  fun [$a] =>
+  fun [$b] =>
+  fun [$c] =>
+  fun (f : $a -> $b -> $c) =>
+  fun (g : $b) =>
+  fun (x : $a) =>
+    f x g;
+true : Bool
