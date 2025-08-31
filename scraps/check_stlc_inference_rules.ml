@@ -35,7 +35,7 @@ type expr (* e *) =
   | App of expr * expr                  (* e e *)
   | True                                (* true *)
   | False                               (* false *)
-  | IfThenElse of expr * expr * expr    (* if e then e else e *)
+  | If_then_else of expr * expr * expr  (* if e then e else e *)
 
 type ctx (* Γ *) =
   | Empty                               (* ∅ *)
@@ -115,7 +115,7 @@ let rec infer (ctx : ctx) (e : expr) : ty =
   | True | False -> Bool
 
   (* T-IfThenElse *)
-  | IfThenElse (e1, e2, e3) ->
+  | If_then_else (e1, e2, e3) ->
       let t1 = infer ctx e1 in
       let t2 = infer ctx e2 in
       let t3 = infer ctx e3 in

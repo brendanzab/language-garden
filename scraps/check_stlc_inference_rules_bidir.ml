@@ -40,7 +40,7 @@ type expr (* e *) =
   | App of expr * expr                  (* e e *)
   | True                                (* true *)
   | False                               (* false *)
-  | IfThenElse of expr * expr * expr    (* if e then e else e *)
+  | If_then_else of expr * expr * expr  (* if e then e else e *)
 
 type ctx (* Γ *) =
   | Empty                               (* ∅ *)
@@ -115,7 +115,7 @@ let rec check (ctx : ctx) (e : expr) (t : ty) : unit =
       check (Extend (ctx, x, t1)) e t2
 
   (* C-IfThenElse *)
-  | IfThenElse (e1, e2, e3), t ->
+  | If_then_else (e1, e2, e3), t ->
       check ctx e1 Bool;
       check ctx e2 t;
       check ctx e3 t;
@@ -145,5 +145,5 @@ and infer (ctx : ctx) (e : expr) : ty =
   (* I-True, I-False *)
   | True | False -> Bool
 
-  | Lam _ | IfThenElse _ ->
+  | Lam _ | If_then_else _ ->
       failwith "ambiguous"
