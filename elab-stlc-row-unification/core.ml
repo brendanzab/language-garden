@@ -2,13 +2,6 @@
 
 (** {1 Names} *)
 
-(** Labels are significant to the equality of terms. They are typically used
-    to distinguish elements in variants, records, etc. *)
-type label = string
-
-(** An unordered row of elements distinguished by label. *)
-module Label_map = Map.Make (String)
-
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
 type name = string option
@@ -42,6 +35,16 @@ let level_to_index (size : level) (level : level) =
 (** An environment of bindings that can be looked up directly using a
     {!index}, or by converting to a {!level} using {!level_to_index}. *)
 type 'a env = 'a list
+
+
+(** {1 Labels} *)
+
+(** Labels are significant to the equality of terms. They are typically used
+    to distinguish elements in variants, records, etc. *)
+type label = string
+
+(** An unordered row of elements distinguished by label. *)
+module Label_map = Map.Make (String)
 
 
 (** {1 Syntax} *)
@@ -414,6 +417,9 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
 
 (** {1 Pretty printing} *)
 
+let pp_trailing_semi : Format.formatter -> unit =
+  Format.pp_print_custom_break ~fits:(" ", 0, "") ~breaks:(";", 0, "")
+
 let pp_ty : ty -> Format.formatter -> unit =
   let rec pp_ty ty ppf =
     match ty with
@@ -441,17 +447,17 @@ let pp_ty : ty -> Format.formatter -> unit =
   and pp_record_row_ty rty ppf =
     let pp_row row ppf =
       Format.pp_print_seq
-        ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
-        (fun ppf (label, ty) -> Format.fprintf ppf "@[<2>@[%s@ :@]@ @[%t@]@]" label (pp_ty ty))
+        ~pp_sep:(fun ppf () -> Format.fprintf ppf ";")
+        (fun ppf (label, ty) -> Format.fprintf ppf "@;<1 2>@[<2>@[%s@ :@]@ @[%t@]@]" label (pp_ty ty))
         ppf row
     in
     match rty with
     | Row_entries row when Label_map.is_empty row ->
         Format.fprintf ppf "{}"
     | Row_entries row ->
-        Format.fprintf ppf "@[{@ %t@ }@]" (pp_row (Label_map.to_seq row))
+        Format.fprintf ppf "@[{%t%t}@]" (pp_row (Label_map.to_seq row)) pp_trailing_semi
     | Row_meta_var { contents = Unsolved_row (id, row) } ->
-        Format.fprintf ppf "@[{@ ?%i..@ %t@ }@]" id (pp_row (Label_map.to_seq row))
+        Format.fprintf ppf "@[{@ ?%i..%t%t}@]" id (pp_row (Label_map.to_seq row)) pp_trailing_semi
     | Row_meta_var { contents = Solved_row rty } ->
         pp_record_row_ty rty ppf
 
@@ -574,12 +580,13 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
     | Record_lit fields when Label_map.is_empty fields ->
         Format.fprintf ppf "{}"
     | Record_lit fields ->
-        Format.fprintf ppf "@[{@ %a@ }@]"
+        Format.fprintf ppf "@[{%a%t}@]"
           (Format.pp_print_seq
-            ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ")
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf ";")
             (fun ppf (label, tm) ->
-              Format.fprintf ppf "@[<2>@[%s@ :=@]@ @[%t@]@]" label (pp_tm names tm)))
+              Format.fprintf ppf "@;<1 2>@[<2>@[%s@ :=@]@ @[%t@]@]" label (pp_tm names tm)))
           (Label_map.to_seq fields)
+          pp_trailing_semi
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
