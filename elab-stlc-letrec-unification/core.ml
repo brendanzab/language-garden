@@ -110,7 +110,7 @@ module Semantics = struct
     | Fix of name * ty * (eval_opts -> vtm -> vtm)
     | Fun_app of ntm * vtm
     | Tuple_proj of ntm * int
-    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
+    | Bool_elim of ntm * (eval_opts -> vtm) * (eval_opts -> vtm)
     | Prim_app of Prim.t * vtm list
 
 
@@ -132,11 +132,11 @@ module Semantics = struct
     | Tuple_lit elems -> List.nth elems elem_index
     | _ -> invalid_arg "expected tuple"
 
-  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
+  let bool_elim (opts : eval_opts) (head : vtm) (vtm1 : eval_opts -> vtm) (vtm2 : eval_opts -> vtm) : vtm =
     match head with
     | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> vtm1 ()
-    | Bool_lit false -> vtm2 ()
+    | Bool_lit true -> vtm1 opts
+    | Bool_lit false -> vtm2 opts
     | _ -> invalid_arg "expected boolean"
 
   let prim_app (prim : Prim.t) : vtm list -> vtm =
@@ -181,9 +181,9 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
         let head = eval ~opts env head in
-        let vtm1 () = eval ~opts env tm1 in
-        let vtm2 () = eval ~opts env tm2 in
-        bool_elim head vtm1 vtm2
+        let vtm1 opts = eval ~opts env tm1 in
+        let vtm2 opts = eval ~opts env tm2 in
+        bool_elim opts head vtm1 vtm2
     | Prim_app (prim, args) ->
         prim_app prim (List.map (eval ~opts env) args)
 
@@ -213,8 +213,8 @@ module Semantics = struct
     | Tuple_proj (head, elem_index) ->
         Tuple_proj (quote_neu ~opts size head, elem_index)
     | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote ~opts size (vtm1 ()) in
-        let tm2 = quote ~opts size (vtm2 ()) in
+        let tm1 = quote ~opts size (vtm1 opts) in
+        let tm2 = quote ~opts size (vtm2 opts) in
         Bool_elim (quote_neu ~opts size head, tm1, tm2)
     | Prim_app (prim, args) ->
         Prim_app (prim, List.map (quote ~opts size) args)
