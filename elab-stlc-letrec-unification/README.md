@@ -48,13 +48,17 @@ is-even 6
 
 <!-- $MDX file=examples/even-odd.stdout -->
 ```
-let $mutual-0 : (Int -> Bool, Int -> Bool) :=
-  #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
-    (fun (n : Int) =>
-       if #int-eq n 0 then true else $mutual-0.1 (#int-sub n 1),
-    fun (n : Int) =>
-      if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
-$mutual-0.0 6 : Bool
+let $mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool } :=
+  #fix ($mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool }) =>
+    {
+      is-even :=
+        fun (n : Int) =>
+          if #int-eq n 0 then true else $mutual-0.is-odd (#int-sub n 1);
+      is-odd :=
+        fun (n : Int) =>
+          if #int-eq n 0 then false else $mutual-0.is-even (#int-sub n 1);
+    };
+$mutual-0.is-even 6 : Bool
 ```
 
 </details>

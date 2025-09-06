@@ -72,12 +72,14 @@ module Elab : sig
 
 end = struct
 
+  module Label_map = Core.Label_map
+
   (** {2 Elaboration context} *)
 
   (** An entry in the context *)
   type entry =
     | Def of string option * Core.ty
-    | Mutual_def of (string option * Core.ty) list
+    | Mutual_def of Core.ty Label_map.t
 
   (** The elaboration context *)
   type context = {
@@ -109,11 +111,9 @@ end = struct
       | Def (name', ty) when Some name = name' ->
           Some (Core.Var index, ty)
       | Def (_, _) -> None
-      | Mutual_def entries ->
-          entries |> List.find_mapi @@ fun elem_index (name', ty) ->
-            match Some name = name' with
-            | true -> Some (Core.Tuple_proj (Var index, elem_index), ty)
-            | false -> None
+      | Mutual_def defs ->
+          Label_map.find_opt name defs |> Option.map @@ fun ty ->
+            Core.Record_proj (Var index, name), ty
 
   (** Generate a fresh metavariable *)
   let fresh_meta (ctx : context) (span: span) (info : string) : Core.ty =
@@ -177,8 +177,8 @@ end = struct
         let body = check_tm (extend ctx (Def (def_name.data, def_ty))) body ty in
         Let (def_name.data, def_ty, def, body)
 
-    | Let_rec (defns, body) ->
-        let def_name, defs_entry, def_ty, def = elab_let_rec_defns ctx defns in
+    | Let_rec (defs, body) ->
+        let def_name, defs_entry, def_ty, def = elab_let_rec_defs ctx defs in
         let body = check_tm (extend ctx defs_entry) body ty in
         Let (def_name, def_ty, def, body)
 
@@ -213,8 +213,8 @@ end = struct
         let body, body_ty = infer_tm (extend ctx (Def (def_name.data, def_ty))) body in
         Let (def_name.data, def_ty, def, body), body_ty
 
-    | Let_rec (defns, body) ->
-        let def_name, defs_entry, def_ty, def = elab_let_rec_defns ctx defns in
+    | Let_rec (defs, body) ->
+        let def_name, defs_entry, def_ty, def = elab_let_rec_defs ctx defs in
         let body, body_ty = infer_tm (extend ctx defs_entry) body in
         Let (def_name, def_ty, def, body), body_ty
 
@@ -320,7 +320,7 @@ end = struct
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
 
   (** Elaborate the definitions of a recursive let binding. *)
-  and elab_let_rec_defns (ctx : context) (defns : defn list) : string option * entry * Core.ty * Core.tm =
+  and elab_let_rec_defs (ctx : context) (defs : defn list) : string option * entry * Core.ty * Core.tm =
     (* Check a definition, avoiding “vicious circles” *)
     let check_def ctx def_name params body_ty def def_ty =
       match check_fun_lit ctx params body_ty def def_ty with
@@ -338,16 +338,10 @@ end = struct
       | _ -> error def_name.span "expected function literal in recursive let binding"
     in
 
-    (* Check a series of mutually recursive definitions against their types *)
-    let check_defs ctx =
-      List.map2 (fun (def_name, params, body_ty, def) (_, def_ty) ->
-        check_def ctx def_name params body_ty def def_ty)
-    in
-
     (* Elaborate the recursive definitions, special-casing singly recursive
       definitions. The special-casing is not exactly necessary, but does reduce
       indirections during evaluation. *)
-    match defns with
+    match defs with
     (* Singly recursive definitions *)
     | [(def_name, params, body_ty, def)] ->
         let def_ty = fresh_meta ctx def_name.span "definition type" in
@@ -358,19 +352,41 @@ end = struct
 
     (* Mutually recursive definitions *)
     | defs ->
-        let def_tys = defs |> List.map (fun (def_name, _, _, _) ->
-          def_name.data, fresh_meta ctx def_name.span "definition type")
+        let mutual_decls = List.fold_left
+          (fun mutual_decls (def_name, _, _, _) ->
+            match def_name.data with
+            | Some name when not (Label_map.mem name mutual_decls) ->
+                mutual_decls |> Label_map.add name (fresh_meta ctx def_name.span "definition type")
+            | Some name ->
+                error def_name.span (Format.asprintf "duplicate name `%s` in mutually recursive binding" name)
+            | None ->
+                (* TODO: Handle ignored bindings *)
+                error def_name.span (Format.asprintf "cannot use `_` in mutually recursive bindings"))
+          Label_map.empty
+          defs
         in
-        let defs_entry = Mutual_def def_tys in
-        let defs = check_defs (extend ctx defs_entry) defs def_tys in
 
-        (* Create the combined mutual definition using a tuple and the fixed-point
-          combinator. Alternatively we could use a record here, which could make
-          debugging the elaborated terms a little easier. *)
-        let def_name = Printf.sprintf "$mutual-%i" (List.length ctx.tys) in
-        let def_ty = Core.Tuple_type (List.map snd def_tys) in
+        let mutual_defs =
+          let ctx = extend ctx (Mutual_def mutual_decls) in
+          List.fold_left
+            (fun mutual_defs (def_name, params, body_ty, def) ->
+              match def_name.data with
+              | Some name ->
+                  let def_ty = Label_map.find name mutual_decls in
+                  let def = check_def ctx def_name params body_ty def def_ty in
+                  mutual_defs |> Label_map.add name def
+              | None ->
+                  mutual_defs)
+            Label_map.empty
+            defs
+        in
 
-        Some def_name, defs_entry, def_ty, Core.Fix (Some def_name, def_ty, Tuple_lit defs)
+        let def_name = Format.sprintf "$mutual-%i" (List.length ctx.tys) in
+
+        Some def_name,
+        Mutual_def mutual_decls,
+        Record_type mutual_decls,
+        Core.Fix (Some def_name, Record_type mutual_decls, Record_lit mutual_defs)
 
 
   (** {2 Running elaboration} *)

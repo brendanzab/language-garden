@@ -276,13 +276,17 @@ Mutually recursive bindings: Even/odd
   > EOF
 
   $ cat even-odd.txt | executable elab
-  let $mutual-0 : (Int -> Bool, Int -> Bool) :=
-    #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
-      (fun (n : Int) =>
-         if #int-eq n 0 then true else $mutual-0.1 (#int-sub n 1),
-      fun (n : Int) =>
-        if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
-  $mutual-0.0 6 : Bool
+  let $mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool } :=
+    #fix ($mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool }) =>
+      {
+        is-even :=
+          fun (n : Int) =>
+            if #int-eq n 0 then true else $mutual-0.is-odd (#int-sub n 1);
+        is-odd :=
+          fun (n : Int) =>
+            if #int-eq n 0 then false else $mutual-0.is-even (#int-sub n 1);
+      };
+  $mutual-0.is-even 6 : Bool
 
   $ cat even-odd.txt | executable norm
   true : Bool
@@ -299,25 +303,36 @@ Mutually recursive bindings: Even/odd (partially applied)
   > EOF
 
   $ cat even-odd.txt | executable elab
-  let $mutual-0 : (Int -> Bool, Int -> Bool) :=
-    #fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
-      (fun (n : Int) =>
-         if #int-eq n 0 then true else $mutual-0.1 (#int-sub n 1),
-      fun (n : Int) =>
-        if #int-eq n 0 then false else $mutual-0.0 (#int-sub n 1));
-  $mutual-0.0 : Int -> Bool
+  let $mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool } :=
+    #fix ($mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool }) =>
+      {
+        is-even :=
+          fun (n : Int) =>
+            if #int-eq n 0 then true else $mutual-0.is-odd (#int-sub n 1);
+        is-odd :=
+          fun (n : Int) =>
+            if #int-eq n 0 then false else $mutual-0.is-even (#int-sub n 1);
+      };
+  $mutual-0.is-even : Int -> Bool
 
   $ cat even-odd.txt | executable norm
   fun (n : Int) =>
     if #int-eq n 0 then
       true
     else
-      (#fix ($mutual-0 : (Int -> Bool, Int -> Bool)) =>
-         (fun (n' : Int) =>
-            if #int-eq n' 0 then true else $mutual-0.1 (#int-sub n' 1),
-         fun (n' : Int) =>
-           if #int-eq n' 0 then false else $mutual-0.0 (#int-sub n' 1)))
-        .1
+      (#fix ($mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool }) =>
+         {
+           is-even :=
+             fun (n' : Int) =>
+               if #int-eq n' 0 then true else $mutual-0.is-odd (#int-sub n' 1);
+           is-odd :=
+             fun (n' : Int) =>
+               if #int-eq n' 0 then
+                 false
+               else
+                 $mutual-0.is-even (#int-sub n' 1);
+         })
+        .is-odd
         (#int-sub n 1)
   : Int -> Bool
 
@@ -416,6 +431,26 @@ Unexpected function application
     │
   1 │ true 3
     │      ^
+  
+  [1]
+
+Duplicate name in mutually recursive binding
+  $ executable elab <<< "let rec f x := x; rec f x := x; f 1 : Int"
+  error: duplicate name `f` in mutually recursive binding
+    ┌─ <stdin>:1:22
+    │
+  1 │ let rec f x := x; rec f x := x; f 1 : Int
+    │                       ^
+  
+  [1]
+
+Ignored definition in mutually recursive binding
+  $ executable elab <<< "let rec f x := x; rec _ x := x; f 1 : Int"
+  error: cannot use `_` in mutually recursive bindings
+    ┌─ <stdin>:1:22
+    │
+  1 │ let rec f x := x; rec _ x := x; f 1 : Int
+    │                       ^
   
   [1]
 

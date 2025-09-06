@@ -37,6 +37,16 @@ let level_to_index (size : level) (level : level) =
 type 'a env = 'a list
 
 
+(** {1 Labels} *)
+
+(** Labels are significant to the equality of terms. They are typically used
+    to distinguish elements in variants, records, etc. *)
+type label = string
+
+(** An unordered row of elements distinguished by label. *)
+module Label_map = Map.Make (String)
+
+
 (** {1 Syntax} *)
 
 (** Identifier used for pretty printing metavariables. *)
@@ -46,7 +56,7 @@ type meta_id = int
 type ty =
   | Meta_var of meta
   | Fun_type of ty * ty
-  | Tuple_type of ty list
+  | Record_type of ty Label_map.t
   | Int_type
   | Bool_type
 
@@ -68,8 +78,8 @@ type tm =
   | Fix of name * ty * tm
   | Fun_lit of name * ty * tm
   | Fun_app of tm * tm
-  | Tuple_lit of tm list
-  | Tuple_proj of tm * int
+  | Record_lit of tm Label_map.t
+  | Record_proj of tm * label
   | Int_lit of int
   | Bool_lit of bool
   | Bool_elim of tm * tm * tm
@@ -94,7 +104,7 @@ module Semantics = struct
   type vtm =
     | Neu of ntm
     | Fun_lit of name * ty * (eval_opts -> vtm -> vtm)
-    | Tuple_lit of vtm list
+    | Record_lit of vtm Label_map.t
     | Bool_lit of bool
     | Int_lit of int
 
@@ -109,7 +119,7 @@ module Semantics = struct
     | Var of level              (* A fresh variable (used when evaluating under a binder) *)
     | Fix of name * ty * (eval_opts -> vtm -> vtm)
     | Fun_app of ntm * vtm
-    | Tuple_proj of ntm * int
+    | Record_proj of ntm * label
     | Bool_elim of ntm * (eval_opts -> vtm) * (eval_opts -> vtm)
     | Prim_app of Prim.t * vtm list
 
@@ -124,12 +134,12 @@ module Semantics = struct
     | Fun_lit (_, _, body) -> body opts arg
     | _ -> invalid_arg "expected function"
 
-  let rec tuple_proj (opts : eval_opts) (head : vtm) (elem_index : int) =
+  let rec record_proj (opts : eval_opts) (head : vtm) (label : label) =
     match head with
     | Neu (Fix (_, _, body)) when opts.unfold_fix ->
-        tuple_proj opts (body opts head) elem_index
-    | Neu ntm -> Neu (Tuple_proj (ntm, elem_index))
-    | Tuple_lit elems -> List.nth elems elem_index
+        record_proj opts (body opts head) label
+    | Neu ntm -> Neu (Record_proj (ntm, label))
+    | Record_lit elems -> Label_map.find label elems
     | _ -> invalid_arg "expected tuple"
 
   let bool_elim (opts : eval_opts) (head : vtm) (vtm1 : eval_opts -> vtm) (vtm2 : eval_opts -> vtm) : vtm =
@@ -172,11 +182,11 @@ module Semantics = struct
         let head = eval ~opts env head in
         let arg = eval ~opts env arg in
         fun_app opts head arg
-    | Tuple_lit elems ->
-        Tuple_lit (List.map (eval ~opts env) elems)
-    | Tuple_proj (head, elem_index) ->
+    | Record_lit defs ->
+        Record_lit (Label_map.map (eval ~opts env) defs)
+    | Record_proj (head, label) ->
         let head = eval ~opts env head in
-        tuple_proj opts head elem_index
+        record_proj opts head label
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
@@ -197,8 +207,8 @@ module Semantics = struct
     | Fun_lit (name, param_ty, body) ->
         let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
-    | Tuple_lit elems ->
-        Tuple_lit (List.map (quote ~opts size) elems)
+    | Record_lit defs ->
+        Record_lit (Label_map.map (quote ~opts size) defs)
     | Bool_lit b -> Bool_lit b
     | Int_lit i -> Int_lit i
 
@@ -210,8 +220,8 @@ module Semantics = struct
         Fix (name, self_ty, body)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu ~opts size head, quote ~opts size arg)
-    | Tuple_proj (head, elem_index) ->
-        Tuple_proj (quote_neu ~opts size head, elem_index)
+    | Record_proj (head, label) ->
+        Record_proj (quote_neu ~opts size head, label)
     | Bool_elim (head, vtm1, vtm2) ->
         let tm1 = quote ~opts size (vtm1 opts) in
         let tm2 = quote ~opts size (vtm2 opts) in
@@ -271,8 +281,8 @@ let rec occurs (m : meta) (ty : ty) : unit =
   | Fun_type (param_ty, body_ty) ->
       occurs m param_ty;
       occurs m body_ty
-  | Tuple_type elem_tys ->
-      List.iter (occurs m) elem_tys
+  | Record_type decls ->
+      Label_map.iter (fun _ ty -> occurs m ty) decls
   | Int_type -> ()
   | Bool_type -> ()
 
@@ -287,11 +297,15 @@ let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->
       unify_tys param_ty1 param_ty2;
       unify_tys body_ty1 body_ty2;
-  | Tuple_type elem_tys1, Tuple_type elem_tys2  -> begin
-      try List.iter2 unify_tys elem_tys1 elem_tys2 with
-      | Invalid_argument _ ->
-          raise (Mismatched_types (ty1, ty2))
-  end
+  | Record_type decls1, Record_type decls2 ->
+      if Label_map.cardinal decls1 <> Label_map.cardinal decls2 then
+        raise (Mismatched_types (ty1, ty2));
+      Seq.iter2
+        (fun (label1, decl_ty1) (label2, decl_ty2) ->
+          if label1 <> label2 then raise (Mismatched_types (ty1, ty2));
+          unify_tys decl_ty1 decl_ty2)
+        (Label_map.to_seq decls1)
+        (Label_map.to_seq decls2)
   | Int_type, Int_type -> ()
   | Bool_type, Bool_type -> ()
   | ty1, ty2 ->
@@ -299,6 +313,9 @@ let rec unify_tys (ty1 : ty) (ty2 : ty) : unit =
 
 
 (** {1 Pretty printing} *)
+
+let pp_trailing_semi : Format.formatter -> unit =
+  Format.pp_print_custom_break ~fits:(" ", 0, "") ~breaks:(";", 0, "")
 
 let pp_ty : ty -> Format.formatter -> unit =
   let rec pp_ty ty ppf =
@@ -313,15 +330,15 @@ let pp_ty : ty -> Format.formatter -> unit =
   and pp_atomic_ty ty ppf =
     match ty with
     | Meta_var m -> pp_meta pp_atomic_ty m ppf
-    | Tuple_type [elem_ty] ->
-        Format.fprintf ppf "(%t,)"
-          (pp_ty elem_ty)
-    | Tuple_type elem_tys ->
-        Format.fprintf ppf "(%a)"
-          (Format.pp_print_list
-            ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-            (Fun.flip pp_ty))
-          elem_tys
+    | Record_type decls when Label_map.is_empty decls ->
+        Format.fprintf ppf "{}"
+    | Record_type decls ->
+        Format.fprintf ppf "@[{%a%t}@]"
+          (Format.pp_print_seq
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf ";")
+            (fun ppf (label, ty) -> Format.fprintf ppf "@;<1 2>@[<2>@[%s@ :@]@ @[%t@]@]" label (pp_ty ty)))
+          (Label_map.to_seq decls)
+          pp_trailing_semi
     | Int_type -> Format.fprintf ppf "Int"
     | Bool_type -> Format.fprintf ppf "Bool"
     | Fun_type _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
@@ -412,32 +429,33 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
   and pp_proj_tm names tm ppf =
     let rec go tm ppf =
       match tm with
-      | Tuple_proj (head, elem_index) ->
-            Format.fprintf ppf "%t@,.%i" (go head) elem_index
+      | Record_proj (head, label) ->
+            Format.fprintf ppf "%t@,.%s" (go head) label
       | tm ->
           pp_atomic_tm names tm ppf
     in
     match tm with
-    | Tuple_proj _ as tm ->
+    | Record_proj _ as tm ->
         Format.fprintf ppf "@[<2>%t@]" (go tm)
     | tm ->
         pp_atomic_tm names tm ppf
   and pp_atomic_tm names tm ppf =
     match tm with
     | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
-    | Tuple_lit [elem] ->
-        Format.fprintf ppf "(%t,)"
-          (pp_tm names elem)
-    | Tuple_lit elems ->
-        Format.fprintf ppf "(%a)"
-          (Format.pp_print_list
-            ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-            (Fun.flip (pp_tm names)))
-          elems
+    | Record_lit defs when Label_map.is_empty defs ->
+        Format.fprintf ppf "{}"
+    | Record_lit defs ->
+        Format.fprintf ppf "@[{%a%t}@]"
+          (Format.pp_print_seq
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf ";")
+            (fun ppf (label, tm) ->
+              Format.fprintf ppf "@;<1 2>@[<2>@[%s@ :=@]@ @[%t@]@]" label (pp_tm names tm)))
+          (Label_map.to_seq defs)
+          pp_trailing_semi
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | Let _ | Fix _ | Fun_lit _ | Fun_app _ | Tuple_proj _
+    | Let _ | Fix _ | Fun_lit _ | Fun_app _ | Record_proj _
     | Bool_elim _ | Prim_app _ as tm ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
