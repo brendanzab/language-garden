@@ -183,7 +183,7 @@ end = struct
         Let (def_name, def_ty, def, body)
 
     | Fun_lit (params, body) ->
-        check_fun_lit ctx params body ty
+        check_fun_lit ctx params None body ty
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Bool_type in
@@ -279,24 +279,27 @@ end = struct
         Prim_app (Int_neg, [tm]), Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
-  and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
-    match params, Core.force_ty ty with
-    | [], ty ->
-        check_tm ctx body ty
-    | (name, None) :: params, Fun_type (param_ty, body_ty) ->
-        let body = check_fun_lit (extend ctx (Def (name.data, param_ty))) params body body_ty in
+  and check_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) (ty : Core.ty) : Core.tm =
+    match params, body_ty, Core.force_ty ty with
+    | [], None, ty -> check_tm ctx body ty
+    | [], Some ({ span; _ } as body_ty), ty ->
+        let body_ty = check_ty ctx body_ty in
+        unify_tys span ~found:body_ty ~expected:ty;
+        check_tm ctx body body_ty
+    | (name, None) :: params, body_ty, Fun_type (param_ty, ty) ->
+        let body = check_fun_lit (extend ctx (Def (name.data, param_ty))) params body_ty body ty in
         Fun_lit (name.data, param_ty, body)
-    | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
+    | (name, Some param_ty) :: params, body_ty, Fun_type (param_ty', ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun_lit (extend ctx (Def (name.data, param_ty))) params body body_ty in
+        let body = check_fun_lit (extend ctx (Def (name.data, param_ty))) params body_ty body ty in
         Fun_lit (name.data, param_ty, body)
-    | (name, _) :: _, Meta_var _ ->
-        let tm', ty' = infer_fun_lit ctx params None body in
+    | (name, _) :: _, body_ty, Meta_var _ ->
+        let tm', ty' = infer_fun_lit ctx params body_ty body in
         unify_tys name.span ~found:ty' ~expected:ty;
         tm'
-    | (name, _) :: _, _ ->
+    | (name, _) :: _, _, _ ->
         error name.span "unexpected parameter"
 
   (** Elaborate a function literal, inferring its type. *)
@@ -318,18 +321,9 @@ end = struct
 
   (** Elaborate the definitions of a recursive let binding. *)
   and elab_let_rec_defns (ctx : context) (defns : defn list) : string option * entry * Core.ty * Core.tm =
-    (* Creates a fresh function type for a definition. *)
-    let rec fresh_fun_ty ctx span params body_ty =
-      match params, body_ty with
-      | [], Some body_ty -> check_ty ctx body_ty
-      | [], None -> fresh_meta ctx span "function return type"
-      | (name, _) :: params, body_ty ->
-          let param_ty = fresh_meta ctx name.span "function parameter type" in
-          Fun_type (param_ty, fresh_fun_ty (extend ctx (Def (name.data, param_ty))) span params body_ty)
-    in
-
-    (* Check the body of a definition, ensuring it is a function *)
-    let check_def_body ctx params def_span def def_ty =
+    (* Check a definition, avoiding “vicious circles” *)
+    let check_def ctx def_name params body_ty def def_ty =
+      match check_fun_lit ctx params body_ty def def_ty with
       (* Avoid “vicious circles” with a blunt syntactic check on the elaborated
         term, ensuring that it is a function literal. This is similar to the
         approach used in Standard ML. This rules out definitions like:
@@ -340,15 +334,14 @@ end = struct
         admits more valid programs. A detailed description of this check can be
         found in “A practical mode system for recursive definitions” by Reynaud
         et. al. https://doi.org/10.1145/3434326. *)
-      match check_fun_lit ctx params def def_ty with
-      | Fun_lit _ as def_body -> def_body
-      | _ -> error def_span "expected function literal in recursive let binding"
+      | Fun_lit _ as def -> def
+      | _ -> error def_name.span "expected function literal in recursive let binding"
     in
 
     (* Check a series of mutually recursive definitions against their types *)
-    let check_def_bodies ctx =
-      List.map2 (fun (def_name, params, _, def) (_, def_ty) ->
-        check_def_body ctx params def_name.span def def_ty)
+    let check_defs ctx =
+      List.map2 (fun (def_name, params, body_ty, def) (_, def_ty) ->
+        check_def ctx def_name params body_ty def def_ty)
     in
 
     (* Elaborate the recursive definitions, special-casing singly recursive
@@ -356,30 +349,28 @@ end = struct
       indirections during evaluation. *)
     match defns with
     (* Singly recursive definitions *)
-    | [(def_name, params, def_ty, def)] ->
-        let def_ty = fresh_fun_ty ctx def_name.span params def_ty in
+    | [(def_name, params, body_ty, def)] ->
+        let def_ty = fresh_meta ctx def_name.span "definition type" in
         let def_entry = Def (def_name.data, def_ty) in
-        let def_body = check_def_body (extend ctx def_entry) params def_name.span def def_ty in
-        let def = Core.Fix (def_name.data, def_ty, def_body) in
+        let def = check_def (extend ctx def_entry) def_name params body_ty def def_ty in
 
-        def_name.data, def_entry, def_ty, def
+        def_name.data, def_entry, def_ty, Core.Fix (def_name.data, def_ty, def)
 
     (* Mutually recursive definitions *)
     | defs ->
-        let def_tys = defs |> List.map (fun (def_name, params, def_ty, _) ->
-          def_name.data, fresh_fun_ty ctx def_name.span params def_ty)
+        let def_tys = defs |> List.map (fun (def_name, _, _, _) ->
+          def_name.data, fresh_meta ctx def_name.span "definition type")
         in
         let defs_entry = Mutual_def def_tys in
-        let defs = check_def_bodies (extend ctx defs_entry) defs def_tys in
+        let defs = check_defs (extend ctx defs_entry) defs def_tys in
 
         (* Create the combined mutual definition using a tuple and the fixed-point
           combinator. Alternatively we could use a record here, which could make
           debugging the elaborated terms a little easier. *)
         let def_name = Printf.sprintf "$mutual-%i" (List.length ctx.tys) in
         let def_ty = Core.Tuple_type (List.map snd def_tys) in
-        let def = Core.Fix (Some def_name, def_ty, Tuple_lit defs) in
 
-        Some def_name, defs_entry, def_ty, def
+        Some def_name, defs_entry, def_ty, Core.Fix (Some def_name, def_ty, Tuple_lit defs)
 
 
   (** {2 Running elaboration} *)
