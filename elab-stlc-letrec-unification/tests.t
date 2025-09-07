@@ -436,7 +436,7 @@ Unexpected function application
 
 Duplicate name in mutually recursive binding
   $ executable elab <<< "let rec f x := x; rec f x := x; f 1 : Int"
-  error: duplicate name `f` in mutually recursive binding
+  error: duplicate name `f` in mutually recursive bindings
     ┌─ <stdin>:1:22
     │
   1 │ let rec f x := x; rec f x := x; f 1 : Int

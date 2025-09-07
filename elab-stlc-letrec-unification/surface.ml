@@ -339,10 +339,10 @@ end = struct
     in
 
     (* Elaborate the recursive definitions, special-casing singly recursive
-      definitions. The special-casing is not exactly necessary, but does reduce
-      indirections during evaluation. *)
+       definitions. *)
     match defs with
-    (* Singly recursive definitions *)
+    (* Singly recursive definitions are special-cased. This is not exactly
+       necessary, but avoids the need to construct an intermediate record.*)
     | [(def_name, params, body_ty, def)] ->
         let def_ty = fresh_meta ctx def_name.span "definition type" in
         let def_entry = Def (def_name.data, def_ty) in
@@ -352,24 +352,22 @@ end = struct
 
     (* Mutually recursive definitions *)
     | defs ->
-        let mutual_decls = List.fold_left
-          (fun mutual_decls (def_name, _, _, _) ->
-            match def_name.data with
-            | Some name when not (Label_map.mem name mutual_decls) ->
-                mutual_decls |> Label_map.add name (fresh_meta ctx def_name.span "definition type")
-            | Some name ->
-                error def_name.span (Format.asprintf "duplicate name `%s` in mutually recursive binding" name)
-            | None ->
-                (* TODO: Handle ignored bindings *)
-                error def_name.span (Format.asprintf "cannot use `_` in mutually recursive bindings"))
-          Label_map.empty
-          defs
+        let mutual_decls =
+          defs |> ListLabels.fold_left
+            ~init:Label_map.empty
+            ~f:(fun mutual_decls (def_name, _, _, _) ->
+              match def_name.data with
+              | Some name when not (Label_map.mem name mutual_decls) ->
+                  mutual_decls |> Label_map.add name (fresh_meta ctx def_name.span "definition type")
+              | Some name -> error def_name.span (Format.asprintf "duplicate name `%s` in mutually recursive bindings" name)
+              | None -> error def_name.span (Format.asprintf "cannot use `_` in mutually recursive bindings"))
         in
 
         let mutual_defs =
           let ctx = extend ctx (Mutual_def mutual_decls) in
-          List.fold_left
-            (fun mutual_defs (def_name, params, body_ty, def) ->
+          defs |> ListLabels.fold_left
+            ~init:Label_map.empty
+            ~f:(fun mutual_defs (def_name, params, body_ty, def) ->
               match def_name.data with
               | Some name ->
                   let def_ty = Label_map.find name mutual_decls in
@@ -377,8 +375,6 @@ end = struct
                   mutual_defs |> Label_map.add name def
               | None ->
                   mutual_defs)
-            Label_map.empty
-            defs
         in
 
         let def_name = Format.sprintf "$mutual-%i" (List.length ctx.tys) in
