@@ -78,8 +78,8 @@ end = struct
 
   (** An entry in the context *)
   type entry =
-    | Def of string option * Core.ty
-    | Mutual_def of Core.ty Label_map.t
+    | Param of string option * Core.ty
+    | Fields of Core.ty Label_map.t
 
   (** The elaboration context *)
   type context = {
@@ -108,10 +108,10 @@ end = struct
   let lookup (ctx : context) (name : string) : (Core.tm * Core.ty) option =
     ctx.tys |> List.find_mapi @@ fun index entry ->
       match entry with
-      | Def (name', ty) when Some name = name' ->
+      | Param (name', ty) when Some name = name' ->
           Some (Core.Var index, ty)
-      | Def (_, _) -> None
-      | Mutual_def defs ->
+      | Param (_, _) -> None
+      | Fields defs ->
           Label_map.find_opt name defs |> Option.map @@ fun ty ->
             Core.Record_proj (Var index, name), ty
 
@@ -174,7 +174,7 @@ end = struct
     match tm.data with
     | Let ((def_name, params, def_ty, def), body) ->
         let def, def_ty = infer_fun_lit ctx params def_ty def in
-        let body = check_tm (extend ctx (Def (def_name.data, def_ty))) body ty in
+        let body = check_tm (extend ctx (Param (def_name.data, def_ty))) body ty in
         Let (def_name.data, def_ty, def, body)
 
     | Let_rec (defs, body) ->
@@ -210,7 +210,7 @@ end = struct
 
     | Let ((def_name, params, def_ty, def), body) ->
         let def, def_ty = infer_fun_lit ctx params def_ty def in
-        let body, body_ty = infer_tm (extend ctx (Def (def_name.data, def_ty))) body in
+        let body, body_ty = infer_tm (extend ctx (Param (def_name.data, def_ty))) body in
         Let (def_name.data, def_ty, def, body), body_ty
 
     | Let_rec (defs, body) ->
@@ -287,13 +287,13 @@ end = struct
         unify_tys span ~found:body_ty ~expected:ty;
         check_tm ctx body body_ty
     | (name, None) :: params, body_ty, Fun_type (param_ty, ty) ->
-        let body = check_fun_lit (extend ctx (Def (name.data, param_ty))) params body_ty body ty in
+        let body = check_fun_lit (extend ctx (Param (name.data, param_ty))) params body_ty body ty in
         Fun_lit (name.data, param_ty, body)
     | (name, Some param_ty) :: params, body_ty, Fun_type (param_ty', ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun_lit (extend ctx (Def (name.data, param_ty))) params body_ty body ty in
+        let body = check_fun_lit (extend ctx (Param (name.data, param_ty))) params body_ty body ty in
         Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, body_ty, Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params body_ty body in
@@ -312,11 +312,11 @@ end = struct
         infer_tm ctx body
     | (name, None) :: params, body_ty ->
         let param_ty = fresh_meta ctx name.span "function parameter type" in
-        let body, body_ty = infer_fun_lit (extend ctx (Def (name.data, param_ty))) params body_ty body in
+        let body, body_ty = infer_fun_lit (extend ctx (Param (name.data, param_ty))) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
     | (name, Some param_ty) :: params, body_ty ->
         let param_ty = check_ty ctx param_ty in
-        let body, body_ty = infer_fun_lit (extend ctx (Def (name.data, param_ty))) params body_ty body in
+        let body, body_ty = infer_fun_lit (extend ctx (Param (name.data, param_ty))) params body_ty body in
         Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
 
   (** Elaborate the definitions of a recursive let binding. *)
@@ -345,7 +345,7 @@ end = struct
        necessary, but avoids the need to construct an intermediate record.*)
     | [(def_name, params, body_ty, def)] ->
         let def_ty = fresh_meta ctx def_name.span "definition type" in
-        let def_entry = Def (def_name.data, def_ty) in
+        let def_entry = Param (def_name.data, def_ty) in
         let def = check_def (extend ctx def_entry) def_name params body_ty def def_ty in
 
         def_name.data, def_entry, def_ty, Core.Fix (def_name.data, def_ty, def)
@@ -364,7 +364,7 @@ end = struct
         in
 
         let mutual_defs =
-          let ctx = extend ctx (Mutual_def mutual_decls) in
+          let ctx = extend ctx (Fields mutual_decls) in
           defs |> ListLabels.fold_left
             ~init:Label_map.empty
             ~f:(fun mutual_defs (def_name, params, body_ty, def) ->
@@ -380,7 +380,7 @@ end = struct
         let def_name = Format.sprintf "$mutual-%i" (List.length ctx.tys) in
 
         Some def_name,
-        Mutual_def mutual_decls,
+        Fields mutual_decls,
         Record_type mutual_decls,
         Core.Fix (Some def_name, Record_type mutual_decls, Record_lit mutual_defs)
 
