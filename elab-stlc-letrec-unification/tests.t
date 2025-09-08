@@ -267,10 +267,10 @@ Recursive bindings: Even/odd (partially applied)
 
 Mutually recursive bindings: Even/odd
   $ cat >even-odd.txt <<EOF
-  > let rec is-even n :=
-  >       if n = 0 then true else is-odd (n - 1);
-  >     rec is-odd n :=
-  >       if n = 0 then false else is-even (n - 1);
+  > let rec {
+  >   is-even n := if n = 0 then true else is-odd (n - 1);
+  >   is-odd n := if n = 0 then false else is-even (n - 1);
+  > };
   > 
   > is-even 6
   > EOF
@@ -294,10 +294,10 @@ Mutually recursive bindings: Even/odd
 
 Mutually recursive bindings: Even/odd (partially applied)
   $ cat >even-odd.txt <<EOF
-  > let rec is-even n :=
-  >       if n = 0 then true else is-odd (n - 1);
-  >     rec is-odd n :=
-  >       if n = 0 then false else is-even (n - 1);
+  > let rec {
+  >   is-even n := if n = 0 then true else is-odd (n - 1);
+  >   is-odd n := if n = 0 then false else is-even (n - 1);
+  > };
   > 
   > is-even
   > EOF
@@ -435,22 +435,22 @@ Unexpected function application
   [1]
 
 Duplicate name in mutually recursive binding
-  $ executable elab <<< "let rec f x := x; rec f x := x; f 1 : Int"
+  $ executable elab <<< "let rec { f x := x; f x := x }; f 1 : Int"
   error: duplicate name `f` in mutually recursive bindings
-    ┌─ <stdin>:1:22
+    ┌─ <stdin>:1:20
     │
-  1 │ let rec f x := x; rec f x := x; f 1 : Int
-    │                       ^
+  1 │ let rec { f x := x; f x := x }; f 1 : Int
+    │                     ^
   
   [1]
 
 Ignored definition in mutually recursive binding
-  $ executable elab <<< "let rec f x := x; rec _ x := x; f 1 : Int"
+  $ executable elab <<< "let rec { f x := x; _ x := x }; f 1 : Int"
   error: cannot use `_` in mutually recursive bindings
-    ┌─ <stdin>:1:22
+    ┌─ <stdin>:1:20
     │
-  1 │ let rec f x := x; rec _ x := x; f 1 : Int
-    │                       ^
+  1 │ let rec { f x := x; _ x := x }; f 1 : Int
+    │                     ^
   
   [1]
 

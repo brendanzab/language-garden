@@ -18,6 +18,8 @@
 %token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
 %token UNDERSCORE "_"
+%token OPEN_BRACKET "{"
+%token CLOSE_BRACKET "}"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
 %token END
@@ -52,7 +54,9 @@ let atomic_ty :=
 let tm :=
 | "let"; d = defn; ";"; tm = spanned(tm);
     { Surface.Let (d, tm) }
-| "let"; ds = nonempty_list("rec"; ~ = defn; ";"; <>); tm = spanned(tm);
+| "let"; "rec"; d = defn; ";"; tm = spanned(tm);
+    { Surface.Let_rec ([d], tm) }
+| "let"; "rec"; "{"; ds = trailing_nonempty_list(";", defn); "}"; ";"; tm = spanned(tm);
     { Surface.Let_rec (ds, tm) }
 | "fun"; ps = nonempty_list(param); "=>"; t = spanned(tm);
     { Surface.Fun_lit (ps, t) }
@@ -123,3 +127,9 @@ let defn :=
 let spanned(X) :=
 | data = X;
     { Surface.{ span = $loc; data } }
+
+let trailing_nonempty_list(Sep, T) :=
+  | t = T; option(Sep);
+      { [ t ] }
+  | t = T; Sep; ts = trailing_nonempty_list(Sep, T);
+      { t :: ts }
