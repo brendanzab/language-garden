@@ -142,8 +142,10 @@ module Semantics = struct
     | Record_lit elems -> Label_map.find label elems
     | _ -> invalid_arg "expected tuple"
 
-  let bool_elim (opts : eval_opts) (head : vtm) (vtm1 : eval_opts -> vtm) (vtm2 : eval_opts -> vtm) : vtm =
+  let rec bool_elim (opts : eval_opts) (head : vtm) (vtm1 : eval_opts -> vtm) (vtm2 : eval_opts -> vtm) : vtm =
     match head with
+    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
+        bool_elim opts (body opts head) vtm1 vtm2
     | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
     | Bool_lit true -> vtm1 opts
     | Bool_lit false -> vtm2 opts
