@@ -99,6 +99,9 @@ different approaches and pointing out bugs in my initial implementations.
 
 In addition to the resources used in [elab-stlc-unification](../elab-stlc-unification):
 
+- Section 11.11: General Recursion in
+  [Types and Programming Languages](https://www.cis.upenn.edu/~bcpierce/tapl/)
+  by Benjamin C. Pierce
 - [Many faces of the fixed-point combinator](https://okmij.org/ftp/Computation/fixed-point-combinators.html)
   by Oleg Kiselyov.
 - [Fixed-point combinator](https://en.wikipedia.org/wiki/Fixed-point_combinator) on Wikipedia
