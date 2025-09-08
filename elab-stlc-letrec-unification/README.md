@@ -30,7 +30,7 @@ fact 5 : Int
 
 </details>
 
-Mutually recursive functions are elaborated to fixed-points over tuples of
+Mutually recursive functions are elaborated to fixed-points over records of
 functions:
 
 <!-- $MDX file=examples/even-odd.txt -->
