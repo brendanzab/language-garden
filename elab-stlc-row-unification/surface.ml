@@ -458,8 +458,9 @@ end = struct
     | Variant_type (Row_entries row) ->
         (* Iterate through clauses, accumulating clauses *)
         let clauses =
-          List.fold_left
-            (fun clauses ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
+          clauses |> ListLabels.fold_left
+            ~init:Label_map.empty
+            ~f:(fun clauses ({ data = Variant_lit (label, name); _}, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then begin
                 warning ctx label.span "redundant case pattern";
                 clauses
@@ -470,8 +471,6 @@ end = struct
                     Label_map.add label.data (name.data, body_tm) clauses
                 | None ->
                     error ctx label.span "unexpected pattern")
-            Label_map.empty
-            clauses
         in
         (* Check that labels in the clauses match the labels in the row *)
         let missing_clauses =
@@ -490,8 +489,9 @@ end = struct
     | head_ty ->
         (* Build up the clauses and the row from the clauses *)
         let clauses, row =
-          List.fold_left
-            (fun (clauses, row) ({ data = Variant_lit (label, name); _ }, body_tm : pattern * _) ->
+          clauses |> ListLabels.fold_left
+            ~init:(Label_map.empty, Label_map.empty)
+            ~f:(fun (clauses, row) ({ data = Variant_lit (label, name); _ }, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then begin
                 warning ctx label.span "redundant case pattern";
                 clauses, row
@@ -500,8 +500,6 @@ end = struct
                 let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
                 Label_map.add label.data (name.data, body_tm) clauses,
                 Label_map.add label.data param_ty row)
-            (Label_map.empty, Label_map.empty)
-            clauses
         in
         (* Unify variant type with head type *)
         unify_tys ctx head_span ~found:head_ty ~expected:(Variant_type (Row_entries row));
