@@ -10,12 +10,15 @@
 (executable (name eval_stlc_gadt_values_closures))
 (executable (name eval_stlc_gadt_globals))
 (executable (name eval_stlc_gadt_prims))
+(executable (name eval_stlc_gadt_index_repr))
 (executable (name eval_cbpv_gadt))
 
 (executable (name check_stlc_inference_rules))
 (executable (name check_stlc_inference_rules_bidir))
 (executable (name check_plain_data))
 
+(executable (name elab_stlc_bidir))
+(executable (name elab_stlc_bidir_effects))
 (executable (name elab_stlc_gadt))
 (executable (name elab_stlc_gadt_bidir))
 
@@ -37,6 +40,7 @@
 (executable (name misc_isorecursion_vs_equirecursion))
 (executable (name misc_landins_knot))
 (executable (name misc_local_datatypes))
+(executable (name misc_nat_int_repr))
 (executable (name misc_option_shapes))
 (executable (name misc_set_objects))
 (executable (name misc_unembedding_hoas))

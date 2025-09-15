@@ -2,7 +2,7 @@
     language, allowing more type annotations to be omitted in the surface
     language through the use of bidirectional typing.
 
-    Extends [elab_stlc_gadt.ml].
+    Extends [elab_stlc_bidir] and [elab_stlc_gadt.ml].
 
     Originally based on {{: https://discuss.ocaml.org/t/parsing-terms-into-a-well-typed-representation-a-gadt-puzzle/8688}
     “Parsing” terms into a well-typed representation: a GADT puzzle} by gasche.

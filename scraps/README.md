@@ -32,6 +32,9 @@ Evaluation:
   A well-typed lambda calculus evaluator, extended with some global definitions.
 - [**eval_stlc_gadt_prims.ml**](./eval_stlc_gadt_primns.ml):
   A well-typed lambda calculus evaluator, extended with some primitive operations.
+- [**eval_stlc_gadt_index_repr.ml**](./eval_stlc_gadt_index_repr.ml):
+  A well-typed lambda calculus evaluator with an optimised representation of de
+  Bruijn indices
 - [**eval_cbpv_gadt.ml**](./eval_cbpv_gadt.ml):
   A well-typed evaluator for a lambda calculus in the style of call-by-push-value.
 
@@ -55,6 +58,10 @@ Elaboration:
 - [**elab_stlc_bidir.rs**](./elab_stlc_bidir.rs):
   Bidirectional elaborator for a simple functional language
   (compare with [check_stlc_bidir.rs](./check_stlc_bidir.rs)).
+- [**elab_stlc_bidir.ml**](./elab_stlc_bidir.ml):
+  Bidirectional elaboration for a simply typed lambda calculus.
+- [**elab_stlc_bidir_effects.ml**](./elab_stlc_bidir_effects.ml):
+  An elaborator that uses effects to keep a record of local bindings.
 - [**elab_stlc_gadt.ml**](./elab_stlc_gadt.ml):
   An elaborator from an untyped surface language into a well-typed core language.
 - [**elab_stlc_gadt_bidir.ml**](./elab_stlc_gadt_bidir.ml):
@@ -106,6 +113,10 @@ Miscellaneous:
 - [**misc_landins_knot.ml**](./misc_landins_knot.ml):
   Demonstration of Landin’s Knot, an approach to encoding general recursion
   using higher-order references and backpatching.
+- [**misc_local_datatypes.ml**](./misc_local_datatypes.ml):
+  Demonstration local datatype definitions in OCaml.
+- [**misc_nat_int_repr.ml**](./misc_nat_int_repr.ml):
+  Natural numbers, represented internally as integers for improved performance.
 - [**misc_local_datatypes.ml**](./misc_local_datatypes.ml):
   Demonstration local datatype definitions in OCaml.
 - [**misc_option_shapes.ml**](./misc_option_shapes.ml):
