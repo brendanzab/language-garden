@@ -100,6 +100,8 @@ Miscellaneous:
 - [**misc_circular_traversals.ml**](./misc_circular_traversals.ml):
   Using laziness to patch up a data structure after-the-fact in a single
   traversal, without using mutable references.
+- [**misc_clowns_and_jokers.ml**](./misc_clowns_and_jokers.ml):
+  Genralised derivatives of data structures and tail-recursive transformations.
 - [**misc_effects_build_system.ml**](./misc_effects_build_system.ml):
   Memoized build system using OCaml 5’s algebraic effects and handlers.
 - [**misc_effects_come_from.ml**](./misc_effects_come_from.ml):

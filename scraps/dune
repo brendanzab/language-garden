@@ -33,6 +33,7 @@
 (executable (name misc_ast_folds))
 (executable (name misc_ast_submodules))
 (executable (name misc_circular_traversals))
+(executable (name misc_clowns_and_jokers))
 (executable (name misc_effects_build_system))
 (executable (name misc_effects_come_from))
 (executable (name misc_effects_state))
