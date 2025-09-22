@@ -68,6 +68,13 @@ module Eval_machine = struct
 end
 
 
+(* Type constructors *)
+
+module type T0 = sig type t end
+module type T1 = sig type 'a t end
+module type T2 = sig type ('a, 'b) t end
+
+
 module Void = struct
 
   type t = |
@@ -76,13 +83,6 @@ module Void = struct
     function _ -> .
 
 end
-
-
-(* Type constructors *)
-
-module type T0 = sig type t end
-module type T1 = sig type 'a t end
-module type T2 = sig type ('a, 'b) t end
 
 
 module Functor = struct
@@ -107,6 +107,7 @@ module Functor = struct
 
 end
 
+
 module Fix (P : Functor.S) : sig
 
   type t = In of t P.t
@@ -122,6 +123,7 @@ end = struct
       f (P.map (fold f) p)
 
 end
+
 
 module Bifunctor = struct
 
