@@ -68,6 +68,16 @@ module Eval_machine = struct
 end
 
 
+module Void = struct
+
+  type t = |
+
+  let absurd : type a. t -> a =
+    function _ -> .
+
+end
+
+
 (* Type constructors *)
 
 module type T0 = sig type t end
@@ -82,6 +92,16 @@ module Functor = struct
     include T1
 
     val map : ('a -> 'b) -> 'a t -> 'b t
+
+  end
+
+  module Ops (F : S) = struct
+
+    (** [inflate x] is equivalent to [F.map Void.magic x], but avoids traversing
+        the data structure. *)
+    let inflate : type a. Void.t F.t -> a F.t =
+      fun x ->
+        Obj.magic x
 
   end
 
@@ -110,27 +130,6 @@ module Bifunctor = struct
     include T2
 
     val bimap : ('a1 -> 'b1) -> ('a2 -> 'b2) -> ('a1, 'a2) t -> ('b1, 'b2) t
-
-  end
-
-end
-
-module Void = struct
-
-  type t = |
-
-  let absurd : type a. t -> a =
-    function _ -> .
-
-  (* NOTE: This will be cleaner once path-dependent types (a.k.a. modular
-     explicits) are added to OCaml. See https://github.com/ocaml/ocaml/pull/13275
-     for more details. *)
-  module Inflate (P : Functor.S) = struct
-
-    let call : type a. t P.t -> a P.t =
-      fun p ->
-        (* P.map magic p *)
-        Obj.magic p
 
   end
 
