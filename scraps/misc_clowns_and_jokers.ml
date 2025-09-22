@@ -115,11 +115,11 @@ module Bifunctor = struct
 
 end
 
-module Zero = struct
+module Void = struct
 
   type t = |
 
-  let magic : type a. t -> a =
+  let absurd : type a. t -> a =
     function _ -> .
 
   (* NOTE: This will be cleaner once path-dependent types (a.k.a. modular
@@ -196,7 +196,7 @@ module Polynomial_functors = struct
 
   (** Common abbreviations *)
 
-  module One1 : Functor.S with type 'x t = unit =
+  module Unit1 : Functor.S with type 'x t = unit =
     Const1 (Unit)
 
   module Option : sig
@@ -212,7 +212,7 @@ module Polynomial_functors = struct
 
   end = struct
 
-    include Either1 (One1) (Id)
+    include Either1 (Unit1) (Id)
 
     let none = Either.Left ()
     let some x = Either.Right x
@@ -343,9 +343,9 @@ module Polynomial_bifunctors = struct
 
   (** Common abbreviations *)
 
-  module One2 : Bifunctor.S with type ('x, 'y) t = unit = Const2 (Unit)
-  module Zero1 : Functor.S with type 'x t = Zero.t = Polynomial_functors.Const1 (Zero)
-  module Zero2 : Bifunctor.S with type ('x, 'y) t = Zero.t = Const2 (Zero)
+  module Unit2 : Bifunctor.S with type ('x, 'y) t = unit = Const2 (Unit)
+  module Void1 : Functor.S with type 'x t = Void.t = Polynomial_functors.Const1 (Void)
+  module Void2 : Bifunctor.S with type ('x, 'y) t = Void.t = Const2 (Void)
 
 
   (** Clowns, Jokers and Dissection *)
@@ -407,7 +407,7 @@ module Polynomial_bifunctors = struct
           in
           continue (P.right (Either.Left ps))
 
-      let divide : type x. x P.t -> (x * (Zero.t, x) P.State.t, Zero.t P.t) Either.t =
+      let divide : type x. x P.t -> (x * (Void.t, x) P.State.t, Void.t P.t) Either.t =
         fun px ->
           P.right (Either.Left px)
 
@@ -420,12 +420,12 @@ module Polynomial_bifunctors = struct
 
   module Const1 (A : T0) : Dissect.S
     with type 'x t = A.t
-    with type ('x, 'y) State.t = ('x, 'y) Zero2.t
+    with type ('x, 'y) State.t = ('x, 'y) Void2.t
   = struct
 
     include Polynomial_functors.Const1 (A)
 
-    module State = Zero2
+    module State = Void2
 
     let right : type c j. (j t, (c, j) State.t * c) Either.t -> ((j * (c, j) State.t), c t) Either.t =
       function
@@ -433,18 +433,18 @@ module Polynomial_bifunctors = struct
       | Right (_, _) -> .   (* cannot be in the middle, so refute that case *)
 
     let plug : type x. x -> (x, x) State.t -> x t =
-      fun _ z -> Zero.magic z
+      fun _ z -> Void.absurd z
 
   end
 
   module Id : Dissect.S
     with type 'x t = 'x
-    with type ('x, 'y) State.t = ('x, 'y) One2.t
+    with type ('x, 'y) State.t = ('x, 'y) Unit2.t
   = struct
 
     include Polynomial_functors.Id
 
-    module State = One2
+    module State = Unit2
 
     let right : type c j. (j t, (c, j) State.t * c) Either.t -> ((j * (c, j) State.t), c t) Either.t =
       function
