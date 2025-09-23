@@ -38,8 +38,8 @@ module Token = struct
   let ident (token : t) : string =
     match token with
     | Keyword_def -> "def"
-    | Ident _ -> "ident"
-    | Quoted _ -> "quoted"
+    | Ident _ -> "IDENT"
+    | Quoted _ -> "QUOTED"
     | Asterisk -> "*"
     | Colon_equals -> ":="
     | Pipe -> "|"
@@ -318,18 +318,61 @@ module Recogniser = struct
 
 end
 
-let grammar_grammar = {|
+module Examples = struct
 
-  def grammar   := item*
-  def item      := 'def' 'ident' ':=' rule
+  let grammar_grammar = {|
 
-  def rule      := alt_rule
-  def alt_rule  := '|'? seq_rule ('|' seq_rule)*
-  def seq_rule  := rep_rule+
-  def rep_rule  := atom_rule ('*' | '+' | '?')?
-  def atom_rule := 'ident' | 'quoted' | '(' rule ')'
+    def grammar   := item*
+    def item      := 'def' 'IDENT' ':=' rule
 
-|}
+    def rule      := alt_rule
+    def alt_rule  := '|'? seq_rule ('|' seq_rule)*
+    def seq_rule  := rep_rule+
+    def rep_rule  := atom_rule ('*' | '+' | '?')?
+    def atom_rule := 'IDENT' | 'QUOTED' | '(' rule ')'
+
+  |}
+
+  (** Wirth’s PL/0 language from “Algorithms + Data Structures = Programs”.
+
+      - https://en.wikipedia.org/wiki/PL/0#Grammar
+      - https://en.wikipedia.org/wiki/Recursive_descent_parser#Example_parser
+  *)
+  let pl0_grammar = {|
+
+    def program :=
+      | block '.'
+
+    def block :=
+      ('const' 'IDENT' '=' 'NUMBER' (',' 'IDENT' '=' 'NUMBER')* ';')?
+      ('var' 'IDENT' (',' 'IDENT')* ';')?
+      ('procedure' 'IDENT' ';' block ';')* statement
+
+    def statement :=
+      | 'IDENT' ':=' expression
+      | 'call' 'IDENT'
+      | 'begin' statement (';' statement)* 'end'
+      | 'if' condition 'then' statement
+      | 'while' condition 'do' statement
+
+    def condition :=
+      | 'odd' expression
+      | expression ('=' | '#' | '<' | '<=' | '>' | '>=') expression
+
+    def expression :=
+      | ('+' | '-')? term (('+' | '-') term)?
+
+    def term :=
+      | factor (('*' | '/') factor)*
+
+    def factor :=
+      | 'IDENT'
+      | 'NUMBER'
+      | '(' expression ')'
+
+  |}
+
+end
 
 let () = begin
 
@@ -337,8 +380,12 @@ let () = begin
 
   print_string "Running tests ...";
 
-  let grammar = grammar_grammar |> Lexer.tokenise |> Parser.parse_grammar in
-  grammar_grammar |> Lexer.tokenise |> Recogniser.recognise_grammar grammar Token.ident "grammar";
+  let grammar = Examples.grammar_grammar |> Lexer.tokenise |> Parser.parse_grammar in
+  let _ = Examples.pl0_grammar |> Lexer.tokenise |> Parser.parse_grammar in
+
+  let recognise_grammar = Recogniser.recognise_grammar grammar Token.ident "grammar" in
+  Examples.grammar_grammar |> Lexer.tokenise |> recognise_grammar;
+  Examples.pl0_grammar |> Lexer.tokenise |> recognise_grammar;
 
   print_string " ok!\n";
 
