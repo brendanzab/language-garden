@@ -116,14 +116,14 @@ end  = struct
     | Some ('?', input) -> Seq.cons Token.Question (tokens input)
     | Some ('(', input) -> Seq.cons Token.Left_paren (tokens input)
     | Some (')', input) -> Seq.cons Token.Right_paren (tokens input)
-    | Some ('\'', input) ->
+    | Some ('"', input) ->
         let buf = Buffer.create 16 in
         let rec go input =
           match Seq.uncons input with
-          | Some ('\'', input) -> input
+          | Some ('"', input) -> input
           | Some ('\\', input) ->
               begin match Seq.uncons input with
-              | Some ('\\'| '\'' as ch, input) ->
+              | Some ('\\'| '"' as ch, input) ->
                   Buffer.add_char buf ch;
                   (go [@tailcall]) input
               | Some (ch, _) -> raise (Error (`Unexpected_escape_code ch))
@@ -323,13 +323,13 @@ module Examples = struct
   let grammar_grammar = {|
 
     def grammar   := item*
-    def item      := 'def' 'IDENT' ':=' rule
+    def item      := "def" "IDENT" ":=" rule
 
     def rule      := alt_rule
-    def alt_rule  := '|'? seq_rule ('|' seq_rule)*
+    def alt_rule  := "|"? seq_rule ("|" seq_rule)*
     def seq_rule  := rep_rule+
-    def rep_rule  := atom_rule ('*' | '+' | '?')?
-    def atom_rule := 'IDENT' | 'QUOTED' | '(' rule ')'
+    def rep_rule  := atom_rule ("*" | "+" | "?")?
+    def atom_rule := "IDENT" | "QUOTED" | "(" rule ")"
 
   |}
 
@@ -341,34 +341,34 @@ module Examples = struct
   let pl0_grammar = {|
 
     def program :=
-      | block '.'
+      | block "."
 
     def block :=
-      ('const' 'IDENT' '=' 'NUMBER' (',' 'IDENT' '=' 'NUMBER')* ';')?
-      ('var' 'IDENT' (',' 'IDENT')* ';')?
-      ('procedure' 'IDENT' ';' block ';')* statement
+      ("const" "IDENT" "=" "NUMBER" ("," "IDENT" "=" "NUMBER")* ";")?
+      ("var" "IDENT" ("," "IDENT")* ";")?
+      ("procedure" "IDENT" ";" block ";")* statement
 
     def statement :=
-      | 'IDENT' ':=' expression
-      | 'call' 'IDENT'
-      | 'begin' statement (';' statement)* 'end'
-      | 'if' condition 'then' statement
-      | 'while' condition 'do' statement
+      | "IDENT" ":=" expression
+      | "call" "IDENT"
+      | "begin" statement (";" statement)* "end"
+      | "if" condition "then" statement
+      | "while" condition "do" statement
 
     def condition :=
-      | 'odd' expression
-      | expression ('=' | '#' | '<' | '<=' | '>' | '>=') expression
+      | "odd" expression
+      | expression ("=" | "#" | "<" | "<=" | ">" | ">=") expression
 
     def expression :=
-      | ('+' | '-')? term (('+' | '-') term)?
+      | ("+" | "-")? term (("+" | "-") term)?
 
     def term :=
-      | factor (('*' | '/') factor)*
+      | factor (("*" | "/") factor)*
 
     def factor :=
-      | 'IDENT'
-      | 'NUMBER'
-      | '(' expression ')'
+      | "IDENT"
+      | "NUMBER"
+      | "(" expression ")"
 
   |}
 
