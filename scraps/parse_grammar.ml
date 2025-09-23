@@ -1,17 +1,8 @@
-(** Recursive descent parser for a simple grammar specification language.
-
-    This was partly inspired by Alex Kladov’s Ungrammar language:
-
-    - {{: https://rust-analyzer.github.io/blog/2020/10/24/introducing-ungrammar.html}
-      Introducing Ungrammar}
-    - {{: https://github.com/rust-analyzer/ungrammar}
-      rust-analyzer/ungrammar} on Github
-*)
+(** Recursive descent parser for a simple grammar specification language. *)
 
 module Rule = struct
 
   type t =
-    | Labelled of string * t
     | Item of string
     | Token of string
     | Seq of t list
@@ -38,7 +29,6 @@ module Token = struct
     | Quoted of string
     | Asterisk
     | Colon_equals
-    | Dollar
     | Pipe
     | Plus
     | Question
@@ -52,7 +42,6 @@ module Token = struct
     | Quoted _ -> "quoted"
     | Asterisk -> "*"
     | Colon_equals -> ":="
-    | Dollar -> "$"
     | Pipe -> "|"
     | Plus -> "+"
     | Question -> "?"
@@ -122,7 +111,6 @@ end  = struct
         | Some (ch, _) -> raise (Error (`Unexpected_char ch))
         | None -> raise (Error `Unexpected_eof)
         end
-    | Some ('$', input) -> Seq.cons Token.Dollar (tokens input)
     | Some ('|', input) -> Seq.cons Token.Pipe (tokens input)
     | Some ('+', input) -> Seq.cons Token.Plus (tokens input)
     | Some ('?', input) -> Seq.cons Token.Question (tokens input)
@@ -218,7 +206,7 @@ end = struct
     let rules, tokens =
       let rec go (acc : Rule.t list) (tokens : Lexer.t) =
         match Seq.uncons tokens with
-        | Some ((Ident _ | Quoted _ | Left_paren | Dollar), _) ->
+        | Some ((Ident _ | Quoted _ | Left_paren), _) ->
             let rule, tokens = parse_rep_rule tokens in
             (go [@tailcall]) (rule :: acc) tokens
         | _ -> List.rev acc, tokens
@@ -245,13 +233,6 @@ end = struct
         let rule, tokens = parse_rule tokens in
         let tokens = expect Right_paren tokens in
         rule, tokens
-    | Some (Dollar, tokens) ->
-        let tokens = expect Left_paren tokens in
-        let ident, tokens = expect_ident tokens in
-        let tokens = expect Colon_equals tokens in
-        let rule, tokens = parse_rule tokens in
-        let tokens = expect Right_paren tokens in
-        Rule.Labelled (ident, rule), tokens
     | Some (token, _) -> raise (Error (`Unexpected_token token))
     | None -> raise (Error `Unexpected_eof)
 
@@ -278,7 +259,6 @@ end
 let interpret_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string) (entrypoint : string) (tokens : t Seq.t) : t Seq.t option =
   let rec interpret_rule (rule : Rule.t) (tokens : t Seq.t) : t Seq.t option =
     match rule with
-    | Labelled (_, rule) -> interpret_rule rule tokens
     | Item name -> interpret_item name tokens
     | Token ident ->
         begin match Seq.uncons tokens with
@@ -333,7 +313,7 @@ let interpret_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string)
 let grammar_grammar = {|
 
   def grammar   := item*
-  def item      := 'def' $(name := 'ident') ':=' rule
+  def item      := 'def' 'ident' ':=' rule
 
   def rule      := alt_rule
   def alt_rule  := '|'? seq_rule ('|' seq_rule)*
@@ -344,7 +324,6 @@ let grammar_grammar = {|
     | 'ident'
     | 'quoted'
     | '(' rule ')'
-    | '$' '(' $(label := 'ident') ':=' rule ')'
 
 |}
 
