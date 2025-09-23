@@ -1,3 +1,4 @@
+(executable (name parse_grammar))
 (executable (name parse_sexpr))
 
 (executable (name eval_lc_cps))

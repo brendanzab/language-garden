@@ -6,6 +6,7 @@ lack build system support and are untested for now.
 Parsing:
 
 - [**parse_sexpr.ml**](./parse_sexpr.ml): Recursive descent parser for S-expressions.
+- [**parse_grammar.ml**](./parse_grammar.ml): Parser for a simple grammar specification language.
 
 Evaluation:
 
