@@ -255,11 +255,11 @@ end = struct
 
 end
 
-(** Top-down, backtracking interpreter for grammars *)
-let interpret_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string) (entrypoint : string) (tokens : t Seq.t) : t Seq.t option =
-  let rec interpret_rule (rule : Rule.t) (tokens : t Seq.t) : t Seq.t option =
+(** Top-down, backtracking recogniser for grammars *)
+let recognise_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string) (entrypoint : string) (tokens : t Seq.t) : bool =
+  let rec recognise_rule (rule : Rule.t) (tokens : t Seq.t) : t Seq.t option =
     match rule with
-    | Item name -> interpret_item name tokens
+    | Item name -> recognise_item name tokens
     | Token ident ->
         begin match Seq.uncons tokens with
         | Some (token, tokens) when token_ident token = ident -> Some tokens
@@ -270,7 +270,7 @@ let interpret_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string)
           match rules with
           | [] -> Some tokens
           | rule :: rules ->
-              match interpret_rule rule tokens with
+              match recognise_rule rule tokens with
               | Some tokens -> go rules tokens
               | None -> None
         in
@@ -280,34 +280,36 @@ let interpret_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string)
           match rules with
           | [] -> None
           | rule :: rules ->
-              match interpret_rule rule tokens with
+              match recognise_rule rule tokens with
               | Some tokens -> Some tokens
               | None -> go rules
         in
         go rules
     | Opt rule ->
-        begin match interpret_rule rule tokens with
+        begin match recognise_rule rule tokens with
         | Some tokens -> Some tokens
         | None -> Some tokens
         end
     | Rep0 rule ->
         let rec go tokens =
-          match interpret_rule rule tokens with
+          match recognise_rule rule tokens with
           | Some tokens -> go tokens
           | None -> Some tokens
         in
         go tokens
     | Rep1 rule ->
-        begin match interpret_rule rule tokens with
-        | Some tokens -> interpret_rule (Rep0 rule) tokens
+        begin match recognise_rule rule tokens with
+        | Some tokens -> recognise_rule (Rep0 rule) tokens
         | None -> Some tokens
         end
 
-  and interpret_item (name : string) (tokens : t Seq.t) : t Seq.t option =
-    interpret_rule (List.assoc name grammar.items) tokens
+  and recognise_item (name : string) (tokens : t Seq.t) : t Seq.t option =
+    recognise_rule (List.assoc name grammar.items) tokens
   in
 
-  interpret_item entrypoint tokens
+  match recognise_item entrypoint tokens with
+  | Some tokens -> Seq.is_empty tokens
+  | None -> false
 
 
 let grammar_grammar = {|
@@ -319,11 +321,7 @@ let grammar_grammar = {|
   def alt_rule  := '|'? seq_rule ('|' seq_rule)*
   def seq_rule  := rep_rule+
   def rep_rule  := atom_rule ('*' | '+' | '?')?
-
-  def atom_rule :=
-    | 'ident'
-    | 'quoted'
-    | '(' rule ')'
+  def atom_rule := 'ident' | 'quoted' | '(' rule ')'
 
 |}
 
@@ -334,8 +332,7 @@ let () = begin
   print_string "Running tests ...";
 
   let grammar = grammar_grammar |> Lexer.tokenise |> Parser.parse_grammar in
-  let result = grammar_grammar |> Lexer.tokenise |> interpret_grammar grammar Token.ident "grammar" in
-  assert (Option.fold result ~some:Seq.is_empty ~none:false);
+  assert (grammar_grammar |> Lexer.tokenise |> recognise_grammar grammar Token.ident "grammar");
 
   print_string " ok!\n";
 
