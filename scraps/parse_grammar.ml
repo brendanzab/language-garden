@@ -256,59 +256,68 @@ end = struct
 end
 
 (** Top-down, backtracking recogniser for grammars *)
-module Recogniser = struct
+module Recogniser (G : sig
+
+  module Token : sig
+    type t
+    val ident : t -> string
+  end
+
+  val entrypoint : string
+  val grammar : Grammar.t
+
+end) = struct
 
   exception Error
 
-  let recognise_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string) (entrypoint : string) (tokens : t Seq.t) =
-    let rec recognise_rule (rule : Rule.t) (tokens : t Seq.t) : t Seq.t =
-      match rule with
-      | Item name -> recognise_item name tokens
-      | Token ident ->
-          begin match Seq.uncons tokens with
-          | Some (token, tokens) when token_ident token = ident -> tokens
-          | Some _ | None -> raise Error
-          end
-      | Seq rules ->
-          let rec go rules tokens =
-            match rules with
-            | [] -> tokens
-            | rule :: rules ->
-                let tokens = recognise_rule rule tokens in
-                go rules tokens
-          in
-          go rules tokens
-      | Alt rules ->
-          let rec go rules =
-            match rules with
-            | [] -> raise Error
-            | rule :: rules ->
-                try recognise_rule rule tokens with
-                | Error -> go rules
-          in
-          go rules
-      | Opt rule ->
-          begin try recognise_rule rule tokens with
-          | Error -> tokens
-          end
-      | Rep0 rule ->
-          let rec go tokens =
-            match recognise_rule rule tokens with
-            | tokens -> go tokens
-            | exception Error -> tokens
-          in
-          go tokens
-      | Rep1 rule ->
-          begin match recognise_rule rule tokens with
-          | tokens -> recognise_rule (Rep0 rule) tokens
+  let rec recognise_rule (rule : Rule.t) (tokens : G.Token.t Seq.t) : G.Token.t Seq.t =
+    match rule with
+    | Item name -> recognise_item name tokens
+    | Token ident ->
+        begin match Seq.uncons tokens with
+        | Some (token, tokens) when G.Token.ident token = ident -> tokens
+        | Some _ | None -> raise Error
+        end
+    | Seq rules ->
+        let rec go rules tokens =
+          match rules with
+          | [] -> tokens
+          | rule :: rules ->
+              let tokens = recognise_rule rule tokens in
+              go rules tokens
+        in
+        go rules tokens
+    | Alt rules ->
+        let rec go rules =
+          match rules with
+          | [] -> raise Error
+          | rule :: rules ->
+              try recognise_rule rule tokens with
+              | Error -> go rules
+        in
+        go rules
+    | Opt rule ->
+        begin try recognise_rule rule tokens with
+        | Error -> tokens
+        end
+    | Rep0 rule ->
+        let rec go tokens =
+          match recognise_rule rule tokens with
+          | tokens -> go tokens
           | exception Error -> tokens
-          end
+        in
+        go tokens
+    | Rep1 rule ->
+        begin match recognise_rule rule tokens with
+        | tokens -> recognise_rule (Rep0 rule) tokens
+        | exception Error -> tokens
+        end
 
-    and recognise_item (name : string) (tokens : t Seq.t) : t Seq.t =
-      recognise_rule (List.assoc name grammar.items) tokens
-    in
+  and recognise_item (name : string) (tokens : G.Token.t Seq.t) : G.Token.t Seq.t =
+    recognise_rule (List.assoc name G.grammar.items) tokens
 
-    match recognise_item entrypoint tokens with
+  let recognise_grammar (tokens : G.Token.t Seq.t) =
+    match recognise_item G.entrypoint tokens with
     | tokens when Seq.is_empty tokens -> ()
     | _ -> raise Error
 
@@ -379,9 +388,16 @@ let () = begin
   let grammar = Examples.grammar_grammar |> Lexer.tokenise |> Parser.parse_grammar in
   let _ = Examples.pl0_grammar |> Lexer.tokenise |> Parser.parse_grammar in
 
-  let recognise_grammar = Recogniser.recognise_grammar grammar Token.ident "grammar" in
-  Examples.grammar_grammar |> Lexer.tokenise |> recognise_grammar;
-  Examples.pl0_grammar |> Lexer.tokenise |> recognise_grammar;
+  let module Grammar_recogniser =
+    Recogniser (struct
+      module Token = Token
+      let entrypoint = "grammar"
+      let grammar = grammar
+    end)
+  in
+
+  Examples.grammar_grammar |> Lexer.tokenise |> Grammar_recogniser.recognise_grammar;
+  Examples.pl0_grammar |> Lexer.tokenise |> Grammar_recogniser.recognise_grammar;
 
   print_string " ok!\n";
 
