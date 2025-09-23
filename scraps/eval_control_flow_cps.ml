@@ -122,13 +122,15 @@ let rec eval_expr : type a. (string * value) list -> expr -> a ops -> (value -> 
     | Loop body ->
         let rec loop () =
           (* First evaluate the body of the loop *)
-          let@ _ = eval_expr env body {
+          let@ result = eval_expr env body {
             continue_k = loop; (* call the loop function recursively when continuing to loop *)
             break_k = k; (* call the value continuation when breaking out of the loop *)
           } in
 
           (* Now perform another iteration *)
-          (loop [@tailcall]) ()
+          match result with
+          | Unit -> (loop [@tailcall]) ()
+          | _ -> failwith "expected unit"
         in
         loop ()
 
