@@ -12,7 +12,7 @@ module Rule = struct
 
   type t =
     | Labelled of string * t
-    | Name of string
+    | Item of string
     | Token of string
     | Seq of t list
     | Alt of t list
@@ -44,6 +44,20 @@ module Token = struct
     | Question
     | Left_paren
     | Right_paren
+
+  let ident (token : t) : string =
+    match token with
+    | Keyword_def -> "def"
+    | Ident _ -> "ident"
+    | Quoted _ -> "quoted"
+    | Asterisk -> "*"
+    | Colon_equals -> ":="
+    | Dollar -> "$"
+    | Pipe -> "|"
+    | Plus -> "+"
+    | Question -> "?"
+    | Left_paren -> "("
+    | Right_paren -> ")"
 
 end
 
@@ -184,29 +198,36 @@ end = struct
       | Some (Pipe, tokens) -> tokens
       | _ -> tokens
     in
+    let rule, tokens = parse_seq_rule tokens in
     let rules, tokens =
-      let rec go (rules : Rule.t list) (tokens : Lexer.t) =
-        let rule, tokens = parse_seq_rule tokens in
+      let rec go (acc : Rule.t list) (tokens : Lexer.t) =
         match Seq.uncons tokens with
-        | Some (Pipe, tokens) -> (go [@tailcall]) (rule :: rules) tokens
-        | _ -> List.rev rules, tokens
+        | Some (Pipe, tokens) ->
+            let rule, tokens = parse_seq_rule tokens in
+            (go [@tailcall]) (rule :: acc) tokens
+        | _ -> List.rev acc, tokens
       in
       go [] tokens
     in
-    Rule.Alt rules, tokens
+    match (rule :: rules) with
+    | [rule] -> rule, tokens
+    | rules -> Rule.Alt rules, tokens
 
   and parse_seq_rule (tokens : Lexer.t) : Rule.t * Lexer.t =
     let rule, tokens = parse_rep_rule tokens in
     let rules, tokens =
-      let rec go (rules : Rule.t list) (tokens : Lexer.t) =
+      let rec go (acc : Rule.t list) (tokens : Lexer.t) =
         match Seq.uncons tokens with
         | Some ((Ident _ | Quoted _ | Left_paren | Dollar), _) ->
             let rule, tokens = parse_rep_rule tokens in
-            (go [@tailcall]) (rule :: rules) tokens
-        | _ -> List.rev rules, tokens
+            (go [@tailcall]) (rule :: acc) tokens
+        | _ -> List.rev acc, tokens
       in
-      go [] tokens in
-    Rule.Seq (rule :: rules), tokens
+      go [] tokens
+    in
+    match (rule :: rules) with
+    | [rule] -> rule, tokens
+    | rules -> Rule.Seq rules, tokens
 
   and parse_rep_rule (tokens : Lexer.t) : Rule.t * Lexer.t =
     let rule, tokens = parse_atom_rule tokens in
@@ -218,8 +239,8 @@ end = struct
 
   and parse_atom_rule (tokens : Lexer.t) : Rule.t * Lexer.t =
     match Seq.uncons tokens with
-    | Some (Ident ident, tokens) -> Rule.Name ident, tokens
-    | Some (Quoted contents, tokens) -> Rule.Token contents, tokens
+    | Some (Ident ident, tokens) -> Rule.Item ident, tokens
+    | Some (Quoted ident, tokens) -> Rule.Token ident, tokens
     | Some (Left_paren, tokens) ->
         let rule, tokens = parse_rule tokens in
         let tokens = expect Right_paren tokens in
@@ -253,6 +274,62 @@ end = struct
 
 end
 
+(** Top-down, backtracking interpreter for grammars *)
+let interpret_grammar (type t) (grammar : Grammar.t) (token_ident : t -> string) (entrypoint : string) (tokens : t Seq.t) : t Seq.t option =
+  let rec interpret_rule (rule : Rule.t) (tokens : t Seq.t) : t Seq.t option =
+    match rule with
+    | Labelled (_, rule) -> interpret_rule rule tokens
+    | Item name -> interpret_item name tokens
+    | Token ident ->
+        begin match Seq.uncons tokens with
+        | Some (token, tokens) when token_ident token = ident -> Some tokens
+        | Some _ | None -> None
+        end
+    | Seq rules ->
+        let rec go rules tokens =
+          match rules with
+          | [] -> Some tokens
+          | rule :: rules ->
+              match interpret_rule rule tokens with
+              | Some tokens -> go rules tokens
+              | None -> None
+        in
+        go rules tokens
+    | Alt rules ->
+        let rec go rules =
+          match rules with
+          | [] -> None
+          | rule :: rules ->
+              match interpret_rule rule tokens with
+              | Some tokens -> Some tokens
+              | None -> go rules
+        in
+        go rules
+    | Opt rule ->
+        begin match interpret_rule rule tokens with
+        | Some tokens -> Some tokens
+        | None -> Some tokens
+        end
+    | Rep0 rule ->
+        let rec go tokens =
+          match interpret_rule rule tokens with
+          | Some tokens -> go tokens
+          | None -> Some tokens
+        in
+        go tokens
+    | Rep1 rule ->
+        begin match interpret_rule rule tokens with
+        | Some tokens -> interpret_rule (Rep0 rule) tokens
+        | None -> Some tokens
+        end
+
+  and interpret_item (name : string) (tokens : t Seq.t) : t Seq.t option =
+    interpret_rule (List.assoc name grammar.items) tokens
+  in
+
+  interpret_item entrypoint tokens
+
+
 let grammar_grammar = {|
 
   def grammar   := item*
@@ -265,12 +342,22 @@ let grammar_grammar = {|
 
   def atom_rule :=
     | 'ident'
-    | 'token'
+    | 'quoted'
     | '(' rule ')'
     | '$' '(' $(label := 'ident') ':=' rule ')'
 
 |}
 
-let () =
+let () = begin
+
   Printexc.record_backtrace true;
-  ignore (grammar_grammar |> Lexer.tokenise |> Parser.parse_grammar)
+
+  print_string "Running tests ...";
+
+  let grammar = grammar_grammar |> Lexer.tokenise |> Parser.parse_grammar in
+  let result = grammar_grammar |> Lexer.tokenise |> interpret_grammar grammar Token.ident "grammar" in
+  assert (Option.fold result ~some:Seq.is_empty ~none:false);
+
+  print_string " ok!\n";
+
+end
