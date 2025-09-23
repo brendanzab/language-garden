@@ -293,19 +293,15 @@ module Recogniser = struct
           end
       | Rep0 rule ->
           let rec go tokens =
-            try
-              let tokens = recognise_rule rule tokens in
-              go tokens
-            with
-            | Error -> tokens
+            match recognise_rule rule tokens with
+            | tokens -> go tokens
+            | exception Error -> tokens
           in
           go tokens
       | Rep1 rule ->
-          begin try
-            let tokens = recognise_rule rule tokens in
-            recognise_rule (Rep0 rule) tokens
-          with
-          | Error -> tokens
+          begin match recognise_rule rule tokens with
+          | tokens -> recognise_rule (Rep0 rule) tokens
+          | exception Error -> tokens
           end
 
     and recognise_item (name : string) (tokens : t Seq.t) : t Seq.t =
