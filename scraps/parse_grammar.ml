@@ -24,7 +24,7 @@ end
 module Token = struct
 
   type t =
-    | Keyword_def
+    | Keyword_rule
     | Ident of string
     | Quoted of string
     | Asterisk
@@ -37,7 +37,7 @@ module Token = struct
 
   let ident (token : t) : string =
     match token with
-    | Keyword_def -> "def"
+    | Keyword_rule -> "rule"
     | Ident _ -> "IDENT"
     | Quoted _ -> "QUOTED"
     | Asterisk -> "*"
@@ -140,7 +140,7 @@ end  = struct
     | Some (ch, _) when is_ident_start ch ->
         let (ident, input) = take_while is_ident_continue input in
         begin match ident with
-        | "def" -> Seq.Cons (Token.Keyword_def, tokens input)
+        | "rule" -> Seq.Cons (Token.Keyword_rule, tokens input)
         | ident -> Seq.Cons (Token.Ident ident, tokens input)
         end
     | Some (ch, input) when is_ascii_whitespace ch -> tokens input ()
@@ -237,7 +237,7 @@ end = struct
     | None -> raise (Error `Unexpected_eof)
 
   let parse_item (tokens : Lexer.t) : (string * Rule.t) * Lexer.t =
-    let tokens = expect Keyword_def tokens in
+    let tokens = expect Keyword_rule tokens in
     let ident, tokens = expect_ident tokens in
     let tokens = expect Colon_equals tokens in
     let rule, tokens = parse_rule tokens in
@@ -327,14 +327,13 @@ module Examples = struct
 
   let grammar_grammar = {|
 
-    def grammar   := item*
-    def item      := "def" "IDENT" ":=" rule
+    rule grammar    := item*
+    rule item       := "rule" "IDENT" ":=" alt_rule
 
-    def rule      := alt_rule
-    def alt_rule  := "|"? seq_rule ("|" seq_rule)*
-    def seq_rule  := rep_rule+
-    def rep_rule  := atom_rule ("*" | "+" | "?")?
-    def atom_rule := "IDENT" | "QUOTED" | "(" rule ")"
+    rule alt_rule   := "|"? seq_rule ("|" seq_rule)*
+    rule seq_rule   := rep_rule+
+    rule rep_rule   := atom_rule ("*" | "+" | "?")?
+    rule atom_rule  := "IDENT" | "QUOTED" | "(" alt_rule ")"
 
   |}
 
@@ -345,32 +344,32 @@ module Examples = struct
   *)
   let pl0_grammar = {|
 
-    def program :=
+    rule program :=
       | block "."
 
-    def block :=
+    rule block :=
       ("const" "IDENT" "=" "NUMBER" ("," "IDENT" "=" "NUMBER")* ";")?
       ("var" "IDENT" ("," "IDENT")* ";")?
       ("procedure" "IDENT" ";" block ";")* statement
 
-    def statement :=
+    rule statement :=
       | "IDENT" ":=" expression
       | "call" "IDENT"
       | "begin" statement (";" statement)* "end"
       | "if" condition "then" statement
       | "while" condition "do" statement
 
-    def condition :=
+    rule condition :=
       | "odd" expression
       | expression ("=" | "#" | "<" | "<=" | ">" | ">=") expression
 
-    def expression :=
+    rule expression :=
       | ("+" | "-")? term (("+" | "-") term)?
 
-    def term :=
+    rule term :=
       | factor (("*" | "/") factor)*
 
-    def factor :=
+    rule factor :=
       | "IDENT"
       | "NUMBER"
       | "(" expression ")"
