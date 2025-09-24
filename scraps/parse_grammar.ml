@@ -332,7 +332,7 @@ end
 
 module Examples = struct
 
-  let grammar_grammar = {|
+  let grammar = {|
 
     rule grammar    := item*
     rule item       := "rule" "IDENT" ":=" alt_rule
@@ -344,12 +344,33 @@ module Examples = struct
 
   |}
 
+  let arith = {|
+
+    rule expr :=
+      | add_expr ("=" | "<" | "<=" | ">" | ">=") add_expr
+
+    rule add_expr :=
+      | mul_expr (("+" | "-") mul_expr)?
+
+    rule mul_expr :=
+      | prefix_expr (("*" | "/") prefix_expr)*
+
+    rule prefix_expr :=
+      | ("+" | "-") atom_expr
+
+    rule atom_expr :=
+      | "IDENT"
+      | "NUMBER"
+      | "(" expr ")"
+
+  |}
+
   (** Wirth’s PL/0 language from “Algorithms + Data Structures = Programs”.
 
       - https://en.wikipedia.org/wiki/PL/0#Grammar
       - https://en.wikipedia.org/wiki/Recursive_descent_parser#Example_parser
   *)
-  let pl0_grammar = {|
+  let pl0 = {|
 
     rule program :=
       | block "."
@@ -391,8 +412,9 @@ let () = begin
 
   print_string "Running tests ...";
 
-  let grammar = Examples.grammar_grammar |> Lexer.tokenise |> Parser.parse_grammar in
-  let _ = Examples.pl0_grammar |> Lexer.tokenise |> Parser.parse_grammar in
+  let grammar = Lexer.tokenise Examples.grammar |> Parser.parse_grammar in
+  let _ = Lexer.tokenise Examples.arith |> Parser.parse_grammar in
+  let _ = Lexer.tokenise Examples.pl0 |> Parser.parse_grammar in
 
   let module Grammar_recogniser =
     Recogniser (struct
@@ -402,8 +424,9 @@ let () = begin
     end)
   in
 
-  Examples.grammar_grammar |> Lexer.tokenise |> Grammar_recogniser.recognise_grammar;
-  Examples.pl0_grammar |> Lexer.tokenise |> Grammar_recogniser.recognise_grammar;
+  Lexer.tokenise Examples.grammar |> Grammar_recogniser.recognise_grammar;
+  Lexer.tokenise Examples.arith |> Grammar_recogniser.recognise_grammar;
+  Lexer.tokenise Examples.pl0 |> Grammar_recogniser.recognise_grammar;
 
   print_string " ok!\n";
 
