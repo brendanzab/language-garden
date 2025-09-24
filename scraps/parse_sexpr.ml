@@ -15,10 +15,10 @@ end
 module Token = struct
 
   type t =
-    | Ident of string
-    | Int of int
-    | Left_paren
-    | Right_paren
+    | IDENT of string
+    | INT of int
+    | LEFT_PAREN
+    | RIGHT_PAREN
 
 end
 
@@ -69,14 +69,14 @@ end  = struct
 
   let[@tail_mod_cons] rec tokens (input : char Seq.t) () =
     match Seq.uncons input with
-    | Some ('(', input) -> Seq.Cons (Token.Left_paren, tokens input)
-    | Some (')', input) -> Seq.Cons (Token.Right_paren, tokens input)
+    | Some ('(', input) -> Seq.Cons (Token.LEFT_PAREN, tokens input)
+    | Some (')', input) -> Seq.Cons (Token.RIGHT_PAREN, tokens input)
     | Some(ch, _) when is_digit ch ->
         let (s, input) = take_while is_digit input in
-        Seq.Cons (Token.Int (int_of_string s), tokens input)
+        Seq.Cons (Token.INT (int_of_string s), tokens input)
     | Some(ch, _) when is_ident_start ch ->
         let (s, input) = take_while is_ident_continue input in
-        Seq.Cons (Token.Ident s, tokens input)
+        Seq.Cons (Token.IDENT s, tokens input)
     | Some (ch, input) when is_ascii_whitespace ch -> tokens input ()
     | Some (ch, _) -> raise (Unexpected_char { found = ch })
     | None -> Seq.Nil
@@ -97,15 +97,15 @@ module Parser = struct
 
   let rec parse_sexpr (tokens : Token.t Seq.t) : Sexpr.t * Token.t Seq.t =
     match Seq.uncons tokens with
-    | Some (Left_paren, tokens) -> parse_list tokens []
-    | Some (Ident s, tokens) -> (Ident s, tokens)
-    | Some (Int s, tokens) -> (Int s, tokens)
+    | Some (LEFT_PAREN, tokens) -> parse_list tokens []
+    | Some (IDENT s, tokens) -> (Ident s, tokens)
+    | Some (INT s, tokens) -> (Int s, tokens)
     | Some (token, _) -> raise (Error (Unexpected_token { found = token }))
     | None -> raise (Error Unexpected_eof)
 
   and parse_list (tokens : Token.t Seq.t) (acc : Sexpr.t list) : Sexpr.t * Token.t Seq.t =
     match Seq.uncons tokens with
-    | Some (Right_paren, tokens) ->
+    | Some (RIGHT_PAREN, tokens) ->
         (List (List.rev acc), tokens)
     | Some _ | None ->
         let (sexpr, tokens) = parse_sexpr tokens in
@@ -124,8 +124,8 @@ let () = begin
 
   print_string "Running tests ...";
 
-  assert (Lexer.tokenise "()" |> List.of_seq = [Left_paren; Right_paren]);
-  assert (Lexer.tokenise "foo" |> List.of_seq = [Ident "foo"]);
+  assert (Lexer.tokenise "()" |> List.of_seq = [LEFT_PAREN; RIGHT_PAREN]);
+  assert (Lexer.tokenise "foo" |> List.of_seq = [IDENT "foo"]);
 
   assert (Parser.parse (Lexer.tokenise "()") = List []);
   assert (Parser.parse (Lexer.tokenise "foo") = Ident "foo");

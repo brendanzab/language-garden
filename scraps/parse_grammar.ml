@@ -24,29 +24,29 @@ end
 module Token = struct
 
   type t =
-    | Keyword_rule
-    | Ident of string
-    | Quoted of string
-    | Asterisk
-    | Colon_equals
-    | Pipe
-    | Plus
-    | Question
-    | Left_paren
-    | Right_paren
+    | IDENT of string
+    | STRING of string
+    | KW_RULE
+    | ASTERISK
+    | COLON_EQUALS
+    | PIPE
+    | PLUS
+    | QUESTION
+    | LEFT_PAREN
+    | RIGHT_PAREN
 
   let ident (token : t) : string =
     match token with
-    | Keyword_rule -> "rule"
-    | Ident _ -> "IDENT"
-    | Quoted _ -> "QUOTED"
-    | Asterisk -> "*"
-    | Colon_equals -> ":="
-    | Pipe -> "|"
-    | Plus -> "+"
-    | Question -> "?"
-    | Left_paren -> "("
-    | Right_paren -> ")"
+    | IDENT _ -> "IDENT"
+    | STRING _ -> "STRING"
+    | KW_RULE -> "rule"
+    | ASTERISK -> "*"
+    | COLON_EQUALS -> ":="
+    | PIPE -> "|"
+    | PLUS -> "+"
+    | QUESTION -> "?"
+    | LEFT_PAREN -> "("
+    | RIGHT_PAREN -> ")"
 
 end
 
@@ -128,25 +128,25 @@ end  = struct
 
   let[@tail_mod_cons] rec tokens (input : char Seq.t) () =
     match Seq.uncons input with
-    | Some ('*', input) -> Seq.Cons (Token.Asterisk, tokens input)
+    | Some ('*', input) -> Seq.Cons (Token.ASTERISK, tokens input)
     | Some (':', input) ->
         begin match Seq.uncons input with
-        | Some ('=', input) -> Seq.Cons (Token.Colon_equals, tokens input)
+        | Some ('=', input) -> Seq.Cons (Token.COLON_EQUALS, tokens input)
         | Some (ch, _) -> raise (Error (Unexpected_char { found = ch }))
         | None -> raise (Error Unexpected_eof)
         end
-    | Some ('|', input) -> Seq.Cons (Token.Pipe, tokens input)
-    | Some ('+', input) -> Seq.Cons (Token.Plus, tokens input)
-    | Some ('?', input) -> Seq.Cons (Token.Question, tokens input)
-    | Some ('(', input) -> Seq.Cons (Token.Left_paren, tokens input)
-    | Some (')', input) -> Seq.Cons (Token.Right_paren, tokens input)
+    | Some ('|', input) -> Seq.Cons (Token.PIPE, tokens input)
+    | Some ('+', input) -> Seq.Cons (Token.PLUS, tokens input)
+    | Some ('?', input) -> Seq.Cons (Token.QUESTION, tokens input)
+    | Some ('(', input) -> Seq.Cons (Token.LEFT_PAREN, tokens input)
+    | Some (')', input) -> Seq.Cons (Token.RIGHT_PAREN, tokens input)
     | Some ('"', input) ->
         let ident, input = quoted input in
-        Seq.Cons (Token.Quoted ident, tokens input)
+        Seq.Cons (Token.STRING ident, tokens input)
     | Some (ch, _) when is_ident_start ch ->
         begin match take_while is_ident_continue input with
-        | "rule", input -> Seq.Cons (Token.Keyword_rule, tokens input)
-        | ident, input -> Seq.Cons (Token.Ident ident, tokens input)
+        | "rule", input -> Seq.Cons (Token.KW_RULE, tokens input)
+        | ident, input -> Seq.Cons (Token.IDENT ident, tokens input)
         end
     | Some (ch, input) when is_ascii_whitespace ch -> tokens input ()
     | Some (ch, _) -> raise (Error (Unexpected_char { found = ch }))
@@ -183,21 +183,21 @@ end = struct
 
   let expect_ident (tokens : Lexer.t) : string * Lexer.t =
     match Seq.uncons tokens with
-    | Some (Ident ident, tokens) -> ident, tokens
+    | Some (IDENT ident, tokens) -> ident, tokens
     | Some (token, _) -> raise (Error (Unexpected_token { found = token }))
     | None -> raise (Error Unexpected_eof)
 
   let rec parse_rule (tokens : Lexer.t) : Rule.t * Lexer.t =
     let tokens =
       match Seq.uncons tokens with
-      | Some (Pipe, tokens) -> tokens
+      | Some (PIPE, tokens) -> tokens
       | _ -> tokens
     in
     let rule, tokens = parse_seq_rule tokens in
     let rules, tokens =
       let rec go (acc : Rule.t list) (tokens : Lexer.t) =
         match Seq.uncons tokens with
-        | Some (Pipe, tokens) ->
+        | Some (PIPE, tokens) ->
             let rule, tokens = parse_seq_rule tokens in
             (go [@tailcall]) (rule :: acc) tokens
         | _ -> List.rev acc, tokens
@@ -213,7 +213,7 @@ end = struct
     let rules, tokens =
       let rec go (acc : Rule.t list) (tokens : Lexer.t) =
         match Seq.uncons tokens with
-        | Some ((Ident _ | Quoted _ | Left_paren), _) ->
+        | Some ((IDENT _ | STRING _ | LEFT_PAREN), _) ->
             let rule, tokens = parse_rep_rule tokens in
             (go [@tailcall]) (rule :: acc) tokens
         | _ -> List.rev acc, tokens
@@ -227,26 +227,26 @@ end = struct
   and parse_rep_rule (tokens : Lexer.t) : Rule.t * Lexer.t =
     let rule, tokens = parse_atom_rule tokens in
     match Seq.uncons tokens with
-    | Some (Asterisk, tokens) -> Rule.Rep0 rule, tokens
-    | Some (Plus, tokens) -> Rule.Rep1 rule, tokens
-    | Some (Question, tokens) -> Rule.Opt rule, tokens
+    | Some (ASTERISK, tokens) -> Rule.Rep0 rule, tokens
+    | Some (PLUS, tokens) -> Rule.Rep1 rule, tokens
+    | Some (QUESTION, tokens) -> Rule.Opt rule, tokens
     | _ -> rule, tokens
 
   and parse_atom_rule (tokens : Lexer.t) : Rule.t * Lexer.t =
     match Seq.uncons tokens with
-    | Some (Ident ident, tokens) -> Rule.Item ident, tokens
-    | Some (Quoted ident, tokens) -> Rule.Token ident, tokens
-    | Some (Left_paren, tokens) ->
+    | Some (IDENT ident, tokens) -> Rule.Item ident, tokens
+    | Some (STRING ident, tokens) -> Rule.Token ident, tokens
+    | Some (LEFT_PAREN, tokens) ->
         let rule, tokens = parse_rule tokens in
-        let tokens = expect Right_paren tokens in
+        let tokens = expect RIGHT_PAREN tokens in
         rule, tokens
     | Some (token, _) -> raise (Error (Unexpected_token { found = token }))
     | None -> raise (Error Unexpected_eof)
 
   let parse_item (tokens : Lexer.t) : (string * Rule.t) * Lexer.t =
-    let tokens = expect Keyword_rule tokens in
+    let tokens = expect KW_RULE tokens in
     let ident, tokens = expect_ident tokens in
-    let tokens = expect Colon_equals tokens in
+    let tokens = expect COLON_EQUALS tokens in
     let rule, tokens = parse_rule tokens in
     (ident, rule), tokens
 
@@ -341,7 +341,7 @@ module Examples = struct
     rule alt_rule   := "|"? seq_rule ("|" seq_rule)*
     rule seq_rule   := rep_rule+
     rule rep_rule   := atom_rule ("*" | "+" | "?")?
-    rule atom_rule  := "IDENT" | "QUOTED" | "(" alt_rule ")"
+    rule atom_rule  := "IDENT" | "STRING" | "(" alt_rule ")"
 
   |}
 
