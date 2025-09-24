@@ -3,6 +3,15 @@
     - {{: https://en.wikipedia.org/wiki/S-expression} S-expression} on Wikipedia
 *)
 
+module Sexpr = struct
+
+  type t =
+    | Ident of string
+    | Int of int
+    | List of t list
+
+end
+
 module Token = struct
 
   type t =
@@ -77,28 +86,22 @@ end  = struct
 
 end
 
-module Sexpr = struct
-
-  type t =
-    | Ident of string
-    | Int of int
-    | List of t list
-
-end
-
 module Parser = struct
 
-  exception Unexpected_token of { found : Token.t }
-  exception Unexpected_eof
-  exception Unconsumed_tokens of { remaining : Token.t Seq.t }
+  type error_data =
+    | Unexpected_eof
+    | Unexpected_token of { found : Token.t }
+    | Unconsumed_tokens of { remaining : Token.t Seq.t }
+
+  exception Error of error_data
 
   let rec parse_sexpr (tokens : Token.t Seq.t) : Sexpr.t * Token.t Seq.t =
     match Seq.uncons tokens with
     | Some (Left_paren, tokens) -> parse_list tokens []
     | Some (Ident s, tokens) -> (Ident s, tokens)
     | Some (Int s, tokens) -> (Int s, tokens)
-    | Some (token, _) -> raise (Unexpected_token { found = token })
-    | None -> raise Unexpected_eof
+    | Some (token, _) -> raise (Error (Unexpected_token { found = token }))
+    | None -> raise (Error Unexpected_eof)
 
   and parse_list (tokens : Token.t Seq.t) (acc : Sexpr.t list) : Sexpr.t * Token.t Seq.t =
     match Seq.uncons tokens with
@@ -111,7 +114,7 @@ module Parser = struct
   let parse (tokens : Token.t Seq.t) : Sexpr.t =
     let (sexpr, tokens) = parse_sexpr tokens in
     if Seq.is_empty tokens then sexpr else
-      raise (Unconsumed_tokens { remaining = tokens })
+      raise (Error (Unconsumed_tokens { remaining = tokens }))
 
 end
 

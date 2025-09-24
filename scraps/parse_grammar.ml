@@ -54,11 +54,12 @@ module Lexer : sig
 
   type t = Token.t Seq.t
 
-  exception Error of [
-    | `Unexpected_char of char
-    | `Unexpected_escape_code of char
-    | `Unexpected_eof
-  ]
+  type error_data =
+    | Unexpected_char of { found : char }
+    | Unexpected_escape_code of { found : char }
+    | Unexpected_eof
+
+  exception Error of error_data
 
   val tokenise : string -> t
 
@@ -84,11 +85,12 @@ end  = struct
     | ' ' | '\n' | '\r' | '\t' -> true
     | _ -> false
 
-  exception Error of [
-    | `Unexpected_char of char
-    | `Unexpected_escape_code of char
-    | `Unexpected_eof
-  ]
+  type error_data =
+    | Unexpected_char of { found : char }
+    | Unexpected_escape_code of { found : char }
+    | Unexpected_eof
+
+  exception Error of error_data
 
   let take_while (f : char -> bool) (input : char Seq.t) : string * char Seq.t =
     let buf = Buffer.create 16 in
@@ -113,14 +115,14 @@ end  = struct
           | Some ('\\'| '"' as ch, input) ->
               Buffer.add_char buf ch;
               (go [@tailcall]) input
-          | Some (ch, _) -> raise (Error (`Unexpected_escape_code ch))
-          | None -> raise (Error `Unexpected_eof)
+          | Some (ch, _) -> raise (Error (Unexpected_escape_code { found = ch }))
+          | None -> raise (Error Unexpected_eof)
           end
       | Some (ch, input) ->
           Buffer.add_char buf ch;
           (go [@tailcall]) input
       | None ->
-          raise (Error `Unexpected_eof)
+          raise (Error Unexpected_eof)
     in
     go input
 
@@ -130,8 +132,8 @@ end  = struct
     | Some (':', input) ->
         begin match Seq.uncons input with
         | Some ('=', input) -> Seq.Cons (Token.Colon_equals, tokens input)
-        | Some (ch, _) -> raise (Error (`Unexpected_char ch))
-        | None -> raise (Error `Unexpected_eof)
+        | Some (ch, _) -> raise (Error (Unexpected_char { found = ch }))
+        | None -> raise (Error Unexpected_eof)
         end
     | Some ('|', input) -> Seq.Cons (Token.Pipe, tokens input)
     | Some ('+', input) -> Seq.Cons (Token.Plus, tokens input)
@@ -147,7 +149,7 @@ end  = struct
         | ident, input -> Seq.Cons (Token.Ident ident, tokens input)
         end
     | Some (ch, input) when is_ascii_whitespace ch -> tokens input ()
-    | Some (ch, _) -> raise (Error (`Unexpected_char ch))
+    | Some (ch, _) -> raise (Error (Unexpected_char { found = ch }))
     | None -> Seq.Nil
 
   let tokenise (input : string) : t =
@@ -157,31 +159,33 @@ end
 
 module Parser : sig
 
-  exception Error of [
-    | `Unexpected_eof
-    | `Unexpected_token of Token.t
-  ]
+  type error_data =
+    | Unexpected_eof
+    | Unexpected_token of { found : Token.t }
+
+  exception Error of error_data
 
   val parse_grammar : Lexer.t -> Grammar.t
 
 end = struct
 
-  exception Error of [
-    | `Unexpected_token of Token.t
-    | `Unexpected_eof
-  ]
+  type error_data =
+    | Unexpected_eof
+    | Unexpected_token of { found : Token.t }
+
+  exception Error of error_data
 
   let expect (token : Token.t) (tokens : Lexer.t) : Lexer.t =
     match Seq.uncons tokens with
     | Some (t, tokens) when t = token -> tokens
-    | Some (token, _) -> raise (Error (`Unexpected_token token))
-    | None -> raise (Error `Unexpected_eof)
+    | Some (token, _) -> raise (Error (Unexpected_token { found = token }))
+    | None -> raise (Error Unexpected_eof)
 
   let expect_ident (tokens : Lexer.t) : string * Lexer.t =
     match Seq.uncons tokens with
     | Some (Ident ident, tokens) -> ident, tokens
-    | Some (token, _) -> raise (Error (`Unexpected_token token))
-    | None -> raise (Error `Unexpected_eof)
+    | Some (token, _) -> raise (Error (Unexpected_token { found = token }))
+    | None -> raise (Error Unexpected_eof)
 
   let rec parse_rule (tokens : Lexer.t) : Rule.t * Lexer.t =
     let tokens =
@@ -236,8 +240,8 @@ end = struct
         let rule, tokens = parse_rule tokens in
         let tokens = expect Right_paren tokens in
         rule, tokens
-    | Some (token, _) -> raise (Error (`Unexpected_token token))
-    | None -> raise (Error `Unexpected_eof)
+    | Some (token, _) -> raise (Error (Unexpected_token { found = token }))
+    | None -> raise (Error Unexpected_eof)
 
   let parse_item (tokens : Lexer.t) : (string * Rule.t) * Lexer.t =
     let tokens = expect Keyword_rule tokens in
