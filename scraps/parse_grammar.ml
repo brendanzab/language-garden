@@ -415,6 +415,7 @@ let () = begin
   print_string "Running tests ...";
 
   let grammar = Lexer.tokenise Examples.grammar |> Parser.parse_grammar in
+  (* NOTE: to test these we'll need a nice way to implement lexers *)
   let _ = Lexer.tokenise Examples.arith |> Parser.parse_grammar in
   let _ = Lexer.tokenise Examples.pl0 |> Parser.parse_grammar in
 
