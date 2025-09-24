@@ -332,6 +332,7 @@ end
 
 module Examples = struct
 
+  (** Grammar of grammar specifications *)
   let grammar = {|
 
     rule grammar    := item*
@@ -344,6 +345,7 @@ module Examples = struct
 
   |}
 
+  (** Arithmetic expressions *)
   let arith = {|
 
     rule expr :=
