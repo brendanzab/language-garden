@@ -13,7 +13,17 @@ module Token = struct
 
 end
 
-module Lexer = struct
+module Lexer : sig
+
+  type t = Token.t Seq.t
+
+  exception Unexpected_char of { found : char }
+
+  val tokenise : string -> t
+
+end  = struct
+
+  type t = Token.t Seq.t
 
   let is_digit (ch : char) : bool =
     match ch with
@@ -48,19 +58,19 @@ module Lexer = struct
     in
     go input
 
-  let[@tail_mod_cons] rec tokens (input : char Seq.t) : Token.t Seq.t =
+  let[@tail_mod_cons] rec tokens (input : char Seq.t) () =
     match Seq.uncons input with
-    | Some ('(', input) -> Seq.cons Token.Left_paren (tokens input)
-    | Some (')', input) -> Seq.cons Token.Right_paren (tokens input)
+    | Some ('(', input) -> Seq.Cons (Token.Left_paren, tokens input)
+    | Some (')', input) -> Seq.Cons (Token.Right_paren, tokens input)
     | Some(ch, _) when is_digit ch ->
         let (s, input) = take_while is_digit input in
-        Seq.cons (Token.Int (int_of_string s)) (tokens input)
+        Seq.Cons (Token.Int (int_of_string s), tokens input)
     | Some(ch, _) when is_ident_start ch ->
         let (s, input) = take_while is_ident_continue input in
-        Seq.cons (Token.Ident s) (tokens input)
-    | Some (ch, input) when is_ascii_whitespace ch -> tokens input
+        Seq.Cons (Token.Ident s, tokens input)
+    | Some (ch, input) when is_ascii_whitespace ch -> tokens input ()
     | Some (ch, _) -> raise (Unexpected_char { found = ch })
-    | None -> Seq.empty
+    | None -> Seq.Nil
 
   let tokenise (input : string) : Token.t Seq.t =
     tokens (String.to_seq input)

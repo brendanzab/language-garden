@@ -52,13 +52,13 @@ end
 
 module Lexer : sig
 
+  type t = Token.t Seq.t
+
   exception Error of [
     | `Unexpected_char of char
     | `Unexpected_escape_code of char
     | `Unexpected_eof
   ]
-
-  type t = Token.t Seq.t
 
   val tokenise : string -> t
 
@@ -102,20 +102,20 @@ end  = struct
     in
     go input
 
-  let[@tail_mod_cons] rec tokens (input : char Seq.t) : Token.t Seq.t =
+  let[@tail_mod_cons] rec tokens (input : char Seq.t) () =
     match Seq.uncons input with
-    | Some ('*', input) -> Seq.cons Token.Asterisk (tokens input)
+    | Some ('*', input) -> Seq.Cons (Token.Asterisk, tokens input)
     | Some (':', input) ->
         begin match Seq.uncons input with
-        | Some ('=', input) -> Seq.cons Token.Colon_equals (tokens input)
+        | Some ('=', input) -> Seq.Cons (Token.Colon_equals, tokens input)
         | Some (ch, _) -> raise (Error (`Unexpected_char ch))
         | None -> raise (Error `Unexpected_eof)
         end
-    | Some ('|', input) -> Seq.cons Token.Pipe (tokens input)
-    | Some ('+', input) -> Seq.cons Token.Plus (tokens input)
-    | Some ('?', input) -> Seq.cons Token.Question (tokens input)
-    | Some ('(', input) -> Seq.cons Token.Left_paren (tokens input)
-    | Some (')', input) -> Seq.cons Token.Right_paren (tokens input)
+    | Some ('|', input) -> Seq.Cons (Token.Pipe, tokens input)
+    | Some ('+', input) -> Seq.Cons (Token.Plus, tokens input)
+    | Some ('?', input) -> Seq.Cons (Token.Question, tokens input)
+    | Some ('(', input) -> Seq.Cons (Token.Left_paren, tokens input)
+    | Some (')', input) -> Seq.Cons (Token.Right_paren, tokens input)
     | Some ('"', input) ->
         let buf = Buffer.create 16 in
         let rec go input =
@@ -136,16 +136,16 @@ end  = struct
               raise (Error `Unexpected_eof)
         in
         let input = go input in
-        Seq.cons (Token.Quoted (String.of_bytes (Buffer.to_bytes buf))) (tokens input)
-    | Some(ch, _) when is_ident_start ch ->
+        Seq.Cons (Token.Quoted (String.of_bytes (Buffer.to_bytes buf)), tokens input)
+    | Some (ch, _) when is_ident_start ch ->
         let (ident, input) = take_while is_ident_continue input in
         begin match ident with
-        | "def" -> Seq.cons Token.Keyword_def (tokens input)
-        | ident -> Seq.cons (Token.Ident ident) (tokens input)
+        | "def" -> Seq.Cons (Token.Keyword_def, tokens input)
+        | ident -> Seq.Cons (Token.Ident ident, tokens input)
         end
-    | Some (ch, input) when is_ascii_whitespace ch -> tokens input
+    | Some (ch, input) when is_ascii_whitespace ch -> tokens input ()
     | Some (ch, _) -> raise (Error (`Unexpected_char ch))
-    | None -> Seq.empty
+  | None -> Seq.Nil
 
   let tokenise (input : string) : t =
     tokens (String.to_seq input)
