@@ -143,6 +143,12 @@ end  = struct
     | Some ('"', input) ->
         let ident, input = quoted input in
         Seq.Cons (Token.STRING ident, tokens input)
+    | Some ('-', input) ->
+        begin match Seq.uncons input with
+        | Some ('-', input) -> tokens (Seq.drop_while ((<>) '\n') input) ()
+        | Some (ch, _) -> raise (Error (Unexpected_char { found = ch }))
+        | None -> raise (Error Unexpected_eof)
+        end
     | Some (ch, _) when is_ident_start ch ->
         begin match take_while is_ident_continue input with
         | "rule", input -> Seq.Cons (Token.KW_RULE, tokens input)
@@ -332,8 +338,9 @@ end
 
 module Examples = struct
 
-  (** Grammar of grammar specifications *)
   let grammar = {|
+
+    -- Grammar of grammar specifications
 
     rule grammar    := item*
     rule item       := "rule" "IDENT" ":=" alt_rule
@@ -345,8 +352,9 @@ module Examples = struct
 
   |}
 
-  (** Arithmetic expressions *)
   let arith = {|
+
+    -- Arithmetic expressions
 
     rule expr :=
       | add_expr ("=" | "<" | "<=" | ">" | ">=") add_expr
@@ -367,12 +375,12 @@ module Examples = struct
 
   |}
 
-  (** Wirth’s PL/0 language from “Algorithms + Data Structures = Programs”.
-
-      - https://en.wikipedia.org/wiki/PL/0#Grammar
-      - https://en.wikipedia.org/wiki/Recursive_descent_parser#Example_parser
-  *)
   let pl0 = {|
+
+    -- Wirth’s PL/0 language from “Algorithms + Data Structures = Programs”.
+    --
+    -- * https://en.wikipedia.org/wiki/PL/0#Grammar
+    -- * https://en.wikipedia.org/wiki/Recursive_descent_parser#Example_parser
 
     rule program :=
       | block "."
