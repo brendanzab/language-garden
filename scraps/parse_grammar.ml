@@ -268,71 +268,98 @@ end = struct
 
 end
 
-(** Top-down, backtracking recogniser for grammars *)
-module Recogniser (G : sig
+(** Top-down, backtracking parser for grammars *)
+module Grammar_parser = struct
 
-  module Token : sig
-    type t
-    val ident : t -> string
+  module type P = sig
+
+    module Token : sig
+      type t
+      val ident : t -> string
+    end
+
+    val entrypoint : string
+    val grammar : Grammar.t
+
   end
 
-  val entrypoint : string
-  val grammar : Grammar.t
+  module Make (G : P) = struct
 
-end) = struct
+    exception Error
 
-  exception Error
+    module Token = G.Token
 
-  let rec recognise_rule (rule : Rule.t) (tokens : G.Token.t Seq.t) : G.Token.t Seq.t =
-    match rule with
-    | Item name -> recognise_item name tokens
-    | Token ident ->
-        begin match Seq.uncons tokens with
-        | Some (token, tokens) when G.Token.ident token = ident -> tokens
-        | Some _ | None -> raise Error
-        end
-    | Seq rules ->
-        let rec go rules tokens =
-          match rules with
-          | [] -> tokens
-          | rule :: rules ->
-              let tokens = recognise_rule rule tokens in
-              go rules tokens
-        in
-        go rules tokens
-    | Alt rules ->
-        let rec go rules =
-          match rules with
-          | [] -> raise Error
-          | rule :: rules ->
-              try recognise_rule rule tokens with
-              | Error -> go rules
-        in
-        go rules
-    | Opt rule ->
-        begin try recognise_rule rule tokens with
-        | Error -> tokens
-        end
-    | Rep0 rule ->
-        let rec go tokens =
-          match recognise_rule rule tokens with
-          | tokens -> go tokens
-          | exception Error -> tokens
-        in
-        go tokens
-    | Rep1 rule ->
-        begin match recognise_rule rule tokens with
-        | tokens -> recognise_rule (Rep0 rule) tokens
-        | exception Error -> tokens
-        end
+    module Tree = struct
 
-  and recognise_item (name : string) (tokens : G.Token.t Seq.t) : G.Token.t Seq.t =
-    recognise_rule (List.assoc name G.grammar.items) tokens
+      type t = {
+        name : string [@warning "-unused-field"];
+        children : child list [@warning "-unused-field"];
+      }
 
-  let recognise_grammar (tokens : G.Token.t Seq.t) =
-    match recognise_item G.entrypoint tokens with
-    | tokens when Seq.is_empty tokens -> ()
-    | _ -> raise Error
+      and child =
+        | Token of Token.t
+        | Tree of t
+
+    end
+
+    let rec parse_rule (rule : Rule.t) (tokens : Token.t Seq.t) : Tree.child list * Token.t Seq.t =
+      let rec parse_rule rule acc tokens =
+        match rule with
+        | Rule.Item name ->
+            let tree, tokens = parse_item name tokens in
+            Tree.Tree tree :: acc, tokens
+        | Rule.Token ident ->
+            begin match Seq.uncons tokens with
+            | Some (token, tokens) when Token.ident token = ident ->
+                Tree.Token token :: acc, tokens
+            | Some _ | None -> raise Error
+            end
+        | Rule.Seq rules ->
+            let rec go rules acc tokens =
+              match rules with
+              | [] -> acc, tokens
+              | rule :: rules ->
+                  let acc, tokens = parse_rule rule acc tokens in
+                  go rules acc tokens
+            in
+            go rules acc tokens
+        | Rule.Alt rules ->
+            let rec go rules =
+              match rules with
+              | [] -> raise Error
+              | rule :: rules ->
+                  try parse_rule rule acc tokens with
+                  | Error -> go rules
+            in
+            go rules
+        | Rule.Opt rule ->
+            begin try parse_rule rule acc tokens with
+            | Error -> acc, tokens
+            end
+        | Rule.Rep0 rule ->
+            let rec go acc tokens =
+              match parse_rule rule acc tokens with
+              | acc, tokens -> go acc tokens
+              | exception Error -> acc, tokens
+            in
+            go acc tokens
+        | Rule.Rep1 rule ->
+            let acc, tokens = parse_rule rule acc tokens in
+            parse_rule (Rep0 rule) acc tokens
+      in
+      let rev_children, tokens = parse_rule rule [] tokens in
+      List.rev rev_children, tokens
+
+    and parse_item (name : string) (tokens : Token.t Seq.t) : Tree.t * Token.t Seq.t =
+      let children, tokens = parse_rule (List.assoc name G.grammar.items) tokens in
+      Tree.{ name; children }, tokens
+
+    let parse_grammar (tokens : Token.t Seq.t) : Tree.t =
+      match parse_item G.entrypoint tokens with
+      | tree, tokens when Seq.is_empty tokens -> tree
+      | _ -> raise Error
+
+  end
 
 end
 
@@ -427,17 +454,17 @@ let () = begin
   let _ = Lexer.tokenise Examples.arith |> Parser.parse_grammar in
   let _ = Lexer.tokenise Examples.pl0 |> Parser.parse_grammar in
 
-  let module Grammar_recogniser =
-    Recogniser (struct
+  let module Grammar_grammar_parser =
+    Grammar_parser.Make (struct
       module Token = Token
       let entrypoint = "grammar"
       let grammar = grammar
     end)
   in
 
-  Lexer.tokenise Examples.grammar |> Grammar_recogniser.recognise_grammar;
-  Lexer.tokenise Examples.arith |> Grammar_recogniser.recognise_grammar;
-  Lexer.tokenise Examples.pl0 |> Grammar_recogniser.recognise_grammar;
+  let _ = Lexer.tokenise Examples.grammar |> Grammar_grammar_parser.parse_grammar in
+  let _ = Lexer.tokenise Examples.arith |> Grammar_grammar_parser.parse_grammar in
+  let _ = Lexer.tokenise Examples.pl0 |> Grammar_grammar_parser.parse_grammar in
 
   print_string " ok!\n";
 
