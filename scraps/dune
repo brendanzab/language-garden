@@ -31,6 +31,7 @@
 (executable (name lang_unsure_calculator))     ; TODO: Tests
 
 (test (name misc_adt_properties))
+(test (name misc_algebraic_graphs))
 (test (name misc_ast_folds))
 (test (name misc_ast_submodules))
 (test (name misc_circular_traversals))

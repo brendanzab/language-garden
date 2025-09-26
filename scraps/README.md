@@ -93,6 +93,8 @@ Miscellaneous:
 
 - [**misc_adt_properties.ml**](./misc_adt_properties.ml):
   Some examples of abstract data types with their associated properties.
+- [**misc_algebraic_graphs.ml**](./misc_algebraic_graphs.ml):
+  Graph library based on a small set of construction primitives.
 - [**misc_ast_folds.ml**](./misc_ast_folds.ml):
   Folding over an AST using recursion schemes.
 - [**misc_ast_submodules.ml**](./misc_ast_submodules.ml):
