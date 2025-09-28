@@ -444,7 +444,8 @@ let () = begin
     let g = Int_graph.(Notation.(v 1 ** (v 2 ++ v 3) ** v 4)) in
     assert (Int_graph.edge_list g = [1, 2; 1, 3; 1, 4; 2, 4; 3, 4]);
 
-    let g = let open Graph.Transpose (Int_graph) in transpose Notation.(v 1 ** (v 2 ++ v 3) ** v 4) in
+    let module Int_graph_t = Graph.Transpose (Int_graph) in
+    let g = Int_graph_t.Notation.(v 1 ** (v 2 ++ v 3) ** v 4) |> Int_graph_t.transpose in
     assert (Int_graph.edge_list g = [2, 1; 3, 1; 4, 1; 4, 2; 4, 3]);
 
   end;
