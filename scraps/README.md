@@ -9,7 +9,7 @@ Parsing:
   Recursive descent parser for S-expressions.
 - [**parse_grammar.ml**](./parse_grammar.ml):
   Parser for a simple grammar specification language.
-- [**parse_grammar.ml**](./parse_grammar.ml):
+- [**parse_grammar_lexer.ml**](./parse_grammar_lexer.ml):
   A simple grammar specification language with support for custom lexers.
 
 Evaluation:
