@@ -71,9 +71,7 @@ Query Results
 
 ```
 
-More examples can be found in the [examples](./examples/) directory,
-including a [genealogy of characters](./examples/genealogy.datalog) from
-Tolkien’s legendarium.
+More examples can be found in the [examples](./examples/) directory.
 
 ## Additional Resources
 

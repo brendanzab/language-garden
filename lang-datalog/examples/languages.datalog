@@ -2,17 +2,19 @@ homepage("Caml", "https://caml.inria.fr/").
 homepage("OCaml", "https://ocaml.org").
 homepage("Haskell", "https://www.haskell.org/").
 homepage("Standard ML", "https://smlfamily.github.io/").
+homepage("Caml Light", "https://caml.inria.fr/caml-light/").
+homepage("GHC", "https://ghc.haskell.org/").
 
-implementation("Caml", "Caml Light").
-implementation("Caml", "Caml Special Light").
-implementation("Caml", "Heavy Caml").             % See: https://en.wikipedia.org/wiki/Caml#History
-implementation("Haskell", "GHC").
-implementation("Haskell", "Hugs").
-implementation("OCaml", "ocamlc").
-implementation("Standard ML", "SML/NJ").
-implementation("Standard ML", "MLton").
-implementation("Standard ML", "MLKit").
-implementation("Standard ML", "Poly/ML").
+implementedBy("Caml", "Caml Light").
+implementedBy("Caml", "Caml Special Light").
+implementedBy("Caml", "Heavy Caml").              % See: https://en.wikipedia.org/wiki/Caml#History
+implementedBy("Haskell", "GHC").
+implementedBy("Haskell", "Hugs").
+implementedBy("OCaml", "ocamlc").
+implementedBy("Standard ML", "SML/NJ").
+implementedBy("Standard ML", "MLton").
+implementedBy("Standard ML", "MLKit").
+implementedBy("Standard ML", "Poly/ML").
 
 implementedIn("Caml Light", "C").
 implementedIn("GHC", "C").
@@ -43,6 +45,9 @@ influencedBy("SASL", "ISWIM").
 influencedBy("Standard ML", "Hope").
 influencedBy("Standard ML", "ML").
 
-influenced(A, B) <- influencedBy(B, A).
+influenceOf(Influence, Lang) <- influencedBy(Lang, Influence).
+implementionOf(Project, Lang) <- implementedBy(Lang, Project).
 
-? influenced("ISWIM", A).
+? influenceOf("ISWIM", Lang).
+
+? implementedIn(Project, "C").
