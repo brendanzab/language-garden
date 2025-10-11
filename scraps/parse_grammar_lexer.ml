@@ -53,6 +53,7 @@ module Lexer : sig
 
   val fail : expr [@@warning "-unused-value-declaration"]
   val empty : expr [@@warning "-unused-value-declaration"]
+  val any : expr
   val char : char -> expr
   val range : char -> char -> expr
   val seq : expr list -> expr
@@ -80,6 +81,7 @@ end = struct
   type expr =
     | Fail
     | Empty
+    | Any
     | Char of char
     | Range of char * char
     | Seq of expr * expr
@@ -90,6 +92,7 @@ end = struct
 
   let fail = Fail
   let empty = Empty
+  let any = Any
   let char ch = Char ch
   let range ch1 ch2 = Range (ch1, ch2)
 
@@ -137,6 +140,11 @@ end = struct
     match e with
     | Fail -> None
     | Empty -> Some pos
+    | Any ->
+        begin match String.get input pos with
+        | _ -> Some (pos + 1)
+        | exception Invalid_argument _ -> None
+        end
     | Char expected ->
         begin match String.get input pos with
         | ch when ch = expected -> Some (pos + 1)
@@ -168,7 +176,7 @@ end = struct
     | Not e ->
         begin match consume_expr e pos input with
         | Some _ -> None
-        | None -> Some (pos + 1) (* NOTE: is this ok? *)
+        | None -> Some pos
         end
 
   exception Error of { pos : int }
@@ -399,14 +407,14 @@ module Examples = struct
 
     let lexer =
       let whitespace = Lexer.(rep1 (alt [char ' '; char '\n'; char '\r'; char '\t'])) in
-      let line_comment = Lexer.(seq [string "--"; rep0 (not (alt [char '\r'; char '\n']))]) in
+      let line_comment = Lexer.(seq [string "--"; rep0 (seq [not (alt [char '\r'; char '\n']); any])]) in
 
       let ident_start = Lexer.(alt [range 'a' 'z'; range 'A' 'Z']) in
       let ident_continue = Lexer.(alt [ident_start; range '0' '9'; char '-'; char '_']) in
       let ident = Lexer.(seq [ident_start; rep0 ident_continue]) in
 
       let escape_code = Lexer.(seq [char '\\'; alt [char '\\'; char '"']]) in
-      let string_lit = Lexer.(seq [char '"'; rep0 (alt [escape_code; not (char '"')]); char '"']) in
+      let string_lit = Lexer.(seq [char '"'; rep0 (alt [escape_code; seq [not (char '"'); any]]); char '"']) in
 
       Lexer.(create [|
         skip whitespace;
@@ -526,7 +534,7 @@ module Examples = struct
 
     let lexer =
       let whitespace = Lexer.(rep1 (alt [char ' '; char '\n'; char '\r'; char '\t'])) in
-      let line_comment = Lexer.(seq [string "--"; rep0 (not (alt [char '\r'; char '\n']))]) in
+      let line_comment = Lexer.(seq [string "--"; rep0 (seq [not (alt [char '\r'; char '\n']); any])]) in
 
       let ident_start = Lexer.(alt [range 'a' 'z'; range 'A' 'Z']) in
       let ident_continue = Lexer.(alt [ident_start; range '0' '9'; char '-'; char '_']) in
