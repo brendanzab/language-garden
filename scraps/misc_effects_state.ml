@@ -48,4 +48,4 @@ let () =
   let module S = State (String) in
   let@ () = S.run ~init:"hello" in
   S.modify (fun x -> x ^ " world!");
-  print_string (S.get ())
+  assert (S.get () = "hello world!")
