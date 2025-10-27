@@ -53,6 +53,9 @@ Type checking:
 - [**check_stlc_inference_rules_bidir.ml**](./check_stlc_inference_rules_bidir.ml):
   A demonstration of translating bidirectional inference rules for the STLC into
   a type inference algorithm.
+- [**check_poly_algorithm_j.ml**](./check_poly_algorithm_j.ml):
+  Type inference for a polymorphic polymorphic functional language using
+  in-place, imperative unification (i.e. Algorithm J).
 - [**check_dependent.pl**](./check_dependent.pl):
   A small dependent type system, implemented in SWI-Prolog using normalisation-by-evaluation.
 - [**check_plain_data.ml**](./check_plain_data.ml):
