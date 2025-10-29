@@ -231,9 +231,9 @@ end = struct
   let instantiate (ctx : context) (Forall (ty_params, ty) : poly_ty) : Ty.t =
     Ty.subst ty (List.map (fun tv -> tv, fresh_meta ctx) ty_params)
 
-  (** Find the unsolved metavariables in a monotype that were introduced within
-      the current level of the type environment and return a polytype that binds
-      them in a forall. *)
+  (** Turn a monotype into a polytype by finding all the unsolved metavariables
+      that have been introduced after the current level in the type environment,
+      and binding them as parameters in a forall. *)
   let generalize (ctx : context) (t : Ty.t) : poly_ty =
     let ty_ids = ref [] in
     let rec go t =
