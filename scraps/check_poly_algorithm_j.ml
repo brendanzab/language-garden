@@ -115,12 +115,12 @@ module Ty = struct
   (** The current state of a metavariable. *)
   and meta_state =
     | Solved of t
-    | Unsolved of Id.t * level
+    | Unsolved of { id : Id.t; level : level }
 
   (** Create a fresh, unsolved metavariable at a given level in the type
       environment *)
   let fresh_meta (size : level) : meta =
-    ref (Unsolved (Id.fresh (), size))
+    ref (Unsolved { id = Id.fresh (); level = size })
 
   (** Replace bound variables in a type *)
   let rec subst (ty : t) (mapping : (Id.t * t) list) : t =
@@ -146,23 +146,26 @@ module Ty = struct
     (* Occurs check and level raising *)
     | Meta m' when m == m' -> raise Infinite_type
     | Meta { contents = Solved ty } -> occurs m level ty
-    | Meta ({ contents = Unsolved (id', level') } as m') ->
-        if level < level' then
-          m' := Unsolved (id', level)
+    | Meta ({ contents = Unsolved other } as m') ->
+        if level < other.level then
+          m' := Unsolved { other with level }
 
   let rec unify (size : level) (ty1 : t) (ty2 : t) =
     match ty1, ty2 with
     | Var id1, Var id2 when id1 = id2 -> ()
-    | Meta m1, Meta m2 when m1 == m2 -> ()
+    | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
     | Unit, Unit -> ()
     | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
         unify size param_ty1 param_ty2;
         unify size body_ty1 body_ty2
 
+    (* Unify through solved metavariables *)
     | Meta ({ contents = Solved ty1 }), ty2 -> unify size ty1 ty2
     | ty1, Meta ({ contents = Solved ty2 }) -> unify size ty1 ty2
-    | Meta ({ contents = Unsolved (_, level) } as m), ty
-    | ty, Meta ({ contents = Unsolved (_, level) } as m) ->
+
+    (* Update unsolved metavariables in-place *)
+    | Meta ({ contents = Unsolved { level; _ } } as m), ty
+    | ty, Meta ({ contents = Unsolved { level; _ } } as m) ->
         occurs m level ty;
         m := Solved ty
 
@@ -241,7 +244,7 @@ end = struct
           go param_ty;
           go body_ty
       | Ty.Meta ({ contents = Solved t }) -> go t
-      | Ty.Meta ({ contents = Unsolved (id, level) } as m) ->
+      | Ty.Meta ({ contents = Unsolved { id; level } } as m) ->
           if ctx.ty_size < level then begin
             ty_ids := id :: !ty_ids;
             m := Solved (Var id);
