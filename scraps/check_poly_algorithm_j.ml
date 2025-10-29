@@ -1,12 +1,7 @@
 (** An implementation of type inference for a polymorphic functional language
     using in-place, imperative unification (a.k.a. Algorithm J).
 
-    This implementation was originally inspired by {{: https://github.com/jfecher/algorithm-j/}
-    jfecher’s implementation of Milner’s algorithm}. I also folded in some ideas
-    I saw in {{: https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7}
-    Mark Barbone’s implementation of higher rank polymorphism}.
-
-    {1 On Milner’s original presentation}
+    {2 On Milner’s original paper}
 
     Algorithm J was first described by Robin Milner in 1978 in the context of
     type checking early versions of ML. It was intended to be called “Algorithm
@@ -31,11 +26,23 @@
     Generalisation and instantiation are more obscured and hard to find - I’ve
     been assuming they emerge from how prefixes are handled.
 
-    {1 Resources}
+    {2 Implementation notes}
+
+    This implementation was originally inspired by {{: https://github.com/jfecher/algorithm-j/}
+    jfecher’s implementation of Milner’s algorithm}. I also folded in some ideas
+    I saw in {{: https://gist.github.com/mb64/87ac275c327ea923a8d587df7863d8c7}
+    Mark Barbone’s implementation of higher rank polymorphism}. One departure
+    I make from jfecher and other ML implementations is that, like Barbone, I’ve
+    distinguished type variables bound by foralls from metavariables, which I
+    think makes things more clear. I’ve also decided to thread through the size
+    of the type environment explicitly rather than using mutable variables.
+
+    {2 Resources}
 
     - Robin Milner, “A theory of type polymorphism in programming”, 1978 https://doi.org/10.1016/0022-0000(78)90014-4
-    - Wikipedia, “Hindley–Milner type system - Algorithm J” https://en.wikipedia.org/wiki/Hindley%E2%80%93Milner_type_system#Algorithm_J
-    - Oleg Kiselyov, “Efficient and insightful generalization” https://okmij.org/ftp/ML/generalization.html
+    - Wikipedia, “Hindley–Milner type system - Algorithm J”, https://en.wikipedia.org/wiki/Hindley%E2%80%93Milner_type_system#Algorithm_J
+    - Oleg Kiselyov, “Efficient and insightful generalization”, https://okmij.org/ftp/ML/generalization.html
+    - Richard Eisenberg, “Type inference in OCaml and GHC using Levels”, https://www.youtube.com/watch?v=iFUrhTQi0-U
 *)
 
 module Expr = struct
@@ -49,7 +56,7 @@ module Expr = struct
 
 end
 
-(** Fresh na,e generation *)
+(** Fresh name generation *)
 module Fresh = struct
 
   module type S = sig
