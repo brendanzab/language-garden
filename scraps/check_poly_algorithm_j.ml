@@ -90,8 +90,8 @@ module Ty = struct
   (** Fresh identifiers used for bound type variables and metavariables. *)
   module Id = Fresh.Make ()
 
-  (* TODO: we could possibly create separate identifier namespaces for type
-           variables v.s. metavariables *)
+  (* TODO: we could possibly use separate identifier namespaces for type
+           variables and metavariables *)
 
   (** Monotypes *)
   type t =
@@ -183,30 +183,48 @@ end = struct
   type poly_ty =
     | Forall of Ty.Id.t list * Ty.t
 
-  type context = (string * poly_ty) list
+  type context = {
+    metas : Ty.meta Dynarray.t;
+    ty_size : Ty.level;
+    expr_tys : (string * poly_ty) list;
+  }
 
-  let metas : Ty.meta Dynarray.t =
-    Dynarray.create ()
+  let empty_context () = {
+    metas = Dynarray.create ();
+    ty_size = 0;
+    expr_tys = [];
+  }
 
-  let fresh_meta (ty_size : Ty.level) : Ty.t =
-    let m = Ty.fresh_meta ty_size in
-    Dynarray.add_last metas m;
+  let fresh_meta (ctx : context) : Ty.t =
+    let m = Ty.fresh_meta ctx.ty_size in
+    Dynarray.add_last ctx.metas m;
     Ty.Meta m
 
-  let unify (ty_size : Ty.level) (ty1 : Ty.t) (ty2 : Ty.t) =
-    try Ty.unify ty_size ty1 ty2 with
+  let extend_ty (ctx : context) : context =
+    { ctx with ty_size = 1 + ctx.ty_size }
+
+  let extend_expr (ctx : context) (name : string) (ty : poly_ty) : context =
+    { ctx with expr_tys = (name, ty) :: ctx.expr_tys }
+
+  let lookup_expr (ctx : context) (name : string) : poly_ty =
+    match List.assoc_opt name ctx.expr_tys with
+    | Some ty -> ty
+    | None -> raise (Error "unbound variable")
+
+  let unify (ctx : context) (ty1 : Ty.t) (ty2 : Ty.t) =
+    try Ty.unify ctx.ty_size ty1 ty2 with
     | Ty.Mismatched_types _ -> raise (Error "type mismatch")
     | Ty.Infinite_type -> raise (Error "infinite type")
 
   (** Convert a polytype to a monotype by replacing the bound type variables with
       fresh metavariables. *)
-  let instantiate (ty_size : Ty.level) (Forall (ty_params, ty) : poly_ty) : Ty.t =
-    Ty.subst ty (List.map (fun tv -> tv, fresh_meta ty_size) ty_params)
+  let instantiate (ctx : context) (Forall (ty_params, ty) : poly_ty) : Ty.t =
+    Ty.subst ty (List.map (fun tv -> tv, fresh_meta ctx) ty_params)
 
-  (** Find the unsolved metavariables in a monotype that were introduced in the
-      current level of the type environment or deeper and returning a polytype
-      that binds them in a forall. *)
-  let generalize (ty_size : Ty.level) (t : Ty.t) : poly_ty =
+  (** Find the unsolved metavariables in a monotype that were introduced within
+      the current level of the type environment and return a polytype that binds
+      them in a forall. *)
+  let generalize (ctx : context) (t : Ty.t) : poly_ty =
     let ty_ids = ref [] in
     let rec go t =
       match t with
@@ -217,7 +235,7 @@ end = struct
           go body_ty
       | Ty.Meta ({ contents = Solved t }) -> go t
       | Ty.Meta ({ contents = Unsolved (m_id, m_level) } as m) ->
-          if ty_size < m_level then begin
+          if ctx.ty_size < m_level then begin
             ty_ids := m_id :: !ty_ids;
             m := Solved (Var m_id);
           end
@@ -226,33 +244,31 @@ end = struct
     let ty_params = List.sort_uniq Ty.Id.compare !ty_ids in
     Forall (ty_params, t)
 
-  let rec infer (ty_size : Ty.level) (ctx : context) (expr : Expr.t) : Ty.t =
+  let rec infer (ctx : context) (expr : Expr.t) : Ty.t =
     match expr with
     | Expr.Var x ->
-        begin match List.assoc_opt x ctx with
-        | Some ty -> instantiate ty_size ty
-        | None -> raise (Error "unbound variable")
-        end
+        instantiate ctx (lookup_expr ctx x)
     | Expr.Let (x, def, body) ->
-        let def_ty = generalize ty_size (infer (ty_size + 1) ctx def) in
-        infer ty_size ((x, def_ty) :: ctx) body
+        let def_ty = generalize ctx (infer (extend_ty ctx) def) in
+        infer (extend_expr ctx x def_ty) body
     | Expr.Fun_lit (x, body) ->
-        let param_ty = fresh_meta ty_size in
-        let body_ty = infer ty_size ((x, (Forall ([], param_ty))) :: ctx) body in
+        let param_ty = fresh_meta ctx in
+        let body_ty = infer (extend_expr ctx x (Forall ([], param_ty))) body in
         Ty.Fun (param_ty, body_ty)
     | Expr.Fun_app (fn, arg) ->
-        let fn_ty = infer ty_size ctx fn in
-        let arg_ty = infer ty_size ctx arg in
-        let body_ty = fresh_meta ty_size in
-        unify ty_size fn_ty (Ty.Fun (arg_ty, body_ty));
+        let fn_ty = infer ctx fn in
+        let arg_ty = infer ctx arg in
+        let body_ty = fresh_meta ctx in
+        unify ctx fn_ty (Ty.Fun (arg_ty, body_ty));
         body_ty
     | Expr.Unit_lit ->
         Ty.Unit
 
   let infer (expr : Expr.t) : (Ty.t, string) result =
     try
-      let ty = infer 0 [] expr in
-      metas |> Dynarray.iter begin function
+      let ctx = empty_context () in
+      let ty = infer ctx expr in
+      ctx.metas |> Dynarray.iter begin function
         | { contents = Ty.Solved _ } -> ()
         | { contents = Ty.Unsolved _ } -> raise (Error "ambiguous type")
       end;
