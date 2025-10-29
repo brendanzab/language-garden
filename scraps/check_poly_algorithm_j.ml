@@ -125,11 +125,7 @@ module Ty = struct
   (** Replace bound variables in a type *)
   let rec subst (ty : t) (mapping : (Id.t * t) list) : t =
     match ty with
-    | Var id ->
-        begin match List.assoc_opt id mapping with
-        | Some ty -> ty
-        | None -> ty
-        end
+    | Var id -> List.assoc_opt id mapping |> Option.value ~default:ty
     | Meta ({ contents = Solved ty }) -> subst ty mapping
     | Meta ({ contents = Unsolved _}) -> ty
     | Fun (param_ty, body_ty) -> Fun (subst param_ty mapping, subst body_ty mapping)
