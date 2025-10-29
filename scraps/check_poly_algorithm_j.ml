@@ -45,6 +45,7 @@
     - Richard Eisenberg, “Type inference in OCaml and GHC using Levels”, https://www.youtube.com/watch?v=iFUrhTQi0-U
 *)
 
+(** Untyped lambda expressions *)
 module Expr = struct
 
   type t =
@@ -137,18 +138,21 @@ module Ty = struct
   exception Mismatched_types of t * t
   exception Infinite_type
 
-  let rec occurs (m_id, m_level) (ty : t) =
+  (** Ensure that the candidate type does not refer to the to-be-solved
+      metavariable, and raise the level of metavariables as required. *)
+  let rec occurs (m : meta) (level : level) (ty : t) =
     match ty with
     | Var _ -> ()
     | Fun (param_ty, body_ty) ->
-        occurs (m_id, m_level) param_ty;
-        occurs (m_id, m_level) body_ty
+        occurs m level param_ty;
+        occurs m level body_ty
     | Unit -> ()
-    | Meta ({ contents = Solved ty }) ->
-        occurs (m_id, m_level) ty
-    | Meta ({ contents = Unsolved (m_id', m_level') } as m') ->
-        m' := Unsolved (m_id', min m_level m_level');
-        if m_id = m_id' then raise Infinite_type
+    (* Occurs check and level raising *)
+    | Meta m' when m == m' -> raise Infinite_type
+    | Meta { contents = Solved ty } -> occurs m level ty
+    | Meta ({ contents = Unsolved (id', level') } as m') ->
+        if level < level' then
+          m' := Unsolved (id', level)
 
   let rec unify (size : level) (ty1 : t) (ty2 : t) =
     match ty1, ty2 with
@@ -161,9 +165,9 @@ module Ty = struct
 
     | Meta ({ contents = Solved ty1 }), ty2 -> unify size ty1 ty2
     | ty1, Meta ({ contents = Solved ty2 }) -> unify size ty1 ty2
-    | Meta ({ contents = Unsolved (m_id, m_level) } as m), ty
-    | ty, Meta ({ contents = Unsolved (m_id, m_level) } as m) ->
-        occurs (m_id, m_level) ty;
+    | Meta ({ contents = Unsolved (_, level) } as m), ty
+    | ty, Meta ({ contents = Unsolved (_, level) } as m) ->
+        occurs m level ty;
         m := Solved ty
 
     | _, _ -> raise (Mismatched_types (ty1, ty2))
@@ -241,10 +245,10 @@ end = struct
           go param_ty;
           go body_ty
       | Ty.Meta ({ contents = Solved t }) -> go t
-      | Ty.Meta ({ contents = Unsolved (m_id, m_level) } as m) ->
-          if ctx.ty_size < m_level then begin
-            ty_ids := m_id :: !ty_ids;
-            m := Solved (Var m_id);
+      | Ty.Meta ({ contents = Unsolved (id, level) } as m) ->
+          if ctx.ty_size < level then begin
+            ty_ids := id :: !ty_ids;
+            m := Solved (Var id);
           end
     in
     go t;
@@ -256,8 +260,8 @@ end = struct
     | Expr.Var x ->
         instantiate ctx (lookup_expr ctx x)
     | Expr.Let (x, def, body) ->
-        let def_ty = generalize ctx (infer (extend_ty ctx) def) in
-        infer (extend_expr ctx x def_ty) body
+        let def_ty = infer (extend_ty ctx) def in
+        infer (extend_expr ctx x (generalize ctx def_ty)) body
     | Expr.Fun_lit (x, body) ->
         let param_ty = fresh_meta ctx in
         let body_ty = infer (extend_expr ctx x (Forall ([], param_ty))) body in
