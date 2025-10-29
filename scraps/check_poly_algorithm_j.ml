@@ -227,14 +227,23 @@ end = struct
     | Ty.Infinite_type -> raise (Error "infinite type")
 
   (** Convert a polytype to a monotype by replacing the bound type variables with
-      fresh metavariables. *)
+      fresh metavariables.
+
+      For example, a polytype [∀ a b. a -> b] would be instantiated to a
+      monotype [$m1 -> $m2].
+  *)
   let instantiate (ctx : context) (Forall (ty_params, ty) : poly_ty) : Ty.t =
     Ty.subst ty (List.map (fun tv -> tv, fresh_meta ctx) ty_params)
 
   (** Turn a monotype into a polytype by finding all the unsolved metavariables
       that have been introduced after the current level in the type environment,
-      and binding them as parameters in a forall. *)
-  let generalize (ctx : context) (t : Ty.t) : poly_ty =
+      and binding them as parameters in a forall.
+
+      For example, [$m1 -> $m2] would be generalise to [∀ a b. a -> b]. If [$m1]
+      was introduced before the current level in the type environment, then
+      [$m1 -> $m2] would generalise to [∀ a. $m1 -> a].
+  *)
+  let generalise (ctx : context) (t : Ty.t) : poly_ty =
     let ty_ids = ref [] in
     let rec go t =
       match t with
@@ -260,7 +269,7 @@ end = struct
         instantiate ctx (lookup_expr ctx x)
     | Expr.Let (x, def, body) ->
         let def_ty = infer (extend_ty ctx) def in
-        infer (extend_expr ctx x (generalize ctx def_ty)) body
+        infer (extend_expr ctx x (generalise ctx def_ty)) body
     | Expr.Fun_lit (x, body) ->
         let param_ty = fresh_meta ctx in
         let body_ty = infer (extend_expr ctx x (Forall ([], param_ty))) body in
