@@ -346,20 +346,17 @@ let validate_meta_solution (ty_size : level) (m, ty_level : meta * level) (vty :
           (* Throw an error if a to-be-solved metavariable would depend on type
               variables to “the right” of it in the context. *)
           raise (Escaping_scope (m, vty))
-    | Meta_var m' ->
-        (* Occurs check *)
-        if m == m' then
-          raise (Infinite_type m);
-        (* Level raising *)
-        begin match !m' with
-        | Unsolved { id = id'; ty_level = ty_level' } ->
-            (* Raise the level constraint on metavariables to match the level
-              of the to-be-solved metavariable. *)
-            if ty_level < ty_level' then
-              m' := Unsolved { id = id'; ty_level }
-        | Solved vty ->
-            go ty_size' vty
-        end
+    (* Occurs check *)
+    | Meta_var m' when m == m' ->
+        raise (Infinite_type m)
+    (* Level raising *)
+    | Meta_var ({ contents = Unsolved other } as m') ->
+        (* Raise the level constraint on metavariables to match the level
+          of the to-be-solved metavariable. *)
+        if ty_level < other.ty_level then
+          m' := Unsolved { other with ty_level }
+    | Meta_var { contents = Solved vty } ->
+        go ty_size' vty
   in
   go ty_size vty
 
