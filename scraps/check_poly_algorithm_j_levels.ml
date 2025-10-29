@@ -323,6 +323,23 @@ let () = begin
   in
   assert (Check.infer expr = Error "ambiguous type");
 
+  (* For some reason hindley-milner systems (like OCaml and Haskell) allow the
+     following: *)
+  let () = (fun _f -> ()) (fun y -> y) in
+  (*                      ^^^^^^^^^^^^ this type contains unsolved metavariables! *)
+
+  (* See “No Unification Variable Left Behind” https://doi.org/10.4230/LIPIcs.ITP.2023.8
+     for more information. I’m not sure how to feel about this, as it will
+     impact elaboration to System-F in the future. *)
+
+  (* Due to the ambiguity check at the end of typechecking, this is not allowed
+     in this implementation: *)
+  let expr =
+    Let ("x", Fun_lit ("f", Unit_lit) $ Fun_lit ("y", Var "y"),
+      Unit_lit)
+  in
+  assert (Check.infer expr = Error "ambiguous type");
+
   print_string " ok!\n";
 
 end
