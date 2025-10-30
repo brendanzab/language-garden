@@ -331,6 +331,7 @@ let () = begin
     Format.asprintf "%t" (Poly_ty.pp ty)
   in
 
+  (* Examples *)
   begin
 
     (* id *)
@@ -354,9 +355,42 @@ let () = begin
     in
     assert (run_infer expr = "Unit");
 
+  end;
+
+  (* Generalisation tests. See https://okmij.org/ftp/ML/generalization.html#generalization
+     for more details *)
+  begin
+
+    let expr =
+      Fun_lit ("x",
+        Let ("y", Fun_lit ("z", Var "z"),
+          Var "y")) in
+    assert (run_infer expr = "forall a b. a -> b -> b");
+
+    (* Ensure that the unsound type [forall a b. a -> b] is not inferred.  *)
+    let expr =
+      Fun_lit ("x",
+        (* At this point the typing context contains a single entry [x : $m0].
+           To prevent [y] being assigned the unsound type [forall a. a] the
+           definition should not be generalised over the metavariable [$m0] *)
+        Let ("y", Var "x",
+          Var "y")) in
+    assert (run_infer expr = "forall a. a -> a");
+
+    let expr =
+      Fun_lit ("x",
+        Let ("y", Fun_lit ("z", Var "x"),
+          Var "y")) in
+    assert (run_infer expr = "forall a b. a -> b -> a");
+
+  end;
+
+  (* Unsolved meta tests *)
+  begin
+
     (* The following example will leave a metavariable unsolved for the of the
-      second function. See “No Unification Variable Left Behind”
-      https://doi.org/10.4230/LIPIcs.ITP.2023.8 for more information. *)
+       second function. See “No Unification Variable Left Behind”
+       https://doi.org/10.4230/LIPIcs.ITP.2023.8 for more information. *)
     let expr =
       Let ("x", Fun_lit ("f", Unit_lit) $ Fun_lit ("y", Var "y"),
         Var "x")
