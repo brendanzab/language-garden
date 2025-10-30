@@ -66,6 +66,7 @@ module Fresh = struct
 
     val fresh : unit -> t
     val compare : t -> t -> int
+    val to_int : t -> int
 
   end
 
@@ -82,6 +83,7 @@ module Fresh = struct
       x
 
     let compare = Int.compare
+    let to_int = Fun.id
 
   end
 
@@ -171,52 +173,81 @@ module Ty = struct
 
     | _, _ -> raise (Mismatched_types (ty1, ty2))
 
-  let rec zonk (ty : t) : t =
-    match ty with
-    | Var _ | Unit -> ty
-    | Meta ({ contents = Solved ty }) -> zonk ty
-    | Meta ({ contents = Unsolved _ }) -> ty
-    | Fun (param_ty, body_ty) -> Fun (zonk param_ty, zonk body_ty)
+  let pp (ty : t) (names : Id.t -> string) (ppf : Format.formatter) : unit =
+    let rec pp_ty ty ppf =
+      match ty with
+      | Meta ({ contents = Solved ty }) -> pp_ty ty ppf
+      | Fun (param_ty, body_ty) ->
+          Format.fprintf ppf "%t -> %t"
+            (pp_atomic_ty param_ty)
+            (pp_ty body_ty)
+      | ty ->
+          pp_atomic_ty ty ppf
+    and pp_atomic_ty ty ppf =
+      match ty with
+      | Var id -> Format.fprintf ppf "%s" (names id)
+      | Meta ({ contents = Solved ty }) -> pp_atomic_ty ty ppf
+      | Meta ({ contents = Unsolved { id; _ } }) -> Format.fprintf ppf "$%i" (Id.to_int id)
+      | Unit -> Format.fprintf ppf "Unit"
+      | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+    in
+    pp_ty ty ppf
+
+end
+
+(** Types that might introduce a series of type variable bindings. *)
+module Poly_ty = struct
+
+  type t =
+    | Forall of Ty.Id.t list * Ty.t
+
+  let pp (pty : t) (ppf : Format.formatter) =
+    match pty with
+    | Forall ([], ty) ->
+        Ty.pp ty (fun _ -> invalid_arg "Poly_ty.pp") ppf
+
+    | Forall (params, body_ty) ->
+        let int_to_name i =
+          let c, i = Char.chr (Char.code 'a' + i mod 26), i / 26 in
+          if i = 0 then Format.sprintf "%c" c else Format.sprintf "%c%i" c i
+        in
+        let names = List.mapi (fun i id -> id, int_to_name i) params in
+        Format.fprintf ppf "@[<2>@[forall@ @[%a@].@]@ @[%t@]@]"
+          (Format.pp_print_list Format.pp_print_string ~pp_sep:Format.pp_print_space)
+          (List.map snd names)
+          (Ty.pp body_ty (fun id -> List.assoc id names))
 
 end
 
 (** The main type checking algorithm *)
 module Check : sig
 
-  val infer : Expr.t -> (Ty.t, string) result
+  val infer : Expr.t -> (Poly_ty.t, string) result
 
 end = struct
 
   exception Error of string
 
-  (** Types that might introduce a series of type variable bindings. *)
-  type poly_ty =
-    | Forall of Ty.Id.t list * Ty.t
-
   type context = {
-    metas : Ty.meta Dynarray.t;
     ty_size : Ty.level;
-    expr_tys : (string * poly_ty) list;
+    expr_tys : (string * Poly_ty.t) list;
   }
 
-  let empty_context () = {
-    metas = Dynarray.create ();
+  let empty_ctx = {
     ty_size = 0;
     expr_tys = [];
   }
 
   let fresh_meta (ctx : context) : Ty.t =
-    let m = Ty.fresh_meta ctx.ty_size in
-    Dynarray.add_last ctx.metas m;
-    Ty.Meta m
+    Ty.Meta (Ty.fresh_meta ctx.ty_size)
 
   let extend_ty (ctx : context) : context =
     { ctx with ty_size = 1 + ctx.ty_size }
 
-  let extend_expr (ctx : context) (name : string) (ty : poly_ty) : context =
+  let extend_expr (ctx : context) (name : string) (ty : Poly_ty.t) : context =
     { ctx with expr_tys = (name, ty) :: ctx.expr_tys }
 
-  let lookup_expr (ctx : context) (name : string) : poly_ty =
+  let lookup_expr (ctx : context) (name : string) : Poly_ty.t =
     match List.assoc_opt name ctx.expr_tys with
     | Some ty -> ty
     | None -> raise (Error "unbound variable")
@@ -232,7 +263,7 @@ end = struct
       For example, a polytype [∀ a b. a -> b] would be instantiated to a
       monotype [$m1 -> $m2].
   *)
-  let instantiate (ctx : context) (Forall (ty_params, ty) : poly_ty) : Ty.t =
+  let instantiate (ctx : context) (Poly_ty.Forall (ty_params, ty) : Poly_ty.t) : Ty.t =
     Ty.subst ty (List.map (fun tv -> tv, fresh_meta ctx) ty_params)
 
   (** Turn a monotype into a polytype by finding all the unsolved metavariables
@@ -243,7 +274,7 @@ end = struct
       was introduced before the current level in the type environment, then
       [$m1 -> $m2] would generalise to [∀ a. $m1 -> a].
   *)
-  let generalise (ctx : context) (t : Ty.t) : poly_ty =
+  let generalise (ctx : context) (t : Ty.t) : Poly_ty.t =
     let ty_ids = ref [] in
     let rec go t =
       match t with
@@ -261,7 +292,7 @@ end = struct
     in
     go t;
     let ty_params = List.sort_uniq Ty.Id.compare !ty_ids in
-    Forall (ty_params, t)
+    Poly_ty.Forall (ty_params, t)
 
   let rec infer (ctx : context) (expr : Expr.t) : Ty.t =
     match expr with
@@ -272,7 +303,7 @@ end = struct
         infer (extend_expr ctx x (generalise ctx def_ty)) body
     | Expr.Fun_lit (x, body) ->
         let param_ty = fresh_meta ctx in
-        let body_ty = infer (extend_expr ctx x (Forall ([], param_ty))) body in
+        let body_ty = infer (extend_expr ctx x (Poly_ty.Forall ([], param_ty))) body in
         Ty.Fun (param_ty, body_ty)
     | Expr.Fun_app (fn, arg) ->
         let fn_ty = infer ctx fn in
@@ -283,15 +314,10 @@ end = struct
     | Expr.Unit_lit ->
         Ty.Unit
 
-  let infer (expr : Expr.t) : (Ty.t, string) result =
+  let infer (expr : Expr.t) : (Poly_ty.t, string) result =
     try
-      let ctx = empty_context () in
-      let ty = infer ctx expr in
-      ctx.metas |> Dynarray.iter begin function
-        | { contents = Ty.Solved _ } -> ()
-        | { contents = Ty.Unsolved _ } -> raise (Error "ambiguous type")
-      end;
-      Ok (Ty.zonk ty)
+      let ctx = empty_ctx in
+      Ok (generalise ctx (infer (extend_ty ctx) expr))
     with
     | Error msg -> Error msg
 
@@ -305,40 +331,44 @@ let () = begin
 
   let ( $ ) f x = Fun_app (f, x) in
 
-  let expr =
-    Let ("id", Fun_lit ("x", Var "x"),
-      Var "id" $ Unit_lit)
+  let run_infer expr =
+    let ty = Check.infer expr |> Result.get_ok in
+    Format.asprintf "%t" (Poly_ty.pp ty)
   in
-  assert (Check.infer expr = Ok Ty.Unit);
 
-  let expr =
-    Let ("id", Fun_lit ("x", Var "x"),
-      Let ("const", Fun_lit ("x", Fun_lit ("y", Var "x")),
-        Var "const" $ Var "id" $ Unit_lit $ Unit_lit))
-  in
-  assert (Check.infer expr = Ok Ty.Unit);
+  begin
 
-  let expr =
-    Fun_lit ("x", Var "x")
-  in
-  assert (Check.infer expr = Error "ambiguous type");
+    (* id *)
+    let id_expr = Fun_lit ("x", Var "x") in
+    assert (run_infer id_expr = "forall a. a -> a");
 
-  (* For some reason hindley-milner systems (like OCaml and Haskell) allow the
-     following: *)
-  let () = (fun _f -> ()) (fun y -> y) in
-  (*                      ^^^^^^^^^^^^ this type contains unsolved metavariables! *)
+    (* const *)
+    let const_expr = Fun_lit ("x", Fun_lit ("y", Var "x")) in
+    assert (run_infer const_expr = "forall a b. a -> b -> a");
 
-  (* See “No Unification Variable Left Behind” https://doi.org/10.4230/LIPIcs.ITP.2023.8
-     for more information. I’m not sure how to feel about this, as it will
-     impact elaboration to System-F in the future. *)
+    let expr =
+      Let ("id", id_expr,
+        Var "id" $ Unit_lit)
+    in
+    assert (run_infer expr = "Unit");
 
-  (* Due to the ambiguity check at the end of typechecking, this is not allowed
-     in this implementation: *)
-  let expr =
-    Let ("x", Fun_lit ("f", Unit_lit) $ Fun_lit ("y", Var "y"),
-      Unit_lit)
-  in
-  assert (Check.infer expr = Error "ambiguous type");
+    let expr =
+      Let ("id", id_expr,
+        Let ("const", const_expr,
+          Var "const" $ Var "id" $ Unit_lit $ Unit_lit))
+    in
+    assert (run_infer expr = "Unit");
+
+    (* The following example will leave a metavariable unsolved for the of the
+      second function. See “No Unification Variable Left Behind”
+      https://doi.org/10.4230/LIPIcs.ITP.2023.8 for more information. *)
+    let expr =
+      Let ("x", Fun_lit ("f", Unit_lit) $ Fun_lit ("y", Var "y"),
+        Var "x")
+    in
+    assert (run_infer expr = "Unit");
+
+  end;
 
   print_string " ok!\n";
 
