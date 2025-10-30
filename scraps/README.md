@@ -53,7 +53,7 @@ Type checking:
 - [**check_stlc_inference_rules_bidir.ml**](./check_stlc_inference_rules_bidir.ml):
   A demonstration of translating bidirectional inference rules for the STLC into
   a type inference algorithm.
-- [**check_poly_algorithm_j_levels.ml**](./check_poly_algorithm_j_levels.ml):
+- [**check_poly_algorithm_j.ml**](./check_poly_algorithm_j.ml):
   Type inference for a polymorphic polymorphic functional language using
   in-place, imperative unification (i.e. Algorithm J). Levels are used to
   improve the performance of generalisation.
