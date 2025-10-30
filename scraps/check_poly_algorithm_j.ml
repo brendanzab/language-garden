@@ -203,14 +203,15 @@ module Poly_ty = struct
     | Ty of Ty.t
 
   let pp (pty : t) (ppf : Format.formatter) =
-    let int_to_name i =
-      let c, i = Char.chr (Char.code 'a' + i mod 26), i / 26 in
-      if i = 0 then Format.sprintf "%c" c else Format.sprintf "%c%i" c i
-    in
     let rec go i names pty =
       match pty with
       | Forall (id, body_ty) ->
-          go (i + 1) ((id, int_to_name i) :: names) body_ty
+          let name =
+            match Char.chr (Char.code 'a' + i mod 26), i / 26 with
+            | c, 0 -> Format.sprintf "%c" c
+            | c, i -> Format.sprintf "%c%i" c i
+          in
+          go (i + 1) ((id, name) :: names) body_ty
       | Ty ty ->
           let lookup_name id = List.assoc id names in
           if i = 0 then Ty.pp ty lookup_name ppf else
