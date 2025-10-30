@@ -199,23 +199,27 @@ end
 module Poly_ty = struct
 
   type t =
-    | Forall of Ty.Id.t list * Ty.t
+    | Forall of Ty.Id.t * t
+    | Ty of Ty.t
 
   let pp (pty : t) (ppf : Format.formatter) =
-    match pty with
-    | Forall ([], ty) ->
-        Ty.pp ty (fun _ -> invalid_arg "Poly_ty.pp") ppf
-
-    | Forall (params, body_ty) ->
-        let int_to_name i =
-          let c, i = Char.chr (Char.code 'a' + i mod 26), i / 26 in
-          if i = 0 then Format.sprintf "%c" c else Format.sprintf "%c%i" c i
-        in
-        let names = List.mapi (fun i id -> id, int_to_name i) params in
-        Format.fprintf ppf "@[<2>@[forall@ @[%a@].@]@ @[%t@]@]"
-          (Format.pp_print_list Format.pp_print_string ~pp_sep:Format.pp_print_space)
-          (List.map snd names)
-          (Ty.pp body_ty (fun id -> List.assoc id names))
+    let int_to_name i =
+      let c, i = Char.chr (Char.code 'a' + i mod 26), i / 26 in
+      if i = 0 then Format.sprintf "%c" c else Format.sprintf "%c%i" c i
+    in
+    let rec go i names pty =
+      match pty with
+      | Forall (id, body_ty) ->
+          go (i + 1) ((id, int_to_name i) :: names) body_ty
+      | Ty ty ->
+          let lookup_name id = List.assoc id names in
+          if i = 0 then Ty.pp ty lookup_name ppf else
+            Format.fprintf ppf "@[<2>@[forall@ @[%a@].@]@ @[%t@]@]"
+              (Format.pp_print_list Format.pp_print_string ~pp_sep:Format.pp_print_space)
+              (List.rev_map snd names)
+              (Ty.pp ty lookup_name)
+    in
+    go 0 [] pty
 
 end
 
@@ -263,8 +267,13 @@ end = struct
       For example, a polytype [∀ a b. a -> b] would be instantiated to a
       monotype [$m1 -> $m2].
   *)
-  let instantiate (ctx : context) (Poly_ty.Forall (ty_params, ty) : Poly_ty.t) : Ty.t =
-    Ty.subst ty (List.map (fun tv -> tv, fresh_meta ctx) ty_params)
+  let instantiate (ctx : context) (pty : Poly_ty.t) : Ty.t =
+    let rec go metas pty =
+      match pty with
+      | Poly_ty.Forall (ty_id, body_ty) -> go ((ty_id, fresh_meta ctx) :: metas) body_ty
+      | Poly_ty.Ty ty -> Ty.subst ty metas
+    in
+    go [] pty
 
   (** Turn a monotype into a polytype by finding all the unsolved metavariables
       that have been introduced after the current level in the type environment,
@@ -287,7 +296,9 @@ end = struct
           S.singleton id
       | Ty.Meta { contents = Unsolved _ } -> S.empty
     in
-    Poly_ty.Forall (S.to_list (ty_params ty), ty)
+    ListLabels.fold_right (S.to_list (ty_params ty))
+      ~init:(Poly_ty.Ty ty)
+      ~f:(fun ty_id pty -> Poly_ty.Forall (ty_id, pty))
 
   let rec infer (ctx : context) (expr : Expr.t) : Ty.t =
     match expr with
@@ -298,7 +309,7 @@ end = struct
         infer (extend_expr ctx x (generalise ctx def_ty)) body
     | Expr.Fun_lit (x, body) ->
         let param_ty = fresh_meta ctx in
-        let body_ty = infer (extend_expr ctx x (Poly_ty.Forall ([], param_ty))) body in
+        let body_ty = infer (extend_expr ctx x (Poly_ty.Ty param_ty)) body in
         Ty.Fun (param_ty, body_ty)
     | Expr.Fun_app (fn, arg) ->
         let fn_ty = infer ctx fn in
