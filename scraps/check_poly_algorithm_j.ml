@@ -42,6 +42,7 @@
     - Robin Milner, “A theory of type polymorphism in programming”, 1978 https://doi.org/10.1016/0022-0000(78)90014-4
     - Wikipedia, “Hindley–Milner type system - Algorithm J”, https://en.wikipedia.org/wiki/Hindley%E2%80%93Milner_type_system#Algorithm_J
     - Oleg Kiselyov, “Efficient and insightful generalization”, https://okmij.org/ftp/ML/generalization.html
+    - Didier Rémy, “Extension of ML type system with a sorted equation theory on types”, https://inria.hal.science/inria-00077006
     - Richard Eisenberg, “Type inference in OCaml and GHC using Levels”, https://www.youtube.com/watch?v=iFUrhTQi0-U
 *)
 
