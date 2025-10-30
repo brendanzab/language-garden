@@ -128,8 +128,8 @@ module Ty = struct
   let rec subst (ty : t) (mapping : (Id.t * t) list) : t =
     match ty with
     | Var id -> List.assoc_opt id mapping |> Option.value ~default:ty
-    | Meta ({ contents = Solved ty }) -> subst ty mapping
-    | Meta ({ contents = Unsolved _}) -> ty
+    | Meta { contents = Solved ty } -> subst ty mapping
+    | Meta { contents = Unsolved _} -> ty
     | Fun (param_ty, body_ty) -> Fun (subst param_ty mapping, subst body_ty mapping)
     | Unit -> Unit
 
@@ -162,8 +162,8 @@ module Ty = struct
         unify size body_ty1 body_ty2
 
     (* Unify through solved metavariables *)
-    | Meta ({ contents = Solved ty1 }), ty2 -> unify size ty1 ty2
-    | ty1, Meta ({ contents = Solved ty2 }) -> unify size ty1 ty2
+    | Meta { contents = Solved ty1 }, ty2 -> unify size ty1 ty2
+    | ty1, Meta { contents = Solved ty2 } -> unify size ty1 ty2
 
     (* Update unsolved metavariables in-place *)
     | Meta ({ contents = Unsolved { level; _ } } as m), ty
@@ -186,8 +186,8 @@ module Ty = struct
     and pp_atomic_ty ty ppf =
       match ty with
       | Var id -> Format.fprintf ppf "%s" (names id)
-      | Meta ({ contents = Solved ty }) -> pp_atomic_ty ty ppf
-      | Meta ({ contents = Unsolved { id; _ } }) -> Format.fprintf ppf "$%i" (Id.to_int id)
+      | Meta { contents = Solved ty } -> pp_atomic_ty ty ppf
+      | Meta { contents = Unsolved { id; _ } } -> Format.fprintf ppf "$%i" (Id.to_int id)
       | Unit -> Format.fprintf ppf "Unit"
       | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
     in
@@ -281,7 +281,7 @@ end = struct
       | Ty.Var _ -> S.empty
       | Ty.Unit -> S.empty
       | Ty.Fun (param_ty, body_ty) -> S.union (ty_params param_ty) (ty_params body_ty)
-      | Ty.Meta ({ contents = Solved ty }) -> ty_params ty
+      | Ty.Meta { contents = Solved ty } -> ty_params ty
       | Ty.Meta ({ contents = Unsolved { id; level } } as m) when ctx.ty_size < level ->
           m := Solved (Var id);
           S.singleton id
