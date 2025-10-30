@@ -274,25 +274,20 @@ end = struct
       was introduced before the current level in the type environment, then
       [$m1 -> $m2] would generalise to [∀ a. $m1 -> a].
   *)
-  let generalise (ctx : context) (t : Ty.t) : Poly_ty.t =
-    let ty_ids = ref [] in
-    let rec go t =
-      match t with
-      | Ty.Var _ -> ()
-      | Ty.Unit -> ()
-      | Ty.Fun (param_ty, body_ty) ->
-          go param_ty;
-          go body_ty
-      | Ty.Meta ({ contents = Solved t }) -> go t
-      | Ty.Meta ({ contents = Unsolved { id; level } } as m) ->
-          if ctx.ty_size < level then begin
-            ty_ids := id :: !ty_ids;
-            m := Solved (Var id);
-          end
+  let generalise (ctx : context) (ty : Ty.t) : Poly_ty.t =
+    let module S = Set.Make (Ty.Id) in
+    let rec ty_params ty =
+      match ty with
+      | Ty.Var _ -> S.empty
+      | Ty.Unit -> S.empty
+      | Ty.Fun (param_ty, body_ty) -> S.union (ty_params param_ty) (ty_params body_ty)
+      | Ty.Meta ({ contents = Solved ty }) -> ty_params ty
+      | Ty.Meta ({ contents = Unsolved { id; level } } as m) when ctx.ty_size < level ->
+          m := Solved (Var id);
+          S.singleton id
+      | Ty.Meta { contents = Unsolved _ } -> S.empty
     in
-    go t;
-    let ty_params = List.sort_uniq Ty.Id.compare !ty_ids in
-    Poly_ty.Forall (ty_params, t)
+    Poly_ty.Forall (S.to_list (ty_params ty), ty)
 
   let rec infer (ctx : context) (expr : Expr.t) : Ty.t =
     match expr with
