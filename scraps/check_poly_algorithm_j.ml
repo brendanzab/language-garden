@@ -177,7 +177,7 @@ module Ty = struct
   let pp (ty : t) (names : Id.t -> string) (ppf : Format.formatter) : unit =
     let rec pp_ty ty ppf =
       match ty with
-      | Meta ({ contents = Solved ty }) -> pp_ty ty ppf
+      | Meta { contents = Solved ty } -> pp_ty ty ppf
       | Fun (param_ty, body_ty) ->
           Format.fprintf ppf "%t -> %t"
             (pp_atomic_ty param_ty)
