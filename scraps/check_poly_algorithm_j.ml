@@ -288,8 +288,9 @@ end = struct
       that have been introduced after the current level in the type environment,
       and binding them as parameters in a forall.
 
-      For example, [$m1 -> $m2] would be generalise to [∀ a b. a -> b]. If [$m1]
-      was introduced before the current level in the type environment, then
+      For example, [$m1 -> $m2] generalises to [∀ a b. a -> b] if they were both
+      introduced {i after} the current level in the type environment. If [$m1]
+      was introduced {i before} the current level in the type environment, then
       [$m1 -> $m2] would generalise to [∀ a. $m1 -> a].
   *)
   let generalise (ctx : context) (ty : Ty.t) : Poly_ty.t =
