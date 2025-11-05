@@ -133,7 +133,7 @@ module Ty = struct
     match ty with
     | Var id -> List.assoc_opt id mapping |> Option.value ~default:ty
     | Meta { contents = Solved ty } -> subst ty mapping
-    | Meta { contents = Unsolved _} -> ty
+    | Meta { contents = Unsolved _ } -> ty
     | Fun (param_ty, body_ty) -> Fun (subst param_ty mapping, subst body_ty mapping)
     | Unit -> Unit
     | Bool -> Bool
