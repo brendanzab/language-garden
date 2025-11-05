@@ -55,6 +55,8 @@ module Expr = struct
     | Fun_lit of string * t
     | Fun_app of t * t
     | Unit_lit
+    | Bool_lit of bool
+    | Bool_if of t * t * t
 
 end
 
@@ -110,6 +112,7 @@ module Ty = struct
     | Meta of meta        (* Metavariables (used for unification) *)
     | Fun of t * t
     | Unit
+    | Bool
 
   (** Mutable representation of metavariables, to be updated in-place during
       unification and typechecking *)
@@ -133,6 +136,7 @@ module Ty = struct
     | Meta { contents = Unsolved _} -> ty
     | Fun (param_ty, body_ty) -> Fun (subst param_ty mapping, subst body_ty mapping)
     | Unit -> Unit
+    | Bool -> Bool
 
   exception Mismatched_types of t * t
   exception Infinite_type
@@ -146,6 +150,7 @@ module Ty = struct
         occurs m level param_ty;
         occurs m level body_ty
     | Unit -> ()
+    | Bool -> ()
     (* Occurs check and level raising *)
     | Meta m' when m == m' -> raise Infinite_type
     | Meta { contents = Solved ty } -> occurs m level ty
@@ -158,6 +163,7 @@ module Ty = struct
     | Var id1, Var id2 when id1 = id2 -> ()
     | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
     | Unit, Unit -> ()
+    | Bool, Bool -> ()
     | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
         unify size param_ty1 param_ty2;
         unify size body_ty1 body_ty2
@@ -190,6 +196,7 @@ module Ty = struct
       | Meta { contents = Solved ty } -> pp_atomic_ty ty ppf
       | Meta { contents = Unsolved { id; _ } } -> Format.fprintf ppf "$%i" (Id.to_int id)
       | Unit -> Format.fprintf ppf "Unit"
+      | Bool -> Format.fprintf ppf "Bool"
       | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
     in
     pp_ty ty ppf
@@ -291,6 +298,7 @@ end = struct
       match ty with
       | Ty.Var _ -> S.empty
       | Ty.Unit -> S.empty
+      | Ty.Bool -> S.empty
       | Ty.Fun (param_ty, body_ty) -> S.union (ty_params param_ty) (ty_params body_ty)
       | Ty.Meta { contents = Solved ty } -> ty_params ty
       | Ty.Meta ({ contents = Unsolved { id; level } } as m) when ctx.ty_size < level ->
@@ -321,6 +329,14 @@ end = struct
         body_ty
     | Expr.Unit_lit ->
         Ty.Unit
+    | Expr.Bool_lit _ ->
+        Ty.Bool
+    | Expr.Bool_if (bool, if_true, if_false) ->
+        unify ctx Ty.Bool (infer ctx bool);
+        let if_true_ty = infer ctx if_true in
+        let if_false_ty = infer ctx if_false in
+        unify ctx if_true_ty if_false_ty;
+        if_true_ty
 
   let infer (expr : Expr.t) : (Poly_ty.t, string) result =
     try
@@ -367,6 +383,16 @@ let () = begin
           Var "const" $ Var "id" $ Unit_lit $ Unit_lit))
     in
     assert (run_infer expr = "Unit");
+
+    let expr =
+      Let ("id", id_expr,
+        Let ("const", const_expr,
+          Fun_lit ("x",
+            Bool_if (Var "x",
+              Var "id",
+              Var "const" $ Bool_lit true))))
+    in
+    assert (run_infer expr = "Bool -> Bool -> Bool");
 
   end;
 
