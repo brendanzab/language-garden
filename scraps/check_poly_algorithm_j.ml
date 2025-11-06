@@ -350,6 +350,8 @@ end
 
 let () = begin
 
+  Printexc.record_backtrace true;
+
   print_string "Running tests ...";
 
   let open Expr in
