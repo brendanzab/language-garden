@@ -47,6 +47,7 @@
 (test (name misc_landins_knot))
 (test (name misc_local_datatypes))
 (test (name misc_nat_int_repr))
+(test (name misc_objects_as_closures_over_state))
 (test (name misc_option_shapes))
 (test (name misc_set_objects))
 (test (name misc_unembedding_hoas))

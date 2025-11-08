@@ -136,6 +136,8 @@ Miscellaneous:
   Natural numbers, represented internally as integers for improved performance.
 - [**misc_local_datatypes.ml**](./misc_local_datatypes.ml):
   Demonstration local datatype definitions in OCaml.
+- [**misc_objects_as_closures_over_state.ml**](./misc_objects_as_closures_over_state.ml):
+  Objects and classes arising from a combination of closures and mutable state.
 - [**misc_option_shapes.ml**](./misc_option_shapes.ml):
   Exposing introduction and elimination forms for variant types, without
   exposing the underlying representation.
