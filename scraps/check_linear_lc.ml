@@ -84,70 +84,78 @@ end = struct
     Format.kasprintf (fun msg -> raise (Type_error msg)) f
 
 
-  (** The number of times a binding has been used *)
-  module Uses = struct
+  (** Typing contexts *)
+  module Ctx : sig
 
-    type t =
+    type t
+
+    val empty : t
+
+    val add : string -> Ty.t -> t -> t
+    val remove : t -> t
+    val lookup : t -> string -> t * Ty.t
+
+    val equate_usages : t -> t -> bool
+    val is_empty : t -> bool
+
+  end = struct
+
+    (** The number of times a binding has been used *)
+    type uses =
       | Zero    (* Unused *)
       | One     (* Used once *)
+
+    type t = (string * Ty.t * uses) list
+
+    let empty = []
+
+    let add (x : string) (ty : Ty.t) (ctx : t) : t =
+      (x, ty, Zero) :: ctx
+
+    let remove (ctx : t) : t =
+      match ctx with
+      | (_, _, One) :: ctx -> ctx
+      | (x, _, Zero) :: _ -> type_error "unused variable `%s`" x
+      | [] -> failwith "bug: no bindings left to remove"
+
+    let lookup (ctx : t) (x : string) : t * Ty.t =
+      let rec go acc ctx =
+        match ctx with
+        | (x', ty, Zero) :: ctx when x = x' -> List.rev_append acc ((x', ty, One) :: ctx), ty
+        | (x', _, One) :: _ when x = x' -> type_error "variable `%s` has already been used" x
+        | entry :: ctx -> go (entry :: acc) ctx
+        | [] -> type_error "unbound variable `%s`" x
+      in
+      go [] ctx
+
+    let equate_usages (ctx1 : t) (ctx2 : t) : bool =
+      (* TODO: return the variable names that differ to improve error reporting *)
+      List.equal (fun (_, _, u1) (_, _, u2) -> u1 = u2) ctx1 ctx2
+
+    let is_empty (ctx : t) : bool =
+      List.is_empty ctx
 
   end
 
 
-  (** Typing contexts *)
-
-  type context = (string * Ty.t * Uses.t) list
-
-  (* TODO: return the variable names that differ *)
-  let equate_usages (ctx1 : context) (ctx2 : context) : bool =
-    List.equal (fun (_, _, u1) (_, _, u2) -> u1 = u2) ctx1 ctx2
-
-  let lookup (ctx : context) (x : string) : context * Ty.t =
-    let rec go acc ctx =
-      match ctx with
-      | (x', ty, Uses.Zero) :: ctx when x = x' -> List.rev_append acc ((x', ty, Uses.One) :: ctx), ty
-      | (x', _, Uses.One) :: _ when x = x' -> type_error "variable `%s` has already been used" x
-      | entry :: ctx -> go (entry :: acc) ctx
-      | [] -> type_error "unbound variable `%s`" x
-    in
-    go [] ctx
-
-  let add_binding (x : string) (ty : Ty.t) (ctx : context) : context =
-    (x, ty, Uses.Zero) :: ctx
-
-  let drop_binding (ctx : context) : context =
-    match ctx with
-    | (_, _, Uses.One) :: ctx -> ctx
-    | (x, _, Uses.Zero) :: _ -> type_error "unused variable `%s`" x
-    | [] -> failwith "no bindings"
-
-
   (** Bidirectional type checking *)
 
-  let check_binder (ctx : context) (x : string) (ty : Ty.t) (k : context -> context) : context =
-    k (ctx |> add_binding x ty) |> drop_binding
-
-  let infer_binder (ctx : context) (x : string) (ty : Ty.t) (k : context -> context * Ty.t) : context * Ty.t =
-    let ctx, ty = k (ctx |> add_binding x ty) in
-    ctx |> drop_binding, ty
-
-  let rec check (ctx : context) (expr : Expr.t) (ty : Ty.t) : context =
+  let rec check (ctx : Ctx.t) (expr : Expr.t) (ty : Ty.t) : Ctx.t =
     match expr, ty with
     | Expr.Let (x, def, body), body_ty ->
         let ctx, def_ty = infer ctx def in
-        check_binder ctx x def_ty @@ fun ctx ->
-          check ctx body body_ty
+        let ctx = check (ctx |> Ctx.add x def_ty) body body_ty in
+        ctx |> Ctx.remove
 
     | Expr.Fun_lit (x, body), Ty.Fun (param_ty, body_ty) ->
-        check_binder ctx x param_ty @@ fun ctx ->
-          check ctx body body_ty
+        let ctx = check (ctx |> Ctx.add x param_ty) body body_ty in
+        ctx |> Ctx.remove
 
     | Expr.Pair_let (x1, x2, pair, body), body_ty ->
         begin match infer ctx pair with
         | ctx, Ty.Pair (ty1, ty2) ->
-            check_binder ctx x1 ty1 @@ fun ctx ->
-              check_binder ctx x2 ty2 @@ fun ctx ->
-                check ctx body body_ty
+            let ctx = check (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body body_ty in
+            ctx |> Ctx.remove |> Ctx.remove
         | _, ty -> type_error "expected pair, found: %t" (Ty.pp ty)
         end
 
@@ -160,9 +168,9 @@ end = struct
     | Expr.Either_case (either, (x1, body1), (x2, body2)), body_ty ->
         begin match infer ctx either with
         | ctx, Ty.Either (ty1, ty2) ->
-            let ctx1 = check_binder ctx x1 ty1 @@ fun ctx -> check ctx body1 body_ty in
-            let ctx2 = check_binder ctx x2 ty2 @@ fun ctx -> check ctx body2 body_ty in
-            if equate_usages ctx1 ctx2 then ctx1 else
+            let ctx1 = check (ctx |> Ctx.add x1 ty1) body1 body_ty |> Ctx.remove in
+            let ctx2 = check (ctx |> Ctx.add x2 ty2) body2 body_ty |> Ctx.remove in
+            if Ctx.equate_usages ctx1 ctx2 then ctx1 else
               type_error "branches did not use the same variables"
         | _, ty -> type_error "expected either, found: %t" (Ty.pp ty)
         end
@@ -172,15 +180,15 @@ end = struct
         if ty = found_ty then ctx else
           type_error "expected: %t, found: %t" (Ty.pp ty) (Ty.pp found_ty)
 
-  and infer (ctx : context) (expr : Expr.t) : context * Ty.t =
+  and infer (ctx : Ctx.t) (expr : Expr.t) : Ctx.t * Ty.t =
     match expr with
     | Expr.Var x ->
-        lookup ctx x
+        Ctx.lookup ctx x
 
     | Expr.Let (x, def, body) ->
         let ctx, def_ty = infer ctx def in
-        infer_binder ctx x def_ty @@ fun ctx ->
-          infer ctx body
+        let ctx, body_ty = infer (ctx |> Ctx.add x def_ty) body in
+        ctx |> Ctx.remove, body_ty
 
     | Expr.Ann (expr, ty) ->
         check ctx expr ty, ty
@@ -199,9 +207,8 @@ end = struct
     | Expr.Pair_let (x1, x2, pair, body) ->
         begin match infer ctx pair with
         | ctx, Ty.Pair (ty1, ty2) ->
-            infer_binder ctx x1 ty1 @@ fun ctx ->
-              infer_binder ctx x2 ty2 @@ fun ctx ->
-                infer ctx body
+            let ctx, body_ty = infer (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body in
+            ctx |> Ctx.remove |> Ctx.remove, body_ty
         | _, ty -> type_error "expected pair, found: %t" (Ty.pp ty)
         end
 
@@ -217,20 +224,20 @@ end = struct
 
   (** Running the type checker *)
 
-  let run (type a) (prog : unit -> context * a) : (a, string) result =
+  let run (type a) (prog : unit -> Ctx.t * a) : (a, string) result =
     match prog () with
-    | [], x -> Ok x
-    | _ :: _, _ -> failwith "unused bindings"
+    | ctx, x when Ctx.is_empty ctx -> Ok x
+    | _, _ -> failwith "bug: unused bindings remaining after typechecking"
     | exception Type_error msg -> Error msg
 
 
   (** Public API *)
 
   let check (expr : Expr.t) (ty : Ty.t) : (unit, string) result =
-    run (fun () -> check [] expr ty, ())
+    run (fun () -> check Ctx.empty expr ty, ())
 
   let infer (expr : Expr.t) : (Ty.t, string) result =
-    run (fun () -> infer [] expr)
+    run (fun () -> infer Ctx.empty expr)
 
 end
 
