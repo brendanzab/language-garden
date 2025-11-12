@@ -76,10 +76,13 @@ module Check : sig
 
 end = struct
 
+  (** Error handling*)
+
   exception Type_error of string
 
   let type_error (type a b) (f : (b, Format.formatter, unit, a) format4) : b =
     Format.kasprintf (fun msg -> raise (Type_error msg)) f
+
 
   (** The number of times a binding has been used *)
   module Uses = struct
@@ -89,6 +92,9 @@ end = struct
       | One     (* Used once *)
 
   end
+
+
+  (** Typing contexts *)
 
   type context = (string * Ty.t * Uses.t) list
 
@@ -114,6 +120,9 @@ end = struct
     | (_, _, Uses.One) :: ctx -> ctx
     | (x, _, Uses.Zero) :: _ -> type_error "unused variable `%s`" x
     | [] -> failwith "no bindings"
+
+
+  (** Bidirectional type checking *)
 
   let check_binder (ctx : context) (x : string) (ty : Ty.t) (k : context -> context) : context =
     k (ctx |> add_binding x ty) |> drop_binding
@@ -205,11 +214,17 @@ end = struct
     | Expr.Either_case _ ->
         type_error "type annotations needed"
 
+
+  (** Running the type checker *)
+
   let run (type a) (prog : unit -> context * a) : (a, string) result =
     match prog () with
     | [], x -> Ok x
     | _ :: _, _ -> failwith "unused bindings"
     | exception Type_error msg -> Error msg
+
+
+  (** Public API *)
 
   let check (expr : Expr.t) (ty : Ty.t) : (unit, string) result =
     run (fun () -> check [] expr ty, ())
