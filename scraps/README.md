@@ -62,7 +62,7 @@ Type checking:
 - [**check_plain_data.ml**](./check_plain_data.ml):
   A simple implementation of type inference for JSON-style objects.
 - [**check_linear_lc.ml**](./check_linear_lc.ml):
-  A linear lambda calculus.
+  A linear lambda calculus that ensures each binding is used exactly once.
 
 Elaboration:
 

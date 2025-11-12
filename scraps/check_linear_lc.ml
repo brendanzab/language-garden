@@ -1,4 +1,9 @@
-(** A linear lambda calculus.
+(** A linear lambda calculus that ensures each binding is used exactly once.
+
+    In order to translate the declarative presentation of linear lambda
+    calculus into an algorithm we use input and output contexts in a style
+    similar to the one shown by David Walker in “Advanced Topics in Types and
+    Programming Languages”.
 
     We don’t have unrestricted bindings, only linear bindings, which implies
     that every binding is unique as well (see {{: https://doi.org/10.1007/978-3-030-99336-8_13}
@@ -16,10 +21,10 @@
 
     {2 Resources}
 
-    - David Walker, “Chapter 1: A Linear Type System” in Advanced Topics in
-      Types and Programming Languages
-    - Frank Pfenning, {{: https://www.cs.cmu.edu/~fp/courses/15816-f01/lectures/lecture19.html}
-      “Lecture 19: Linear Type Theory”}
+    - David Walker. 2002. A Linear Type System. In Benjamin C. Peirce (Ed).
+      Advanced Topics in Types and Programming Languages. https://www.cis.upenn.edu/~bcpierce/attapl/
+    - Frank Pfenning. 2001. Linear Type Theory.
+      https://www.cs.cmu.edu/~fp/courses/15816-f01/handouts/lintt.pdf
 *)
 
 module Ty = struct
@@ -89,18 +94,29 @@ end = struct
 
     type t
 
+    (** A context with no bindings in it *)
     val empty : t
 
+    (** Add an unused binding to the context *)
     val add : string -> Ty.t -> t -> t
+
+    (** Remove the most recently added binding from the context, raising a type
+        error if it has not yet been used *)
     val remove : t -> t
+
+    (** Lookup the type of an unused variable in the context, returning a new
+        context with the binding marked as used *)
     val lookup : t -> string -> t * Ty.t
 
-    val equate_usages : t -> t -> bool
+    (** [true] if there are no bindings in the context *)
     val is_empty : t -> bool
+
+    (** [true] if both contexts have the same bindings marked as used *)
+    val equate_usages : t -> t -> bool
 
   end = struct
 
-    (** The number of times a binding has been used *)
+    (** The number of times a binding has been used. *)
     type uses =
       | Zero    (* Unused *)
       | One     (* Used once *)
@@ -108,6 +124,13 @@ end = struct
     type t = (string * Ty.t * uses) list
 
     let empty = []
+
+    let is_empty (ctx : t) : bool =
+      List.is_empty ctx
+
+    let equate_usages (ctx1 : t) (ctx2 : t) : bool =
+      (* TODO: return the variable names that differ to improve error reporting *)
+      List.equal (fun (_, _, u1) (_, _, u2) -> u1 = u2) ctx1 ctx2
 
     let add (x : string) (ty : Ty.t) (ctx : t) : t =
       (x, ty, Zero) :: ctx
@@ -127,13 +150,6 @@ end = struct
         | [] -> type_error "unbound variable `%s`" x
       in
       go [] ctx
-
-    let equate_usages (ctx1 : t) (ctx2 : t) : bool =
-      (* TODO: return the variable names that differ to improve error reporting *)
-      List.equal (fun (_, _, u1) (_, _, u2) -> u1 = u2) ctx1 ctx2
-
-    let is_empty (ctx : t) : bool =
-      List.is_empty ctx
 
   end
 
