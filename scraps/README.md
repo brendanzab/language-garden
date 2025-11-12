@@ -61,6 +61,8 @@ Type checking:
   A small dependent type system, implemented in SWI-Prolog using normalisation-by-evaluation.
 - [**check_plain_data.ml**](./check_plain_data.ml):
   A simple implementation of type inference for JSON-style objects.
+- [**check_linear_lc.ml**](./check_linear_lc.ml):
+  A linear lambda calculus.
 
 Elaboration:
 
