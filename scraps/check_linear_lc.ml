@@ -34,6 +34,8 @@ module Ty = struct
     | Pair of t * t       (* Multiplicative conjunction [t1 ⊗ t2] *)
     | Either of t * t     (* Additive disjunction [t1 ⊕ t2]*)
     | Unit                (* Unit type *)
+    | Int                 (* Integers *)
+    | Ref of t            (* Memory references *)
     [@@warning "-unused-constructor"]
 
   let pp (ty : t) (ppf : Format.formatter) =
@@ -43,13 +45,18 @@ module Ty = struct
       | ty -> pp_infix ty ppf
     and pp_infix ty ppf =
       match ty with
-      | Pair (ty1, ty2) -> Format.fprintf ppf "%t ⊗ %t" (pp_atomic ty1) (pp_atomic ty2)
-      | Either (ty1, ty2) -> Format.fprintf ppf "%t ⊕ %t" (pp_atomic ty1) (pp_atomic ty2)
+      | Pair (ty1, ty2) -> Format.fprintf ppf "%t ⊗ %t" (pp_app ty1) (pp_app ty2)
+      | Either (ty1, ty2) -> Format.fprintf ppf "%t ⊕ %t" (pp_app ty1) (pp_app ty2)
+      | ty -> pp_app ty ppf
+    and pp_app ty ppf =
+      match ty with
+      | Ref ty -> Format.fprintf ppf "Ref %t" (pp_atomic ty)
       | ty -> pp_atomic ty ppf
     and pp_atomic ty ppf =
       match ty with
       | Unit -> Format.fprintf ppf "Unit"
-      | Fun _ | Pair _ | Either _ as ty ->
+      | Int -> Format.fprintf ppf "Int"
+      | Fun _ | Pair _ | Either _ | Ref _ as ty ->
           Format.fprintf ppf "(%t)" (pp_fun ty)
     in
     pp_fun ty ppf
@@ -65,11 +72,13 @@ module Expr = struct
     | Fun_lit of string * t
     | Fun_app of t * t
     | Pair_lit of t * t
-    | Pair_let of string * string * t * t
+    | Pair_elim of string * string * t * t
     | Either_left of t
     | Either_right of t
-    | Either_case of t * (string * t) * (string * t)
+    | Either_elim of t * (string * t) * (string * t)
     | Unit_lit
+    | Unit_elim of t * t
+    | Prim of [ `Alloc | `Free | `Swap ] * t list
     [@@warning "-unused-constructor"]
 
 end
@@ -167,12 +176,12 @@ end = struct
         let ctx = check (ctx |> Ctx.add x param_ty) body body_ty in
         ctx |> Ctx.remove
 
-    | Expr.Pair_let (x1, x2, pair, body), body_ty ->
+    | Expr.Pair_elim (x1, x2, pair, body), body_ty ->
         begin match infer ctx pair with
         | ctx, Ty.Pair (ty1, ty2) ->
             let ctx = check (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body body_ty in
             ctx |> Ctx.remove |> Ctx.remove
-        | _, ty -> type_error "expected pair, found: %t" (Ty.pp ty)
+        | _, ty -> type_error "expected: _ ⊕ _, found: %t" (Ty.pp ty)
         end
 
     | Expr.Either_left expr, Ty.Either (left_ty, _) ->
@@ -181,15 +190,19 @@ end = struct
     | Expr.Either_right expr, Ty.Either (_, right_ty) ->
         check ctx expr right_ty
 
-    | Expr.Either_case (either, (x1, body1), (x2, body2)), body_ty ->
+    | Expr.Either_elim (either, (x1, body1), (x2, body2)), body_ty ->
         begin match infer ctx either with
         | ctx, Ty.Either (ty1, ty2) ->
             let ctx1 = check (ctx |> Ctx.add x1 ty1) body1 body_ty |> Ctx.remove in
             let ctx2 = check (ctx |> Ctx.add x2 ty2) body2 body_ty |> Ctx.remove in
             if Ctx.equate_usages ctx1 ctx2 then ctx1 else
               type_error "branches did not use the same variables"
-        | _, ty -> type_error "expected either, found: %t" (Ty.pp ty)
+        | _, ty -> type_error "expected: _ ⊗ _, found: %t" (Ty.pp ty)
         end
+
+    | Expr.Unit_elim (unit, body), body_ty ->
+        let ctx = check ctx unit Ty.Unit in
+        check ctx body body_ty
 
     | expr, ty ->
         let ctx, found_ty = infer ctx expr in
@@ -220,21 +233,47 @@ end = struct
         let ctx, ty2 = infer ctx expr2 in
         ctx, Ty.Pair (ty1, ty2)
 
-    | Expr.Pair_let (x1, x2, pair, body) ->
+    | Expr.Pair_elim (x1, x2, pair, body) ->
         begin match infer ctx pair with
         | ctx, Ty.Pair (ty1, ty2) ->
             let ctx, body_ty = infer (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body in
             ctx |> Ctx.remove |> Ctx.remove, body_ty
-        | _, ty -> type_error "expected pair, found: %t" (Ty.pp ty)
+        | _, ty -> type_error "expected: _ ⊗ _, found: %t" (Ty.pp ty)
         end
 
     | Expr.Unit_lit ->
         ctx, Ty.Unit
 
+    | Expr.Unit_elim (unit, body) ->
+        let ctx = check ctx unit Ty.Unit in
+        infer ctx body
+
+    | Expr.Prim (`Alloc, [expr]) ->
+        let ctx, ty = infer ctx expr in
+        ctx, Ty.Ref ty
+
+    | Expr.Prim (`Free, [expr]) ->
+        begin match infer ctx expr with
+        | ctx, Ty.Ref _ -> ctx, Ty.Unit
+        | _, ty -> type_error "expected: Ref _, found: %t" (Ty.pp ty)
+        end
+
+    | Expr.Prim (`Swap, [dst; src]) ->
+        let ctx, dst_ty =
+          match infer ctx dst with
+          | ctx, Ty.Ref ty -> ctx, ty
+          | _, ty -> type_error "expected: Ref _, found: %t" (Ty.pp ty)
+        in
+        let ctx, src_ty = infer ctx src in
+        ctx, Ty.Pair (Ty.Ref src_ty, dst_ty)
+
+    | Expr.Prim _ ->
+        type_error "mismatched arity"
+
     | Expr.Fun_lit _
     | Expr.Either_left _
     | Expr.Either_right _
-    | Expr.Either_case _ ->
+    | Expr.Either_elim _ ->
         type_error "type annotations needed"
 
 
@@ -286,6 +325,22 @@ let () = begin
     (* We can only use functions once, haha *)
     let expr = Expr.Let ("id", Ann (id_expr, id_ty), Pair_lit (Var "id" $ Unit_lit, Var "id" $ Unit_lit)) in
     assert (Check.infer expr = Error "variable `id` has already been used");
+
+    let expr =
+      Expr.Fun_lit ("v",
+        Let ("x", Prim (`Alloc, [Var "v"]),
+          Prim (`Free, [Var "x"])))
+    in
+    assert (Check.check expr (Ty.Fun (Int, Unit)) = Ok ());
+
+    let expr =
+      Expr.Fun_lit ("v",
+        Let ("x", Prim (`Alloc, [Var "v"]),
+          Pair_elim ("x", "y", Prim (`Swap, [Var "x"; Unit_lit]),
+            Unit_elim (Prim (`Free, [Var "x"]),
+              Var "y"))))
+    in
+    assert (Check.check expr (Ty.Fun (Int, Int)) = Ok ());
 
     (* TODO: More tests *)
 
