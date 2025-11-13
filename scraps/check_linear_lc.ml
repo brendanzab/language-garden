@@ -81,6 +81,7 @@ module Expr = struct
     | Either_elim of t * (string * t) * (string * t)
     | Unit_lit
     | Unit_elim of t * t
+    | Int_lit of int
     | Prim of [ `Alloc | `Free | `Swap ] * t list
     [@@warning "-unused-constructor"]
 
@@ -250,6 +251,9 @@ end = struct
     | Expr.Unit_elim (unit, body) ->
         let ctx = check ctx unit Ty.Unit in
         infer ctx body
+
+    | Expr.Int_lit _ ->
+        ctx, Ty.Int
 
     | Expr.Prim (`Alloc, [expr]) ->
         let ctx, ty = infer ctx expr in
