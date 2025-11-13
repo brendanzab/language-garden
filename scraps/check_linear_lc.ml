@@ -15,6 +15,9 @@
     which is described in {{: https://doi.org/10.1145/3764117} “From Linearity
     to Borrowing”} by Wagner et. al.
 
+    Adding some sort of copying (like in Rust) would be nice, e.g. to allow
+    functions that don’t close over values to be used multiple times.
+
     I’d also be interested in experimenting with QTT-style typechecking - I’m
     curious if this would be cleaner than threading through input and output
     contexts.
@@ -323,7 +326,10 @@ let () = begin
     assert (Check.infer expr = Ok Ty.Unit);
 
     (* We can only use functions once, haha *)
-    let expr = Expr.Let ("id", Ann (id_expr, id_ty), Pair_lit (Var "id" $ Unit_lit, Var "id" $ Unit_lit)) in
+    let expr =
+      Expr.Let ("id", Ann (id_expr, id_ty),
+        Pair_lit (Var "id" $ Unit_lit, Var "id" $ Unit_lit))
+    in
     assert (Check.infer expr = Error "variable `id` has already been used");
 
     let expr =
