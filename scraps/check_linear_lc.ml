@@ -181,12 +181,9 @@ end = struct
         ctx |> Ctx.remove
 
     | Expr.Pair_elim (x1, x2, pair, body), body_ty ->
-        begin match infer ctx pair with
-        | ctx, Ty.Pair (ty1, ty2) ->
-            let ctx = check (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body body_ty in
-            ctx |> Ctx.remove |> Ctx.remove
-        | _, ty -> type_error "expected: _ ⊕ _, found: %t" (Ty.pp ty)
-        end
+        let ctx, (ty1, ty2) = expect_pair ctx pair in
+        let ctx = check (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body body_ty in
+        ctx |> Ctx.remove |> Ctx.remove
 
     | Expr.Either_left expr, Ty.Either (left_ty, _) ->
         check ctx expr left_ty
@@ -195,14 +192,11 @@ end = struct
         check ctx expr right_ty
 
     | Expr.Either_elim (either, (x1, body1), (x2, body2)), body_ty ->
-        begin match infer ctx either with
-        | ctx, Ty.Either (ty1, ty2) ->
-            let ctx1 = check (ctx |> Ctx.add x1 ty1) body1 body_ty |> Ctx.remove in
-            let ctx2 = check (ctx |> Ctx.add x2 ty2) body2 body_ty |> Ctx.remove in
-            if Ctx.equate_usages ctx1 ctx2 then ctx1 else
-              type_error "branches did not use the same variables"
-        | _, ty -> type_error "expected: _ ⊗ _, found: %t" (Ty.pp ty)
-        end
+        let ctx, (ty1, ty2) = expect_either ctx either in
+        let ctx1 = check (ctx |> Ctx.add x1 ty1) body1 body_ty |> Ctx.remove in
+        let ctx2 = check (ctx |> Ctx.add x2 ty2) body2 body_ty |> Ctx.remove in
+        if Ctx.equate_usages ctx1 ctx2 then ctx1 else
+          type_error "branches did not use the same variables"
 
     | Expr.Unit_elim (unit, body), body_ty ->
         let ctx = check ctx unit Ty.Unit in
@@ -238,12 +232,9 @@ end = struct
         ctx, Ty.Pair (ty1, ty2)
 
     | Expr.Pair_elim (x1, x2, pair, body) ->
-        begin match infer ctx pair with
-        | ctx, Ty.Pair (ty1, ty2) ->
-            let ctx, body_ty = infer (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body in
-            ctx |> Ctx.remove |> Ctx.remove, body_ty
-        | _, ty -> type_error "expected: _ ⊗ _, found: %t" (Ty.pp ty)
-        end
+        let ctx, (ty1, ty2) = expect_pair ctx pair in
+        let ctx, body_ty = infer (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body in
+        ctx |> Ctx.remove |> Ctx.remove, body_ty
 
     | Expr.Unit_lit ->
         ctx, Ty.Unit
@@ -260,17 +251,11 @@ end = struct
         ctx, Ty.Ref ty
 
     | Expr.Prim (`Free, [expr]) ->
-        begin match infer ctx expr with
-        | ctx, Ty.Ref _ -> ctx, Ty.Unit
-        | _, ty -> type_error "expected: Ref _, found: %t" (Ty.pp ty)
-        end
+        let ctx, _ = expect_ref ctx expr in
+        ctx, Ty.Unit
 
     | Expr.Prim (`Swap, [dst; src]) ->
-        let ctx, dst_ty =
-          match infer ctx dst with
-          | ctx, Ty.Ref ty -> ctx, ty
-          | _, ty -> type_error "expected: Ref _, found: %t" (Ty.pp ty)
-        in
+        let ctx, dst_ty = expect_ref ctx dst in
         let ctx, src_ty = infer ctx src in
         ctx, Ty.Pair (Ty.Ref src_ty, dst_ty)
 
@@ -282,6 +267,21 @@ end = struct
     | Expr.Either_right _
     | Expr.Either_elim _ ->
         type_error "type annotations needed"
+
+  and expect_ref (ctx : Ctx.t) (expr : Expr.t) : Ctx.t * Ty.t =
+    match infer ctx expr with
+    | ctx, Ty.Ref ty -> ctx, ty
+    | _, ty -> type_error "expected: Ref _, found: %t" (Ty.pp ty)
+
+  and expect_pair (ctx : Ctx.t) (expr : Expr.t) : Ctx.t * (Ty.t * Ty.t) =
+    match infer ctx expr with
+    | ctx, Ty.Pair (ty1, ty2) -> ctx, (ty1, ty2)
+    | _, ty -> type_error "expected: _ ⊕ _, found: %t" (Ty.pp ty)
+
+  and expect_either (ctx : Ctx.t) (expr : Expr.t) : Ctx.t * (Ty.t * Ty.t) =
+    match infer ctx expr with
+    | ctx, Ty.Either (ty1, ty2) -> ctx, (ty1, ty2)
+    | _, ty -> type_error "expected: _ ⊗ _, found: %t" (Ty.pp ty)
 
 
   (** Running the type checker *)
