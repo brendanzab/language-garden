@@ -12,7 +12,7 @@ tools for thought, and as works of computational world building. Perhaps from
 these seedlings something new and interesting might germinate?
 
 [^fathom]: [yeslogic/fathom](https://github.com/yeslogic/fathom):
-  A declarative data definition language for formally specifying binary data formats.xe
+  A declarative data definition language for formally specifying binary data formats.
 
 ## The garden path
 
