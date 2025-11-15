@@ -431,6 +431,23 @@ let () = begin
       Ty.Unit
     ));
 
+    (* Constant function *)
+    let expr =
+      Let ("id", ["a"], None,
+        Fun ("x", Some (Name "a"), Name ("x", [])),
+        Let ("const", ["a"; "b"], None,
+          Fun ("x", Some (Name "a"), Fun ("y", Some (Name "b"), Name ("x", []))),
+          Name ("const", []) $ Unit $ (Name ("id", []) $ Bool true)))
+    in
+    assert (Elab.infer_expr expr |> expect_ok = Core.(
+      Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
+        Fun_lit ("x", Ty.Var "a", Var ("x", [])),
+        Expr.Let ("const", ["a"; "b"], Ty.Fun (Var "a", Ty.Fun (Var "b", Var "a")),
+          Fun_lit ("x", Ty.Var "a", Fun_lit ("y", Ty.Var "b", Var ("x", []))),
+          Fun_app (Fun_app (Var ("const", [Ty.Unit; Ty.Bool]), Unit_lit), Fun_app (Var ("id", [Ty.Bool]), Bool_lit true)))),
+      Ty.Unit
+    ));
+
     (* TODO: More tests *)
 
   end;
