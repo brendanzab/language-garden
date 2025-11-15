@@ -377,6 +377,12 @@ let () = begin
 
   let ( $ ) f x = App (f, x) in
 
+  let expect_infer expr =
+    match Elab.infer expr with
+    | Ok expr -> expr
+    | Error msg -> failwith msg
+  in
+
   begin
 
     (* Polymorphic identity function *)
@@ -385,17 +391,12 @@ let () = begin
         Fun ("x", Some (Name "a"), Name ("x", [])),
         Name ("id", []) $ Unit)
     in
-    begin match Elab.infer expr with
-    | Ok expr ->
-        let ( $ ) f x = Core.Expr.Fun_app (f, x) in
-        assert (expr = Core.(
-          Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
-            Fun_lit ("x", Ty.Var "a", Var ("x", [])),
-            Var ("id", [Ty.Unit]) $ Unit_lit),
-          Ty.Unit
-        ))
-    | Error msg -> failwith msg
-    end;
+    assert (expect_infer expr = Core.(
+      Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
+        Fun_lit ("x", Ty.Var "a", Var ("x", [])),
+        Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
+      Ty.Unit
+    ));
 
     (* Explicit type application *)
     let expr =
@@ -403,17 +404,12 @@ let () = begin
         Fun ("x", Some (Name "a"), Name ("x", [])),
         Name ("id", [Name "Unit"]) $ Unit)
     in
-    begin match Elab.infer expr with
-    | Ok expr ->
-        let ( $ ) f x = Core.Expr.Fun_app (f, x) in
-        assert (expr = Core.(
-          Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
-            Fun_lit ("x", Ty.Var "a", Var ("x", [])),
-            Var ("id", [Ty.Unit]) $ Unit_lit),
-          Ty.Unit
-        ))
-    | Error msg -> failwith msg
-    end;
+    assert (expect_infer expr = Core.(
+      Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
+        Fun_lit ("x", Ty.Var "a", Var ("x", [])),
+        Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
+      Ty.Unit
+    ));
 
     (* TODO: More tests *)
 
