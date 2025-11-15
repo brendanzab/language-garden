@@ -168,7 +168,7 @@ module Surface = struct
   (** The main type checking algorithm *)
   module Elab : sig
 
-    val infer : expr -> (Core.Expr.t * Core.Ty.t, string) result
+    val infer_expr : expr -> (Core.Expr.t * Core.Ty.t, string) result
 
   end = struct
 
@@ -243,7 +243,7 @@ module Surface = struct
 
     end
 
-    let unify (ty1 : Ty.t) (ty2 : Ty.t) =
+    let unify_tys (ty1 : Ty.t) (ty2 : Ty.t) =
       try Ty.unify ty1 ty2 with
       | Ty.Mismatched_types _ -> error "type mismatch"
       | Ty.Infinite_type -> error "infinite type"
@@ -263,35 +263,35 @@ module Surface = struct
       | Fun (ty1, ty2) -> Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
       | Placeholder -> Ctx.fresh_meta ctx
 
-    let rec check (ctx : Ctx.t) (expr : expr) (ty : Ty.t) : Expr.t =
+    let rec check_expr (ctx : Ctx.t) (expr : expr) (ty : Ty.t) : Expr.t =
       match expr, ty with
       | Let (name, ty_params, def_ty, def, body), body_ty ->
           let def, def_ty = infer_def ctx ty_params def_ty def in
-          let body = check (Ctx.extend_expr ctx name (ty_params, def_ty)) body body_ty in
+          let body = check_expr (Ctx.extend_expr ctx name (ty_params, def_ty)) body body_ty in
           Expr.Let (name, ty_params, def_ty, def, body)
 
       | Fun (name, None, body), Ty.Fun (param_ty', body_ty) ->
-          let body = check (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
+          let body = check_expr (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
           Expr.Fun_lit (name, param_ty', body)
 
       | Fun (name, Some param_ty, body), Ty.Fun (param_ty', body_ty) ->
           let param_ty = check_ty ctx param_ty in
-          unify param_ty param_ty';
-          let body = check (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
+          unify_tys param_ty param_ty';
+          let body = check_expr (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
           Expr.Fun_lit (name, param_ty, body)
 
       | If (pred, if_true, if_false), body_ty ->
-          let pred = check ctx pred Ty.Bool in
-          let if_true = check ctx if_true body_ty in
-          let if_false = check ctx if_false body_ty in
+          let pred = check_expr ctx pred Ty.Bool in
+          let if_true = check_expr ctx if_true body_ty in
+          let if_false = check_expr ctx if_false body_ty in
           Expr.Bool_if (pred, if_true, if_false)
 
       | expr, ty ->
-          let expr, found_ty = infer ctx expr in
-          unify ty found_ty;
+          let expr, found_ty = infer_expr ctx expr in
+          unify_tys ty found_ty;
           expr
 
-    and infer (ctx : Ctx.t) (expr : expr) : Expr.t * Ty.t =
+    and infer_expr (ctx : Ctx.t) (expr : expr) : Expr.t * Ty.t =
       match expr with
       | Name (name, ty_args) ->
           begin match Ctx.lookup_expr ctx name, ty_args with
@@ -307,28 +307,28 @@ module Surface = struct
 
       | Let (name, ty_params, def_ty, def, body) ->
           let def, def_ty = infer_def ctx ty_params def_ty def in
-          let body, body_ty = infer (Ctx.extend_expr ctx name (ty_params, def_ty)) body in
+          let body, body_ty = infer_expr (Ctx.extend_expr ctx name (ty_params, def_ty)) body in
           Expr.Let (name, ty_params, def_ty, def, body), body_ty
 
       | Ann (tm, ty) ->
           let ty = check_ty ctx ty in
-          check ctx tm ty, ty
+          check_expr ctx tm ty, ty
 
       | Fun (name, None, body) ->
           let param_ty = Ctx.fresh_meta ctx in
-          let body, body_ty = infer (Ctx.extend_expr ctx name ([], param_ty)) body in
+          let body, body_ty = infer_expr (Ctx.extend_expr ctx name ([], param_ty)) body in
           Expr.Fun_lit (name, param_ty, body), Ty.Fun (param_ty, body_ty)
 
       | Fun (name, Some param_ty, body) ->
           let param_ty = check_ty ctx param_ty in
-          let body, body_ty = infer (Ctx.extend_expr ctx name ([], param_ty)) body in
+          let body, body_ty = infer_expr (Ctx.extend_expr ctx name ([], param_ty)) body in
           Expr.Fun_lit (name, param_ty, body), Ty.Fun (param_ty, body_ty)
 
       | App (fn, arg) ->
-          let fn, fn_ty = infer ctx fn in
-          let arg, arg_ty = infer ctx arg in
+          let fn, fn_ty = infer_expr ctx fn in
+          let arg, arg_ty = infer_expr ctx arg in
           let body_ty = Ctx.fresh_meta ctx in
-          unify fn_ty (Ty.Fun (arg_ty, body_ty));
+          unify_tys fn_ty (Ty.Fun (arg_ty, body_ty));
           Expr.Fun_app (fn, arg), body_ty
 
       | Unit ->
@@ -338,10 +338,10 @@ module Surface = struct
           Expr.Bool_lit b, Ty.Bool
 
       | If (pred, if_true, if_false) ->
-          let pred = check ctx pred Ty.Bool in
-          let if_true, if_true_ty = infer ctx if_true in
-          let if_false, if_false_ty = infer ctx if_false in
-          unify if_true_ty if_false_ty;
+          let pred = check_expr ctx pred Ty.Bool in
+          let if_true, if_true_ty = infer_expr ctx if_true in
+          let if_false, if_false_ty = infer_expr ctx if_false in
+          unify_tys if_true_ty if_false_ty;
           Expr.Bool_if (pred, if_true, if_false), if_true_ty
 
     and infer_def ctx ty_params def_ty def =
@@ -349,14 +349,14 @@ module Surface = struct
         error "type parameter names must be unique";
 
       match def_ty with
-      | None -> infer (Ctx.extend_tys ctx ty_params) def
+      | None -> infer_expr (Ctx.extend_tys ctx ty_params) def
       | Some def_ty ->
           let def_ty = check_ty (Ctx.extend_tys ctx ty_params) def_ty in
-          check (Ctx.extend_tys ctx ty_params) def def_ty, def_ty
+          check_expr (Ctx.extend_tys ctx ty_params) def def_ty, def_ty
 
-    let infer (expr : expr) : (Expr.t * Ty.t, string) result =
+    let infer_expr (expr : expr) : (Expr.t * Ty.t, string) result =
       let ctx = Ctx.create () in
-      match infer ctx expr with
+      match infer_expr ctx expr with
       | expr, ty when not (Ctx.has_unsolved_metas ctx) -> Ok (Expr.zonk expr, Ty.zonk ty)
       | _, _ -> Error "unsolved metavariables"
       | exception Error msg -> Error msg
@@ -376,9 +376,9 @@ let () = begin
 
   let ( $ ) f x = App (f, x) in
 
-  let expect_infer expr =
-    match Elab.infer expr with
-    | Ok expr -> expr
+  let expect_ok result =
+    match result with
+    | Ok x -> x
     | Error msg -> failwith msg
   in
 
@@ -390,7 +390,7 @@ let () = begin
         Fun ("x", Some (Name "a"), Name ("x", [])),
         Name ("id", []) $ Unit)
     in
-    assert (expect_infer expr = Core.(
+    assert (Elab.infer_expr expr |> expect_ok = Core.(
       Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
         Fun_lit ("x", Ty.Var "a", Var ("x", [])),
         Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
@@ -403,7 +403,7 @@ let () = begin
         Fun ("x", Some (Name "a"), Name ("x", [])),
         Name ("id", [Name "Unit"]) $ Unit)
     in
-    assert (expect_infer expr = Core.(
+    assert (Elab.infer_expr expr |> expect_ok = Core.(
       Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
         Fun_lit ("x", Ty.Var "a", Var ("x", [])),
         Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
