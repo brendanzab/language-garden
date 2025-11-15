@@ -148,33 +148,39 @@ end
 
 module Surface = struct
 
-  type ty =
-    | Fun of ty * ty
-    | Name of string
-    | Placeholder
-    [@@warning "-unused-constructor"]
+  module Ty = struct
 
-  type expr =
-    | Name of string * ty list
-    | Let of string * string list * ty option * expr * expr
-    | Ann of expr * ty
-    | Fun of string * ty option * expr
-    | App of expr * expr
-    | Unit
-    | Bool of bool
-    | If of expr * expr * expr
-    [@@warning "-unused-constructor"]
+    type t =
+      | Fun of t * t
+      | Name of string
+      | Placeholder
+      [@@warning "-unused-constructor"]
+
+  end
+
+  module Expr = struct
+
+    type t =
+      | Name of string * Ty.t list
+      | Let of string * string list * Ty.t option * t * t
+      | Ann of t * Ty.t
+      | Fun of string * Ty.t option * t
+      | App of t * t
+      | Unit
+      | Bool of bool
+      | If of t * t * t
+      [@@warning "-unused-constructor"]
+
+  end
 
   (** The main type checking algorithm *)
   module Elab : sig
 
-    val check_ty : ty -> (Core.Ty.t, string) result [@@warning "-unused-value-declaration"]
-    val check_expr : expr -> Core.Ty.t -> (Core.Expr.t, string) result [@@warning "-unused-value-declaration"]
-    val infer_expr : expr -> (Core.Expr.t * Core.Ty.t, string) result
+    val check_ty : Ty.t -> (Core.Ty.t, string) result [@@warning "-unused-value-declaration"]
+    val check_expr : Expr.t -> Core.Ty.t -> (Core.Expr.t, string) result [@@warning "-unused-value-declaration"]
+    val infer_expr : Expr.t -> (Core.Expr.t * Core.Ty.t, string) result
 
   end = struct
-
-    open Core
 
     (** Error handling *)
 
@@ -183,7 +189,7 @@ module Surface = struct
     let error (type a b) (f : (b, Format.formatter, unit, a) format4) : b =
       Format.kasprintf (fun msg -> raise (Error msg)) f
 
-    type poly_ty = Ty.name list * Ty.t
+    type poly_ty = Core.Ty.name list * Core.Ty.t
 
 
     (** Elaboration contexts *)
@@ -193,7 +199,7 @@ module Surface = struct
 
       val create : unit -> t
 
-      val fresh_meta : t -> Ty.t
+      val fresh_meta : t -> Core.Ty.t
 
       val extend_tys : t -> string list -> t
       val extend_expr : t -> string -> poly_ty -> t
@@ -206,7 +212,7 @@ module Surface = struct
     end = struct
 
       type t = {
-        metas : Ty.meta Dynarray.t;
+        metas : Core.Ty.meta Dynarray.t;
         (* NOTE: We could provide additional information alongside metavariables
                  to provide a better ambiguity error at the end of typechecking.
                  See [elab-stlc-unification] for an example of this. *)
@@ -221,10 +227,10 @@ module Surface = struct
         expr_tys = [];
       }
 
-      let fresh_meta (ctx : t) : Ty.t =
-        let meta = Ty.fresh_meta () in
+      let fresh_meta (ctx : t) : Core.Ty.t =
+        let meta = Core.Ty.fresh_meta () in
         Dynarray.add_last ctx.metas meta;
-        Ty.Meta meta
+        Core.Ty.Meta meta
 
       let extend_tys (ctx : t) (names : string list) : t =
         { ctx with ty_names = List.rev_append names ctx.ty_names }
@@ -240,111 +246,114 @@ module Surface = struct
 
       let has_unsolved_metas (ctx : t) : bool =
         ctx.metas |> Dynarray.exists @@ function
-          | { contents = Ty.Unsolved _ } -> true
-          | { contents = Ty.Solved _ } -> false
+          | { contents = Core.Ty.Unsolved _ } -> true
+          | { contents = Core.Ty.Solved _ } -> false
 
     end
 
-    let unify_tys (ty1 : Ty.t) (ty2 : Ty.t) =
-      try Ty.unify ty1 ty2 with
-      | Ty.Mismatched_types _ -> error "type mismatch"
-      | Ty.Infinite_type -> error "infinite type"
+    let unify_tys (ty1 : Core.Ty.t) (ty2 : Core.Ty.t) =
+      try Core.Ty.unify ty1 ty2 with
+      | Core.Ty.Mismatched_types _ -> error "type mismatch"
+      | Core.Ty.Infinite_type -> error "infinite type"
 
 
     (* Bidirectional elaboration *)
 
-    let rec check_ty (ctx : Ctx.t) (ty : ty) : Ty.t =
+    let rec check_ty (ctx : Ctx.t) (ty : Ty.t) : Core.Ty.t =
       match ty with
-      | Name name ->
+      | Ty.Name name ->
           begin match Ctx.lookup_ty ctx name with
-          | Some () -> Ty.Var name
-          | None when name = "Bool" -> Ty.Bool
-          | None when name = "Unit" -> Ty.Unit
+          | Some () -> Core.Ty.Var name
+          | None when name = "Bool" -> Core.Ty.Bool
+          | None when name = "Unit" -> Core.Ty.Unit
           | None -> error "unbound type variable `%s`" name
           end
-      | Fun (ty1, ty2) -> Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
-      | Placeholder -> Ctx.fresh_meta ctx
+      | Ty.Fun (ty1, ty2) -> Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
+      | Ty.Placeholder -> Ctx.fresh_meta ctx
 
-    let rec check_expr (ctx : Ctx.t) (expr : expr) (ty : Ty.t) : Expr.t =
+    let rec check_expr (ctx : Ctx.t) (expr : Expr.t) (ty : Core.Ty.t) : Core.Expr.t =
       match expr, ty with
-      | Let (name, ty_params, def_ty, def, body), body_ty ->
+      | Expr.Let (name, ty_params, def_ty, def, body), body_ty ->
           let def, def_ty = infer_def ctx ty_params def_ty def in
           let body = check_expr (Ctx.extend_expr ctx name (ty_params, def_ty)) body body_ty in
-          Expr.Let (name, ty_params, def_ty, def, body)
+          Core.Expr.Let (name, ty_params, def_ty, def, body)
 
-      | Fun (name, None, body), Ty.Fun (param_ty', body_ty) ->
+      | Expr.Fun (name, None, body), Core.Ty.Fun (param_ty', body_ty) ->
           let body = check_expr (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
-          Expr.Fun_lit (name, param_ty', body)
+          Core.Expr.Fun_lit (name, param_ty', body)
 
-      | Fun (name, Some param_ty, body), Ty.Fun (param_ty', body_ty) ->
+      | Expr.Fun (name, Some param_ty, body), Core.Ty.Fun (param_ty', body_ty) ->
           let param_ty = check_ty ctx param_ty in
           unify_tys param_ty param_ty';
           let body = check_expr (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
-          Expr.Fun_lit (name, param_ty, body)
+          Core.Expr.Fun_lit (name, param_ty, body)
 
-      | If (pred, if_true, if_false), body_ty ->
-          let pred = check_expr ctx pred Ty.Bool in
+      | Expr.If (pred, if_true, if_false), body_ty ->
+          let pred = check_expr ctx pred Core.Ty.Bool in
           let if_true = check_expr ctx if_true body_ty in
           let if_false = check_expr ctx if_false body_ty in
-          Expr.Bool_if (pred, if_true, if_false)
+          Core.Expr.Bool_if (pred, if_true, if_false)
 
       | expr, ty ->
           let expr, found_ty = infer_expr ctx expr in
           unify_tys ty found_ty;
           expr
 
-    and infer_expr (ctx : Ctx.t) (expr : expr) : Expr.t * Ty.t =
+    and infer_expr (ctx : Ctx.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
       match expr with
-      | Name (name, ty_args) ->
+      | Expr.Name (name, ty_args) ->
           begin match Ctx.lookup_expr ctx name, ty_args with
           | Some (ty_params, ty), [] ->
               let mapping = ty_params |> List.map (fun name -> name, Ctx.fresh_meta ctx) in
-              Expr.Var (name, List.map snd mapping), Ty.subst ty mapping
+              Core.Expr.Var (name, List.map snd mapping), Core.Ty.subst ty mapping
+
           | Some (ty_params, ty), ty_args when List.length ty_params = List.length ty_args ->
               let ty_args = List.map (check_ty ctx) ty_args in
-              Expr.Var (name, ty_args), Ty.subst ty (List.combine ty_params ty_args)
+              let mapping = List.combine ty_params ty_args in
+              Core.Expr.Var (name, ty_args), Core.Ty.subst ty mapping
+
           | Some (_, _), _ -> error "mismatched type parameter list";
           | None, _ -> error "unbound variable `%s`" name
           end
 
-      | Let (name, ty_params, def_ty, def, body) ->
+      | Expr.Let (name, ty_params, def_ty, def, body) ->
           let def, def_ty = infer_def ctx ty_params def_ty def in
           let body, body_ty = infer_expr (Ctx.extend_expr ctx name (ty_params, def_ty)) body in
-          Expr.Let (name, ty_params, def_ty, def, body), body_ty
+          Core.Expr.Let (name, ty_params, def_ty, def, body), body_ty
 
-      | Ann (tm, ty) ->
+      | Expr.Ann (tm, ty) ->
           let ty = check_ty ctx ty in
           check_expr ctx tm ty, ty
 
-      | Fun (name, None, body) ->
+      | Expr.Fun (name, None, body) ->
           let param_ty = Ctx.fresh_meta ctx in
           let body, body_ty = infer_expr (Ctx.extend_expr ctx name ([], param_ty)) body in
-          Expr.Fun_lit (name, param_ty, body), Ty.Fun (param_ty, body_ty)
+          Core.Expr.Fun_lit (name, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
-      | Fun (name, Some param_ty, body) ->
+      | Expr.Fun (name, Some param_ty, body) ->
           let param_ty = check_ty ctx param_ty in
           let body, body_ty = infer_expr (Ctx.extend_expr ctx name ([], param_ty)) body in
-          Expr.Fun_lit (name, param_ty, body), Ty.Fun (param_ty, body_ty)
+          Core.Expr.Fun_lit (name, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
-      | App (fn, arg) ->
+      | Expr.App (fn, arg) ->
           let fn, fn_ty = infer_expr ctx fn in
           let arg, arg_ty = infer_expr ctx arg in
           let body_ty = Ctx.fresh_meta ctx in
-          unify_tys fn_ty (Ty.Fun (arg_ty, body_ty));
-          Expr.Fun_app (fn, arg), body_ty
+          unify_tys fn_ty (Core.Ty.Fun (arg_ty, body_ty));
+          Core.Expr.Fun_app (fn, arg), body_ty
 
-      | Unit ->
-          Expr.Unit_lit, Ty.Unit
+      | Expr.Unit ->
+          Core.Expr.Unit_lit, Core.Ty.Unit
 
-      | Bool b ->
-          Expr.Bool_lit b, Ty.Bool
+      | Expr.Bool b ->
+          Core.Expr.Bool_lit b, Core.Ty.Bool
 
-      | If (pred, if_true, if_false) ->
-          let pred = check_expr ctx pred Ty.Bool in
+      | Expr.If (pred, if_true, if_false) ->
+          let pred = check_expr ctx pred Core.Ty.Bool in
           let if_true, if_true_ty = infer_expr ctx if_true in
           let if_false, if_false_ty = infer_expr ctx if_false in
           unify_tys if_true_ty if_false_ty;
-          Expr.Bool_if (pred, if_true, if_false), if_true_ty
+          Core.Expr.Bool_if (pred, if_true, if_false), if_true_ty
 
     and infer_def ctx ty_params def_ty def =
       if List.length ty_params <> List.length (List.sort_uniq String.compare ty_params) then
@@ -369,18 +378,18 @@ module Surface = struct
 
     (** Public API *)
 
-    let check_ty (ty : ty) : (Ty.t, string) result =
+    let check_ty (ty : Ty.t) : (Core.Ty.t, string) result =
       run @@ fun ctx ->
-        Ty.zonk (check_ty ctx ty)
+        Core.Ty.zonk (check_ty ctx ty)
 
-    let check_expr (expr : expr) (ty : Ty.t) : (Expr.t, string) result =
+    let check_expr (expr : Expr.t) (ty : Core.Ty.t) : (Core.Expr.t, string) result =
       run @@ fun ctx ->
-        Expr.zonk (check_expr ctx expr ty)
+        Core.Expr.zonk (check_expr ctx expr ty)
 
-    let infer_expr (expr : expr) : (Expr.t * Ty.t, string) result =
+    let infer_expr (expr : Expr.t) : (Core.Expr.t * Core.Ty.t, string) result =
       run @@ fun ctx ->
         let expr, ty = infer_expr ctx expr in
-        Expr.zonk expr, Ty.zonk ty
+        Core.Expr.zonk expr, Core.Ty.zonk ty
 
   end
 
@@ -395,7 +404,7 @@ let () = begin
 
   let open Surface in
 
-  let ( $ ) f x = App (f, x) in
+  let ( $ ) f x = Expr.App (f, x) in
 
   let expect_ok result =
     match result with
@@ -407,7 +416,7 @@ let () = begin
 
     (* Polymorphic identity function *)
     let expr =
-      Let ("id", ["a"], None,
+      Expr.Let ("id", ["a"], None,
         Fun ("x", Some (Name "a"), Name ("x", [])),
         Name ("id", []) $ Unit)
     in
@@ -420,7 +429,7 @@ let () = begin
 
     (* Explicit type application *)
     let expr =
-      Let ("id", ["a"], None,
+      Expr.Let ("id", ["a"], None,
         Fun ("x", Some (Name "a"), Name ("x", [])),
         Name ("id", [Name "Unit"]) $ Unit)
     in
@@ -433,7 +442,7 @@ let () = begin
 
     (* Constant function *)
     let expr =
-      Let ("id", ["a"], None,
+      Expr.Let ("id", ["a"], None,
         Fun ("x", Some (Name "a"), Name ("x", [])),
         Let ("const", ["a"; "b"], None,
           Fun ("x", Some (Name "a"), Fun ("y", Some (Name "b"), Name ("x", []))),
