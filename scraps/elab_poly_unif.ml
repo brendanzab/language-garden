@@ -236,7 +236,7 @@ module Surface = struct
                  to provide a better ambiguity error at the end of typechecking.
                  See [elab-stlc-unification] for an example of this. *)
 
-        ty_names : string list;
+        ty_names : string list list;
         expr_tys : (string * poly_ty) list;
       }
 
@@ -252,13 +252,13 @@ module Surface = struct
         Core.Ty.Meta meta
 
       let extend_tys (ctx : t) (names : string list) : t =
-        { ctx with ty_names = List.rev_append names ctx.ty_names }
+        { ctx with ty_names = names :: ctx.ty_names }
 
       let extend_expr (ctx : t) (name : string) (ty_params, ty : poly_ty) : t =
         { ctx with expr_tys = (name, (ty_params, ty)) :: ctx.expr_tys }
 
       let lookup_ty (ctx : t) (name : string) : unit option =
-        if List.mem name ctx.ty_names then Some () else None
+        if List.exists (List.mem name) ctx.ty_names then Some () else None
 
       let lookup_expr (ctx : t) (name : string) : poly_ty option =
         List.assoc_opt name ctx.expr_tys
