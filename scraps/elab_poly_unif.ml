@@ -55,7 +55,7 @@ module Core = struct
     exception Infinite_type
 
     (** Ensure that the candidate type does not refer to the to-be-solved
-        metavariable, and raise the level of metavariables as required. *)
+        metavariable *)
     let rec occurs (m : meta) (ty : t) =
       match ty with
       | Var _ -> ()
@@ -68,6 +68,8 @@ module Core = struct
       | Meta { contents = Solved ty } -> occurs m ty
       | Meta { contents = Unsolved _ } -> ()
 
+    (** Check that two types are the same, wile updating unsolved metavariables
+        with known type information as required. *)
     let rec unify (ty1 : t) (ty2 : t) =
       match ty1, ty2 with
       | Var name1, Var name2 when name1 = name2 -> ()
