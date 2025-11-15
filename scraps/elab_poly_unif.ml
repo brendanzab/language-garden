@@ -449,11 +449,12 @@ let () = begin
           Name ("const", []) $ Unit $ (Name ("id", []) $ Bool true)))
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
+      let ( $ ) f x = Expr.Fun_app (f, x) in
       Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
         Fun_lit ("x", Ty.Var "a", Var ("x", [])),
         Expr.Let ("const", ["a"; "b"], Ty.Fun (Var "a", Ty.Fun (Var "b", Var "a")),
           Fun_lit ("x", Ty.Var "a", Fun_lit ("y", Ty.Var "b", Var ("x", []))),
-          Fun_app (Fun_app (Var ("const", [Ty.Unit; Ty.Bool]), Unit_lit), Fun_app (Var ("id", [Ty.Bool]), Bool_lit true)))),
+          Var ("const", [Ty.Unit; Ty.Bool]) $ Unit_lit $ (Var ("id", [Ty.Bool]) $ Bool_lit true))),
       Ty.Unit
     ));
 
