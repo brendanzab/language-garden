@@ -119,6 +119,27 @@ module Core = struct
       | Unit -> ty
       | Bool -> ty
 
+    let pp (ty : t) (ppf : Format.formatter) : unit =
+      let rec pp_ty ty ppf =
+        match ty with
+        | Meta { contents = Solved ty } -> pp_ty ty ppf
+        | Fun (param_ty, body_ty) ->
+            Format.fprintf ppf "%t -> %t"
+              (pp_atomic_ty param_ty)
+              (pp_ty body_ty)
+        | ty ->
+            pp_atomic_ty ty ppf
+      and pp_atomic_ty ty ppf =
+        match ty with
+        | Var name -> Format.fprintf ppf "%s" name
+        | Meta { contents = Solved ty } -> pp_atomic_ty ty ppf
+        | Meta { contents = Unsolved id } -> Format.fprintf ppf "$%i" id
+        | Unit -> Format.fprintf ppf "Unit"
+        | Bool -> Format.fprintf ppf "Bool"
+        | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+      in
+      pp_ty ty ppf
+
   end
 
   module Expr = struct
@@ -218,7 +239,7 @@ module Surface = struct
 
       val create : unit -> t
 
-      val fresh_meta : t -> Core.Ty.t
+      val fresh_meta : t -> string -> Core.Ty.t
 
       val extend_tys : t -> string list -> t
       val extend_expr : t -> string -> poly_ty -> t
@@ -226,16 +247,12 @@ module Surface = struct
       val lookup_ty : t -> string -> unit option
       val lookup_expr : t -> string -> poly_ty option
 
-      val has_unsolved_metas : t -> bool
+      val unsolved_metas : t -> string Seq.t
 
     end = struct
 
       type t = {
-        metas : Core.Ty.meta Dynarray.t;
-        (* NOTE: We could provide additional information alongside metavariables
-                 to provide a better ambiguity error at the end of typechecking.
-                 See [elab-stlc-unification] for an example of this. *)
-
+        metas : (Core.Ty.meta * string) Dynarray.t;
         ty_names : string list list;
         expr_tys : (string * poly_ty) list;
       }
@@ -246,9 +263,9 @@ module Surface = struct
         expr_tys = [];
       }
 
-      let fresh_meta (ctx : t) : Core.Ty.t =
+      let fresh_meta (ctx : t) (desc : string) : Core.Ty.t =
         let meta = Core.Ty.fresh_meta () in
-        Dynarray.add_last ctx.metas meta;
+        Dynarray.add_last ctx.metas (meta, desc);
         Core.Ty.Meta meta
 
       let extend_tys (ctx : t) (names : string list) : t =
@@ -263,17 +280,19 @@ module Surface = struct
       let lookup_expr (ctx : t) (name : string) : poly_ty option =
         List.assoc_opt name ctx.expr_tys
 
-      let has_unsolved_metas (ctx : t) : bool =
-        ctx.metas |> Dynarray.exists @@ function
-          | { contents = Core.Ty.Unsolved _ } -> true
-          | { contents = Core.Ty.Solved _ } -> false
+      let unsolved_metas (ctx : t) : string Seq.t =
+        Dynarray.to_seq ctx.metas |> Seq.filter_map @@ function
+          | { contents = Core.Ty.Unsolved _ }, desc -> Some desc
+          | { contents = Core.Ty.Solved _ }, _ -> None
 
     end
 
     let unify_tys (ty1 : Core.Ty.t) (ty2 : Core.Ty.t) =
       try Core.Ty.unify ty1 ty2 with
-      | Core.Ty.Mismatched_types _ -> error "type mismatch"
-      | Core.Ty.Infinite_type -> error "infinite type"
+      | Core.Ty.Mismatched_types _ ->
+          error "expected: %t, found: %t" (Core.Ty.pp ty1) (Core.Ty.pp ty2)
+      | Core.Ty.Infinite_type ->
+          error "infinite type"
 
 
     (* Bidirectional elaboration *)
@@ -288,7 +307,7 @@ module Surface = struct
           | None -> error "unbound type variable `%s`" name
           end
       | Ty.Fun (ty1, ty2) -> Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
-      | Ty.Placeholder -> Ctx.fresh_meta ctx
+      | Ty.Placeholder -> Ctx.fresh_meta ctx "placeholder"
 
     let rec check_expr (ctx : Ctx.t) (expr : Expr.t) (ty : Core.Ty.t) : Core.Expr.t =
       match expr, ty with
@@ -323,7 +342,7 @@ module Surface = struct
       | Expr.Name (name, ty_args) ->
           begin match Ctx.lookup_expr ctx name, ty_args with
           | Some (ty_params, ty), [] ->
-              let mapping = ty_params |> List.map (fun name -> name, Ctx.fresh_meta ctx) in
+              let mapping = ty_params |> List.map (fun name -> name, Ctx.fresh_meta ctx "type argument") in
               Core.Expr.Var (name, List.map snd mapping), Core.Ty.subst ty mapping
 
           | Some (ty_params, ty), ty_args when List.length ty_params = List.length ty_args ->
@@ -345,7 +364,7 @@ module Surface = struct
           check_expr ctx tm ty, ty
 
       | Expr.Fun (name, None, body) ->
-          let param_ty = Ctx.fresh_meta ctx in
+          let param_ty = Ctx.fresh_meta ctx "function parameter" in
           let body, body_ty = infer_expr (Ctx.extend_expr ctx name ([], param_ty)) body in
           Core.Expr.Fun_lit (name, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
@@ -357,7 +376,7 @@ module Surface = struct
       | Expr.App (fn, arg) ->
           let fn, fn_ty = infer_expr ctx fn in
           let arg, arg_ty = infer_expr ctx arg in
-          let body_ty = Ctx.fresh_meta ctx in
+          let body_ty = Ctx.fresh_meta ctx "return type" in
           unify_tys fn_ty (Core.Ty.Fun (arg_ty, body_ty));
           Core.Expr.Fun_app (fn, arg), body_ty
 
@@ -388,11 +407,13 @@ module Surface = struct
     (** Running elaboration *)
 
     let run (type a) (prog : Ctx.t -> a) : (a, string) result =
-      let ctx = Ctx.create () in
-      match prog ctx with
-      | x when not (Ctx.has_unsolved_metas ctx) -> Ok x
-      | _ -> Error "unsolved metavariables"
-      | exception Error msg -> Error msg
+      try
+        let ctx = Ctx.create () in
+        let result = prog ctx in
+        Ctx.unsolved_metas ctx |> Seq.iter (error "ambiguous %s");
+        Ok result
+      with
+      | Error msg -> Error msg
 
 
     (** Public API *)
