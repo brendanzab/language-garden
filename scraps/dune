@@ -25,6 +25,7 @@
 (test (name elab_stlc_bidir_effects))
 (test (name elab_stlc_gadt))
 (test (name elab_stlc_gadt_bidir))
+(test (name elab_poly_unif))
 (test (name elab_poly_algorithm_j))
 
 (test (name compile_stlc_anf_fresh))

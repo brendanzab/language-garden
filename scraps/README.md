@@ -78,6 +78,9 @@ Elaboration:
 - [**elab_stlc_gadt_bidir.ml**](./elab_stlc_gadt_bidir.ml):
   An elaborator from an untyped surface language into a well-typed core language,
   allowing more type annotations to be omitted in the surface language.
+- [**elab_poly_unif.ml**](./elab_poly_unif.ml):
+  Elaboration for a polymorphic functional language with explicit type
+  parameters (similar to languages like Rust, Typescript, C#, and Java).
 - [**elab_poly_algorithm_j.ml**](./elab_poly_algorithm_j.ml):
   Elaboration for a polymorphic polymorphic functional language using
   in-place, imperative unification (i.e. Algorithm J). Levels are used to
