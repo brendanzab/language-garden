@@ -168,6 +168,8 @@ module Surface = struct
   (** The main type checking algorithm *)
   module Elab : sig
 
+    val check_ty : ty -> (Core.Ty.t, string) result [@@warning "-unused-value-declaration"]
+    val check_expr : expr -> Core.Ty.t -> (Core.Expr.t, string) result [@@warning "-unused-value-declaration"]
     val infer_expr : expr -> (Core.Expr.t * Core.Ty.t, string) result
 
   end = struct
@@ -354,12 +356,31 @@ module Surface = struct
           let def_ty = check_ty (Ctx.extend_tys ctx ty_params) def_ty in
           check_expr (Ctx.extend_tys ctx ty_params) def def_ty, def_ty
 
-    let infer_expr (expr : expr) : (Expr.t * Ty.t, string) result =
+
+    (** Running elaboration *)
+
+    let run (type a) (prog : Ctx.t -> a) : (a, string) result =
       let ctx = Ctx.create () in
-      match infer_expr ctx expr with
-      | expr, ty when not (Ctx.has_unsolved_metas ctx) -> Ok (Expr.zonk expr, Ty.zonk ty)
-      | _, _ -> Error "unsolved metavariables"
+      match prog ctx with
+      | x when not (Ctx.has_unsolved_metas ctx) -> Ok x
+      | _ -> Error "unsolved metavariables"
       | exception Error msg -> Error msg
+
+
+    (** Public API *)
+
+    let check_ty (ty : ty) : (Ty.t, string) result =
+      run @@ fun ctx ->
+        Ty.zonk (check_ty ctx ty)
+
+    let check_expr (expr : expr) (ty : Ty.t) : (Expr.t, string) result =
+      run @@ fun ctx ->
+        Expr.zonk (check_expr ctx expr ty)
+
+    let infer_expr (expr : expr) : (Expr.t * Ty.t, string) result =
+      run @@ fun ctx ->
+        let expr, ty = infer_expr ctx expr in
+        Expr.zonk expr, Ty.zonk ty
 
   end
 
