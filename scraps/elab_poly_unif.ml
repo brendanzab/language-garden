@@ -347,13 +347,12 @@ module Surface = struct
     and infer_def ctx ty_params def_ty def =
       if List.length ty_params <> List.length (List.sort_uniq String.compare ty_params) then
         error "type parameter names must be unique";
-      let ctx = Ctx.extend_tys ctx ty_params in
+
       match def_ty with
-      | None -> infer ctx def
+      | None -> infer (Ctx.extend_tys ctx ty_params) def
       | Some def_ty ->
-          let def_ty = check_ty ctx def_ty in
-          let def = check ctx def def_ty in
-          def, def_ty
+          let def_ty = check_ty (Ctx.extend_tys ctx ty_params) def_ty in
+          check (Ctx.extend_tys ctx ty_params) def def_ty, def_ty
 
     let infer (expr : expr) : (Expr.t * Ty.t, string) result =
       let ctx = Ctx.create () in
