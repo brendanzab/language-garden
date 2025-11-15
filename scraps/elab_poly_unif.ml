@@ -2,7 +2,24 @@
     with explicit type parameters (similar to languages like Rust, Typescript,
     C#, and Java).
 
-    Compare this with [elab_poly_algorithm_j], which implements generalisation.
+    This supports typechecking expressions like:
+
+    {@text[
+      let id [a] (x : a) := x;
+      let const [a, b] (x : a) (y : b) := x;
+      const () (id true)
+    ]}
+
+    and explicit type applications like:
+
+    {@text[
+      let id [a] (x : a) := x;
+      let const [a, b] (x : a) (y : b) := x;
+      const [Unit, Int] () (id [Bool] true)
+    ]}
+
+    It could be interesting ot compare this to [check_poly_algorithm_j] and
+    [elab_poly_algorithm_j], which implement generalisation.
 *)
 
 module Core = struct
@@ -280,9 +297,9 @@ module Surface = struct
           let body = check_expr (Ctx.extend_expr ctx name (ty_params, def_ty)) body body_ty in
           Core.Expr.Let (name, ty_params, def_ty, def, body)
 
-      | Expr.Fun (name, None, body), Core.Ty.Fun (param_ty', body_ty) ->
-          let body = check_expr (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
-          Core.Expr.Fun_lit (name, param_ty', body)
+      | Expr.Fun (name, None, body), Core.Ty.Fun (param_ty, body_ty) ->
+          let body = check_expr (Ctx.extend_expr ctx name ([], param_ty)) body body_ty in
+          Core.Expr.Fun_lit (name, param_ty, body)
 
       | Expr.Fun (name, Some param_ty, body), Core.Ty.Fun (param_ty', body_ty) ->
           let param_ty = check_ty ctx param_ty in
