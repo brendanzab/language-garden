@@ -174,12 +174,12 @@ module Core = struct
           Let (name, ty_params, Ty.zonk def_ty, zonk def, zonk body)
       | Fun_lit (name, ty, body) ->
           Fun_lit (name, Ty.zonk ty, zonk body)
-      | Fun_app (fn, arg) ->
-          Fun_app (zonk fn, zonk arg)
+      | Fun_app (head, arg) ->
+          Fun_app (zonk head, zonk arg)
       | Unit_lit -> expr
       | Bool_lit _ -> expr
-      | Bool_if (pred, if_true, if_false) ->
-          Bool_if (zonk pred, zonk if_true, zonk if_false)
+      | Bool_if (head, true_body, false_body) ->
+          Bool_if (zonk head, zonk true_body, zonk false_body)
 
   end
 
@@ -287,10 +287,10 @@ module Surface = struct
 
     end
 
-    let unify_tys (ty1 : Core.Ty.t) (ty2 : Core.Ty.t) =
-      try Core.Ty.unify ty1 ty2 with
+    let unify_tys ~(found : Core.Ty.t) ~(expected : Core.Ty.t) =
+      try Core.Ty.unify expected found with
       | Core.Ty.Mismatched_types _ ->
-          error "expected: %t, found: %t" (Core.Ty.pp ty1) (Core.Ty.pp ty2)
+          error "expected: %t, found: %t" (Core.Ty.pp expected) (Core.Ty.pp found)
       | Core.Ty.Infinite_type ->
           error "infinite type"
 
@@ -322,19 +322,19 @@ module Surface = struct
 
       | Expr.Fun (name, Some param_ty, body), Core.Ty.Fun (param_ty', body_ty) ->
           let param_ty = check_ty ctx param_ty in
-          unify_tys param_ty param_ty';
+          unify_tys ~found:param_ty ~expected:param_ty';
           let body = check_expr (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
           Core.Expr.Fun_lit (name, param_ty, body)
 
-      | Expr.If (pred, if_true, if_false), body_ty ->
-          let pred = check_expr ctx pred Core.Ty.Bool in
-          let if_true = check_expr ctx if_true body_ty in
-          let if_false = check_expr ctx if_false body_ty in
-          Core.Expr.Bool_if (pred, if_true, if_false)
+      | Expr.If (head, true_body, false_body), body_ty ->
+          let head = check_expr ctx head Core.Ty.Bool in
+          let true_body = check_expr ctx true_body body_ty in
+          let false_body = check_expr ctx false_body body_ty in
+          Core.Expr.Bool_if (head, true_body, false_body)
 
-      | expr, ty ->
+      | expr, expected_ty ->
           let expr, found_ty = infer_expr ctx expr in
-          unify_tys ty found_ty;
+          unify_tys ~found:found_ty ~expected:expected_ty;
           expr
 
     and infer_expr (ctx : Ctx.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
@@ -373,12 +373,17 @@ module Surface = struct
           let body, body_ty = infer_expr (Ctx.extend_expr ctx name ([], param_ty)) body in
           Core.Expr.Fun_lit (name, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
-      | Expr.App (fn, arg) ->
-          let fn, fn_ty = infer_expr ctx fn in
-          let arg, arg_ty = infer_expr ctx arg in
-          let body_ty = Ctx.fresh_meta ctx "return type" in
-          unify_tys fn_ty (Core.Ty.Fun (arg_ty, body_ty));
-          Core.Expr.Fun_app (fn, arg), body_ty
+      | Expr.App (head, arg) ->
+          begin match infer_expr ctx head with
+          | head, Core.Ty.Fun (param_ty, body_ty) ->
+              let arg = check_expr ctx arg param_ty in
+              Core.Expr.Fun_app (head, arg), body_ty
+          | head, head_ty ->
+              let arg, arg_ty = infer_expr ctx arg in
+              let body_ty = Ctx.fresh_meta ctx "return type" in
+              unify_tys ~found:head_ty ~expected:(Core.Ty.Fun (arg_ty, body_ty));
+              Core.Expr.Fun_app (head, arg), body_ty
+          end
 
       | Expr.Unit ->
           Core.Expr.Unit_lit, Core.Ty.Unit
@@ -386,12 +391,12 @@ module Surface = struct
       | Expr.Bool b ->
           Core.Expr.Bool_lit b, Core.Ty.Bool
 
-      | Expr.If (pred, if_true, if_false) ->
-          let pred = check_expr ctx pred Core.Ty.Bool in
-          let if_true, if_true_ty = infer_expr ctx if_true in
-          let if_false, if_false_ty = infer_expr ctx if_false in
-          unify_tys if_true_ty if_false_ty;
-          Core.Expr.Bool_if (pred, if_true, if_false), if_true_ty
+      | Expr.If (head, true_body, false_body) ->
+          let head = check_expr ctx head Core.Ty.Bool in
+          let body_ty = Ctx.fresh_meta ctx "if branches" in
+          let true_body = check_expr ctx true_body body_ty in
+          let false_body = check_expr ctx false_body body_ty in
+          Core.Expr.Bool_if (head, true_body, false_body), body_ty
 
     and infer_def ctx ty_params def_ty def =
       if List.length ty_params <> List.length (List.sort_uniq String.compare ty_params) then
