@@ -31,6 +31,8 @@
     - Type aliases
 *)
 
+(** The explicitly typed core language that the surface language will be
+    elaborated to. *)
 module Core = struct
 
   module Ty = struct
@@ -195,6 +197,9 @@ module Core = struct
 end
 
 
+(** The surface language closely mirrors what the programmer originally wrote,
+    including syntactic sugar and higher level language features that make
+    programming more convenient. *)
 module Surface = struct
 
   module Ty = struct
@@ -222,7 +227,9 @@ module Surface = struct
 
   end
 
-  (** The main type checking algorithm *)
+  (** Elaboration of the surface language. This performs type checking and
+      type-directed lowering to the core language (e.g. inserting explicit type
+      annotations and explicit type applications). *)
   module Elab : sig
 
     val check_ty : Ty.t -> (Core.Ty.t, string) result [@@warning "-unused-value-declaration"]
