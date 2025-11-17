@@ -504,7 +504,7 @@ let () = begin
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
       let ( $ ) f x = Expr.Fun_app (f, x) in
-      Core.Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+      Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
         Fun_lit ("x", Ty.Var "A", Var ("x", [])),
         Let ("const", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "A")),
           Fun_lit ("x", Ty.Var "A", Fun_lit ("y", Ty.Var "B", Var ("x", []))),
