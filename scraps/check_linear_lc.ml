@@ -1,13 +1,29 @@
 (** A linear lambda calculus that ensures each binding is used exactly once.
 
-    In order to translate the declarative presentation of linear lambda
-    calculus into an algorithm we use input and output contexts in a style
-    similar to the one shown by David Walker in “Advanced Topics in Types and
-    Programming Languages”.
-
     We don’t have unrestricted bindings, only linear bindings, which implies
     that every binding is unique as well (see {{: https://doi.org/10.1007/978-3-030-99336-8_13}
     “Linearity and Uniqueness: An Entente Cordiale”} by Marshall et. al.).
+
+    On it’s own this calculus is not that useful, as we can’t use closures
+    multiple times, nor can we load or update the content of memory references.
+    See the “Future Ideas” section for ideas on how we might make this language
+    more useful.
+
+    {2 Implementation notes}
+
+    In order to translate the normal declarative typing rules for linear lambda
+    calculus into an efficient type checking algorithm we use input and output
+    contexts in a approach similar to the one shown by David Walker in “Advanced
+    Topics in Types and Programming Languages”.
+
+    Unlike Walker's approach, which removes bindings from the context when they
+    are used, we instead decorate these bindings with usage information. This is
+    then updated when a variable is accessed. This approach makes it easier to
+    handle variable shadowing more easily, and to makes it easier to provide
+    better type errors when a variable is used multiple times.
+
+    We could investigate separating the usage context from the typing context
+    and only updating that.
 
     {2 Future ideas}
 
@@ -25,7 +41,7 @@
     {2 Resources}
 
     - David Walker. 2002. A Linear Type System. In Benjamin C. Peirce (Ed).
-      Advanced Topics in Types and Programming Languages. https://www.cis.upenn.edu/~bcpierce/attapl/
+      Advanced Topics in Types and Programming Languages. https://www.cis.upenn.edu/~bcpierce/attapl
     - Frank Pfenning. 2001. Linear Type Theory.
       https://www.cs.cmu.edu/~fp/courses/15816-f01/handouts/lintt.pdf
 *)
