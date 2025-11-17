@@ -470,44 +470,44 @@ let () = begin
 
     (* Polymorphic identity function *)
     let expr =
-      Expr.Let ("id", ["a"], None,
-        Fun ("x", Some (Name "a"), Name ("x", [])),
+      Expr.Let ("id", ["A"], None,
+        Fun ("x", Some (Name "A"), Name ("x", [])),
         Name ("id", []) $ Unit)
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
-      Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
-        Fun_lit ("x", Ty.Var "a", Var ("x", [])),
+      Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+        Fun_lit ("x", Ty.Var "A", Var ("x", [])),
         Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
       Ty.Unit
     ));
 
     (* Explicit type application *)
     let expr =
-      Expr.Let ("id", ["a"], None,
-        Fun ("x", Some (Name "a"), Name ("x", [])),
+      Expr.Let ("id", ["A"], None,
+        Fun ("x", Some (Name "A"), Name ("x", [])),
         Name ("id", [Name "Unit"]) $ Unit)
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
-      Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
-        Fun_lit ("x", Ty.Var "a", Var ("x", [])),
+      Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+        Fun_lit ("x", Ty.Var "A", Var ("x", [])),
         Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
       Ty.Unit
     ));
 
     (* Constant function *)
     let expr =
-      Expr.Let ("id", ["a"], None,
-        Fun ("x", Some (Name "a"), Name ("x", [])),
-        Let ("const", ["a"; "b"], None,
-          Fun ("x", Some (Name "a"), Fun ("y", Some (Name "b"), Name ("x", []))),
+      Expr.Let ("id", ["A"], None,
+        Fun ("x", Some (Name "A"), Name ("x", [])),
+        Let ("const", ["A"; "B"], None,
+          Fun ("x", Some (Name "A"), Fun ("y", Some (Name "B"), Name ("x", []))),
           Name ("const", []) $ Unit $ (Name ("id", []) $ Bool true)))
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
       let ( $ ) f x = Expr.Fun_app (f, x) in
-      Expr.Let ("id", ["a"], Ty.Fun (Var "a", Var "a"),
-        Fun_lit ("x", Ty.Var "a", Var ("x", [])),
-        Expr.Let ("const", ["a"; "b"], Ty.Fun (Var "a", Ty.Fun (Var "b", Var "a")),
-          Fun_lit ("x", Ty.Var "a", Fun_lit ("y", Ty.Var "b", Var ("x", []))),
+      Core.Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+        Fun_lit ("x", Ty.Var "A", Var ("x", [])),
+        Let ("const", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "A")),
+          Fun_lit ("x", Ty.Var "A", Fun_lit ("y", Ty.Var "B", Var ("x", []))),
           Var ("const", [Ty.Unit; Ty.Bool]) $ Unit_lit $ (Var ("id", [Ty.Bool]) $ Bool_lit true))),
       Ty.Unit
     ));
