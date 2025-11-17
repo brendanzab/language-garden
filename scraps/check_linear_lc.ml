@@ -4,7 +4,7 @@
     that every binding is unique as well (see {{: https://doi.org/10.1007/978-3-030-99336-8_13}
     “Linearity and Uniqueness: An Entente Cordiale”} by Marshall et. al.).
 
-    On it’s own this calculus is not that useful, as we can’t use closures
+    On its own this calculus is not that useful, as we can’t use closures
     multiple times, nor can we load or update the content of memory references.
     See the “Future Ideas” section for ideas on how we might make this language
     more useful.
@@ -13,17 +13,15 @@
 
     In order to translate the normal declarative typing rules for linear lambda
     calculus into an efficient type checking algorithm we use input and output
-    contexts in a approach similar to the one shown by David Walker in “Advanced
-    Topics in Types and Programming Languages”.
+    contexts in a approach similar to the one shown by David Walker in
+    {{: https://www.cis.upenn.edu/~bcpierce/attapl} “Advanced Topics in Types
+    and Programming Languages”}.
 
     Unlike Walker's approach, which removes bindings from the context when they
-    are used, we instead decorate these bindings with usage information. This is
-    then updated when a variable is accessed. This approach makes it easier to
-    handle variable shadowing more easily, and to makes it easier to provide
-    better type errors when a variable is used multiple times.
-
-    We could investigate separating the usage context from the typing context
-    and only updating that.
+    are used, we instead decorate these bindings with usage information, marking
+    them as used when they are accessed. This approach makes it easier to handle
+    variable shadowing more easily, and to makes it easier to provide better
+    type errors when a variable is used multiple times.
 
     {2 Future ideas}
 
@@ -36,12 +34,20 @@
 
     I’d also be interested in experimenting with QTT-style typechecking - I’m
     curious if this would be cleaner than threading through input and output
-    contexts.
+    contexts. We could investigate separating the usage context from the typing
+    context and only updating that.
 
     {2 Resources}
 
     - David Walker. 2002. A Linear Type System. In Benjamin C. Peirce (Ed).
-      Advanced Topics in Types and Programming Languages. https://www.cis.upenn.edu/~bcpierce/attapl
+      Advanced Topics in Types and Programming Languages.
+      https://www.cis.upenn.edu/~bcpierce/attapl
+    - Danielle Marshall, Michael Vollmer, and Dominic Orchard. 2022.
+      Linearity and Uniqueness: An Entente Cordiale.
+      https://doi.org/10.1007/978-3-030-99336-8_13
+    - Andrew Wagner, Olek Gierczak, Brianna Marshall, John M. Li, and Amal Ahmed. 2025.
+      From Linearity to Borrowing.
+      https://doi.org/10.1145/3764117
     - Frank Pfenning. 2001. Linear Type Theory.
       https://www.cs.cmu.edu/~fp/courses/15816-f01/handouts/lintt.pdf
 *)
