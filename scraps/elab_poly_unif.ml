@@ -5,21 +5,30 @@
     This supports typechecking expressions like:
 
     {@text[
-      let id [a] (x : a) := x;
-      let const [a, b] (x : a) (y : b) := x;
-      const () (id true)
+      let id [A] (x : A) := x;
+      let const [A, B] (x : A) (y : B) := x;
+      const unit (id true)
     ]}
 
     and explicit type applications like:
 
     {@text[
-      let id [a] (x : a) := x;
-      let const [a, b] (x : a) (y : b) := x;
-      const [Unit, Int] () (id [Bool] true)
+      let id [A] (x : A) := x;
+      let const [A, B] (x : A) (y : B) := x;
+      const [Unit, Int] unit (id [Bool] true)
     ]}
 
-    It could be interesting ot compare this to [check_poly_algorithm_j] and
-    [elab_poly_algorithm_j], which implement generalisation.
+    This is what I think most people are asking for when they ask “how do I
+    implement generics”. This is in contrast to Hindley Milner type systems that
+    implement generalisation (see [check_poly_algorithm_j.ml] and
+    [elab_poly_algorithm_j.ml]).
+
+    {2 Future work}
+
+    - Recursive definitions (see [elab-stlc-letrec-unification])
+    - Datatype definitions (see [misc_local_datatypes.ml] and {{: https://doi.org/10.1145/3729338}
+      Practical Type Inference with Levels})
+    - Type aliases
 *)
 
 module Core = struct
