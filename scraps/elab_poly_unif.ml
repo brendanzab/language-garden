@@ -392,8 +392,9 @@ module Surface = struct
               expr (List.map snd mapping), Core.Ty.subst ty mapping
 
           | (ty_params, _), ty_args ->
-              error "expected %i type arguments, found %i"
+              error "expected %i type %s, found %i"
                 (List.length ty_params)
+                (match ty_params with [_] -> "argument" | _ -> "arguments")
                 (List.length ty_args)
           end
 
@@ -438,13 +439,10 @@ module Surface = struct
     (** Elaborate a polymorphic definition with an optional type annotation *)
     and infer_def (ctx : Ctx.t) (ty_params : string list) (def_ty : Ty.t option) (def : Expr.t) : Core.Expr.t * Core.Ty.t =
       match find_dupes ty_params with
-      | [name] ->
-          error "the type parameter `%s` is introduced multiple times" name
       | (_ :: _) as names ->
-          error "the type parameters %a are introduced multiple times"
-            (Format.pp_print_list (fun ppf name -> Format.fprintf ppf "`%s`" name)
-              ~pp_sep:(fun ppf () -> Format.fprintf ppf ", "))
-            names
+          error "type %s introduced multiple times: %s"
+            (match names with [_] -> "parameter" | _ -> "parameters")
+            (String.concat ", " names)
       | [] ->
           begin match def_ty with
           | None -> infer_expr (Ctx.extend_tys ctx ty_params) def
