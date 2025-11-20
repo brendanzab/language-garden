@@ -31,6 +31,17 @@
     - Type aliases
 *)
 
+(** Returns a list of the duplicate elements in a list *)
+let find_dupes (type a) (xs : a list) : a list =
+  let rec go acc xs =
+    match xs with
+    | [] -> List.rev acc
+    | x :: xs when List.mem x xs && not (List.mem x acc) -> go (x :: acc) xs
+    | _ :: xs -> go acc xs
+  in
+  go [] xs
+
+
 (** The explicitly typed core language that the surface language will be
     elaborated to. *)
 module Core = struct
@@ -417,15 +428,22 @@ module Surface = struct
           let false_body = check_expr ctx false_body body_ty in
           Core.Expr.Bool_if (head, true_body, false_body), body_ty
 
-    and infer_def ctx ty_params def_ty def =
-      if List.length ty_params <> List.length (List.sort_uniq String.compare ty_params) then
-        error "type parameter names must be unique";
-
-      match def_ty with
-      | None -> infer_expr (Ctx.extend_tys ctx ty_params) def
-      | Some def_ty ->
-          let def_ty = check_ty (Ctx.extend_tys ctx ty_params) def_ty in
-          check_expr (Ctx.extend_tys ctx ty_params) def def_ty, def_ty
+    and infer_def (ctx : Ctx.t) (ty_params : string list) (def_ty : Ty.t option) (def : Expr.t) : Core.Expr.t * Core.Ty.t =
+      match find_dupes ty_params with
+      | [name] ->
+          error "the type parameter `%s` is introduced multiple times" name
+      | (_ :: _) as names ->
+          error "the type parameters %a are introduced multiple times"
+            (Format.pp_print_list (fun ppf name -> Format.fprintf ppf "`%s`" name)
+              ~pp_sep:(fun ppf () -> Format.fprintf ppf ", "))
+            names
+      | [] ->
+          begin match def_ty with
+          | None -> infer_expr (Ctx.extend_tys ctx ty_params) def
+          | Some def_ty ->
+              let def_ty = check_ty (Ctx.extend_tys ctx ty_params) def_ty in
+              check_expr (Ctx.extend_tys ctx ty_params) def def_ty, def_ty
+          end
 
 
     (** Running elaboration *)
