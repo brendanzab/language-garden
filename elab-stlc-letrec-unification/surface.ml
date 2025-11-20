@@ -228,9 +228,6 @@ end = struct
     | Int_lit i ->
         Int_lit i, Int_type
 
-    | Bool_lit b ->
-        Bool_lit b, Bool_type
-
     | App ({ span = head_span; _ } as head, arg) ->
         let head, head_ty = infer_tm ctx head in
         begin match Core.force_ty head_ty with
