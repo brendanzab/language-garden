@@ -375,9 +375,9 @@ module Surface = struct
           let expr, pty =
             match Ctx.lookup_expr ctx name with
             | Some pty -> (fun ty_args -> Core.Expr.Var (name, ty_args)), pty
-            | None when name = "unit" -> (fun _ -> Core.Expr.Unit_lit), ([], Core.Ty.Unit)
-            | None when name = "true" -> (fun _ -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
-            | None when name = "false" -> (fun _ -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
+            | None when name = "unit" -> (fun[@warning "-partial-match"] [] -> Core.Expr.Unit_lit), ([], Core.Ty.Unit)
+            | None when name = "true" -> (fun[@warning "-partial-match"] [] -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
+            | None when name = "false" -> (fun[@warning "-partial-match"] [] -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
             | None -> error "unbound variable `%s`" name
           in
 
