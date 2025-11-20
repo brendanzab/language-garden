@@ -236,9 +236,12 @@ module Surface = struct
 
   end
 
-  (** Elaboration of the surface language. This performs type checking and
-      type-directed lowering to the core language (e.g. inserting explicit type
-      annotations and explicit type applications). *)
+  (** Elaboration of the surface language into the core language.
+
+      This is where we implement user-facing type checking, while also
+      translating the surface language into the simpler, more explicit core
+      language (e.g. with explicit type annotations and type applications).
+  *)
   module Elab : sig
 
     val check_ty : Ty.t -> (Core.Ty.t, string) result [@@warning "-unused-value-declaration"]
@@ -247,15 +250,16 @@ module Surface = struct
 
   end = struct
 
-    (** Error handling *)
-
+    (** An exception raised on an elaboration error. These should be caught
+        before they escape this module. *)
     exception Error of string
 
+    (** Raise an elaboration error with a formatted message *)
     let error (type a b) (f : (b, Format.formatter, unit, a) format4) : b =
       Format.kasprintf (fun msg -> raise (Error msg)) f
 
+    (** Polymorphic types *)
     type poly_ty = Core.Ty.name list * Core.Ty.t
-
 
     (** Elaboration contexts *)
     module Ctx : sig
@@ -322,6 +326,7 @@ module Surface = struct
 
     (* Bidirectional elaboration *)
 
+    (** Elaborate a type, checking that it is well-formed. *)
     let rec check_ty (ctx : Ctx.t) (ty : Ty.t) : Core.Ty.t =
       match ty with
       | Ty.Name name ->
@@ -334,6 +339,7 @@ module Surface = struct
       | Ty.Fun (ty1, ty2) -> Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
       | Ty.Placeholder -> Ctx.fresh_meta ctx "placeholder"
 
+    (** Elaborate a term, given an expected type. *)
     let rec check_expr (ctx : Ctx.t) (expr : Expr.t) (ty : Core.Ty.t) : Core.Expr.t =
       match expr, ty with
       | Expr.Let (name, ty_params, def_ty, def, body), body_ty ->
@@ -362,6 +368,7 @@ module Surface = struct
           unify_tys ~found:found_ty ~expected:expected_ty;
           expr
 
+    (** Elaborate a term, inferring its type. *)
     and infer_expr (ctx : Ctx.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
       match expr with
       | Expr.Name (name, ty_args) ->
@@ -428,6 +435,7 @@ module Surface = struct
           let false_body = check_expr ctx false_body body_ty in
           Core.Expr.Bool_if (head, true_body, false_body), body_ty
 
+    (** Elaborate a polymorphic definition with an optional type annotation *)
     and infer_def (ctx : Ctx.t) (ty_params : string list) (def_ty : Ty.t option) (def : Expr.t) : Core.Expr.t * Core.Ty.t =
       match find_dupes ty_params with
       | [name] ->
