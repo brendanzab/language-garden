@@ -220,8 +220,6 @@ module Surface = struct
       | Ann of t * Ty.t
       | Fun of string * Ty.t option * t
       | App of t * t
-      | Unit
-      | Bool of bool
       | If of t * t * t
       [@@warning "-unused-constructor"]
 
@@ -356,18 +354,29 @@ module Surface = struct
     and infer_expr (ctx : Ctx.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
       match expr with
       | Expr.Name (name, ty_args) ->
-          begin match Ctx.lookup_expr ctx name, ty_args with
-          | Some (ty_params, ty), [] ->
-              let mapping = ty_params |> List.map (fun name -> name, Ctx.fresh_meta ctx "type argument") in
-              Core.Expr.Var (name, List.map snd mapping), Core.Ty.subst ty mapping
+          let expr, pty =
+            match Ctx.lookup_expr ctx name with
+            | Some pty -> (fun ty_args -> Core.Expr.Var (name, ty_args)), pty
+            | None when name = "unit" -> (fun _ -> Core.Expr.Unit_lit), ([], Core.Ty.Unit)
+            | None when name = "true" -> (fun _ -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
+            | None when name = "false" -> (fun _ -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
+            | None -> error "unbound variable `%s`" name
+          in
 
-          | Some (ty_params, ty), ty_args when List.length ty_params = List.length ty_args ->
+          begin match pty, ty_args with
+          | (ty_params, ty), [] ->
+              let mapping = ty_params |> List.map (fun name -> name, Ctx.fresh_meta ctx "type argument") in
+              expr (List.map snd mapping), Core.Ty.subst ty mapping
+
+          | (ty_params, ty), ty_args when List.length ty_params = List.length ty_args ->
               let ty_args = List.map (check_ty ctx) ty_args in
               let mapping = List.combine ty_params ty_args in
-              Core.Expr.Var (name, ty_args), Core.Ty.subst ty mapping
+              expr (List.map snd mapping), Core.Ty.subst ty mapping
 
-          | Some (_, _), _ -> error "mismatched type parameter list";
-          | None, _ -> error "unbound variable `%s`" name
+          | (ty_params, _), ty_args ->
+              error "expected %i type arguments, found %i"
+                (List.length ty_params)
+                (List.length ty_args)
           end
 
       | Expr.Let (name, ty_params, def_ty, def, body) ->
@@ -400,12 +409,6 @@ module Surface = struct
               unify_tys ~found:head_ty ~expected:(Core.Ty.Fun (arg_ty, body_ty));
               Core.Expr.Fun_app (head, arg), body_ty
           end
-
-      | Expr.Unit ->
-          Core.Expr.Unit_lit, Core.Ty.Unit
-
-      | Expr.Bool b ->
-          Core.Expr.Bool_lit b, Core.Ty.Bool
 
       | Expr.If (head, true_body, false_body) ->
           let head = check_expr ctx head Core.Ty.Bool in
@@ -479,7 +482,7 @@ let () = begin
     let expr =
       Expr.Let ("id", ["A"], None,
         Fun ("x", Some (Name "A"), Name ("x", [])),
-        Name ("id", []) $ Unit)
+        Name ("id", []) $ Name ("unit", []))
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
       Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
@@ -492,7 +495,7 @@ let () = begin
     let expr =
       Expr.Let ("id", ["A"], None,
         Fun ("x", Some (Name "A"), Name ("x", [])),
-        Name ("id", [Name "Unit"]) $ Unit)
+        Name ("id", [Name "Unit"]) $ Name ("unit", []))
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
       Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
@@ -507,7 +510,7 @@ let () = begin
         Fun ("x", Some (Name "A"), Name ("x", [])),
         Let ("const", ["A"; "B"], None,
           Fun ("x", Some (Name "A"), Fun ("y", Some (Name "B"), Name ("x", []))),
-          Name ("const", []) $ Unit $ (Name ("id", []) $ Bool true)))
+          Name ("const", []) $ Name ("unit", []) $ (Name ("id", []) $ Name ("true", []))))
     in
     assert (Elab.infer_expr expr |> expect_ok = Core.(
       let ( $ ) f x = Expr.Fun_app (f, x) in
