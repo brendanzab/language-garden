@@ -71,6 +71,8 @@ module Elab : sig
 
 end = struct
 
+  module Semantics = Core.Semantics
+
   (** {2 Elaboration context} *)
 
   (** The elaboration context *)
@@ -177,19 +179,20 @@ end = struct
     | Name name ->
         begin match lookup_ty ctx name with
         | Some ty_index -> Var ty_index
-        | None when name = "Bool" -> Bool_type
-        | None when name = "Int" -> Int_type
+        | None when name = "Bool" -> Core.Bool_type
+        | None when name = "Int" -> Core.Int_type
         | None -> error ty.span (Format.asprintf "unbound type `%s`" name)
         end
     | Forall_type (names, body_ty) ->
         let rec go ctx names : Core.ty =
           match names with
           | [] -> check_ty ctx body_ty
-          | name :: names -> Forall_type (name.data, go (extend_ty ctx name.data) names)
+          | name :: names ->
+              Core.Forall_type (name.data, go (extend_ty ctx name.data) names)
         in
         go ctx names
     | Fun_type (ty1, ty2) ->
-        Fun_type (check_ty ctx ty1, check_ty ctx ty2)
+        Core.Fun_type (check_ty ctx ty1, check_ty ctx ty2)
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (vty : Core.Semantics.vty) : Core.tm =
@@ -197,16 +200,16 @@ end = struct
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_vty = infer_fun_lit ctx params def_body_ty def_body in
         let body = check_tm (extend_tm ctx def_name.data def_vty) body vty in
-        Let (def_name.data, quote_vty ctx def_vty, def, body)
+        Core.Let (def_name.data, quote_vty ctx def_vty, def, body)
 
     | Fun_lit (params, body) ->
         check_fun_lit ctx params body vty
 
     | If_then_else (head, tm1, tm2) ->
-        let head = check_tm ctx head Bool_type in
+        let head = check_tm ctx head Semantics.Bool_type in
         let tm1 = check_tm ctx tm1 vty in
         let tm2 = check_tm ctx tm2 vty in
-        Bool_elim (head, tm1, tm2)
+        Core.Bool_elim (head, tm1, tm2)
 
     (* Fall back to type inference *)
     | _ ->
@@ -220,15 +223,15 @@ end = struct
     | Name name ->
         begin match lookup_tm ctx name with
         | Some (tm_index, vty) -> Var tm_index, vty
-        | None when name = "true" -> Bool_lit true, Bool_type
-        | None when name = "false" -> Bool_lit false, Bool_type
+        | None when name = "true" -> Core.Bool_lit true, Semantics.Bool_type
+        | None when name = "false" -> Core.Bool_lit false, Semantics.Bool_type
         | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_vty = infer_fun_lit ctx params def_body_ty def_body in
         let body, body_ty = infer_tm (extend_tm ctx def_name.data def_vty) body in
-        Let (def_name.data, quote_vty ctx def_vty, def, body), body_ty
+        Core.Let (def_name.data, quote_vty ctx def_vty, def, body), body_ty
 
     | Ann (tm, ty) ->
         let ty = check_ty ctx ty in
@@ -236,7 +239,7 @@ end = struct
         check_tm ctx tm vty, vty
 
     | Int_lit i ->
-        Int_lit i, Int_type
+        Core.Int_lit i, Semantics.Int_type
 
     | Fun_lit (params, body) ->
         infer_fun_lit ctx params None body
@@ -255,26 +258,26 @@ end = struct
         let head, head_ty = infer_tm ctx head in
         let param_ty, body_ty =
           match head_ty with
-          | Fun_type (param_ty, body_ty) -> param_ty, body_ty
+          | Semantics.Fun_type (param_ty, body_ty) -> param_ty, body_ty
           | _ -> error arg_span "unexpected argument"
         in
         let arg = check_tm ctx arg param_ty in
-        Fun_app (head, arg), body_ty
+        Core.Fun_app (head, arg), body_ty
 
     | If_then_else (head, tm1, ({ span = tm2_span; _ } as tm2)) ->
-        let head = check_tm ctx head Bool_type in
+        let head = check_tm ctx head Semantics.Bool_type in
         let tm1, vty1 = infer_tm ctx tm1 in
         let tm2, vty2 = infer_tm ctx tm2 in
         equate_vtys ctx tm2_span ~found:vty2 ~expected:vty1;
-        Bool_elim (head, tm1, tm2), vty1
+        Core.Bool_elim (head, tm1, tm2), vty1
 
     | Infix (`Eq, tm1, tm2) ->
         let tm1, vty1 = infer_tm ctx tm1 in
         let tm2, vty2 = infer_tm ctx tm2 in
         equate_vtys ctx tm.span ~found:vty2 ~expected:vty1;
         begin match vty1 with
-        | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
-        | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
+        | Semantics.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Semantics.Bool_type
+        | Semantics.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Semantics.Bool_type
         | vty -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (pp_vty ctx vty))
         end
 
@@ -285,13 +288,13 @@ end = struct
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let tm1 = check_tm ctx tm1 Int_type in
-        let tm2 = check_tm ctx tm2 Int_type in
-        Prim_app (prim, [tm1; tm2]), Int_type
+        let tm1 = check_tm ctx tm1 Semantics.Int_type in
+        let tm2 = check_tm ctx tm2 Semantics.Int_type in
+        Core.Prim_app (prim, [tm1; tm2]), Semantics.Int_type
 
     | Prefix (`Neg, tm) ->
-        let tm = check_tm ctx tm Int_type in
-        Prim_app (Int_neg, [tm]), Int_type
+        let tm = check_tm ctx tm Semantics.Int_type in
+        Core.Prim_app (Prim.Int_neg, [tm]), Semantics.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : Core.Semantics.vty) : Core.tm =
@@ -299,29 +302,29 @@ end = struct
     | [], vty ->
         check_tm ctx body vty
 
-    | Ty_param name :: params, Forall_type (_, body_vty) ->
+    | Ty_param name :: params, Semantics.Forall_type (_, body_vty) ->
         let ty_var = next_ty_var ctx in
         let body_tm = check_fun_lit (extend_ty ctx name.data) params body (body_vty ty_var) in
-        Forall_lit (name.data, body_tm)
+        Core.Forall_lit (name.data, body_tm)
 
     (* Insert missing type parameters *)
-    | params, Forall_type (name, body_vty) ->
+    | params, Semantics.Forall_type (name, body_vty) ->
         let ty_var = next_ty_var ctx in
         let name = name |> Option.map (fun n -> "$" ^ n) in
         let body_tm = check_fun_lit (extend_ty ctx name) params body (body_vty ty_var) in
-        Forall_lit (name, body_tm)
+        Core.Forall_lit (name, body_tm)
 
-    | Param (name, None) :: params, Fun_type (param_vty, body_vty) ->
+    | Param (name, None) :: params, Semantics.Fun_type (param_vty, body_vty) ->
         let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
-        Fun_lit (name.data, quote_vty ctx param_vty, body_tm)
+        Core.Fun_lit (name.data, quote_vty ctx param_vty, body_tm)
 
-    | Param (name, Some param_ty) :: params, Fun_type (param_vty', body_vty) ->
+    | Param (name, Some param_ty) :: params, Semantics.Fun_type (param_vty', body_vty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         let param_vty = eval_ty ctx param_ty in
         equate_vtys ctx param_ty_span ~found:param_vty ~expected:param_vty';
         let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
-        Fun_lit (name.data, param_ty, body_tm)
+        Core.Fun_lit (name.data, param_ty, body_tm)
 
     | Ty_param name :: _, _ ->
         error name.span "unexpected type parameter"
@@ -342,7 +345,7 @@ end = struct
 
     | Ty_param name :: params, body_ty ->
         let body, body_ty = infer_fun_lit (extend_ty ctx name.data) params body_ty body in
-        Forall_lit (name.data, body), Forall_type (name.data, close_vty ctx body_ty)
+        Core.Forall_lit (name.data, body), Semantics.Forall_type (name.data, close_vty ctx body_ty)
 
     | Param (name, None) :: _, _ ->
         error name.span "ambiguous parameter type"
@@ -351,7 +354,7 @@ end = struct
         let param_ty = check_ty ctx param_ty in
         let param_vty = eval_ty ctx param_ty in
         let body, body_ty = infer_fun_lit (extend_tm ctx name.data param_vty) params body_ty body in
-        Fun_lit (name.data, param_ty, body), Fun_type (param_vty, body_ty)
+        Core.Fun_lit (name.data, param_ty, body), Semantics.Fun_type (param_vty, body_ty)
 
 
   (** {2 Running elaboration} *)

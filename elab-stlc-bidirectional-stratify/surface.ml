@@ -88,7 +88,7 @@ end = struct
       match ctx with
       | (Univ_def name') :: ctx -> if name = name' then Some Univ else go ctx i
       | (Type_def (name', t)) :: ctx -> if name = name' then Some (Type t) else go ctx i
-      | (Expr_def (name', t)) :: ctx -> if name = name' then Some (Expr (Var i, t)) else go ctx (i + 1)
+      | (Expr_def (name', t)) :: ctx -> if name = name' then Some (Expr (Core.Var i, t)) else go ctx (i + 1)
       | [] -> None
     in
     go ctx 0
@@ -153,17 +153,17 @@ end = struct
         | Type def -> check_expr (Type_def (def_name.data, def) :: ctx) body t
         | Expr (def, def_t) ->
             let body = check_expr (Expr_def (def_name.data, def_t) :: ctx) body t in
-            Let (def_name.data, def_t, def, body)
+            Core.Let (def_name.data, def_t, def, body)
         end
 
     | Fun_lit (params, body) ->
         check_fun_lit ctx params body t
 
     | If_then_else (head, tm1, tm2) ->
-        let head = check_expr ctx head Bool_type in
+        let head = check_expr ctx head Core.Bool_type in
         let e1 = check_expr ctx tm1 t in
         let e2 = check_expr ctx tm2 t in
-        Bool_elim (head, e1, e2)
+        Core.Bool_elim (head, e1, e2)
 
     | _ ->
         let e', t' = infer_expr ctx tm in
@@ -177,10 +177,10 @@ end = struct
         begin match lookup ctx n with
         | Some tm -> tm
         | None when n = "Type" -> Univ
-        | None when n = "Bool" -> Type Bool_type
-        | None when n = "true" -> Expr (Bool_lit true, Bool_type)
-        | None when n = "false" -> Expr (Bool_lit false, Bool_type)
-        | None when n = "Int" -> Type Int_type
+        | None when n = "Bool" -> Type Core.Bool_type
+        | None when n = "true" -> Expr (Core.Bool_lit true, Core.Bool_type)
+        | None when n = "false" -> Expr (Core.Bool_lit false, Core.Bool_type)
+        | None when n = "Int" -> Type Core.Int_type
         | None -> error tm.span (Format.asprintf "unbound name `%s`" n)
         end
 
@@ -191,7 +191,7 @@ end = struct
         | Expr (def, def_t) ->
             begin match infer (Expr_def (def_name.data, def_t) :: ctx) body with
             | (Univ | Type _) as elab_tm -> elab_tm
-            | Expr (body, body_t) -> Expr (Let (def_name.data, def_t, def, body), body_t)
+            | Expr (body, body_t) -> Expr (Core.Let (def_name.data, def_t, def, body), body_t)
             end
         end
 
@@ -202,7 +202,7 @@ end = struct
         | Expr (_, _) -> error tm.span "expected type or universe, found expression"
         end
 
-    | Int_lit i -> Expr (Int_lit i, Int_type)
+    | Int_lit i -> Expr (Core.Int_lit i, Core.Int_type)
 
     | Fun_lit (params, body) ->
         infer_fun_lit ctx params None body
@@ -211,31 +211,31 @@ end = struct
         let head, head_t = infer_expr ctx head in
         let param_t, body_t =
           match head_t with
-          | Fun_type (param_t, body_t) -> param_t, body_t
+          | Core.Fun_type (param_t, body_t) -> param_t, body_t
           | _ -> error arg.span "unexpected argument"
         in
         let arg = check_expr ctx arg param_t in
-        Expr (Fun_app (head, arg), body_t)
+        Expr (Core.Fun_app (head, arg), body_t)
 
     | If_then_else (head, expr1, ({ span = expr2_span; _ } as expr2)) ->
         let head = check_expr ctx head Bool_type in
         let e1, t1 = infer_expr ctx expr1 in
         let e2, t2 = infer_expr ctx expr2 in
         equate_ty expr2_span ~found:t2 ~expected:t1;
-        Expr (Bool_elim (head, e1, e2), t1)
+        Expr (Core.Bool_elim (head, e1, e2), t1)
 
     | Infix (`Arrow, param_t, body_t) ->
         let param_t = check_ty ctx param_t in
         let body_t = check_ty ctx body_t in
-        Type (Fun_type (param_t, body_t))
+        Type (Core.Fun_type (param_t, body_t))
 
     | Infix (`Eq, tm1, tm2) ->
         let e1, t1 = infer_expr ctx tm1 in
         let e2, t2 = infer_expr ctx tm2 in
         equate_ty tm.span ~found:t2 ~expected:t1;
         begin match t1 with
-        | Bool_type -> Expr (Prim_app (Bool_eq, [e1; e2]), Bool_type)
-        | Int_type -> Expr (Prim_app (Int_eq, [e1; e2]), Bool_type)
+        | Bool_type -> Expr (Core.Prim_app (Prim.Bool_eq, [e1; e2]), Core.Bool_type)
+        | Int_type -> Expr (Core.Prim_app (Prim.Int_eq, [e1; e2]), Core.Bool_type)
         | t -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty t))
         end
 
@@ -246,13 +246,13 @@ end = struct
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let e1 = check_expr ctx tm1 Int_type in
-        let e2 = check_expr ctx tm2 Int_type in
-        Expr (Prim_app (prim, [e1; e2]), Int_type)
+        let e1 = check_expr ctx tm1 Core.Int_type in
+        let e2 = check_expr ctx tm2 Core.Int_type in
+        Expr (Core.Prim_app (prim, [e1; e2]), Core.Int_type)
 
     | Prefix (`Neg, tm) ->
-        let e = check_expr ctx tm Int_type in
-        Expr (Prim_app (Int_neg, [e]), Int_type)
+        let e = check_expr ctx tm Core.Int_type in
+        Expr (Core.Prim_app (Prim.Int_neg, [e]), Core.Int_type)
 
   and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
     match infer ctx tm with
@@ -268,16 +268,16 @@ end = struct
     | [], ty ->
         check_expr ctx body ty
 
-    | (name, None) :: params, Fun_type (param_t, body_t) ->
+    | (name, None) :: params, Core.Fun_type (param_t, body_t) ->
         let body = check_fun_lit (Expr_def (name.data, param_t) :: ctx) params body body_t in
-          Fun_lit (name.data, param_t, body)
+          Core.Fun_lit (name.data, param_t, body)
 
-    | (name, Some param_t) :: params, Fun_type (param_t', body_t) ->
+    | (name, Some param_t) :: params, Core.Fun_type (param_t', body_t) ->
         let param_t_span = param_t.span in
         let param_t = check_ty ctx param_t in
         equate_ty param_t_span ~found:param_t ~expected:param_t';
         let body = check_fun_lit (Expr_def (name.data, param_t) :: ctx) params body body_t in
-        Fun_lit (name.data, param_t, body)
+        Core.Fun_lit (name.data, param_t, body)
 
     | (name, _) :: _, _ ->
         error name.span "unexpected parameter"
@@ -306,7 +306,7 @@ end = struct
           | Type _ -> error body.span "expected expression, found type"
           | Expr (e, t) -> e, t
         in
-        Expr (Fun_lit (name.data, param_t, body), Fun_type (param_t, body_t))
+        Expr (Core.Fun_lit (name.data, param_t, body), Core.Fun_type (param_t, body_t))
 
 
   (** {2 Running elaboration} *)

@@ -518,7 +518,7 @@ end = struct
   and elim_implicits (ctx : context) (tm : Syntax.tm) (vty : Semantics.vty) : Syntax.tm * Semantics.vty =
     match vty with
     (* Eliminate the singleton, converting it back to its underlying term *)
-    | Sing_type (vty, sing_vtm) ->
+    | Semantics.Sing_type (vty, sing_vtm) ->
         elim_implicits ctx (quote ctx (Lazy.force sing_vtm)) vty
     (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
       for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)

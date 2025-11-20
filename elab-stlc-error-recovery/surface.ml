@@ -140,13 +140,13 @@ end = struct
   (** Elaborate a type, checking that it is well-formed. *)
   let rec check_ty (ctx : context) (ty : ty) : Core.ty =
     match ty.data with
-    | Name "Bool" -> Bool_type
-    | Name "Int" -> Int_type
+    | Name "Bool" -> Core.Bool_type
+    | Name "Int" -> Core.Int_type
     | Name name ->
         report ctx @@ Error.make ty.span (Format.asprintf "unbound type `%s`" name);
-        Unknown_type
+        Core.Unknown_type
     | Fun_type (ty1, ty2) ->
-        Fun_type (check_ty ctx ty1, check_ty ctx ty2)
+        Core.Fun_type (check_ty ctx ty1, check_ty ctx ty2)
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : context) (tm : tm) (ty : Core.ty) : Core.tm =
@@ -154,16 +154,16 @@ end = struct
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
         let body = check_tm (extend ctx def_name.data def_ty) body ty in
-        Let (def_name.data, def_ty, def, body)
+        Core.Let (def_name.data, def_ty, def, body)
 
     | Fun_lit (params, body) ->
         check_fun_lit ctx params body ty
 
     | If_then_else (head, tm1, tm2) ->
-        let head = check_tm ctx head Bool_type in
+        let head = check_tm ctx head Core.Bool_type in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
-        Bool_elim (head, tm1, tm2)
+        Core.Bool_elim (head, tm1, tm2)
 
     (* Fall back to type inference *)
     | _ ->
@@ -172,7 +172,7 @@ end = struct
         | Ok () -> tm'
         | Error error ->
             report ctx error;
-            Reported_error
+            Core.Reported_error
         end
 
   (** Elaborate a surface term into a core term, inferring its type. *)
@@ -180,18 +180,18 @@ end = struct
     match tm.data with
     | Name name ->
         begin match lookup ctx name with
-        | Some (index, ty) -> Var index, ty
-        | None when name = "true" -> Bool_lit true, Bool_type
-        | None when name = "false" -> Bool_lit false, Bool_type
+        | Some (index, ty) -> Core.Var index, ty
+        | None when name = "true" -> Core.Bool_lit true, Core.Bool_type
+        | None when name = "false" -> Core.Bool_lit false, Core.Bool_type
         | None ->
             report ctx @@ Error.make tm.span (Format.asprintf "unbound name `%s`" name);
-            Reported_error, Unknown_type
+            Core.Reported_error, Core.Unknown_type
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
         let body, body_ty = infer_tm (extend ctx def_name.data def_ty) body in
-        Let (def_name.data, def_ty, def, body), body_ty
+        Core.Let (def_name.data, def_ty, def, body), body_ty
 
     | Ann (tm, ty) ->
         let ty = check_ty ctx ty in
@@ -201,23 +201,23 @@ end = struct
         infer_fun_lit ctx params None body
 
     | Int_lit i ->
-        Int_lit i, Int_type
+        Core.Int_lit i, Core.Int_type
 
     | App (head, arg) ->
         let head, head_ty = infer_tm ctx head in
         begin match head_ty with
-        | Unknown_type ->
-            Reported_error, Unknown_type
-        | Fun_type (param_ty, body_ty) ->
+        | Core.Unknown_type ->
+            Core.Reported_error, Core.Unknown_type
+        | Core.Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
-            Fun_app (head, arg), body_ty
+            Core.Fun_app (head, arg), body_ty
         | _ ->
             report ctx @@ Error.make arg.span "unexpected argument";
-            Reported_error, Unknown_type
+            Core.Reported_error, Core.Unknown_type
         end
 
     | If_then_else (head, tm1, ({ span = tm2_span; _ } as tm2)) ->
-        let head = check_tm ctx head Bool_type in
+        let head = check_tm ctx head Core.Bool_type in
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
         begin match Core.meet_tys ty1 ty2 with
@@ -229,26 +229,26 @@ end = struct
                   (Core.pp_ty ty1)
                   (Core.pp_ty ty2);
               ];
-            Reported_error, Unknown_type
+            Core.Reported_error, Core.Unknown_type
         end
 
     | Infix (`Eq, tm1, ({ span = tm2_span; _ } as tm2)) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
         begin match Core.meet_tys ty1 ty2 with
-        | Some Unknown_type -> Reported_error, Unknown_type
-        | Some Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
-        | Some Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
+        | Some Core.Unknown_type -> Core.Reported_error, Core.Unknown_type
+        | Some Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
+        | Some Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
         | Some ty ->
             report ctx @@ Error.make tm.span
               (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
                 (Core.pp_ty ty))
               ~details:[
                 Format.asprintf "expected `%t` or `%t`"
-                  (Core.pp_ty Bool_type)
-                  (Core.pp_ty Int_type);
+                  (Core.pp_ty Core.Bool_type)
+                  (Core.pp_ty Core.Int_type);
               ];
-            Reported_error, Unknown_type
+            Core.Reported_error, Core.Unknown_type
         | None ->
             report ctx @@ Error.make tm2_span "mismatched operands"
               ~details:[
@@ -256,7 +256,7 @@ end = struct
                   (Core.pp_ty ty1)
                   (Core.pp_ty ty2);
               ];
-            Reported_error, Unknown_type
+            Core.Reported_error, Core.Unknown_type
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
@@ -266,13 +266,13 @@ end = struct
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let tm1 = check_tm ctx tm1 Int_type in
-        let tm2 = check_tm ctx tm2 Int_type in
-        Prim_app (prim, [tm1; tm2]), Int_type
+        let tm1 = check_tm ctx tm1 Core.Int_type in
+        let tm2 = check_tm ctx tm2 Core.Int_type in
+        Core.Prim_app (prim, [tm1; tm2]), Core.Int_type
 
     | Prefix (`Neg, tm) ->
-        let tm = check_tm ctx tm Int_type in
-        Prim_app (Int_neg, [tm]), Int_type
+        let tm = check_tm ctx tm Core.Int_type in
+        Core.Prim_app (Prim.Int_neg, [tm]), Core.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
@@ -282,7 +282,7 @@ end = struct
     let match_fun_ty (ty : Core.ty) =
       match ty with
       | Fun_type (param_ty, body_ty) -> Some (param_ty, body_ty)
-      | Unknown_type -> Some (Unknown_type, Unknown_type)
+      | Core.Unknown_type -> Some (Core.Unknown_type, Core.Unknown_type)
       | _ -> None
     in
 
@@ -305,7 +305,7 @@ end = struct
         | Error error ->
             report ctx error;
             let _ = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
-            Reported_error
+            Core.Reported_error
         end
 
     (* If we see an unexpected parameter, we check the parameter type regardless
@@ -314,10 +314,10 @@ end = struct
         report ctx @@ Error.make name.span "unexpected parameter";
         let param_ty = match param_ty with
           | Some param_ty -> check_ty ctx param_ty
-          | None -> Unknown_type
+          | None -> Core.Unknown_type
         in
-        let _ = check_fun_lit (extend ctx name.data param_ty) params body Unknown_type in
-        Reported_error
+        let _ = check_fun_lit (extend ctx name.data param_ty) params body Core.Unknown_type in
+        Core.Reported_error
 
   (** Elaborate a function literal into a core term, inferring its type. *)
   and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.tm * Core.ty =
@@ -333,10 +333,10 @@ end = struct
           | Some ty -> check_ty ctx ty
           | None ->
               report ctx @@ Error.make name.span "ambiguous parameter type";
-              Unknown_type
+              Core.Unknown_type
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
-        Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
+        Core.Fun_lit (name.data, param_ty, body), Core.Fun_type (param_ty, body_ty)
 
 
   (** {2 Running elaboration} *)

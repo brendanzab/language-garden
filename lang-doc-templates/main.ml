@@ -68,13 +68,13 @@ let fun_lit (name, ty) body = Core.(Fun_lit (name, ty, body (Var name)))
 let rec concat = function
   | [] -> Core.Text_lit ""
   | [t] -> t
-  | t :: ts -> Core.Prim_app (Test_concat, [t; concat ts])
+  | t :: ts -> Core.Prim_app (Prim.Text_concat, [t; concat ts])
 
 let node name body =
   concat [
-    Text_lit (Format.sprintf "<%s>" name);
+    Core.Text_lit (Format.sprintf "<%s>" name);
     body;
-    Text_lit (Format.sprintf "</%s>" name);
+    Core.Text_lit (Format.sprintf "</%s>" name);
   ]
 
 let () = begin
@@ -82,11 +82,11 @@ let () = begin
   define "true" Core.Bool_ty Core.(Bool_lit true);
   define "false" Core.Bool_ty Core.(Bool_lit false);
 
-  define "heading1" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "h1"));
-  define "heading2" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "h2"));
-  define "heading3" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "h3"));
-  define "para" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "p"));
-  define "link" Core.(Fun_ty (Test_ty, Test_ty)) (fun_lit ("text", Test_ty) (node "a"));
+  define "heading1" Core.(Fun_ty (Text_ty, Text_ty)) (fun_lit ("text", Core.Text_ty) (node "h1"));
+  define "heading2" Core.(Fun_ty (Text_ty, Text_ty)) (fun_lit ("text", Core.Text_ty) (node "h2"));
+  define "heading3" Core.(Fun_ty (Text_ty, Text_ty)) (fun_lit ("text", Core.Text_ty) (node "h3"));
+  define "para" Core.(Fun_ty (Text_ty, Text_ty)) (fun_lit ("text", Core.Text_ty) (node "p"));
+  define "link" Core.(Fun_ty (Text_ty, Text_ty)) (fun_lit ("text", Core.Text_ty) (node "a"));
 
 end
 

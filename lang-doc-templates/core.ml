@@ -1,6 +1,6 @@
 type ty =
   | Fun_ty of ty * ty
-  | Test_ty
+  | Text_ty
   | List_ty of ty
   | Bool_ty
   | Int_ty

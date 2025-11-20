@@ -168,7 +168,7 @@ end = struct
   let fresh_meta (ctx : context) (span: span) (info : string) : Core.ty =
     let m = Core.fresh_meta () in
     Dynarray.add_last ctx.metas (span, info, m);
-    Meta_var m
+    Core.Meta_var m
 
   (** Generate a fresh row metavariable *)
   let fresh_row_meta (ctx : context) (row: Core.ty Label_map.t) : Core.row_ty =
@@ -228,12 +228,12 @@ end = struct
   (** Elaborate a type, checking that it is well-formed. *)
   let rec check_ty (ctx : context) (ty : ty) : Core.ty =
     match ty.data with
-    | Name "Bool" -> Bool_type
-    | Name "Int" -> Int_type
+    | Name "Bool" -> Core.Bool_type
+    | Name "Int" -> Core.Int_type
     | Name name -> error ctx ty.span (Format.asprintf "unbound type `%s`" name)
-    | Fun_type (ty1, ty2) -> Fun_type (check_ty ctx ty1, check_ty ctx ty2)
-    | Record_type entries -> Record_type (check_ty_entries ctx entries)
-    | Variant_type entries -> Variant_type (check_ty_entries ctx entries)
+    | Fun_type (ty1, ty2) -> Core.Fun_type (check_ty ctx ty1, check_ty ctx ty2)
+    | Record_type entries -> Core.Record_type (check_ty_entries ctx entries)
+    | Variant_type entries -> Core.Variant_type (check_ty_entries ctx entries)
     | Placeholder -> fresh_meta ctx ty.span "placeholder"
 
   and check_ty_entries ctx entries =
@@ -254,15 +254,15 @@ end = struct
     | Let (def_name, params, def_body_ty, def_body, body), body_ty ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
         let body = check_tm (extend ctx def_name.data def_ty) body body_ty in
-        Let (def_name.data, def_ty, def, body)
+        Core.Let (def_name.data, def_ty, def, body)
 
     | Fun_lit (params, body), ty ->
         check_fun_lit ctx params body ty
 
-    | Variant_lit (label, tm), Variant_type (Row_entries row) ->
+    | Variant_lit (label, tm), Core.Variant_type (Core.Row_entries row) ->
         begin match Label_map.find_opt label.data row with
         | Some elem_ty ->
-            Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
+            Core.Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
         | None ->
             error ctx label.span
               (Format.asprintf "unexpected variant `%s` in type `%t`"
@@ -274,10 +274,10 @@ end = struct
         check_tm_match ctx head clauses body_ty
 
     | If_then_else (head, tm1, tm2), ty ->
-        let head = check_tm ctx head Bool_type in
+        let head = check_tm ctx head Core.Bool_type in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
-        Bool_elim (head, tm1, tm2)
+        Core.Bool_elim (head, tm1, tm2)
 
     (* Fall back to type inference *)
     | _ ->
@@ -291,16 +291,16 @@ end = struct
     match tm.data with
     | Name name ->
         begin match lookup ctx name with
-        | Some (index, ty) -> Var index, ty
-        | None when name = "true" -> Bool_lit true, Bool_type
-        | None when name = "false" -> Bool_lit false, Bool_type
+        | Some (index, ty) -> Core.Var index, ty
+        | None when name = "true" -> Core.Bool_lit true, Core.Bool_type
+        | None when name = "false" -> Core.Bool_lit false, Core.Bool_type
         | None -> error ctx tm.span (Format.asprintf "unbound name `%s`" name)
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
         let def, def_ty = infer_fun_lit ctx params def_body_ty def_body in
         let body, body_ty = infer_tm (extend ctx def_name.data def_ty) body in
-        Let (def_name.data, def_ty, def, body), body_ty
+        Core.Let (def_name.data, def_ty, def, body), body_ty
 
     | Ann (tm, ty) ->
         let ty = check_ty ctx ty in
@@ -319,30 +319,30 @@ end = struct
               | false -> go (Label_map.add label.data (infer_tm ctx tm) acc) entries
         in
         let entries = go Label_map.empty entries in
-        Record_lit (Label_map.map fst entries),
-        Record_type (Row_entries (Label_map.map snd entries))
+        Core.Record_lit (Label_map.map fst entries),
+        Core.Record_type (Row_entries (Label_map.map snd entries))
 
     | Variant_lit (label, elem_tm) ->
         let elem_tm, elem_ty = infer_tm ctx elem_tm in
         let row = Label_map.singleton label.data elem_ty in
         let ty = Core.Variant_type (fresh_row_meta ctx row) in
-        Variant_lit (label.data, elem_tm, ty), ty
+        Core.Variant_lit (label.data, elem_tm, ty), ty
 
     | Int_lit i ->
-        Int_lit i, Int_type
+        Core.Int_lit i, Core.Int_type
 
     | App ({ span = head_span; _ } as head, arg) ->
         let head, head_ty = infer_tm ctx head in
         begin match Core.force_ty head_ty with
-        | Fun_type (param_ty, body_ty) ->
+        | Core.Fun_type (param_ty, body_ty) ->
             let arg = check_tm ctx arg param_ty in
-            Fun_app (head, arg), body_ty
+            Core.Fun_app (head, arg), body_ty
         | Meta_var _ as head_ty ->
             let param_ty = fresh_meta ctx head_span "function parameter type" in
             let body_ty = fresh_meta ctx head_span "function return type" in
-            unify_tys ctx head_span ~found:head_ty ~expected:(Fun_type (param_ty, body_ty));
+            unify_tys ctx head_span ~found:head_ty ~expected:(Core.Fun_type (param_ty, body_ty));
             let arg = check_tm ctx arg param_ty in
-            Fun_app (head, arg), body_ty
+            Core.Fun_app (head, arg), body_ty
         | _ -> error ctx arg.span "unexpected argument"
         end
 
@@ -355,13 +355,13 @@ end = struct
         let head, head_ty = infer_tm ctx head in
 
         begin match Core.force_ty head_ty with
-        | Record_type (Row_entries row) when Label_map.mem label.data row ->
-            Record_proj (head, label.data), Label_map.find label.data row
-        | Record_type (Row_meta_var _) | Meta_var _ as head_ty ->
+        | Core.Record_type (Core.Row_entries row) when Label_map.mem label.data row ->
+            Core.Record_proj (head, label.data), Label_map.find label.data row
+        | Core.Record_type (Core.Row_meta_var _) | Core.Meta_var _ as head_ty ->
             let field_ty = fresh_meta ctx head_span "record field" in
             let row = Label_map.singleton label.data field_ty in
             unify_tys ctx head_span ~found:head_ty ~expected:(Record_type (fresh_row_meta ctx row));
-            Record_proj (head, label.data), field_ty
+            Core.Record_proj (head, label.data), field_ty
         | head_ty ->
             error ctx head_span (Format.asprintf "unknown field `%s`" label.data)
               ~details:[
@@ -372,27 +372,27 @@ end = struct
         end
 
     | If_then_else (head, tm1, tm2) ->
-        let head = check_tm ctx head Bool_type in
+        let head = check_tm ctx head Core.Bool_type in
         let ty = fresh_meta ctx tm.span "if expression branches" in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
-        Bool_elim (head, tm1, tm2), ty
+        Core.Bool_elim (head, tm1, tm2), ty
 
     | Infix (`Eq, tm1, tm2) ->
         let tm1, ty1 = infer_tm ctx tm1 in
         let tm2, ty2 = infer_tm ctx tm2 in
         unify_tys ctx tm.span ~found:ty2 ~expected:ty1;
         begin match Core.force_ty ty1 with
-        | Bool_type -> Prim_app (Bool_eq, [tm1; tm2]), Bool_type
-        | Int_type -> Prim_app (Int_eq, [tm1; tm2]), Bool_type
+        | Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
+        | Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
         | ty ->
             error ctx tm.span
               (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
                 (Core.pp_ty ty))
               ~details:[
                 Format.asprintf "expected `%t` or `%t`"
-                  (Core.pp_ty Bool_type)
-                  (Core.pp_ty Int_type);
+                  (Core.pp_ty Core.Bool_type)
+                  (Core.pp_ty Core.Int_type);
               ]
         end
 
@@ -403,29 +403,29 @@ end = struct
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let tm1 = check_tm ctx tm1 Int_type in
-        let tm2 = check_tm ctx tm2 Int_type in
-        Prim_app (prim, [tm1; tm2]), Int_type
+        let tm1 = check_tm ctx tm1 Core.Int_type in
+        let tm2 = check_tm ctx tm2 Core.Int_type in
+        Core.Prim_app (prim, [tm1; tm2]), Core.Int_type
 
     | Prefix (`Neg, tm) ->
-        let tm = check_tm ctx tm Int_type in
-        Prim_app (Int_neg, [tm]), Int_type
+        let tm = check_tm ctx tm Core.Int_type in
+        Core.Prim_app (Prim.Int_neg, [tm]), Core.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
     match params, Core.force_ty ty with
     | [], ty ->
         check_tm ctx body ty
-    | (name, None) :: params, Fun_type (param_ty, body_ty) ->
+    | (name, None) :: params, Core.Fun_type (param_ty, body_ty) ->
         let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
-        Fun_lit (name.data, param_ty, body)
-    | (name, Some param_ty) :: params, Fun_type (param_ty', body_ty) ->
+        Core.Fun_lit (name.data, param_ty, body)
+    | (name, Some param_ty) :: params, Core.Fun_type (param_ty', body_ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys ctx param_ty_span ~found:param_ty ~expected:param_ty';
         let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
-        Fun_lit (name.data, param_ty, body)
-    | (name, _) :: _, Meta_var _ ->
+        Core.Fun_lit (name.data, param_ty, body)
+    | (name, _) :: _, Core.Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
         unify_tys ctx name.span ~found:ty' ~expected:ty;
         tm'
@@ -446,7 +446,7 @@ end = struct
           | Some ty -> check_ty ctx ty
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in
-        Fun_lit (name.data, param_ty, body), Fun_type (param_ty, body_ty)
+        Core.Fun_lit (name.data, param_ty, body), Core.Fun_type (param_ty, body_ty)
 
   (** Elaborate a pattern match, checking the clause bodies against an expected type. *)
   and check_tm_match (ctx : context) (head : tm) (clauses : (pattern * tm) list) (body_ty : Core.ty) : Core.tm =
@@ -455,7 +455,7 @@ end = struct
 
     (* TODO: Proper match compilation *)
     match Core.force_ty head_ty with
-    | Variant_type (Row_entries row) ->
+    | Core.Variant_type (Core.Row_entries row) ->
         (* Iterate through clauses, accumulating clauses *)
         let clauses =
           clauses |> ListLabels.fold_left
@@ -480,7 +480,7 @@ end = struct
         in
         if List.is_empty missing_clauses then
           (* Return the clauses *)
-          Variant_elim (head, clauses)
+          Core.Variant_elim (head, clauses)
         else
           error ctx head_span "non-exhaustive match"
             ~details:(missing_clauses |> List.map (fun (label, _) ->
@@ -502,9 +502,9 @@ end = struct
                 Label_map.add label.data param_ty row)
         in
         (* Unify variant type with head type *)
-        unify_tys ctx head_span ~found:head_ty ~expected:(Variant_type (Row_entries row));
+        unify_tys ctx head_span ~found:head_ty ~expected:(Core.Variant_type (Core.Row_entries row));
         (* Return the clauses *)
-        Variant_elim (head, clauses)
+        Core.Variant_elim (head, clauses)
 
 
   (** {2 Running elaboration} *)
@@ -526,7 +526,7 @@ end = struct
         ctx.row_metas |> Dynarray.iter begin fun m ->
           match !m with
           | Core.Unsolved_row (_, row) ->
-              m := Solved_row (Row_entries row);
+              m := Core.Solved_row (Core.Row_entries row);
           | Core.Solved_row _ -> ()
         end;
 
