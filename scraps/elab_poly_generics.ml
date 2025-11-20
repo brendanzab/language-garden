@@ -10,12 +10,22 @@
       const unit (id true)
     ]}
 
-    and explicit type applications like:
+    ...and explicit type applications like:
 
     {@text[
       let id [A] (x : A) := x;
       let const [A, B] (x : A) (y : B) := x;
       const [Unit, Int] unit (id [Bool] true)
+    ]}
+
+    Locally polymorphic definitions are also supported:
+
+    {@text[
+      -- False combinator (see https://www.angelfire.com/tx4/cus/combinator/birds.html)
+      let kite [A, B] (x : A) : B -> B :=
+        let id [A] (x : A) := x;
+        id;
+      kite unit true
     ]}
 
     This is what I think most people are asking for when they ask “how do I
@@ -544,6 +554,26 @@ let () = begin
           Fun_lit ("x", Ty.Var "A", Fun_lit ("y", Ty.Var "B", Var ("x", []))),
           Var ("const", [Ty.Unit; Ty.Bool]) $ Unit_lit $ (Var ("id", [Ty.Bool]) $ Bool_lit true))),
       Ty.Unit
+    ));
+
+    (* Locally polymorphic definitions *)
+    let expr =
+      Expr.Let ("kite", ["A"; "B"], Some (Fun (Name "A", Fun (Name "B", Name "B"))),
+        Fun ("x", None,
+          Expr.Let ("id", ["A"], None,
+            Fun ("x", Some (Name "A"), Name ("x", [])),
+            Name ("id", []))),
+        Name ("kite", []) $ Name ("unit", []) $ Name ("true", []))
+    in
+    assert (Elab.infer_expr expr |> expect_ok = Core.(
+      let ( $ ) f x = Expr.Fun_app (f, x) in
+      Expr.Let ("kite", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "B")),
+        Fun_lit ("x", Ty.Var "A",
+          Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+            Fun_lit ("x", Ty.Var "A", Var ("x", [])),
+            Var ("id", [Ty.Var "B"]))),
+        Var ("kite", [Ty.Unit; Ty.Bool]) $ Unit_lit $ Bool_lit true),
+      Ty.Bool
     ));
 
     (* TODO: More tests *)
