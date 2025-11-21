@@ -18,16 +18,6 @@
       const [Unit, Int] unit (id [Bool] true)
     ]}
 
-    Locally polymorphic definitions are also supported:
-
-    {@text[
-      -- False combinator (see https://www.angelfire.com/tx4/cus/combinator/birds.html)
-      let kite [A, B] (x : A) : B -> B :=
-        let id [A] (x : A) := x;
-        id;
-      kite unit true
-    ]}
-
     This is what I think most people are asking for when they ask “how do I
     implement generics”. This is in contrast to Hindley Milner type systems that
     implement generalisation (see [check_poly_algorithm_j.ml] and
@@ -558,6 +548,7 @@ let () = begin
 
     (* Locally polymorphic definitions *)
     let expr =
+      (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
       Expr.Let ("kite", ["A"; "B"], Some (Fun (Name "A", Fun (Name "B", Name "B"))),
         Fun ("x", None,
           Expr.Let ("id", ["A"], None,
