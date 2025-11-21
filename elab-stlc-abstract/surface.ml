@@ -53,8 +53,9 @@ end = struct
       for an example of how to implement this. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error span msg = raise (Error (span, msg))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   (** The elaboration context only needs to map names to variables. The types of
       those variables are handled internally in the {!Core} module. *)
@@ -69,7 +70,7 @@ end = struct
     | Name "Bool" -> Core.Bool.form
     | Name "Int" -> Core.Int.form
     | Name name ->
-        error ty.span (Format.asprintf "unbound type `%s`" name)
+        error ty.span "unbound type `%s`" name
     | Fun_ty (ty1, ty2) ->
         Core.Fun.form (check_ty ty1) (check_ty ty2)
 
@@ -88,14 +89,11 @@ end = struct
           (fun var -> check_tm ((name.data, var) :: ctx) body)
         |> Core.catch_check_tm begin function
           | `Unexpected_fun_lit expected_ty ->
-              error tm.span
-                (Format.asprintf "found function, expected `%t`"
-                  (Core.pp_ty expected_ty))
+              error tm.span "found function, expected `%t`" (Core.pp_ty expected_ty)
           | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
-              error tm.span
-                (Format.asprintf "mismatched parameter type, found `%t` expected `%t`"
-                  (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty))
+              error tm.span "mismatched parameter type, found `%t` expected `%t`"
+                (Core.pp_ty found_ty)
+                (Core.pp_ty expected_ty)
           end
 
     | If_then_else (head, tm1, tm2) ->
@@ -108,10 +106,9 @@ end = struct
         Core.conv (infer_tm ctx tm)
         |> Core.catch_check_tm begin function
           | `Type_mismatch Core.{ found_ty; expected_ty } ->
-              error tm.span
-                (Format.asprintf "type mismatch, found `%t` expected `%t`"
-                  (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty))
+              error tm.span "type mismatch, found `%t` expected `%t`"
+                (Core.pp_ty found_ty)
+                (Core.pp_ty expected_ty)
           end
 
   (** Elaborate a surface term into an inferrable term in the core language. *)
@@ -122,7 +119,7 @@ end = struct
         | Some var -> Core.lookup var
         | None when name = "true" -> Core.Bool.intro_true
         | None when name = "false" -> Core.Bool.intro_false
-        | None -> error tm.span (Format.asprintf "unbound variable `%s`" name)
+        | None -> error tm.span "unbound variable `%s`" name
         end
 
     | Let (name, def_ty, def, body) ->
@@ -151,14 +148,11 @@ end = struct
         Core.Fun.elim (infer_tm ctx head) (infer_tm ctx arg)
         |> Core.catch_infer_tm begin function
           | `Unexpected_arg head_ty ->
-              error head.span
-                (Format.asprintf "unexpected argument applied to `%t`"
-                  (Core.pp_ty head_ty))
+              error head.span "unexpected argument applied to `%t`" (Core.pp_ty head_ty)
           | `Type_mismatch Core.{ found_ty; expected_ty } ->
-              error arg.span
-                (Format.asprintf "mismatched argument type, found `%t` expected `%t`"
-                  (Core.pp_ty found_ty)
-                  (Core.pp_ty expected_ty))
+              error arg.span "mismatched argument type, found `%t` expected `%t`"
+                (Core.pp_ty found_ty)
+                (Core.pp_ty expected_ty)
           end
 
     | If_then_else (head, tm1, tm2) ->

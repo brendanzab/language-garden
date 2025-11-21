@@ -105,16 +105,15 @@ end = struct
       for an example of how to implement this. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   let equate_ty (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     if found = expected then () else
-      error span
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-          (Core.pp_ty expected)
-          (Core.pp_ty found))
+      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+        (Core.pp_ty expected)
+        (Core.pp_ty found)
 
 
   (** {2 Bidirectional type checking} *)
@@ -181,7 +180,7 @@ end = struct
         | None when n = "true" -> Expr (Core.Bool_lit true, Core.Bool_type)
         | None when n = "false" -> Expr (Core.Bool_lit false, Core.Bool_type)
         | None when n = "Int" -> Type Core.Int_type
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" n)
+        | None -> error tm.span "unbound name `%s`" n
         end
 
     | Let (def_name, params, def_body_t, def_body, body) ->
@@ -236,7 +235,7 @@ end = struct
         begin match t1 with
         | Bool_type -> Expr (Core.Prim_app (Prim.Bool_eq, [e1; e2]), Core.Bool_type)
         | Int_type -> Expr (Core.Prim_app (Prim.Int_eq, [e1; e2]), Core.Bool_type)
-        | t -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty t))
+        | t -> error tm.span "@[unsupported type: %t@]" (Core.pp_ty t)
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->

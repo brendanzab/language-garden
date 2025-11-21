@@ -160,30 +160,27 @@ end = struct
       for an example of how to implement this. *)
   exception Error of (span * string)
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   let unify_vtys (ctx : context) (span : span) ~(found : Core.vty) ~(expected : Core.vty) =
     try Core.unify_vtys ctx.ty_size found expected with
     | Core.Mismatched_types (_, _) ->
-        error span
-          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-            (pp_vty ctx expected)
-            (pp_vty ctx found))
+        error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+          (pp_vty ctx expected)
+          (pp_vty ctx found)
     | Core.Infinite_type m ->
-        error span
-          (Format.asprintf "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-            (pp_ty ctx (Meta_var m))
-            (pp_vty ctx expected)
-            (pp_vty ctx found))
+        error span "@[<v 2>@[meta variable %t refers to itself:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+          (pp_ty ctx (Meta_var m))
+          (pp_vty ctx expected)
+          (pp_vty ctx found)
     | Core.Escaping_scope (m, vty) ->
-        error span
-          (Format.asprintf "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-            (pp_vty ctx vty)
-            (pp_ty ctx (Meta_var m))
-            (pp_vty ctx expected)
-            (pp_vty ctx found))
+        error span "@[<v 2>@[type variable %t escapes the scope of meta variable %t:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+          (pp_vty ctx vty)
+          (pp_ty ctx (Meta_var m))
+          (pp_vty ctx expected)
+          (pp_vty ctx found)
 
 
   (** {2 Bidirectional type checking} *)
@@ -204,7 +201,7 @@ end = struct
         | Some ty_index -> Local_var ty_index
         | None when name = "Bool" -> Core.Bool_type
         | None when name = "Int" -> Core.Int_type
-        | None -> error ty.span (Format.asprintf "unbound type `%s`" name)
+        | None -> error ty.span "unbound type `%s`" name
         end
     | Placeholder ->
         fresh_meta ctx ty.span "placeholder"
@@ -255,7 +252,7 @@ end = struct
         | Some (tm_index, vty) -> Core.Local_var tm_index, vty
         | None when name = "true" -> Core.Bool_lit true, Core.Bool_type
         | None when name = "false" -> Core.Bool_lit false, Core.Bool_type
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -320,7 +317,7 @@ end = struct
         begin match Core.force_vty vty1 with
         | Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
         | Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
-        | vty -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (pp_vty ctx vty))
+        | vty -> error tm.span "@[unsupported type: %t@]" (pp_vty ctx vty)
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->

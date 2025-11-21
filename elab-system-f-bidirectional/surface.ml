@@ -151,16 +151,15 @@ end = struct
       for an example of how to implement this. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   let equate_vtys (ctx : context) (span : span) ~(found : Core.Semantics.vty) ~(expected : Core.Semantics.vty) =
     if Core.Semantics.is_convertible ctx.ty_size found expected then () else
-      error span
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-          (pp_vty ctx expected)
-          (pp_vty ctx found))
+      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+        (pp_vty ctx expected)
+        (pp_vty ctx found)
 
 
   (** {2 Bidirectional type checking} *)
@@ -181,7 +180,7 @@ end = struct
         | Some ty_index -> Var ty_index
         | None when name = "Bool" -> Core.Bool_type
         | None when name = "Int" -> Core.Int_type
-        | None -> error ty.span (Format.asprintf "unbound type `%s`" name)
+        | None -> error ty.span "unbound type `%s`" name
         end
     | Forall_type (names, body_ty) ->
         let rec go ctx names : Core.ty =
@@ -225,7 +224,7 @@ end = struct
         | Some (tm_index, vty) -> Var tm_index, vty
         | None when name = "true" -> Core.Bool_lit true, Semantics.Bool_type
         | None when name = "false" -> Core.Bool_lit false, Semantics.Bool_type
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -278,7 +277,7 @@ end = struct
         begin match vty1 with
         | Semantics.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Semantics.Bool_type
         | Semantics.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Semantics.Bool_type
-        | vty -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (pp_vty ctx vty))
+        | vty -> error tm.span "@[unsupported type: %t@]" (pp_vty ctx vty)
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->

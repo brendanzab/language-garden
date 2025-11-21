@@ -132,18 +132,17 @@ end = struct
       for an example of how to implement this. *)
   exception Error of (span * string)
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   let unify_tys (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     try Core.unify_tys found expected with
     | Core.Infinite_type _ -> error span "infinite type"
     | Core.Mismatched_types (_, _) ->
-        error span
-          (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-            (Core.pp_ty expected)
-            (Core.pp_ty found))
+        error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+          (Core.pp_ty expected)
+          (Core.pp_ty found)
 
 
   (** {2 Bidirectional type checking} *)
@@ -161,8 +160,7 @@ end = struct
     match ty.data with
     | Name "Bool" -> Core.Bool_type
     | Name "Int" -> Core.Int_type
-    | Name name ->
-        error ty.span (Format.asprintf "unbound type `%s`" name)
+    | Name name -> error ty.span "unbound type `%s`" name
     | Fun_type (ty1, ty2) ->
         Core.Fun_type (check_ty ctx ty1, check_ty ctx ty2)
     | Placeholder ->
@@ -204,7 +202,7 @@ end = struct
         | Some (tm, ty) -> tm, ty
         | None when name = "true" -> Core.Bool_lit true, Core.Bool_type
         | None when name = "false" -> Core.Bool_lit false, Core.Bool_type
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
 
     | Let ((def_name, params, def_ty, def), body) ->
@@ -256,7 +254,7 @@ end = struct
         begin match Core.force_ty ty1 with
         | Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
         | Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
-        | ty -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
+        | ty -> error tm.span "@[unsupported type: %t@]" (Core.pp_ty ty)
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->
@@ -355,8 +353,8 @@ end = struct
               match def_name.data with
               | Some name when not (Label_map.mem name mutual_decls) ->
                   mutual_decls |> Label_map.add name (fresh_meta ctx def_name.span "definition type")
-              | Some name -> error def_name.span (Format.asprintf "duplicate name `%s` in mutually recursive bindings" name)
-              | None -> error def_name.span (Format.asprintf "cannot use `_` in mutually recursive bindings"))
+              | Some name -> error def_name.span "duplicate name `%s` in mutually recursive bindings" name
+              | None -> error def_name.span "cannot use `_` in mutually recursive bindings")
         in
 
         let mutual_defs =

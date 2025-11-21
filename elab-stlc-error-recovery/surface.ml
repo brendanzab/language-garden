@@ -116,6 +116,10 @@ end = struct
   let report (ctx : context) (error : Error.t) =
     Dynarray.add_last ctx.errors error
 
+  let error (type a) ?(details : string list option) (ctx : context) (span : span) : (a, Format.formatter, unit, unit) format4 -> a =
+    Format.kasprintf @@ fun message ->
+      report ctx (Error.make span message ?details)
+
   (** Check if two types are compatible with each other. *)
   let equate_tys (span : span) ~(found : Core.ty) ~(expected : Core.ty) : (unit, Error.t) result =
     if Core.equate_tys found expected then Ok () else
@@ -143,7 +147,7 @@ end = struct
     | Name "Bool" -> Core.Bool_type
     | Name "Int" -> Core.Int_type
     | Name name ->
-        report ctx @@ Error.make ty.span (Format.asprintf "unbound type `%s`" name);
+        error ctx ty.span "unbound type `%s`" name;
         Core.Unknown_type
     | Fun_type (ty1, ty2) ->
         Core.Fun_type (check_ty ctx ty1, check_ty ctx ty2)
@@ -184,7 +188,7 @@ end = struct
         | None when name = "true" -> Core.Bool_lit true, Core.Bool_type
         | None when name = "false" -> Core.Bool_lit false, Core.Bool_type
         | None ->
-            report ctx @@ Error.make tm.span (Format.asprintf "unbound name `%s`" name);
+            error ctx tm.span "unbound name `%s`" name;
             Core.Reported_error, Core.Unknown_type
         end
 
@@ -212,7 +216,7 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Core.Fun_app (head, arg), body_ty
         | _ ->
-            report ctx @@ Error.make arg.span "unexpected argument";
+            error ctx arg.span "unexpected argument";
             Core.Reported_error, Core.Unknown_type
         end
 
@@ -223,7 +227,7 @@ end = struct
         begin match Core.meet_tys ty1 ty2 with
         | Some ty -> Bool_elim (head, tm1, tm2), ty
         | None ->
-            report ctx @@ Error.make tm2_span "mismatched branches of if expression"
+            error ctx tm2_span "mismatched branches of if expression"
               ~details:[
                 Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
                   (Core.pp_ty ty1)
@@ -240,9 +244,9 @@ end = struct
         | Some Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
         | Some Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
         | Some ty ->
-            report ctx @@ Error.make tm.span
-              (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
-                (Core.pp_ty ty))
+            error ctx tm.span
+              "@[<h>cannot compare operands of type `%t`@]"
+              (Core.pp_ty ty)
               ~details:[
                 Format.asprintf "expected `%t` or `%t`"
                   (Core.pp_ty Core.Bool_type)
@@ -250,7 +254,7 @@ end = struct
               ];
             Core.Reported_error, Core.Unknown_type
         | None ->
-            report ctx @@ Error.make tm2_span "mismatched operands"
+            error ctx tm2_span "mismatched operands"
               ~details:[
                 Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
                   (Core.pp_ty ty1)
@@ -311,7 +315,7 @@ end = struct
     (* If we see an unexpected parameter, we check the parameter type regardless
        and continue checking the body of the function. *)
     | (name, param_ty) :: params, None ->
-        report ctx @@ Error.make name.span "unexpected parameter";
+        error ctx name.span "unexpected parameter";
         let param_ty = match param_ty with
           | Some param_ty -> check_ty ctx param_ty
           | None -> Core.Unknown_type
@@ -332,7 +336,7 @@ end = struct
           match param_ty with
           | Some ty -> check_ty ctx ty
           | None ->
-              report ctx @@ Error.make name.span "ambiguous parameter type";
+              error ctx name.span "ambiguous parameter type";
               Core.Unknown_type
         in
         let body, body_ty = infer_fun_lit (extend ctx name.data param_ty) params body_ty body in

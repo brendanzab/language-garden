@@ -193,13 +193,15 @@ end = struct
     Dynarray.add_last ctx.diagnostics diagnostic
 
   (** Report a warning to the programmer *)
-  let warning ?(details : string list option) (ctx : context) (span : span) (message : string) : unit =
-    report ctx (Diagnostic.warning span message ?details)
+  let warning (type a) ?(details : string list option) (ctx : context) (span : span) : (a, Format.formatter, unit, unit) format4 -> a =
+    Format.kasprintf @@ fun message ->
+      report ctx (Diagnostic.warning span message ?details)
 
   (** Terminate elaboration, reporting an error *)
-  let error (type a) ?(details : string list option) (ctx : context) (span : span) (message : string) : a =
-    report ctx (Diagnostic.error span message ?details);
-    raise Error
+  let error (type a b) ?(details : string list option) (ctx : context) (span : span) : (a, Format.formatter, unit, b) format4 -> a =
+    Format.kasprintf @@ fun message ->
+      report ctx (Diagnostic.error span message ?details);
+      raise Error
 
   let unify_tys (ctx : context) (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     try Core.unify_tys found expected with
@@ -230,7 +232,7 @@ end = struct
     match ty.data with
     | Name "Bool" -> Core.Bool_type
     | Name "Int" -> Core.Int_type
-    | Name name -> error ctx ty.span (Format.asprintf "unbound type `%s`" name)
+    | Name name -> error ctx ty.span "unbound type `%s`" name
     | Fun_type (ty1, ty2) -> Core.Fun_type (check_ty ctx ty1, check_ty ctx ty2)
     | Record_type entries -> Core.Record_type (check_ty_entries ctx entries)
     | Variant_type entries -> Core.Variant_type (check_ty_entries ctx entries)
@@ -242,7 +244,7 @@ end = struct
       | [] -> acc
       | (label, ty) :: entries ->
           begin match Label_map.mem label.data acc with
-          | true -> error ctx label.span (Format.asprintf "duplicate label `%s`" label.data)
+          | true -> error ctx label.span "duplicate label `%s`" label.data
           | false -> go (Label_map.add label.data (check_ty ctx ty) acc) entries
           end
     in
@@ -264,10 +266,9 @@ end = struct
         | Some elem_ty ->
             Core.Variant_lit (label.data, check_tm ctx tm elem_ty, ty)
         | None ->
-            error ctx label.span
-              (Format.asprintf "unexpected variant `%s` in type `%t`"
-                label.data
-                (Core.pp_ty ty))
+            error ctx label.span "unexpected variant `%s` in type `%t`"
+              label.data
+              (Core.pp_ty ty)
         end
 
     | Match (head, clauses), body_ty ->
@@ -294,7 +295,7 @@ end = struct
         | Some (index, ty) -> Core.Var index, ty
         | None when name = "true" -> Core.Bool_lit true, Core.Bool_type
         | None when name = "false" -> Core.Bool_lit false, Core.Bool_type
-        | None -> error ctx tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error ctx tm.span "unbound name `%s`" name
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -315,7 +316,7 @@ end = struct
           | [] -> acc
           | (label, tm) :: entries ->
               match Label_map.mem label.data acc with
-              | true -> error ctx label.span (Format.asprintf "duplicate label `%s`" label.data)
+              | true -> error ctx label.span "duplicate label `%s`" label.data
               | false -> go (Label_map.add label.data (infer_tm ctx tm) acc) entries
         in
         let entries = go Label_map.empty entries in
@@ -363,7 +364,7 @@ end = struct
             unify_tys ctx head_span ~found:head_ty ~expected:(Record_type (fresh_row_meta ctx row));
             Core.Record_proj (head, label.data), field_ty
         | head_ty ->
-            error ctx head_span (Format.asprintf "unknown field `%s`" label.data)
+            error ctx head_span "unknown field `%s`" label.data
               ~details:[
                 Format.asprintf "@[<v>@[expected: { .. %s : _ }@]@ @[   found: %t@]@]"
                   label.data
@@ -386,9 +387,8 @@ end = struct
         | Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
         | Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
         | ty ->
-            error ctx tm.span
-              (Format.asprintf "@[<h>cannot compare operands of type `%t`@]"
-                (Core.pp_ty ty))
+            error ctx tm.span "@[<h>cannot compare operands of type `%t`@]"
+              (Core.pp_ty ty)
               ~details:[
                 Format.asprintf "expected `%t` or `%t`"
                   (Core.pp_ty Core.Bool_type)

@@ -68,9 +68,9 @@ module Elab = struct
       nicely to the programmer. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
 
   (** {1 Bidirectional elaboration} *)
@@ -82,8 +82,7 @@ module Elab = struct
     | Name ("Text", []) -> Core.Text_ty (* TODO: improve arity errors *)
     | Name ("Bool", []) -> Core.Bool_ty (* TODO: improve arity errors *)
     | Name ("Int", []) -> Core.Int_ty (* TODO: improve arity errors *)
-    | Name (name, _) ->
-        error ty.span (Format.asprintf "unbound type `%s`" name)
+    | Name (name, _) -> error ty.span "unbound type `%s`" name
     | Fun_ty (ty1, ty2) ->
         Core.Fun_ty (check_ty ty1, check_ty ty2)
 
@@ -113,7 +112,7 @@ module Elab = struct
         | Some ty -> Var name, ty
         | None when name = "true" -> Core.Bool_lit true, Core.Bool_ty
         | None when name = "false" -> Core.Bool_lit false, Core.Bool_ty
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
     | Let (name, params, def_body_ty, def_tm, body_tm) ->
         let def_tm, def_ty = fun_lit ctx params def_body_ty def_tm in

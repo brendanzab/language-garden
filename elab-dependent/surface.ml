@@ -143,9 +143,9 @@ end = struct
       for an example of how to implement this. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
 
   (** {2 Bidirectional type checking} *)
@@ -195,10 +195,9 @@ end = struct
         let tm_span = tm.span in
         let tm, found_vty = infer ctx tm in
         if Ctx.is_convertible ctx found_vty vty then tm else
-          error tm_span
-            (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-              (Ctx.pp_vtm ctx vty)
-              (Ctx.pp_vtm ctx found_vty))
+          error tm_span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+            (Ctx.pp_vtm ctx vty)
+            (Ctx.pp_vtm ctx found_vty)
 
   (** Elaborate a term in the surface language into a term in the core language,
       inferring its type. *)
@@ -220,7 +219,7 @@ end = struct
            is inconsistent. This is fine for a toy type system, but we should
            use universe levels in an actual implementation. *)
         | None when name = "Type" -> Syntax.Univ, Semantics.Univ
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
 
     (* Annotated terms *)

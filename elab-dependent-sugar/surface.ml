@@ -147,16 +147,15 @@ end = struct
       for an example of how to implement this. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   let check_convertible (ctx : Ctx.t) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
     if Ctx.is_convertible ctx found expected then () else
-      error span
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-          (Ctx.pp_vtm ctx expected)
-          (Ctx.pp_vtm ctx found))
+      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+        (Ctx.pp_vtm ctx expected)
+        (Ctx.pp_vtm ctx found)
 
 
   (** {2 Bidirectional type checking} *)
@@ -212,7 +211,7 @@ end = struct
            is inconsistent. This is fine for a toy type system, but we should
            use universe levels in an actual implementation. *)
         | None when name = "Type" -> Syntax.Univ, Semantics.Univ
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
 
     (* Annotated terms *)

@@ -89,16 +89,15 @@ end = struct
       for an example of how to implement this. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   let equate_ty (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     if found = expected then () else
-      error span
-        (Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-          (Core.pp_ty expected)
-          (Core.pp_ty found))
+      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+        (Core.pp_ty expected)
+        (Core.pp_ty found)
 
 
   (** {2 Bidirectional type checking} *)
@@ -116,8 +115,7 @@ end = struct
     match ty.data with
     | Name "Bool" -> Core.Bool_type
     | Name "Int" -> Core.Int_type
-    | Name name ->
-        error ty.span (Format.asprintf "unbound type `%s`" name)
+    | Name name -> error ty.span "unbound type `%s`" name
     | Fun_type (ty1, ty2) ->
         Core.Fun_type (check_ty ty1, check_ty ty2)
 
@@ -152,7 +150,7 @@ end = struct
         | Some (index, ty) -> Core.Var index, ty
         | None when name = "true" -> Core.Bool_lit true, Core.Bool_type
         | None when name = "false" -> Core.Bool_lit false, Core.Bool_type
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
 
     | Let (def_name, params, def_body_ty, def_body, body) ->
@@ -194,7 +192,7 @@ end = struct
         begin match ty1 with
         | Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
         | Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
-        | ty -> error tm.span (Format.asprintf "@[unsupported type: %t@]" (Core.pp_ty ty))
+        | ty -> error tm.span "@[unsupported type: %t@]" (Core.pp_ty ty)
         end
 
     | Infix ((`Add | `Sub | `Mul) as prim, tm1, tm2) ->

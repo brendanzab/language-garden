@@ -173,27 +173,21 @@ end = struct
       for an example of how to implement this. *)
   exception Error of span * string
 
-  (** Raises an {!Error} exception *)
-  let error (type a) (span : span) (message : string) : a =
-    raise (Error (span, message))
-
-  let type_mismatch (ctx : Ctx.t) ~(found : Semantics.vty) ~(expected : Semantics.vty) : string =
-    Format.asprintf "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-      (Ctx.pp_vtm ctx expected)
-      (Ctx.pp_vtm ctx found)
-
-  let term_mismatch (ctx : Ctx.t) ~(found : Semantics.vtm) ~(expected : Semantics.vtm) : string =
-    Format.asprintf "@[<v 2>@[mismatched terms:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-      (Ctx.pp_vtm ctx expected)
-      (Ctx.pp_vtm ctx found)
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
+    Format.kasprintf (fun message -> raise (Error (span, message)))
 
   let check_convertible_vtys (ctx : Ctx.t) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
     if Ctx.is_convertible ctx found expected then () else
-      error span (type_mismatch ctx ~found ~expected)
+      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+        (Ctx.pp_vtm ctx expected)
+        (Ctx.pp_vtm ctx found)
 
   let check_convertible_vtms (ctx : Ctx.t) (span : span) ~(found : Semantics.vtm) ~(expected : Semantics.vtm) =
     if Ctx.is_convertible ctx found expected then () else
-      error span (term_mismatch ctx ~found ~expected)
+      error span "@[<v 2>@[mismatched terms:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+        (Ctx.pp_vtm ctx expected)
+        (Ctx.pp_vtm ctx found)
 
 
   (** {2 Coercive subtyping} *)
@@ -242,16 +236,17 @@ end = struct
               let to_tm = Syntax.Sing_intro in
               (to_label, to_tm) :: go from_decls (to_decls (lazy (Ctx.eval ctx to_tm)))
           | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
-              error span
-                (Format.asprintf "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[   found label: `%s`@]@]"
-                  to_label from_label)
+              error span "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[   found label: `%s`@]@]"
+                to_label from_label
           | _, _ -> Semantics.error "mismatched telescope length"
         in
         Syntax.Rec_lit (go from_decls to_decls)
 
     (* TODO: subtyping for functions! *)
     | from_vty, to_vty ->
-        error span (type_mismatch ctx ~expected:to_vty ~found:from_vty)
+        error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
+          (Ctx.pp_vtm ctx from_vty)
+          (Ctx.pp_vtm ctx to_vty)
 
 
   (** {2 Bidirectional type checking} *)
@@ -298,9 +293,9 @@ end = struct
               let tm = Syntax.Sing_intro in
               (label, tm) :: go defns (decls (lazy (Ctx.eval ctx tm)))
           | _, Semantics.Cons (label, _, _) ->
-              error tm.span (Format.asprintf "field with label `%s` not found in record" label)
+              error tm.span "field with label `%s` not found in record" label
           | (label, _) :: _, Semantics.Nil ->
-              error label.span (Format.sprintf "unexpected field `%s` in record literal" label.data)
+              error label.span "unexpected field `%s` in record literal" label.data
         in
         Syntax.Rec_lit (go defns decls)
 
@@ -346,7 +341,7 @@ end = struct
            is inconsistent. This is fine for a toy type system, but we should
            use universe levels in an actual implementation. *)
         | None when name = "Type" -> Syntax.Univ, Semantics.Univ
-        | None -> error tm.span (Format.asprintf "unbound name `%s`" name)
+        | None -> error tm.span "unbound name `%s`" name
         end
 
     (* Annotated terms *)
@@ -386,7 +381,7 @@ end = struct
         let rec go ctx seen_labels = function
           | [] -> []
           | (label, _) :: _ when List.mem label.data seen_labels ->
-              error label.span (Format.sprintf "duplicate label `%s` in record type" label.data)
+              error label.span "duplicate label `%s` in record type" label.data
           | (label, ty) :: decls ->
               let ty = check ctx ty Semantics.Univ in
               let ctx = Ctx.add_param ctx (Some label.data) (Ctx.eval ctx ty) in
@@ -430,9 +425,9 @@ end = struct
               | head, Semantics.Rec_type decls ->
                   begin match Semantics.proj_ty (Ctx.eval ctx head) decls label.data with
                   | Some vty -> go ctx (Syntax.Rec_proj (head, label.data), vty) labels
-                  | None -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data)
+                  | None -> error label.span "field with label `%s` not found in record" label.data
                   end
-              | _ -> error label.span (Format.asprintf "field with label `%s` not found in record" label.data)
+              | _ -> error label.span "field with label `%s` not found in record" label.data
         in
         go ctx (infer ctx head) labels
 
@@ -444,7 +439,7 @@ end = struct
           | Semantics.Nil, [] -> []
           | Semantics.Nil, (label, _) :: _ ->
               (* FIXME: use label location *)
-              error head.span (Format.sprintf "field `%s` not found in record type" label)
+              error head.span "field `%s` not found in record type" label
           | Semantics.Cons (label, vty, ty_env), patches ->
               let ty = Ctx.quote ctx vty in
               begin match List.assoc_opt label patches with
@@ -463,7 +458,7 @@ end = struct
 
         let dupes = find_dupes (List.map fst patches) in
         if List.compare_length_with dupes 0 <> 0 then
-          error head.span ("duplicate labels in patches: `" ^ String.concat "`, `" dupes ^ "`")
+          error head.span "duplicate labels in patches: `%s`" (String.concat "`, `" dupes)
         else
           let head = check ctx head Semantics.Univ in
           begin match Ctx.eval ctx head with
