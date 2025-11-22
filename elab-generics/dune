@@ -1,0 +1,21 @@
+(executable
+ (name main)
+ (public_name generics)
+ (package elab-generics)
+ (preprocess
+  (pps sedlex.ppx))
+ (libraries
+  cmdliner
+  menhirLib))
+
+(menhir
+ (modules parser)
+ (flags --explain --strict))
+
+(mdx
+ (package elab-generics)
+ (deps %{bin:generics}))
+
+(cram
+ (package elab-generics)
+ (deps %{bin:generics}))

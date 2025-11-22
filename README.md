@@ -48,6 +48,8 @@ Simply typed:
 
 Polymorphically typed:
 
+- [**elab-generics**](./elab-generics):
+  An elaborator for a simple, polymorphic functional language.
 - [**elab-system-f-bidirectional**](./elab-system-f-bidirectional):
   An elaborator for a higher-rank polymorphic lambda calculus.
 - [**elab-system-f-unification**](./elab-system-f-unification):

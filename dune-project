@@ -64,6 +64,15 @@
   (sedlex (>= "3.6"))))
 
 (package
+ (name elab-generics)
+ (depends
+  (cmdliner (>= "1.3"))
+  (menhir (and (>= "20240715") :build))
+  (menhirLib (>= "20240715"))
+  (mdx (and (>= "2.5") :with-test))
+  (sedlex (>= "3.6"))))
+
+(package
  (name elab-stlc-abstract)
  (depends
   ; (cmdliner (>= "1.3"))

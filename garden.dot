@@ -20,6 +20,9 @@ digraph garden {
     style = "filled, rounded",
   ];
 
+  // NOTE: Subgraphs and nodes are listed in reverse order to how we’d like
+  //       them to appear in the rendered graph
+
   subgraph elab {
     label = "elab";
     cluster = true;
@@ -30,6 +33,8 @@ digraph garden {
 
     "elab-system-f-bidirectional";
     "elab-system-f-unification";
+
+    "elab-generics";
 
     "elab-stlc-bidirectional";
     "elab-stlc-unification";
@@ -70,6 +75,7 @@ digraph garden {
   "elab-stlc-bidirectional" -> "lang-doc-templates";
   "elab-stlc-unification" -> "elab-stlc-letrec-unification";
   "elab-stlc-unification" -> "elab-stlc-row-unification";
+  "elab-stlc-unification" -> "elab-generics";
   "elab-stlc-unification" -> "elab-system-f-unification";
   "elab-system-f-bidirectional" -> "elab-system-f-unification";
   "elab-dependent" -> "elab-dependent-sugar";
