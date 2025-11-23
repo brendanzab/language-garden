@@ -80,6 +80,16 @@ module Core = struct
         incr next;
         ref (Unsolved id)
 
+    (** Force any solved metavariables on the outermost part of a type. This is
+        usually done before pattern matching on a type. *)
+    let rec force (ty : t) : t =
+      match ty with
+      | Meta ({ contents = Solved ty } as m) ->
+          let ty = force ty in
+          m := Solved ty;
+          ty
+      | ty -> ty
+
     (** Replace bound variables in a type *)
     let rec subst (ty : t) (mapping : (string * t) list) : t =
       match ty with
@@ -98,19 +108,19 @@ module Core = struct
     let rec occurs (m : meta) (ty : t) =
       match ty with
       | Var _ -> ()
+      | Meta m' when m == m' -> raise Infinite_type
+      | Meta { contents = Solved ty } -> occurs m ty
+      | Meta { contents = Unsolved _ } -> ()
       | Fun (param_ty, body_ty) ->
           occurs m param_ty;
           occurs m body_ty
       | Unit -> ()
       | Bool -> ()
-      | Meta m' when m == m' -> raise Infinite_type
-      | Meta { contents = Solved ty } -> occurs m ty
-      | Meta { contents = Unsolved _ } -> ()
 
     (** Check that two types are the same, wile updating unsolved metavariables
         with known type information as required. *)
     let rec unify (ty1 : t) (ty2 : t) =
-      match ty1, ty2 with
+      match force ty1, force ty2 with
       | Var name1, Var name2 when name1 = name2 -> ()
       | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
       | Unit, Unit -> ()
@@ -144,7 +154,7 @@ module Core = struct
     let pp (ty : t) (ppf : Format.formatter) : unit =
       let rec pp_ty ty ppf =
         match ty with
-        | Meta { contents = Solved ty } -> pp_ty ty ppf
+        | Meta m -> pp_meta pp_ty m ppf
         | Fun (param_ty, body_ty) ->
             Format.fprintf ppf "%t -> %t"
               (pp_atomic_ty param_ty)
@@ -154,11 +164,14 @@ module Core = struct
       and pp_atomic_ty ty ppf =
         match ty with
         | Var name -> Format.fprintf ppf "%s" name
-        | Meta { contents = Solved ty } -> pp_atomic_ty ty ppf
-        | Meta { contents = Unsolved id } -> Format.fprintf ppf "$%i" id
+        | Meta m -> pp_meta pp_atomic_ty m ppf
         | Unit -> Format.fprintf ppf "Unit"
         | Bool -> Format.fprintf ppf "Bool"
         | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
+      and pp_meta pp_ty m ppf =
+        match !m with
+        | Solved ty -> pp_ty ty ppf
+        | Unsolved id -> Format.fprintf ppf "?%i" id
       in
       pp_ty ty ppf
 
@@ -341,7 +354,7 @@ module Surface = struct
 
     (** Elaborate a term, given an expected type. *)
     let rec check_expr (ctx : Ctx.t) (expr : Expr.t) (ty : Core.Ty.t) : Core.Expr.t =
-      match expr, ty with
+      match expr, Core.Ty.force ty with
       | Expr.Let (name, ty_params, def_ty, def, body), body_ty ->
           let def, def_ty = infer_def ctx ty_params def_ty def in
           let body = check_expr (Ctx.extend_expr ctx name (ty_params, def_ty)) body body_ty in
@@ -418,15 +431,17 @@ module Surface = struct
           Core.Expr.Fun_lit (name, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
       | Expr.App (head, arg) ->
-          begin match infer_expr ctx head with
-          | head, Core.Ty.Fun (param_ty, body_ty) ->
+          let head, head_ty = infer_expr ctx head in
+          begin match Core.Ty.force head_ty with
+          | Core.Ty.Fun (param_ty, body_ty) ->
               let arg = check_expr ctx arg param_ty in
               Core.Expr.Fun_app (head, arg), body_ty
-          | head, head_ty ->
+          | Core.Ty.Meta _ as head_ty ->
               let arg, arg_ty = infer_expr ctx arg in
               let body_ty = Ctx.fresh_meta ctx "return type" in
               unify_tys ~found:head_ty ~expected:(Core.Ty.Fun (arg_ty, body_ty));
               Core.Expr.Fun_app (head, arg), body_ty
+          |_ -> error "unexpected argument"
           end
 
       | Expr.If (head, true_body, false_body) ->
