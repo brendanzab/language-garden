@@ -185,12 +185,15 @@ module Core = struct
 
   module Expr = struct
 
+    (** Names of bound variables *)
+    type name = string
+
     type t =
-      | Var of string * Ty.t list
+      | Var of name * Ty.t list
       (** A variable that is possibly applied to a series of type arguments
           (which will be applied a type lambda in a definition). *)
 
-      | Let of string * Ty.name list * Ty.t * t * t
+      | Let of name * Ty.name list * Ty.t * t * t
       (** Let bindings that are polymorphic over a series of type parameters.
           The type parameters are bound in a forall in the type annotation, and
           in a type lambda in the definition. In System F this would look like:
@@ -202,7 +205,7 @@ module Core = struct
           ]}
       *)
 
-      | Fun_lit of string * Ty.t * t
+      | Fun_lit of name * Ty.t * t
       | Fun_app of t * t
       | Unit_lit
       | Bool_lit of bool
@@ -292,11 +295,11 @@ module Surface = struct
 
       val fresh_meta : t -> string -> Core.Ty.t
 
-      val extend_tys : t -> string list -> t
-      val extend_expr : t -> string -> poly_ty -> t
+      val extend_tys : t -> Core.Ty.name list -> t
+      val extend_expr : t -> Core.Expr.name -> poly_ty -> t
 
-      val lookup_ty : t -> string -> unit option
-      val lookup_expr : t -> string -> poly_ty option
+      val lookup_ty : t -> Core.Ty.name -> unit option
+      val lookup_expr : t -> Core.Expr.name -> poly_ty option
 
       val unsolved_metas : t -> string Seq.t
 
@@ -304,8 +307,8 @@ module Surface = struct
 
       type t = {
         metas : (Core.Ty.meta * string) Dynarray.t;
-        ty_names : string list list;
-        expr_tys : (string * poly_ty) list;
+        ty_names : Core.Ty.name list list;
+        expr_tys : (Core.Expr.name * poly_ty) list;
       }
 
       let create () = {
@@ -319,16 +322,16 @@ module Surface = struct
         Dynarray.add_last ctx.metas (meta, desc);
         Core.Ty.Meta meta
 
-      let extend_tys (ctx : t) (names : string list) : t =
+      let extend_tys (ctx : t) (names : Core.Ty.name list) : t =
         { ctx with ty_names = names :: ctx.ty_names }
 
-      let extend_expr (ctx : t) (name : string) (ty_params, ty : poly_ty) : t =
+      let extend_expr (ctx : t) (name : Core.Expr.name) (ty_params, ty : poly_ty) : t =
         { ctx with expr_tys = (name, (ty_params, ty)) :: ctx.expr_tys }
 
-      let lookup_ty (ctx : t) (name : string) : unit option =
+      let lookup_ty (ctx : t) (name : Core.Ty.name) : unit option =
         if List.exists (List.mem name) ctx.ty_names then Some () else None
 
-      let lookup_expr (ctx : t) (name : string) : poly_ty option =
+      let lookup_expr (ctx : t) (name : Core.Expr.name) : poly_ty option =
         List.assoc_opt name ctx.expr_tys
 
       let unsolved_metas (ctx : t) : string Seq.t =
