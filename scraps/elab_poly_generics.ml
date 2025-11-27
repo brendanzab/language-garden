@@ -58,6 +58,7 @@ module Core = struct
       | Fun of t * t
       | Unit
       | Bool
+      | Int
 
     (** Mutable representation of metavariables, to be updated in-place during
         unification and typechecking *)
@@ -99,6 +100,7 @@ module Core = struct
       | Fun (param_ty, body_ty) -> Fun (subst param_ty mapping, subst body_ty mapping)
       | Unit -> Unit
       | Bool -> Bool
+      | Int -> Int
 
     exception Mismatched_types of t * t
     exception Infinite_type
@@ -116,6 +118,7 @@ module Core = struct
           occurs m body_ty
       | Unit -> ()
       | Bool -> ()
+      | Int -> ()
 
     (** Check that two types are the same, wile updating unsolved metavariables
         with known type information as required. *)
@@ -125,6 +128,7 @@ module Core = struct
       | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
       | Unit, Unit -> ()
       | Bool, Bool -> ()
+      | Int, Int -> ()
       | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
           unify param_ty1 param_ty2;
           unify body_ty1 body_ty2
@@ -150,6 +154,7 @@ module Core = struct
       | Fun (param_ty, body_ty) -> Fun (zonk param_ty, zonk body_ty)
       | Unit -> ty
       | Bool -> ty
+      | Int -> Int
 
     let pp (ty : t) (ppf : Format.formatter) : unit =
       let rec pp_ty ty ppf =
@@ -167,6 +172,7 @@ module Core = struct
         | Meta m -> pp_meta pp_atomic_ty m ppf
         | Unit -> Format.fprintf ppf "Unit"
         | Bool -> Format.fprintf ppf "Bool"
+        | Int -> Format.fprintf ppf "Int"
         | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
       and pp_meta pp_ty m ppf =
         match !m with
@@ -201,6 +207,7 @@ module Core = struct
       | Unit_lit
       | Bool_lit of bool
       | Bool_if of t * t * t
+      | Int_lit of int
 
     let rec zonk (expr : t) : t =
       match expr with
@@ -215,6 +222,7 @@ module Core = struct
       | Bool_lit _ -> expr
       | Bool_if (head, true_body, false_body) ->
           Bool_if (zonk head, zonk true_body, zonk false_body)
+      | Int_lit _ -> expr
 
   end
 
@@ -245,6 +253,7 @@ module Surface = struct
       | Fun of string * Ty.t option * t
       | App of t * t
       | If of t * t * t
+      | Int of int
       [@@warning "-unused-constructor"]
 
   end
@@ -450,6 +459,9 @@ module Surface = struct
           let true_body = check_expr ctx true_body body_ty in
           let false_body = check_expr ctx false_body body_ty in
           Core.Expr.Bool_if (head, true_body, false_body), body_ty
+
+      | Int i ->
+          Core.Expr.Int_lit i, Core.Ty.Int
 
     (** Elaborate a polymorphic definition with an optional type annotation *)
     and infer_def (ctx : Ctx.t) (ty_params : string list) (def_ty : Ty.t option) (def : Expr.t) : Core.Expr.t * Core.Ty.t =
