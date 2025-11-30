@@ -212,6 +212,48 @@ module Core = struct
       | Bool_if of t * t * t
       | Int_lit of int
 
+    module Value = struct
+
+      type t =
+        | Fun_lit of (t -> t)
+        | Unit_lit
+        | Bool_lit of bool
+        | Int_lit of int
+
+      let[@warning "-unused-value-declaration"] pp (vexpr : t) (ppf : Format.formatter) : unit =
+        match vexpr with
+        | Fun_lit _ -> Format.fprintf ppf "<function>"
+        | Unit_lit -> Format.fprintf ppf "unit"
+        | Bool_lit true -> Format.fprintf ppf "true"
+        | Bool_lit false -> Format.fprintf ppf "false"
+        | Int_lit i -> Format.fprintf ppf "%i" i
+
+    end
+
+    let[@warning "-unused-value-declaration"] rec eval (env : (string * Value.t) list) (expr : t) : Value.t =
+      match expr with
+      | Var (name, _) -> List.assoc name env
+      | Let (name, _, _, def, body) ->
+          let vdef = eval env def in
+          eval ((name, vdef) :: env) body
+      | Fun_lit (name, _, body) ->
+          Value.Fun_lit (fun varg ->
+            eval ((name, varg) :: env) body)
+      | Fun_app (head, arg) ->
+          begin match eval env head with
+          | Value.Fun_lit vbody -> vbody (eval env arg)
+          | _ -> invalid_arg "eval"
+          end
+      | Unit_lit -> Value.Unit_lit
+      | Bool_lit b -> Value.Bool_lit b
+      | Bool_if (head, true_body, false_body) ->
+          begin match eval env head with
+          | Value.Bool_lit true -> eval env true_body
+          | Value.Bool_lit false -> eval env false_body
+          | _ -> invalid_arg "eval"
+          end
+      | Int_lit i -> Value.Int_lit i
+
     let rec zonk (expr : t) : t =
       match expr with
       | Var (name, ty_args) -> Var (name, List.map Ty.zonk ty_args)
