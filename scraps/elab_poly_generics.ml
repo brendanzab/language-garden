@@ -92,12 +92,12 @@ module Core = struct
       | ty -> ty
 
     (** Replace bound variables in a type *)
-    let rec subst (ty : t) (mapping : (string * t) list) : t =
+    let rec subst (mapping : (string * t) list) (ty : t) : t =
       match ty with
       | Var name -> List.assoc_opt name mapping |> Option.value ~default:ty
-      | Meta { contents = Solved ty } -> subst ty mapping
+      | Meta { contents = Solved ty } -> subst mapping ty
       | Meta { contents = Unsolved _ } -> ty
-      | Fun (param_ty, body_ty) -> Fun (subst param_ty mapping, subst body_ty mapping)
+      | Fun (param_ty, body_ty) -> Fun (subst mapping param_ty, subst mapping body_ty)
       | Unit -> Unit
       | Bool -> Bool
       | Int -> Int
@@ -449,12 +449,12 @@ module Surface = struct
           begin match pty, ty_args with
           | (ty_params, ty), [] ->
               let mapping = ty_params |> List.map (fun name -> name, Ctx.fresh_meta ctx "type argument") in
-              expr (List.map snd mapping), Core.Ty.subst ty mapping
+              expr (List.map snd mapping), Core.Ty.subst mapping ty
 
           | (ty_params, ty), ty_args when List.length ty_params = List.length ty_args ->
               let ty_args = List.map (check_ty ctx) ty_args in
               let mapping = List.combine ty_params ty_args in
-              expr (List.map snd mapping), Core.Ty.subst ty mapping
+              expr (List.map snd mapping), Core.Ty.subst mapping ty
 
           | (ty_params, _), ty_args ->
               error "expected %i type %s, found %i"
