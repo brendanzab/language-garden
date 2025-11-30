@@ -283,8 +283,6 @@ module Surface = struct
     let error (type a b) (f : (b, Format.formatter, unit, a) format4) : b =
       Format.kasprintf (fun msg -> raise (Error msg)) f
 
-    (** Polymorphic types *)
-    type poly_ty = Core.Ty.name list * Core.Ty.t
 
     (** Elaboration contexts *)
     module Ctx : sig
@@ -296,10 +294,10 @@ module Surface = struct
       val fresh_meta : t -> string -> Core.Ty.t
 
       val extend_tys : t -> Core.Ty.name list -> t
-      val extend_expr : t -> Core.Expr.name -> poly_ty -> t
+      val extend_expr : t -> Core.Expr.name -> Core.(Ty.name list * Ty.t) -> t
 
       val lookup_ty : t -> Core.Ty.name -> unit option
-      val lookup_expr : t -> Core.Expr.name -> poly_ty option
+      val lookup_expr : t -> Core.Expr.name -> Core.(Ty.name list * Ty.t) option
 
       val unsolved_metas : t -> string Seq.t
 
@@ -308,7 +306,7 @@ module Surface = struct
       type t = {
         metas : (Core.Ty.meta * string) Dynarray.t;
         ty_names : Core.Ty.name list list;
-        expr_tys : (Core.Expr.name * poly_ty) list;
+        expr_tys : (Core.Expr.name * Core.(Ty.name list * Ty.t)) list;
       }
 
       let create () = {
@@ -325,13 +323,13 @@ module Surface = struct
       let extend_tys (ctx : t) (names : Core.Ty.name list) : t =
         { ctx with ty_names = names :: ctx.ty_names }
 
-      let extend_expr (ctx : t) (name : Core.Expr.name) (ty_params, ty : poly_ty) : t =
+      let extend_expr (ctx : t) (name : Core.Expr.name) (ty_params, ty : Core.(Ty.name list * Ty.t)) : t =
         { ctx with expr_tys = (name, (ty_params, ty)) :: ctx.expr_tys }
 
       let lookup_ty (ctx : t) (name : Core.Ty.name) : unit option =
         if List.exists (List.mem name) ctx.ty_names then Some () else None
 
-      let lookup_expr (ctx : t) (name : Core.Expr.name) : poly_ty option =
+      let lookup_expr (ctx : t) (name : Core.Expr.name) : Core.(Ty.name list * Ty.t) option =
         List.assoc_opt name ctx.expr_tys
 
       let unsolved_metas (ctx : t) : string Seq.t =
