@@ -56,7 +56,7 @@ module Core = struct
       | Var of name         (* Type variables (bound by type parameters) *)
       | Meta of meta        (* Metavariables (used for unification) *)
       | Fun of t * t
-      | Unit
+      | Tuple of t list
       | Bool
       | Int
 
@@ -98,11 +98,11 @@ module Core = struct
       | Meta { contents = Solved ty } -> subst mapping ty
       | Meta { contents = Unsolved _ } -> ty
       | Fun (param_ty, body_ty) -> Fun (subst mapping param_ty, subst mapping body_ty)
-      | Unit -> Unit
+      | Tuple elem_tys -> Tuple (List.map (subst mapping) elem_tys)
       | Bool -> Bool
       | Int -> Int
 
-    exception Mismatched_types of t * t
+    exception Mismatched_types
     exception Infinite_type
 
     (** Ensure that the candidate type does not refer to the to-be-solved
@@ -116,7 +116,8 @@ module Core = struct
       | Fun (param_ty, body_ty) ->
           occurs m param_ty;
           occurs m body_ty
-      | Unit -> ()
+      | Tuple elem_tys ->
+          List.iter (occurs m) elem_tys
       | Bool -> ()
       | Int -> ()
 
@@ -126,12 +127,15 @@ module Core = struct
       match force ty1, force ty2 with
       | Var name1, Var name2 when name1 = name2 -> ()
       | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
-      | Unit, Unit -> ()
-      | Bool, Bool -> ()
-      | Int, Int -> ()
       | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
           unify param_ty1 param_ty2;
           unify body_ty1 body_ty2
+      | Tuple [], Tuple [] -> ()
+      | Tuple (elem_ty1 :: elem_tys1), Tuple (elem_ty2 :: elem_tys2) ->
+          unify elem_ty1 elem_ty2;
+          unify (Tuple elem_tys1) (Tuple elem_tys2)
+      | Bool, Bool -> ()
+      | Int, Int -> ()
 
       (* Unify through solved metavariables *)
       | Meta { contents = Solved ty1 }, ty2 -> unify ty1 ty2
@@ -143,7 +147,7 @@ module Core = struct
           occurs m ty;
           m := Solved ty
 
-      | _, _ -> raise (Mismatched_types (ty1, ty2))
+      | _, _ -> raise Mismatched_types
 
     (** Inline solved metavariables in types *)
     let rec zonk (ty : t) : t =
@@ -152,7 +156,7 @@ module Core = struct
       | Meta { contents = Solved ty } -> zonk ty
       | Meta { contents = Unsolved _ } -> ty
       | Fun (param_ty, body_ty) -> Fun (zonk param_ty, zonk body_ty)
-      | Unit -> ty
+      | Tuple elem_tys -> Tuple (List.map zonk elem_tys)
       | Bool -> ty
       | Int -> Int
 
@@ -170,7 +174,12 @@ module Core = struct
         match ty with
         | Var name -> Format.fprintf ppf "%s" name
         | Meta m -> pp_meta pp_atomic_ty m ppf
-        | Unit -> Format.fprintf ppf "Unit"
+        | Tuple [] -> Format.fprintf ppf "()"
+        | Tuple elem_tys ->
+            Format.fprintf ppf "@[(%a)@]"
+              (Format.pp_print_list (Fun.flip pp_ty)
+                ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
+              elem_tys
         | Bool -> Format.fprintf ppf "Bool"
         | Int -> Format.fprintf ppf "Int"
         | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
@@ -207,7 +216,8 @@ module Core = struct
 
       | Fun_lit of name * Ty.t * t
       | Fun_app of t * t
-      | Unit_lit
+      | Tuple_lit of t list
+      | Tuple_proj of t * int
       | Bool_lit of bool
       | Bool_if of t * t * t
       | Int_lit of int
@@ -216,14 +226,19 @@ module Core = struct
 
       type t =
         | Fun_lit of (t -> t)
-        | Unit_lit
+        | Tuple_lit of t list
         | Bool_lit of bool
         | Int_lit of int
 
-      let[@warning "-unused-value-declaration"] pp (vexpr : t) (ppf : Format.formatter) : unit =
+      let[@warning "-unused-value-declaration"] rec pp (vexpr : t) (ppf : Format.formatter) : unit =
         match vexpr with
         | Fun_lit _ -> Format.fprintf ppf "<function>"
-        | Unit_lit -> Format.fprintf ppf "unit"
+        | Tuple_lit [] -> Format.fprintf ppf "()"
+        | Tuple_lit elems ->
+            Format.fprintf ppf "@[(%a)@]"
+              (Format.pp_print_list (Fun.flip pp)
+                ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
+              elems
         | Bool_lit true -> Format.fprintf ppf "true"
         | Bool_lit false -> Format.fprintf ppf "false"
         | Int_lit i -> Format.fprintf ppf "%i" i
@@ -244,7 +259,13 @@ module Core = struct
           | Value.Fun_lit vbody -> vbody (eval env arg)
           | _ -> invalid_arg "eval"
           end
-      | Unit_lit -> Value.Unit_lit
+      | Tuple_lit elems ->
+          Value.Tuple_lit (List.map (eval env) elems)
+      | Tuple_proj (head, index) ->
+          begin match eval env head with
+          | Value.Tuple_lit velems -> List.nth velems index
+          | _ -> invalid_arg "eval"
+          end
       | Bool_lit b -> Value.Bool_lit b
       | Bool_if (head, true_body, false_body) ->
           begin match eval env head with
@@ -263,7 +284,10 @@ module Core = struct
           Fun_lit (name, Ty.zonk ty, zonk body)
       | Fun_app (head, arg) ->
           Fun_app (zonk head, zonk arg)
-      | Unit_lit -> expr
+      | Tuple_lit elems ->
+          Tuple_lit (List.map zonk elems)
+      | Tuple_proj (head, index) ->
+          Tuple_proj (zonk head, index)
       | Bool_lit _ -> expr
       | Bool_if (head, true_body, false_body) ->
           Bool_if (zonk head, zonk true_body, zonk false_body)
@@ -282,8 +306,9 @@ module Surface = struct
   module Ty = struct
 
     type t =
-      | Fun of t * t
       | Name of string
+      | Fun of t * t
+      | Tuple of t list
       | Placeholder
       [@@warning "-unused-constructor"]
 
@@ -296,9 +321,11 @@ module Surface = struct
       | Let of string * string list * Ty.t option * t * t
       | Ann of t * Ty.t
       | Fun of string * Ty.t option * t
-      | App of t * t
-      | If of t * t * t
+      | Tuple of t list
       | Int of int
+      | App of t * t
+      | Proj of t * int
+      | If of t * t * t
       [@@warning "-unused-constructor"]
 
   end
@@ -383,7 +410,7 @@ module Surface = struct
 
     let unify_tys ~(found : Core.Ty.t) ~(expected : Core.Ty.t) =
       try Core.Ty.unify expected found with
-      | Core.Ty.Mismatched_types _ ->
+      | Core.Ty.Mismatched_types ->
           error "expected: %t, found: %t" (Core.Ty.pp expected) (Core.Ty.pp found)
       | Core.Ty.Infinite_type ->
           error "infinite type"
@@ -398,10 +425,10 @@ module Surface = struct
           begin match Ctx.lookup_ty ctx name with
           | Some () -> Core.Ty.Var name
           | None when name = "Bool" -> Core.Ty.Bool
-          | None when name = "Unit" -> Core.Ty.Unit
           | None -> error "unbound type variable `%s`" name
           end
       | Ty.Fun (ty1, ty2) -> Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
+      | Ty.Tuple elem_tys -> Core.Ty.Tuple (List.map (check_ty ctx) elem_tys)
       | Ty.Placeholder -> Ctx.fresh_meta ctx "placeholder"
 
     (** Elaborate a term, given an expected type. *)
@@ -422,6 +449,13 @@ module Surface = struct
           let body = check_expr (Ctx.extend_expr ctx name ([], param_ty')) body body_ty in
           Core.Expr.Fun_lit (name, param_ty, body)
 
+      | Expr.Tuple elems, Core.Ty.Tuple elem_tys ->
+          if List.length elems <> List.length elem_tys then
+            error "expected %i elements, found %i elements"
+              (List.length elem_tys)
+              (List.length elems);
+          Core.Expr.Tuple_lit (List.map2 (check_expr ctx) elems elem_tys)
+
       | Expr.If (head, true_body, false_body), body_ty ->
           let head = check_expr ctx head Core.Ty.Bool in
           let true_body = check_expr ctx true_body body_ty in
@@ -440,7 +474,6 @@ module Surface = struct
           let expr, pty =
             match Ctx.lookup_expr ctx name with
             | Some pty -> (fun ty_args -> Core.Expr.Var (name, ty_args)), pty
-            | None when name = "unit" -> (fun[@warning "-partial-match"] [] -> Core.Expr.Unit_lit), ([], Core.Ty.Unit)
             | None when name = "true" -> (fun[@warning "-partial-match"] [] -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
             | None when name = "false" -> (fun[@warning "-partial-match"] [] -> Core.Expr.Bool_lit true), ([], Core.Ty.Bool)
             | None -> error "unbound variable `%s`" name
@@ -482,6 +515,13 @@ module Surface = struct
           let body, body_ty = infer_expr (Ctx.extend_expr ctx name ([], param_ty)) body in
           Core.Expr.Fun_lit (name, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
+      | Expr.Tuple elems ->
+          let elems, elem_tys = List.split (List.map (infer_expr ctx) elems) in
+          Core.Expr.Tuple_lit elems, Core.Ty.Tuple elem_tys
+
+      | Expr.Int i ->
+          Core.Expr.Int_lit i, Core.Ty.Int
+
       | Expr.App (head, arg) ->
           let head, head_ty = infer_expr ctx head in
           begin match Core.Ty.force head_ty with
@@ -496,15 +536,23 @@ module Surface = struct
           |_ -> error "unexpected argument"
           end
 
+      | Expr.Proj (head, index) ->
+          let head, head_ty = infer_expr ctx head in
+          begin match Core.Ty.force head_ty with
+          | Core.Ty.Tuple elem_tys ->
+              begin match List.nth_opt elem_tys index with
+              | Some ty -> Core.Expr.Tuple_proj (head, index), ty
+              | None -> error "unknown field"
+              end
+          | _ -> error "expected tuple, found: %t" (Core.Ty.pp head_ty)
+          end
+
       | Expr.If (head, true_body, false_body) ->
           let head = check_expr ctx head Core.Ty.Bool in
           let body_ty = Ctx.fresh_meta ctx "if branches" in
           let true_body = check_expr ctx true_body body_ty in
           let false_body = check_expr ctx false_body body_ty in
           Core.Expr.Bool_if (head, true_body, false_body), body_ty
-
-      | Int i ->
-          Core.Expr.Int_lit i, Core.Ty.Int
 
     (** Elaborate a polymorphic definition with an optional type annotation *)
     and infer_def (ctx : Ctx.t) (ty_params : string list) (def_ty : Ty.t option) (def : Expr.t) : Core.Expr.t * Core.Ty.t =
@@ -576,34 +624,34 @@ let () = begin
     let expr =
       Expr.Let ("id", ["A"], None,
         Fun ("x", Some (Name "A"), Name ("x", [])),
-        Name ("id", []) $ Name ("unit", []))
+        Name ("id", []) $ Tuple [])
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
           Fun_lit ("x", Ty.Var "A", Var ("x", [])),
-          Fun_app (Var ("id", [Ty.Unit]), Unit_lit))
+          Fun_app (Var ("id", [Ty.Tuple []]), Tuple_lit []))
       ));
-      assert (ty = Core.Ty.Unit);
-      assert (Core.Expr.eval [] expr = Core.Expr.Value.Unit_lit);
+      assert (ty = Core.Ty.Tuple []);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Tuple_lit []);
     end;
 
     (* Explicit type application *)
     let expr =
       Expr.Let ("id", ["A"], None,
         Fun ("x", Some (Name "A"), Name ("x", [])),
-        Name ("id", [Name "Unit"]) $ Name ("unit", []))
+        Name ("id", [Ty.Tuple []]) $ Tuple [])
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
           Fun_lit ("x", Ty.Var "A", Var ("x", [])),
-          Fun_app (Var ("id", [Ty.Unit]), Unit_lit))
+          Fun_app (Var ("id", [Ty.Tuple []]), Tuple_lit []))
       ));
-      assert (ty = Core.Ty.Unit);
-      assert (Core.Expr.eval [] expr = Core.Expr.Value.Unit_lit);
+      assert (ty = Core.Ty.Tuple []);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Tuple_lit []);
     end;
 
     (* Constant function *)
@@ -612,7 +660,7 @@ let () = begin
         Fun ("x", Some (Name "A"), Name ("x", [])),
         Let ("const", ["A"; "B"], None,
           Fun ("x", Some (Name "A"), Fun ("y", Some (Name "B"), Name ("x", []))),
-          Name ("const", []) $ Name ("unit", []) $ (Name ("id", []) $ Name ("true", []))))
+          Name ("const", []) $ Tuple [] $ (Name ("id", []) $ Name ("true", []))))
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
@@ -622,10 +670,10 @@ let () = begin
           Fun_lit ("x", Ty.Var "A", Var ("x", [])),
           Let ("const", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "A")),
             Fun_lit ("x", Ty.Var "A", Fun_lit ("y", Ty.Var "B", Var ("x", []))),
-            Var ("const", [Ty.Unit; Ty.Bool]) $ Unit_lit $ (Var ("id", [Ty.Bool]) $ Bool_lit true)))
+            Var ("const", [Ty.Tuple []; Ty.Bool]) $ Tuple_lit [] $ (Var ("id", [Ty.Bool]) $ Bool_lit true)))
       ));
-      assert (ty = Core.Ty.Unit);
-      assert (Core.Expr.eval [] expr = Core.Expr.Value.Unit_lit);
+      assert (ty = Core.Ty.Tuple []);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Tuple_lit []);
     end;
 
     (* Locally polymorphic definitions *)
@@ -636,7 +684,7 @@ let () = begin
           Expr.Let ("id", ["A"], None,
             Fun ("x", Some (Name "A"), Name ("x", [])),
             Name ("id", []))),
-        Name ("kite", []) $ Name ("unit", []) $ Name ("true", []))
+        Name ("kite", []) $ Tuple [] $ Name ("true", []))
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
@@ -647,7 +695,7 @@ let () = begin
             Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
               Fun_lit ("x", Ty.Var "A", Var ("x", [])),
               Var ("id", [Ty.Var "B"]))),
-          Var ("kite", [Ty.Unit; Ty.Bool]) $ Unit_lit $ Bool_lit true)
+          Var ("kite", [Ty.Tuple []; Ty.Bool]) $ Tuple_lit [] $ Bool_lit true)
       ));
       assert (ty = Core.Ty.Bool);
       assert (Core.Expr.eval [] expr = Core.Expr.Value.Bool_lit true);
