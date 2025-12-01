@@ -230,7 +230,7 @@ module Core = struct
 
     end
 
-    let[@warning "-unused-value-declaration"] rec eval (env : (string * Value.t) list) (expr : t) : Value.t =
+    let rec eval (env : (string * Value.t) list) (expr : t) : Value.t =
       match expr with
       | Var (name, _) -> List.assoc name env
       | Let (name, _, _, def, body) ->
@@ -578,12 +578,16 @@ let () = begin
         Fun ("x", Some (Name "A"), Name ("x", [])),
         Name ("id", []) $ Name ("unit", []))
     in
-    assert (Elab.infer_expr expr |> expect_ok = Core.(
-      Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
-        Fun_lit ("x", Ty.Var "A", Var ("x", [])),
-        Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
-      Ty.Unit
-    ));
+    begin
+      let expr, ty = Elab.infer_expr expr |> expect_ok in
+      assert (expr = Core.(
+        Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+          Fun_lit ("x", Ty.Var "A", Var ("x", [])),
+          Fun_app (Var ("id", [Ty.Unit]), Unit_lit))
+      ));
+      assert (ty = Core.Ty.Unit);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Unit_lit);
+    end;
 
     (* Explicit type application *)
     let expr =
@@ -591,12 +595,16 @@ let () = begin
         Fun ("x", Some (Name "A"), Name ("x", [])),
         Name ("id", [Name "Unit"]) $ Name ("unit", []))
     in
-    assert (Elab.infer_expr expr |> expect_ok = Core.(
-      Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
-        Fun_lit ("x", Ty.Var "A", Var ("x", [])),
-        Fun_app (Var ("id", [Ty.Unit]), Unit_lit)),
-      Ty.Unit
-    ));
+    begin
+      let expr, ty = Elab.infer_expr expr |> expect_ok in
+      assert (expr = Core.(
+        Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+          Fun_lit ("x", Ty.Var "A", Var ("x", [])),
+          Fun_app (Var ("id", [Ty.Unit]), Unit_lit))
+      ));
+      assert (ty = Core.Ty.Unit);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Unit_lit);
+    end;
 
     (* Constant function *)
     let expr =
@@ -606,15 +614,19 @@ let () = begin
           Fun ("x", Some (Name "A"), Fun ("y", Some (Name "B"), Name ("x", []))),
           Name ("const", []) $ Name ("unit", []) $ (Name ("id", []) $ Name ("true", []))))
     in
-    assert (Elab.infer_expr expr |> expect_ok = Core.(
-      let ( $ ) f x = Expr.Fun_app (f, x) in
-      Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
-        Fun_lit ("x", Ty.Var "A", Var ("x", [])),
-        Let ("const", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "A")),
-          Fun_lit ("x", Ty.Var "A", Fun_lit ("y", Ty.Var "B", Var ("x", []))),
-          Var ("const", [Ty.Unit; Ty.Bool]) $ Unit_lit $ (Var ("id", [Ty.Bool]) $ Bool_lit true))),
-      Ty.Unit
-    ));
+    begin
+      let expr, ty = Elab.infer_expr expr |> expect_ok in
+      assert (expr = Core.(
+        let ( $ ) f x = Expr.Fun_app (f, x) in
+        Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+          Fun_lit ("x", Ty.Var "A", Var ("x", [])),
+          Let ("const", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "A")),
+            Fun_lit ("x", Ty.Var "A", Fun_lit ("y", Ty.Var "B", Var ("x", []))),
+            Var ("const", [Ty.Unit; Ty.Bool]) $ Unit_lit $ (Var ("id", [Ty.Bool]) $ Bool_lit true)))
+      ));
+      assert (ty = Core.Ty.Unit);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Unit_lit);
+    end;
 
     (* Locally polymorphic definitions *)
     let expr =
@@ -626,16 +638,20 @@ let () = begin
             Name ("id", []))),
         Name ("kite", []) $ Name ("unit", []) $ Name ("true", []))
     in
-    assert (Elab.infer_expr expr |> expect_ok = Core.(
-      let ( $ ) f x = Expr.Fun_app (f, x) in
-      Expr.Let ("kite", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "B")),
-        Fun_lit ("x", Ty.Var "A",
-          Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
-            Fun_lit ("x", Ty.Var "A", Var ("x", [])),
-            Var ("id", [Ty.Var "B"]))),
-        Var ("kite", [Ty.Unit; Ty.Bool]) $ Unit_lit $ Bool_lit true),
-      Ty.Bool
-    ));
+    begin
+      let expr, ty = Elab.infer_expr expr |> expect_ok in
+      assert (expr = Core.(
+        let ( $ ) f x = Expr.Fun_app (f, x) in
+        Expr.Let ("kite", ["A"; "B"], Ty.Fun (Var "A", Ty.Fun (Var "B", Var "B")),
+          Fun_lit ("x", Ty.Var "A",
+            Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
+              Fun_lit ("x", Ty.Var "A", Var ("x", [])),
+              Var ("id", [Ty.Var "B"]))),
+          Var ("kite", [Ty.Unit; Ty.Bool]) $ Unit_lit $ Bool_lit true)
+      ));
+      assert (ty = Core.Ty.Bool);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Bool_lit true);
+    end;
 
     (* TODO: More tests *)
 
