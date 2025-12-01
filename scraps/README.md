@@ -81,6 +81,9 @@ Elaboration:
 - [**elab_poly_generics.ml**](./elab_poly_generics.ml):
   Elaboration for a polymorphic functional language with explicit type
   parameters (similar to languages like Rust, Typescript, C#, and Java).
+- [**elab_poly_generics_letrec.ml**](./elab_poly_generics_letrec.ml):
+  Elaboration for a polymorphic functional language with explicit type
+  parameters and general recursion.
 - [**elab_poly_algorithm_j.ml**](./elab_poly_algorithm_j.ml):
   Elaboration for a polymorphic polymorphic functional language using
   in-place, imperative unification (i.e. Algorithm J). Levels are used to
