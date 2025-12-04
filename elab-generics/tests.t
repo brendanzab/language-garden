@@ -61,17 +61,17 @@ Polymorphism examples
 
 Identity function
   $ executable elab <<< "let id [A] (x : A) : A := x; id 42"
-  let id : A -> A [A] := fun (x : A) => x;
+  let id [A] : A -> A := fun (x : A) => x;
   id [Int] 42 : Int
 
 Identity function (explicit type application)
   $ executable elab <<< "let id [A] (x : A) : A := x; id [Int] 42"
-  let id : A -> A [A] := fun (x : A) => x;
+  let id [A] : A -> A := fun (x : A) => x;
   id [Int] 42 : Int
 
 Identity function (placeholder type application)
   $ executable elab <<< "let id [A] (x : A) : A := x; id [_] 42"
-  let id : A -> A [A] := fun (x : A) => x;
+  let id [A] : A -> A := fun (x : A) => x;
   id [Int] 42 : Int
 
 Identity and constant functions
@@ -81,8 +81,8 @@ Identity and constant functions
   > 
   > const 5 (id true)
   > EOF
-  let id : A -> A [A] := fun (x : A) => x;
-  let const : A -> B -> A [A, B] := fun (x : A) => fun (y : B) => x;
+  let id [A] : A -> A := fun (x : A) => x;
+  let const [A, B] : A -> B -> A := fun (x : A) => fun (y : B) => x;
   const [Int, Bool] 5 (id [Bool] true) : Int
 
 Locally polymorphic definitions
@@ -95,8 +95,8 @@ Locally polymorphic definitions
   > 
   > kite 5 true
   > EOF
-  let kite : A -> B -> B [A, B] :=
-    fun (x : A) => let id : A -> A [A] := fun (x : A) => x;
+  let kite [A, B] : A -> B -> B :=
+    fun (x : A) => let id [A] : A -> A := fun (x : A) => x;
                    id [B];
   kite [Int, Bool] 5 true : Bool
 

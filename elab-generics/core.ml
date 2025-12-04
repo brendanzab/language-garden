@@ -161,8 +161,16 @@ module Tm = struct
       | None -> Format.pp_print_string ppf "_"
     in
 
-    let pp_name_ann (name : name) (ty : Ty.t) (ppf : Format.formatter) : unit =
-      Format.fprintf ppf "@[<2>@[%t :@]@ %t@]" (pp_name name) (Ty.pp ty)
+    let pp_name_ann (name : name) (ty_params : Ty.name list) (ty : Ty.t) (ppf : Format.formatter) : unit =
+      match ty_params with
+      | [] -> Format.fprintf ppf "@[<2>@[%t :@]@ %t@]" (pp_name name) (Ty.pp ty)
+      | ty_params ->
+          let pp_sep ppf () = Format.fprintf ppf ",@ " in
+          Format.fprintf ppf "@[<2>@[%t@ @[[%t]@]@ :@]@ %t@]"
+            (pp_name name)
+            (Fun.flip (Format.pp_print_list ~pp_sep Format.pp_print_string) ty_params)
+            (Ty.pp ty)
+
     and pp_param (name : name) (ty : Ty.t) (ppf : Format.formatter) : unit =
       Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]" (pp_name name) (Ty.pp ty)
     in
@@ -172,16 +180,9 @@ module Tm = struct
       | Let _ as tm ->
           let rec go names tm ppf =
             match tm with
-            | Let ((name, [], def_ty, def), body) ->
-                Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
-                  (pp_name_ann name def_ty)
-                  (pp_tm names def)
-                  (go (name :: names) body)
             | Let ((name, ty_params, def_ty, def), body) ->
-                let pp_sep ppf () = Format.fprintf ppf ",@ " in
-                Format.fprintf ppf "@[<2>@[let %t@ [%t]@ :=@]@ @[%t;@]@]@ %t"
-                  (pp_name_ann name def_ty)
-                  (Fun.flip (Format.pp_print_list ~pp_sep Format.pp_print_string) ty_params)
+                Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+                  (pp_name_ann name ty_params def_ty)
                   (pp_tm names def)
                   (go (name :: names) body)
             | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
