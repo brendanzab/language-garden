@@ -4,9 +4,8 @@
 
 ---
 
-An elaborator for a simple, polymorphic functional language. A more
-stripped-down version of this project can be found in
-[`scraps/check_poly_generics.ml`].
+An elaborator for a simple, polymorphic functional language. The goal of this
+project is as a response to the common question “how do I implement generics?”
 
 We support typechecking expressions like:
 
@@ -30,12 +29,15 @@ const [Int -> Int, Bool] id [Int] true 45 : Int
 
 </details>
 
-In this language type parameters must be explicitly bound, similar to in
-languages like Rust, Typescript, C#, and Java. This is what I think most people
-are asking for when they ask “how do I implement generics”, as opposed to
-Hindley-Milner type systems that implement generalisation[^hm].
+The type parameters _must_ be explicitly bound, similar to Rust, Swift, Java,
+etc. This is what I think most people are asking for when they ask about
+implementing generics, as opposed to Hindley-Milner type systems (with
+generalisation[^hm]).
 
-[^hm]: For examples of these see [`scraps/check_poly_algorithm_j.ml`] and
+A more stripped-down version of this project can be found in [`scraps/check_poly_generics.ml`].
+
+[^hm]: For examples of Hindley-Milner type system implementations that implement
+  generalisation, see [`scraps/check_poly_algorithm_j.ml`] and
   [`scraps/elab_poly_algorithm_j.ml`]).
 
 [`scraps/check_poly_algorithm_j.ml`]: ../scraps/check_poly_algorithm_j.ml
