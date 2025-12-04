@@ -36,6 +36,10 @@ module Ty = struct
     | Fun of t * t
     | Placeholder
 
+  (** Names that bind type definitions or parameters *)
+  and binder =
+    string Spanned.t
+
 end
 
 (** Terms in the surface language *)
@@ -65,7 +69,7 @@ module Tm = struct
 
   (** Definitions, possibly parameterised, with an optional type annotation *)
   and def =
-    binder * string Spanned.t list * param list * Ty.t option * t
+    binder * Ty.binder list * param list * Ty.t option * t
 
 end
 

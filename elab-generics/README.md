@@ -22,8 +22,8 @@ const id true 45
 
 <!-- $MDX file=examples/readme.stdout -->
 ```
-let id : A -> A [A] := fun (x : A) => x;
-let const : A -> B -> A [A, B] := fun (x : A) => fun (y : B) => x;
+let id [A] : A -> A := fun (x : A) => x;
+let const [A, B] : A -> B -> A := fun (x : A) => fun (y : B) => x;
 const [Int -> Int, Bool] id [Int] true 45 : Int
 ```
 
