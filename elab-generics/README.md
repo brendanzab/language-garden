@@ -1,6 +1,6 @@
 # Generics
 
-- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ type parameters)
+- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ type parameters, mutual recursion)
 
 ---
 
@@ -64,10 +64,10 @@ A more stripped-down version of this project can be found in [`scraps/check_poly
 
 ## Future work
 
-- Recursive definitions (see [elab-stlc-letrec-unification](../elab-stlc-letrec-unification))
-- Local datatype definitions (see [misc_local_datatypes.ml](../scraps/misc_local_datatypes.ml)
+- [x] Recursive definitions (see [elab-stlc-letrec-unification](../elab-stlc-letrec-unification))
+- [ ] Local datatype definitions (see [misc_local_datatypes.ml](../scraps/misc_local_datatypes.ml)
   and [Practical Type Inference with Levels](https://doi.org/10.1145/3729338)
-- Local type aliases
+- [ ] Local type aliases
 
 ## Examples
 

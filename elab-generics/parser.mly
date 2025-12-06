@@ -5,6 +5,7 @@
 %token KEYWORD_IF "if"
 %token KEYWORD_LET "let"
 %token KEYWORD_THEN "then"
+%token KEYWORD_REC "rec"
 %token ADD "+"
 %token ASTERISK "*"
 %token COLON ":"
@@ -18,6 +19,8 @@
 %token UNDERSCORE "_"
 %token OPEN_BRACKET "["
 %token CLOSE_BRACKET "]"
+%token OPEN_BRACE "{"
+%token CLOSE_BRACE "}"
 %token OPEN_PAREN "("
 %token CLOSE_PAREN ")"
 %token END
@@ -47,8 +50,8 @@ let atomic_ty :=
     { Surface.Ty.Placeholder }
 
 let tm :=
-| "let"; d = def; ";"; tm = spanned(tm);
-    { Surface.Tm.Let (d, tm) }
+| "let"; r = option("rec"; { `Rec }); ds = defs; ";"; tm = spanned(tm);
+    { Surface.Tm.Let (r, ds, tm) }
 | "fun"; ps = nonempty_list(param); "=>"; tm = spanned(tm);
     { Surface.Tm.Fun (ps, tm) }
 | "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
@@ -118,6 +121,10 @@ let def :=
     ps = list(param); ty = option(":"; ty = spanned(ty); { ty }); ":=";
     tm = spanned(tm);
     { n, tps, ps, ty, tm }
+
+let defs :=
+| d = def; { [d] }
+| "{"; ds = trailing_nonempty_list(";", def); "}"; { ds }
 
 
 (* Utilities *)

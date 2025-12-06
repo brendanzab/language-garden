@@ -598,9 +598,9 @@ module Surface = struct
       (* Extend the typing context with forward declarations for each
          recursive definition *)
       let ctx =
-        ListLabels.fold_right defs
+        ListLabels.fold_left defs
           ~init:ctx
-          ~f:(fun Expr.{ name; ty_params; ty; _ } ctx ->
+          ~f:(fun ctx Expr.{ name; ty_params; ty; _ } ->
             uncons (find_dupes ty_params) |> Option.iter (fun (name, names) ->
               error "reused type parameter names: %s"
                 (String.concat "," (name :: names)));

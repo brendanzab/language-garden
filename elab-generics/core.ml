@@ -144,6 +144,7 @@ module Tm = struct
   type t =
     | Var of index * Ty.t list
     | Let of def * t
+    | Let_rec of def list * t
     | Fun_lit of name * Ty.t * t
     | Fun_app of t * t
     | Int_lit of int
@@ -177,7 +178,7 @@ module Tm = struct
 
     let rec pp_tm names tm ppf =
       match tm with
-      | Let _ as tm ->
+      | Let _ | Let_rec _ as tm ->
           let rec go names tm ppf =
             match tm with
             | Let ((name, ty_params, def_ty, def), body) ->
@@ -185,6 +186,17 @@ module Tm = struct
                   (pp_name_ann name ty_params def_ty)
                   (pp_tm names def)
                   (go (name :: names) body)
+            | Let_rec (defs, body) ->
+                let rec_names = List.(rev_append (map (fun (n, _, _, _) -> n) defs) names) in
+                (* FIXME: indentation *)
+                Format.fprintf ppf "@[@[let@ rec@ {@]%t@ };@]@ %t"
+                  (defs |> Fun.flip @@ Format.pp_print_list
+                    ~pp_sep:Format.pp_print_nothing
+                    (fun ppf (name, ty_params, def_ty, def) ->
+                      Format.fprintf ppf "@;<1 2>@[<2>@[%t@ :=@]@ %t@];"
+                        (pp_name_ann name ty_params def_ty)
+                        (pp_tm rec_names def)))
+                  (go rec_names body)
             | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
           in
           Format.fprintf ppf "@[<v>%t@]" (go names tm)
@@ -230,15 +242,15 @@ module Tm = struct
     and pp_atomic_tm names tm ppf =
       match tm with
       | Var (index, []) -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
-      | Var (index, ty_args) ->
+      | Var (index, ((_ :: _) as ty_args)) ->
           let pp_sep ppf () = Format.fprintf ppf ",@ " in
-          Format.fprintf ppf "%t@ [%t]"
+          Format.fprintf ppf "%t@ @[[%t]@]"
             (pp_name (List.nth names index))
             (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip Ty.pp)) ty_args)
       | Int_lit i -> Format.fprintf ppf "%i" i
       | Bool_lit true -> Format.fprintf ppf "true"
       | Bool_lit false -> Format.fprintf ppf "false"
-      | Let _ | Fun_lit _ | Fun_app _ | Bool_elim _ | Prim_app _ as tm ->
+      | Let _ | Let_rec _ | Fun_lit _ | Fun_app _ | Bool_elim _ | Prim_app _ as tm ->
           Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
     in
     pp_tm
@@ -259,14 +271,28 @@ module Tm = struct
 
   end
 
-  let rec eval (env : Value.t env) (tm : t) : Value.t =
+  let rec eval (env : Value.t ref env) (tm : t) : Value.t =
     match tm with
-    | Var (index, _) -> List.nth env index
+    | Var (index, _) -> !(List.nth env index)
     | Let ((_, _, _, def), body) ->
         let def = eval env def in
-        eval (def :: env) body
+        eval (ref def :: env) body
+    | Let_rec (defs, body) ->
+        (* Add placeholder bindings to the environment then back-patch them
+            with their corresponding recursive definitions. This is inspired by
+            R⁵RS Scheme’s approach to encoding [letrec] (see Section 7.3 of the
+            {{: https://dl.acm.org/doi/10.1145/290229.290234} Revised⁵ Report
+            on the Algorithmic Language Scheme}).
+
+            This relies on each definition being a function in order to avoid
+            the bindings from being accessed before they have been defined. *)
+        let undefined = Value.Fun_lit (fun _ -> failwith "undefined") in
+        let bindings = defs |> List.map (fun _ -> ref undefined) in
+        let env = List.rev_append bindings env in
+        List.iter2 (fun vdef (_, _, _, tm) -> vdef := eval env tm) bindings defs;
+        eval env body
     | Fun_lit (_, _, body) ->
-        Value.Fun_lit (fun arg -> eval (arg :: env) body)
+        Value.Fun_lit (fun arg -> eval (ref arg :: env) body)
     | Fun_app (head, arg) ->
         begin match eval env head with
         | Value.Fun_lit vbody -> vbody (eval env arg)

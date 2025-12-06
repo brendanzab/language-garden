@@ -50,7 +50,7 @@ module Tm = struct
 
   and data =
     | Name of string Spanned.t * Ty.t list
-    | Let of def * t
+    | Let of [`Rec] option * def list * t
     | Ann of t * Ty.t
     | Fun of param list * t
     | Int of int
@@ -105,7 +105,7 @@ end = struct
     val extend_tm : t -> Core.Tm.name -> Core.(Ty.name list * Ty.t) -> t
 
     val lookup_ty : t -> string -> unit option
-    val lookup_expr : t -> string -> (Core.Tm.index * Core.(Ty.name list * Ty.t)) option
+    val lookup_tm : t -> string -> (Core.Tm.index * Core.(Ty.name list * Ty.t)) option
 
     val unsolved_metas : t -> (Span.t * string) Seq.t
 
@@ -144,7 +144,7 @@ end = struct
     let lookup_ty (ctx : t) (name : string) : unit option =
       if List.exists (List.mem name) ctx.ty_names then Some () else None
 
-    let lookup_expr (ctx : t) (name : string) : (Core.Tm.index * Core.(Ty.name list * Ty.t)) option =
+    let lookup_tm (ctx : t) (name : string) : (Core.Tm.index * Core.(Ty.name list * Ty.t)) option =
       ctx.tm_tys |> List.find_mapi @@ fun index (name', ty) ->
         match Some name = name' with
         | true -> Some (index, ty)
@@ -210,13 +210,21 @@ end = struct
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : Ctx.t) (tm : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
     match tm.data with
-    | Tm.Let (def, body) ->
+    | Tm.Let (None, [], body) ->
+        check_tm ctx body ty
+
+    | Tm.Let (None, def :: defs, body) ->
         let ctx, def = check_def ctx def in
-        let body = check_tm ctx body ty in
+        let body = check_tm ctx { tm with data = Let (None, defs, body) } ty in
         Core.Tm.Let (def, body)
 
+    | Tm.Let (Some `Rec, defs, body) ->
+        let ctx, defs = check_rec_defs ctx defs in
+        let body = check_tm ctx body ty in
+        Core.Tm.Let_rec (defs, body)
+
     | Tm.Fun (params, body) ->
-        check_fun_lit ctx params body ty
+        check_fun_lit ctx params None body ty
 
     | Tm.If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Core.Ty.Bool in
@@ -235,7 +243,7 @@ end = struct
     match tm.data with
     | Tm.Name ({ span; data = name }, ty_args) ->
         let expr, pty =
-          match Ctx.lookup_expr ctx name with
+          match Ctx.lookup_tm ctx name with
           | Some (index, pty) -> Core.((fun ty_args -> Tm.Var (index, ty_args)), pty)
           | None when name = "true" -> Core.((fun[@warning "-partial-match"] [] -> Tm.Bool_lit true), ([], Ty.Bool))
           | None when name = "false" -> Core.((fun[@warning "-partial-match"] [] -> Tm.Bool_lit false), ([], Ty.Bool))
@@ -265,10 +273,18 @@ end = struct
             (List.length ty_args)
       end
 
-    | Tm.Let (def, body) ->
+    | Tm.Let (None, [], body) ->
+        infer_tm ctx body
+
+    | Tm.Let (None, def :: defs, body) ->
         let ctx, def = check_def ctx def in
-        let body, body_ty = infer_tm ctx body in
+        let body, body_ty = infer_tm ctx { tm with data = Let (None, defs, body) } in
         Core.Tm.Let (def, body), body_ty
+
+    | Tm.Let (Some `Rec, defs, body) ->
+        let ctx, def = check_rec_defs ctx defs in
+        let body, body_ty = infer_tm ctx body in
+        Core.Tm.Let_rec (def, body), body_ty
 
     | Tm.Ann (tm, ty) ->
         let ty = check_ty ctx ty in
@@ -328,21 +344,24 @@ end = struct
         Core.Tm.Prim_app (Prim.Int_neg, [tm]), Core.Ty.Int
 
   (** Elaborate a function literal into a core term, given an expected type. *)
-  and check_fun_lit (ctx : Ctx.t) (params : Tm.param list) (body : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
+  and check_fun_lit (ctx : Ctx.t) (params : Tm.param list) (body_ty : Ty.t option) (body : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
     match params, Core.Ty.force ty with
     | [], ty ->
+        body_ty |> Option.iter (fun (Spanned.{ span; _ } as body_ty) ->
+          let body_ty = check_ty ctx body_ty in
+          unify_tys span ~found:body_ty ~expected:ty);
         check_tm ctx body ty
-    | (name, None) :: params, Core.Ty.Fun (param_ty, body_ty) ->
-        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) params body body_ty in
+    | (name, None) :: params, Core.Ty.Fun (param_ty, body_ty') ->
+        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) params body_ty body body_ty' in
         Core.Tm.Fun_lit (name.data, param_ty, body)
-    | (name, Some param_ty) :: params, Core.Ty.Fun (param_ty', body_ty) ->
+    | (name, Some param_ty) :: params, Core.Ty.Fun (param_ty', body_ty') ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) params body body_ty in
+        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) params body_ty body body_ty' in
         Core.Tm.Fun_lit (name.data, param_ty, body)
     | (name, _) :: _, Core.Ty.Meta_var _ ->
-        let tm', ty' = infer_fun_lit ctx params None body in
+        let tm', ty' = infer_fun_lit ctx params body_ty body in
         unify_tys name.span ~found:ty' ~expected:ty;
         tm'
     | (name, _) :: _, _ ->
@@ -364,31 +383,76 @@ end = struct
         let body, body_ty = infer_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) params body_ty body in
         Core.Tm.Fun_lit (name.data, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
+  and check_ty_params (ty_params : Ty.binder list) : Core.Ty.name list =
+    ListLabels.fold_left ty_params ~init:[]
+      ~f:(fun names Spanned.{ span; data = name } ->
+        if not (List.mem name names) then name :: names else
+          error span "reused type parameter name %s" name)
+    |> List.rev
+
   (** Elaborate a definition, and add it to the context. *)
   and check_def (ctx : Ctx.t) (name, ty_params, params, ty, tm : Tm.def) : Ctx.t * Core.Tm.def =
-    let ty_params =
-      ListLabels.fold_left ty_params ~init:[]
-        ~f:(fun names Spanned.{ span; data = name } ->
-          if not (List.mem name names) then name :: names else
-            error span "reused type parameter name %s" name)
-      |> List.rev
-    in
+    let ty_params = check_ty_params ty_params in
     let tm, ty = infer_fun_lit (Ctx.extend_tys ctx ty_params) params ty tm in
     Ctx.extend_tm ctx name.data (ty_params, ty), (name.data, ty_params, ty, tm)
 
+  (** Elaborate a series of mutually recursive definitions, returning a
+      context with them bound. *)
+  and check_rec_defs (ctx : Ctx.t) (defs : Tm.def list) : Ctx.t * Core.Tm.def list =
+    let rec get_fun_ty ctx params ty =
+      match params with
+      | [] -> check_ty ctx ty
+      | (name, param_ty : Tm.param) :: params ->
+          match param_ty with
+          | None -> Ctx.fresh_meta ctx name.span "parameter type"
+          | Some param_ty -> Core.Ty.Fun (check_ty ctx param_ty, get_fun_ty ctx params ty)
+    in
+
+    (* Extend the typing context with forward declarations for each
+        recursive definition *)
+    let ctx, _ =
+      ListLabels.fold_left defs
+        ~init:(ctx, [])
+        ~f:(fun (ctx, seen) ({ span; data = name }, ty_params, params, ty, _ : Tm.def) ->
+          let name =
+            match name with
+            | None -> error span "placeholder in recursive binding"
+            | Some name when List.mem name seen -> error span "reused name %s in recursive binding" name
+            | Some name -> name
+          in
+          let ty_params = check_ty_params ty_params in
+          let ty =
+            match ty with
+            | None -> Ctx.fresh_meta ctx span "definition type"
+            | Some ty -> get_fun_ty (Ctx.extend_tys ctx ty_params) params ty
+          in
+          Ctx.extend_tm ctx (Some name) (ty_params, ty), name :: seen)
+    in
+
+    (* Elaborate the definitions with the recursive definitions in scope *)
+    let defs =
+      defs |> List.map @@ fun (name, _, params, body_ty, body : Tm.def) ->
+        let _, (ty_params, ty) = Option.get (Ctx.lookup_tm ctx (Option.get name.data)) in
+        let tm = check_fun_lit (Ctx.extend_tys ctx ty_params) params body_ty body ty in
+        match Core.Ty.force ty with
+        | Core.Ty.Fun _ -> (name.data, ty_params, ty, tm)
+        | _ -> error name.span "definitions must be functions in recursive let bindings"
+    in
+
+    ctx, defs
+
 
   (** {2 Running elaboration} *)
-
-  let collect_ambiguities (ctx : Ctx.t) : (Span.t * string) list =
-    Ctx.unsolved_metas ctx
-    |> Seq.map (fun (span, info) -> span, "ambiguous " ^ info)
-    |> List.of_seq
 
   let run_elab (type a) (prog : Ctx.t -> a) : (a, (Span.t * string) list) result =
     match
       let ctx = Ctx.create () in
       let result = prog ctx in
-      let ambiguity_errors = collect_ambiguities ctx in
+      let ambiguity_errors =
+        Ctx.unsolved_metas ctx
+        |> Seq.map (fun (span, info) -> span, "ambiguous " ^ info)
+        |> List.of_seq
+      in
       result, ambiguity_errors
     with
     | result, [] -> Ok result

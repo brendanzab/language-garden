@@ -85,6 +85,19 @@ Identity and constant functions
   let const [A, B] : A -> B -> A := fun (x : A) => fun (y : B) => x;
   const [Int, Bool] 5 (id [Bool] true) : Int
 
+Identity and constant functions (alternate syntax)
+  $ executable elab <<EOF
+  > let {
+  >   id [A] (x : A) : A := x;
+  >   const [A, B] (x : A) (y : B) : A := x;
+  > };
+  > 
+  > const 5 (id true)
+  > EOF
+  let id [A] : A -> A := fun (x : A) => x;
+  let const [A, B] : A -> B -> A := fun (x : A) => fun (y : B) => x;
+  const [Int, Bool] 5 (id [Bool] true) : Int
+
 Locally polymorphic definitions
   $ executable elab <<EOF
   > -- False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html
@@ -100,37 +113,74 @@ Locally polymorphic definitions
                    id [B];
   kite [Int, Bool] 5 true : Bool
 
-Identity function (invalid type application)
-  $ executable elab <<< "let id [A] (x : A) : A := x; id [Bool] 42"
-  error: mismatched types:
-    expected: Bool
-       found: Int
-    ┌─ <stdin>:1:39
-    │
-  1 │ let id [A] (x : A) : A := x; id [Bool] 42
-    │                                        ^^
-  
-  [1]
+Factorial
+  $ cat >fact.txt <<EOF
+  > let rec fact n :=
+  >   if n = 0 then 1 else n * fact (n - 1);
+  > 
+  > fact 5
+  > EOF
 
-Identity function (reused type parameter)
-  $ executable elab <<< "let id [A, A] (x : A) : A := x; id 42"
-  error: reused type parameter name A
-    ┌─ <stdin>:1:11
-    │
-  1 │ let id [A, A] (x : A) : A := x; id 42
-    │            ^
-  
-  [1]
+  $ cat fact.txt | executable elab
+  let rec {
+    fact : Int -> Int :=
+      fun (n : Int) =>
+        if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1));
+  };
+  fact 5 : Int
 
-Identity function (ambiguous type argument)
-  $ executable elab <<< "let id [A] (x : A) : A := x; id"
-  error: ambiguous type argument
-    ┌─ <stdin>:1:29
-    │
-  1 │ let id [A] (x : A) : A := x; id
-    │                              ^^
-  
-  [1]
+  $ cat fact.txt | executable norm
+  120 : Int
+
+Factorial in terms of the fixed-point combinator
+  $ cat >fix.txt <<EOF
+  > let rec fix [A, B] (f : (A -> B) -> A -> B) (x : A) : B :=
+  >   f (fix f) x;
+  > 
+  > let fact n :=
+  >   fix (fun fact n =>
+  >     if n = 0 then 1 else n * fact (n - 1)) n;
+  > 
+  > fact 5
+  > EOF
+
+  $ cat fix.txt | executable elab
+  let rec {
+    fix [A, B] : ((A -> B) -> A -> B) -> A -> B :=
+      fun (f : (A -> B) -> A -> B) => fun (x : A) => f (fix [A, B] f) x;
+  };
+  let fact : Int -> Int :=
+    fun (n : Int) =>
+      fix
+        [Int, Int]
+        (fun (fact : Int -> Int) => fun (n : Int) =>
+           if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1)))
+        n;
+  fact 5 : Int
+  $ cat fix.txt | executable n
+  120 : Int
+
+Mutually recursive bindings: Even/odd
+  $ cat >even-odd.txt <<EOF
+  > let rec {
+  >   is-even n := if n = 0 then true else is-odd (n - 1);
+  >   is-odd n := if n = 0 then false else is-even (n - 1);
+  > };
+  > 
+  > is-even 6
+  > EOF
+
+  $ cat even-odd.txt | executable elab
+  let rec {
+    is-even : Int -> Bool :=
+      fun (n : Int) => if #int-eq n 0 then true else is-odd (#int-sub n 1);
+    is-odd : Int -> Bool :=
+      fun (n : Int) => if #int-eq n 0 then false else is-even (#int-sub n 1);
+  };
+  is-even 6 : Bool
+
+  $ cat even-odd.txt | executable norm
+  true : Bool
 
 Lexer Errors
 ------------
@@ -317,5 +367,77 @@ Unsupported equality
     │
   1 │ let f (x : Bool) := x; f = f
     │                        ^^^^^
+  
+  [1]
+
+Identity function (invalid type application)
+  $ executable elab <<< "let id [A] (x : A) : A := x; id [Bool] 42"
+  error: mismatched types:
+    expected: Bool
+       found: Int
+    ┌─ <stdin>:1:39
+    │
+  1 │ let id [A] (x : A) : A := x; id [Bool] 42
+    │                                        ^^
+  
+  [1]
+
+Identity function (reused type parameter)
+  $ executable elab <<< "let id [A, A] (x : A) : A := x; id 42"
+  error: reused type parameter name A
+    ┌─ <stdin>:1:11
+    │
+  1 │ let id [A, A] (x : A) : A := x; id 42
+    │            ^
+  
+  [1]
+
+Identity function (ambiguous type argument)
+  $ executable elab <<< "let id [A] (x : A) : A := x; id"
+  error: ambiguous type argument
+    ┌─ <stdin>:1:29
+    │
+  1 │ let id [A] (x : A) : A := x; id
+    │                              ^^
+  
+  [1]
+
+Reused name in mutually recursive binding
+  $ executable elab <<< "let rec { f x := x; f x := x }; f 1 : Int"
+  error: reused name f in recursive binding
+    ┌─ <stdin>:1:20
+    │
+  1 │ let rec { f x := x; f x := x }; f 1 : Int
+    │                     ^
+  
+  [1]
+
+Ignored definition in mutually recursive binding
+  $ executable elab <<< "let rec { f x := x; _ x := x }; f 1 : Int"
+  error: placeholder in recursive binding
+    ┌─ <stdin>:1:20
+    │
+  1 │ let rec { f x := x; _ x := x }; f 1 : Int
+    │                     ^
+  
+  [1]
+
+Vicious cycle prevention
+  $ executable elab <<< "let rec x := x; x : Int"
+  error: definitions must be functions in recursive let bindings
+    ┌─ <stdin>:1:8
+    │
+  1 │ let rec x := x; x : Int
+    │         ^
+  
+  [1]
+
+Infinite type
+  $ executable elab <<< "fun f => f f"
+  error: infinite type
+    ┌─ <stdin>:1:11
+    │
+  1 │ fun f => f f
+    │            ^
   
   [1]

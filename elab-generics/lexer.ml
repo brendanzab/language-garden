@@ -22,6 +22,7 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "if"          -> KEYWORD_IF
   | "let"         -> KEYWORD_LET
   | "then"        -> KEYWORD_THEN
+  | "rec"         -> KEYWORD_REC
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
   | "+"           -> ADD
   | "*"           -> ASTERISK
@@ -36,6 +37,8 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "_"           -> UNDERSCORE
   | "["           -> OPEN_BRACKET
   | "]"           -> CLOSE_BRACKET
+  | "{"           -> OPEN_BRACE
+  | "}"           -> CLOSE_BRACE
   | "("           -> OPEN_PAREN
   | ")"           -> CLOSE_PAREN
   | eof           -> END
