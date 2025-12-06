@@ -597,10 +597,10 @@ module Surface = struct
 
       (* Extend the typing context with forward declarations for each
          recursive definition *)
-      let ctx, _ =
+      let ctx =
         ListLabels.fold_right defs
-          ~init:(ctx, [])
-          ~f:(fun Expr.{ name; ty_params; ty; _ } (ctx, seen) ->
+          ~init:ctx
+          ~f:(fun Expr.{ name; ty_params; ty; _ } ctx ->
             uncons (find_dupes ty_params) |> Option.iter (fun (name, names) ->
               error "reused type parameter names: %s"
                 (String.concat "," (name :: names)));
@@ -610,7 +610,7 @@ module Surface = struct
               | None -> Ctx.fresh_meta ctx "definition type"
               | Some ty -> check_ty (Ctx.extend_tys ctx ty_params) ty
             in
-            Ctx.extend_expr ctx name (ty_params, ty), name :: seen)
+            Ctx.extend_expr ctx name (ty_params, ty))
       in
 
       (* Elaborate the definitions with the recursive definitions in scope *)
