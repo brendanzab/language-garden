@@ -397,32 +397,33 @@ end = struct
   (** Elaborate a series of mutually recursive definitions, returning a
       context with them bound. *)
   and check_rec_defs (ctx : Ctx.t) (defs : Tm.def list) : Ctx.t * Core.Tm.def list =
-    (* Construct a forward declaration using the explicit type information from
-       the definition. *)
-    let rec check_fun_ty ctx span params body_ty =
+    (* Construct the forward-declaration of a definition, generating fresh
+       metavariables for any missing types. This provides more precise type
+       errors in mutual definitions when compared to generating a single
+       metavariables for each definition. *)
+    let rec get_def_ty ctx span params body_ty =
       match params, body_ty with
       | [], None -> Ctx.fresh_meta ctx span "definition type"
       | [], Some body_ty -> check_ty ctx body_ty
-      | (name, param_ty : Tm.param) :: params, body_ty ->
-          let param_ty =
-            match param_ty with
-            | None -> Ctx.fresh_meta ctx name.span "parameter type"
-            | Some param_ty -> check_ty ctx param_ty
-          in
-          Core.Ty.Fun (param_ty, check_fun_ty ctx span params body_ty)
+      | (name, None : Tm.param) :: params, body_ty ->
+          let param_ty = Ctx.fresh_meta ctx name.span "parameter type" in
+          Core.Ty.Fun (param_ty, get_def_ty ctx span params body_ty)
+      | (_, Some param_ty : Tm.param) :: params, body_ty ->
+          let param_ty = check_ty ctx param_ty in
+          Core.Ty.Fun (param_ty, get_def_ty ctx span params body_ty)
     in
 
-    (* Elaborate the the body of the definition. *)
-    let rec check_fun ctx params body body_ty =
-      match params, Core.Ty.force body_ty with
+    (* Elaborate the the body of the definition, given a forward-declaration. *)
+    let rec check_def ctx params body ty =
+      match params, Core.Ty.force ty with
       | [], ty -> check_tm ctx body ty
       (* We've already pulled the type annotations from the parameters when
-         constructing the forward-declarations, to these can be ignored. *)
+        constructing the forward-declarations, to these can be ignored. *)
       | (name, _ : Tm.param) :: params, Core.Ty.Fun (param_ty, body_ty) ->
-          let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) params body body_ty in
+          let body = check_def (Ctx.extend_tm ctx name.data ([], param_ty)) params body body_ty in
           Core.Tm.Fun_lit (name.data, param_ty, body)
       (* Every parameter should already have a type associated with it when we
-         made the forward-declaration. *)
+        made the forward-declaration. *)
       | (_, _) :: _, Core.Ty.Meta_var _ -> failwith "impossible"
       | (name, _) :: _, _ -> error name.span "unexpected parameter"
     in
@@ -435,10 +436,10 @@ end = struct
         ~f:(fun (ctx, seen) ({ span; data = name }, ty_params, params, body_ty, _ : Tm.def) ->
           match name with
           | None -> error span "placeholder in recursive binding"
-          | Some name when List.mem name seen -> error span "reused name %s in recursive binding" name
+          | Some name when List.mem name seen -> error span "reused name `%s` in recursive binding" name
           | Some name ->
               let ty_params = check_ty_params ty_params in
-              let ty = check_fun_ty (Ctx.extend_tys ctx ty_params) span params body_ty in
+              let ty = get_def_ty (Ctx.extend_tys ctx ty_params) span params body_ty in
               Ctx.extend_tm ctx (Some name) (ty_params, ty), name :: seen)
     in
 
@@ -446,9 +447,18 @@ end = struct
     let defs =
       defs |> List.map @@ fun (name, _, params, _, body : Tm.def) ->
         let _, (ty_params, body_ty) = Option.get (Ctx.lookup_tm ctx (Option.get name.data)) in
-        let tm = check_fun (Ctx.extend_tys ctx ty_params) params body body_ty in
-        match Core.Ty.force body_ty with
-        | Core.Ty.Fun _ -> (name.data, ty_params, body_ty, tm)
+        (* Avoid “vicious circles” with a blunt syntactic check on the elaborated
+          term, ensuring that it is a function literal. This is similar to the
+          approach used in Standard ML. This rules out definitions like:
+
+              let x := x + 1;
+
+          OCaml uses a more complicated check (as of versions 4.06 and 4.08) that
+          admits more valid programs. A detailed description of this check can be
+          found in “A practical mode system for recursive definitions” by Reynaud
+          et. al. https://doi.org/10.1145/3434326. *)
+        match check_def (Ctx.extend_tys ctx ty_params) params body body_ty with
+        | Core.Tm.Fun_lit _ as tm -> name.data, ty_params, body_ty, tm
         | _ -> error name.span "definitions must be functions in recursive let bindings"
     in
 

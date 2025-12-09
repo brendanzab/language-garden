@@ -436,7 +436,7 @@ Unexpected function application
 
 Duplicate name in mutually recursive binding
   $ executable elab <<< "let rec { f x := x; f x := x }; f 1 : Int"
-  error: duplicate name `f` in mutually recursive bindings
+  error: reused name `f` in recursive binding
     ┌─ <stdin>:1:20
     │
   1 │ let rec { f x := x; f x := x }; f 1 : Int
@@ -446,7 +446,7 @@ Duplicate name in mutually recursive binding
 
 Ignored definition in mutually recursive binding
   $ executable elab <<< "let rec { f x := x; _ x := x }; f 1 : Int"
-  error: cannot use `_` in mutually recursive bindings
+  error: placeholder in recursive binding
     ┌─ <stdin>:1:20
     │
   1 │ let rec { f x := x; _ x := x }; f 1 : Int
@@ -456,7 +456,7 @@ Ignored definition in mutually recursive binding
 
 Vicious circle prevention
   $ executable elab <<< "let rec x := x; x : Int"
-  error: expected function literal in recursive let binding
+  error: definitions must be functions in recursive let bindings
     ┌─ <stdin>:1:8
     │
   1 │ let rec x := x; x : Int
@@ -474,12 +474,12 @@ Mismatched recursive call
   > is-even
   > EOF
   error: mismatched types:
-    expected: Bool
-       found: Int
-    ┌─ <stdin>:3:14
+    expected: Int
+       found: Bool
+    ┌─ <stdin>:2:54
     │
-  3 │   is-odd (n : Int) := if n = 0 then false else is-even (n - 1);
-    │               ^^^
+  2 │   is-even (n : Int) := if n = 0 then true else is-odd false;
+    │                                                       ^^^^^
   
   [1]
 

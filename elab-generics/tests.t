@@ -404,7 +404,7 @@ Identity function (ambiguous type argument)
 
 Reused name in mutually recursive binding
   $ executable elab <<< "let rec { f x := x; f x := x }; f 1 : Int"
-  error: reused name f in recursive binding
+  error: reused name `f` in recursive binding
     ┌─ <stdin>:1:20
     │
   1 │ let rec { f x := x; f x := x }; f 1 : Int
