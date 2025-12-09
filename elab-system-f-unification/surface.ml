@@ -225,7 +225,7 @@ end = struct
         Core.Let (def_name.data, quote_vty ctx def_vty, def, body)
 
     | Fun_lit (params, body), vty ->
-        check_fun_lit ctx params body vty
+        check_fun_lit ctx tm.span params body vty
 
     | _, Forall_type (name, body_ty) ->
         let name = name |> Option.map (fun n -> "$" ^ n) in
@@ -336,25 +336,25 @@ end = struct
         Core.Prim_app (Prim.Int_neg, [tm]), Core.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
-  and check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : Core.vty) : Core.tm =
+  and check_fun_lit (ctx : context) (span : span) (params : param list) (body : tm) (vty : Core.vty) : Core.tm =
     match params, Core.force_vty vty with
     | [], vty ->
         check_tm ctx body vty
 
     | Ty_param name :: params, Forall_type (_, body_vty) ->
         let ty_var = next_ty_var ctx in
-        let body_tm = check_fun_lit (extend_ty ctx name.data) params body (body_vty ty_var) in
+        let body_tm = check_fun_lit (extend_ty ctx name.data) span params body (body_vty ty_var) in
         Core.Forall_lit (name.data, body_tm)
 
     (* Insert missing type parameters *)
     | params, Core.Forall_type (name, body_vty) ->
         let ty_var = next_ty_var ctx in
         let name = name |> Option.map (fun n -> "$" ^ n) in
-        let body_tm = check_fun_lit (extend_ty ctx name) params body (body_vty ty_var) in
+        let body_tm = check_fun_lit (extend_ty ctx name) span params body (body_vty ty_var) in
         Core.Forall_lit (name, body_tm)
 
     | Param (name, None) :: params, Core.Fun_type (param_vty, body_vty) ->
-        let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
+        let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) span params body body_vty in
         Core.Fun_lit (name.data, quote_vty ctx param_vty, body_tm)
 
     | Param (name, Some param_ty) :: params, Core.Fun_type (param_vty', body_vty) ->
@@ -362,13 +362,12 @@ end = struct
         let param_ty = check_ty ctx param_ty in
         let param_vty = eval_ty ctx param_ty in
         unify_vtys ctx param_ty_span ~found:param_vty ~expected:param_vty';
-        let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) params body body_vty in
+        let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) span params body body_vty in
         Core.Fun_lit (name.data, param_ty, body_tm)
 
-    | Param (name, _) :: _, Core.Meta_var _
-    | Ty_param name :: _, Core.Meta_var _ ->
+    | (_ :: _) as params, Core.Meta_var _ ->
         let tm', vty' = infer_fun_lit ctx params None body in
-        unify_vtys ctx name.span ~found:vty' ~expected:vty;
+        unify_vtys ctx span ~found:vty' ~expected:vty;
         tm'
 
     | Ty_param name :: _, _ ->

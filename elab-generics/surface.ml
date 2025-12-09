@@ -224,7 +224,7 @@ end = struct
         Core.Tm.Let_rec (defs, body)
 
     | Tm.Fun (params, body) ->
-        check_fun_lit ctx params body ty
+        check_fun_lit ctx tm.span params body ty
 
     | Tm.If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Core.Ty.Bool in
@@ -344,23 +344,22 @@ end = struct
         Core.Tm.Prim_app (Prim.Int_neg, [tm]), Core.Ty.Int
 
   (** Elaborate a function literal into a core term, given an expected type. *)
-  and check_fun_lit (ctx : Ctx.t) (params : Tm.param list) (body : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
+  and check_fun_lit (ctx : Ctx.t) (span : Span.t) (params : Tm.param list) (body : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
     match params, Core.Ty.force ty with
     | [], ty ->
         check_tm ctx body ty
     | (name, None) :: params, Core.Ty.Fun (param_ty, ty) ->
-        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) params body ty in
+        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) span params body ty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
     | (name, Some param_ty) :: params, Core.Ty.Fun (param_ty', ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) params body ty in
+        let body = check_fun_lit (Ctx.extend_tm ctx name.data ([], param_ty)) span params body ty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
-    | (name, _) :: _, Core.Ty.Meta_var _ ->
+    | (_ :: _) as params, Core.Ty.Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
-        unify_tys name.span ~found:ty' ~expected:ty;
-        (*        ^^^^^^^^^ FIXME: incorrect span *)
+        unify_tys span ~found:ty' ~expected:ty;
         tm'
     | (name, _) :: _, _ ->
         error name.span "unexpected parameter"

@@ -292,6 +292,7 @@ end = struct
     | (name, _) :: _, body_ty, Core.Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params body_ty body in
         unify_tys name.span ~found:ty' ~expected:ty;
+        (*        ^^^^^^^^^ FIXME: incorrect span *)
         tm'
     | (name, _) :: _, _, _ ->
         error name.span "unexpected parameter"

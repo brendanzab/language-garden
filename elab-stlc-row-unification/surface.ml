@@ -259,7 +259,7 @@ end = struct
         Core.Let (def_name.data, def_ty, def, body)
 
     | Fun_lit (params, body), ty ->
-        check_fun_lit ctx params body ty
+        check_fun_lit ctx tm.span params body ty
 
     | Variant_lit (label, tm), Core.Variant_type (Core.Row_entries row) ->
         begin match Label_map.find_opt label.data row with
@@ -412,22 +412,22 @@ end = struct
         Core.Prim_app (Prim.Int_neg, [tm]), Core.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
-  and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
+  and check_fun_lit (ctx : context) (span : span) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
     match params, Core.force_ty ty with
     | [], ty ->
         check_tm ctx body ty
     | (name, None) :: params, Core.Fun_type (param_ty, body_ty) ->
-        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
+        let body = check_fun_lit (extend ctx name.data param_ty) span params body body_ty in
         Core.Fun_lit (name.data, param_ty, body)
     | (name, Some param_ty) :: params, Core.Fun_type (param_ty', body_ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys ctx param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun_lit (extend ctx name.data param_ty) params body body_ty in
+        let body = check_fun_lit (extend ctx name.data param_ty) span params body body_ty in
         Core.Fun_lit (name.data, param_ty, body)
-    | (name, _) :: _, Core.Meta_var _ ->
+    | (_ :: _) as params, Core.Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
-        unify_tys ctx name.span ~found:ty' ~expected:ty;
+        unify_tys ctx span ~found:ty' ~expected:ty;
         tm'
     | (name, _) :: _, _ ->
         error ctx name.span "unexpected parameter"
