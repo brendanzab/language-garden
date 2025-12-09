@@ -454,13 +454,32 @@ Ignored definition in mutually recursive binding
   
   [1]
 
-Recursive let bindings
+Vicious circle prevention
   $ executable elab <<< "let rec x := x; x : Int"
   error: expected function literal in recursive let binding
     ┌─ <stdin>:1:8
     │
   1 │ let rec x := x; x : Int
     │         ^
+  
+  [1]
+
+Mismatched recursive call
+  $ executable elab <<EOF
+  > let rec {
+  >   is-even (n : Int) := if n = 0 then true else is-odd false;
+  >   is-odd (n : Int) := if n = 0 then false else is-even (n - 1);
+  > };
+  > 
+  > is-even
+  > EOF
+  error: mismatched types:
+    expected: Bool
+       found: Int
+    ┌─ <stdin>:3:14
+    │
+  3 │   is-odd (n : Int) := if n = 0 then false else is-even (n - 1);
+    │               ^^^
   
   [1]
 
