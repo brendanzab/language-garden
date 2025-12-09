@@ -422,6 +422,8 @@ end = struct
       | (name, _ : Tm.param) :: params, Core.Ty.Fun (param_ty, body_ty) ->
           let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) params body body_ty in
           Core.Tm.Fun_lit (name.data, param_ty, body)
+      (* Every parameter should already have a type associated with it when we
+         made the forward-declaration. *)
       | (_, _) :: _, Core.Ty.Meta_var _ -> failwith "impossible"
       | (name, _) :: _, _ -> error name.span "unexpected parameter"
     in
