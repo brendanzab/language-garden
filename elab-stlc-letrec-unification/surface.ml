@@ -315,36 +315,29 @@ end = struct
 
   (** Elaborate the definitions of a recursive let binding. *)
   and elab_let_rec_defs (ctx : context) (defs : defn list) : string option * entry * Core.ty * Core.tm =
-    (* Construct the forward-declaration of a definition, generating fresh
-       metavariables for any missing types. This provides more precise type
-       errors in mutual definitions when compared to generating a single
-       metavariables for each definition. *)
-    let rec get_def_ty ctx span params body_ty =
+    (* Elaborate the type of a function, generating fresh metavariables for
+       any missing annotations. *)
+    let rec check_fun_ty ctx span params body_ty =
       match params, body_ty with
       | [], None -> fresh_meta ctx span "definition type"
       | [], Some body_ty -> check_ty ctx body_ty
       | (name, None : param) :: params, body_ty ->
           let param_ty = fresh_meta ctx name.span "parameter type" in
-          Core.Fun_type (param_ty, get_def_ty ctx span params body_ty)
+          Core.Fun_type (param_ty, check_fun_ty ctx span params body_ty)
       | (_, Some param_ty : param) :: params, body_ty ->
           let param_ty = check_ty ctx param_ty in
-          Core.Fun_type (param_ty, get_def_ty ctx span params body_ty)
+          Core.Fun_type (param_ty, check_fun_ty ctx span params body_ty)
     in
 
-    (* Elaborate the the body of the definition, given a forward-declaration. *)
-    let check_def ctx span params body def_ty =
-      let rec go ctx params body def_ty =
-        match params, Core.force_ty def_ty with
+    (* Elaborate a function against an expected type *)
+    let check_fun_lit ctx span param_names body def_ty =
+      let rec go ctx param_names body def_ty =
+        match param_names, Core.force_ty def_ty with
         | [], body_ty -> check_tm ctx body body_ty
-        (* We've already pulled the type annotations from the parameters when
-          constructing the forward-declarations, to these can be ignored. *)
-        | (name, _ : param) :: params, Core.Fun_type (param_ty, body_ty) ->
-            let body = go (extend ctx (Param (name.data, param_ty))) params body body_ty in
+        | (name : binder) :: param_names, Core.Fun_type (param_ty, body_ty) ->
+            let body = go (extend ctx (Param (name.data, param_ty))) param_names body body_ty in
             Core.Fun_lit (name.data, param_ty, body)
-        (* Every parameter should already have a type associated with it when we
-          made the forward-declaration. *)
-        | (_, _) :: _, Core.Meta_var _ -> failwith "impossible"
-        | (name, _) :: _, _ -> error name.span "unexpected parameter"
+        | (name : binder) :: _, _ -> error name.span "unexpected parameter"
       in
 
       (* Avoid “vicious circles” with a blunt syntactic check on the elaborated
@@ -357,7 +350,7 @@ end = struct
         admits more valid programs. A detailed description of this check can be
         found in “A practical mode system for recursive definitions” by Reynaud
         et. al. https://doi.org/10.1145/3434326. *)
-      match go ctx params body def_ty with
+      match go ctx param_names body def_ty with
       | Core.Fun_lit _ as def -> def
       | _ -> error span "definitions must be functions in recursive let bindings"
     in
@@ -366,11 +359,12 @@ end = struct
        definitions. *)
     match defs with
     (* Singly recursive definitions are special-cased. This is not exactly
-       necessary, but avoids the need to construct an intermediate record.*)
+       necessary, but avoids the need to construct an intermediate record. *)
     | [(def_name, params, body_ty, def)] ->
-        let def_ty = get_def_ty ctx def_name.span params body_ty in
+        let def_ty = check_fun_ty ctx def_name.span params body_ty in
         let def_entry = Param (def_name.data, def_ty) in
-        let def = check_def (extend ctx def_entry) def_name.span params def def_ty in
+        let param_names = params |> List.map fst in
+        let def = check_fun_lit (extend ctx def_entry) def_name.span param_names def def_ty in
         def_name.data, def_entry, def_ty, Core.Fix (def_name.data, def_ty, def)
 
     (* Mutually recursive definitions *)
@@ -378,13 +372,13 @@ end = struct
         let mutual_decls =
           defs |> ListLabels.fold_left
             ~init:Label_map.empty
-            ~f:(fun mutual_decls ({ span; data = name }, params, body_ty, _) ->
-              match name with
+            ~f:(fun mutual_decls ({ span; _ } as name, params, body_ty, _) ->
+              match name.data with
               | None -> error span "placeholder in recursive binding"
               | Some name when Label_map.mem name mutual_decls ->
                   error span "reused name `%s` in recursive binding" name
               | Some name ->
-                  let def_ty = get_def_ty ctx span params body_ty in
+                  let def_ty = check_fun_ty ctx span params body_ty in
                   mutual_decls |> Label_map.add name def_ty)
         in
 
@@ -396,7 +390,8 @@ end = struct
               match def_name.data with
               | Some name ->
                   let def_ty = Label_map.find name mutual_decls in
-                  let def = check_def ctx def_name.span params def def_ty in
+                  let param_names = params |> List.map fst in
+                  let def = check_fun_lit ctx def_name.span param_names def def_ty in
                   mutual_defs |> Label_map.add name def
               | None ->
                   mutual_defs)
