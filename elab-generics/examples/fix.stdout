@@ -1,0 +1,21 @@
+let rec {
+  fix [A, B] : ((A -> B) -> A -> B) -> A -> B :=
+    fun (f : (A -> B) -> A -> B) => fun (x : A) => f (fix [A, B] f) x;
+};
+let fact : Int -> Int :=
+  fix
+    [Int, Int]
+    (fun (fact : Int -> Int) => fun (n : Int) =>
+       if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1)));
+let fib : Int -> Int :=
+  fix
+    [Int, Int]
+    (fun (fib : Int -> Int) => fun (n : Int) =>
+       if #int-eq n 0 then
+         0
+       else
+         if #int-eq n 1 then
+           1
+         else
+           #int-add (fib (#int-sub n 1)) (fib (#int-sub n 2)));
+fact 5 : Int

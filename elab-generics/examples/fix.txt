@@ -1,0 +1,14 @@
+let rec fix [A, B] (f : (A -> B) -> A -> B) (x : A) : B :=
+  f (fix f) x;
+
+let fact :=
+  fix (fun fact n =>
+    if n = 0 then 1 else n * fact (n - 1));
+
+let fib :=
+  fix (fun fib n =>
+    if n = 0 then 0 else
+    if n = 1 then 1 else
+      fib (n - 1) + fib (n - 2));
+
+fact 5

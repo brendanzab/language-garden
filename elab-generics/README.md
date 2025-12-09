@@ -14,7 +14,10 @@ We support typechecking expressions like:
 let id [A] (x : A) : A := x;
 let const [A, B] (x : A) (y : B) : A := x;
 
-const id true 45
+let flip [A, B, C] (f : A -> B -> C) : B -> A -> C :=
+  fun x y => f y x;
+
+flip const true id 45
 ```
 
 <details>
@@ -24,7 +27,10 @@ const id true 45
 ```
 let id [A] : A -> A := fun (x : A) => x;
 let const [A, B] : A -> B -> A := fun (x : A) => fun (y : B) => x;
-const [Int -> Int, Bool] id [Int] true 45 : Int
+let flip [A, B, C] : (A -> B -> C) -> B -> A -> C :=
+  fun (f : A -> B -> C) => fun (x : B) => fun (y : A) => f y x;
+flip [Int -> Int, Bool, Int -> Int] const [Int -> Int, Bool] true id [Int] 45
+: Int
 ```
 
 </details>
