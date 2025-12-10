@@ -358,7 +358,7 @@ Ambiguous parameter type
 
 Ambiguous return type
   $ executable elab <<< "fun f x => f x"
-  error: ambiguous function parameter type
+  error: ambiguous function argument
     ┌─ <stdin>:1:11
     │
   1 │ fun f x => f x

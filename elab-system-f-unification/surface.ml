@@ -291,10 +291,10 @@ end = struct
               Fun_app (head, arg), body_ty
 
           | Core.Meta_var _ as head_ty, Arg arg ->
-              let param_ty = eval_ty ctx (fresh_meta ctx head_span "function parameter type") in
+              let arg_ty = eval_ty ctx (fresh_meta ctx head_span "function argument") in
               let body_ty = eval_ty ctx (fresh_meta ctx head_span "function return type") in
-              unify_vtys ctx head_span ~expected:head_ty ~found:(Core.Fun_type (param_ty, body_ty));
-              let arg = check_tm ctx arg param_ty in
+              unify_vtys ctx head_span ~expected:head_ty ~found:(Core.Fun_type (arg_ty, body_ty));
+              let arg = check_tm ctx arg arg_ty in
               Fun_app (head, arg), body_ty
 
           | _, Ty_arg _ -> error arg.span "unexpected type argument"

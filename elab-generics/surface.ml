@@ -303,10 +303,10 @@ end = struct
             let arg = check_tm ctx arg param_ty in
             Core.Tm.Fun_app (head, arg), body_ty
         | Core.Ty.Meta_var _ as head_ty ->
-            let param_ty = Ctx.fresh_meta ctx head_span "function parameter type" in
+            let arg_ty = Ctx.fresh_meta ctx arg.span "function argument" in
             let body_ty = Ctx.fresh_meta ctx head_span "function return type" in
-            unify_tys head_span ~found:head_ty ~expected:(Core.Ty.Fun (param_ty, body_ty));
-            let arg = check_tm ctx arg param_ty in
+            unify_tys head_span ~found:head_ty ~expected:(Core.Ty.Fun (arg_ty, body_ty));
+            let arg = check_tm ctx arg arg_ty in
             Core.Tm.Fun_app (head, arg), body_ty
         | _ -> error arg.span "unexpected argument"
         end
