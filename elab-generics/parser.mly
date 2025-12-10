@@ -52,8 +52,9 @@ let atomic_ty :=
 let tm :=
 | "let"; r = option("rec"; { `Rec }); ds = defs; ";"; tm = spanned(tm);
     { Surface.Tm.Let (r, ds, tm) }
-| "fun"; ps = nonempty_list(param); "=>"; tm = spanned(tm);
-    { Surface.Tm.Fun (ps, tm) }
+| "fun"; ps = nonempty_list(param); ty = option(":"; ty = spanned(ty); { ty });
+  "=>"; tm = spanned(tm);
+    { Surface.Tm.Fun (ps, ty, tm) }
 | "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.Tm.If_then_else (tm1, tm2, tm3) }
 | tm = spanned(eq_tm); ":"; ty = spanned(ty);

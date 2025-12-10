@@ -52,7 +52,7 @@ module Tm = struct
     | Name of string Spanned.t * Ty.t list
     | Let of [`Rec] option * def list * t
     | Ann of t * Ty.t
-    | Fun of param list * t
+    | Fun of param list * Ty.t option * t
     | Int of int
     | App of t * t
     | If_then_else of t * t * t
@@ -223,8 +223,8 @@ end = struct
         let body = check_tm ctx body ty in
         Core.Tm.Let_rec (defs, body)
 
-    | Tm.Fun (params, body) ->
-        check_fun ctx tm.span params body ty
+    | Tm.Fun (params, body_ty, body) ->
+        check_fun ctx tm.span params body_ty body ty
 
     | Tm.If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Core.Ty.Bool in
@@ -290,8 +290,8 @@ end = struct
         let ty = check_ty ctx ty in
         check_tm ctx tm ty, ty
 
-    | Tm.Fun (params, body) ->
-        infer_fun ctx params None body
+    | Tm.Fun (params, body_ty, body) ->
+        infer_fun ctx params body_ty body
 
     | Tm.Int i ->
         Core.Tm.Int_lit i, Core.Ty.Int
@@ -344,24 +344,28 @@ end = struct
         Core.Tm.Prim_app (Prim.Int_neg, [tm]), Core.Ty.Int
 
   (** Elaborate a function into a core term, given an expected type. *)
-  and check_fun (ctx : Ctx.t) (span : Span.t) (params : Tm.param list) (body : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
-    match params, Core.Ty.force ty with
-    | [], ty ->
-        check_tm ctx body ty
-    | (name, None) :: params, Core.Ty.Fun (param_ty, ty) ->
-        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span params body ty in
+  and check_fun (ctx : Ctx.t) (span : Span.t) (params : Tm.param list) (body_ty : Ty.t option) (body : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
+    match params, body_ty, Core.Ty.force ty with
+    | [], None, body_ty ->
+        check_tm ctx body body_ty
+    | [], Some ({ span = body_ty_span; _ } as body_ty), body_ty' ->
+        let body_ty = check_ty ctx body_ty in
+        unify_tys body_ty_span ~found:body_ty ~expected:body_ty';
+        check_tm ctx body body_ty
+    | (name, None) :: params, body_ty, Core.Ty.Fun (param_ty, ty) ->
+        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span params body_ty body ty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
-    | (name, Some param_ty) :: params, Core.Ty.Fun (param_ty', ty) ->
+    | (name, Some param_ty) :: params, body_ty, Core.Ty.Fun (param_ty', ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span params body ty in
+        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span params body_ty body ty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
-    | (_ :: _) as params, Core.Ty.Meta_var _ ->
-        let tm', ty' = infer_fun ctx params None body in
+    | (_ :: _) as params, body_ty, Core.Ty.Meta_var _ ->
+        let tm', ty' = infer_fun ctx params body_ty body in
         unify_tys span ~found:ty' ~expected:ty;
         tm'
-    | (name, _) :: _, _ ->
+    | (name, _) :: _, _, _ ->
         error name.span "unexpected parameter"
 
   (** Elaborate a function into a core term, inferring its type. *)
