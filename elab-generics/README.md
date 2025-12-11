@@ -1,6 +1,6 @@
 # Generics
 
-- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ type parameters, mutual recursion)
+- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ type parameters, mutual recursion) (- normalisation-by-evaluation)
 
 ---
 
@@ -9,7 +9,7 @@ project is as a response to the common question â€œhow do I implement generics?â
 
 We support typechecking expressions like:
 
-<!-- $MDX file=examples/readme.txt -->
+<!-- $MDX file=examples/combinators.txt -->
 ```
 let id [A] (x : A) : A := x;
 let const [A, B] (x : A) (y : B) : A := x;
@@ -23,7 +23,7 @@ flip const true id 45
 <details>
 <summary>Elaboration output</summary>
 
-<!-- $MDX file=examples/readme.stdout -->
+<!-- $MDX file=examples/combinators.stdout -->
 ```
 let id [A] : A -> A := fun (x : A) => x;
 let const [A, B] : A -> B -> A := fun (x : A) => fun (y : B) => x;
@@ -31,6 +31,55 @@ let flip [A, B, C] : (A -> B -> C) -> B -> A -> C :=
   fun (f : A -> B -> C) => fun (x : B) => fun (y : A) => f y x;
 flip [Int -> Int, Bool, Int -> Int] const [Int -> Int, Bool] true id [Int] 45
 : Int
+```
+
+</details>
+
+Recursive bindings are also supported:
+
+<!-- $MDX file=examples/fix.txt -->
+```
+let rec fix [A, B] (f : (A -> B) -> A -> B) (x : A) : B :=
+  f (fix f) x;
+
+let fact :=
+  fix (fun fact n =>
+    if n = 0 then 1 else n * fact (n - 1));
+
+let fib :=
+  fix (fun fib n =>
+    if n = 0 then 0 else
+    if n = 1 then 1 else
+      fib (n - 1) + fib (n - 2));
+
+fact 5
+```
+
+<details>
+<summary>Elaboration output</summary>
+<!-- $MDX file=examples/fix.stdout -->
+```
+let rec {
+  fix [A, B] : ((A -> B) -> A -> B) -> A -> B :=
+    fun (f : (A -> B) -> A -> B) => fun (x : A) => f (fix [A, B] f) x;
+};
+let fact : Int -> Int :=
+  fix
+    [Int, Int]
+    (fun (fact : Int -> Int) => fun (n : Int) =>
+       if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1)));
+let fib : Int -> Int :=
+  fix
+    [Int, Int]
+    (fun (fib : Int -> Int) => fun (n : Int) =>
+       if #int-eq n 0 then
+         0
+       else
+         if #int-eq n 1 then
+           1
+         else
+           #int-add (fib (#int-sub n 1)) (fib (#int-sub n 2)));
+fact 5 : Int
 ```
 
 </details>
@@ -58,7 +107,7 @@ A more stripped-down version of this project can be found in [`scraps/check_poly
 | [`Lexer`]     | Lexer for the surface language          |
 | [`Parser`]    | Parser for the surface language         |
 | [`Surface`]   | Surface language, including elaboration |
-| [`Core`]      | Core language, including normalisation, unification, and pretty printing |
+| [`Core`]      | Core language, including evaluation, unification, and pretty printing |
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./main.ml
@@ -77,4 +126,5 @@ A more stripped-down version of this project can be found in [`scraps/check_poly
 
 ## Examples
 
-More examples can be found in [`tests.t`](tests.t).
+More examples can be found in the [`examples`](./examples/) directory and in
+[`tests.t`](tests.t).
