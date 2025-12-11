@@ -6,9 +6,9 @@ homepage: "https://github.com/brendanzab/language-garden"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.16"}
-  "js_of_ocaml-compiler" {>= "6.0.1"}
-  "js_of_ocaml" {>= "6.0.1"}
-  "js_of_ocaml-ppx" {>= "6.0.1"}
+  "js_of_ocaml-compiler" {>= "6.2"}
+  "js_of_ocaml" {>= "6.2"}
+  "js_of_ocaml-ppx" {>= "6.2"}
   "odoc" {with-doc}
 ]
 build: [

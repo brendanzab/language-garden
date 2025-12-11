@@ -7,8 +7,8 @@ bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.16"}
   "cmdliner" {>= "1.3"}
-  "menhir" {>= "20240715" & build}
-  "menhirLib" {>= "20240715"}
+  "menhir" {>= "20250912" & build}
+  "menhirLib" {>= "20250912"}
   "mdx" {>= "2.5" & with-test}
   "odoc" {with-doc}
 ]
