@@ -81,6 +81,8 @@ Elaboration:
 - [**elab_poly_generics.ml**](./elab_poly_generics.ml):
   Elaboration for a polymorphic functional language with explicit type
   parameters (similar to languages like Rust, Typescript, C#, and Java).
+- [**elab_poly_generics_nbe.ml**](./elab_poly_generics_nbe.ml):
+  An implementation of generics that uses normalisation-by-evaluation in types.
 - [**elab_poly_generics_letrec.ml**](./elab_poly_generics_letrec.ml):
   Elaboration for a polymorphic functional language with explicit type
   parameters and general recursion.
