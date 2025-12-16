@@ -1,6 +1,14 @@
-(** An implementation of generics that uses normalisation-by-evaluation in
-    types. This should make it easier to keep track of when substitutions have
-    been applied in types.
+(** An implementation of a polymorphic functional language with local type
+    definitions, that uses normalisation-by-evaluation in types. This should
+    make it easier to keep track of when substitutions have been applied in
+    types.
+
+    {2 Future work}
+
+    - Parameterised type definitions
+    - Local unfolding of type definitions. See
+      {{: https://andraskovacs.github.io/pdfs/wits24prez.pdf#page=19} Efficient
+      Elaboration with Controlled Definition Unfolding} for more details.
 *)
 
 (** Returns a list of the duplicate elements in a list *)
@@ -254,6 +262,9 @@ module Core = struct
           ]}
       *)
 
+      | Let_type of Ty.name * Ty.t * t
+      (** Local type definitions. *)
+
       | Fun_lit of name * Ty.t * t
       | Fun_app of t * t
       | Tuple_lit of t list
@@ -291,6 +302,8 @@ module Core = struct
       | Let (name, _, _, def, body) ->
           let vdef = eval env def in
           eval ((name, vdef) :: env) body
+      | Let_type (_, _, body) ->
+          eval env body
       | Fun_lit (name, _, body) ->
           Value.Fun_lit (fun varg ->
             eval ((name, varg) :: env) body)
@@ -320,6 +333,8 @@ module Core = struct
       | Var (name, ty_args) -> Var (name, List.map Ty.zonk ty_args)
       | Let (name, ty_params, def_ty, def, body) ->
           Let (name, ty_params, Ty.zonk def_ty, zonk def, zonk body)
+      | Let_type (name, ty, body) ->
+          Let_type (name, Ty.zonk ty, zonk body)
       | Fun_lit (name, ty, body) -> Fun_lit (name, Ty.zonk ty, zonk body)
       | Fun_app (head, arg) -> Fun_app (zonk head, zonk arg)
       | Tuple_lit elems -> Tuple_lit (List.map zonk elems)
@@ -355,6 +370,7 @@ module Surface = struct
     type t =
       | Name of string * Ty.t list
       | Let of string * string list * Ty.t option * t * t
+      | Let_type of string * (* TODO: Type parameters *) Ty.t * t
       | Ann of t * Ty.t
       | Fun of string * Ty.t option * t
       | Tuple of t list
@@ -471,6 +487,7 @@ module Surface = struct
           begin match Ctx.lookup_ty ctx name with
           | Some _ -> Core.Ty.Var name
           | None when name = "Bool" -> Core.Ty.Bool
+          | None when name = "Int" -> Core.Ty.Int
           | None -> error "unbound type variable `%s`" name
           end
       | Ty.Fun (ty1, ty2) -> Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
@@ -484,6 +501,12 @@ module Surface = struct
           let ctx, def_ty, def = infer_def ctx name ty_params def_ty def in
           let body = check_expr ctx body body_vty in
           Core.Expr.Let (name, ty_params, def_ty, def, body)
+
+      | Expr.Let_type (name, ty, body), body_vty ->
+          let ty = check_ty ctx ty in
+          let vty = Ctx.eval_ty ctx ty in
+          let body = check_expr (Ctx.extend_ty_def ctx name vty) body body_vty in
+          Core.Expr.Let_type (name, ty, body)
 
       | Expr.Fun (name, None, body), Core.Ty.Value.Fun (param_vty, body_vty) ->
           let param_ty = Core.Ty.quote param_vty in
@@ -547,6 +570,12 @@ module Surface = struct
           let ctx, def_ty, def = infer_def ctx name ty_params def_ty def in
           let body, body_vty = infer_expr ctx body in
           Core.Expr.Let (name, ty_params, def_ty, def, body), body_vty
+
+      | Expr.Let_type (name, ty, body) ->
+          let ty = check_ty ctx ty in
+          let vty = Ctx.eval_ty ctx ty in
+          let body, body_vty = infer_expr (Ctx.extend_ty_def ctx name vty) body in
+          Core.Expr.Let_type (name, ty, body), body_vty
 
       | Expr.Ann (tm, ty) ->
           let ty = check_ty ctx ty in
@@ -755,6 +784,22 @@ let () = begin
       ));
       assert (ty = Core.Ty.Bool);
       assert (Core.Expr.eval [] expr = Core.Expr.Value.Bool_lit true);
+    end;
+
+    (* Local type definitions *)
+    let expr =
+      (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
+      Expr.Let_type ("Foo", Name "Int",
+        Ann (Int 42, Name "Foo"))
+    in
+    begin
+      let expr, ty = Elab.infer_expr expr |> expect_ok in
+      assert (expr = Core.(
+        Expr.Let_type ("Foo", Int,
+          Int_lit 42)
+      ));
+      assert (ty = Core.Ty.Int);
+      assert (Core.Expr.eval [] expr = Core.Expr.Value.Int_lit 42);
     end;
 
     (* TODO: More tests *)

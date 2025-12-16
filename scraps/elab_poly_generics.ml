@@ -425,6 +425,7 @@ module Surface = struct
           begin match Ctx.lookup_ty ctx name with
           | Some () -> Core.Ty.Var name
           | None when name = "Bool" -> Core.Ty.Bool
+          | None when name = "Int" -> Core.Ty.Int
           | None -> error "unbound type variable `%s`" name
           end
       | Ty.Fun (ty1, ty2) -> Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
