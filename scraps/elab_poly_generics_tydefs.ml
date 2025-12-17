@@ -1,14 +1,8 @@
-(** An implementation of a polymorphic functional language with local type
-    definitions, that uses normalisation-by-evaluation in types. This should
-    make it easier to keep track of when substitutions have been applied in
-    types.
+(** A polymorphic functional language with local type definitions, that uses
+    normalisation-by-evaluation in types. This should make it easier to keep
+    track of when substitutions have been applied in types.
 
-    {2 Future work}
-
-    - Parameterised type definitions
-    - Local unfolding of type definitions. See
-      {{: https://andraskovacs.github.io/pdfs/wits24prez.pdf#page=19} Efficient
-      Elaboration with Controlled Definition Unfolding} for more details.
+    Extends [elab_poly_generics.ml].
 *)
 
 (** Returns a list of the duplicate elements in a list *)
