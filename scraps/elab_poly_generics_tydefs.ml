@@ -540,7 +540,7 @@ module Surface = struct
             match Ctx.lookup_expr ctx name with
             | Some pty -> (fun ty_args -> Core.Expr.Var (name, ty_args)), pty
             | None when name = "true" -> Core.((fun _ -> Expr.Bool_lit true), ([], fun _ -> Ty.Value.Bool))
-            | None when name = "false" -> Core.((fun _ -> Expr.Bool_lit true), ([], fun _ -> Ty.Value.Bool))
+            | None when name = "false" -> Core.((fun _ -> Expr.Bool_lit false), ([], fun _ -> Ty.Value.Bool))
             | None -> error "unbound variable `%s`" name
           in
 
