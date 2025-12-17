@@ -42,6 +42,9 @@ module Core = struct
       | Bool
       | Int
 
+    (** Type definitions (used in local type definitions) *)
+    and def = name * name list * t
+
     (** Mutable representation of metavariables, to be updated in-place during
         unification and typechecking *)
     and meta = meta_state ref
@@ -95,12 +98,8 @@ module Core = struct
       exception Mismatched_types
       exception Infinite_type
 
-      (** Check that two types are the same, wile updating unsolved metavariables
-          with known type information as required.
-
-          @raises Mismatched_types
-          @raises Infinite_type
-      *)
+      (** Check that two types are the same, wile updating unsolved
+          metavariables with known type information as required. *)
       val unify : t -> t -> unit
 
     end
@@ -111,6 +110,9 @@ module Core = struct
 
     (** Inline solved metavariables in types *)
     val zonk : Value.level -> t -> t
+
+    (** Inline solved metavariables in type definitions *)
+    val zonk_def : Value.level -> def -> def
 
     (** Pretty print a type *)
     val pp : Value.level -> name list -> t -> Format.formatter -> unit
@@ -213,6 +215,9 @@ module Core = struct
       | Bool -> ty
       | Int -> Int
 
+    let zonk_def (ty_size : Value.level) (name, ty_params, ty : def) : def =
+      name, ty_params, zonk (ty_size + List.length ty_params) ty
+
     let pp (size : Value.level) (names : name list) (ty : t) (ppf : Format.formatter) : unit =
       let rec pp_ty ty ppf =
         match ty with
@@ -265,7 +270,7 @@ module Core = struct
       (** A variable that is possibly applied to a series of type arguments
           (which will be applied a type lambda in a definition). *)
 
-      | Let of name * Ty.name list * Ty.t * t * t
+      | Let of def * t
       (** Let bindings that are polymorphic over a series of type parameters.
           The type parameters are bound in a forall in the type annotation, and
           in a type lambda in the definition. In System F this would look like:
@@ -277,7 +282,7 @@ module Core = struct
           ]}
       *)
 
-      | Let_type of Ty.name * Ty.name list * Ty.t * t
+      | Let_type of Ty.def * t
       (** Local type definitions. *)
 
       | Fun_lit of name * Ty.t * t
@@ -287,6 +292,9 @@ module Core = struct
       | Bool_lit of bool
       | Bool_if of t * t * t
       | Int_lit of int
+
+    (** Definitions *)
+    and def = name * Ty.name list * Ty.t * t
 
     module Value = struct
 
@@ -314,10 +322,10 @@ module Core = struct
     let rec eval (env : (name * Value.t) list) (expr : t) : Value.t =
       match expr with
       | Var (name, _) -> List.assoc name env
-      | Let (name, _, _, def, body) ->
+      | Let ((name, _, _, def), body) ->
           let vdef = eval env def in
           eval ((name, vdef) :: env) body
-      | Let_type (_, _, _, body) ->
+      | Let_type (_, body) ->
           eval env body
       | Fun_lit (name, _, body) ->
           Value.Fun_lit (fun varg ->
@@ -346,15 +354,8 @@ module Core = struct
     let rec zonk (ty_size : Ty.Value.level) (expr : t) : t =
       match expr with
       | Var (name, ty_args) -> Var (name, List.map (Ty.zonk ty_size) ty_args)
-      | Let (name, ty_params, def_ty, def, body) ->
-          let def_ty, def =
-            let ty_size = ty_size + List.length ty_params in
-            Ty.zonk ty_size def_ty, zonk ty_size def
-          in
-          Let (name, ty_params, def_ty, def, zonk ty_size body)
-      | Let_type (name, ty_params, ty, body) ->
-          Let_type (name, ty_params, Ty.zonk (ty_size + List.length ty_params) ty,
-            zonk (ty_size + 1) body)
+      | Let (def, body) -> Let (zonk_def ty_size def, zonk ty_size body)
+      | Let_type (ty_def, body) -> Let_type (Ty.zonk_def ty_size ty_def, zonk (ty_size + 1) body)
       | Fun_lit (name, ty, body) -> Fun_lit (name, Ty.zonk ty_size ty, zonk ty_size body)
       | Fun_app (head, arg) -> Fun_app (zonk ty_size head, zonk ty_size arg)
       | Tuple_lit elems -> Tuple_lit (List.map (zonk ty_size) elems)
@@ -363,6 +364,10 @@ module Core = struct
       | Bool_if (head, true_body, false_body) ->
           Bool_if (zonk ty_size head, zonk ty_size true_body, zonk ty_size false_body)
       | Int_lit _ -> expr
+
+    and zonk_def (ty_size : Ty.Value.level) (name, ty_params, def_ty, def : def) : def =
+      let ty_size = ty_size + List.length ty_params in
+      name, ty_params, Ty.zonk ty_size def_ty, zonk ty_size def
 
   end
 
@@ -383,14 +388,16 @@ module Surface = struct
       | Placeholder
       [@@warning "-unused-constructor"]
 
+    and def = string * string list * t
+
   end
 
   module Expr = struct
 
     type t =
       | Name of string * Ty.t list
-      | Let of string * string list * Ty.t option * t * t
-      | Let_type of string * string list * Ty.t * t
+      | Let of def * t
+      | Let_type of Ty.def * t
       | Ann of t * Ty.t
       | Fun of string * Ty.t option * t
       | Tuple of t list
@@ -399,6 +406,8 @@ module Surface = struct
       | Proj of t * int
       | If of t * t * t
       [@@warning "-unused-constructor"]
+
+    and def = string * string list * Ty.t option * t
 
   end
 
@@ -564,15 +573,15 @@ module Surface = struct
     (** Elaborate a term, given an expected type. *)
     let rec check_expr (ctx : Ctx.t) (expr : Expr.t) (ty : Core.Ty.Value.t) : Core.Expr.t =
       match expr, Core.Ty.Value.force ty with
-      | Expr.Let (name, ty_params, def_ty, def, body), body_vty ->
-          let ctx, def_ty, def = infer_def ctx name ty_params def_ty def in
+      | Expr.Let (def, body), body_vty ->
+          let ctx, def = infer_def ctx def in
           let body = check_expr ctx body body_vty in
-          Core.Expr.Let (name, ty_params, def_ty, def, body)
+          Core.Expr.Let (def, body)
 
-      | Expr.Let_type (name, ty_params, ty, body), body_vty ->
-          let ctx, ty = infer_ty_def ctx name ty_params ty in
+      | Expr.Let_type (ty_def, body), body_vty ->
+          let ctx, ty_def = infer_ty_def ctx ty_def in
           let body = check_expr ctx body body_vty in
-          Core.Expr.Let_type (name, ty_params, ty, body)
+          Core.Expr.Let_type (ty_def, body)
 
       | Expr.Fun (name, None, body), Core.Ty.Value.Fun (param_vty, body_vty) ->
           let param_ty = Ctx.quote_vty ctx param_vty in
@@ -632,15 +641,15 @@ module Surface = struct
                 (List.length ty_args)
           end
 
-      | Expr.Let (name, ty_params, def_ty, def, body) ->
-          let ctx, def_ty, def = infer_def ctx name ty_params def_ty def in
+      | Expr.Let (def, body) ->
+          let ctx, def = infer_def ctx def in
           let body, body_vty = infer_expr ctx body in
-          Core.Expr.Let (name, ty_params, def_ty, def, body), body_vty
+          Core.Expr.Let (def, body), body_vty
 
-      | Expr.Let_type (name, ty_params, ty, body) ->
-          let ctx, ty = infer_ty_def ctx name ty_params ty in
+      | Expr.Let_type (ty_def, body) ->
+          let ctx, ty_def = infer_ty_def ctx ty_def in
           let body, body_vty = infer_expr ctx body in
-          Core.Expr.Let_type (name, ty_params, ty, body), body_vty
+          Core.Expr.Let_type (ty_def, body), body_vty
 
       | Expr.Ann (tm, ty) ->
           let ty = check_ty ctx ty in
@@ -698,7 +707,7 @@ module Surface = struct
           Core.Expr.Bool_if (head, true_body, false_body), body_vty
 
     (** Elaborate a polymorphic definition with an optional type annotation *)
-    and infer_def (ctx : Ctx.t) (name : string) (ty_params : string list) (def_ty : Ty.t option) (def : Expr.t) : Ctx.t * Core.Ty.t * Core.Expr.t =
+    and infer_def (ctx : Ctx.t) (name, ty_params, def_ty, def : Expr.def) : Ctx.t * Core.Expr.def =
       match find_dupes ty_params with
       | (_ :: _) as names ->
           error "type %s introduced multiple times: %s"
@@ -721,9 +730,10 @@ module Surface = struct
             let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name ([], fun _ -> vty) in
             Ctx.eval_ty (List.fold_left2 extend_ty_arg ctx ty_params ty_args) def_ty
           in
-          Ctx.extend_expr ctx name (ty_params, def_pty), def_ty, def
+          Ctx.extend_expr ctx name (ty_params, def_pty),
+          (name, ty_params, def_ty, def)
 
-    and infer_ty_def (ctx : Ctx.t) (name : string) (ty_params : string list) (ty : Ty.t) : Ctx.t * Core.Ty.t =
+    and infer_ty_def (ctx : Ctx.t) (name, ty_params, ty : Ty.def) : Ctx.t * Core.Ty.def =
       match find_dupes ty_params with
       | (_ :: _) as names ->
           error "type %s introduced multiple times: %s"
@@ -739,7 +749,8 @@ module Surface = struct
             let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name ([], fun _ -> vty) in
             Ctx.eval_ty (List.fold_left2 extend_ty_arg ctx ty_params ty_args) ty
           in
-          Ctx.extend_ty_def ctx name (ty_params, pty), ty
+          Ctx.extend_ty_def ctx name (ty_params, pty),
+          (name, ty_params, ty)
 
 
     (** Running elaboration *)
@@ -791,15 +802,15 @@ let () = begin
 
     (* Polymorphic identity function *)
     let expr =
-      Expr.Let ("id", ["A"], None,
-        Fun ("x", Some (Name ("A", [])), Name ("x", [])),
+      Expr.Let (("id", ["A"], None,
+        Fun ("x", Some (Name ("A", [])), Name ("x", []))),
         Name ("id", []) $ Tuple [])
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
-        Expr.Let ("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
-          Fun_lit ("x", Ty.Var (0, []), Var ("x", [])),
+        Expr.Let (("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
+          Fun_lit ("x", Ty.Var (0, []), Var ("x", []))),
           Fun_app (Var ("id", [Ty.Tuple []]), Tuple_lit []))
       ));
       assert (ty = Core.Ty.Tuple []);
@@ -808,15 +819,15 @@ let () = begin
 
     (* Explicit type application *)
     let expr =
-      Expr.Let ("id", ["A"], None,
-        Fun ("x", Some (Name ("A", [])), Name ("x", [])),
+      Expr.Let (("id", ["A"], None,
+        Fun ("x", Some (Name ("A", [])), Name ("x", []))),
         Name ("id", [Ty.Tuple []]) $ Tuple [])
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
-        Expr.Let ("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
-          Fun_lit ("x", Ty.Var (0, []), Var ("x", [])),
+        Expr.Let (("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
+          Fun_lit ("x", Ty.Var (0, []), Var ("x", []))),
           Fun_app (Var ("id", [Ty.Tuple []]), Tuple_lit []))
       ));
       assert (ty = Core.Ty.Tuple []);
@@ -825,20 +836,20 @@ let () = begin
 
     (* Constant function *)
     let expr =
-      Expr.Let ("id", ["A"], None,
-        Fun ("x", Some (Name ("A", [])), Name ("x", [])),
-        Let ("const", ["A"; "B"], None,
-          Fun ("x", Some (Name ("A", [])), Fun ("y", Some (Name ("B", [])), Name ("x", []))),
+      Expr.Let (("id", ["A"], None,
+        Fun ("x", Some (Name ("A", [])), Name ("x", []))),
+        Let (("const", ["A"; "B"], None,
+          Fun ("x", Some (Name ("A", [])), Fun ("y", Some (Name ("B", [])), Name ("x", [])))),
           Name ("const", []) $ Tuple [] $ (Name ("id", []) $ Name ("true", []))))
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         let ( $ ) f x = Expr.Fun_app (f, x) in
-        Expr.Let ("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
-          Fun_lit ("x", Ty.Var (0, []), Var ("x", [])),
-          Let ("const", ["A"; "B"], Ty.Fun (Var (1, []), Ty.Fun (Var (0, []), Var (1, []))),
-            Fun_lit ("x", Ty.Var (1, []), Fun_lit ("y", Ty.Var (0, []), Var ("x", []))),
+        Expr.Let (("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
+          Fun_lit ("x", Ty.Var (0, []), Var ("x", []))),
+          Let (("const", ["A"; "B"], Ty.Fun (Var (1, []), Ty.Fun (Var (0, []), Var (1, []))),
+            Fun_lit ("x", Ty.Var (1, []), Fun_lit ("y", Ty.Var (0, []), Var ("x", [])))),
             Var ("const", [Ty.Tuple []; Ty.Bool]) $ Tuple_lit [] $ (Var ("id", [Ty.Bool]) $ Bool_lit true)))
       ));
       assert (ty = Core.Ty.Tuple []);
@@ -847,22 +858,22 @@ let () = begin
 
     (* Locally polymorphic definitions *)
     let expr =
-      Expr.Let ("kite", ["A"; "B"], Some (Fun (Name ("A", []), Fun (Name ("B", []), Name ("B", [])))),
+      Expr.Let (("kite", ["A"; "B"], Some (Fun (Name ("A", []), Fun (Name ("B", []), Name ("B", [])))),
         Fun ("x", None,
-          Expr.Let ("id", ["A"], None,
-            Fun ("x", Some (Name ("A", [])), Name ("x", [])),
-            Name ("id", []))),
+          Let (("id", ["A"], None,
+            Fun ("x", Some (Name ("A", [])), Name ("x", []))),
+            Name ("id", [])))),
         Name ("kite", []) $ Tuple [] $ Name ("true", []))
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         let ( $ ) f x = Expr.Fun_app (f, x) in
-        Expr.Let ("kite", ["A"; "B"], Ty.Fun (Var (1, []), Ty.Fun (Var (0, []), Var (0, []))),
+        Expr.Let (("kite", ["A"; "B"], Ty.Fun (Var (1, []), Ty.Fun (Var (0, []), Var (0, []))),
           Fun_lit ("x", Ty.Var (1, []),
-            Let ("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
-              Fun_lit ("x", Ty.Var (0, []), Var ("x", [])),
-              Var ("id", [Ty.Var (0, [])]))),
+            Let (("id", ["A"], Ty.Fun (Var (0, []), Var (0, [])),
+              Fun_lit ("x", Ty.Var (0, []), Var ("x", []))),
+              Var ("id", [Ty.Var (0, [])])))),
           Var ("kite", [Ty.Tuple []; Ty.Bool]) $ Tuple_lit [] $ Bool_lit true)
       ));
       assert (ty = Core.Ty.Bool);
@@ -872,13 +883,13 @@ let () = begin
     (* Local type definitions *)
     let expr =
       (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
-      Expr.Let_type ("Foo", [], Name ("Int", []),
+      Expr.Let_type (("Foo", [], Name ("Int", [])),
         Ann (Int 42, Name ("Foo", [])))
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
-        Expr.Let_type ("Foo", [], Int,
+        Expr.Let_type (("Foo", [], Int),
           Int_lit 42)
       ));
       assert (ty = Core.Ty.Int);
@@ -888,15 +899,15 @@ let () = begin
     (* Parameterised type definitions *)
     let expr =
       (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
-      Expr.Let_type ("Id", ["A"], Name ("A", []),
-        Let ("x", [], Some (Name ("Id", [Name ("Int", [])])), Int 42,
+      Expr.Let_type (("Id", ["A"], Name ("A", [])),
+        Let (("x", [], Some (Name ("Id", [Name ("Int", [])])), Int 42),
         Name ("x", [])))
     in
     begin
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
-        Expr.Let_type ("Id", ["A"], Var (0, []),
-          Let ("x", [], Var (0, [Int]), Int_lit 42,
+        Expr.Let_type (("Id", ["A"], Var (0, [])),
+          Let (("x", [], Var (0, [Int]), Int_lit 42),
             Var ("x", [])))
       ));
       assert (ty = Core.Ty.Int);
