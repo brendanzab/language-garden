@@ -364,7 +364,7 @@ module Surface = struct
     type t =
       | Name of string * Ty.t list
       | Let of string * string list * Ty.t option * t * t
-      | Let_type of string * (* TODO: Type parameters *) Ty.t * t
+      | Let_type of string * Ty.t * t
       | Ann of t * Ty.t
       | Fun of string * Ty.t option * t
       | Tuple of t list
