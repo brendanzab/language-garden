@@ -7,6 +7,8 @@
     - Local unfolding of type definitions. See
       {{: https://andraskovacs.github.io/pdfs/wits24prez.pdf#page=19} Efficient
       Elaboration with Controlled Definition Unfolding} for more details.
+    - Datatype definitions (see [misc_local_datatypes.ml] and {{: https://doi.org/10.1145/3729338}
+      Practical Type Inference with Levels})
 *)
 
 (** Returns a list of the duplicate elements in a list *)

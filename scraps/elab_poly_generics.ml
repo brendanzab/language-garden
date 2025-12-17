@@ -22,13 +22,6 @@
     implement generics”. This is in contrast to Hindley Milner type systems that
     implement generalisation (see [check_poly_algorithm_j.ml] and
     [elab_poly_algorithm_j.ml]).
-
-    {2 Future work}
-
-    - Recursive definitions (see [elab-stlc-letrec-unification])
-    - Datatype definitions (see [misc_local_datatypes.ml] and {{: https://doi.org/10.1145/3729338}
-      Practical Type Inference with Levels})
-    - Type aliases
 *)
 
 (** Returns a list of the duplicate elements in a list *)
