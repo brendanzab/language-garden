@@ -427,7 +427,8 @@ module Surface = struct
     (** Elaboration contexts *)
     module Ctx : sig
 
-      open Core
+      module Ty := Core.Ty
+      module Expr := Core.Expr
 
       type t
 
@@ -451,7 +452,8 @@ module Surface = struct
 
     end = struct
 
-      open Core
+      module Ty = Core.Ty
+      module Expr = Core.Expr
 
       type t = {
         metas : (Ty.meta * string) Dynarray.t;
@@ -484,12 +486,13 @@ module Surface = struct
       let extend_ty_param (ctx : t) (name : Ty.name) : t =
         extend_ty_def ctx name ([], fun _ -> Ty.Value.Var ctx.ty_size)
 
-      let extend_expr (ctx : t) (name : Expr.name) (ty_params, ty : Ty.Value.clos) : t =
-        { ctx with expr_tys = (name, (ty_params, ty)) :: ctx.expr_tys }
-
       let lookup_ty (ctx : t) (name : Ty.name) : Ty.(index * Value.clos) option =
         List.find_index (String.equal name) ctx.ty_names
         |> Option.map (fun index -> index, List.nth ctx.ty_defs index)
+
+
+      let extend_expr (ctx : t) (name : Expr.name) (ty_params, ty : Ty.Value.clos) : t =
+        { ctx with expr_tys = (name, (ty_params, ty)) :: ctx.expr_tys }
 
       let lookup_expr (ctx : t) (name : Expr.name) : Ty.Value.clos option =
         List.assoc_opt name ctx.expr_tys
@@ -512,6 +515,7 @@ module Surface = struct
 
       let pp_vty (ctx : t) (vty : Ty.Value.t) (ppf : Format.formatter) : unit =
         pp_ty ctx (quote_vty ctx vty) ppf
+
 
       let unsolved_metas (ctx : t) : string Seq.t =
         Dynarray.to_seq ctx.metas |> Seq.filter_map @@ function
