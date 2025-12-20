@@ -579,13 +579,15 @@ module Surface = struct
       | Expr.Fun (name, None, body) ->
           let param_vty = Ctx.fresh_vty ctx "function parameter" in
           let body, body_vty = infer_expr (Ctx.extend_expr ctx name ([], fun _ -> param_vty)) body in
-          Core.Expr.Fun_lit (name, Core.Ty.quote param_vty, body), Core.Ty.Value.Fun (param_vty, body_vty)
+          Core.Expr.Fun_lit (name, Core.Ty.quote param_vty, body),
+          Core.Ty.Value.Fun (param_vty, body_vty)
 
       | Expr.Fun (name, Some param_ty, body) ->
           let param_ty = check_ty ctx param_ty in
           let param_vty = Ctx.eval_ty ctx param_ty in
           let body, body_vty = infer_expr (Ctx.extend_expr ctx name ([], fun _ -> param_vty)) body in
-          Core.Expr.Fun_lit (name, param_ty, body), Core.Ty.Value.Fun (param_vty, body_vty)
+          Core.Expr.Fun_lit (name, param_ty, body),
+          Core.Ty.Value.Fun (param_vty, body_vty)
 
       | Expr.Tuple elems ->
           let elems, elem_tys = List.split (List.map (infer_expr ctx) elems) in
