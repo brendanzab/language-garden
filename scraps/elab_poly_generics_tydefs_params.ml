@@ -9,6 +9,7 @@
       Elaboration with Controlled Definition Unfolding} for more details.
     - Datatype definitions (see [misc_local_datatypes.ml] and {{: https://doi.org/10.1145/3729338}
       Practical Type Inference with Levels})
+    - Defunctionalise closure representation
 *)
 
 (** Returns a list of the duplicate elements in a list *)
