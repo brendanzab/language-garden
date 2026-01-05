@@ -104,6 +104,8 @@ Compilation:
   Compiling de Bruijn indexed lambda terms to freshly named lambda terms in A-normal form.
 - [**compile_stlc_anf_nameless.ml**](compile_stlc_anf_nameless.ml):
   Compiling de Bruijn indexed lambda terms to de Bruijn indexed lambda terms in A-normal form.
+- [**compile_lc_machines.ml**](compile_lc_machines.ml):
+  Compiling untyped lambda calculus expressions into various abstract machines.
 
 Languages and embedded DSLs:
 

@@ -31,6 +31,7 @@
 (test (name elab_poly_generics_tydefs_params))
 (test (name elab_poly_algorithm_j))
 
+(test (name compile_lc_machines))
 (test (name compile_stlc_anf_fresh))
 (test (name compile_stlc_anf_nameless))
 
