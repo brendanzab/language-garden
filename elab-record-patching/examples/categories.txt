@@ -1,3 +1,6 @@
+-- A category theory library
+
+-- A generalisation of the theory of sets and functions
 let Category := {
   Ob : Type;
   Hom : { S : Ob; T : Ob } -> Type;
@@ -6,18 +9,81 @@ let Category := {
   -- id : fun (A : Ob) -> Hom [ S := A; T := A ];
   -- seq : fun (f : Hom) (g : Hom [ S := f.T ]) -> Hom [ S := f.S; T := g.T ];
 
+  -- The identity morphism
   id : fun (A : Ob) -> Hom { S := A; T := A };
+
+  -- Sequencing morphisms (backwards composition)
   seq : fun (A : Ob) (B : Ob) (C : Ob)
             (f : Hom { S := A; T := B })
             (g : Hom { S := B; T := C })
             -> Hom { S := A; T := C };
 };
 
+-- A mapping between categories (i.e. a generalisation of functions between sets)
+--
+-- Contrast this definition with Haskell’s functor type class, which is
+-- specialised to an endofunctor in the category of types and functions.
+let Functor := {
+  S : Category;   -- The source category
+  T : Category;   -- The target category
+
+  -- A mapping between objects in the source and target categories
+  Map : S.Ob -> T.Ob;
+
+  -- A mapping between homomorphisms in the source and target categories
+  map : fun (A : S.Ob) (B : S.Ob) ->
+    S.Hom { S := A; T := B } ->
+    T.Hom { S := Map A; T := Map B };
+};
+
+-- An mapping from a category to itself
+let Endofunctor (C : Category) :=
+  Functor [
+    S := C;
+    T := C;
+    Map := fun A => A;
+  ];
+
+
+-- Opposites
+
+let op-category (c : Category) : Category := {
+  Ob := c.Ob;
+  Hom params := c.Hom { S := params.T; T := params.S };
+  id := c.id;
+  seq A B C f g := c.seq C B A g f;
+};
+
+let op-functor (f : Functor) : Functor := {
+  S := op-category f.S;
+  T := op-category f.T;
+  Map := f.Map;
+  map A B := f.map B A;
+};
+
+
+-- Composition of functors
+
+let seq-functor (f1 : Functor) (f2 : Functor [ S := f1.T ]) : Functor := {
+  S := f1.S;
+  T := f2.T;
+  Map A := f2.Map (f1.Map A);
+  map A B f := f2.map (f1.Map A) (f1.Map B) (f1.map A B f);
+};
+
+
+-- Types and functions
+
 let types : Category := {
   Ob := Type;
-  Hom := fun params => params.S -> params.T;
+  Hom params := params.S -> params.T;
   id A a := a;
   seq A B C f g a := g (f a);
 };
+
+let functions : Endofunctor types := {
+  map A B f := fun x => f x;
+};
+
 
 Type
