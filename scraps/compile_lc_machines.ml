@@ -38,8 +38,11 @@ module Expr = struct
 
   module Make (C : Const) = struct
 
+    (** De-bruijn index *)
+    type index = int
+
     type t =
-      | Var of int
+      | Var of index
       | Let of string * t * t
       | Fun_intro of string * t
       | Fun_app of t * t
@@ -54,8 +57,12 @@ module Secd = struct
 
   module Data (C : Const) = struct
 
+    (** De-bruijn index *)
+    type index = int
+
+    (** Machine instructions *)
     type instr =
-      | Var of int          (* Load a variable from the environment and push it to the stack *)
+      | Var of index        (* Load a variable from the environment and push it to the stack *)
       | Let_def             (* Pop a value and add it to the environment *)
       | Let_end             (* Discard the first entry in the environment *)
       | Fun_intro of prog   (* Push a closure to the stack *)
@@ -67,6 +74,7 @@ module Secd = struct
       | Clos of prog * env
       | Const of C.t
 
+    (** Call-frames, for resuming a computation later *)
     and frame = prog * env * stack
 
     and stack = value list        (* Return (S)tack *)
