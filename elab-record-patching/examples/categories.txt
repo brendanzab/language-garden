@@ -135,14 +135,16 @@ let option-monad : Monad := {
   F := option-functor;
 
   pure := some;
-  flatten A opt-opt-A :=
-    opt-opt-A (Option A) {
-      some opt-A := opt-A;
+
+  flatten A opt-opt :=
+    opt-opt (Option A) {
+      some opt := opt;
       none := none A;
     };
-  flat-map A B f opt-A :=
-    opt-A (Option B) {
-      some := f;
+
+  flat-map A B f opt :=
+    opt (Option B) {
+      some x := f x;
       none := none B;
     };
 };

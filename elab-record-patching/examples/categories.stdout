@@ -142,10 +142,11 @@
       F := option-functor;
       pure := some;
       flatten :=
-        fun A opt-opt-A =>
-          opt-opt-A (Option A) { some := fun opt-A => opt-A; none := none A };
+        fun A opt-opt =>
+          opt-opt (Option A) { some := fun opt => opt; none := none A };
       flat-map :=
-        fun A B f opt-A => opt-A (Option B) { some := f; none := none B }
+        fun A B f opt =>
+          opt (Option B) { some := fun x => f x; none := none B }
     };
   let reader-functor : fun (Arg : Type) -> Endofunctor types :=
     fun Arg => {
