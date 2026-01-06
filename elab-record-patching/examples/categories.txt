@@ -4,6 +4,11 @@
 -- their underlying categories, which is closer to the actual category theoretic
 -- definitions, compared to the definitions in functional programming languages
 -- like Haskell.
+--
+-- # Resources
+--
+-- * https://1lab.dev/Cat.Base.html
+-- * https://hackage.haskell.org/package/category
 
 -- Generalisation of the theory of sets and functions
 let Category := {
