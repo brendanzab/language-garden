@@ -1,62 +1,61 @@
 <stdin> : Type :=
   let Category : Type :=
     {
-      Ob : Type;
-      Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
-      id : fun (A : Ob) -> Hom { S := A; T := A };
+      Object : Type;
+      Arrow : fun (_ : Object) (_ : Object) -> Type;
+      id : fun (A : Object) -> Arrow A A;
       seq :
-        fun (A : Ob) (B : Ob) (C : Ob) (_ : Hom { S := A; T := B })
-            (_ : Hom { S := B; T := C }) -> Hom { S := A; T := C }
+        fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
+            (_ : Arrow B C) -> Arrow A C
     };
   let Functor : Type :=
     {
       S : Category;
       T : Category;
-      Map : fun (_ : S.Ob) -> T.Ob;
+      Map : fun (_ : S.Object) -> T.Object;
       map :
-        fun (A : S.Ob) (B : S.Ob) (_ : S.Hom { S := A; T := B })
-            -> T.Hom { S := Map A; T := Map B }
+        fun (A : S.Object) (B : S.Object) (_ : S.Arrow A B)
+            -> T.Arrow (Map A) (Map B)
     };
   let Endofunctor : fun (C : Category) -> Type :=
     fun C => {
       S :
         {
-          Ob : Type;
-          Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
-          id : fun (A : Ob) -> Hom { S := A; T := A };
+          Object : Type;
+          Arrow : fun (_ : Object) (_ : Object) -> Type;
+          id : fun (A : Object) -> Arrow A A;
           seq :
-            fun (A : Ob) (B : Ob) (C : Ob) (_ : Hom { S := A; T := B })
-                (_ : Hom { S := B; T := C }) -> Hom { S := A; T := C }
+            fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
+                (_ : Arrow B C) -> Arrow A C
         } [= C];
       T :
         {
-          Ob : Type;
-          Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
-          id : fun (A : Ob) -> Hom { S := A; T := A };
+          Object : Type;
+          Arrow : fun (_ : Object) (_ : Object) -> Type;
+          id : fun (A : Object) -> Arrow A A;
           seq :
-            fun (A : Ob) (B : Ob) (C : Ob) (_ : Hom { S := A; T := B })
-                (_ : Hom { S := B; T := C }) -> Hom { S := A; T := C }
+            fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
+                (_ : Arrow B C) -> Arrow A C
         } [= C];
-      Map : fun (_ : C.Ob) -> C.Ob;
+      Map : fun (_ : C.Object) -> C.Object;
       map :
-        fun (A : C.Ob) (B : C.Ob) (_ : C.Hom { S := A; T := B })
-            -> C.Hom { S := Map A; T := Map B }
+        fun (A : C.Object) (B : C.Object) (_ : C.Arrow A B)
+            -> C.Arrow (Map A) (Map B)
     };
   let Monad : Type :=
     {
       C : Category;
       F : Endofunctor C;
-      pure : fun (A : C.Ob) -> C.Hom { S := A; T := F.Map A };
-      flatten :
-        fun (A : C.Ob) -> C.Hom { S := F.Map (F.Map A); T := F.Map A };
+      pure : fun (A : C.Object) -> C.Arrow A (F.Map A);
+      flatten : fun (A : C.Object) -> C.Arrow (F.Map (F.Map A)) (F.Map A);
       flat-map :
-        fun (A : C.Ob) (B : C.Ob) (_ : C.Hom { S := A; T := F.Map B })
-            -> C.Hom { S := F.Map A; T := F.Map B }
+        fun (A : C.Object) (B : C.Object) (_ : C.Arrow A (F.Map B))
+            -> C.Arrow (F.Map A) (F.Map B)
     };
   let op-category : fun (c : Category) -> Category :=
     fun c => {
-      Ob := c.Ob;
-      Hom := fun params => c.Hom { S := params.T; T := params.S };
+      Object := c.Object;
+      Arrow := fun A B => c.Arrow B A;
       id := c.id;
       seq := fun A B C f g => c.seq C B A g f
     };
@@ -80,31 +79,26 @@
               {
                 S :
                   {
-                    Ob : Type;
-                    Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
-                    id : fun (A : Ob) -> Hom { S := A; T := A };
+                    Object : Type;
+                    Arrow : fun (_ : Object) (_ : Object) -> Type;
+                    id : fun (A : Object) -> Arrow A A;
                     seq :
-                      fun (A : Ob) (B : Ob) (C : Ob)
-                          (_ : Hom { S := A; T := B })
-                          (_ : Hom { S := B; T := C })
-                          -> Hom { S := A; T := C }
+                      fun (A : Object) (B : Object) (C : Object)
+                          (_ : Arrow A B) (_ : Arrow B C) -> Arrow A C
                   } [= f1.T];
                 T :
                   {
-                    Ob : Type;
-                    Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
-                    id : fun (A : Ob) -> Hom { S := A; T := A };
+                    Object : Type;
+                    Arrow : fun (_ : Object) (_ : Object) -> Type;
+                    id : fun (A : Object) -> Arrow A A;
                     seq :
-                      fun (A : Ob) (B : Ob) (C : Ob)
-                          (_ : Hom { S := A; T := B })
-                          (_ : Hom { S := B; T := C })
-                          -> Hom { S := A; T := C }
+                      fun (A : Object) (B : Object) (C : Object)
+                          (_ : Arrow A B) (_ : Arrow B C) -> Arrow A C
                   };
-                Map : fun (_ : f1.T.Ob) -> T.Ob;
+                Map : fun (_ : f1.T.Object) -> T.Object;
                 map :
-                  fun (A : f1.T.Ob) (B : f1.T.Ob)
-                      (_ : f1.T.Hom { S := A; T := B })
-                      -> T.Hom { S := Map A; T := Map B }
+                  fun (A : f1.T.Object) (B : f1.T.Object)
+                      (_ : f1.T.Arrow A B) -> T.Arrow (Map A) (Map B)
               })
             -> Functor
   :=
@@ -116,8 +110,8 @@
     };
   let types : Category :=
     {
-      Ob := Type;
-      Hom := fun params => fun (_ : params.S) -> params.T;
+      Object := Type;
+      Arrow := fun A B => fun (_ : A) -> B;
       id := fun A a => a;
       seq := fun A B C f g a => g (f a)
     };

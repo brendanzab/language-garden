@@ -16,20 +16,19 @@ let Category := {
   Object : Type;
 
   -- Directional relationship between objects (a.k.a. homomorphisms)
-  Arrow : { S : Object; T : Object } -> Type;
-
-  -- TODO: requires total space conversion like in CoolTT
-  -- id : fun (A : Object) -> Arrow [ S := A; T := A ];
-  -- seq : fun (f : Arrow) (g : Arrow [ S := f.T ]) -> Arrow [ S := f.S; T := g.T ];
+  Arrow : Object -> Object -> Type;
 
   -- The identity arrow, that does nothing
-  id : fun (A : Object) -> Arrow { S := A; T := A };
+  id : fun (A : Object) -> Arrow A A;
 
   -- Connecting morphisms one after the other (a.k.a. backwards composition)
   seq : fun (A : Object) (B : Object) (C : Object) ->
-    Arrow { S := A; T := B } ->
-    Arrow { S := B; T := C } ->
-    Arrow { S := A; T := C };
+    Arrow A B -> Arrow B C -> Arrow A C;
+
+  -- TODO: requires total space conversion like in CoolTT
+  -- Arrow : { S : Object; T : Object } -> Type;
+  -- id : fun (A : Object) -> Arrow [ S := A; T := A ];
+  -- seq : fun (f : Arrow) (g : Arrow [ S := f.T ]) -> Arrow [ S := f.S; T := g.T ];
 };
 
 -- Mapping between categories (i.e. a generalisation of functions between sets)
@@ -44,13 +43,13 @@ let Functor := {
   -- A mapping between objects in the source and target categories
   Map : S.Object -> T.Object;
 
-  -- TODO: requires total space conversion like in CoolTT
-  -- map : fun (f : Arrow) -> Arrow [ S := Map f.S; T := f.T ];
-
   -- A mapping between homomorphisms in the source and target categories
   map : fun (A : S.Object) (B : S.Object) ->
-    S.Arrow { S := A; T := B } ->
-    T.Arrow { S := Map A; T := Map B };
+    S.Arrow A B ->
+    T.Arrow (Map A) (Map B);
+
+  -- TODO: requires total space conversion like in CoolTT
+  -- map : fun (f : Arrow) -> Arrow [ S := Map f.S; T := f.T ];
 };
 
 -- Mapping from a category to itself
@@ -61,15 +60,14 @@ let Monad := {
   C : Category;
   F : Endofunctor C;
 
-  pure : fun (A : C.Object) ->
-    C.Arrow { S := A; T := F.Map A };
+  pure : fun (A : C.Object) -> C.Arrow A (F.Map A);
 
   flatten : fun (A : C.Object) ->
-    C.Arrow { S := F.Map (F.Map A); T := F.Map A };
+    C.Arrow (F.Map (F.Map A)) (F.Map A);
 
   flat-map : fun (A : C.Object) (B : C.Object) ->
-    C.Arrow { S := A; T := F.Map B } ->
-    C.Arrow { S := F.Map A; T := F.Map B };
+    C.Arrow A (F.Map B) ->
+    C.Arrow (F.Map A) (F.Map B);
 };
 
 
@@ -77,7 +75,7 @@ let Monad := {
 
 let op-category (c : Category) : Category := {
   Object := c.Object;
-  Arrow params := c.Arrow { S := params.T; T := params.S };
+  Arrow A B := c.Arrow B A;
   id := c.id;
   seq A B C f g := c.seq C B A g f;
 };
@@ -113,7 +111,7 @@ let seq-functor (f1 : Functor) (f2 : Functor [ S := f1.T ]) : Functor := {
 -- Category of types and functions
 let types : Category := {
   Object := Type;
-  Arrow params := params.S -> params.T;
+  Arrow A B := A -> B;
   id A a := a;
   seq A B C f g a := g (f a);
 };
