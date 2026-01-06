@@ -104,25 +104,34 @@ module Secd = struct
       prog, [], [], []
 
     let step : state -> state option = function
+      (* Lookup a variable and push it to the stack *)
       | Var i :: prog, env, stack, frames ->
           List.nth_opt env i |> Option.map @@ fun v ->
             prog, env, v :: stack, frames
 
+      (* Move a definition from the stack to the environment *)
       | Let_def :: prog, env, v :: stack, frames ->
           Some (prog, v :: env, stack, frames)
 
+      (* Exiting a let binding, so pop the definition off the environment *)
       | Let_end :: prog, _ :: env, stack, frames ->
           Some (prog, env, stack, frames)
 
+      (* Push a closure onto the stack *)
       | Fun_intro prog' :: prog, env, stack, frames ->
           Some (prog, env, Clos (prog', env) :: stack, frames)
 
+      (* Suspend the calling frame, and begin executing the body of a closure
+         with argument bound in the environment. *)
       | Fun_app :: prog, env, v :: Clos (prog', env') :: stack, frames ->
           Some (prog', v :: env', [], (prog, env, stack) :: frames)
 
+      (* Resume the calling frame, moving the value at the top of the stack
+         to the previously suspended stack *)
       | Fun_end :: _, _, v :: _, (prog, env, stack) :: frames ->
           Some (prog, env, v :: stack, frames)
 
+      (* Push a constant to the stack *)
       | Const c :: prog, env, stack, frames ->
           Some (prog, env, Const c :: stack, frames)
 
