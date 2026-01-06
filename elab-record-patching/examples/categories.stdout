@@ -37,10 +37,10 @@
             fun (A : Ob) (B : Ob) (C : Ob) (f : Hom { S := A; T := B })
                 (g : Hom { S := B; T := C }) -> Hom { S := A; T := C }
         } [= C];
-      Map : (fun (_ : C.Ob) -> C.Ob) [= fun A => A];
+      Map : fun (_ : C.Ob) -> C.Ob;
       map :
         fun (A : C.Ob) (B : C.Ob) (_ : C.Hom { S := A; T := B })
-            -> C.Hom { S := A; T := B }
+            -> C.Hom { S := Map A; T := Map B }
     };
   let op-category : fun (c : Category) -> Category :=
     fun c => {
@@ -107,7 +107,22 @@
     {
       S := #sing-intro;
       T := #sing-intro;
-      Map := #sing-intro;
+      Map := fun A => A;
       map := fun A B f x => f x
+    };
+  let Option : fun (A : Type) -> Type :=
+    fun A =>
+      fun (Out : Type) (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out;
+  let none : fun (A : Type) -> Option A := fun A Out cases => cases.none;
+  let some : fun (A : Type) (a : A) -> Option A :=
+    fun A a Out cases => cases.some a;
+  let functions : Endofunctor types :=
+    {
+      S := #sing-intro;
+      T := #sing-intro;
+      Map := Option;
+      map :=
+        fun A B f opt-A =>
+          opt-A (Option B) { some := fun x => some B (f x); none := none B }
     };
   Type

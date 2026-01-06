@@ -38,11 +38,7 @@ let Functor := {
 
 -- An mapping from a category to itself
 let Endofunctor (C : Category) :=
-  Functor [
-    S := C;
-    T := C;
-    Map := fun A => A;
-  ];
+  Functor [ S := C; T := C ];
 
 
 -- Opposites
@@ -82,7 +78,28 @@ let types : Category := {
 };
 
 let functions : Endofunctor types := {
+  Map := fun A => A;
   map A B f := fun x => f x;
+};
+
+
+-- Optional values
+
+let Option (A : Type) : Type :=
+  fun (Out : Type) -> { some : A -> Out; none : Out } -> Out;
+
+let none (A : Type) : Option A :=
+  fun Out cases => cases.none;
+let some (A : Type) (a : A) : Option A :=
+  fun Out cases => cases.some a;
+
+let functions : Endofunctor types := {
+  Map := Option;
+  map A B f opt-A :=
+    opt-A (Option B) {
+      some x := some B (f x);
+      none := none B;
+    };
 };
 
 
