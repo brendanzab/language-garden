@@ -10,23 +10,26 @@
 -- * https://1lab.dev/Cat.Base.html
 -- * https://hackage.haskell.org/package/category
 
--- Generalisation of the theory of sets and functions
+-- Interface that provides a generalisation of the theory of sets and functions
 let Category := {
-  Ob : Type;
-  Hom : { S : Ob; T : Ob } -> Type;
+  -- Collection of elements in the category
+  Object : Type;
+
+  -- Directional relationship between objects (a.k.a. homomorphisms)
+  Arrow : { S : Object; T : Object } -> Type;
 
   -- TODO: requires total space conversion like in CoolTT
-  -- id : fun (A : Ob) -> Hom [ S := A; T := A ];
-  -- seq : fun (f : Hom) (g : Hom [ S := f.T ]) -> Hom [ S := f.S; T := g.T ];
+  -- id : fun (A : Object) -> Arrow [ S := A; T := A ];
+  -- seq : fun (f : Arrow) (g : Arrow [ S := f.T ]) -> Arrow [ S := f.S; T := g.T ];
 
-  -- The identity morphism
-  id : fun (A : Ob) -> Hom { S := A; T := A };
+  -- The identity arrow, that does nothing
+  id : fun (A : Object) -> Arrow { S := A; T := A };
 
-  -- Sequencing morphisms (backwards composition)
-  seq : fun (A : Ob) (B : Ob) (C : Ob) ->
-    Hom { S := A; T := B } ->
-    Hom { S := B; T := C } ->
-    Hom { S := A; T := C };
+  -- Connecting morphisms one after the other (a.k.a. backwards composition)
+  seq : fun (A : Object) (B : Object) (C : Object) ->
+    Arrow { S := A; T := B } ->
+    Arrow { S := B; T := C } ->
+    Arrow { S := A; T := C };
 };
 
 -- Mapping between categories (i.e. a generalisation of functions between sets)
@@ -39,15 +42,15 @@ let Functor := {
   T : Category;   -- The target category
 
   -- A mapping between objects in the source and target categories
-  Map : S.Ob -> T.Ob;
+  Map : S.Object -> T.Object;
 
   -- TODO: requires total space conversion like in CoolTT
-  -- map : fun (f : Hom) -> Hom [ S := Map f.S; T := f.T ];
+  -- map : fun (f : Arrow) -> Arrow [ S := Map f.S; T := f.T ];
 
   -- A mapping between homomorphisms in the source and target categories
-  map : fun (A : S.Ob) (B : S.Ob) ->
-    S.Hom { S := A; T := B } ->
-    T.Hom { S := Map A; T := Map B };
+  map : fun (A : S.Object) (B : S.Object) ->
+    S.Arrow { S := A; T := B } ->
+    T.Arrow { S := Map A; T := Map B };
 };
 
 -- Mapping from a category to itself
@@ -58,23 +61,23 @@ let Monad := {
   C : Category;
   F : Endofunctor C;
 
-  pure : fun (A : C.Ob) ->
-    C.Hom { S := A; T := F.Map A };
+  pure : fun (A : C.Object) ->
+    C.Arrow { S := A; T := F.Map A };
 
-  flatten : fun (A : C.Ob) ->
-    C.Hom { S := F.Map (F.Map A); T := F.Map A };
+  flatten : fun (A : C.Object) ->
+    C.Arrow { S := F.Map (F.Map A); T := F.Map A };
 
-  flat-map : fun (A : C.Ob) (B : C.Ob) ->
-    C.Hom { S := A; T := F.Map B } ->
-    C.Hom { S := F.Map A; T := F.Map B };
+  flat-map : fun (A : C.Object) (B : C.Object) ->
+    C.Arrow { S := A; T := F.Map B } ->
+    C.Arrow { S := F.Map A; T := F.Map B };
 };
 
 
 -- Opposites
 
 let op-category (c : Category) : Category := {
-  Ob := c.Ob;
-  Hom params := c.Hom { S := params.T; T := params.S };
+  Object := c.Object;
+  Arrow params := c.Arrow { S := params.T; T := params.S };
   id := c.id;
   seq A B C f g := c.seq C B A g f;
 };
@@ -109,8 +112,8 @@ let seq-functor (f1 : Functor) (f2 : Functor [ S := f1.T ]) : Functor := {
 
 -- Category of types and functions
 let types : Category := {
-  Ob := Type;
-  Hom params := params.S -> params.T;
+  Object := Type;
+  Arrow params := params.S -> params.T;
   id A a := a;
   seq A B C f g a := g (f a);
 };
