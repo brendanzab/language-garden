@@ -5,8 +5,8 @@
       Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
       id : fun (A : Ob) -> Hom { S := A; T := A };
       seq :
-        fun (A : Ob) (B : Ob) (C : Ob) (f : Hom { S := A; T := B })
-            (g : Hom { S := B; T := C }) -> Hom { S := A; T := C }
+        fun (A : Ob) (B : Ob) (C : Ob) (_ : Hom { S := A; T := B })
+            (_ : Hom { S := B; T := C }) -> Hom { S := A; T := C }
     };
   let Functor : Type :=
     {
@@ -25,8 +25,8 @@
           Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
           id : fun (A : Ob) -> Hom { S := A; T := A };
           seq :
-            fun (A : Ob) (B : Ob) (C : Ob) (f : Hom { S := A; T := B })
-                (g : Hom { S := B; T := C }) -> Hom { S := A; T := C }
+            fun (A : Ob) (B : Ob) (C : Ob) (_ : Hom { S := A; T := B })
+                (_ : Hom { S := B; T := C }) -> Hom { S := A; T := C }
         } [= C];
       T :
         {
@@ -34,8 +34,8 @@
           Hom : fun (_ : { S : Ob; T : Ob }) -> Type;
           id : fun (A : Ob) -> Hom { S := A; T := A };
           seq :
-            fun (A : Ob) (B : Ob) (C : Ob) (f : Hom { S := A; T := B })
-                (g : Hom { S := B; T := C }) -> Hom { S := A; T := C }
+            fun (A : Ob) (B : Ob) (C : Ob) (_ : Hom { S := A; T := B })
+                (_ : Hom { S := B; T := C }) -> Hom { S := A; T := C }
         } [= C];
       Map : fun (_ : C.Ob) -> C.Ob;
       map :
@@ -67,8 +67,8 @@
                     id : fun (A : Ob) -> Hom { S := A; T := A };
                     seq :
                       fun (A : Ob) (B : Ob) (C : Ob)
-                          (f : Hom { S := A; T := B })
-                          (g : Hom { S := B; T := C })
+                          (_ : Hom { S := A; T := B })
+                          (_ : Hom { S := B; T := C })
                           -> Hom { S := A; T := C }
                   } [= f1.T];
                 T :
@@ -78,8 +78,8 @@
                     id : fun (A : Ob) -> Hom { S := A; T := A };
                     seq :
                       fun (A : Ob) (B : Ob) (C : Ob)
-                          (f : Hom { S := A; T := B })
-                          (g : Hom { S := B; T := C })
+                          (_ : Hom { S := A; T := B })
+                          (_ : Hom { S := B; T := C })
                           -> Hom { S := A; T := C }
                   };
                 Map : fun (_ : f1.T.Ob) -> T.Ob;

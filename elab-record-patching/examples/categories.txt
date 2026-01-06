@@ -13,10 +13,10 @@ let Category := {
   id : fun (A : Ob) -> Hom { S := A; T := A };
 
   -- Sequencing morphisms (backwards composition)
-  seq : fun (A : Ob) (B : Ob) (C : Ob)
-            (f : Hom { S := A; T := B })
-            (g : Hom { S := B; T := C })
-            -> Hom { S := A; T := C };
+  seq : fun (A : Ob) (B : Ob) (C : Ob) ->
+    Hom { S := A; T := B } ->
+    Hom { S := B; T := C } ->
+    Hom { S := A; T := C };
 };
 
 -- A mapping between categories (i.e. a generalisation of functions between sets)
