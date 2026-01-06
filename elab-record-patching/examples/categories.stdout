@@ -8,50 +8,6 @@
         fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
             (_ : Arrow B C) -> Arrow A C
     };
-  let Functor : Type :=
-    {
-      S : Category;
-      T : Category;
-      Map : fun (_ : S.Object) -> T.Object;
-      map :
-        fun (A : S.Object) (B : S.Object) (_ : S.Arrow A B)
-            -> T.Arrow (Map A) (Map B)
-    };
-  let Endofunctor : fun (C : Category) -> Type :=
-    fun C => {
-      S :
-        {
-          Object : Type;
-          Arrow : fun (_ : Object) (_ : Object) -> Type;
-          id : fun (A : Object) -> Arrow A A;
-          seq :
-            fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
-                (_ : Arrow B C) -> Arrow A C
-        } [= C];
-      T :
-        {
-          Object : Type;
-          Arrow : fun (_ : Object) (_ : Object) -> Type;
-          id : fun (A : Object) -> Arrow A A;
-          seq :
-            fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
-                (_ : Arrow B C) -> Arrow A C
-        } [= C];
-      Map : fun (_ : C.Object) -> C.Object;
-      map :
-        fun (A : C.Object) (B : C.Object) (_ : C.Arrow A B)
-            -> C.Arrow (Map A) (Map B)
-    };
-  let Monad : Type :=
-    {
-      C : Category;
-      F : Endofunctor C;
-      pure : fun (A : C.Object) -> C.Arrow A (F.Map A);
-      flatten : fun (A : C.Object) -> C.Arrow (F.Map (F.Map A)) (F.Map A);
-      flat-map :
-        fun (A : C.Object) (B : C.Object) (_ : C.Arrow A (F.Map B))
-            -> C.Arrow (F.Map A) (F.Map B)
-    };
   let op-category : fun (c : Category) -> Category :=
     fun c => {
       Object := c.Object;
@@ -59,17 +15,58 @@
       id := c.id;
       seq := fun A B C f g => c.seq C B A g f
     };
+  let types : Category :=
+    {
+      Object := Type;
+      Arrow := fun A B => fun (_ : A) -> B;
+      id := fun A a => a;
+      seq := fun A B C f g a => g (f a)
+    };
+  let Functor : Type :=
+    {
+      src : Category;
+      tgt : Category;
+      Map : fun (_ : src.Object) -> tgt.Object;
+      map :
+        fun (A : src.Object) (B : src.Object) (_ : src.Arrow A B)
+            -> tgt.Arrow (Map A) (Map B)
+    };
+  let Endofunctor : fun (c : Category) -> Type :=
+    fun c => {
+      src :
+        {
+          Object : Type;
+          Arrow : fun (_ : Object) (_ : Object) -> Type;
+          id : fun (A : Object) -> Arrow A A;
+          seq :
+            fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
+                (_ : Arrow B C) -> Arrow A C
+        } [= c];
+      tgt :
+        {
+          Object : Type;
+          Arrow : fun (_ : Object) (_ : Object) -> Type;
+          id : fun (A : Object) -> Arrow A A;
+          seq :
+            fun (A : Object) (B : Object) (C : Object) (_ : Arrow A B)
+                (_ : Arrow B C) -> Arrow A C
+        } [= c];
+      Map : fun (_ : c.Object) -> c.Object;
+      map :
+        fun (A : c.Object) (B : c.Object) (_ : c.Arrow A B)
+            -> c.Arrow (Map A) (Map B)
+    };
   let op-functor : fun (f : Functor) -> Functor :=
     fun f => {
-      S := op-category f.S;
-      T := op-category f.T;
+      src := op-category f.src;
+      tgt := op-category f.tgt;
       Map := f.Map;
       map := fun A B => f.map B A
     };
   let id-functor : fun (c : Category) -> Endofunctor c :=
     fun c => {
-      S := #sing-intro;
-      T := #sing-intro;
+      src := #sing-intro;
+      tgt := #sing-intro;
       Map := fun A => A;
       map := fun A B f => f
     };
@@ -77,7 +74,7 @@
         fun (f1 : Functor)
             (f2 :
               {
-                S :
+                src :
                   {
                     Object : Type;
                     Arrow : fun (_ : Object) (_ : Object) -> Type;
@@ -85,8 +82,8 @@
                     seq :
                       fun (A : Object) (B : Object) (C : Object)
                           (_ : Arrow A B) (_ : Arrow B C) -> Arrow A C
-                  } [= f1.T];
-                T :
+                  } [= f1.tgt];
+                tgt :
                   {
                     Object : Type;
                     Arrow : fun (_ : Object) (_ : Object) -> Type;
@@ -95,25 +92,28 @@
                       fun (A : Object) (B : Object) (C : Object)
                           (_ : Arrow A B) (_ : Arrow B C) -> Arrow A C
                   };
-                Map : fun (_ : f1.T.Object) -> T.Object;
+                Map : fun (_ : f1.tgt.Object) -> tgt.Object;
                 map :
-                  fun (A : f1.T.Object) (B : f1.T.Object)
-                      (_ : f1.T.Arrow A B) -> T.Arrow (Map A) (Map B)
+                  fun (A : f1.tgt.Object) (B : f1.tgt.Object)
+                      (_ : f1.tgt.Arrow A B) -> tgt.Arrow (Map A) (Map B)
               })
             -> Functor
   :=
     fun f1 f2 => {
-      S := f1.S;
-      T := f2.T;
+      src := f1.src;
+      tgt := f2.tgt;
       Map := fun A => f2.Map (f1.Map A);
       map := fun A B f => f2.map (f1.Map A) (f1.Map B) (f1.map A B f)
     };
-  let types : Category :=
+  let Monad : Type :=
     {
-      Object := Type;
-      Arrow := fun A B => fun (_ : A) -> B;
-      id := fun A a => a;
-      seq := fun A B C f g a => g (f a)
+      c : Category;
+      f : Endofunctor c;
+      pure : fun (A : c.Object) -> c.Arrow A (f.Map A);
+      flatten : fun (A : c.Object) -> c.Arrow (f.Map (f.Map A)) (f.Map A);
+      flat-map :
+        fun (A : c.Object) (B : c.Object) (_ : c.Arrow A (f.Map B))
+            -> c.Arrow (f.Map A) (f.Map B)
     };
   let Option : fun (A : Type) -> Type :=
     fun A =>
@@ -123,8 +123,8 @@
     fun A a Out cases => cases.some a;
   let option-functor : Endofunctor types :=
     {
-      S := #sing-intro;
-      T := #sing-intro;
+      src := #sing-intro;
+      tgt := #sing-intro;
       Map := Option;
       map :=
         fun A B f opt-A =>
@@ -132,8 +132,8 @@
     };
   let option-monad : Monad :=
     {
-      C := types;
-      F := option-functor;
+      c := types;
+      f := option-functor;
       pure := some;
       flatten :=
         fun A opt-opt =>
@@ -144,15 +144,15 @@
     };
   let reader-functor : fun (Arg : Type) -> Endofunctor types :=
     fun Arg => {
-      S := #sing-intro;
-      T := #sing-intro;
+      src := #sing-intro;
+      tgt := #sing-intro;
       Map := fun A => fun (_ : Arg) -> A;
       map := fun A B f g => types.seq Arg A B g f
     };
   let reader-monad : fun (Arg : Type) -> Monad :=
     fun Arg => {
-      C := types;
-      F := reader-functor Arg;
+      c := types;
+      f := reader-functor Arg;
       pure := fun A x arg => x;
       flatten := fun A f arg => f arg arg;
       flat-map := fun A B f g arg => f (g arg) arg

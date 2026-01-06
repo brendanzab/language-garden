@@ -10,6 +10,11 @@
 -- * https://1lab.dev/Cat.Base.html
 -- * https://hackage.haskell.org/package/category
 
+
+--------------------------------------------------------------------------------
+-- Categories
+--------------------------------------------------------------------------------
+
 -- Interface that provides a generalisation of the theory of sets and functions
 let Category := {
   -- Collection of elements in the category
@@ -31,82 +36,13 @@ let Category := {
   -- seq : fun (f : Arrow) (g : Arrow [ S := f.T ]) -> Arrow [ S := f.S; T := g.T ];
 };
 
--- Mapping between categories (i.e. a generalisation of functions between sets)
---
--- Contrast this definition with the `Functor` interface in the `control.txt`
--- example, which is actually an endofunctor in the category of types and
--- functions.
-let Functor := {
-  S : Category;   -- The source category
-  T : Category;   -- The target category
-
-  -- A mapping between objects in the source and target categories
-  Map : S.Object -> T.Object;
-
-  -- A mapping between homomorphisms in the source and target categories
-  map : fun (A : S.Object) (B : S.Object) ->
-    S.Arrow A B ->
-    T.Arrow (Map A) (Map B);
-
-  -- TODO: requires total space conversion like in CoolTT
-  -- map : fun (f : Arrow) -> Arrow [ S := Map f.S; T := f.T ];
-};
-
--- Mapping from a category to itself
-let Endofunctor (C : Category) :=
-  Functor [ S := C; T := C ];
-
-let Monad := {
-  C : Category;
-  F : Endofunctor C;
-
-  pure : fun (A : C.Object) -> C.Arrow A (F.Map A);
-
-  flatten : fun (A : C.Object) ->
-    C.Arrow (F.Map (F.Map A)) (F.Map A);
-
-  flat-map : fun (A : C.Object) (B : C.Object) ->
-    C.Arrow A (F.Map B) ->
-    C.Arrow (F.Map A) (F.Map B);
-};
-
-
--- Opposites
-
+-- Opposite category
 let op-category (c : Category) : Category := {
   Object := c.Object;
   Arrow A B := c.Arrow B A;
   id := c.id;
   seq A B C f g := c.seq C B A g f;
 };
-
-let op-functor (f : Functor) : Functor := {
-  S := op-category f.S;
-  T := op-category f.T;
-  Map := f.Map;
-  map A B := f.map B A;
-};
-
-
--- Identity functor
-
-let id-functor (c : Category) : Endofunctor c := {
-  Map A := A;
-  map A B f := f;
-};
-
-
--- Composition of functors
-
-let seq-functor (f1 : Functor) (f2 : Functor [ S := f1.T ]) : Functor := {
-  S := f1.S;
-  T := f2.T;
-  Map A := f2.Map (f1.Map A);
-  map A B f := f2.map (f1.Map A) (f1.Map B) (f1.map A B f);
-};
-
-
--- Types and functions
 
 -- Category of types and functions
 let types : Category := {
@@ -117,7 +53,80 @@ let types : Category := {
 };
 
 
+--------------------------------------------------------------------------------
+-- Functors
+--------------------------------------------------------------------------------
+
+-- Mapping between categories (i.e. a generalisation of functions between sets)
+--
+-- Contrast this definition with the `Functor` interface in the `control.txt`
+-- example, which is actually an endofunctor in the category of types and
+-- functions.
+let Functor := {
+  src : Category;   -- The source category
+  tgt : Category;   -- The target category
+
+  -- A mapping between objects in the source and target categories
+  Map : src.Object -> tgt.Object;
+
+  -- A mapping between homomorphisms in the source and target categories
+  map : fun (A : src.Object) (B : src.Object) ->
+    src.Arrow A B ->
+    tgt.Arrow (Map A) (Map B);
+
+  -- TODO: requires total space conversion like in CoolTT
+  -- map : fun (f : Arrow) -> Arrow [ S := Map f.S; T := f.T ];
+};
+
+-- Mapping from a category to itself
+let Endofunctor (c : Category) :=
+  Functor [ src := c; tgt := c ];
+
+-- Opposite functor
+let op-functor (f : Functor) : Functor := {
+  src := op-category f.src;
+  tgt := op-category f.tgt;
+  Map := f.Map;
+  map A B := f.map B A;
+};
+
+-- Identity functor
+let id-functor (c : Category) : Endofunctor c := {
+  Map A := A;
+  map A B f := f;
+};
+
+-- Composition of functors
+let seq-functor (f1 : Functor) (f2 : Functor [ src := f1.tgt ]) : Functor := {
+  src := f1.src;
+  tgt := f2.tgt;
+  Map A := f2.Map (f1.Map A);
+  map A B f := f2.map (f1.Map A) (f1.Map B) (f1.map A B f);
+};
+
+
+--------------------------------------------------------------------------------
+-- Monads
+--------------------------------------------------------------------------------
+
+let Monad := {
+  c : Category;
+  f : Endofunctor c;
+
+  pure : fun (A : c.Object) -> c.Arrow A (f.Map A);
+
+  flatten : fun (A : c.Object) ->
+    c.Arrow (f.Map (f.Map A)) (f.Map A);
+
+  flat-map : fun (A : c.Object) (B : c.Object) ->
+    c.Arrow A (f.Map B) ->
+    c.Arrow (f.Map A) (f.Map B);
+};
+
+
+--------------------------------------------------------------------------------
 -- Optional values
+--------------------------------------------------------------------------------
 
 let Option (A : Type) : Type :=
   fun (Out : Type) -> { some : A -> Out; none : Out } -> Out;
@@ -137,8 +146,8 @@ let option-functor : Endofunctor types := {
 };
 
 let option-monad : Monad := {
-  C := types;
-  F := option-functor;
+  c := types;
+  f := option-functor;
 
   pure := some;
 
@@ -156,7 +165,9 @@ let option-monad : Monad := {
 };
 
 
+--------------------------------------------------------------------------------
 -- Reader functor and monad
+--------------------------------------------------------------------------------
 
 let reader-functor (Arg : Type) : Endofunctor types := {
   Map A := Arg -> A;
@@ -165,8 +176,8 @@ let reader-functor (Arg : Type) : Endofunctor types := {
 };
 
 let reader-monad (Arg : Type) : Monad := {
-  C := types;
-  F := reader-functor Arg;
+  c := types;
+  f := reader-functor Arg;
 
   pure A x := fun arg => x;
   flatten A f := fun arg => f arg arg;
