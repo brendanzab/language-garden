@@ -26,11 +26,12 @@ let Category := {
   -- The identity arrow, that does nothing
   id : fun (A : Object) -> Arrow A A;
 
-  -- Connecting morphisms one after the other (a.k.a. backwards composition)
+  -- Connect morphisms one after the other (a.k.a. reverse composition)
   seq : fun (A : Object) (B : Object) (C : Object) ->
     Arrow A B -> Arrow B C -> Arrow A C;
 
   -- TODO: requires total space conversion like in CoolTT
+  --
   -- Arrow : { S : Object; T : Object } -> Type;
   -- id : fun (A : Object) -> Arrow [ S := A; T := A ];
   -- seq : fun (f : Arrow) (g : Arrow [ S := f.T ]) -> Arrow [ S := f.S; T := g.T ];
