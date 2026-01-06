@@ -36,6 +36,9 @@ let Functor := {
   -- A mapping between objects in the source and target categories
   Map : S.Ob -> T.Ob;
 
+  -- TODO: requires total space conversion like in CoolTT
+  -- map : fun (f : Hom) -> Hom [ S := Map f.S; T := f.T ];
+
   -- A mapping between homomorphisms in the source and target categories
   map : fun (A : S.Ob) (B : S.Ob) ->
     S.Hom { S := A; T := B } ->
