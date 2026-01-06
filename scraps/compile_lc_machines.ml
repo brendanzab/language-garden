@@ -19,6 +19,13 @@ module type Machine = sig
 
 end
 
+(** Step an abstract machine until it halts *)
+let rec step_many : type state. (module Machine with type state = state) -> state -> state =
+  fun (module M) state ->
+  match M.step state with
+  | Some state -> step_many (module M) state
+  | None -> state
+
 (** Constants *)
 module type Const = sig
 
@@ -194,14 +201,8 @@ let () = begin
       (name : string)
       (expr : Expr.t) : unit =
 
-    let rec step_many state =
-      match Secd.step state with
-      | Some state -> step_many state
-      | None -> state
-    in
-
     test name @@ fun () ->
-      match step_many Secd.(inject (compile_expr expr)), expected with
+      match step_many (module Secd) Secd.(inject (compile_expr expr)), expected with
       | ([], [], [v], []), expected -> assert (v = expected)
       | (_, _, _, _), _ -> failwith "expected return value"
   in
