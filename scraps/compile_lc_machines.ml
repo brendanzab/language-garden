@@ -2,10 +2,10 @@
 
     {2 Resources}
 
-    - Xavier Leroy, {{: https://xavierleroy.org/talks/zam-kazam05.pdf}
-      From Krivine’s machine to the Caml implementations}
-    - Xavier Leroy, {{: https://xavierleroy.org/mpri/2-4/machines.pdf}
-      Functional programming languages Part II: abstract machines}
+    - Xavier Leroy. 2005. From Krivine’s machine to the Caml implementations
+      https://xavierleroy.org/talks/zam-kazam05.pdf
+    - Xavier Leroy. 2015. Functional programming languages Part II: abstract machines
+      https://xavierleroy.org/mpri/2-4/machines.pdf
 *)
 
 (** Signature of abstract machines *)
@@ -54,7 +54,38 @@ module Expr = struct
 
 end
 
-(** Landin’s SECD Machine (Call-by-value) *)
+(** Landin’s SECD Machine (Call-by-value)
+
+    This was a very early abstract machine (possibly one of the first?) and was
+    very influential, introducing {e closures} as a way of implementing
+    first-class functions.
+
+    The name is derived from the somewhat names used for the components of the
+    machine state in the original paper:
+
+    {@text[
+      ⟨ S, E, C, D ⟩
+        ▲  ▲  ▲  ▲
+        │  │  │  │
+        │  │  │  (D)ump
+        │  │  │
+        │  │  (C)ontrol instruction
+        │  │
+        │  (E)nvironment
+        │
+        (S)tack
+    ]}
+
+    Let expressions are implemented in the same way as on Xavier Leroy’s slides
+    (linked above), by pushing and popping definitions off the environment.
+
+    {2 Resources}
+
+    - https://en.wikipedia.org/wiki/SECD_machine
+    - Peter Landin. 1964. The Mechanical Evaluation of Expressions.
+    - David Turner. 2012. Some History of Functional Programming Languages.
+      https://www.cs.kent.ac.uk/people/staff/dat/tfp12/tfp12.pdf
+*)
 module Secd = struct
 
   (** De-bruijn index *)
