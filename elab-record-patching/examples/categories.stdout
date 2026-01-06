@@ -42,6 +42,17 @@
         fun (A : C.Ob) (B : C.Ob) (_ : C.Hom { S := A; T := B })
             -> C.Hom { S := Map A; T := Map B }
     };
+  let Monad : Type :=
+    {
+      C : Category;
+      F : Endofunctor C;
+      pure : fun (A : C.Ob) -> C.Hom { S := A; T := F.Map A };
+      flatten :
+        fun (A : C.Ob) -> C.Hom { S := F.Map (F.Map A); T := F.Map A };
+      flat-map :
+        fun (A : C.Ob) (B : C.Ob) (_ : C.Hom { S := A; T := F.Map B })
+            -> C.Hom { S := F.Map A; T := F.Map B }
+    };
   let op-category : fun (c : Category) -> Category :=
     fun c => {
       Ob := c.Ob;
@@ -55,6 +66,13 @@
       T := op-category f.T;
       Map := f.Map;
       map := fun A B => f.map B A
+    };
+  let id-functor : fun (c : Category) -> Endofunctor c :=
+    fun c => {
+      S := #sing-intro;
+      T := #sing-intro;
+      Map := fun A => A;
+      map := fun A B f => f
     };
   let seq-functor :
         fun (f1 : Functor)
@@ -103,20 +121,13 @@
       id := fun A a => a;
       seq := fun A B C f g a => g (f a)
     };
-  let functions : Endofunctor types :=
-    {
-      S := #sing-intro;
-      T := #sing-intro;
-      Map := fun A => A;
-      map := fun A B f x => f x
-    };
   let Option : fun (A : Type) -> Type :=
     fun A =>
       fun (Out : Type) (_ : { some : fun (_ : A) -> Out; none : Out }) -> Out;
   let none : fun (A : Type) -> Option A := fun A Out cases => cases.none;
   let some : fun (A : Type) (a : A) -> Option A :=
     fun A a Out cases => cases.some a;
-  let functions : Endofunctor types :=
+  let option-functor : Endofunctor types :=
     {
       S := #sing-intro;
       T := #sing-intro;
@@ -124,5 +135,31 @@
       map :=
         fun A B f opt-A =>
           opt-A (Option B) { some := fun x => some B (f x); none := none B }
+    };
+  let option-monad : Monad :=
+    {
+      C := types;
+      F := option-functor;
+      pure := some;
+      flatten :=
+        fun A opt-opt-A =>
+          opt-opt-A (Option A) { some := fun opt-A => opt-A; none := none A };
+      flat-map :=
+        fun A B f opt-A => opt-A (Option B) { some := f; none := none B }
+    };
+  let reader-functor : fun (Arg : Type) -> Endofunctor types :=
+    fun Arg => {
+      S := #sing-intro;
+      T := #sing-intro;
+      Map := fun A => fun (_ : Arg) -> A;
+      map := fun A B f g => types.seq Arg A B g f
+    };
+  let reader-monad : fun (Arg : Type) -> Monad :=
+    fun Arg => {
+      C := types;
+      F := reader-functor Arg;
+      pure := fun A x arg => x;
+      flatten := fun A f arg => f arg arg;
+      flat-map := fun A B f g arg => f (g arg) arg
     };
   Type
