@@ -118,13 +118,15 @@ module Secd = struct
 
   (** Compile lambda calculus expressions into a list of SECD instructions *)
   let compile_expr (expr : Expr.t) : prog =
+    (* Avoid expensive append operations by composing functions that add
+       instructions to the head of the program. *)
     let ( << ) = Fun.compose in
     let rec compile (expr : Expr.t) : prog -> prog =
       match expr with
       | Expr.Var i -> List.cons (Var i : instr)
-      | Expr.Let (_, e1, e2) -> compile e1 << List.cons Let_def << compile e2 << List.cons Let_end
-      | Expr.Fun_intro (_, e) -> List.cons (Fun_intro (compile e [Fun_end]))
-      | Expr.Fun_app (e1, e2) -> compile e1 << compile e2 << List.cons Fun_app
+      | Expr.Let (_, def, body) -> compile def << List.cons Let_def << compile body << List.cons Let_end
+      | Expr.Fun_intro (_, body) -> List.cons (Fun_intro (compile body [Fun_end]))
+      | Expr.Fun_app (fn, arg) -> compile fn << compile arg << List.cons Fun_app
       | Expr.Const c -> List.cons (Const c : instr)
     in
     compile expr []
