@@ -41,8 +41,8 @@ and tm_data =
   | Fun_type of params * tm                         (** Function types: [ fun (x : A) -> B x ] *)
   | Fun_arrow of tm * tm                            (** Function arrow types: [ A -> B ] *)
   | Fun_lit of params * tm option * tm              (** Function literals: [ fun x => f x ] *)
-  | Rec_type of (label * tm) list                   (** Record types: [ { x : A; ... } ]*)
-  | Rec_lit of (label * (params * tm) option) list  (** Record literals: [ { x := A; ... } ]*)
+  | Rec_type of decl list                           (** Record types: [ { x : A; ... } ]*)
+  | Rec_lit of defn list                            (** Record literals: [ { x := A; ... } ]*)
   | Rec_unit                                        (** Unit records: [ {} ] *)
   | Sing_type of tm * tm                            (** Singleton types: [ A [= x ] ] *)
   | App of tm * tm list                             (** Applications: [ f x ] *)
@@ -61,6 +61,9 @@ and tm_data =
 
 and param = pattern * tm option
 and params = param list
+
+and decl = label * tm
+and defn = label * (params * tm option * tm) option
 
 
 (** Elaboration from the surface language into the core language
@@ -283,7 +286,7 @@ end = struct
             punned fields appropriately. *)
           | (label, tm) :: defns, Semantics.Cons (label', vty, decls) when label.data = label' ->
               let tm = match tm with
-                | Some (params, tm) -> check_fun_lit ctx params None tm vty (* explicit field definition *)
+                | Some (params, ty, tm) -> check_fun_lit ctx params ty tm vty (* explicit field definition *)
                 | None -> check ctx ({ span = label.span; data = Name label.data }) vty (* punned field definition *)
               in
               (label.data, tm) :: go defns (decls (lazy (Ctx.eval ctx tm)))

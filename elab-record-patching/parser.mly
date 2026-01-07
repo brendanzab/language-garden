@@ -31,7 +31,7 @@ let main :=
 (* Terms *)
 
 let tm :=
-| "let"; p = spanned(pattern); ps = list(param); t1 = option(":"; t1 = spanned(tm); { t1 }); ":=";
+| "let"; p = spanned(pattern); ps = list(param); t1 = ann; ":=";
     t2 = spanned(tm); ";"; t3 = spanned(tm);
     { Surface.Let (p, ps, t1, t2, t3) }
 | t1 = spanned(app_tm); ":"; t2 = spanned(tm);
@@ -40,7 +40,7 @@ let tm :=
     { Surface.Fun_arrow (t1, t2) }
 | "fun"; ps = nonempty_list(param); "->"; t = spanned(tm);
     { Surface.Fun_type (ps, t) }
-| "fun"; ps = nonempty_list(param); t1 = option(":"; t1 = spanned(tm); { t1 }); "=>"; t2 = spanned(tm);
+| "fun"; ps = nonempty_list(param); t1 = ann; "=>"; t2 = spanned(tm);
     { Surface.Fun_lit (ps, t1, t2) }
 | app_tm
 
@@ -54,7 +54,7 @@ let app_tm :=
 | proj_tm
 
 let proj_tm :=
-| t = spanned(atomic_tm); ls = nonempty_list("."; l = spanned(NAME); { l });
+| t = spanned(atomic_tm); ls = nonempty_list("."; ~ = spanned(NAME); <>);
     { Surface.Proj (t, ls) }
 | atomic_tm
 
@@ -89,7 +89,14 @@ let defn :=
 | l = spanned(NAME);
     { l, None }
 | l = spanned(NAME); ps = list(param); ":="; t = spanned(tm);
-    { l, Some (ps, t) }
+    { l, Some (ps, None, t) }
+// FIXME: The additional annotation causes a conflict between record types and
+//        record definitions:
+// | l = spanned(NAME); ps = list(param); t1 = ann; ":="; t2 = spanned(tm);
+//     { l, Some (ps, t1, t2) }
+
+let ann :=
+  option(":"; ~ = spanned(tm); <>)
 
 
 (* Utilities *)
