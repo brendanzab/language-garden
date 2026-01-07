@@ -27,6 +27,8 @@ let rec step_many : type state. (module Machine with type state = state) -> stat
   | None -> state
 
 
+(** {2 Source language} *)
+
 (** Constants *)
 module Const = struct
 
@@ -35,9 +37,6 @@ module Const = struct
     | String of string
 
 end
-
-
-(** {2 Abstract Machines} *)
 
 (** Untyped lambda calculus expressions *)
 module Expr = struct
@@ -53,6 +52,9 @@ module Expr = struct
     | Const of Const.t
 
 end
+
+
+(** {2 Abstract Machines} *)
 
 (** Landin’s SECD Machine (Call-by-value)
 
