@@ -76,6 +76,7 @@ module Core = struct
         | Int
 
       (** Types that can be instantiated with a series of type arguments *)
+      (* TODO: Use a defunctionalised closure here *)
       type clos = name list * (t list -> t)
 
     end
