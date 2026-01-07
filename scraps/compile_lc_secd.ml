@@ -11,7 +11,7 @@
         │  │  │  │
         │  │  │  (D)ump
         │  │  │
-        │  │  (C)ontrol instruction
+        │  │  (C)ontrol stack
         │  │
         │  (E)nvironment
         │
@@ -77,10 +77,10 @@ module Secd = struct
     | Clos of prog * env
     | Const of Const.t
 
-  (** Call-frames, for resuming a computation later *)
+  (** Call-frames, used for recording suspended calling frames *)
   and frame = prog * env * stack
 
-  and stack = value list        (* Return (S)tack *)
+  and stack = value list        (* (S)tack *)
   and env = value list          (* (E)nvironment *)
   and prog = instr list         (* (C)ontrol stack *)
   and frames = frame list       (* (D)ump stack *)
@@ -88,10 +88,9 @@ module Secd = struct
   (** State of the abstract machine *)
   type state = prog * env * stack * frames
 
-  let inject (prog : prog) : state =
-    prog, [], [], []
-
-  let step : state -> state option = function
+  (** Step the state of the machine forward once *)
+  let step (state : state) : state option =
+    match state with
     (* Lookup a variable and push it to the stack *)
     | Var i :: prog, env, stack, frames ->
         List.nth_opt env i |> Option.map @@ fun v ->
@@ -125,13 +124,16 @@ module Secd = struct
 
     | _ -> None
 
+  (** Step the state of the machine forward until no transitions apply *)
   let rec step_many (state : state) : state =
     match step state with
     | Some state -> step_many state
     | None -> state
 
+  (** Run a program until we reach the terminal state, and returning the final
+      value on the stack *)
   let run (prog : prog) : value =
-    match step_many (inject prog) with
+    match step_many (prog, [], [], []) with
     | ([], [], [v], []) -> v
     | (_, _, _, _) -> failwith "invalid terminal state"
 
