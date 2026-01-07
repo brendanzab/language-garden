@@ -448,11 +448,13 @@ module Surface = struct
       val create : unit -> t
 
       val fresh_vty : t -> string -> Ty.Value.t
-      val extend_ty_def : t -> Ty.name -> Ty.Value.clos -> t
+      val extend_poly_ty_def : t -> Ty.name -> Ty.Value.clos -> t
+      val extend_ty_def : t -> Ty.name -> Ty.Value.t -> t
       val extend_ty_param : t -> Ty.name -> t
       val lookup_ty : t -> Ty.name -> Ty.(index * Value.clos) option
 
-      val extend_expr : t -> Expr.name -> Ty.Value.clos -> t
+      val extend_poly_expr : t -> Expr.name -> Ty.Value.clos -> t
+      val extend_expr : t -> Expr.name -> Ty.Value.t -> t
       val lookup_expr : t -> Expr.name -> Ty.Value.clos option
 
       val eval_ty : t -> Ty.t -> Ty.Value.t
@@ -489,23 +491,29 @@ module Surface = struct
         Dynarray.add_last ctx.metas (meta, desc);
         Ty.Value.Meta meta
 
-      let extend_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Value.clos) : t =
+      let extend_poly_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Value.clos) : t =
         { ctx with
           ty_size = 1 + ctx.ty_size;
           ty_names = name :: ctx.ty_names;
           ty_defs = ty_def :: ctx.ty_defs;
         }
 
+      let extend_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Value.t) : t =
+        extend_poly_ty_def ctx name ([], fun _ -> ty_def)
+
       let extend_ty_param (ctx : t) (name : Ty.name) : t =
-        extend_ty_def ctx name ([], fun _ -> Ty.Value.Var ctx.ty_size)
+        extend_ty_def ctx name (Ty.Value.Var ctx.ty_size)
 
       let lookup_ty (ctx : t) (name : Ty.name) : Ty.(index * Value.clos) option =
         List.find_index (String.equal name) ctx.ty_names
         |> Option.map (fun index -> index, List.nth ctx.ty_defs index)
 
 
-      let extend_expr (ctx : t) (name : Expr.name) (ty_params, ty : Ty.Value.clos) : t =
+      let extend_poly_expr (ctx : t) (name : Expr.name) (ty_params, ty : Ty.Value.clos) : t =
         { ctx with expr_tys = (name, (ty_params, ty)) :: ctx.expr_tys }
+
+      let extend_expr (ctx : t) (name : Expr.name) (ty : Ty.Value.t) : t =
+        extend_poly_expr ctx name ([], fun _ -> ty)
 
       let lookup_expr (ctx : t) (name : Expr.name) : Ty.Value.clos option =
         List.assoc_opt name ctx.expr_tys
@@ -589,14 +597,14 @@ module Surface = struct
 
       | Expr.Fun (name, None, body), Core.Ty.Value.Fun (param_vty, body_vty) ->
           let param_ty = Ctx.quote_vty ctx param_vty in
-          let body = check_expr (Ctx.extend_expr ctx name ([], fun _ -> param_vty)) body body_vty in
+          let body = check_expr (Ctx.extend_expr ctx name param_vty) body body_vty in
           Core.Expr.Fun_lit (name, param_ty, body)
 
       | Expr.Fun (name, Some param_ty, body), Core.Ty.Value.Fun (param_vty', body_vty) ->
           let param_ty = check_ty ctx param_ty in
           let param_vty = Ctx.eval_ty ctx param_ty in
           unify_vtys ctx ~found:param_vty ~expected:param_vty';
-          let body = check_expr (Ctx.extend_expr ctx name ([], fun _ -> param_vty')) body body_vty in
+          let body = check_expr (Ctx.extend_expr ctx name param_vty') body body_vty in
           Core.Expr.Fun_lit (name, param_ty, body)
 
       | Expr.Tuple elems, Core.Ty.Value.Tuple elem_vtys ->
@@ -662,14 +670,14 @@ module Surface = struct
 
       | Expr.Fun (name, None, body) ->
           let param_vty = Ctx.fresh_vty ctx "function parameter" in
-          let body, body_vty = infer_expr (Ctx.extend_expr ctx name ([], fun _ -> param_vty)) body in
+          let body, body_vty = infer_expr (Ctx.extend_expr ctx name param_vty) body in
           Core.Expr.Fun_lit (name, Ctx.quote_vty ctx param_vty, body),
           Core.Ty.Value.Fun (param_vty, body_vty)
 
       | Expr.Fun (name, Some param_ty, body) ->
           let param_ty = check_ty ctx param_ty in
           let param_vty = Ctx.eval_ty ctx param_ty in
-          let body, body_vty = infer_expr (Ctx.extend_expr ctx name ([], fun _ -> param_vty)) body in
+          let body, body_vty = infer_expr (Ctx.extend_expr ctx name param_vty) body in
           Core.Expr.Fun_lit (name, param_ty, body),
           Core.Ty.Value.Fun (param_vty, body_vty)
 
@@ -733,10 +741,10 @@ module Surface = struct
           in
           let def_pty ty_args =
             (* FIXME: Closing over the entire context? Could be costly. *)
-            let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name ([], fun _ -> vty) in
+            let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name vty in
             Ctx.eval_ty (List.fold_left2 extend_ty_arg ctx ty_params ty_args) def_ty
           in
-          Ctx.extend_expr ctx name (ty_params, def_pty),
+          Ctx.extend_poly_expr ctx name (ty_params, def_pty),
           (name, ty_params, def_ty, def)
 
     and infer_ty_def (ctx : Ctx.t) (name, ty_params, ty : Ty.def) : Ctx.t * Core.Ty.def =
@@ -752,10 +760,10 @@ module Surface = struct
           in
           let pty ty_args =
             (* FIXME: Closing over the entire context? Could be costly. *)
-            let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name ([], fun _ -> vty) in
+            let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name vty in
             Ctx.eval_ty (List.fold_left2 extend_ty_arg ctx ty_params ty_args) ty
           in
-          Ctx.extend_ty_def ctx name (ty_params, pty),
+          Ctx.extend_poly_ty_def ctx name (ty_params, pty),
           (name, ty_params, ty)
 
 
