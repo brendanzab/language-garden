@@ -687,7 +687,39 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  print_string "Running tests ...";
+  let run_tests (prog : (string -> (unit -> unit) -> unit) -> unit) : unit =
+    let success_count = ref 0 in
+    let error_count = ref 0 in
+
+    let run_test (name : string) (prog : unit -> unit) : unit =
+      Printf.printf "test %s ... " name;
+
+      match prog () with
+      | () ->
+          Printf.printf "ok\n";
+          incr success_count
+      | exception e ->
+          Printf.printf "error:\n\n";
+          Printf.printf "  %s\n\n" (Printexc.to_string e);
+          String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+            Printf.printf "  %s\n" line;
+          end;
+          incr error_count
+    in
+
+    Printf.printf "Running tests in %s:\n\n" __FILE__;
+
+    prog run_test;
+
+    Printf.printf "\n";
+
+    if !error_count > 0 then begin
+      Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
+      exit 1
+    end;
+
+    Printf.printf "Ran %i successful tests\n\n" !success_count;
+  in
 
   let open Surface in
 
@@ -699,15 +731,16 @@ let () = begin
     | Error msg -> failwith msg
   in
 
-  begin
+  begin run_tests @@ fun test ->
 
-    (* Polymorphic identity function *)
-    let expr =
-      Expr.Let ("id", ["A"], None,
-        Fun ("x", Some (Name "A"), Name ("x", [])),
-        Name ("id", []) $ Tuple [])
-    in
-    begin
+    begin test "polymorphic identity function" @@ fun () ->
+
+      let expr =
+        Expr.Let ("id", ["A"], None,
+          Fun ("x", Some (Name "A"), Name ("x", [])),
+          Name ("id", []) $ Tuple [])
+      in
+
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
@@ -716,15 +749,17 @@ let () = begin
       ));
       assert (ty = Core.Ty.Tuple []);
       assert (Core.Expr.eval [] expr = Core.Expr.Value.Tuple_lit []);
+
     end;
 
-    (* Explicit type application *)
-    let expr =
-      Expr.Let ("id", ["A"], None,
-        Fun ("x", Some (Name "A"), Name ("x", [])),
-        Name ("id", [Ty.Tuple []]) $ Tuple [])
-    in
-    begin
+    begin test "explicit type application" @@ fun () ->
+
+      let expr =
+        Expr.Let ("id", ["A"], None,
+          Fun ("x", Some (Name "A"), Name ("x", [])),
+          Name ("id", [Ty.Tuple []]) $ Tuple [])
+      in
+
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         Expr.Let ("id", ["A"], Ty.Fun (Var "A", Var "A"),
@@ -733,17 +768,19 @@ let () = begin
       ));
       assert (ty = Core.Ty.Tuple []);
       assert (Core.Expr.eval [] expr = Core.Expr.Value.Tuple_lit []);
+
     end;
 
-    (* Constant function *)
-    let expr =
-      Expr.Let ("id", ["A"], None,
-        Fun ("x", Some (Name "A"), Name ("x", [])),
-        Let ("const", ["A"; "B"], None,
-          Fun ("x", Some (Name "A"), Fun ("y", Some (Name "B"), Name ("x", []))),
-          Name ("const", []) $ Tuple [] $ (Name ("id", []) $ Name ("true", []))))
-    in
-    begin
+    begin test "constant function" @@ fun () ->
+
+      let expr =
+        Expr.Let ("id", ["A"], None,
+          Fun ("x", Some (Name "A"), Name ("x", [])),
+          Let ("const", ["A"; "B"], None,
+            Fun ("x", Some (Name "A"), Fun ("y", Some (Name "B"), Name ("x", []))),
+            Name ("const", []) $ Tuple [] $ (Name ("id", []) $ Name ("true", []))))
+      in
+
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         let ( $ ) f x = Expr.Fun_app (f, x) in
@@ -755,19 +792,21 @@ let () = begin
       ));
       assert (ty = Core.Ty.Tuple []);
       assert (Core.Expr.eval [] expr = Core.Expr.Value.Tuple_lit []);
+
     end;
 
-    (* Locally polymorphic definitions *)
-    let expr =
-      (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
-      Expr.Let ("kite", ["A"; "B"], Some (Fun (Name "A", Fun (Name "B", Name "B"))),
-        Fun ("x", None,
-          Expr.Let ("id", ["A"], None,
-            Fun ("x", Some (Name "A"), Name ("x", [])),
-            Name ("id", []))),
-        Name ("kite", []) $ Tuple [] $ Name ("true", []))
-    in
-    begin
+    begin test "locally polymorphic definitions" @@ fun () ->
+
+      let expr =
+        (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
+        Expr.Let ("kite", ["A"; "B"], Some (Fun (Name "A", Fun (Name "B", Name "B"))),
+          Fun ("x", None,
+            Expr.Let ("id", ["A"], None,
+              Fun ("x", Some (Name "A"), Name ("x", [])),
+              Name ("id", []))),
+          Name ("kite", []) $ Tuple [] $ Name ("true", []))
+      in
+
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         let ( $ ) f x = Expr.Fun_app (f, x) in
@@ -780,15 +819,17 @@ let () = begin
       ));
       assert (ty = Core.Ty.Bool);
       assert (Core.Expr.eval [] expr = Core.Expr.Value.Bool_lit true);
+
     end;
 
-    (* Local type definitions *)
-    let expr =
-      (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
-      Expr.Let_type ("Foo", Name "Int",
-        Ann (Int 42, Name "Foo"))
-    in
-    begin
+    begin test "local type definitions" @@ fun () ->
+
+      let expr =
+        (* False combinator https://www.angelfire.com/tx4/cus/combinator/birds.html *)
+        Expr.Let_type ("Foo", Name "Int",
+          Ann (Int 42, Name "Foo"))
+      in
+
       let expr, ty = Elab.infer_expr expr |> expect_ok in
       assert (expr = Core.(
         Expr.Let_type ("Foo", Int,
@@ -796,12 +837,11 @@ let () = begin
       ));
       assert (ty = Core.Ty.Int);
       assert (Core.Expr.eval [] expr = Core.Expr.Value.Int_lit 42);
+
     end;
 
     (* TODO: More tests *)
 
   end;
-
-  print_string " ok!\n";
 
 end

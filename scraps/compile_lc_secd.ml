@@ -161,68 +161,76 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  let success_count = ref 0 in
-  let error_count = ref 0 in
+  let run_tests (prog : (string -> (unit -> unit) -> unit) -> unit) : unit =
+    let success_count = ref 0 in
+    let error_count = ref 0 in
 
-  let test (name : string) (f : unit -> unit) : unit =
-    Printf.printf "test %s ... " name;
+    let run_test (name : string) (prog : unit -> unit) : unit =
+      Printf.printf "test %s ... " name;
 
-    match f () with
-    | () ->
-        Printf.printf "ok\n";
-        incr success_count
-    | exception e ->
-        Printf.printf "error:\n\n";
-        Printf.printf "  %s\n\n" (Printexc.to_string e);
-        String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
-          Printf.printf "  %s\n" line;
-        end;
-        incr error_count
+      match prog () with
+      | () ->
+          Printf.printf "ok\n";
+          incr success_count
+      | exception e ->
+          Printf.printf "error:\n\n";
+          Printf.printf "  %s\n\n" (Printexc.to_string e);
+          String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+            Printf.printf "  %s\n" line;
+          end;
+          incr error_count
+    in
+
+    Printf.printf "Running tests in %s:\n\n" __FILE__;
+
+    prog run_test;
+
+    Printf.printf "\n";
+
+    if !error_count > 0 then begin
+      Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
+      exit 1
+    end;
+
+    Printf.printf "Ran %i successful tests\n\n" !success_count;
   in
-
-  let test_eval
-      ~(expected : Secd.value)
-      (name : string)
-      (expr : Expr.t) : unit =
-
-    test name @@ fun () ->
-      assert (Secd.run (compile_expr expr) = expected)
-  in
-
-  print_string "Running tests:\n\n";
 
   let ( $ ) f a = Expr.Fun_app (f, a) in
 
-  test_eval "apply id"
-    (* (fun x => x) 42 *)
-    Expr.(Fun_intro ("x", Var 0) $ Const (Int 42))
-    ~expected:(Const (Int 42));
+  begin run_tests @@ fun test ->
 
-  test_eval "apply const"
-    (* (fun x y => x) 42 3 *)
-    Expr.(Fun_intro ("x", Fun_intro ("y", Var 1)) $ Const (Int 42) $ Const (Int 3))
-    ~expected:(Const (Int 42));
+    let test_eval
+        ~(expected : Secd.value)
+        (name : string)
+        (expr : Expr.t) : unit =
 
-  test_eval "apply flip const"
-    (*
-      let const x y := x;
-      let flip f x y := f y x;
-      flip const 42 3
-    *)
-    Expr.(
-      Let ("const", Fun_intro ("x", Fun_intro ("y", Var 1)),
-      Let ("flip", Fun_intro ("f", Fun_intro ("x", Fun_intro ("y", Var 2 $ Var 0 $ Var 1))),
-        Var 0 $ Var 1 $ Const (Int 42) $ Const (Int 3)))
-    )
-    ~expected:(Const (Int 3));
+      test name @@ fun () ->
+        assert (Secd.run (compile_expr expr) = expected)
+    in
 
-  print_string "\n";
+    test_eval "apply id"
+      (* (fun x => x) 42 *)
+      Expr.(Fun_intro ("x", Var 0) $ Const (Int 42))
+      ~expected:(Const (Int 42));
 
-  if !error_count > 0 then begin
-    Printf.printf "Failed %i out of %i tests\n" !error_count (!success_count + !error_count);
-    exit 1
+    test_eval "apply const"
+      (* (fun x y => x) 42 3 *)
+      Expr.(Fun_intro ("x", Fun_intro ("y", Var 1)) $ Const (Int 42) $ Const (Int 3))
+      ~expected:(Const (Int 42));
+
+    test_eval "apply flip const"
+      (*
+        let const x y := x;
+        let flip f x y := f y x;
+        flip const 42 3
+      *)
+      Expr.(
+        Let ("const", Fun_intro ("x", Fun_intro ("y", Var 1)),
+        Let ("flip", Fun_intro ("f", Fun_intro ("x", Fun_intro ("y", Var 2 $ Var 0 $ Var 1))),
+          Var 0 $ Var 1 $ Const (Int 42) $ Const (Int 3)))
+      )
+      ~expected:(Const (Int 3));
+
   end;
-
-  Printf.printf "Ran %i successful tests\n" !success_count;
 
 end
