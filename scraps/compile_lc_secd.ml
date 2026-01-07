@@ -1,40 +1,44 @@
-(** Compiling untyped lambda calculus expressions into various abstract machines.
+(** Compiling untyped lambda expressions to Landin’s SECD Machine
+
+    This was an early and influential abstract machine for that introduced
+    {e closures} as a way of implementing first-class functions.
+    The name is derived from the original names used for the components of the
+    machine state in Landin’s paper:
+
+    {@text[
+      ⟨ S, E, C, D ⟩
+        ▲  ▲  ▲  ▲
+        │  │  │  │
+        │  │  │  (D)ump
+        │  │  │
+        │  │  (C)ontrol instruction
+        │  │
+        │  (E)nvironment
+        │
+        (S)tack
+    ]}
+
+    Let expressions are implemented in the same way as on Xavier Leroy’s slides,
+    by pushing and popping definitions off the environment.
 
     {2 Resources}
 
+    - Wikipedia. SECD machine. https://en.wikipedia.org/wiki/SECD_machine
+    - Peter Landin. 1964. The Mechanical Evaluation of Expressions.
+      https://doi.org/10.1093/comjnl/6.4.308
+    - David Turner. 2012. Some History of Functional Programming Languages.
+      https://www.cs.kent.ac.uk/people/staff/dat/tfp12/tfp12.pdf
     - Xavier Leroy. 2005. From Krivine’s machine to the Caml implementations
       https://xavierleroy.org/talks/zam-kazam05.pdf
     - Xavier Leroy. 2015. Functional programming languages Part II: abstract machines
       https://xavierleroy.org/mpri/2-4/machines.pdf
 *)
 
-(** Signature of abstract machines *)
-module type Machine = sig
-
-  type prog
-  type state
-
-  val inject : prog -> state
-  val step : state -> state option
-
-end
-
-(** Step an abstract machine until it halts *)
-let rec step_many : type state. (module Machine with type state = state) -> state -> state =
-  fun (module M) state ->
-  match M.step state with
-  | Some state -> step_many (module M) state
-  | None -> state
-
-
-(** {2 Source language} *)
-
 (** Constants *)
 module Const = struct
 
   type t =
     | Int of int
-    | String of string
 
 end
 
@@ -53,41 +57,7 @@ module Expr = struct
 
 end
 
-
-(** {2 Abstract Machines} *)
-
-(** Landin’s SECD Machine (Call-by-value)
-
-    This was a very early abstract machine (possibly one of the first?) and was
-    very influential, introducing {e closures} as a way of implementing
-    first-class functions.
-
-    The name is derived from the somewhat names used for the components of the
-    machine state in the original paper:
-
-    {@text[
-      ⟨ S, E, C, D ⟩
-        ▲  ▲  ▲  ▲
-        │  │  │  │
-        │  │  │  (D)ump
-        │  │  │
-        │  │  (C)ontrol instruction
-        │  │
-        │  (E)nvironment
-        │
-        (S)tack
-    ]}
-
-    Let expressions are implemented in the same way as on Xavier Leroy’s slides
-    (linked above), by pushing and popping definitions off the environment.
-
-    {2 Resources}
-
-    - https://en.wikipedia.org/wiki/SECD_machine
-    - Peter Landin. 1964. The Mechanical Evaluation of Expressions.
-    - David Turner. 2012. Some History of Functional Programming Languages.
-      https://www.cs.kent.ac.uk/people/staff/dat/tfp12/tfp12.pdf
-*)
+(** Landin’s SECD Machine *)
 module Secd = struct
 
   (** De-bruijn index *)
@@ -117,21 +87,6 @@ module Secd = struct
 
   (** State of the abstract machine *)
   type state = prog * env * stack * frames
-
-  (** Compile lambda calculus expressions into a list of SECD instructions *)
-  let compile_expr (expr : Expr.t) : prog =
-    (* Avoid expensive append operations by composing functions that add
-       instructions to the head of the program. *)
-    let ( << ) = Fun.compose in
-    let rec compile (expr : Expr.t) : prog -> prog =
-      match expr with
-      | Expr.Var i -> List.cons (Var i : instr)
-      | Expr.Let (_, def, body) -> compile def << List.cons Let_def << compile body << List.cons Let_end
-      | Expr.Fun_intro (_, body) -> List.cons (Fun_intro (compile body [Fun_end]))
-      | Expr.Fun_app (fn, arg) -> compile fn << compile arg << List.cons Fun_app
-      | Expr.Const c -> List.cons (Const c : instr)
-    in
-    compile expr []
 
   let inject (prog : prog) : state =
     prog, [], [], []
@@ -170,19 +125,32 @@ module Secd = struct
 
     | _ -> None
 
+  let rec step_many (state : state) : state =
+    match step state with
+    | Some state -> step_many state
+    | None -> state
+
+  let run (prog : prog) : value =
+    match step_many (inject prog) with
+    | ([], [], [v], []) -> v
+    | (_, _, _, _) -> failwith "invalid terminal state"
+
 end
 
-(** Cardelli’s Functional Abstract Machine (Call-by-value) *)
-module Fam = struct (* TODO *) end
-
-(** Categorical abstract machine (Call-by-value) *)
-module Cam = struct (* TODO *) end
-
-(** Kirvine’s Machine (Call-by-name) *)
-module Kirvine = struct (* TODO *) end
-
-(** Zinc abstract machine (Call-by-value)*)
-module Zam = struct (* TODO *) end
+(** Compile lambda calculus expressions into a list of SECD instructions *)
+let compile_expr (expr : Expr.t) : Secd.prog =
+  (* Avoid expensive append operations by composing functions that add
+      instructions to the head of the program. *)
+  let ( << ) = Fun.compose in
+  let rec compile (expr : Expr.t) : Secd.prog -> Secd.prog =
+    match expr with
+    | Expr.Var i -> List.cons (Secd.Var i : Secd.instr)
+    | Expr.Let (_, def, body) -> compile def << List.cons Secd.Let_def << compile body << List.cons Secd.Let_end
+    | Expr.Fun_intro (_, body) -> List.cons (Secd.Fun_intro (compile body [Secd.Fun_end]))
+    | Expr.Fun_app (fn, arg) -> compile fn << compile arg << List.cons Secd.Fun_app
+    | Expr.Const c -> List.cons (Secd.Const c : Secd.instr)
+  in
+  compile expr []
 
 
 (* Tests *)
@@ -190,15 +158,6 @@ module Zam = struct (* TODO *) end
 let () = begin
 
   Printexc.record_backtrace true;
-
-  let module Const = struct
-
-    type t =
-      | Int of int
-
-  end in
-
-  let ( $ ) f a = Expr.Fun_app (f, a) in
 
   let success_count = ref 0 in
   let error_count = ref 0 in
@@ -225,12 +184,12 @@ let () = begin
       (expr : Expr.t) : unit =
 
     test name @@ fun () ->
-      match step_many (module Secd) Secd.(inject (compile_expr expr)), expected with
-      | ([], [], [v], []), expected -> assert (v = expected)
-      | (_, _, _, _), _ -> failwith "expected return value"
+      assert (Secd.run (compile_expr expr) = expected)
   in
 
   print_string "Running tests:\n\n";
+
+  let ( $ ) f a = Expr.Fun_app (f, a) in
 
   test_eval "apply id"
     (* (fun x => x) 42 *)

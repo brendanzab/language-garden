@@ -33,7 +33,7 @@
 
 (test (name compile_lc_anf_fresh))
 (test (name compile_lc_anf_nameless))
-(test (name compile_lc_machines))
+(test (name compile_lc_secd))
 
 (test (name lang_miniadapton))
 (executable (name lang_triple_store))          ; TODO: Tests

@@ -104,8 +104,8 @@ Compilation:
   Compiling de Bruijn indexed lambda terms to freshly named lambda terms in A-normal form.
 - [**compile_lc_anf_nameless.ml**](compile_lc_anf_nameless.ml):
   Compiling de Bruijn indexed lambda terms to de Bruijn indexed lambda terms in A-normal form.
-- [**compile_lc_machines.ml**](compile_lc_machines.ml):
-  Compiling untyped lambda calculus expressions into various abstract machines.
+- [**compile_lc_secd.ml**](compile_lc_secd.ml):
+  Compiling untyped lambda expressions to Landin’s SECD Machine.
 
 Languages and embedded DSLs:
 
