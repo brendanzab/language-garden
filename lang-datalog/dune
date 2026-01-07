@@ -9,7 +9,7 @@
 
 (menhir
  (modules parser)
- (flags --explain --strict))
+ (flags --strict))
 
 (mdx
  (package lang-datalog)

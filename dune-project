@@ -7,7 +7,7 @@
 (license MIT)
 
 (using mdx 0.4)
-(using menhir 2.1)
+(using menhir 3.0)
 (cram enable)
 
 (implicit_transitive_deps false)

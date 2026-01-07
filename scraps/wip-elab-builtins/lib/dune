@@ -4,6 +4,6 @@
 
 (menhir
  (modules surface_parser)
- (flags --explain --strict))
+ (flags --strict))
 
 (ocamllex surface_lexer)

@@ -11,7 +11,7 @@
 
 (menhir
  (modules parser)
- (flags --explain --strict))
+ (flags --strict))
 
 (mdx
  (package elab-dependent)

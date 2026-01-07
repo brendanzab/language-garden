@@ -9,4 +9,4 @@
 
 (menhir
  (modules surface_parser)
- (flags --explain --strict))
+ (flags --strict))
