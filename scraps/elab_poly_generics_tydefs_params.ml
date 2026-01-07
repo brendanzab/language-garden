@@ -449,7 +449,7 @@ module Surface = struct
 
       val fresh_vty : t -> string -> Ty.Value.t
       val extend_poly_ty_def : t -> Ty.name -> Ty.Value.clos -> t
-      val extend_ty_def : t -> Ty.name -> Ty.Value.t -> t
+      val extend_ty_def : t -> Ty.name -> Ty.Value.t -> t [@@warning "-unused-value-declaration"]
       val extend_ty_param : t -> Ty.name -> t
       val lookup_ty : t -> Ty.name -> Ty.(index * Value.clos) option
 
@@ -459,6 +459,7 @@ module Surface = struct
 
       val eval_ty : t -> Ty.t -> Ty.Value.t
       val quote_vty : t -> Ty.Value.t -> Ty.t
+      val close_ty : t -> Ty.name list -> Ty.t -> Ty.Value.clos
       val zonk_ty : t -> Ty.t -> Ty.t
       val zonk_expr : t -> Expr.t -> Expr.t
       val pp_vty : t -> Ty.Value.t -> Format.formatter -> unit
@@ -524,6 +525,10 @@ module Surface = struct
 
       let quote_vty (ctx : t) (vty : Ty.Value.t) : Ty.t =
         Ty.quote ctx.ty_size vty
+
+      let close_ty ({ ty_defs; _ } : t) (ty_params : Ty.name list) (ty : Ty.t) : Ty.Value.clos =
+        let extend acc arg = ([], fun _ -> arg) :: acc in
+        ty_params, fun ty_args -> Ty.eval (List.fold_left extend ty_defs ty_args) ty
 
       let zonk_ty (ctx : t) (vty : Ty.t) : Ty.t =
         Ty.zonk ctx.ty_size vty
@@ -739,12 +744,7 @@ module Surface = struct
                 let def_vty = Ctx.eval_ty ctx def_ty in
                 check_expr ctx def def_vty, def_ty
           in
-          let def_pty ty_args =
-            (* FIXME: Closing over the entire context? Could be costly. *)
-            let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name vty in
-            Ctx.eval_ty (List.fold_left2 extend_ty_arg ctx ty_params ty_args) def_ty
-          in
-          Ctx.extend_poly_expr ctx name (ty_params, def_pty),
+          Ctx.extend_poly_expr ctx name (Ctx.close_ty ctx ty_params def_ty),
           (name, ty_params, def_ty, def)
 
     and infer_ty_def (ctx : Ctx.t) (name, ty_params, ty : Ty.def) : Ctx.t * Core.Ty.def =
@@ -754,16 +754,8 @@ module Surface = struct
             (match names with [_] -> "parameter" | _ -> "parameters")
             (String.concat ", " names)
       | [] ->
-          let ty =
-            let ctx = List.fold_left Ctx.extend_ty_param ctx ty_params in
-            check_ty ctx ty
-          in
-          let pty ty_args =
-            (* FIXME: Closing over the entire context? Could be costly. *)
-            let extend_ty_arg ctx name vty = Ctx.extend_ty_def ctx name vty in
-            Ctx.eval_ty (List.fold_left2 extend_ty_arg ctx ty_params ty_args) ty
-          in
-          Ctx.extend_poly_ty_def ctx name (ty_params, pty),
+          let ty = check_ty (List.fold_left Ctx.extend_ty_param ctx ty_params) ty in
+          Ctx.extend_poly_ty_def ctx name (Ctx.close_ty ctx ty_params ty),
           (name, ty_params, ty)
 
 
