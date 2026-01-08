@@ -26,19 +26,19 @@ let gen_name : string QCheck.Gen.t =
     char_range 'A' 'Z';
   ] in
   let continue = oneof [
-    oneofl ['-'; '_'];
+    oneof_list ['-'; '_'];
     char_range 'a' 'z';
     char_range 'A' 'Z';
     char_range '0' '9';
   ] in
 
-  map2 (Format.sprintf "%c%s") start (small_string ~gen:continue)
+  map2 (Format.sprintf "%c%s") start (string_small_of continue)
     (* not sure if there's a nicer way to do this! *)
     |> map (fun n -> if is_keyword n then n ^ "_" else n)
 
 (** Type generation *)
 let gen_ty : Tree_lang.ty QCheck.Gen.t =
-  QCheck.Gen.oneofl [
+  QCheck.Gen.oneof_list [
     Tree_lang.Ty_int;
     Tree_lang.Ty_bool;
   ]
@@ -52,16 +52,16 @@ let gen_expr_untyped : Tree_lang.expr QCheck.Gen.t =
       [1, map Tree_lang.var (int_range 0 (size - 1))]
   in
   let gen_lit = oneof [
-    map Tree_lang.int big_nat;
+    map Tree_lang.int (map abs int);
     map Tree_lang.bool bool;
   ] in
 
   pair (pure 0) nat >>= fix
     (fun self -> function
       | size, 0 ->
-          frequency (var_freqs size @ [1, gen_lit])
+          oneof_weighted (var_freqs size @ [1, gen_lit])
       | size, n ->
-          frequency (var_freqs size @ [
+          oneof_weighted (var_freqs size @ [
             1, gen_lit;
             2, map Tree_lang.neg (self (size, n/2));
             3, map2 Tree_lang.add (self (size, n/2)) (self (size, n/2));
@@ -127,7 +127,7 @@ module Env = struct
     let open QCheck.Gen in
     Type_map.find_opt t env.ty_names
       |> Option.map (fun names ->
-        let+ n = delay (fun () -> oneofl (Name_set.elements names)) in
+        let+ n = delay (fun () -> oneof_list (Name_set.elements names)) in
         var env (Name_map.find n env.name_levels))
 
 end
@@ -138,7 +138,7 @@ let gen_expr gen_ty : Tree_lang.expr QCheck.Gen.t =
   let open QCheck.Gen in
 
   let gen_lit = function
-    | Tree_lang.Ty_int -> map Tree_lang.int big_nat
+    | Tree_lang.Ty_int -> map Tree_lang.int (map abs int)
     | Tree_lang.Ty_bool -> map Tree_lang.bool bool
   in
   let gen_let self (env, ty, n) =
@@ -165,7 +165,7 @@ let gen_expr gen_ty : Tree_lang.expr QCheck.Gen.t =
     (fun self -> function
       | env, ty, 0 -> oneof [ gen_lit ty; gen_var env ty ]
       | env, Tree_lang.Ty_int, n ->
-          frequency [
+          oneof_weighted [
             3, gen_let self (env, Tree_lang.Ty_int, n);
             1, gen_lit Tree_lang.Ty_int;
             1, gen_var env Tree_lang.Ty_int;
@@ -177,7 +177,7 @@ let gen_expr gen_ty : Tree_lang.expr QCheck.Gen.t =
             4, gen_if self (env, Tree_lang.Ty_int, n);
           ]
       | env, Tree_lang.Ty_bool, n ->
-          frequency [
+          oneof_weighted [
             3, gen_let self (env, Tree_lang.Ty_bool, n);
             1, gen_lit Tree_lang.Ty_bool;
             1, gen_var env Tree_lang.Ty_bool;

@@ -158,7 +158,9 @@ Factorial in terms of the fixed-point combinator
         n;
   fact 5 : Int
   $ cat fix.txt | executable n
-  120 : Int
+  Usage: generics [--help] COMMAND …
+  generics: unknown command n. Must be either elab or norm
+  [124]
 
 Mutually recursive bindings: Even/odd
   $ cat >even-odd.txt <<EOF

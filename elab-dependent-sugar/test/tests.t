@@ -2,9 +2,9 @@
 
 Usage
   $ executable
-  dependent-sugar: required COMMAND name is missing, must be either 'elab' or 'norm'.
-  Usage: dependent-sugar COMMAND …
-  Try 'dependent-sugar --help' for more information.
+  Usage: dependent-sugar [--help] COMMAND …
+  dependent-sugar: required COMMAND name is missing, must be either elab or
+                   norm
   [124]
 
 The identity function

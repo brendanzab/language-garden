@@ -2,14 +2,12 @@
 
 Usage
   $ executable
-  arithcond: required COMMAND name is missing, must be either 'compile' or 'exec'.
-  Usage: arithcond COMMAND …
-  Try 'arithcond --help' for more information.
+  Usage: arithcond [--help] COMMAND …
+  arithcond: required COMMAND name is missing, must be either compile or exec
   [124]
   $ executable compile
+  Usage: arithcond compile [--help] --target=TARGET [OPTION]…
   arithcond: required option --target is missing
-  Usage: arithcond compile [--target=TARGET] [OPTION]…
-  Try 'arithcond compile --help' or 'arithcond --help' for more information.
   [124]
 
 A number

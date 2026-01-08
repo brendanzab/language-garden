@@ -1,8 +1,8 @@
 Usage
   $ fractal-growth
-  fractal-growth: required COMMAND name is missing, must be either 'generations' or 'list'.
-  Usage: fractal-growth COMMAND …
-  Try 'fractal-growth --help' for more information.
+  Usage: fractal-growth [--help] COMMAND …
+  fractal-growth: required COMMAND name is missing, must be either generations
+                  or list
   [124]
 
 List of systems

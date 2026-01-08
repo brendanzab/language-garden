@@ -2,9 +2,8 @@
 
 Usage
   $ executable
-  dependent: required COMMAND name is missing, must be either 'elab' or 'norm'.
-  Usage: dependent COMMAND …
-  Try 'dependent --help' for more information.
+  Usage: dependent [--help] COMMAND …
+  dependent: required COMMAND name is missing, must be either elab or norm
   [124]
 
 The identity function

@@ -104,12 +104,11 @@ f 7 3
 
 Lambda lifted term:
 
-<!-- $MDX file=test/multiple-captures-3.lifted.stdout -->
+<!-- $MDX file=test/multiple-captures-3.lifted-a.stdout -->
 ```text
 def anon0↑ (env4 : (Int, Int, Int)) (y5 : Int) :=
   #add (#mul env4.0 env4.2) (#mul env4.1 y5);
-def f1↑ (env2 : (Int, Int)) (x3 : Int) :=
-  clos(anon0↑, (env2.0, env2.1, x3));
+def f1↑ (env2 : (Int, Int)) (x3 : Int) := clos(anon0↑, (env2.0, env2.1, x3));
 let a0 : Int := 2;
 let b1 : Int := 5;
 f1↑ (a0, b1) 7 3

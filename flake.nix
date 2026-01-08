@@ -62,7 +62,7 @@
         # # Use the OCaml compiler from nixpkgs
         # ocaml-system = "*";
         # Use OCaml compiler from opam-repository
-        ocaml-base-compiler = "5.3.0";
+        ocaml-base-compiler = "5.4.0";
       };
 
       # Package-specific derivation overrides.

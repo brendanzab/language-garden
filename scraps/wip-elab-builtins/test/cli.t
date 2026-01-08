@@ -1,6 +1,5 @@
 Usage
   $ builtins
-  builtins: required COMMAND name is missing, must be 'elab'.
-  Usage: builtins COMMAND …
-  Try 'builtins --help' for more information.
+  Usage: builtins [--help] COMMAND …
+  builtins: required COMMAND name is missing, must be elab
   [124]

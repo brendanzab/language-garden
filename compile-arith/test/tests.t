@@ -2,14 +2,12 @@
 
 Usage
   $ executable
-  arith: required COMMAND name is missing, must be either 'compile' or 'exec'.
-  Usage: arith COMMAND …
-  Try 'arith --help' for more information.
+  Usage: arith [--help] COMMAND …
+  arith: required COMMAND name is missing, must be either compile or exec
   [124]
   $ executable compile
+  Usage: arith compile [--help] --target=TARGET [OPTION]…
   arith: required option --target is missing
-  Usage: arith compile [--target=TARGET] [OPTION]…
-  Try 'arith compile --help' or 'arith --help' for more information.
   [124]
 
 A number

@@ -24,8 +24,8 @@ let generate_rules base =
     {|
       (rule
        (with-stdin-from ../%s.txt
-        (with-stdout-to %s.lifted.stdout.tmp
-         (run %%{bin:%s} compile --target=lifted))))
+        (with-stdout-to %s.lifted-a.stdout.tmp
+         (run %%{bin:%s} compile --target=lifted-a))))
     |}
     base base bin;
   Printf.printf
@@ -34,7 +34,7 @@ let generate_rules base =
        (alias runtest)
        (package %s)
        (action
-        (diff ../%s.lifted.stdout %s.lifted.stdout.tmp)))
+        (diff ../%s.lifted-a.stdout %s.lifted-a.stdout.tmp)))
     |}
     package base base
 

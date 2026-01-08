@@ -6,7 +6,7 @@ module Js = Js_of_ocaml.Js
 let canvas_width = 400.0
 let canvas_height = 400.0
 
-let start (_ : (#Html.event as 'b) Js.t) : bool Js.t = begin
+let start (_ : #Html.event Js.t) : bool Js.t = begin
   (* Initialise canvas and 2D drawing context *)
   let canvas = Html.createCanvas Html.document in
   let ctx = canvas##getContext Html._2d_ in

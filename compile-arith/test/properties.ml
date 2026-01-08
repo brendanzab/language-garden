@@ -11,7 +11,7 @@ let expr_gen = QCheck.Gen.(sized @@ fix
   (fun self n -> match n with
     | 0 -> map Tree_lang.int nat
     | n ->
-      frequency [
+      oneof_weighted [
         1, map Tree_lang.int nat;
         2, map Tree_lang.neg (self (n/2));
         3, map2 Tree_lang.add (self (n/2)) (self (n/2));
