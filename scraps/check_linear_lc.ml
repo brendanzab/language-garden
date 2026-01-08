@@ -329,55 +329,99 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  print_string "Running tests ...";
+  let run_tests (prog : (string -> (unit -> unit) -> unit) -> unit) : unit =
+    let success_count = ref 0 in
+    let error_count = ref 0 in
+
+    let run_test (name : string) (prog : unit -> unit) : unit =
+      Printf.printf "test %s ... " name;
+
+      match prog () with
+      | () ->
+          Printf.printf "ok\n";
+          incr success_count
+      | exception e ->
+          Printf.printf "error:\n\n";
+          Printf.printf "  %s\n\n" (Printexc.to_string e);
+          String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+            Printf.printf "  %s\n" line;
+          end;
+          incr error_count
+    in
+
+    Printf.printf "Running tests in %s:\n\n" __FILE__;
+
+    prog run_test;
+
+    Printf.printf "\n";
+
+    if !error_count > 0 then begin
+      Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
+      exit 1
+    end;
+
+    Printf.printf "Ran %i successful tests\n\n" !success_count;
+  in
 
   let ( $ ) f x = Expr.Fun_app (f, x) in
 
-  begin
+  begin run_tests @@ fun test ->
 
-    (* id *)
     let id_expr = Expr.Fun_lit ("x", Var "x") in
     let id_ty = Ty.Fun (Unit, Unit) in
-    assert (Check.check id_expr id_ty = Ok ());
 
-    (* const *)
-    let const_expr = Expr.Fun_lit ("x", Fun_lit ("y", Var "x")) in
-    let const_ty = Ty.Fun (Unit, Fun (Unit, Unit)) in
-    assert (Check.check const_expr const_ty = Error "unused variable `y`");
+    begin test "id" @@ fun () ->
+      assert (Check.check id_expr id_ty = Ok ());
+    end;
 
-    let expr = Expr.Let ("id", Ann (id_expr, id_ty), Unit_lit) in
-    assert (Check.infer expr = Error "unused variable `id`");
+    begin test "const" @@ fun () ->
+      let const_expr = Expr.Fun_lit ("x", Fun_lit ("y", Var "x")) in
+      let const_ty = Ty.Fun (Unit, Fun (Unit, Unit)) in
 
-    let expr = Expr.Let ("id", Ann (id_expr, id_ty), Var "id" $ Unit_lit) in
-    assert (Check.infer expr = Ok Ty.Unit);
+      assert (Check.check const_expr const_ty = Error "unused variable `y`");
+    end;
 
-    (* We can only use functions once, haha *)
-    let expr =
-      Expr.Let ("id", Ann (id_expr, id_ty),
-        Pair_lit (Var "id" $ Unit_lit, Var "id" $ Unit_lit))
-    in
-    assert (Check.infer expr = Error "variable `id` has already been used");
+    begin test "let binding" @@ fun () ->
+      let expr = Expr.Let ("id", Ann (id_expr, id_ty), Var "id" $ Unit_lit) in
+      assert (Check.infer expr = Ok Ty.Unit);
+    end;
 
-    let expr =
-      Expr.Fun_lit ("v",
-        Let ("x", Prim (`Alloc, [Var "v"]),
-          Prim (`Free, [Var "x"])))
-    in
-    assert (Check.check expr (Ty.Fun (Int, Unit)) = Ok ());
+    begin test "let binding (unused definition)" @@ fun () ->
+      let expr = Expr.Let ("id", Ann (id_expr, id_ty), Unit_lit) in
+      assert (Check.infer expr = Error "unused variable `id`");
+    end;
 
-    let expr =
-      Expr.Fun_lit ("v",
-        Let ("x", Prim (`Alloc, [Var "v"]),
-          Pair_elim ("x", "y", Prim (`Swap, [Var "x"; Unit_lit]),
-            Unit_elim (Prim (`Free, [Var "x"]),
-              Var "y"))))
-    in
-    assert (Check.check expr (Ty.Fun (Int, Int)) = Ok ());
+    (* We can only use functions once, which somewhat limits the utility of our language *)
+    begin test "let binding (reused function definition)" @@ fun () ->
+      let expr =
+        Expr.Let ("id", Ann (id_expr, id_ty),
+          Pair_lit (Var "id" $ Unit_lit, Var "id" $ Unit_lit))
+      in
+      assert (Check.infer expr = Error "variable `id` has already been used");
+    end;
+
+    begin test "alloc/free" @@ fun () ->
+      let expr =
+        Expr.Fun_lit ("v",
+          Let ("x", Prim (`Alloc, [Var "v"]),
+            Prim (`Free, [Var "x"])))
+      in
+      assert (Check.check expr (Ty.Fun (Int, Unit)) = Ok ());
+    end;
+
+    begin test "alloc/swap/free" @@ fun () ->
+      let expr =
+        Expr.Fun_lit ("v",
+          Let ("x", Prim (`Alloc, [Var "v"]),
+            Pair_elim ("x", "y", Prim (`Swap, [Var "x"; Unit_lit]),
+              Unit_elim (Prim (`Free, [Var "x"]),
+                Var "y"))))
+      in
+      assert (Check.check expr (Ty.Fun (Int, Int)) = Ok ());
+    end;
 
     (* TODO: More tests *)
 
   end;
-
-  print_string " ok!\n";
 
 end
