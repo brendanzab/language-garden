@@ -107,7 +107,9 @@ module Core = struct
 
     end
 
-    (** Types that can be instantiated with a series of type arguments *)
+    (** Types that can be instantiated with a series of type arguments.
+        These are used for representing polymorphic definitions during
+        elaboration. *)
     module Clos : sig
 
       type t
@@ -205,6 +207,9 @@ module Core = struct
         incr next;
         ref (Unsolved id)
 
+    (** Defunctionalised closure representation. We define {!clos} and {!inst}
+        before the {!Clos} module in order to make it easier to deal with the
+        mutual recursion with the {!eval} function. *)
     type clos =
       | Clos of clos list * int * t
       | Value of Value.t
