@@ -488,18 +488,18 @@ end = struct
 
     | head_ty ->
         (* Build up the clauses and the row from the clauses *)
-        let clauses, row =
+        let ~clauses, ~row =
           clauses |> ListLabels.fold_left
-            ~init:(Label_map.empty, Label_map.empty)
-            ~f:(fun (clauses, row) ({ data = Variant_lit (label, name); _ }, body_tm : pattern * _) ->
+            ~init:(~clauses:Label_map.empty, ~row:Label_map.empty)
+            ~f:(fun (~clauses, ~row) ({ data = Variant_lit (label, name); _ }, body_tm : pattern * _) ->
               if Label_map.mem label.data clauses then begin
                 warning ctx label.span "redundant case pattern";
-                clauses, row
+                ~clauses, ~row
               end else
                 let param_ty = fresh_meta ctx name.span "pattern binder" in
                 let body_tm = check_tm (extend ctx name.data param_ty) body_tm body_ty in
-                Label_map.add label.data (name.data, body_tm) clauses,
-                Label_map.add label.data param_ty row)
+                ~clauses:(Label_map.add label.data (name.data, body_tm) clauses),
+                ~row:(Label_map.add label.data param_ty row))
         in
         (* Unify variant type with head type *)
         unify_tys ctx head_span ~found:head_ty ~expected:(Core.Variant_type (Core.Row_entries row));

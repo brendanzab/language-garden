@@ -84,14 +84,13 @@ let rec translate globals locals ?name : Fun_a.tm -> Lifted_a.globals * Lifted_a
         captured variable ocurrences are mapped to explicit projections off the
         environment parameter. *)
       let globals, body =
-        let _, body_env =
-          List.fold_left
-            (fun (label, body_env) id ->
+        let ~label:_, ~body_env =
+          ListLabels.fold_left body_fvs
+            ~init:(~label:0, ~body_env:(Var_map.singleton param_var (param_tm, param_ty)))
+            ~f:(fun (~label, ~body_env) id ->
               let ty = snd (Var_map.find id locals) in
               let tm = Lifted_a.Tuple_proj (Local_var env_var', label) in
-              label + 1, Var_map.add id (tm, ty) body_env)
-            (0, Var_map.singleton param_var (param_tm, param_ty))
-            body_fvs
+              ~label:(label + 1), ~body_env:(Var_map.add id (tm, ty) body_env))
         in
         translate globals body_env body in
 

@@ -427,17 +427,17 @@ end = struct
 
     (* Extend the typing context with forward declarations for each of the
        recursive definitions *)
-    let ctx, _ =
+    let ~ctx, ~seen:_ =
       ListLabels.fold_left defs
-        ~init:(ctx, [])
-        ~f:(fun (ctx, seen) ({ span; _ } as name, ty_params, params, body_ty, _ : Tm.def) ->
+        ~init:(~ctx, ~seen:[])
+        ~f:(fun (~ctx, ~seen) ({ span; _ } as name, ty_params, params, body_ty, _ : Tm.def) ->
           match name.data with
           | None -> error name.span "placeholder in recursive binding"
           | Some name when List.mem name seen -> error span "reused name `%s` in recursive binding" name
           | Some name ->
               let ty_params = check_ty_params ty_params in
               let ty = check_fun_ty (Ctx.extend_tys ctx ty_params) span params body_ty in
-              Ctx.extend_tm ctx (Some name) (ty_params, ty), name :: seen)
+              ~ctx:(Ctx.extend_tm ctx (Some name) (ty_params, ty)), ~seen:(name :: seen))
     in
 
     (* Elaborate the definitions with the recursive definitions in scope *)
