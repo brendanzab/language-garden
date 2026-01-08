@@ -560,7 +560,6 @@ module Surface = struct
         List.find_index (String.equal name) ctx.ty_names
         |> Option.map (fun index -> index, List.nth ctx.ty_defs index)
 
-
       let extend_poly_expr (ctx : t) (name : Expr.name) (cty : Ty.Clos.t) : t =
         { ctx with expr_tys = (name, cty) :: ctx.expr_tys }
 
@@ -569,7 +568,6 @@ module Surface = struct
 
       let lookup_expr (ctx : t) (name : Expr.name) : Ty.Clos.t option =
         List.assoc_opt name ctx.expr_tys
-
 
       let eval_ty (ctx : t) (ty : Ty.t) : Ty.Value.t =
         Ty.eval ctx.ty_defs ty
@@ -591,7 +589,6 @@ module Surface = struct
 
       let pp_vty (ctx : t) (vty : Ty.Value.t) (ppf : Format.formatter) : unit =
         pp_ty ctx (quote_vty ctx vty) ppf
-
 
       let unsolved_metas (ctx : t) : string Seq.t =
         Dynarray.to_seq ctx.metas |> Seq.filter_map @@ function

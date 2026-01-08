@@ -407,6 +407,7 @@ module Surface = struct
       val create : unit -> t
 
       val fresh_vty : t -> string -> Core.Ty.Value.t
+
       val extend_ty_def : t -> Core.Ty.name -> Core.Ty.Value.t -> t
       val extend_ty_param : t -> Core.Ty.name -> t
       val lookup_ty : t -> Core.Ty.name -> Core.Ty.Value.t option
