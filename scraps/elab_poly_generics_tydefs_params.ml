@@ -14,7 +14,6 @@
       Elaboration with Controlled Definition Unfolding} for more details.
     - Datatype definitions (see [misc_local_datatypes.ml] and {{: https://doi.org/10.1145/3729338}
       Practical Type Inference with Levels})
-    - Defunctionalise closure representation
 *)
 
 (** Returns a list of the duplicate elements in a list *)
@@ -80,15 +79,11 @@ module Core = struct
         | Bool
         | Int
 
-      (** Types that can be instantiated with a series of type arguments *)
-      (* TODO: Use a defunctionalised closure here *)
-      type clos = name list * (t list -> t)
-
     end
 
   end = Ty_data
 
-  module Ty : sig
+  module rec Ty : sig
 
     include module type of Ty_data
 
@@ -112,8 +107,23 @@ module Core = struct
 
     end
 
-    val eval : Value.clos list -> t -> Value.t
+    (** Types that can be instantiated with a series of type arguments *)
+    module Clos : sig
 
+      type t
+
+      val make : t list -> int -> Ty.t -> t
+      val value : Value.t -> t
+
+      val arity : t -> int
+      val inst : t -> Value.t list -> Value.t
+
+    end
+
+    (** Evaluate a type into a value *)
+    val eval : Clos.t list -> t -> Value.t
+
+    (** Quote an evaluated type back into its normal form *)
     val quote : Value.level -> Value.t -> t
 
     (** Inline solved metavariables in types *)
@@ -195,14 +205,26 @@ module Core = struct
         incr next;
         ref (Unsolved id)
 
-    let rec eval (env : Value.clos list) (ty : t) : Value.t =
+    type clos =
+      | Clos of clos list * int * t
+      | Value of Value.t
+
+    let rec eval (env : clos list) (ty : t) : Value.t =
       match ty with
-      | Var (index, args) -> snd (List.nth env index) (List.map (eval env) args)
+      | Var (index, args) -> inst (List.nth env index) (List.map (eval env) args)
       | Meta meta -> Value.Meta meta
       | Fun (param_ty, body_ty) -> Value.Fun (eval env param_ty, eval env body_ty)
       | Tuple elem_tys -> Value.Tuple (List.map (eval env) elem_tys)
       | Bool -> Value.Bool
       | Int -> Value.Int
+
+    and inst (clos : clos) (args : Value.t list) =
+      match clos, args with
+      | Clos (env, arity, body), args when List.length args = arity ->
+          let extend_arg acc arg = Value arg :: acc in
+          eval (List.fold_left extend_arg env args) body
+      | Value vty, [] -> vty
+      | _, _ -> failwith "mismatched arity"
 
     let rec quote (size : Value.level) (vty : Value.t) : t =
       match vty with
@@ -265,6 +287,22 @@ module Core = struct
         | Unsolved id -> Format.fprintf ppf "?%i" id
       in
       pp_ty ty ppf
+
+    module Clos = struct
+
+      type t = clos
+
+      let make env arity ty = Clos (env, arity, ty)
+      let value vty = Value vty
+
+      let arity clos =
+        match clos with
+        | Clos (_, arity, _) -> arity
+        | Value _ -> 0
+
+      let inst = inst
+
+    end
 
   end
 
@@ -452,18 +490,19 @@ module Surface = struct
       val create : unit -> t
 
       val fresh_vty : t -> string -> Ty.Value.t
-      val extend_poly_ty_def : t -> Ty.name -> Ty.Value.clos -> t
+
+      val extend_poly_ty_def : t -> Ty.name -> Ty.Clos.t -> t
       val extend_ty_def : t -> Ty.name -> Ty.Value.t -> t [@@warning "-unused-value-declaration"]
       val extend_ty_param : t -> Ty.name -> t
-      val lookup_ty : t -> Ty.name -> Ty.(index * Value.clos) option
+      val lookup_ty : t -> Ty.name -> Ty.(index * Clos.t) option
 
-      val extend_poly_expr : t -> Expr.name -> Ty.Value.clos -> t
+      val extend_poly_expr : t -> Expr.name -> Ty.Clos.t -> t
       val extend_expr : t -> Expr.name -> Ty.Value.t -> t
-      val lookup_expr : t -> Expr.name -> Ty.Value.clos option
+      val lookup_expr : t -> Expr.name -> Ty.Clos.t option
 
       val eval_ty : t -> Ty.t -> Ty.Value.t
       val quote_vty : t -> Ty.Value.t -> Ty.t
-      val close_ty : t -> Ty.name list -> Ty.t -> Ty.Value.clos
+      val close_ty : t -> Ty.name list -> Ty.t -> Ty.Clos.t
       val zonk_ty : t -> Ty.t -> Ty.t
       val zonk_expr : t -> Expr.t -> Expr.t
       val pp_vty : t -> Ty.Value.t -> Format.formatter -> unit
@@ -479,8 +518,8 @@ module Surface = struct
         metas : (Ty.meta * string) Dynarray.t;
         ty_size : Ty.Value.level;
         ty_names : Ty.name list;
-        ty_defs : Ty.Value.clos list;
-        expr_tys : (Expr.name * Ty.Value.clos) list;
+        ty_defs : Ty.Clos.t list;
+        expr_tys : (Expr.name * Ty.Clos.t) list;
       }
 
       let create () = {
@@ -496,7 +535,7 @@ module Surface = struct
         Dynarray.add_last ctx.metas (meta, desc);
         Ty.Value.Meta meta
 
-      let extend_poly_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Value.clos) : t =
+      let extend_poly_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Clos.t) : t =
         { ctx with
           ty_size = 1 + ctx.ty_size;
           ty_names = name :: ctx.ty_names;
@@ -504,23 +543,23 @@ module Surface = struct
         }
 
       let extend_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Value.t) : t =
-        extend_poly_ty_def ctx name ([], fun _ -> ty_def)
+        extend_poly_ty_def ctx name (Ty.Clos.value ty_def)
 
       let extend_ty_param (ctx : t) (name : Ty.name) : t =
         extend_ty_def ctx name (Ty.Value.Var ctx.ty_size)
 
-      let lookup_ty (ctx : t) (name : Ty.name) : Ty.(index * Value.clos) option =
+      let lookup_ty (ctx : t) (name : Ty.name) : Ty.(index * Clos.t) option =
         List.find_index (String.equal name) ctx.ty_names
         |> Option.map (fun index -> index, List.nth ctx.ty_defs index)
 
 
-      let extend_poly_expr (ctx : t) (name : Expr.name) (ty_params, ty : Ty.Value.clos) : t =
-        { ctx with expr_tys = (name, (ty_params, ty)) :: ctx.expr_tys }
+      let extend_poly_expr (ctx : t) (name : Expr.name) (cty : Ty.Clos.t) : t =
+        { ctx with expr_tys = (name, cty) :: ctx.expr_tys }
 
       let extend_expr (ctx : t) (name : Expr.name) (ty : Ty.Value.t) : t =
-        extend_poly_expr ctx name ([], fun _ -> ty)
+        extend_poly_expr ctx name (Ty.Clos.value ty)
 
-      let lookup_expr (ctx : t) (name : Expr.name) : Ty.Value.clos option =
+      let lookup_expr (ctx : t) (name : Expr.name) : Ty.Clos.t option =
         List.assoc_opt name ctx.expr_tys
 
 
@@ -530,9 +569,8 @@ module Surface = struct
       let quote_vty (ctx : t) (vty : Ty.Value.t) : Ty.t =
         Ty.quote ctx.ty_size vty
 
-      let close_ty ({ ty_defs; _ } : t) (ty_params : Ty.name list) (ty : Ty.t) : Ty.Value.clos =
-        let extend acc arg = ([], fun _ -> arg) :: acc in
-        ty_params, fun ty_args -> Ty.eval (List.fold_left extend ty_defs ty_args) ty
+      let close_ty (ctx : t) (ty_params : Ty.name list) (ty : Ty.t) : Ty.Clos.t =
+        Ty.Clos.make ctx.ty_defs (List.length ty_params) ty
 
       let zonk_ty (ctx : t) (vty : Ty.t) : Ty.t =
         Ty.zonk ctx.ty_size vty
@@ -570,21 +608,20 @@ module Surface = struct
     let rec check_ty (ctx : Ctx.t) (ty : Ty.t) : Core.Ty.t =
       match ty with
       | Ty.Name (name, ty_args) ->
-          let ty_params, ty =
+          let arity, ty =
             match Ctx.lookup_ty ctx name with
-            | Some (index, (ty_params, _)) ->
-                ty_params, fun ty_args -> Core.Ty.Var (index, ty_args)
-            | None when name = "Bool" -> [], fun _ -> Core.Ty.Bool
-            | None when name = "Int" -> [], fun _ -> Core.Ty.Int
+            | Some (index, cty) -> Core.Ty.(Clos.arity cty, fun ty_args -> Var (index, ty_args))
+            | None when name = "Bool" -> 0, fun _ -> Core.Ty.Bool
+            | None when name = "Int" -> 0, fun _ -> Core.Ty.Int
             | None -> error "unbound type variable `%s`" name
           in
 
-          if List.length ty_params = List.length ty_args then
+          if arity = List.length ty_args then
             ty (List.map (check_ty ctx) ty_args)
           else
             error "expected %i type %s, found %i"
-              (List.length ty_params)
-              (match ty_params with [_] -> "argument" | _ -> "arguments")
+              arity
+              (if arity = 1 then "argument" else "arguments")
               (List.length ty_args)
 
       | Ty.Fun (ty1, ty2) -> Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
@@ -638,27 +675,27 @@ module Surface = struct
     and infer_expr (ctx : Ctx.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.Value.t =
       match expr with
       | Expr.Name (name, ty_args) ->
-          let expr, pty =
+          let expr, cty =
             match Ctx.lookup_expr ctx name with
             | Some pty -> (fun ty_args -> Core.Expr.Var (name, ty_args)), pty
-            | None when name = "true" -> Core.((fun _ -> Expr.Bool_lit true), ([], fun _ -> Ty.Value.Bool))
-            | None when name = "false" -> Core.((fun _ -> Expr.Bool_lit false), ([], fun _ -> Ty.Value.Bool))
+            | None when name = "true" -> Core.((fun _ -> Expr.Bool_lit true), Ty.Clos.value Ty.Value.Bool)
+            | None when name = "false" -> Core.((fun _ -> Expr.Bool_lit false), Ty.Clos.value Ty.Value.Bool)
             | None -> error "unbound variable `%s`" name
           in
 
-          begin match pty, ty_args with
-          | (ty_params, ty), [] ->
-              let ty_args = ty_params |> List.map (fun _ -> Ctx.fresh_vty ctx "type argument") in
-              expr (List.map (Ctx.quote_vty ctx) ty_args), ty ty_args
+          begin match cty, ty_args with
+          | cty, [] ->
+              let ty_args = List.init (Core.Ty.Clos.arity cty) (fun _ -> Ctx.fresh_vty ctx "type argument") in
+              expr (List.map (Ctx.quote_vty ctx) ty_args), Core.Ty.Clos.inst cty ty_args
 
-          | (ty_params, ty), ty_args when List.length ty_params = List.length ty_args ->
+          | cty, ty_args when Core.Ty.Clos.arity cty = List.length ty_args ->
               let ty_args = List.map (check_ty ctx) ty_args in
-              expr ty_args, ty (List.map (Ctx.eval_ty ctx) ty_args)
+              expr ty_args, Core.Ty.Clos.inst cty (List.map (Ctx.eval_ty ctx) ty_args)
 
-          | (ty_params, _), ty_args ->
+          | cty, ty_args ->
               error "expected %i type %s, found %i"
-                (List.length ty_params)
-                (match ty_params with [_] -> "argument" | _ -> "arguments")
+                (Core.Ty.Clos.arity cty)
+                (if Core.Ty.Clos.arity cty = 1 then "argument" else "arguments")
                 (List.length ty_args)
           end
 
