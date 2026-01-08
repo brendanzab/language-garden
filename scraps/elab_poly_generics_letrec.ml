@@ -50,8 +50,7 @@ module Core = struct
       | Solved of t
       | Unsolved of meta_id
 
-    (** Create a fresh, unsolved metavariable at a given level in the type
-        environment *)
+    (** Create a fresh, unsolved metavariable *)
     let fresh_meta : unit -> meta =
       let next = ref 0 in
       fun () ->

@@ -69,8 +69,7 @@ module Core = struct
 
     include module type of Ty_data
 
-    (** Create a fresh, unsolved metavariable at a given level in the type
-        environment *)
+    (** Create a fresh, unsolved metavariable *)
     val fresh_meta : unit -> meta
 
     module Value : sig
