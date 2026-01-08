@@ -2,6 +2,8 @@
     with explicit type parameters (similar to languages like Rust, Typescript,
     C#, and Java).
 
+    Extends [elab_stlc_bidir.ml].
+
     This supports typechecking expressions like:
 
     {@text[

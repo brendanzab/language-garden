@@ -1,6 +1,7 @@
 # Generics
 
 - Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ type parameters, mutual recursion) (- normalisation-by-evaluation)
+- Based on [**scraps/elab_poly_generics_letrec.ml**](../scraps/elab_poly_generics_letrec.ml)
 
 ---
 
@@ -57,6 +58,7 @@ fact 5
 
 <details>
 <summary>Elaboration output</summary>
+
 <!-- $MDX file=examples/fix.stdout -->
 ```
 let rec {
@@ -89,7 +91,7 @@ etc. This is what I think most people are asking for when they ask about
 implementing generics, as opposed to Hindley-Milner type systems (with
 generalisation[^hm]).
 
-A more stripped-down version of this project can be found in [`scraps/check_poly_generics.ml`].
+A stripped-down version of this project can be found in [`scraps/check_poly_generics.ml`].
 
 [^hm]: For examples of Hindley-Milner type system implementations that implement
   generalisation, see [`scraps/check_poly_algorithm_j.ml`] and

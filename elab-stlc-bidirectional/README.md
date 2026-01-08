@@ -1,5 +1,9 @@
 # Bidirectional typing for a simply typed lambda calculus
 
+- Based on [**scraps/elab_stlc_bidir.ml**](../scraps/elab_stlc_bidir.ml)
+
+---
+
 This project implements a bidirectional elaborator for a simply typed lambda
 calculus with booleans and integers. We use bidirectional type checking during
 elaboration to allow the programmer to omit some type annotations, without
