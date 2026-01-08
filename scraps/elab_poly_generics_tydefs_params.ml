@@ -329,7 +329,15 @@ module Core = struct
       *)
 
       | Let_type of Ty.def * t
-      (** Local type definitions. *)
+      (** Local type definitions. These can be parameterised by a series of
+          type arguments, corresponding to a type-lambda in System Fω:
+
+          {@text[
+            let type Foo : k₁ -> ... -> kₙ :=
+              Λ a₁ ... aₙ. t
+            in e
+          ]}
+      *)
 
       | Fun_lit of name * Ty.t * t
       | Fun_app of t * t
