@@ -9,7 +9,6 @@
   compile-arithcond
   alcotest
   menhirLib
-  qcheck
   qcheck-core
   qcheck-alcotest
   sedlex))
