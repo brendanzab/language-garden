@@ -1,5 +1,10 @@
 (** A polymorphic functional language with parameterised type definitions.
 
+    To make keeping track of substitutions easier we switch to using
+    normalisation-by-evaluation in types. This should also make it easier to
+    control the unfolding of types in the future, making it easier to support
+    better error messages.
+
     Extends [elab_poly_generics_tydefs.ml].
 
     {2 Future work}
