@@ -329,7 +329,7 @@ exception Escaping_scope of meta * vty
         to match the level of the to-be-solved metavariable.
 *)
 let validate_meta_solution (ty_size : level) (m, ty_level : meta * level) (vty : vty) : unit =
-  (** Traverse the solution candidate type, using the size of the typing
+  (* Traverse the solution candidate type, using the size of the typing
       context to generate free variables under binders. *)
   let rec go ty_size' (vty : vty) =
     match vty with

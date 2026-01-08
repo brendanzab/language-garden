@@ -3,7 +3,8 @@
  (public_name stlc)
  (package wip-compile-stlc)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) surface_lexer)))
  (libraries
   menhirLib))
 

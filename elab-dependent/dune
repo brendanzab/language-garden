@@ -3,7 +3,8 @@
  (public_name dependent)
  (package elab-dependent)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib

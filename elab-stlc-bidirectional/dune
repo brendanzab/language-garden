@@ -3,7 +3,8 @@
  (public_name stlc-bidirectional)
  (package elab-stlc-bidirectional)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib))

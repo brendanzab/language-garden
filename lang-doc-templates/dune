@@ -3,7 +3,8 @@
  (public_name doc-templates)
  (package lang-doc-templates)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   menhirLib))
 

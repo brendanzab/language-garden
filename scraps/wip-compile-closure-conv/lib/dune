@@ -2,7 +2,8 @@
  (name closure_conv)
  (public_name wip-compile-closure-conv)
  (preprocess
-  (pps sedlex.ppx)))
+  (per_module
+   ((pps sedlex.ppx) lang__fun__lexer))))
 
 (menhir
  (modules lang__fun__parser))

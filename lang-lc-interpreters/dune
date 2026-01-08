@@ -3,7 +3,8 @@
  (public_name name-binding-comparison)
  (package lang-lc-interpreters)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   menhirLib))
 

@@ -3,7 +3,8 @@
  (public_name system-f-unification)
  (package elab-system-f-unification)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib))

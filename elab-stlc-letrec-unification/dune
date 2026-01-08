@@ -3,7 +3,8 @@
  (public_name stlc-letrec-unification)
  (package elab-stlc-letrec-unification)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib))

@@ -3,7 +3,8 @@
  (public_name dependent-sugar)
  (package elab-dependent-sugar)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib

@@ -3,7 +3,8 @@
  (public_name stlc-bidirectional-stratify)
  (package elab-stlc-bidirectional-stratify)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib))

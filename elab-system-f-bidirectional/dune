@@ -3,7 +3,8 @@
  (public_name system-f-bidirectional)
  (package elab-system-f-bidirectional)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib))

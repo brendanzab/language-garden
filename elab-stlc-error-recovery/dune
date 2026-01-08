@@ -3,7 +3,8 @@
  (public_name stlc-error-recovery)
  (package elab-stlc-error-recovery)
  (preprocess
-  (pps sedlex.ppx))
+  (per_module
+   ((pps sedlex.ppx) lexer)))
  (libraries
   cmdliner
   menhirLib))
