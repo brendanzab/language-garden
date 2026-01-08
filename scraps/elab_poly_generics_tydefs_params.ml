@@ -90,6 +90,21 @@ module Core = struct
     (** Create a fresh, unsolved metavariable *)
     val fresh_meta : unit -> meta
 
+    (** Evaluate a type into a value *)
+    val eval : Ty.Clos.t list -> t -> Ty.Value.t
+
+    (** Quote an evaluated type back into its normal form *)
+    val quote : Ty.Value.level -> Ty.Value.t -> t
+
+    (** Inline solved metavariables in types *)
+    val zonk : Ty.Value.level -> t -> t
+
+    (** Inline solved metavariables in type definitions *)
+    val zonk_def : Ty.Value.level -> def -> def
+
+    (** Pretty print a type *)
+    val pp : Ty.Value.level -> name list -> t -> Format.formatter -> unit
+
     module Value : sig
 
       include module type of Value
@@ -122,83 +137,9 @@ module Core = struct
 
     end
 
-    (** Evaluate a type into a value *)
-    val eval : Clos.t list -> t -> Value.t
-
-    (** Quote an evaluated type back into its normal form *)
-    val quote : Value.level -> Value.t -> t
-
-    (** Inline solved metavariables in types *)
-    val zonk : Value.level -> t -> t
-
-    (** Inline solved metavariables in type definitions *)
-    val zonk_def : Value.level -> def -> def
-
-    (** Pretty print a type *)
-    val pp : Value.level -> name list -> t -> Format.formatter -> unit
-
   end = struct
 
     include Ty_data
-
-    module Value = struct
-
-      include Value
-
-      let rec force (ty : t) : t =
-        match ty with
-        | Meta ({ contents = Solved ty } as m) ->
-            let ty = force ty in
-            m := Solved ty;
-            ty
-        | ty -> ty
-
-      exception Mismatched_types
-      exception Infinite_type
-
-      (** Ensure that the candidate type does not refer to the to-be-solved
-          metavariable *)
-      let rec occurs (m : meta) (ty : t) =
-        match ty with
-        | Var _ -> ()
-        | Meta m' when m == m' -> raise Infinite_type
-        | Meta { contents = Solved ty } -> occurs m ty
-        | Meta { contents = Unsolved _ } -> ()
-        | Fun (param_ty, body_ty) ->
-            occurs m param_ty;
-            occurs m body_ty
-        | Tuple elem_tys ->
-            List.iter (occurs m) elem_tys
-        | Bool -> ()
-        | Int -> ()
-
-      let rec unify (ty1 : t) (ty2 : t) =
-        match force ty1, force ty2 with
-        | Var name1, Var name2 when name1 = name2 -> ()
-        | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
-        | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
-            unify param_ty1 param_ty2;
-            unify body_ty1 body_ty2
-        | Tuple [], Tuple [] -> ()
-        | Tuple (elem_ty1 :: elem_tys1), Tuple (elem_ty2 :: elem_tys2) ->
-            unify elem_ty1 elem_ty2;
-            unify (Tuple elem_tys1) (Tuple elem_tys2)
-        | Bool, Bool -> ()
-        | Int, Int -> ()
-
-        (* Unify through solved metavariables *)
-        | Meta { contents = Solved ty1 }, ty2 -> unify ty1 ty2
-        | ty1, Meta { contents = Solved ty2 } -> unify ty1 ty2
-
-        (* Update unsolved metavariables in-place *)
-        | Meta ({ contents = Unsolved _ } as m), ty
-        | ty, Meta ({ contents = Unsolved _ } as m) ->
-            occurs m ty;
-            m := Solved ty
-
-        | _, _ -> raise Mismatched_types
-
-    end
 
     let fresh_meta : unit -> meta =
       let next = ref 0 in
@@ -292,6 +233,65 @@ module Core = struct
         | Unsolved id -> Format.fprintf ppf "?%i" id
       in
       pp_ty ty ppf
+
+    module Value = struct
+
+      include Value
+
+      let rec force (ty : t) : t =
+        match ty with
+        | Meta ({ contents = Solved ty } as m) ->
+            let ty = force ty in
+            m := Solved ty;
+            ty
+        | ty -> ty
+
+      exception Mismatched_types
+      exception Infinite_type
+
+      (** Ensure that the candidate type does not refer to the to-be-solved
+          metavariable *)
+      let rec occurs (m : meta) (ty : t) =
+        match ty with
+        | Var _ -> ()
+        | Meta m' when m == m' -> raise Infinite_type
+        | Meta { contents = Solved ty } -> occurs m ty
+        | Meta { contents = Unsolved _ } -> ()
+        | Fun (param_ty, body_ty) ->
+            occurs m param_ty;
+            occurs m body_ty
+        | Tuple elem_tys ->
+            List.iter (occurs m) elem_tys
+        | Bool -> ()
+        | Int -> ()
+
+      let rec unify (ty1 : t) (ty2 : t) =
+        match force ty1, force ty2 with
+        | Var name1, Var name2 when name1 = name2 -> ()
+        | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
+        | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
+            unify param_ty1 param_ty2;
+            unify body_ty1 body_ty2
+        | Tuple [], Tuple [] -> ()
+        | Tuple (elem_ty1 :: elem_tys1), Tuple (elem_ty2 :: elem_tys2) ->
+            unify elem_ty1 elem_ty2;
+            unify (Tuple elem_tys1) (Tuple elem_tys2)
+        | Bool, Bool -> ()
+        | Int, Int -> ()
+
+        (* Unify through solved metavariables *)
+        | Meta { contents = Solved ty1 }, ty2 -> unify ty1 ty2
+        | ty1, Meta { contents = Solved ty2 } -> unify ty1 ty2
+
+        (* Update unsolved metavariables in-place *)
+        | Meta ({ contents = Unsolved _ } as m), ty
+        | ty, Meta ({ contents = Unsolved _ } as m) ->
+            occurs m ty;
+            m := Solved ty
+
+        | _, _ -> raise Mismatched_types
+
+    end
 
     module Clos = struct
 
