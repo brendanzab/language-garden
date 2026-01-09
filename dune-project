@@ -71,6 +71,15 @@
   (sedlex (>= "3.7"))))
 
 (package
+ (name elab-generics-tydefs)
+ (depends
+  (cmdliner (>= "2.1"))
+  (menhir (and (>= "20250912") :build))
+  (menhirLib (>= "20250912"))
+  (mdx (and (>= "2.5") :with-test))
+  (sedlex (>= "3.7"))))
+
+(package
  (name elab-stlc-abstract)
  (depends
   ; (cmdliner (>= "2.1"))

@@ -1,0 +1,3 @@
+(cram
+ (package elab-generics-tydefs)
+ (deps %{bin:generics-tydefs}))

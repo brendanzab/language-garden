@@ -1,0 +1,6 @@
+let id [A] : A -> A := fun (x : A) => x;
+let const [A, B] : A -> B -> A := fun (x : A) => fun (y : B) => x;
+let flip [A, B, C] : (A -> B -> C) -> B -> A -> C :=
+  fun (f : A -> B -> C) => fun (x : B) => fun (y : A) => f y x;
+flip [Int -> Int, Bool, Int -> Int] const [Int -> Int, Bool] true id [Int] 45
+: Int

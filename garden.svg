@@ -37,7 +37,7 @@
 <text text-anchor="middle" x="534.25" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;dependent&#45;sugar</text>
 </g>
 <!-- elab&#45;dependent&#45;&gt;elab&#45;dependent&#45;sugar -->
-<g id="edge13" class="edge">
+<g id="edge14" class="edge">
 <title>elab&#45;dependent&#45;&gt;elab&#45;dependent&#45;sugar</title>
 <path fill="none" stroke="black" d="M368.99,-387C391.54,-387 417.67,-387 442.35,-387"/>
 <polygon fill="black" stroke="black" points="442.06,-390.5 452.06,-387 442.06,-383.5 442.06,-390.5"/>
@@ -49,7 +49,7 @@
 <text text-anchor="middle" x="737.42" y="-381.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;record&#45;patching</text>
 </g>
 <!-- elab&#45;dependent&#45;sugar&#45;&gt;elab&#45;record&#45;patching -->
-<g id="edge14" class="edge">
+<g id="edge15" class="edge">
 <title>elab&#45;dependent&#45;sugar&#45;&gt;elab&#45;record&#45;patching</title>
 <path fill="none" stroke="black" d="M615.05,-387C626.32,-387 637.96,-387 649.36,-387"/>
 <polygon fill="black" stroke="black" points="649.14,-390.5 659.14,-387 649.14,-383.5 649.14,-390.5"/>
@@ -67,7 +67,7 @@
 <text text-anchor="middle" x="534.25" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;system&#45;f&#45;unification</text>
 </g>
 <!-- elab&#45;system&#45;f&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;unification -->
-<g id="edge12" class="edge">
+<g id="edge13" class="edge">
 <title>elab&#45;system&#45;f&#45;bidirectional&#45;&gt;elab&#45;system&#45;f&#45;unification</title>
 <path fill="none" stroke="black" d="M401.18,-441C412.22,-441 423.53,-441 434.65,-441"/>
 <polygon fill="black" stroke="black" points="434.63,-444.5 444.63,-441 434.63,-437.5 434.63,-444.5"/>
@@ -78,8 +78,20 @@
 <path fill="white" stroke="none" d="M577.15,-513C577.15,-513 491.35,-513 491.35,-513 485.35,-513 479.35,-507 479.35,-501 479.35,-501 479.35,-489 479.35,-489 479.35,-483 485.35,-477 491.35,-477 491.35,-477 577.15,-477 577.15,-477 583.15,-477 589.15,-483 589.15,-489 589.15,-489 589.15,-501 589.15,-501 589.15,-507 583.15,-513 577.15,-513"/>
 <text text-anchor="middle" x="534.25" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;generics</text>
 </g>
-<!-- elab&#45;stlc&#45;bidirectional -->
+<!-- elab&#45;generics&#45;tydefs -->
 <g id="node7" class="node">
+<title>elab&#45;generics&#45;tydefs</title>
+<path fill="white" stroke="none" d="M800.57,-513C800.57,-513 674.27,-513 674.27,-513 668.27,-513 662.27,-507 662.27,-501 662.27,-501 662.27,-489 662.27,-489 662.27,-483 668.27,-477 674.27,-477 674.27,-477 800.57,-477 800.57,-477 806.57,-477 812.57,-483 812.57,-489 812.57,-489 812.57,-501 812.57,-501 812.57,-507 806.57,-513 800.57,-513"/>
+<text text-anchor="middle" x="737.42" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;generics&#45;tydefs</text>
+</g>
+<!-- elab&#45;generics&#45;&gt;elab&#45;generics&#45;tydefs -->
+<g id="edge12" class="edge">
+<title>elab&#45;generics&#45;&gt;elab&#45;generics&#45;tydefs</title>
+<path fill="none" stroke="black" d="M589.43,-495C608.28,-495 629.92,-495 650.69,-495"/>
+<polygon fill="black" stroke="black" points="650.61,-498.5 660.61,-495 650.61,-491.5 650.61,-498.5"/>
+</g>
+<!-- elab&#45;stlc&#45;bidirectional -->
+<g id="node8" class="node">
 <title>elab&#45;stlc&#45;bidirectional</title>
 <path fill="white" stroke="none" d="M159.55,-486C159.55,-486 28,-486 28,-486 22,-486 16,-480 16,-474 16,-474 16,-462 16,-462 16,-456 22,-450 28,-450 28,-450 159.55,-450 159.55,-450 165.55,-450 171.55,-456 171.55,-462 171.55,-462 171.55,-474 171.55,-474 171.55,-480 165.55,-486 159.55,-486"/>
 <text text-anchor="middle" x="93.77" y="-462.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;bidirectional</text>
@@ -97,7 +109,7 @@
 <polygon fill="black" stroke="black" points="202.66,-457.77 212.14,-453.03 201.78,-450.82 202.66,-457.77"/>
 </g>
 <!-- elab&#45;stlc&#45;unification -->
-<g id="node8" class="node">
+<g id="node9" class="node">
 <title>elab&#45;stlc&#45;unification</title>
 <path fill="white" stroke="none" d="M367.6,-513C367.6,-513 247.3,-513 247.3,-513 241.3,-513 235.3,-507 235.3,-501 235.3,-501 235.3,-489 235.3,-489 235.3,-483 241.3,-477 247.3,-477 247.3,-477 367.6,-477 367.6,-477 373.6,-477 379.6,-483 379.6,-489 379.6,-489 379.6,-501 379.6,-501 379.6,-507 373.6,-513 367.6,-513"/>
 <text text-anchor="middle" x="307.45" y="-489.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;unification</text>
@@ -109,7 +121,7 @@
 <polygon fill="black" stroke="black" points="223.26,-487.92 233.62,-485.71 224.14,-480.97 223.26,-487.92"/>
 </g>
 <!-- elab&#45;stlc&#45;bidirectional&#45;stratify -->
-<g id="node9" class="node">
+<g id="node10" class="node">
 <title>elab&#45;stlc&#45;bidirectional&#45;stratify</title>
 <path fill="white" stroke="none" d="M395.35,-567C395.35,-567 219.55,-567 219.55,-567 213.55,-567 207.55,-561 207.55,-555 207.55,-555 207.55,-543 207.55,-543 207.55,-537 213.55,-531 219.55,-531 219.55,-531 395.35,-531 395.35,-531 401.35,-531 407.35,-537 407.35,-543 407.35,-543 407.35,-555 407.35,-555 407.35,-561 401.35,-567 395.35,-567"/>
 <text text-anchor="middle" x="307.45" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;bidirectional&#45;stratify</text>
@@ -121,7 +133,7 @@
 <polygon fill="black" stroke="black" points="221.03,-530.42 231.62,-530.1 223.14,-523.75 221.03,-530.42"/>
 </g>
 <!-- elab&#45;stlc&#45;abstract -->
-<g id="node10" class="node">
+<g id="node11" class="node">
 <title>elab&#45;stlc&#45;abstract</title>
 <path fill="white" stroke="none" d="M361.22,-621C361.22,-621 253.67,-621 253.67,-621 247.67,-621 241.67,-615 241.67,-609 241.67,-609 241.67,-597 241.67,-597 241.67,-591 247.67,-585 253.67,-585 253.67,-585 361.22,-585 361.22,-585 367.22,-585 373.22,-591 373.22,-597 373.22,-597 373.22,-609 373.22,-609 373.22,-615 367.22,-621 361.22,-621"/>
 <text text-anchor="middle" x="307.45" y="-597.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;abstract</text>
@@ -133,7 +145,7 @@
 <polygon fill="black" stroke="black" points="229.27,-589.78 239.86,-589.7 231.53,-583.15 229.27,-589.78"/>
 </g>
 <!-- elab&#45;stlc&#45;error&#45;recovery -->
-<g id="node13" class="node">
+<g id="node14" class="node">
 <title>elab&#45;stlc&#45;error&#45;recovery</title>
 <path fill="white" stroke="none" d="M379.6,-675C379.6,-675 235.3,-675 235.3,-675 229.3,-675 223.3,-669 223.3,-663 223.3,-663 223.3,-651 223.3,-651 223.3,-645 229.3,-639 235.3,-639 235.3,-639 379.6,-639 379.6,-639 385.6,-639 391.6,-645 391.6,-651 391.6,-651 391.6,-663 391.6,-663 391.6,-669 385.6,-675 379.6,-675"/>
 <text text-anchor="middle" x="307.45" y="-651.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;error&#45;recovery</text>
@@ -145,7 +157,7 @@
 <polygon fill="black" stroke="black" points="211.18,-636.57 221.65,-638.22 214.5,-630.41 211.18,-636.57"/>
 </g>
 <!-- lang&#45;doc&#45;templates -->
-<g id="node21" class="node">
+<g id="node22" class="node">
 <title>lang&#45;doc&#45;templates</title>
 <path fill="white" stroke="none" d="M367.6,-268C367.6,-268 247.3,-268 247.3,-268 241.3,-268 235.3,-262 235.3,-256 235.3,-256 235.3,-244 235.3,-244 235.3,-238 241.3,-232 247.3,-232 247.3,-232 367.6,-232 367.6,-232 373.6,-232 379.6,-238 379.6,-244 379.6,-244 379.6,-256 379.6,-256 379.6,-262 373.6,-268 367.6,-268"/>
 <text text-anchor="middle" x="307.45" y="-244.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;doc&#45;templates</text>
@@ -169,7 +181,7 @@
 <polygon fill="black" stroke="black" points="467.61,-498.5 477.61,-495 467.61,-491.5 467.61,-498.5"/>
 </g>
 <!-- elab&#45;stlc&#45;row&#45;unification -->
-<g id="node11" class="node">
+<g id="node12" class="node">
 <title>elab&#45;stlc&#45;row&#45;unification</title>
 <path fill="white" stroke="none" d="M607.52,-567C607.52,-567 460.97,-567 460.97,-567 454.97,-567 448.97,-561 448.97,-555 448.97,-555 448.97,-543 448.97,-543 448.97,-537 454.97,-531 460.97,-531 460.97,-531 607.52,-531 607.52,-531 613.52,-531 619.52,-537 619.52,-543 619.52,-543 619.52,-555 619.52,-555 619.52,-561 613.52,-567 607.52,-567"/>
 <text text-anchor="middle" x="534.25" y="-543.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;row&#45;unification</text>
@@ -181,7 +193,7 @@
 <polygon fill="black" stroke="black" points="444.54,-531.29 455.08,-530.22 446.18,-524.48 444.54,-531.29"/>
 </g>
 <!-- elab&#45;stlc&#45;letrec&#45;unification -->
-<g id="node12" class="node">
+<g id="node13" class="node">
 <title>elab&#45;stlc&#45;letrec&#45;unification</title>
 <path fill="white" stroke="none" d="M613.15,-621C613.15,-621 455.35,-621 455.35,-621 449.35,-621 443.35,-615 443.35,-609 443.35,-609 443.35,-597 443.35,-597 443.35,-591 449.35,-585 455.35,-585 455.35,-585 613.15,-585 613.15,-585 619.15,-585 625.15,-591 625.15,-597 625.15,-597 625.15,-609 625.15,-609 625.15,-615 619.15,-621 613.15,-621"/>
 <text text-anchor="middle" x="534.25" y="-597.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">elab&#45;stlc&#45;letrec&#45;unification</text>
@@ -193,73 +205,73 @@
 <polygon fill="black" stroke="black" points="445.56,-581.81 455.97,-583.76 449.05,-575.74 445.56,-581.81"/>
 </g>
 <!-- compile&#45;arith -->
-<g id="node14" class="node">
+<g id="node15" class="node">
 <title>compile&#45;arith</title>
 <path fill="white" stroke="none" d="M135.17,-758C135.17,-758 52.37,-758 52.37,-758 46.37,-758 40.37,-752 40.37,-746 40.37,-746 40.37,-734 40.37,-734 40.37,-728 46.37,-722 52.37,-722 52.37,-722 135.17,-722 135.17,-722 141.17,-722 147.17,-728 147.17,-734 147.17,-734 147.17,-746 147.17,-746 147.17,-752 141.17,-758 135.17,-758"/>
 <text text-anchor="middle" x="93.77" y="-734.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">compile&#45;arith</text>
 </g>
 <!-- compile&#45;arithcond -->
-<g id="node15" class="node">
+<g id="node16" class="node">
 <title>compile&#45;arithcond</title>
 <path fill="white" stroke="none" d="M363.47,-758C363.47,-758 251.42,-758 251.42,-758 245.42,-758 239.42,-752 239.42,-746 239.42,-746 239.42,-734 239.42,-734 239.42,-728 245.42,-722 251.42,-722 251.42,-722 363.47,-722 363.47,-722 369.47,-722 375.47,-728 375.47,-734 375.47,-734 375.47,-746 375.47,-746 375.47,-752 369.47,-758 363.47,-758"/>
 <text text-anchor="middle" x="307.45" y="-734.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">compile&#45;arithcond</text>
 </g>
 <!-- compile&#45;arith&#45;&gt;compile&#45;arithcond -->
-<g id="edge15" class="edge">
+<g id="edge16" class="edge">
 <title>compile&#45;arith&#45;&gt;compile&#45;arithcond</title>
 <path fill="none" stroke="black" d="M147.64,-740C171.86,-740 201.06,-740 227.78,-740"/>
 <polygon fill="black" stroke="black" points="227.55,-743.5 237.55,-740 227.55,-736.5 227.55,-743.5"/>
 </g>
 <!-- lang&#45;declarative&#45;graphics -->
-<g id="node16" class="node">
+<g id="node17" class="node">
 <title>lang&#45;declarative&#45;graphics</title>
 <path fill="white" stroke="none" d="M385.22,-52C385.22,-52 229.67,-52 229.67,-52 223.67,-52 217.67,-46 217.67,-40 217.67,-40 217.67,-28 217.67,-28 217.67,-22 223.67,-16 229.67,-16 229.67,-16 385.22,-16 385.22,-16 391.22,-16 397.22,-22 397.22,-28 397.22,-28 397.22,-40 397.22,-40 397.22,-46 391.22,-52 385.22,-52"/>
 <text text-anchor="middle" x="307.45" y="-28.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;declarative&#45;graphics</text>
 </g>
 <!-- lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="node18" class="node">
+<g id="node19" class="node">
 <title>lang&#45;fractal&#45;tree&#45;rewriting</title>
 <path fill="white" stroke="none" d="M611.65,-79C611.65,-79 456.85,-79 456.85,-79 450.85,-79 444.85,-73 444.85,-67 444.85,-67 444.85,-55 444.85,-55 444.85,-49 450.85,-43 456.85,-43 456.85,-43 611.65,-43 611.65,-43 617.65,-43 623.65,-49 623.65,-55 623.65,-55 623.65,-67 623.65,-67 623.65,-73 617.65,-79 611.65,-79"/>
 <text text-anchor="middle" x="534.25" y="-55.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;tree&#45;rewriting</text>
 </g>
 <!-- lang&#45;declarative&#45;graphics&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="edge18" class="edge">
+<g id="edge19" class="edge">
 <title>lang&#45;declarative&#45;graphics&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting</title>
 <path fill="none" stroke="black" d="M397.62,-44.71C409.32,-46.12 421.38,-47.56 433.25,-48.99"/>
 <polygon fill="black" stroke="black" points="432.71,-52.45 443.05,-50.17 433.54,-45.5 432.71,-52.45"/>
 </g>
 <!-- lang&#45;fractal&#45;growth -->
-<g id="node17" class="node">
+<g id="node18" class="node">
 <title>lang&#45;fractal&#45;growth</title>
 <path fill="white" stroke="none" d="M365.72,-106C365.72,-106 249.17,-106 249.17,-106 243.17,-106 237.17,-100 237.17,-94 237.17,-94 237.17,-82 237.17,-82 237.17,-76 243.17,-70 249.17,-70 249.17,-70 365.72,-70 365.72,-70 371.72,-70 377.72,-76 377.72,-82 377.72,-82 377.72,-94 377.72,-94 377.72,-100 371.72,-106 365.72,-106"/>
 <text text-anchor="middle" x="307.45" y="-82.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;growth</text>
 </g>
 <!-- lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="edge17" class="edge">
+<g id="edge18" class="edge">
 <title>lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting</title>
 <path fill="none" stroke="black" d="M378.04,-79.64C395.53,-77.54 414.64,-75.25 433.29,-73.01"/>
 <polygon fill="black" stroke="black" points="433.5,-76.51 443.01,-71.84 432.66,-69.56 433.5,-76.51"/>
 </g>
 <!-- lang&#45;shader&#45;graphics -->
-<g id="node19" class="node">
+<g id="node20" class="node">
 <title>lang&#45;shader&#45;graphics</title>
 <path fill="white" stroke="none" d="M373.22,-160C373.22,-160 241.67,-160 241.67,-160 235.67,-160 229.67,-154 229.67,-148 229.67,-148 229.67,-136 229.67,-136 229.67,-130 235.67,-124 241.67,-124 241.67,-124 373.22,-124 373.22,-124 379.22,-124 385.22,-130 385.22,-136 385.22,-136 385.22,-148 385.22,-148 385.22,-154 379.22,-160 373.22,-160"/>
 <text text-anchor="middle" x="307.45" y="-136.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;shader&#45;graphics</text>
 </g>
 <!-- lang&#45;datalog -->
-<g id="node20" class="node">
+<g id="node21" class="node">
 <title>lang&#45;datalog</title>
 <path fill="white" stroke="none" d="M346.97,-214C346.97,-214 267.92,-214 267.92,-214 261.92,-214 255.92,-208 255.92,-202 255.92,-202 255.92,-190 255.92,-190 255.92,-184 261.92,-178 267.92,-178 267.92,-178 346.97,-178 346.97,-178 352.97,-178 358.97,-184 358.97,-190 358.97,-190 358.97,-202 358.97,-202 358.97,-208 352.97,-214 346.97,-214"/>
 <text text-anchor="middle" x="307.45" y="-190.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;datalog</text>
 </g>
 <!-- lang&#45;lc&#45;interpreters -->
-<g id="node22" class="node">
+<g id="node23" class="node">
 <title>lang&#45;lc&#45;interpreters</title>
 <path fill="white" stroke="none" d="M366.1,-322C366.1,-322 248.8,-322 248.8,-322 242.8,-322 236.8,-316 236.8,-310 236.8,-310 236.8,-298 236.8,-298 236.8,-292 242.8,-286 248.8,-286 248.8,-286 366.1,-286 366.1,-286 372.1,-286 378.1,-292 378.1,-298 378.1,-298 378.1,-310 378.1,-310 378.1,-316 372.1,-322 366.1,-322"/>
 <text text-anchor="middle" x="307.45" y="-298.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;lc&#45;interpreters</text>
 </g>
 <!-- lang&#45;lc&#45;interpreters&#45;&gt;elab&#45;stlc&#45;bidirectional -->
-<g id="edge16" class="edge">
+<g id="edge17" class="edge">
 <title>lang&#45;lc&#45;interpreters&#45;&gt;elab&#45;stlc&#45;bidirectional</title>
 <path fill="none" stroke="black" d="M265.91,-322.43C247.38,-331.67 225.59,-343.72 207.55,-357 173.42,-382.13 139.46,-417.29 117.87,-441.26"/>
 <polygon fill="black" stroke="black" points="115.26,-438.93 111.23,-448.72 120.49,-443.58 115.26,-438.93"/>

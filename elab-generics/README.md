@@ -119,13 +119,6 @@ A stripped-down version of this project can be found in [`scraps/check_poly_gene
 [`Core`]: ./core.ml
 [`Prim`]: ./prim.ml
 
-## Future work
-
-- [x] Recursive definitions (see [elab-stlc-letrec-unification](../elab-stlc-letrec-unification))
-- [ ] Local datatype definitions (see [misc_local_datatypes.ml](../scraps/misc_local_datatypes.ml)
-  and [Practical Type Inference with Levels](https://doi.org/10.1145/3729338)
-- [ ] Local type aliases
-
 ## Examples
 
 More examples can be found in the [`examples`](./examples/) and
