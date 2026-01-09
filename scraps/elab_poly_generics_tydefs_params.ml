@@ -1,10 +1,5 @@
 (** A polymorphic functional language with parameterised type definitions.
 
-    To make keeping track of substitutions easier we switch to using
-    normalisation-by-evaluation in types. This should also make it easier to
-    control the unfolding of types in the future, making it easier to support
-    better error messages.
-
     Extends [elab_poly_generics_tydefs.ml].
 
     {2 Future work}
@@ -122,9 +117,7 @@ module Core = struct
 
     end
 
-    (** Types that can be instantiated with a series of type arguments.
-        These are used for representing polymorphic definitions during
-        elaboration. *)
+    (** Types that can be instantiated with a series of type arguments. *)
     module Clos : sig
 
       type t
@@ -164,8 +157,8 @@ module Core = struct
       | Bool -> Value.Bool
       | Int -> Value.Int
 
-    and inst (clos : clos) (args : Value.t list) =
-      match clos, args with
+    and inst (cty : clos) (args : Value.t list) =
+      match cty, args with
       | Clos (env, arity, body), args when List.length args = arity ->
           let extend_arg acc arg = Value arg :: acc in
           eval (List.fold_left extend_arg env args) body
@@ -300,8 +293,8 @@ module Core = struct
       let make env arity ty = Clos (env, arity, ty)
       let value vty = Value vty
 
-      let arity clos =
-        match clos with
+      let arity (cty : t) : int =
+        match cty with
         | Clos (_, arity, _) -> arity
         | Value _ -> 0
 
@@ -621,8 +614,8 @@ module Surface = struct
           let arity, ty =
             match Ctx.lookup_ty ctx name with
             | Some (index, cty) -> Core.Ty.(Clos.arity cty, fun ty_args -> Var (index, ty_args))
-            | None when name = "Bool" -> 0, fun _ -> Core.Ty.Bool
-            | None when name = "Int" -> 0, fun _ -> Core.Ty.Int
+            | None when name = "Bool" -> Core.Ty.(0, fun _ -> Bool)
+            | None when name = "Int" -> Core.Ty.(0, fun _ -> Int)
             | None -> error "unbound type variable `%s`" name
           in
 
@@ -687,7 +680,7 @@ module Surface = struct
       | Expr.Name (name, ty_args) ->
           let expr, cty =
             match Ctx.lookup_expr ctx name with
-            | Some pty -> (fun ty_args -> Core.Expr.Var (name, ty_args)), pty
+            | Some cty -> Core.((fun ty_args -> Expr.Var (name, ty_args)), cty)
             | None when name = "true" -> Core.((fun _ -> Expr.Bool_lit true), Ty.Clos.value Ty.Value.Bool)
             | None when name = "false" -> Core.((fun _ -> Expr.Bool_lit false), Ty.Clos.value Ty.Value.Bool)
             | None -> error "unbound variable `%s`" name
