@@ -1,9 +1,11 @@
 (** Compiling untyped lambda expressions to Landin’s SECD Machine
 
-    This was an early and influential abstract machine for that introduced
-    {e closures} as a way of implementing first-class functions.
-    The name is derived from the original names used for the components of the
-    machine state in Landin’s paper:
+    This was an early and influential abstract machine from the 60s that
+    introduced {e closures} as a way of implementing first-class functions, and
+    led to further developments like the CEK machine, the Categorical Abstract
+    Machine (used in Caml), and the ZINC abstract machine (used in OCaml’s
+    bytecode). The name is derived from the names used for the components of the
+    machine state in Landin’s original paper:
 
     {@text[
       ⟨ S, E, C, D ⟩
@@ -18,8 +20,8 @@
         (S)tack
     ]}
 
-    Let expressions are implemented in the same way as on Xavier Leroy’s slides,
-    by pushing and popping definitions off the environment.
+    Let expressions are implemented in the same way as on Xavier Leroy’s slides
+    (linked below), by pushing and popping definitions off the environment.
 
     {2 Resources}
 
