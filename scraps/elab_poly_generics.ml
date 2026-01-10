@@ -601,7 +601,7 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  let run_tests (prog : (string -> (unit -> unit) -> unit) -> unit) : unit =
+  let run_tests (type a) (prog : (string -> (unit -> unit) -> unit) -> unit) : a =
     let success_count = ref 0 in
     let error_count = ref 0 in
 
@@ -622,17 +622,16 @@ let () = begin
     in
 
     Printf.printf "Running tests in %s:\n\n" __FILE__;
-
     prog run_test;
-
     Printf.printf "\n";
 
-    if !error_count > 0 then begin
+    if !error_count <= 0 then begin
+      Printf.printf "Ran %i successful tests\n\n" !success_count;
+      exit 0
+    end else begin
       Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
       exit 1
-    end;
-
-    Printf.printf "Ran %i successful tests\n\n" !success_count;
+    end
   in
 
   let open Surface in
