@@ -352,7 +352,38 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  print_string "Running tests ...";
+  let run_tests (type a) (prog : (string -> (unit -> unit) -> unit) -> unit) : a =
+    let success_count = ref 0 in
+    let error_count = ref 0 in
+
+    let run_test (name : string) (prog : unit -> unit) : unit =
+      Printf.printf "test %s ... " name;
+
+      match prog () with
+      | () ->
+          Printf.printf "ok\n";
+          incr success_count
+      | exception e ->
+          Printf.printf "error:\n\n";
+          Printf.printf "  %s\n\n" (Printexc.to_string e);
+          String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+            Printf.printf "  %s\n" line;
+          end;
+          incr error_count
+    in
+
+    Printf.printf "Running tests in %s:\n\n" __FILE__;
+    prog run_test;
+    Printf.printf "\n";
+
+    if !error_count <= 0 then begin
+      Printf.printf "Ran %i successful tests\n\n" !success_count;
+      exit 0
+    end else begin
+      Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
+      exit 1
+    end
+  in
 
   let open Expr in
 
@@ -363,84 +394,116 @@ let () = begin
     Format.asprintf "%t" (Poly_ty.pp ty)
   in
 
-  (* Examples *)
-  begin
+  begin run_tests @@ fun test ->
 
-    (* id *)
     let id_expr = Fun_lit ("x", Var "x") in
-    assert (run_infer id_expr = "forall a. a -> a");
-
-    (* const *)
     let const_expr = Fun_lit ("x", Fun_lit ("y", Var "x")) in
-    assert (run_infer const_expr = "forall a b. a -> b -> a");
 
-    let expr =
-      Let ("id", id_expr,
-        Var "id" $ Unit_lit)
-    in
-    assert (run_infer expr = "Unit");
+    begin test "id" @@ fun () ->
+      (* fun x => x *)
+      assert (run_infer id_expr = "forall a. a -> a");
+    end;
 
-    let expr =
-      Let ("id", id_expr,
+    begin test "const" @@ fun () ->
+      (* fun x y => x *)
+      assert (run_infer const_expr = "forall a b. a -> b -> a");
+    end;
+
+    begin test "let 1" @@ fun () ->
+      (*
+        let id x := x;
+        id ()
+      *)
+      let expr =
+        Let ("id", id_expr,
+          Var "id" $ Unit_lit)
+      in
+      assert (run_infer expr = "Unit");
+    end;
+
+    begin test "let 2" @@ fun () ->
+      (*
+        let id := x;
+        let const x y := x;
+        const id () ()
+      *)
+      let expr =
+        Let ("id", id_expr,
         Let ("const", const_expr,
           Var "const" $ Var "id" $ Unit_lit $ Unit_lit))
-    in
-    assert (run_infer expr = "Unit");
+      in
+      assert (run_infer expr = "Unit");
+    end;
 
-    let expr =
-      Let ("id", id_expr,
+    begin test "let 3" @@ fun () ->
+      (*
+        let id := x;
+        let const x y := x;
+        fun x ->
+          if x then
+            id
+          else
+            const true
+      *)
+      let expr =
+        Let ("id", id_expr,
         Let ("const", const_expr,
-          Fun_lit ("x",
-            Bool_if (Var "x",
-              Var "id",
-              Var "const" $ Bool_lit true))))
-    in
-    assert (run_infer expr = "Bool -> Bool -> Bool");
+        Fun_lit ("x",
+          Bool_if (Var "x",
+            Var "id",
+            Var "const" $ Bool_lit true))))
+      in
+      assert (run_infer expr = "Bool -> Bool -> Bool");
+    end;
 
-  end;
+    (* Generalisation tests. See https://okmij.org/ftp/ML/generalization.html#generalization
+      for more details *)
 
-  (* Generalisation tests. See https://okmij.org/ftp/ML/generalization.html#generalization
-     for more details *)
-  begin
-
-    let expr =
-      Fun_lit ("x",
-        Let ("y", Fun_lit ("z", Var "z"),
+    begin test "generalise 1" @@ fun () ->
+      (* fun x -> let y z := z; y *)
+      let expr =
+        Fun_lit ("x",
+          Let ("y", Fun_lit ("z", Var "z"),
           Var "y")) in
-    assert (run_infer expr = "forall a b. a -> b -> b");
+      assert (run_infer expr = "forall a b. a -> b -> b");
+    end;
 
     (* Ensure that the unsound type [forall a b. a -> b] is not inferred.  *)
-    let expr =
-      Fun_lit ("x",
-        (* At this point the typing context contains a single entry [x : $m0].
-           To prevent [y] being assigned the unsound type [forall a. a] the
-           definition should not be generalised over the metavariable [$m0] *)
-        Let ("y", Var "x",
+    begin test "generalise 2" @@ fun () ->
+      (* fun x -> let y := x; y *)
+      let expr =
+        Fun_lit ("x",
+          (* At this point the typing context contains a single entry [x : $m0].
+            To prevent [y] being assigned the unsound type [forall a. a] the
+            definition should not be generalised over the metavariable [$m0] *)
+          Let ("y", Var "x",
           Var "y")) in
-    assert (run_infer expr = "forall a. a -> a");
+      assert (run_infer expr = "forall a. a -> a");
+    end;
 
-    let expr =
-      Fun_lit ("x",
-        Let ("y", Fun_lit ("z", Var "x"),
+    begin test "generalise 3" @@ fun () ->
+      (* fun x -> let y z := x; y *)
+      let expr =
+        Fun_lit ("x",
+          Let ("y", Fun_lit ("z", Var "x"),
           Var "y")) in
-    assert (run_infer expr = "forall a b. a -> b -> a");
+      assert (run_infer expr = "forall a b. a -> b -> a");
+    end;
 
-  end;
-
-  (* Unsolved meta tests *)
-  begin
+    (* Unsolved meta tests *)
 
     (* The following example will leave a metavariable unsolved for the of the
-       second function. See “No Unification Variable Left Behind”
-       https://doi.org/10.4230/LIPIcs.ITP.2023.8 for more information. *)
-    let expr =
-      Let ("x", Fun_lit ("f", Unit_lit) $ Fun_lit ("y", Var "y"),
+      second function. See “No Unification Variable Left Behind”
+      https://doi.org/10.4230/LIPIcs.ITP.2023.8 for more information. *)
+    begin test "unsolved metas" @@ fun () ->
+      (* let x := (fun f -> ()) (fun y -> y); x *)
+      let expr =
+        Let ("x", Fun_lit ("f", Unit_lit) $ Fun_lit ("y", Var "y"),
         Var "x")
-    in
-    assert (run_infer expr = "Unit");
+      in
+      assert (run_infer expr = "Unit");
+    end;
 
   end;
-
-  print_string " ok!\n";
 
 end
