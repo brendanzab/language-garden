@@ -19,7 +19,7 @@ Factorial
   };
   fact 5 : Int
 
-  $ cat fact.txt | executable norm
+  $ cat fact.txt | executable eval
   120 : Int
 
 Factorial in terms of the fixed-point combinator
@@ -49,7 +49,7 @@ Factorial in terms of the fixed-point combinator
   fact 5 : Int
   $ cat fix.txt | executable n
   Usage: generics [--help] COMMAND …
-  generics: unknown command n. Must be either elab or norm
+  generics: unknown command n. Must be either elab or eval
   [124]
 
 Mutually recursive bindings: Even/odd
@@ -71,7 +71,7 @@ Mutually recursive bindings: Even/odd
   };
   is-even 6 : Bool
 
-  $ cat even-odd.txt | executable norm
+  $ cat even-odd.txt | executable eval
   true : Bool
 
 --------------------------------------------------------------------------------
