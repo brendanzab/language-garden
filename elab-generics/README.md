@@ -1,6 +1,6 @@
 # Generics
 
-- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ type parameters, mutual recursion) (- normalisation-by-evaluation)
+- Extends [**elab-stlc-unification**](../elab-stlc-unification) (+ type parameters, mutual recursion, tuples) (- normalisation-by-evaluation)
 - Based on [**scraps/elab_poly_generics_letrec.ml**](../scraps/elab_poly_generics_letrec.ml)
 
 ---

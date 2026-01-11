@@ -34,6 +34,7 @@ module Ty = struct
   and data =
     | Name of string
     | Fun of t * t
+    | Tuple of t list
     | Placeholder
 
   (** Names that bind type definitions or parameters *)
@@ -53,8 +54,10 @@ module Tm = struct
     | Let of [`Rec] option * def list * t
     | Ann of t * Ty.t
     | Fun of param list * Ty.t option * t
+    | Tuple of t list
     | Int of int
     | App of t * t
+    | Proj of t * int Spanned.t
     | If_then_else of t * t * t
     | Infix of [`Eq | `Add | `Sub | `Mul] * t * t
     | Prefix of [`Neg] * t
@@ -204,36 +207,45 @@ end = struct
           end
     | Ty.Fun (ty1, ty2) ->
         Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
+    | Ty.Tuple elem_tys ->
+        Core.Ty.Tuple (List.map (check_ty ctx) elem_tys)
     | Ty.Placeholder ->
         Ctx.fresh_meta ctx ty.span "placeholder"
 
   (** Elaborate a surface term into a core term, given an expected type. *)
   let rec check_tm (ctx : Ctx.t) (tm : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
-    match tm.data with
-    | Tm.Let (None, [], body) ->
-        check_tm ctx body ty
+    match tm.data, Core.Ty.force ty with
+    | Tm.Let (None, [], body), body_ty ->
+        check_tm ctx body body_ty
 
-    | Tm.Let (None, def :: defs, body) ->
+    | Tm.Let (None, def :: defs, body), body_ty ->
         let ctx, def = check_def ctx def in
-        let body = check_tm ctx { tm with data = Let (None, defs, body) } ty in
+        let body = check_tm ctx { tm with data = Let (None, defs, body) } body_ty in
         Core.Tm.Let (def, body)
 
-    | Tm.Let (Some `Rec, defs, body) ->
+    | Tm.Let (Some `Rec, defs, body), body_ty ->
         let ctx, defs = check_rec_defs ctx defs in
-        let body = check_tm ctx body ty in
+        let body = check_tm ctx body body_ty in
         Core.Tm.Let_rec (defs, body)
 
-    | Tm.Fun (params, body_ty, body) ->
-        check_fun ctx tm.span params body_ty body ty
+    | Tm.Fun (params, body_ty, body), fun_ty ->
+        check_fun ctx tm.span params body_ty body fun_ty
 
-    | Tm.If_then_else (head, tm1, tm2) ->
+    | Tm.Tuple elems, Core.Ty.Tuple elem_tys ->
+        if List.length elems <> List.length elem_tys then
+          error tm.span "expected %i elements, found %i elements"
+            (List.length elem_tys)
+            (List.length elems);
+        Core.Tm.Tuple_lit (List.map2 (check_tm ctx) elems elem_tys)
+
+    | Tm.If_then_else (head, tm1, tm2), body_ty ->
         let head = check_tm ctx head Core.Ty.Bool in
-        let tm1 = check_tm ctx tm1 ty in
-        let tm2 = check_tm ctx tm2 ty in
+        let tm1 = check_tm ctx tm1 body_ty in
+        let tm2 = check_tm ctx tm2 body_ty in
         Core.Tm.Bool_elim (head, tm1, tm2)
 
     (* Fall back to type inference *)
-    | _ ->
+    | _, _ ->
         let tm', ty' = infer_tm ctx tm in
         unify_tys tm.span ~found:ty' ~expected:ty;
         tm'
@@ -293,6 +305,10 @@ end = struct
     | Tm.Fun (params, body_ty, body) ->
         infer_fun ctx params body_ty body
 
+    | Tm.Tuple elems ->
+        let elems, elem_tys = List.split (List.map (infer_tm ctx) elems) in
+        Core.Tm.Tuple_lit elems, Core.Ty.Tuple elem_tys
+
     | Tm.Int i ->
         Core.Tm.Int_lit i, Core.Ty.Int
 
@@ -338,6 +354,17 @@ end = struct
         let tm1 = check_tm ctx tm1 Core.Ty.Int in
         let tm2 = check_tm ctx tm2 Core.Ty.Int in
         Core.Tm.Prim_app (prim, [tm1; tm2]), Core.Ty.Int
+
+    | Tm.Proj ({ span = head_span; _ } as head, index) ->
+        let head, head_ty = infer_tm ctx head in
+        begin match Core.Ty.force head_ty with
+        | Core.Ty.Tuple elem_tys ->
+            begin match List.nth_opt elem_tys index.data with
+            | Some ty -> Core.Tm.Tuple_proj (head, index.data), ty
+            | None -> error index.span "unknown field `%i`" index.data
+            end
+        | _ -> error head_span "@[expected tuple, found: %t@]" (Core.Ty.pp head_ty)
+        end
 
     | Tm.Prefix (`Neg, tm) ->
         let tm = check_tm ctx tm Core.Ty.Int in

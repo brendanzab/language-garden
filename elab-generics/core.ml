@@ -13,6 +13,7 @@ module Ty = struct
     | Var of name         (* Type variables (bound by type parameters) *)
     | Meta_var of meta
     | Fun of t * t
+    | Tuple of t list
     | Int
     | Bool
 
@@ -34,6 +35,7 @@ module Ty = struct
     | Meta_var { contents = Solved ty } -> subst mapping ty
     | Meta_var { contents = Unsolved _ } -> ty
     | Fun (param_ty, body_ty) -> Fun (subst mapping param_ty, subst mapping body_ty)
+    | Tuple elem_tys -> Tuple (List.map (subst mapping) elem_tys)
     | Bool -> Bool
     | Int -> Int
 
@@ -76,6 +78,8 @@ module Ty = struct
     | Fun (param_ty, body_ty) ->
         occurs m param_ty;
         occurs m body_ty
+    | Tuple elem_tys ->
+        List.iter (occurs m) elem_tys
     | Int -> ()
     | Bool -> ()
 
@@ -91,6 +95,10 @@ module Ty = struct
     | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
         unify param_ty1 param_ty2;
         unify body_ty1 body_ty2
+    | Tuple [], Tuple [] -> ()
+    | Tuple (elem_ty1 :: elem_tys1), Tuple (elem_ty2 :: elem_tys2) ->
+        unify elem_ty1 elem_ty2;
+        unify (Tuple elem_tys1) (Tuple elem_tys2)
     | Int, Int -> ()
     | Bool, Bool -> ()
     | ty1, ty2 ->
@@ -113,6 +121,12 @@ module Ty = struct
       match ty with
       | Var name -> Format.fprintf ppf "%s" name
       | Meta_var m -> pp_meta pp_atomic_ty m ppf
+      | Tuple [] -> Format.fprintf ppf "()"
+      | Tuple [elem_ty] -> Format.fprintf ppf "@[(%t,)@]" (pp_ty elem_ty)
+      | Tuple elem_tys ->
+          let pp_sep ppf () = Format.fprintf ppf ",@ " in
+          Format.fprintf ppf "@[(%t)@]"
+            (Fun.flip (Format.pp_print_list (Fun.flip pp_ty) ~pp_sep) elem_tys)
       | Int -> Format.fprintf ppf "Int"
       | Bool -> Format.fprintf ppf "Bool"
       | Fun _ as ty -> Format.fprintf ppf "@[(%t)@]" (pp_ty ty)
@@ -147,6 +161,8 @@ module Tm = struct
     | Let_rec of def list * t
     | Fun_lit of name * Ty.t * t
     | Fun_app of t * t
+    | Tuple_lit of t list
+    | Tuple_proj of t * int
     | Int_lit of int
     | Bool_lit of bool
     | Bool_elim of t * t * t
@@ -225,18 +241,31 @@ module Tm = struct
         | Fun_app (head, arg) ->
             Format.fprintf ppf "%t@ %t"
               (go head)
-              (pp_atomic_tm names arg)
+              (pp_proj_tm names arg)
         | Prim_app (prim, args) ->
             let pp_sep ppf () = Format.fprintf ppf "@ " in
             Format.fprintf ppf "#%s@ %t"
               (Prim.name prim)
-              (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_atomic_tm names))) args)
+              (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names))) args)
         | tm ->
-            pp_atomic_tm names tm ppf
+            pp_proj_tm names tm ppf
       in
       match tm with
       | Fun_app _ | Prim_app _ as tm ->
           Format.fprintf ppf "@[<hv 2>%t@]" (go tm)
+      | tm ->
+          pp_proj_tm names tm ppf
+    and pp_proj_tm names tm ppf =
+      let rec go tm ppf =
+        match tm with
+        | Tuple_proj (head, label) ->
+              Format.fprintf ppf "%t@,.%i" (go head) label
+        | tm ->
+            pp_atomic_tm names tm ppf
+      in
+      match tm with
+      | Tuple_proj _ as tm ->
+          Format.fprintf ppf "@[<2>%t@]" (go tm)
       | tm ->
           pp_atomic_tm names tm ppf
     and pp_atomic_tm names tm ppf =
@@ -247,10 +276,17 @@ module Tm = struct
           Format.fprintf ppf "%t@ @[[%t]@]"
             (pp_name (List.nth names index))
             (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip Ty.pp)) ty_args)
+      | Tuple_lit [] -> Format.fprintf ppf "()"
+      | Tuple_lit [elem] -> Format.fprintf ppf "@[(%t,)@]" (pp_tm names elem)
+      | Tuple_lit elems ->
+          let pp_sep ppf () = Format.fprintf ppf ",@ " in
+          Format.fprintf ppf "@[(%t)@]"
+            (Fun.flip (Format.pp_print_list (Fun.flip (pp_tm names)) ~pp_sep) elems)
       | Int_lit i -> Format.fprintf ppf "%i" i
       | Bool_lit true -> Format.fprintf ppf "true"
       | Bool_lit false -> Format.fprintf ppf "false"
-      | Let _ | Let_rec _ | Fun_lit _ | Fun_app _ | Bool_elim _ | Prim_app _ as tm ->
+      | Let _ | Let_rec _ | Fun_lit _ | Fun_app _ | Tuple_proj _ | Bool_elim _
+      | Prim_app _ as tm ->
           Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
     in
     pp_tm
@@ -258,13 +294,20 @@ module Tm = struct
   module Value = struct
 
     type t =
+      | Fun_lit of (t -> t)
+      | Tuple_lit of t list
       | Int_lit of int
       | Bool_lit of bool
-      | Fun_lit of (t -> t)
 
-    let pp (vexpr : t) (ppf : Format.formatter) : unit =
+    let rec pp (vexpr : t) (ppf : Format.formatter) : unit =
       match vexpr with
       | Fun_lit _ -> Format.fprintf ppf "<function>"
+      | Tuple_lit [] -> Format.fprintf ppf "()"
+      | Tuple_lit [elem] -> Format.fprintf ppf "@[(%t)@]" (pp elem)
+      | Tuple_lit elems ->
+          let pp_sep ppf () = Format.fprintf ppf ",@ " in
+          Format.fprintf ppf "@[(%t)@]"
+            (Fun.flip (Format.pp_print_list (Fun.flip pp) ~pp_sep) elems)
       | Bool_lit true -> Format.fprintf ppf "true"
       | Bool_lit false -> Format.fprintf ppf "false"
       | Int_lit i -> Format.fprintf ppf "%i" i
@@ -296,6 +339,13 @@ module Tm = struct
     | Fun_app (head, arg) ->
         begin match eval env head with
         | Value.Fun_lit vbody -> vbody (eval env arg)
+        | _ -> invalid_arg "eval"
+        end
+    | Tuple_lit elems ->
+        Value.Tuple_lit (List.map (eval env) elems)
+    | Tuple_proj (head, index) ->
+        begin match eval env head with
+        | Value.Tuple_lit velems -> List.nth velems index
         | _ -> invalid_arg "eval"
         end
     | Int_lit i -> Value.Int_lit i

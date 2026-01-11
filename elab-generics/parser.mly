@@ -11,6 +11,7 @@
 %token COLON ":"
 %token COLON_EQUALS ":="
 %token COMMA ","
+%token DOT "."
 %token EQUALS "="
 %token EQUALS_GREATER "=>"
 %token HYPHEN "-"
@@ -44,6 +45,12 @@ let ty :=
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
+| "("; ")";
+    { Surface.Ty.Tuple [] }
+| "("; ty = spanned(ty); ","; ")";
+    { Surface.Ty.Tuple [ty] }
+| "("; ty = spanned(ty); ","; tys = trailing_nonempty_list(",", spanned(ty)); ")";
+    { Surface.Ty.Tuple (ty :: tys) }
 | n = NAME;
     { Surface.Ty.Name n }
 | UNDERSCORE;
@@ -81,15 +88,26 @@ let mul_tm :=
 let app_tm :=
 | n = spanned(NAME); "["; tys = trailing_nonempty_list(",", spanned(ty)); "]";
     { Surface.Tm.Name (n, tys) }
-| tm1 = spanned(app_tm); tm2 = spanned(atomic_tm);
+| tm1 = spanned(app_tm); tm2 = spanned(proj_tm);
     { Surface.Tm.App (tm1, tm2) }
-| "-"; tm = spanned(atomic_tm);
+| "-"; tm = spanned(proj_tm);
     { Surface.Tm.Prefix (`Neg, tm) }
+| proj_tm
+
+let proj_tm :=
+| tm = spanned(proj_tm); "."; i = spanned(NUMBER);
+    { Surface.Tm.Proj(tm, i) }
 | atomic_tm
 
 let atomic_tm :=
 | "("; tm = tm; ")";
     { tm }
+| "("; ")";
+    { Surface.Tm.Tuple [] }
+| "("; tm = spanned(tm); ","; ")";
+    { Surface.Tm.Tuple [tm] }
+| "("; tm = spanned(tm); ","; tms = trailing_nonempty_list(",", spanned(tm)); ")";
+    { Surface.Tm.Tuple (tm :: tms) }
 | n = spanned(NAME);
     { Surface.Tm.Name (n, []) }
 | i = NUMBER;

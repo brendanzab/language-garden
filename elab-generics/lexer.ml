@@ -29,6 +29,7 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | ":"           -> COLON
   | ":="          -> COLON_EQUALS
   | ","           -> COMMA
+  | "."           -> DOT
   | "="           -> EQUALS
   | "=>"          -> EQUALS_GREATER
   | "-"           -> HYPHEN
