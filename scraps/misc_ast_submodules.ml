@@ -1,4 +1,4 @@
-(** OCaml’s mutually recusive modules are often quite tedious to use, requiring
+(** OCaml’s mutually recursive modules are often quite tedious to use, requiring
     explicit module signatures. This can be quite frustrating if you want to
     define an AST with submodules for each node type.
 
@@ -11,6 +11,7 @@
 module rec Expr : sig
 
   type t =
+    | Var of string
     | Zero
     | Succ of Expr.t
     | Block of Stmt.t list
@@ -20,7 +21,7 @@ module rec Expr : sig
 end = struct
 
   include Expr
-  (* Infer the definitions from the signture.
+  (* Derive the definitions from the signature.
 
      NOTE: If we forget to define [Expr.pp], we will get an [unused-value-declaration]
      warning, which if ignored will result in a fatal runtime error if [Expr.pp]
@@ -31,10 +32,11 @@ end = struct
 
   let pp ppf expr =
     match expr with
+    | Var x -> Format.fprintf ppf "%s" x
     | Zero -> Format.fprintf ppf "Z"
     | Succ expr -> Format.fprintf ppf "S(%a)" Expr.pp expr
     | Block stmts ->
-        let pp_sep ppf () = Format.fprintf ppf "@ " in
+        let pp_sep ppf () = Format.fprintf ppf ";@ " in
         Format.fprintf ppf "@[<hv>{@ %a@ }@]"
           (Format.pp_print_list ~pp_sep Stmt.pp) stmts
 
@@ -43,6 +45,7 @@ end
 and Stmt : sig
 
   type t =
+    | Let of string * Expr.t
     | Print of Expr.t
 
   val pp : Format.formatter -> t -> unit
@@ -53,16 +56,20 @@ end = struct
 
   let pp ppf stmt =
     match stmt with
-    | Print expr -> Format.fprintf ppf "print %a" Expr.pp expr
+    | Let (x, expr) -> Format.fprintf ppf "@[<2>@[let@ %s :=@]@ %a@]" x Expr.pp expr
+    | Print expr -> Format.fprintf ppf "@[print@ %a@]" Expr.pp expr
 
 end
 
+(*
 let () = begin
   Format.printf "%a\n"
     Expr.pp
     (Block [
       Print Zero;
+      Let ("x", (Succ (Succ Zero)));
       Print (Succ (Succ Zero));
-      Print (Succ Zero);
+      Print (Var "x");
     ]);
 end
+*)
