@@ -128,5 +128,5 @@ A stripped-down version of this project can be found in [`scraps/check_poly_gene
 
 ## Examples
 
-More examples can be found in the [`examples`](./examples/) directory and in
-[`tests.t`](tests.t).
+More examples can be found in the [`examples`](./examples/) and
+[`tests`](./tests/) directories.
