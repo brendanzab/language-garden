@@ -396,17 +396,16 @@ let () = begin
 
   begin run_tests @@ fun test ->
 
-    let id_expr = Fun_lit ("x", Var "x") in
-    let const_expr = Fun_lit ("x", Fun_lit ("y", Var "x")) in
-
     begin test "id" @@ fun () ->
       (* fun x => x *)
-      assert (run_infer id_expr = "forall a. a -> a");
+      let expr = Fun_lit ("x", Var "x") in
+      assert (run_infer expr = "forall a. a -> a");
     end;
 
     begin test "const" @@ fun () ->
       (* fun x y => x *)
-      assert (run_infer const_expr = "forall a b. a -> b -> a");
+      let expr = Fun_lit ("x", Fun_lit ("y", Var "x")) in
+      assert (run_infer expr = "forall a b. a -> b -> a");
     end;
 
     begin test "let 1" @@ fun () ->
@@ -415,7 +414,7 @@ let () = begin
         id ()
       *)
       let expr =
-        Let ("id", id_expr,
+        Let ("id", Fun_lit ("x", Var "x"),
           Var "id" $ Unit_lit)
       in
       assert (run_infer expr = "Unit");
@@ -423,13 +422,13 @@ let () = begin
 
     begin test "let 2" @@ fun () ->
       (*
-        let id := x;
+        let id x := x;
         let const x y := x;
         const id () ()
       *)
       let expr =
-        Let ("id", id_expr,
-        Let ("const", const_expr,
+        Let ("id", Fun_lit ("x", Var "x"),
+        Let ("const", Fun_lit ("x", Fun_lit ("y", Var "x")),
           Var "const" $ Var "id" $ Unit_lit $ Unit_lit))
       in
       assert (run_infer expr = "Unit");
@@ -437,7 +436,7 @@ let () = begin
 
     begin test "let 3" @@ fun () ->
       (*
-        let id := x;
+        let id x := x;
         let const x y := x;
         fun x ->
           if x then
@@ -446,8 +445,8 @@ let () = begin
             const true
       *)
       let expr =
-        Let ("id", id_expr,
-        Let ("const", const_expr,
+        Let ("id", Fun_lit ("x", Var "x"),
+        Let ("const", Fun_lit ("x", Fun_lit ("y", Var "x")),
         Fun_lit ("x",
           Bool_if (Var "x",
             Var "id",
