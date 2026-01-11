@@ -283,23 +283,27 @@ let () = begin
 
     let test_eval_comp_tm (type a)
         ?(expected : a comp_vtm option)
-        ?(expected_in : string list = [])
-        ?(expected_out : string list = [])
+        ?(expected_io : [`In of string | `Out of string] list = [])
         (name : string)
         (tm : (T.empty, a) comp_tm) : unit =
 
-      let expected_in = Queue.of_seq (List.to_seq expected_in) in
-      let expected_out = Queue.of_seq (List.to_seq expected_out) in
+      let expected_io = Queue.of_seq (List.to_seq expected_io) in
 
       test name @@ fun () ->
         match eval_comp_tm [] tm, expected with
         | vtm, Some expected -> assert (vtm = expected)
         | _, None -> failwith "expected abort"
         | effect (Print str), k ->
-            assert (str = Queue.pop expected_out);
-            Effect.Deep.continue k ()
+            begin match Queue.pop expected_io with
+            | `Out output when output = str -> Effect.Deep.continue k ()
+            | `Out _ -> Effect.Deep.discontinue k (Failure "mismatched output")
+            | `In _ -> Effect.Deep.discontinue k (Failure "expected output")
+            end
         | effect Read, k ->
-            Effect.Deep.continue k (Queue.pop expected_in)
+            begin match Queue.pop expected_io with
+            | `In input -> Effect.Deep.continue k input
+            | `Out _ -> Effect.Deep.discontinue k (Failure "expected input")
+            end
         | exception Abort ->
             begin match expected with
             | Some _ -> failwith "expected value"
@@ -365,12 +369,12 @@ let () = begin
     test_eval_comp_tm "print"
       (Comp_print (String_lit "hello"))
       ~expected:(Comp_pure Unit_lit)
-      ~expected_out:["hello"];
+      ~expected_io:[`Out "hello"];
 
     test_eval_comp_tm "read"
       Comp_read
       ~expected:(Comp_pure (String_lit "howdy"))
-      ~expected_in:["howdy"];
+      ~expected_io:[`In "howdy"];
 
     test_eval_comp_tm "abort"
       Comp_abort;
@@ -381,7 +385,7 @@ let () = begin
           Comp_bind (Thunk_force (Var (Pop Stop)),
             Prim String_cat $ Var (Pop Stop) $ Var Stop))))
       ~expected:(Comp_pure (String_lit "hello world!"))
-      ~expected_in:["hello "; "world!"];
+      ~expected_io:[`In "hello "; `In "world!"];
 
   end;
 
