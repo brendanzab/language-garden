@@ -1,0 +1,47 @@
+<stdin> : Type :=
+  let Monoid : Type :=
+    { T : Type; empty : T; append : fun (_ : T) (_ : T) -> T };
+  let Nat : Type :=
+    fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out;
+  let succ : fun (n : Nat) -> Nat := fun n Out s z => s (n Out s z);
+  let zero : Nat := fun Out s z => z;
+  let one : Nat := fun Out s z => s z;
+  let two : Nat := fun Out s z => s (s z);
+  let three : Nat := fun Out s z => s (s (s z));
+  let four : Nat := fun Out s z => s (s (s (s z)));
+  let five : Nat := fun Out s z => s (s (s (s (s z))));
+  let add : fun (n : Nat) (m : Nat) -> Nat :=
+    fun n m Out s z => n Out s (m Out s z);
+  let mul : fun (n : Nat) (m : Nat) -> Nat :=
+    fun n m Out s z => n Out (m Out s) z;
+  let additive-monoid :
+        {
+          T : Type [= Nat];
+          empty :
+            fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out;
+          append :
+            fun (_ :
+                  fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out)
+                      -> Out)
+                (_ :
+                  fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out)
+                      -> Out)
+                (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out
+        }
+  := { T := #sing-intro; empty := zero; append := add };
+  let multiplicative-monoid :
+        {
+          T : Type [= Nat];
+          empty :
+            fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out;
+          append :
+            fun (_ :
+                  fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out)
+                      -> Out)
+                (_ :
+                  fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out)
+                      -> Out)
+                (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out
+        }
+  := { T := #sing-intro; empty := one; append := mul };
+  Type

@@ -1,0 +1,34 @@
+let Monoid := {
+  T : Type;
+  empty : T;
+  append : T -> T -> T;
+};
+
+let Nat : Type := fun (Out : Type) -> (Out -> Out) -> Out -> Out;
+
+let succ (n : Nat) : Nat := fun Out s z => s (n Out s z);
+let zero : Nat := fun Out s z => z;
+
+let one : Nat := fun Out s z => s z;
+let two : Nat := fun Out s z => s (s z);
+let three : Nat := fun Out s z => s (s (s z));
+let four : Nat := fun Out s z => s (s (s (s z)));
+let five : Nat := fun Out s z => s (s (s (s (s z))));
+
+let add (n : Nat) (m : Nat) : Nat :=
+  fun Out s z => n Out s (m Out s z);
+
+let mul (n : Nat) (m : Nat) : Nat :=
+  fun Out s z => n Out (m Out s) z;
+
+let additive-monoid : Monoid [ T := Nat ] := {
+  empty := zero;
+  append := add;
+};
+
+let multiplicative-monoid : Monoid [ T := Nat ] := {
+  empty := one;
+  append := mul;
+};
+
+Type
