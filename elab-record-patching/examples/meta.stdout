@@ -1,0 +1,27 @@
+<stdin> : fun (Label : Type) (Index : Type) -> { Tm : Type } :=
+  let Pair : fun (A : Type) (B : Type) -> Type :=
+    fun A B => { fst : A; snd : B };
+  let List : fun (A : Type) -> Type :=
+    fun A =>
+      fun (List : Type)
+          (_ : { cons : fun (_ : A) (_ : List) -> List; nil : List }) 
+          -> List;
+  fun Label Index => {
+    Tm :=
+      fun (Tm : Type)
+          (_ :
+            {
+              let_ : fun (_ : Tm) (_ : Tm) (_ : Tm) -> Tm;
+              var : Index;
+              univ : Tm;
+              fun_type : fun (_ : Tm) (_ : Tm) -> Tm;
+              fun_lit : fun (_ : Tm) -> Tm;
+              fun_app : fun (_ : Tm) (_ : Tm) -> Tm;
+              rec_type : fun (_ : List (Pair Label Tm)) -> Tm;
+              rec_lit : fun (_ : List (Pair Label Tm)) -> Tm;
+              rec_proj : fun (_ : Tm) (_ : Label) -> Tm;
+              sing_type : fun (_ : Tm) (_ : Tm) -> Tm;
+              sing_intro : Tm
+            })
+          -> Tm
+  }

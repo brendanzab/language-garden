@@ -1,0 +1,31 @@
+let Pair (A : Type) (B: Type) : Type := {
+  fst : A;
+  snd : B;
+};
+
+let List (A : Type) : Type :=
+  fun (List : Type) -> {
+    cons : A -> List -> List;
+    nil : List;
+  } -> List;
+
+fun (Label : Type) (Index : Type) : {
+  Tm : Type;
+} => {
+  Tm := fun (Tm : Type) -> {
+    let_ : Tm -> Tm -> Tm -> Tm;
+    var : Index;
+    univ : Tm;
+
+    fun_type : Tm -> Tm -> Tm;
+    fun_lit : Tm -> Tm;
+    fun_app : Tm -> Tm -> Tm;
+
+    rec_type : List (Pair Label Tm) -> Tm;
+    rec_lit : List (Pair Label Tm) -> Tm;
+    rec_proj : Tm -> Label -> Tm;
+
+    sing_type : Tm -> Tm -> Tm;
+    sing_intro : Tm;
+  } -> Tm;
+}
