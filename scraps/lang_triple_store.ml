@@ -37,17 +37,16 @@ let string_of_property = function
   | `mortal -> "mortal"
 
 let rec collect_predicate_along_axis ~subject ~predicate ~axis kb =
-  let facts = kb |> List.filter (fun triple -> triple.subject = subject) in
-  let arcs = facts |> List.filter (fun triple -> triple.predicate = axis) in
-  List.append
-    (facts |> List.filter (fun triple -> triple.predicate = predicate))
-    (arcs |> List.concat_map (fun triple ->
+  let facts = List.to_seq kb |> Seq.filter (fun triple -> triple.subject = subject) in
+  let arcs = facts |> Seq.filter (fun triple -> triple.predicate = axis) in
+  Seq.append
+    (facts |> Seq.filter (fun triple -> triple.predicate = predicate))
+    (arcs |> Seq.concat_map (fun triple ->
       kb |> collect_predicate_along_axis ~subject:triple.object_ ~predicate ~axis))
 
 let get_properties ~subject kb =
-  kb
-  |> collect_predicate_along_axis ~subject ~predicate:`has_property ~axis:`is_a
-  |> List.map (fun triple -> triple.object_)
+  collect_predicate_along_axis kb ~subject ~predicate:`has_property ~axis:`is_a
+  |> Seq.map (fun triple -> triple.object_)
 
 let () = begin
 
@@ -55,8 +54,8 @@ let () = begin
 
   knowledge_base
   |> get_properties ~subject:`Socrates
-  |> List.map string_of_property
-  |> List.iter (Format.printf "- %s\n");
+  |> Seq.map string_of_property
+  |> Seq.iter (Format.printf "- %s\n");
 
   Format.printf "\n";
 
@@ -88,7 +87,7 @@ let string_of_property = function
 let part_of_what ~subject kb =
   kb
   |> collect_predicate_along_axis ~subject ~predicate:`part_of ~axis:`part_of
-  |> List.map (fun triple -> triple.object_)
+  |> Seq.map (fun triple -> triple.object_)
 
 let () = begin
 
@@ -96,8 +95,8 @@ let () = begin
 
   knowledge_base
   |> part_of_what ~subject:`Berlin
-  |> List.map string_of_property
-  |> List.iter (Format.printf "- %s\n");
+  |> Seq.map string_of_property
+  |> Seq.iter (Format.printf "- %s\n");
 
   Format.printf "\n";
 
@@ -127,18 +126,18 @@ let () = begin
 
   knowledge_base
   |> collect_predicate_along_axis ~subject:`Berlin ~predicate:`member_of ~axis:`part_of
-  |> List.map (fun triple -> triple.object_)
-  |> List.map string_of_property
-  |> List.iter (Format.printf "- %s\n");
+  |> Seq.map (fun triple -> triple.object_)
+  |> Seq.map string_of_property
+  |> Seq.iter (Format.printf "- %s\n");
 
   Format.printf "\n";
   Format.printf "Berlin is part_of:\n";
 
   knowledge_base
   |> collect_predicate_along_axis ~subject:`Berlin ~predicate:`part_of ~axis:`part_of
-  |> List.map (fun triple -> triple.object_)
-  |> List.map string_of_property
-  |> List.iter (Format.printf "- %s\n");
+  |> Seq.map (fun triple -> triple.object_)
+  |> Seq.map string_of_property
+  |> Seq.iter (Format.printf "- %s\n");
 
   Format.printf "\n";
 
