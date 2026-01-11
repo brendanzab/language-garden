@@ -42,13 +42,13 @@ let rec eval : type ctx a. ctx env -> (ctx, a) expr -> a value =
 
 let () = begin
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   assert (eval [] (Fun_app (Fun_abs (Var Stop), Int_lit 1)) = Int_lit 1);
   assert (eval [] (Fun_app (Fun_app (Fun_abs (Fun_abs (Var (Pop Stop))), String_lit "hello"), Int_lit 4)) = String_lit "hello");
   assert (eval [String_lit "hello"] (Fun_app (Fun_app (Fun_abs (Fun_abs (Var (Pop Stop))), Var Stop), Int_lit 4)) = String_lit "hello");
   assert (eval [Int_lit 2; String_lit "hello"] (Let (Var (Pop Stop), Var Stop)) = String_lit "hello");
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

@@ -386,7 +386,7 @@ end
 
 let () = begin
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   Printexc.record_backtrace true;
 
@@ -450,6 +450,6 @@ let () = begin
 
   end;
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

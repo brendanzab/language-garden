@@ -720,7 +720,7 @@ let () = begin
     | _ -> None
   end;
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   (* Parse a grammar with the bootstrap grammar *)
   let parse_grammar (input : string) : Grammar.t =
@@ -748,6 +748,6 @@ let () = begin
 
   assert (grammar_grammar = parse_grammar' Examples.Grammar.grammar);
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

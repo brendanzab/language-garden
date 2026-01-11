@@ -331,7 +331,7 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   let open Surface in
 
@@ -362,6 +362,6 @@ let () = begin
 
   end;
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

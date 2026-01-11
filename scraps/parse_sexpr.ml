@@ -122,7 +122,7 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   assert (Lexer.tokenise "()" |> List.of_seq = [LEFT_PAREN; RIGHT_PAREN]);
   assert (Lexer.tokenise "foo" |> List.of_seq = [IDENT "foo"]);
@@ -134,6 +134,6 @@ let () = begin
   assert (Parser.parse (Lexer.tokenise "(+ 1 2 (* 3 4))") = List [Ident "+"; Int 1; Int 2; List [Ident "*"; Int 3; Int 4]]);
   assert (Parser.parse (Lexer.tokenise "(+ (* 1 2) 3 4)") = List [Ident "+"; List [Ident "*"; Int 1; Int 2]; Int 3; Int 4]);
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

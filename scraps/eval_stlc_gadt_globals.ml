@@ -88,7 +88,7 @@ let () = begin
   let id (type a) : (a -> a) Global.t = Global.define Fun.id in
   let const (type a b) : (a -> b -> a) Global.t = Global.define Fun.const in
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   assert (eval [] (Fun_abs (Local_var Stop)) 1 = 1);
   assert (eval [] (Fun_abs (Fun_abs (Local_var (Pop Stop)))) "hello" 4 = "hello");
@@ -97,6 +97,6 @@ let () = begin
   assert (eval [] (Global_var id $ Global_var zero) = 0);
   assert (eval [] (Global_var const $ Int_lit 42 $ String_lit "hello") = 42);
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

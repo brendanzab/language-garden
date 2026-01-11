@@ -656,7 +656,7 @@ end
 
 let () = begin
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   assert (Eval.(eval (Add (Lit 1, Lit (-3)))) = -2);
   assert (Eval.(eval (Add (Add (Lit 1, Lit (-3)), Add (Lit 7, Lit 0)))) = 5);
@@ -670,6 +670,6 @@ let () = begin
   assert (Polynomial_bifunctors.Expr.(eval (add (lit 1) (lit (-3)))) = -2);
   assert (Polynomial_bifunctors.Expr.(eval (add (add (lit 1) (lit (-3))) (add (lit 7) (lit 0)))) = 5);
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

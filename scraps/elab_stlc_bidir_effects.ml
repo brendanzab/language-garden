@@ -154,7 +154,7 @@ end
 
 let () = begin
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   assert (Surface.synth_expr (Fun_lit (("x", Some (Name "Unit")), Name "x"))
     = (Fun_lit (Unit_ty, Var 0), Fun_ty (Unit_ty, Unit_ty)));
@@ -168,6 +168,6 @@ let () = begin
   assert (Surface.check_expr (Fun_lit (("x", None), Name "x")) (Fun_ty (Unit_ty, Unit_ty))
     = Fun_lit (Unit_ty, Var 0));
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end

@@ -447,7 +447,7 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  print_string "Running tests ...";
+  Printf.printf "Running tests in %s ..." __FILE__;
 
   let grammar = Lexer.tokenise Examples.grammar |> Parser.parse_grammar in
   (* NOTE: to test these we'll need a nice way to implement lexers *)
@@ -466,6 +466,6 @@ let () = begin
   let _ = Lexer.tokenise Examples.arith |> Grammar_grammar_parser.parse_grammar in
   let _ = Lexer.tokenise Examples.pl0 |> Grammar_grammar_parser.parse_grammar in
 
-  print_string " ok!\n";
+  Printf.printf " ok!\n";
 
 end
