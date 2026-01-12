@@ -257,7 +257,7 @@ end = struct
   and infer_tm (ctx : Ctx.t) (tm : Tm.t) : Core.Tm.t * Core.Ty.t =
     match tm.data with
     | Tm.Name ({ span; data = name }, ty_args) ->
-        let expr, pty =
+        let tm, pty =
           match Ctx.lookup_tm ctx name with
           | Some (index, pty) -> Core.((fun ty_args -> Tm.Var (index, ty_args)), pty)
           | None when name = "true" -> Core.((fun[@warning "-partial-match"] [] -> Tm.Bool_lit true), ([], Ty.Bool))
@@ -273,13 +273,13 @@ end = struct
             ty_params |> List.map @@ fun name ->
               name, Ctx.fresh_meta ctx span "type argument"
           in
-          expr (List.map snd mapping), Core.Ty.subst mapping ty
+          tm (List.map snd mapping), Core.Ty.subst mapping ty
 
       (* Explicit type arguments were provided *)
       | (ty_params, ty), ty_args when List.length ty_params = List.length ty_args ->
           let ty_args = List.map (check_ty ctx) ty_args in
           let mapping = List.combine ty_params ty_args in
-          expr (List.map snd mapping), Core.Ty.subst mapping ty
+          tm (List.map snd mapping), Core.Ty.subst mapping ty
 
       | (ty_params, _), ty_args ->
           error span "expected %i type %s, found %i"
@@ -332,7 +332,7 @@ end = struct
 
     | Tm.If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Core.Ty.Bool in
-        let ty = Ctx.fresh_meta ctx tm.span "if expression branches" in
+        let ty = Ctx.fresh_meta ctx tm.span "if branches" in
         let tm1 = check_tm ctx tm1 ty in
         let tm2 = check_tm ctx tm2 ty in
         Core.Tm.Bool_elim (head, tm1, tm2), ty

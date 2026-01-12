@@ -674,15 +674,15 @@ module Surface = struct
               (List.length elems);
           Core.Expr.Tuple_lit (List.map2 (check_expr ctx) elems elem_vtys)
 
-      | Expr.If (head, true_body, false_body), body_ty ->
+      | Expr.If (head, true_body, false_body), body_vty ->
           let head = check_expr ctx head Core.Ty.Value.Bool in
-          let true_body = check_expr ctx true_body body_ty in
-          let false_body = check_expr ctx false_body body_ty in
+          let true_body = check_expr ctx true_body body_vty in
+          let false_body = check_expr ctx false_body body_vty in
           Core.Expr.Bool_if (head, true_body, false_body)
 
-      | expr, expected_ty ->
-          let expr, found_ty = infer_expr ctx expr in
-          unify_vtys ctx ~found:found_ty ~expected:expected_ty;
+      | expr, expected_vty ->
+          let expr, found_vty = infer_expr ctx expr in
+          unify_vtys ctx ~found:found_vty ~expected:expected_vty;
           expr
 
     (** Elaborate a term, inferring its type. *)
