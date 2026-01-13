@@ -86,7 +86,7 @@ module Core = struct
     val fresh_meta : unit -> meta
 
     (** Evaluate a type into a value *)
-    val eval : Ty.Clos.t list -> t -> Ty.Value.t
+    val eval : Ty.Clos.t Ty.Env.t -> t -> Ty.Value.t
 
     (** Quote an evaluated type back into its normal form *)
     val quote : Ty.Value.level -> Ty.Value.t -> t
@@ -98,7 +98,7 @@ module Core = struct
     val zonk_def : Ty.Value.level -> def -> def
 
     (** Pretty print a type *)
-    val pp : Ty.Value.level -> name list -> t -> Format.formatter -> unit
+    val pp : Ty.Value.level -> name Ty.Env.t -> t -> Format.formatter -> unit
 
     module Value : sig
 
@@ -122,7 +122,7 @@ module Core = struct
 
       type t
 
-      val make : t list -> int -> Ty.t -> t
+      val make : t Ty.Env.t -> int -> Ty.t -> t
       val value : Value.t -> t
 
       val arity : t -> int
@@ -130,9 +130,31 @@ module Core = struct
 
     end
 
+    module Env : sig
+
+      type _ t
+
+      val empty : 'a t
+      val extend : 'a -> 'a t -> 'a t
+      val lookup : index -> 'a t -> 'a
+      val find : ('a -> bool) -> 'a t -> index option
+
+    end
+
   end = struct
 
     include Ty_data
+
+    module Env = struct
+
+      type 'a t = 'a list
+
+      let empty = []
+      let extend = List.cons
+      let lookup index env = List.nth env index
+      let find = List.find_index
+
+    end
 
     let fresh_meta : unit -> meta =
       let next = ref 0 in
@@ -145,12 +167,12 @@ module Core = struct
         before the {!Clos} module in order to make it easier to deal with the
         mutual recursion with the {!eval} function. *)
     type clos =
-      | Clos of clos list * int * t
+      | Clos of clos Env.t * int * t
       | Value of Value.t
 
-    let rec eval (env : clos list) (ty : t) : Value.t =
+    let rec eval (env : clos Env.t) (ty : t) : Value.t =
       match ty with
-      | Var (index, args) -> inst (List.nth env index) (List.map (eval env) args)
+      | Var (index, args) -> inst (Env.lookup index env) (List.map (eval env) args)
       | Meta meta -> Value.Meta meta
       | Fun (param_ty, body_ty) -> Value.Fun (eval env param_ty, eval env body_ty)
       | Tuple elem_tys -> Value.Tuple (List.map (eval env) elem_tys)
@@ -160,7 +182,7 @@ module Core = struct
     and inst (cty : clos) (args : Value.t list) =
       match cty, args with
       | Clos (env, arity, body), args when List.length args = arity ->
-          let extend_arg acc arg = Value arg :: acc in
+          let extend_arg acc arg = Env.extend (Value arg) acc in
           eval (List.fold_left extend_arg env args) body
       | Value vty, [] -> vty
       | _, _ -> failwith "mismatched arity"
@@ -187,7 +209,7 @@ module Core = struct
     let zonk_def (ty_size : Value.level) (name, ty_params, ty : def) : def =
       name, ty_params, zonk (ty_size + List.length ty_params) ty
 
-    let pp (size : Value.level) (names : name list) (ty : t) (ppf : Format.formatter) : unit =
+    let pp (size : Value.level) (names : name Env.t) (ty : t) (ppf : Format.formatter) : unit =
       let rec pp_ty ty ppf =
         match ty with
         | Meta m -> pp_meta pp_ty m ppf
@@ -201,7 +223,7 @@ module Core = struct
         match ty with
         | Var (index, args) ->
             Format.fprintf ppf "@[%s@ %a@]"
-              (List.nth names index)
+              (Env.lookup index names)
               (Format.pp_print_list (Fun.flip pp_ty)
                 ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ "))
               args
@@ -209,7 +231,7 @@ module Core = struct
             pp_atomic_ty ty ppf
       and pp_atomic_ty ty ppf =
         match ty with
-        | Var (index, []) -> Format.fprintf ppf "%s" (List.nth names index)
+        | Var (index, []) -> Format.fprintf ppf "%s" (Env.lookup index names)
         | Meta m -> pp_meta pp_atomic_ty m ppf
         | Tuple [] -> Format.fprintf ppf "()"
         | Tuple elem_tys ->
@@ -523,16 +545,16 @@ module Surface = struct
       type t = {
         metas : (Ty.meta * string) Dynarray.t;
         ty_size : Ty.Value.level;
-        ty_names : Ty.name list;
-        ty_defs : Ty.Clos.t list;
+        ty_names : Ty.name Ty.Env.t;
+        ty_defs : Ty.Clos.t Ty.Env.t;
         expr_tys : (Expr.name * Ty.Clos.t) list;
       }
 
       let create () = {
         metas = Dynarray.create ();
         ty_size = 0;
-        ty_names = [];
-        ty_defs = [];
+        ty_names = Ty.Env.empty;
+        ty_defs = Ty.Env.empty;
         expr_tys = [];
       }
 
@@ -544,8 +566,8 @@ module Surface = struct
       let extend_poly_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Clos.t) : t =
         { ctx with
           ty_size = 1 + ctx.ty_size;
-          ty_names = name :: ctx.ty_names;
-          ty_defs = ty_def :: ctx.ty_defs;
+          ty_names = Ty.Env.extend name ctx.ty_names;
+          ty_defs = Ty.Env.extend ty_def ctx.ty_defs;
         }
 
       let extend_ty_def (ctx : t) (name : Ty.name) (ty_def : Ty.Value.t) : t =
@@ -555,8 +577,8 @@ module Surface = struct
         extend_ty_def ctx name (Ty.Value.Var ctx.ty_size)
 
       let lookup_ty (ctx : t) (name : Ty.name) : Ty.(index * Clos.t) option =
-        List.find_index (String.equal name) ctx.ty_names
-        |> Option.map (fun index -> index, List.nth ctx.ty_defs index)
+        Ty.Env.find (String.equal name) ctx.ty_names |> Option.map @@ fun index ->
+          index, Ty.Env.lookup index ctx.ty_defs
 
       let extend_poly_expr (ctx : t) (name : Expr.name) (cty : Ty.Clos.t) : t =
         { ctx with expr_tys = (name, cty) :: ctx.expr_tys }
