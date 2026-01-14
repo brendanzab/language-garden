@@ -1,0 +1,12 @@
+let type Point2 A := (A, A);
+let type Vector2 A := (A, A);
+
+-- Scale a vector by a scalar
+let scale (v : Vector2 Int) (s : Int) : Vector2 Int :=
+  (v.0 * s, v.1 * s);
+
+-- Move a point by a displacement vector
+let move (p : Point2 Int) (v : Vector2 Int) : Point2 Int :=
+  (p.0 + v.0, p.1 + v.1);
+
+()

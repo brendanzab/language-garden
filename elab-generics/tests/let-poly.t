@@ -1,5 +1,5 @@
 Initial setup
-  $ alias executable=generics-tydefs
+  $ alias executable=generics
 
 --------------------------------------------------------------------------------
 
@@ -59,7 +59,7 @@ Locally polymorphic definitions
 
 --------------------------------------------------------------------------------
 
-Identity function (invalid type application)
+Invalid type application
   $ executable elab <<< "let id [A] (x : A) : A := x; id [Bool] 42"
   error: mismatched types:
     expected: Bool
@@ -71,7 +71,7 @@ Identity function (invalid type application)
   
   [1]
 
-Identity function (reused type parameter)
+Reused type parameter
   $ executable elab <<< "let id [A, A] (x : A) : A := x; id 42"
   error: reused type parameter name A
     ┌─ <stdin>:1:11
@@ -81,7 +81,7 @@ Identity function (reused type parameter)
   
   [1]
 
-Identity function (ambiguous type argument)
+Ambiguous type argument
   $ executable elab <<< "let id [A] (x : A) : A := x; id"
   error: ambiguous type argument
     ┌─ <stdin>:1:29

@@ -6,6 +6,7 @@
 %token KEYWORD_LET "let"
 %token KEYWORD_THEN "then"
 %token KEYWORD_REC "rec"
+%token KEYWORD_TYPE "type"
 %token ADD "+"
 %token ASTERISK "*"
 %token COLON ":"
@@ -38,8 +39,13 @@ let main :=
 (* Types *)
 
 let ty :=
-| ty1 = spanned(atomic_ty); "->"; ty2 = spanned(ty);
+| ty1 = spanned(app_ty); "->"; ty2 = spanned(ty);
     { Surface.Ty.Fun (ty1, ty2) }
+| app_ty
+
+let app_ty :=
+| n = spanned(NAME); tys = nonempty_list(spanned(atomic_ty));
+    { Surface.Ty.Name (n, tys) }
 | atomic_ty
 
 let atomic_ty :=
@@ -51,14 +57,16 @@ let atomic_ty :=
     { Surface.Ty.Tuple [ty] }
 | "("; ty = spanned(ty); ","; tys = trailing_nonempty_list(",", spanned(ty)); ")";
     { Surface.Ty.Tuple (ty :: tys) }
-| n = NAME;
-    { Surface.Ty.Name n }
+| n = spanned(NAME);
+    { Surface.Ty.Name (n, []) }
 | UNDERSCORE;
     { Surface.Ty.Placeholder }
 
 let tm :=
 | "let"; r = option("rec"; { `Rec }); ds = defs; ";"; tm = spanned(tm);
     { Surface.Tm.Let (r, ds, tm) }
+| "let"; "type"; td = ty_def; ";"; tm = spanned(tm);
+    { Surface.Tm.Let_type (td, tm) }
 | "fun"; ps = nonempty_list(param); ty = option(":"; ty = spanned(ty); { ty });
   "=>"; tm = spanned(tm);
     { Surface.Tm.Fun (ps, ty, tm) }
@@ -132,14 +140,18 @@ let param :=
 (* Definitions *)
 
 let ty_params :=
-| "["; tps = trailing_nonempty_list(",", spanned(NAME)); "]"; { tps }
+| "["; tps = trailing_nonempty_list(",", spanned(binder)); "]"; { tps }
 | { [] }
+
+let ty_def :=
+| n = spanned(binder); tps = list(spanned(binder)); ":="; ty = spanned(ty);
+    { n, tps, ty }
 
 let def :=
 | n = spanned(binder); tps = ty_params;
     ps = list(param); ty = option(":"; ty = spanned(ty); { ty }); ":=";
     tm = spanned(tm);
-    { n, tps, ps, ty, tm }
+    { n, tps, (ps, ty, tm) }
 
 let defs :=
 | d = def; { [d] }

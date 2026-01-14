@@ -72,15 +72,15 @@ let elab_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.Tm.pp [] tm)
-    (Core.Ty.pp ty)
+    Core.(Tm.pp Env.empty Env.empty tm)
+    Core.(Ty.pp Env.empty ty)
 
 let eval_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.Tm.Value.pp (Core.Tm.eval [] tm))
-    (Core.Ty.pp ty)
+    Core.(Tm.Value.pp (Core.Tm.eval [] tm))
+    Core.(Ty.pp Env.empty ty)
 
 
 (** {1 CLI options} *)

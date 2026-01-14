@@ -1,0 +1,8 @@
+let type Point2 A := (A, A);
+let type Vector2 A := (A, A);
+let scale : Vector2 Int -> Int -> Vector2 Int :=
+  fun (v : Vector2 Int) => fun (s : Int) => (#int-mul v.0 s, #int-mul v.1 s);
+let move : Point2 Int -> Vector2 Int -> Point2 Int :=
+  fun (p : Point2 Int) => fun (v : Vector2 Int) =>
+    (#int-add p.0 v.0, #int-add p.1 v.1);
+() : ()

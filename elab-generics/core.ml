@@ -203,7 +203,8 @@ module Tm = struct
                   (pp_tm names def)
                   (go (name :: names) body)
             | Let_rec (defs, body) ->
-                let rec_names = List.(rev_append (map (fun (n, _, _, _) -> n) defs) names) in
+                let extend names (n, _, _, _) = n :: names in
+                let rec_names = List.fold_left extend names defs in
                 (* FIXME: indentation *)
                 Format.fprintf ppf "@[@[let@ rec@ {@]%t@ };@]@ %t"
                   (defs |> Fun.flip @@ Format.pp_print_list

@@ -210,7 +210,7 @@ module Core = struct
             pp_app_ty ty ppf
       and pp_app_ty ty ppf =
         match ty with
-        | Var (index, args) ->
+        | Var (index, ((_ :: _) as args)) ->
             Format.fprintf ppf "@[%s@ %a@]"
               (Env.lookup index names)
               (Format.pp_print_list (Fun.flip pp_atomic_ty)

@@ -23,6 +23,7 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "let"         -> KEYWORD_LET
   | "then"        -> KEYWORD_THEN
   | "rec"         -> KEYWORD_REC
+  | "type"        -> KEYWORD_TYPE
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
   | "+"           -> ADD
   | "*"           -> ASTERISK

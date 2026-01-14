@@ -1,0 +1,10 @@
+let type Pair A B := (A, B);
+let fst [A, B] : Pair A B -> A := fun (p : Pair A B) => p.0;
+let snd [A, B] : Pair A B -> B := fun (p : Pair A B) => p.1;
+let elim [A, B, C] : Pair A B -> (A -> B -> C) -> C :=
+  fun (p : Pair A B) => fun (f : A -> B -> C) => f p.0 p.1;
+let curry [A, B, C] : (Pair A B -> C) -> A -> B -> C :=
+  fun (f : Pair A B -> C) => fun (a : A) => fun (b : B) => f (a, b);
+let uncurry [A, B, C] : (A -> B -> C) -> Pair A B -> C :=
+  fun (f : A -> B -> C) => fun (p : (A, B)) => f p.0 p.1;
+() : ()
