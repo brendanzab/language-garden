@@ -561,7 +561,7 @@ module Surface = struct
           let false_body = check_expr ctx false_body body_ty in
           Core.Expr.Bool_if (head, true_body, false_body), body_ty
 
-    (** Elaborate a definition, return a context with the definition bound. *)
+    (** Elaborate a definition and add it to the context *)
     and infer_def (ctx : Ctx.t) (name, ty_params, ty, expr : Expr.def) : Ctx.t * Core.Expr.def =
       uncons (find_dupes ty_params) |> Option.iter (fun (name, names) ->
         error "reused type parameter names: %s"
@@ -577,8 +577,8 @@ module Surface = struct
       Ctx.extend_expr ctx name (ty_params, ty),
       (name, ty_params, ty, expr)
 
-    (** Elaborate a series of mutually recursive definitions, returning a
-        context with them bound. *)
+    (** Elaborate a series of mutually recursive definitions and add them to the
+        context *)
     and infer_rec_defs (ctx : Ctx.t) (defs : Expr.def list) : Ctx.t * Core.Expr.def list =
       let names = List.map (fun (name, _, _, _) -> name) defs in
       uncons (find_dupes names) |> Option.iter (fun (name, names) ->

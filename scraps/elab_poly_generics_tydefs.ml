@@ -628,7 +628,7 @@ module Surface = struct
           let false_body = check_expr ctx false_body body_vty in
           Core.Expr.Bool_if (head, true_body, false_body), body_vty
 
-    (** Elaborate a polymorphic definition with an optional type annotation *)
+    (** Elaborate a definition and add it to the context *)
     and infer_def (ctx : Ctx.t) (name : string) (ty_params : string list) (def_ty : Ty.t option) (def : Expr.t) : Ctx.t * Core.Ty.t * Core.Expr.t =
       match find_dupes ty_params with
       | (_ :: _) as names ->

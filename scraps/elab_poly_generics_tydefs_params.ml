@@ -787,7 +787,7 @@ module Surface = struct
           if not (List.mem name seen) then name :: seen else
             error "reused type parameter name %s" name)
 
-    (** Elaborate a polymorphic definition with an optional type annotation *)
+    (** Elaborate a definition and add it to the context *)
     and infer_def (ctx : Ctx.t) (name, ty_params, def_ty, def : Expr.def) : Ctx.t * Core.Expr.def =
       check_ty_params ty_params;
       let def, def_ty =
@@ -804,6 +804,7 @@ module Surface = struct
       Ctx.extend_poly_expr ctx name (Ctx.close_ty ctx ty_params def_ty),
       (name, ty_params, def_ty, def)
 
+    (** Elaborate a type definition and add it to the context *)
     and infer_ty_def (ctx : Ctx.t) (name, ty_params, ty : Ty.def) : Ctx.t * Core.Ty.def =
       check_ty_params ty_params;
       let ty = check_ty (List.fold_left Ctx.extend_ty_param ctx ty_params) ty in
