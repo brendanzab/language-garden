@@ -111,12 +111,6 @@ module rec Ty : sig
   (** Quote an evaluated type back into its normal form *)
   val quote : level -> Ty.Value.t -> t
 
-  (** Inline solved metavariables in types *)
-  val zonk : level -> t -> t
-
-  (** Inline solved metavariables in type definitions *)
-  val zonk_def : level -> def -> def
-
   (** Pretty print a type *)
   val pp : name Env.t -> t -> Format.formatter -> unit
 
@@ -193,19 +187,6 @@ end = struct
     | Value.Tuple elem_tys -> Tuple (List.map (quote size) elem_tys)
     | Value.Bool -> Bool
     | Value.Int -> Int
-
-  let rec zonk (size : level) (ty : t) : t =
-    match ty with
-    | Var _ -> ty
-    | Meta { contents = Solved ty } -> zonk size (quote size ty)
-    | Meta { contents = Unsolved _ } -> ty
-    | Fun (param_ty, body_ty) -> Fun (zonk size param_ty, zonk size body_ty)
-    | Tuple elem_tys -> Tuple (List.map (zonk size) elem_tys)
-    | Bool -> ty
-    | Int -> Int
-
-  let zonk_def (ty_size : level) (name, ty_params, ty : def) : def =
-    name, ty_params, zonk (ty_size + List.length ty_params) ty
 
   let pp (names : name Env.t) (ty : t) (ppf : Format.formatter) : unit =
     let size = Env.size names in
