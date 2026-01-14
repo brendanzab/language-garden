@@ -180,8 +180,8 @@ end = struct
   and inst (cty : clos) (args : Value.t list) =
     match cty, args with
     | Clos (env, arity, body), args when List.length args = arity ->
-        let extend_arg acc arg = Env.extend (Value arg) acc in
-        eval (List.fold_left extend_arg env args) body
+        let extend_value acc arg = Env.extend (Value arg) acc in
+        eval (List.fold_left extend_value env args) body
     | Value vty, [] -> vty
     | _, _ -> failwith "mismatched arity"
 
