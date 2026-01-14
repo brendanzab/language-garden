@@ -448,37 +448,37 @@ end = struct
     in
 
     (* Elaborate a function against an expected type *)
-    let rec check_fun ctx param_names body ty =
-      match param_names, Core.Ty.force ty with
-      | [], ty -> check_tm ctx body ty
-      | (name : Tm.binder) :: param_names, Core.Ty.Fun (param_ty, body_ty) ->
-          let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) param_names body body_ty in
+    let rec check_fun ctx params body fun_ty =
+      match params, Core.Ty.force fun_ty with
+      | [], body_ty -> check_tm ctx body body_ty
+      | (name, _ : Tm.param) :: params, Core.Ty.Fun (param_ty, body_ty) ->
+          let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) params body body_ty in
           Core.Tm.Fun_lit (name.data, param_ty, body)
-      | (name : Tm.binder) :: _, _ -> error name.span "unexpected parameter"
+      | (name, _ : Tm.param) :: _, _ -> error name.span "unexpected parameter"
     in
 
-    (* Extend the typing context with forward declarations for each of the
-       recursive definitions *)
-    let ~ctx, ~seen:_ =
+    (* Find the forward declarations for each recursive definition, adding them
+       to the context *)
+    let ~ctx, ~seen =
       ListLabels.fold_left defs
         ~init:(~ctx, ~seen:[])
-        ~f:(fun (~ctx, ~seen) ({ span; _ } as name, ty_params, (params, body_ty, _) : Tm.def) ->
+        ~f:(fun (~ctx, ~seen) (name, ty_params, (params, body_ty, _) : Tm.def) ->
           match name.data with
           | None -> error name.span "placeholder in recursive binding"
-          | Some name when List.mem name seen ->
-              error span "reused name `%s` in recursive binding" name
-          | Some name ->
+          | Some n when Option.is_some (List.assoc_opt n seen) ->
+              error name.span "reused name `%s` in recursive binding" n
+          | Some n ->
               let ty_params = check_ty_params ty_params in
-              let ty = check_fun_ty (Ctx.extend_tys ctx ty_params) span params body_ty in
-              ~ctx:(Ctx.extend_tm ctx (Some name) (ty_params, ty)), ~seen:(name :: seen))
+              let ty = check_fun_ty (Ctx.extend_tys ctx ty_params) name.span params body_ty in
+              ~ctx:(Ctx.extend_tm ctx (Some n) (ty_params, ty)),
+              ~seen:((n, (ty_params, ty)) :: seen))
     in
 
     (* Elaborate the definitions with the recursive definitions in scope *)
     let defs =
       defs |> List.map @@ fun (name, _, (params, _, body) : Tm.def) ->
-        let _, (ty_params, body_ty) = Option.get (Ctx.lookup_tm ctx (Option.get name.data)) in
-        let param_names = params |> List.map fst in
-        let tm = check_fun (Ctx.extend_tys ctx ty_params) param_names body body_ty in
+        let ty_params, body_ty = List.assoc (Option.get name.data) seen in
+        let tm = check_fun (Ctx.extend_tys ctx ty_params) params body body_ty in
 
         (* Avoid “vicious circles” with a blunt syntactic check on the elaborated
           term, ensuring that it is a function literal. This is similar to the

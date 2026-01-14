@@ -76,6 +76,16 @@ Mutually recursive bindings: Even/odd
 
 --------------------------------------------------------------------------------
 
+Placeholder name in mutually recursive binding
+  $ executable elab <<< "let rec { _ x := x; f x := x }; f 1 : Int"
+  error: placeholder in recursive binding
+    ┌─ <stdin>:1:10
+    │
+  1 │ let rec { _ x := x; f x := x }; f 1 : Int
+    │           ^
+  
+  [1]
+
 Reused name in mutually recursive binding
   $ executable elab <<< "let rec { f x := x; f x := x }; f 1 : Int"
   error: reused name `f` in recursive binding
