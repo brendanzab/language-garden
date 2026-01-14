@@ -266,18 +266,12 @@ module Core = struct
     let rec zonk (expr : t) : t =
       match expr with
       | Var (name, ty_args) -> Var (name, List.map Ty.zonk ty_args)
-      | Let (def, body) ->
-          Let (zonk_def def, zonk body)
-      | Let_rec (defs, body) ->
-          Let_rec (List.map zonk_def defs, zonk body)
-      | Fun_lit (name, ty, body) ->
-          Fun_lit (name, Ty.zonk ty, zonk body)
-      | Fun_app (head, arg) ->
-          Fun_app (zonk head, zonk arg)
-      | Tuple_lit elems ->
-          Tuple_lit (List.map zonk elems)
-      | Tuple_proj (head, index) ->
-          Tuple_proj (zonk head, index)
+      | Let (def, body) -> Let (zonk_def def, zonk body)
+      | Let_rec (defs, body) -> Let_rec (List.map zonk_def defs, zonk body)
+      | Fun_lit (name, ty, body) -> Fun_lit (name, Ty.zonk ty, zonk body)
+      | Fun_app (head, arg) -> Fun_app (zonk head, zonk arg)
+      | Tuple_lit elems -> Tuple_lit (List.map zonk elems)
+      | Tuple_proj (head, index) -> Tuple_proj (zonk head, index)
       | Bool_lit _ -> expr
       | Bool_if (head, true_body, false_body) ->
           Bool_if (zonk head, zonk true_body, zonk false_body)
