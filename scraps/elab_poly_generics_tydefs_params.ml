@@ -11,17 +11,6 @@
       Practical Type Inference with Levels})
 *)
 
-(** Returns a list of the duplicate elements in a list *)
-let find_dupes (type a) (xs : a list) : a list =
-  let rec go acc xs =
-    match xs with
-    | [] -> List.rev acc
-    | x :: xs when List.mem x xs && not (List.mem x acc) -> go (x :: acc) xs
-    | _ :: xs -> go acc xs
-  in
-  go [] xs
-
-
 (** The explicitly typed core language that the surface language will be
     elaborated to. *)
 module Core = struct
@@ -791,38 +780,35 @@ module Surface = struct
           let false_body = check_expr ctx false_body body_vty in
           Core.Expr.Bool_if (head, true_body, false_body), body_vty
 
+    (** Check that the type parameter names are unique *)
+    and check_ty_params (ty_params : string list) =
+      ignore @@ ListLabels.fold_left ty_params ~init:[]
+        ~f:(fun seen name ->
+          if not (List.mem name seen) then name :: seen else
+            error "reused type parameter name %s" name)
+
     (** Elaborate a polymorphic definition with an optional type annotation *)
     and infer_def (ctx : Ctx.t) (name, ty_params, def_ty, def : Expr.def) : Ctx.t * Core.Expr.def =
-      match find_dupes ty_params with
-      | (_ :: _) as names ->
-          error "type %s introduced multiple times: %s"
-            (match names with [_] -> "parameter" | _ -> "parameters")
-            (String.concat ", " names)
-      | [] ->
-          let def, def_ty =
-            let ctx = List.fold_left Ctx.extend_ty_param ctx ty_params in
-            match def_ty with
-            | None ->
-                let def, def_vty = infer_expr ctx def in
-                def, Ctx.quote_vty ctx def_vty
-            | Some def_ty ->
-                let def_ty = check_ty ctx def_ty in
-                let def_vty = Ctx.eval_ty ctx def_ty in
-                check_expr ctx def def_vty, def_ty
-          in
-          Ctx.extend_poly_expr ctx name (Ctx.close_ty ctx ty_params def_ty),
-          (name, ty_params, def_ty, def)
+      check_ty_params ty_params;
+      let def, def_ty =
+        let ctx = List.fold_left Ctx.extend_ty_param ctx ty_params in
+        match def_ty with
+        | None ->
+            let def, def_vty = infer_expr ctx def in
+            def, Ctx.quote_vty ctx def_vty
+        | Some def_ty ->
+            let def_ty = check_ty ctx def_ty in
+            let def_vty = Ctx.eval_ty ctx def_ty in
+            check_expr ctx def def_vty, def_ty
+      in
+      Ctx.extend_poly_expr ctx name (Ctx.close_ty ctx ty_params def_ty),
+      (name, ty_params, def_ty, def)
 
     and infer_ty_def (ctx : Ctx.t) (name, ty_params, ty : Ty.def) : Ctx.t * Core.Ty.def =
-      match find_dupes ty_params with
-      | (_ :: _) as names ->
-          error "type %s introduced multiple times: %s"
-            (match names with [_] -> "parameter" | _ -> "parameters")
-            (String.concat ", " names)
-      | [] ->
-          let ty = check_ty (List.fold_left Ctx.extend_ty_param ctx ty_params) ty in
-          Ctx.extend_poly_ty_def ctx name (Ctx.close_ty ctx ty_params ty),
-          (name, ty_params, ty)
+      check_ty_params ty_params;
+      let ty = check_ty (List.fold_left Ctx.extend_ty_param ctx ty_params) ty in
+      Ctx.extend_poly_ty_def ctx name (Ctx.close_ty ctx ty_params ty),
+      (name, ty_params, ty)
 
 
     (** Running elaboration *)
