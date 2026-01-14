@@ -77,6 +77,16 @@ let uncurry [A, B, C] : (A -> B -> C) -> Pair A B -> C :=
 
 </details>
 
+## Implementation notes
+
+Substitution in types is now handled with normalisation-by-evaluation, and we
+store polymorphic types as closures in the elaboration context. I find this
+helps to keep name binding manageable, and could be scaled up to fancier type
+systems in the future (see [elab-system-f-bidirectional] and [elab-dependent]).
+
+[elab-system-f-bidirectional]: ../elab-system-f-bidirectional
+[elab-dependent]: ../elab-dependent
+
 ## Project overview
 
 | Module        | Description                             |
@@ -99,7 +109,10 @@ let uncurry [A, B, C] : (A -> B -> C) -> Pair A B -> C :=
 
 - [x] Recursive definitions (see [elab-stlc-letrec-unification](../elab-stlc-letrec-unification))
 - [ ] Local datatype definitions (see [misc_local_datatypes.ml](../scraps/misc_local_datatypes.ml)
-  and [Practical Type Inference with Levels](https://doi.org/10.1145/3729338)
+      and [Practical Type Inference with Levels](https://doi.org/10.1145/3729338)
+- [ ] Local unfolding of type definitions. See [Efficient Elaboration with
+      Controlled Definition Unfolding](https://andraskovacs.github.io/pdfs/wits24prez.pdf#page=19)
+      by Andras Kovacs for more details.
 
 ## Examples
 
