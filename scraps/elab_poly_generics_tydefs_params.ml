@@ -204,7 +204,7 @@ module Core = struct
         | Meta m -> pp_meta pp_ty m ppf
         | Fun (param_ty, body_ty) ->
             Format.fprintf ppf "%t -> %t"
-              (pp_atomic_ty param_ty)
+              (pp_app_ty param_ty)
               (pp_ty body_ty)
         | ty ->
             pp_app_ty ty ppf
@@ -213,7 +213,7 @@ module Core = struct
         | Var (index, args) ->
             Format.fprintf ppf "@[%s@ %a@]"
               (Env.lookup index names)
-              (Format.pp_print_list (Fun.flip pp_ty)
+              (Format.pp_print_list (Fun.flip pp_atomic_ty)
                 ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ "))
               args
         | ty ->
