@@ -139,7 +139,7 @@ let def :=
 | n = spanned(binder); tps = ty_params;
     ps = list(param); ty = option(":"; ty = spanned(ty); { ty }); ":=";
     tm = spanned(tm);
-    { n, tps, ps, ty, tm }
+    { n, tps, (ps, ty, tm) }
 
 let defs :=
 | d = def; { [d] }

@@ -53,7 +53,7 @@ module Tm = struct
     | Name of string Spanned.t * Ty.t list
     | Let of [`Rec] option * def list * t
     | Ann of t * Ty.t
-    | Fun of param list * Ty.t option * t
+    | Fun of fun_
     | Tuple of t list
     | Int of int
     | App of t * t
@@ -70,9 +70,12 @@ module Tm = struct
   and param =
     binder * Ty.t option
 
+  and fun_ =
+    param list * Ty.t option * t
+
   (** Definitions, possibly parameterised, with an optional type annotation *)
   and def =
-    binder * Ty.binder list * param list * Ty.t option * t
+    binder * Ty.binder list * fun_
 
 end
 
@@ -228,8 +231,8 @@ end = struct
         let body = check_tm ctx body body_ty in
         Core.Tm.Let_rec (defs, body)
 
-    | Tm.Fun (params, body_ty, body), fun_ty ->
-        check_fun ctx tm.span params body_ty body fun_ty
+    | Tm.Fun fun_, fun_ty ->
+        check_fun ctx tm.span fun_ fun_ty
 
     | Tm.Tuple elems, Core.Ty.Tuple elem_tys ->
         if List.length elems <> List.length elem_tys then
@@ -302,8 +305,8 @@ end = struct
         let ty = check_ty ctx ty in
         check_tm ctx tm ty, ty
 
-    | Tm.Fun (params, body_ty, body) ->
-        infer_fun ctx params body_ty body
+    | Tm.Fun fun_ ->
+        infer_fun ctx fun_
 
     | Tm.Tuple elems ->
         let elems, elem_tys = List.split (List.map (infer_tm ctx) elems) in
@@ -371,8 +374,8 @@ end = struct
         Core.Tm.Prim_app (Prim.Int_neg, [tm]), Core.Ty.Int
 
   (** Elaborate a function into a core term, given an expected type. *)
-  and check_fun (ctx : Ctx.t) (span : Span.t) (params : Tm.param list) (body_ty : Ty.t option) (body : Tm.t) (ty : Core.Ty.t) : Core.Tm.t =
-    match params, body_ty, Core.Ty.force ty with
+  and check_fun (ctx : Ctx.t) (span : Span.t) (params, body_ty, body : Tm.fun_) (fun_ty : Core.Ty.t) : Core.Tm.t =
+    match params, body_ty, Core.Ty.force fun_ty with
     | [], None, body_ty ->
         check_tm ctx body body_ty
     | [], Some ({ span = body_ty_span; _ } as body_ty), body_ty' ->
@@ -380,23 +383,23 @@ end = struct
         unify_tys body_ty_span ~found:body_ty ~expected:body_ty';
         check_tm ctx body body_ty
     | (name, None) :: params, body_ty, Core.Ty.Fun (param_ty, ty) ->
-        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span params body_ty body ty in
+        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span (params, body_ty, body) ty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
     | (name, Some param_ty) :: params, body_ty, Core.Ty.Fun (param_ty', ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span params body_ty body ty in
+        let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span (params, body_ty, body) ty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
     | (_ :: _) as params, body_ty, Core.Ty.Meta_var _ ->
-        let tm', ty' = infer_fun ctx params body_ty body in
-        unify_tys span ~found:ty' ~expected:ty;
-        tm'
+        let fun', fun_ty' = infer_fun ctx (params, body_ty, body) in
+        unify_tys span ~found:fun_ty' ~expected:fun_ty;
+        fun'
     | (name, _) :: _, _, _ ->
         error name.span "unexpected parameter"
 
   (** Elaborate a function into a core term, inferring its type. *)
-  and infer_fun (ctx : Ctx.t) (params : Tm.param list) (body_ty : Ty.t option) (body : Tm.t) : Core.Tm.t * Core.Ty.t =
+  and infer_fun (ctx : Ctx.t) (params, body_ty, body : Tm.fun_) : Core.Tm.t * Core.Ty.t =
     match params, body_ty with
     | [], Some body_ty ->
         let body_ty = check_ty ctx body_ty in
@@ -409,7 +412,9 @@ end = struct
           | None -> Ctx.fresh_meta ctx name.span "function parameter type"
           | Some ty -> check_ty ctx ty
         in
-        let body, body_ty = infer_fun (Ctx.extend_tm ctx name.data ([], param_ty)) params body_ty body in
+        let body, body_ty =
+          infer_fun (Ctx.extend_tm ctx name.data ([], param_ty)) (params, body_ty, body)
+        in
         Core.Tm.Fun_lit (name.data, param_ty, body), Core.Ty.Fun (param_ty, body_ty)
 
   and check_ty_params (ty_params : Ty.binder list) : Core.Ty.name list =
@@ -420,9 +425,9 @@ end = struct
     |> List.rev
 
   (** Elaborate a definition, and add it to the context. *)
-  and check_def (ctx : Ctx.t) (name, ty_params, params, ty, tm : Tm.def) : Ctx.t * Core.Tm.def =
+  and check_def (ctx : Ctx.t) (name, ty_params, fun_ : Tm.def) : Ctx.t * Core.Tm.def =
     let ty_params = check_ty_params ty_params in
-    let tm, ty = infer_fun (Ctx.extend_tys ctx ty_params) params ty tm in
+    let tm, ty = infer_fun (Ctx.extend_tys ctx ty_params) fun_ in
     Ctx.extend_tm ctx name.data (ty_params, ty), (name.data, ty_params, ty, tm)
 
   (** Elaborate a series of mutually recursive definitions, returning a
@@ -457,10 +462,11 @@ end = struct
     let ~ctx, ~seen:_ =
       ListLabels.fold_left defs
         ~init:(~ctx, ~seen:[])
-        ~f:(fun (~ctx, ~seen) ({ span; _ } as name, ty_params, params, body_ty, _ : Tm.def) ->
+        ~f:(fun (~ctx, ~seen) ({ span; _ } as name, ty_params, (params, body_ty, _) : Tm.def) ->
           match name.data with
           | None -> error name.span "placeholder in recursive binding"
-          | Some name when List.mem name seen -> error span "reused name `%s` in recursive binding" name
+          | Some name when List.mem name seen ->
+              error span "reused name `%s` in recursive binding" name
           | Some name ->
               let ty_params = check_ty_params ty_params in
               let ty = check_fun_ty (Ctx.extend_tys ctx ty_params) span params body_ty in
@@ -469,7 +475,7 @@ end = struct
 
     (* Elaborate the definitions with the recursive definitions in scope *)
     let defs =
-      defs |> List.map @@ fun (name, _, params, _, body : Tm.def) ->
+      defs |> List.map @@ fun (name, _, (params, _, body) : Tm.def) ->
         let _, (ty_params, body_ty) = Option.get (Ctx.lookup_tm ctx (Option.get name.data)) in
         let param_names = params |> List.map fst in
         let tm = check_fun (Ctx.extend_tys ctx ty_params) param_names body body_ty in
