@@ -24,6 +24,21 @@ Multiple parameters
   let type Pair A B := (A, B);
   (3, false) : (Int, Bool)
 
+Placeholder parameters
+  $ executable elab <<< "let type Foo _ A _ := A; 4 : Foo Bool Int Bool"
+  let type Foo _ A _ := A;
+  4 : Int
+
+Placeholder type definition
+  $ executable elab <<EOF
+  > let type _ := Int;
+  > let type _ A B := (B, A);
+  > ()
+  > EOF
+  let type _ := Int;
+  let type _ A B := (B, A);
+  () : ()
+
 Local type definitions
   $ executable elab <<EOF 
   >   let dup [A] (x : A) := 

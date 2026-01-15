@@ -14,6 +14,18 @@ Multiple definitions
   let y : Int := #int-add x x;
   #int-eq x 4 : Bool
 
+Placeholder parameters
+  $ executable elab <<< "let foo _ x _ := x; foo true 3 false"
+  let foo : Bool -> Int -> Bool -> Int :=
+    fun (_ : Bool) => fun (x : Int) => fun (_ : Bool) => x;
+  foo true 3 false : Int
+
+Placeholder definitions
+  $ executable elab <<< "let _ := 2; let _ x y := x + y; 4"
+  let _ : Int := 2;
+  let _ : Int -> Int -> Int := fun (x : Int) => fun (y : Int) => #int-add x y;
+  4 : Int
+
 Function definition
   $ executable elab <<< "let add-two := fun x => x + 2; add-two 3"
   let add-two : Int -> Int := fun (x : Int) => #int-add x 2;
