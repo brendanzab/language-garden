@@ -27,12 +27,12 @@ Multiple parameters
 Local type definitions
   $ executable elab <<EOF 
   >   let dup [A] (x : A) := 
-  >     let type B := A;
-  >     (x, x) : (B, B);
+  >     let type AA := (A, A);
+  >     (x, x) : AA;
   > 
   >   dup 4
   > EOF
-  let dup [A] : A -> (A, A) := fun (x : A) => let type B := A;
+  let dup [A] : A -> (A, A) := fun (x : A) => let type AA := (A, A);
                                               (x, x);
   dup [Int] 4 : (Int, Int)
 
