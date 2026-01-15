@@ -228,6 +228,7 @@ module Core = struct
       | Let_rec (defs, body) ->
           (* Add placeholder bindings to the environment then back-patch them
              with their corresponding recursive definitions. This is inspired by
+             Landin’s approach in “The Mechanical Evaluation of Expressions” and
              R⁵RS Scheme’s approach to encoding [letrec] (see Section 7.3 of the
              {{: https://dl.acm.org/doi/10.1145/290229.290234} Revised⁵ Report
              on the Algorithmic Language Scheme}).

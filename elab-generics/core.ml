@@ -323,13 +323,14 @@ module Tm = struct
         eval (ref def :: env) body
     | Let_rec (defs, body) ->
         (* Add placeholder bindings to the environment then back-patch them
-            with their corresponding recursive definitions. This is inspired by
-            R⁵RS Scheme’s approach to encoding [letrec] (see Section 7.3 of the
-            {{: https://dl.acm.org/doi/10.1145/290229.290234} Revised⁵ Report
-            on the Algorithmic Language Scheme}).
+           with their corresponding recursive definitions. This is inspired by
+           Landin’s approach in “The Mechanical Evaluation of Expressions” and
+           R⁵RS Scheme’s approach to encoding [letrec] (see Section 7.3 of the
+           {{: https://dl.acm.org/doi/10.1145/290229.290234} Revised⁵ Report
+           on the Algorithmic Language Scheme}).
 
-            This relies on each definition being a function in order to avoid
-            the bindings from being accessed before they have been defined. *)
+           This relies on each definition being a function in order to avoid
+           the bindings from being accessed before they have been defined. *)
         let undefined = Value.Fun_lit (fun _ -> failwith "undefined") in
         let bindings = defs |> List.map (fun _ -> ref undefined) in
         let env = List.rev_append bindings env in

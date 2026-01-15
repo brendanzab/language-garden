@@ -66,14 +66,15 @@ module Tm = struct
   and binder =
     string option Spanned.t
 
-  (** Parameters, with optional type annotations *)
+  (** Function parameters, with optional type annotations *)
   and param =
     binder * Ty.t option
 
+  (** Functions, with an optional type annotation *)
   and fun_ =
     param list * Ty.t option * t
 
-  (** Definitions, possibly parameterised, with an optional type annotation *)
+  (** Term definitions that might be parameterised by a series of types *)
   and def =
     binder * Ty.binder list * fun_
 
