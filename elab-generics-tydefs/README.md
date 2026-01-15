@@ -79,13 +79,15 @@ let uncurry [A, B, C] : (A -> B -> C) -> Pair A B -> C :=
 
 ## Implementation notes
 
-Substitution in types is now handled with normalisation-by-evaluation, and we
-store polymorphic types as closures in the elaboration context. I find this
-helps to keep name binding manageable, and could be scaled up to fancier type
-systems in the future (see [elab-system-f-bidirectional] and [elab-dependent]).
+Substitution in types is now handled with normalisation-by-evaluation as opposed
+to rewriting in place like in [`elab-generics`]. I find that in the presence of
+parameterised type definitions this helps to keep name binding manageable, and
+scales up to fancier type systems (see [`elab-system-f-bidirectional`] and
+[`elab-dependent`]).
 
-[elab-system-f-bidirectional]: ../elab-system-f-bidirectional
-[elab-dependent]: ../elab-dependent
+[`elab-generics`]: ../elab-generics
+[`elab-system-f-bidirectional`]: ../elab-system-f-bidirectional
+[`elab-dependent`]: ../elab-dependent
 
 ## Project overview
 

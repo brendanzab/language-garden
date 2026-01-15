@@ -114,6 +114,8 @@ module rec Ty : sig
   (** Pretty print a type *)
   val pp : name Env.t -> t -> Format.formatter -> unit
 
+  (** Evaluated types. These can be used at deeper parts of the program without
+      needing to be re-indexed. *)
   module Value : sig
 
     include module type of Value
@@ -131,15 +133,24 @@ module rec Ty : sig
 
   end
 
-  (** Types that can be instantiated with a series of type arguments. *)
+  (** Types that can be instantiated with a series of type arguments.
+      These are used as polymorphic types during elaboration, either for
+      parameterised type definitions, or for the types of polymorphic term
+      definitions. *)
   module Clos : sig
 
     type t
 
+    (** Create a closure must be instantiated with a given number of types. *)
     val make : t Env.t -> int -> Ty.t -> t
+
+    (** Create a closure that is instantiated with no types. *)
     val value : Value.t -> t
 
+    (** The number of type arguments this closure should be instantiated with *)
     val arity : t -> int
+
+    (** Instantiate the closure with a list of types. *)
     val inst : t -> Value.t list -> Value.t
 
   end
