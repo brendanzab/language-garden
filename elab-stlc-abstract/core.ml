@@ -161,7 +161,7 @@ let catch_infer_tm (type e) (f : e -> infer_tm) (elab : e infer_tm_err) : infer_
     | Error e -> f e ctx
 
 
-let ( let* ) = Result.bind
+open Result.Syntax
 
 
 (** Directional rules *)
