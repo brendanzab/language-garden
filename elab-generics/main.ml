@@ -46,41 +46,53 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Surface.Spa
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
   Printf.eprintf "\n"
 
-let parse_tm (source : Source_file.t) : Surface.Tm.t =
+let parse_tm (source : Source_file.t) : (Surface.Tm.t, (Surface.Span.t * string) list) result =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
   let lexpos () = Sedlexing.lexing_positions lexbuf in
-  Sedlexing.set_filename lexbuf source.name;
-
   try
-    MenhirLib.Convert.Simplified.traditional2revised Parser.main
-      (Sedlexing.with_tokenizer Lexer.token lexbuf)
+    Sedlexing.set_filename lexbuf source.name;
+    Sedlexing.with_tokenizer Lexer.token lexbuf
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
+    |> Result.ok
   with
-  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
-  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
-
-let elab_tm (source : Source_file.t) (tm : Surface.Tm.t) : Core.Tm.t * Core.Ty.t =
-  match Surface.Elab.infer_tm tm with
-  | Ok (tm, ty) -> tm, ty
-  | Error errors ->
-      errors |> List.iter (fun (pos, reason) -> emit source "error" pos reason);
-      exit 1
+  | Lexer.Error message -> Error [lexpos (), message]
+  | Parser.Error -> Error [lexpos (), "syntax error"]
 
 
 (** {1 Subcommands} *)
 
-let elab_cmd () : unit =
-  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let tm, ty = parse_tm source |> elab_tm source in
-  Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.Tm.pp [] tm)
-    (Core.Ty.pp ty)
+let exit_ok = 0
+let exit_error = 1
 
-let eval_cmd () : unit =
+let elab_cmd () : int =
+  let open Result.Syntax in
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  let tm, ty = parse_tm source |> elab_tm source in
-  Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.Tm.Value.pp (Core.Tm.eval [] tm))
-    (Core.Ty.pp ty)
+  match
+    let* tm = parse_tm source in
+    let+ (tm, ty) = Surface.Elab.infer_tm tm in
+    Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+      Core.(Tm.pp [] tm)
+      Core.(Ty.pp ty)
+  with
+  | Ok () -> exit_ok
+  | Error errors ->
+      errors |> List.iter (fun (pos, message) -> emit source "error" pos message);
+      exit_error
+
+let eval_cmd () : int =
+  let open Result.Syntax in
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
+  match
+    let* tm = parse_tm source in
+    let+ (tm, ty) = Surface.Elab.infer_tm tm in
+    Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+      Core.(Tm.Value.pp (Core.Tm.eval [] tm))
+      Core.(Ty.pp ty)
+  with
+  | Ok () -> exit_ok
+  | Error errors ->
+      errors |> List.iter (fun (pos, message) -> emit source "error" pos message);
+      exit_error
 
 
 (** {1 CLI options} *)
@@ -100,4 +112,4 @@ let cmd =
 
 let () =
   Printexc.record_backtrace true;
-  exit (Cmdliner.Cmd.eval cmd)
+  exit (Cmdliner.Cmd.eval' cmd)
