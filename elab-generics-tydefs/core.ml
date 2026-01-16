@@ -391,7 +391,7 @@ module Tm = struct
           let pp_sep ppf () = Format.fprintf ppf ",@ " in
           Format.fprintf ppf "@[<2>@[%t@ @[[%t]@]@ :@]@ %t@]"
             (pp_name name)
-            (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip pp_name)) ty_params)
+            (Fun.flip (Format.pp_print_list (Fun.flip pp_name) ~pp_sep) ty_params)
             (Ty.pp (List.fold_left (Fun.flip Env.extend) ty_names ty_params) ty)
 
     and pp_param (ty_names : name Env.t) (name : name) (ty : Ty.t) (ppf : Format.formatter) : unit =
@@ -425,7 +425,7 @@ module Tm = struct
             | Let_type ((ty_name, ty_params, ty_def), body) ->
                 let pp_sep ppf () = Format.fprintf ppf "@ " in
                 Format.fprintf ppf "@[<2>@[let type @[%t@] :=@]@ @[%t;@]@]@ %t"
-                  (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip pp_name)) (ty_name :: ty_params))
+                  (Fun.flip (Format.pp_print_list (Fun.flip pp_name) ~pp_sep) (ty_name :: ty_params))
                   (Ty.pp (List.fold_left (Fun.flip Env.extend) ty_names ty_params) ty_def)
                   (go (Env.extend ty_name ty_names) names body)
             | tm -> Format.fprintf ppf "@[%t@]" (pp_tm ty_names names tm)
@@ -464,7 +464,7 @@ module Tm = struct
             let pp_sep ppf () = Format.fprintf ppf "@ " in
             Format.fprintf ppf "#%s@ %t"
               (Prim.name prim)
-              (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm ty_names names))) args)
+              (Fun.flip (Format.pp_print_list (Fun.flip (pp_proj_tm ty_names names)) ~pp_sep) args)
         | tm ->
             pp_proj_tm ty_names names tm ppf
       in
@@ -493,7 +493,7 @@ module Tm = struct
           let pp_sep ppf () = Format.fprintf ppf ",@ " in
           Format.fprintf ppf "%t@ @[[%t]@]"
             (pp_name (Env.lookup index names))
-            (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (Ty.pp ty_names))) ty_args)
+            (Fun.flip (Format.pp_print_list (Fun.flip (Ty.pp ty_names)) ~pp_sep) ty_args)
       | Tuple_lit [] -> Format.fprintf ppf "()"
       | Tuple_lit [elem] -> Format.fprintf ppf "@[(%t,)@]" (pp_tm ty_names names elem)
       | Tuple_lit elems ->

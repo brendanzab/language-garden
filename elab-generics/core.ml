@@ -185,7 +185,7 @@ module Tm = struct
           let pp_sep ppf () = Format.fprintf ppf ",@ " in
           Format.fprintf ppf "@[<2>@[%t@ @[[%t]@]@ :@]@ %t@]"
             (pp_name name)
-            (Fun.flip (Format.pp_print_list ~pp_sep Format.pp_print_string) ty_params)
+            (Fun.flip (Format.pp_print_list Format.pp_print_string ~pp_sep) ty_params)
             (Ty.pp ty)
 
     and pp_param (name : name) (ty : Ty.t) (ppf : Format.formatter) : unit =
@@ -247,7 +247,7 @@ module Tm = struct
             let pp_sep ppf () = Format.fprintf ppf "@ " in
             Format.fprintf ppf "#%s@ %t"
               (Prim.name prim)
-              (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names))) args)
+              (Fun.flip (Format.pp_print_list (Fun.flip (pp_proj_tm names)) ~pp_sep) args)
         | tm ->
             pp_proj_tm names tm ppf
       in
@@ -276,7 +276,7 @@ module Tm = struct
           let pp_sep ppf () = Format.fprintf ppf ",@ " in
           Format.fprintf ppf "%t@ @[[%t]@]"
             (pp_name (List.nth names index))
-            (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip Ty.pp)) ty_args)
+            (Fun.flip (Format.pp_print_list (Fun.flip Ty.pp) ~pp_sep) ty_args)
       | Tuple_lit [] -> Format.fprintf ppf "()"
       | Tuple_lit [elem] -> Format.fprintf ppf "@[(%t,)@]" (pp_tm names elem)
       | Tuple_lit elems ->
