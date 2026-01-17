@@ -35,7 +35,7 @@ digraph garden {
     "elab-system-f-unification";
 
     "elab-generics";
-    "elab-generics-tydefs";
+    "elab-generics-lettype";
 
     "elab-stlc-bidirectional";
     "elab-stlc-unification";
@@ -78,7 +78,7 @@ digraph garden {
   "elab-stlc-unification" -> "elab-stlc-row-unification";
   "elab-stlc-unification" -> "elab-generics";
   "elab-stlc-unification" -> "elab-system-f-unification";
-  "elab-generics" -> "elab-generics-tydefs";
+  "elab-generics" -> "elab-generics-lettype";
   "elab-system-f-bidirectional" -> "elab-system-f-unification";
   "elab-dependent" -> "elab-dependent-sugar";
   "elab-dependent-sugar" -> "elab-record-patching";

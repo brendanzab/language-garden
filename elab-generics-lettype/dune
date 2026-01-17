@@ -1,0 +1,22 @@
+(executable
+ (name main)
+ (public_name generics-lettype)
+ (package elab-generics-lettype)
+ (preprocess
+  (per_module
+   ((pps sedlex.ppx) lexer)))
+ (libraries
+  cmdliner
+  menhirLib))
+
+(menhir
+ (modules parser)
+ (flags --strict))
+
+(mdx
+ (package elab-generics-lettype)
+ (deps %{bin:generics-lettype}))
+
+(cram
+ (package elab-generics-lettype)
+ (deps %{bin:generics-lettype}))

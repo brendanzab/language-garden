@@ -50,7 +50,7 @@ Polymorphically typed:
 
 - [**elab-generics**](./elab-generics):
   An elaborator for a simple, polymorphic functional language.
-- [**elab-generics-tydefs**](./elab-generics-tydefs):
+- [**elab-generics-lettype**](./elab-generics-lettype):
   An implementation of generics that supports local type definitions.
 - [**elab-system-f-bidirectional**](./elab-system-f-bidirectional):
   An elaborator for a higher-rank polymorphic lambda calculus.

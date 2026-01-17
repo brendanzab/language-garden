@@ -27,8 +27,8 @@
 (test (name elab_stlc_gadt_bidir))
 (test (name elab_poly_generics))
 (test (name elab_poly_generics_letrec))
-(test (name elab_poly_generics_tydefs))
-(test (name elab_poly_generics_tydefs_params))
+(test (name elab_poly_generics_lettype))
+(test (name elab_poly_generics_lettype_params))
 (test (name elab_poly_algorithm_j))
 
 (test (name compile_lc_anf_fresh))

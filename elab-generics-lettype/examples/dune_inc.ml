@@ -1,5 +1,5 @@
-let bin = "generics-tydefs"
-let package = "elab-generics-tydefs"
+let bin = "generics-lettype"
+let package = "elab-generics-lettype"
 
 let generate_rules base =
   Printf.printf

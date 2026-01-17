@@ -71,7 +71,7 @@
   (sedlex (>= "3.7"))))
 
 (package
- (name elab-generics-tydefs)
+ (name elab-generics-lettype)
  (depends
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20250912") :build))

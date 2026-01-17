@@ -1,5 +1,5 @@
 Initial setup
-  $ alias executable=generics-tydefs
+  $ alias executable=generics-lettype
 
 --------------------------------------------------------------------------------
 

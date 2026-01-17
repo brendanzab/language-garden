@@ -1,0 +1,3 @@
+(cram
+ (package elab-generics-lettype)
+ (deps %{bin:generics-lettype}))

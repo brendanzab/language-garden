@@ -1,5 +1,5 @@
 Initial setup
-  $ alias executable=generics-tydefs
+  $ alias executable=generics-lettype
 
 --------------------------------------------------------------------------------
 
@@ -48,8 +48,8 @@ Factorial in terms of the fixed-point combinator
         n;
   fact 5 : Int
   $ cat fix.txt | executable n
-  Usage: generics-tydefs [--help] COMMAND …
-  generics-tydefs: unknown command n. Must be either elab or eval
+  Usage: generics-lettype [--help] COMMAND …
+  generics-lettype: unknown command n. Must be either elab or eval
   [124]
 
 Mutually recursive bindings: Even/odd
