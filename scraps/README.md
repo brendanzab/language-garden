@@ -21,8 +21,12 @@ Evaluation:
   the CEK machine.
 - [**eval_lc_prims.ml**](./eval_lc_prims.ml): A lambda calculus evaluator with
   primitive operations that support partial applications.
-- [**eval_lc_prims.ml**](./eval_lc_prims.ml): A lambda calculus evaluator that
-  encodes primitive operations using higher order abstract syntax.
+- [**eval_lc_prims_hoas.ml**](./eval_lc_prims_hoas.ml): A lambda calculus
+  evaluator that encodes primitive operations using higher order abstract syntax.
+- [**eval_lc_prims_clos.ml**](./eval_lc_prims_clos.ml): A version of
+  `eval_lc_prims_hoas` with defunctionalised closures.
+- [**eval_lc_prims_clos.ml**](./eval_lc_prims_clos.ml): A version of
+  `eval_lc_prims_clos` that uses GADTs to track the arity of primitives.
 - [**eval_control_flow_cps.ml**](./eval_control_flow_cps.ml):
   An evaluator for imperative control flow (loop, break, continue) implemented
   using continuation passing style
