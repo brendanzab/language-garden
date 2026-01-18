@@ -139,14 +139,11 @@ end = struct
 
     type t = {
       ty_size : Core.level;
-
       ty_names : Core.name Core.Env.t;
-      (** A stack of types currently in scope *)
-
       ty_defs : Ty.Clos.t Core.Env.t;
 
-      tm_tys : (Core.name * Ty.Clos.t) list;
-      (** A stack of term bindings currently in scope *)
+      tm_names : Core.name Core.Env.t;
+      tm_tys : Ty.Clos.t Core.Env.t;
 
       metas : (Ty.meta * Span.t * string) Dynarray.t;
       (** A list of the metavariables that have been inserted during elaboration.
@@ -158,7 +155,8 @@ end = struct
       ty_size = 0;
       ty_names = Core.Env.empty;
       ty_defs = Core.Env.empty;
-      tm_tys = [];
+      tm_names = Core.Env.empty;
+      tm_tys = Core.Env.empty;
       metas = Dynarray.create ();
     }
 
@@ -188,16 +186,17 @@ end = struct
       |> Option.map (fun index -> index, Core.Env.lookup index ctx.ty_defs)
 
     let extend_poly_tm (ctx : t) (name : Core.name) (cty : Ty.Clos.t) : t =
-      { ctx with tm_tys = (name, cty) :: ctx.tm_tys }
+      { ctx with
+        tm_names = Core.Env.extend name ctx.tm_names;
+        tm_tys = Core.Env.extend cty ctx.tm_tys;
+      }
 
     let extend_tm (ctx : t) (name : Core.name) (ty : Ty.Value.t) : t =
       extend_poly_tm ctx name (Ty.Clos.value ty)
 
     let lookup_tm (ctx : t) (name : string) : (Core.index * Ty.Clos.t) option =
-      ctx.tm_tys |> List.find_mapi @@ fun index (name', ty) ->
-        match Some name = name' with
-        | true -> Some (index, ty)
-        | false -> None
+      Core.Env.find (Option.fold ~some:((=) name) ~none:false) ctx.tm_names
+      |> Option.map (fun index -> index, Core.Env.lookup index ctx.tm_tys)
 
     let eval_ty (ctx : t) (ty : Ty.t) : Ty.Value.t =
       Ty.eval ctx.ty_defs ty

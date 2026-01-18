@@ -86,7 +86,7 @@ let eval_cmd () : int =
     let* tm = parse_tm source in
     let+ (tm, ty) = Surface.Elab.infer_tm tm in
     Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-      Core.(Tm.Value.pp (Core.Tm.eval [] tm))
+      Core.(Tm.Value.pp (Core.Tm.eval Env.empty tm))
       Core.(Ty.pp Env.empty ty)
   with
   | Ok () -> exit_ok

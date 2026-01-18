@@ -329,10 +329,6 @@ end
 (** Terms in the core language *)
 module Tm = struct
 
-  (** An environment of bindings that can be looked up directly using a
-      {!index}, or by converting to a {!level} using {!level_to_index}. *)
-  type 'a env = 'a list
-
   (** Term syntax *)
   type t =
     | Var of index * Ty.t list
@@ -532,12 +528,12 @@ module Tm = struct
 
   end
 
-  let rec eval (env : Value.t ref env) (tm : t) : Value.t =
+  let rec eval (env : Value.t ref Env.t) (tm : t) : Value.t =
     match tm with
-    | Var (index, _) -> !(List.nth env index)
+    | Var (index, _) -> !(Env.lookup index env)
     | Let ((_, _, _, def), body) ->
         let def = eval env def in
-        eval (ref def :: env) body
+        eval (Env.extend (ref def) env) body
     | Let_rec (defs, body) ->
         (* Add placeholder bindings to the environment then back-patch them
            with their corresponding recursive definitions. This is inspired by
@@ -550,13 +546,13 @@ module Tm = struct
            the bindings from being accessed before they have been defined. *)
         let undefined = Value.Fun_lit (fun _ -> failwith "undefined") in
         let bindings = defs |> List.map (fun _ -> ref undefined) in
-        let env = List.rev_append bindings env in
+        let env = List.fold_left (fun env binding -> Env.extend binding env) env bindings in
         List.iter2 (fun vdef (_, _, _, tm) -> vdef := eval env tm) bindings defs;
         eval env body
     | Let_type (_, body) ->
         eval env body
     | Fun_lit (_, _, body) ->
-        Value.Fun_lit (fun arg -> eval (ref arg :: env) body)
+        Value.Fun_lit (fun arg -> eval (Env.extend (ref arg) env) body)
     | Fun_app (head, arg) ->
         begin match eval env head with
         | Value.Fun_lit vbody -> vbody (eval env arg)
