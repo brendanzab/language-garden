@@ -4,6 +4,8 @@
 
 (test (name eval_lc_cps))
 (test (name eval_lc_cek))
+(test (name eval_lc_prims))
+(test (name eval_lc_prims_hoas))
 (test (name eval_control_flow_cps))
 (test (name eval_extensible))
 (test (name eval_imp))
