@@ -22,8 +22,6 @@ let generate_rules base =
     package base base
 
 let () =
-  Sys.readdir ".."
-  |> Array.to_list
-  |> List.sort String.compare
-  |> List.filter_map (Filename.chop_suffix_opt ~suffix:".txt")
-  |> List.iter generate_rules
+  Sys.readdir ".." |> Array.iter @@ fun name ->
+    Filename.chop_suffix_opt name ~suffix:".txt"
+    |> Option.iter generate_rules
