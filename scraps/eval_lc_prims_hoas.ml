@@ -15,37 +15,38 @@ end
 module Term = struct
 
   type t =
-    | Var of ident [@warning "-unused-constructor"]
-    | Fun_lit of ident * t [@warning "-unused-constructor"]
-    | Fun_app of t * t
-    | Int of int
+    | Var of ident
     | Prim of Prim.t
+    | Let of ident * t * t
+    | Fun_lit of ident * t
+    | Fun_app of t * t
+    | Int_lit of int
 
 end
 
 module Value = struct
 
   type t =
-    | Int of int
-    | Var of ident [@warning "-unused-constructor"]
+    | Int_lit of int
     | Fun_lit of (t -> t)
 
 end
 
 let int_fun k =
   Value.Fun_lit (function
-    | Value.Int n -> k n
+    | Value.Int_lit n -> k n
     | _ -> failwith "invalid application")
 
 let rec eval env =
   function
   | Term.Var x -> List.assoc x env
+  | Term.Let (x, t1, t2) -> let v = eval env t1 in eval ((x, v) :: env) t2
   | Term.Fun_lit (x, t) -> Value.Fun_lit (fun v -> eval ((x, v) :: env) t)
   | Term.Fun_app (f, t) -> apply (eval env f) (eval env t)
-  | Term.Int n -> Value.Int n
-  | Term.Prim Int_neg -> int_fun @@ fun n -> Value.Int (-n)
-  | Term.Prim Int_add -> int_fun @@ fun n -> int_fun @@ fun m -> Value.Int (n + m)
-  | Term.Prim Int_sub -> int_fun @@ fun n -> int_fun @@ fun m -> Value.Int (n - m)
+  | Term.Int_lit n -> Value.Int_lit n
+  | Term.Prim Int_neg -> int_fun @@ fun n -> Value.Int_lit (-n)
+  | Term.Prim Int_add -> int_fun @@ fun n -> int_fun @@ fun m -> Value.Int_lit (n + m)
+  | Term.Prim Int_sub -> int_fun @@ fun n -> int_fun @@ fun m -> Value.Int_lit (n - m)
 
 and apply f v =
   match f with
@@ -94,15 +95,28 @@ let () = begin
   begin run_tests @@ fun test ->
 
     begin test "#int-neg 1" @@ fun () ->
-      assert (eval [] Term.(Prim Int_neg $ Int 1) = Value.Int (-1));
+      assert (eval [] Term.(Prim Int_neg $ Int_lit 1) = Value.Int_lit (-1));
     end;
 
     begin test "#int-add 3 4" @@ fun () ->
-      assert (eval [] Term.(Prim Int_add $ Int 3 $ Int 4) = Value.Int 7);
+      assert (eval [] Term.(Prim Int_add $ Int_lit 3 $ Int_lit 4) = Value.Int_lit 7);
     end;
 
     begin test "#int-sub 3 4" @@ fun () ->
-      assert (eval [] Term.(Prim Int_sub $ Int 3 $ Int 4) = Value.Int (-1));
+      assert (eval [] Term.(Prim Int_sub $ Int_lit 3 $ Int_lit 4) = Value.Int_lit (-1));
+    end;
+
+    begin test "let add-3 := #int-add 3; add-3 4" @@ fun () ->
+      let tm = Term.(
+        Let ("add-3", Prim Int_add $ Int_lit 3,
+        Var "add-3" $ Int_lit 4)
+      ) in
+      assert (eval [] tm = Value.Int_lit 7);
+    end;
+
+    begin test "(fun x => x) (#int-sub 3) 4" @@ fun () ->
+      let tm = Term.(Fun_lit ("x", Var "x") $ (Prim Int_sub $ Int_lit 3) $ Int_lit 4) in
+      assert (eval [] tm = Value.Int_lit (-1));
     end;
 
   end;

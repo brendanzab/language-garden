@@ -15,20 +15,20 @@ end
 module Term = struct
 
   type t =
-    | Var of ident [@warning "-unused-constructor"]
-    | Fun_lit of ident * t [@warning "-unused-constructor"]
-    | Fun_app of t * t
-    | Int of int
+    | Var of ident
     | Prim : 'a Prim.t -> t
+    | Let of ident * t * t
+    | Fun_lit of ident * t
+    | Fun_app of t * t
+    | Int_lit of int
 
 end
 
 module Value = struct
 
   type t =
-    | Int of int
-    | Var of ident [@warning "-unused-constructor"]
     | Fun_lit of clos
+    | Int_lit of int
 
   and clos =
     | Clos of (ident * t) list * ident * Term.t
@@ -41,9 +41,10 @@ end
 let rec eval env =
   function
   | Term.Var x -> List.assoc x env
+  | Term.Let (x, t1, t2) -> let v = eval env t1 in eval ((x, v) :: env) t2
   | Term.Fun_lit (x, t) -> Value.Fun_lit (Clos (env, x, t))
   | Term.Fun_app (f, t) -> apply (eval env f) (eval env t)
-  | Term.Int n -> Value.Int n
+  | Term.Int_lit n -> Value.Int_lit n
   | Term.Prim Int_neg -> Value.Fun_lit (Prim0 Int_neg)
   | Term.Prim Int_add -> Value.Fun_lit (Prim0 Int_add)
   | Term.Prim Int_sub -> Value.Fun_lit (Prim0 Int_sub)
@@ -51,11 +52,11 @@ let rec eval env =
 and apply f v =
   match f, v with
   | Value.Fun_lit (Clos (env, x, t)), v -> eval ((x, v) :: env) t
-  | Value.Fun_lit (Prim0 Int_neg), Int n -> Value.Int (Int.neg n)
-  | Value.Fun_lit (Prim0 Int_add), Int n -> Value.Fun_lit (Prim1 (Int_add, n))
-  | Value.Fun_lit (Prim0 Int_sub), Int n -> Value.Fun_lit (Prim1 (Int_sub, n))
-  | Value.Fun_lit (Prim1 (Int_add, n)), Int m -> Value.Int (Int.add n m)
-  | Value.Fun_lit (Prim1 (Int_sub, n)), Int m -> Value.Int (Int.sub n m)
+  | Value.Fun_lit (Prim0 Int_neg), Int_lit n -> Value.Int_lit (Int.neg n)
+  | Value.Fun_lit (Prim0 Int_add), Int_lit n -> Value.Fun_lit (Prim1 (Int_add, n))
+  | Value.Fun_lit (Prim0 Int_sub), Int_lit n -> Value.Fun_lit (Prim1 (Int_sub, n))
+  | Value.Fun_lit (Prim1 (Int_add, n)), Int_lit m -> Value.Int_lit (Int.add n m)
+  | Value.Fun_lit (Prim1 (Int_sub, n)), Int_lit m -> Value.Int_lit (Int.sub n m)
   | _ -> failwith "invalid application"
 
 let () = begin
@@ -100,15 +101,28 @@ let () = begin
   begin run_tests @@ fun test ->
 
     begin test "#int-neg 1" @@ fun () ->
-      assert (eval [] Term.(Prim Int_neg $ Int 1) = Value.Int (-1));
+      assert (eval [] Term.(Prim Int_neg $ Int_lit 1) = Value.Int_lit (-1));
     end;
 
     begin test "#int-add 3 4" @@ fun () ->
-      assert (eval [] Term.(Prim Int_add $ Int 3 $ Int 4) = Value.Int 7);
+      assert (eval [] Term.(Prim Int_add $ Int_lit 3 $ Int_lit 4) = Value.Int_lit 7);
     end;
 
     begin test "#int-sub 3 4" @@ fun () ->
-      assert (eval [] Term.(Prim Int_sub $ Int 3 $ Int 4) = Value.Int (-1));
+      assert (eval [] Term.(Prim Int_sub $ Int_lit 3 $ Int_lit 4) = Value.Int_lit (-1));
+    end;
+
+    begin test "let add-3 := #int-add 3; add-3 4" @@ fun () ->
+      let tm = Term.(
+        Let ("add-3", Prim Int_add $ Int_lit 3,
+        Var "add-3" $ Int_lit 4)
+      ) in
+      assert (eval [] tm = Value.Int_lit 7);
+    end;
+
+    begin test "(fun x => x) (#int-sub 3) 4" @@ fun () ->
+      let tm = Term.(Fun_lit ("x", Var "x") $ (Prim Int_sub $ Int_lit 3) $ Int_lit 4) in
+      assert (eval [] tm = Value.Int_lit (-1));
     end;
 
   end;
