@@ -146,8 +146,6 @@ Miscellaneous:
   COMEFROM in OCaml, implemented with algebraic effects and handlers.
 - [**misc_effects_state.ml**](./misc_effects_state.ml):
   State effect, implemented with algebraic effects and handlers.
-- [**misc_functional_unparsing.ml**](./misc_functional_unparsing.ml):
-  Type-safe formatting strings with continuation passing.
 - [**misc_isorecursion_vs_equirecursion.ml**](./misc_isorecursion_vs_equirecursion.ml):
   Comparing isorecursive variant types with equirecursive variant types in OCaml.
 - [**misc_landins_knot.ml**](./misc_landins_knot.ml):
@@ -170,6 +168,9 @@ Miscellaneous:
   Converting HOAS-encoded lambda terms into a de Bruijn-indexed representation.
 - [**misc_unembedding_hoas_gadt**](./misc_unembedding_hoas_gadt.ml):
   Converting typed HOAS-encoded lambda terms into a well-typed, de Bruijn-indexed representation.
+- [**misc_variadic_cps.ml**](./misc_variadic_cps.ml): Variadic functions using CPS.
+- [**misc_variadic_printf.ml**](./misc_variadic_printf.ml):
+  Type-safe formatting strings with continuation passing.
 
 Work in progress projects:
 
