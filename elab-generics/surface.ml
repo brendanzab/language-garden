@@ -343,8 +343,8 @@ end = struct
         let tm2, ty2 = infer_tm ctx tm2 in
         unify_tys tm.span ~found:ty2 ~expected:ty1;
         begin match Core.Ty.force ty1 with
-        | Core.Ty.Bool -> Core.Tm.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Ty.Bool
-        | Core.Ty.Int -> Core.Tm.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Ty.Bool
+        | Core.Ty.Bool -> Core.Tm.(fun_app (Prim Prim.Bool_eq) [tm1; tm2]), Core.Ty.Bool
+        | Core.Ty.Int -> Core.Tm.(fun_app (Prim Prim.Int_eq) [tm1; tm2]), Core.Ty.Bool
         | ty -> error tm.span "@[unsupported type: %t@]" (Core.Ty.pp ty)
         end
 
@@ -357,7 +357,7 @@ end = struct
         in
         let tm1 = check_tm ctx tm1 Core.Ty.Int in
         let tm2 = check_tm ctx tm2 Core.Ty.Int in
-        Core.Tm.Prim_app (prim, [tm1; tm2]), Core.Ty.Int
+        Core.Tm.(fun_app (Prim prim) [tm1; tm2]), Core.Ty.Int
 
     | Tm.Proj ({ span = head_span; _ } as head, index) ->
         let head, head_ty = infer_tm ctx head in
@@ -372,7 +372,7 @@ end = struct
 
     | Tm.Prefix (`Neg, tm) ->
         let tm = check_tm ctx tm Core.Ty.Int in
-        Core.Tm.Prim_app (Prim.Int_neg, [tm]), Core.Ty.Int
+        Core.Tm.(fun_app (Prim Prim.Int_neg) [tm]), Core.Ty.Int
 
   (** Elaborate a function into a core term, given an expected type. *)
   and check_fun (ctx : Ctx.t) (span : Span.t) (params, body_ty, body : Tm.fun_) (fun_ty : Core.Ty.t) : Core.Tm.t =

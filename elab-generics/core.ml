@@ -157,6 +157,7 @@ module Tm = struct
   (** Term syntax *)
   type t =
     | Var of index * Ty.t list
+    | Prim of Prim.t
     | Let of def * t
     | Let_rec of def list * t
     | Fun_lit of name * Ty.t * t
@@ -166,11 +167,16 @@ module Tm = struct
     | Int_lit of int
     | Bool_lit of bool
     | Bool_elim of t * t * t
-    | Prim_app of Prim.t * t list
 
+  (** Local definitions *)
   and def =
     name * Ty.name list * Ty.t * t
 
+  (** Apply a function to a list of arguments *)
+  let fun_app (head : t) (args : t list) : t =
+    List.fold_left (fun head arg -> Fun_app (head, arg)) head args
+
+  (** Pretty print a term *)
   let pp : name env -> t -> Format.formatter -> unit =
     let pp_name (name : name) (ppf : Format.formatter) : unit =
       match name with
@@ -243,16 +249,11 @@ module Tm = struct
             Format.fprintf ppf "%t@ %t"
               (go head)
               (pp_proj_tm names arg)
-        | Prim_app (prim, args) ->
-            let pp_sep ppf () = Format.fprintf ppf "@ " in
-            Format.fprintf ppf "#%s@ %t"
-              (Prim.name prim)
-              (Fun.flip (Format.pp_print_list (Fun.flip (pp_proj_tm names)) ~pp_sep) args)
         | tm ->
             pp_proj_tm names tm ppf
       in
       match tm with
-      | Fun_app _ | Prim_app _ as tm ->
+      | Fun_app _ as tm ->
           Format.fprintf ppf "@[<hv 2>%t@]" (go tm)
       | tm ->
           pp_proj_tm names tm ppf
@@ -277,6 +278,7 @@ module Tm = struct
           Format.fprintf ppf "%t@ @[[%t]@]"
             (pp_name (List.nth names index))
             (Fun.flip (Format.pp_print_list (Fun.flip Ty.pp) ~pp_sep) ty_args)
+      | Prim prim -> Format.fprintf ppf "#%s" (Prim.name prim)
       | Tuple_lit [] -> Format.fprintf ppf "()"
       | Tuple_lit [elem] -> Format.fprintf ppf "@[(%t,)@]" (pp_tm names elem)
       | Tuple_lit elems ->
@@ -286,8 +288,7 @@ module Tm = struct
       | Int_lit i -> Format.fprintf ppf "%i" i
       | Bool_lit true -> Format.fprintf ppf "true"
       | Bool_lit false -> Format.fprintf ppf "false"
-      | Let _ | Let_rec _ | Fun_lit _ | Fun_app _ | Tuple_proj _ | Bool_elim _
-      | Prim_app _ as tm ->
+      | Let _ | Let_rec _ | Fun_lit _ | Fun_app _ | Tuple_proj _ | Bool_elim _ as tm ->
           Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
     in
     pp_tm
@@ -295,29 +296,56 @@ module Tm = struct
   module Value = struct
 
     type t =
+      | Prim_app of Prim.t * t list
       | Fun_lit of (t -> t)
       | Tuple_lit of t list
       | Int_lit of int
       | Bool_lit of bool
 
-    let rec pp (vexpr : t) (ppf : Format.formatter) : unit =
-      match vexpr with
-      | Fun_lit _ -> Format.fprintf ppf "<function>"
-      | Tuple_lit [] -> Format.fprintf ppf "()"
-      | Tuple_lit [elem] -> Format.fprintf ppf "@[(%t)@]" (pp elem)
-      | Tuple_lit elems ->
-          let pp_sep ppf () = Format.fprintf ppf ",@ " in
-          Format.fprintf ppf "@[(%t)@]"
-            (Fun.flip (Format.pp_print_list (Fun.flip pp) ~pp_sep) elems)
-      | Bool_lit true -> Format.fprintf ppf "true"
-      | Bool_lit false -> Format.fprintf ppf "false"
-      | Int_lit i -> Format.fprintf ppf "%i" i
+    let rec pp (vtm : t) (ppf : Format.formatter) : unit =
+      let rec pp_vtm (vtm : t) (ppf : Format.formatter) =
+        match vtm with
+        | Prim_app (prim, ((_ :: _) as args)) ->
+            let pp_sep ppf () = Format.fprintf ppf "@ " in
+            Format.fprintf ppf "@[<2>#%s %t@]"
+              (Prim.name prim)
+              (Fun.flip (Format.pp_print_list (Fun.flip pp_atomic_vtm) ~pp_sep) args)
+        | vtm ->
+            pp_atomic_vtm vtm ppf
+      and pp_atomic_vtm (vtm : t) (ppf : Format.formatter) =
+        match vtm with
+        | Prim_app (prim, []) -> Format.fprintf ppf "#%s" (Prim.name prim)
+        | Fun_lit _ -> Format.fprintf ppf "<function>"
+        | Tuple_lit [] -> Format.fprintf ppf "()"
+        | Tuple_lit [elem] -> Format.fprintf ppf "@[(%t)@]" (pp elem)
+        | Tuple_lit elems ->
+            let pp_sep ppf () = Format.fprintf ppf ",@ " in
+            Format.fprintf ppf "@[(%t)@]"
+              (Fun.flip (Format.pp_print_list (Fun.flip pp) ~pp_sep) elems)
+        | Bool_lit true -> Format.fprintf ppf "true"
+        | Bool_lit false -> Format.fprintf ppf "false"
+        | Int_lit i -> Format.fprintf ppf "%i" i
+        | Prim_app (_, (_ :: _)) as vtm ->
+            Format.fprintf ppf "@[(%t)@]" (pp_vtm vtm)
+      in
+      pp_vtm vtm ppf
 
   end
+
+  let prim_app (prim : Prim.t) (args : Value.t list) : Value.t =
+    match prim, args with
+    | Prim.Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
+    | Prim.Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
+    | Prim.Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
+    | Prim.Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
+    | Prim.Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
+    | Prim.Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+    | prim, args -> Prim_app (prim, args)
 
   let rec eval (env : Value.t ref env) (tm : t) : Value.t =
     match tm with
     | Var (index, _) -> !(List.nth env index)
+    | Prim prim -> prim_app prim []
     | Let ((_, _, _, def), body) ->
         let def = eval env def in
         eval (ref def :: env) body
@@ -341,6 +369,7 @@ module Tm = struct
     | Fun_app (head, arg) ->
         begin match eval env head with
         | Value.Fun_lit vbody -> vbody (eval env arg)
+        | Value.Prim_app (prim, args) -> prim_app prim (eval env arg :: args)
         | _ -> invalid_arg "eval"
         end
     | Tuple_lit elems ->
@@ -356,16 +385,6 @@ module Tm = struct
         begin match eval env head with
         | Value.Bool_lit true -> eval env true_body
         | Value.Bool_lit false -> eval env false_body
-        | _ -> invalid_arg "eval"
-        end
-    | Prim_app (prim, args) ->
-        begin match prim, List.map (eval env) args with
-        | Prim.Bool_eq, Value.[Bool_lit t1; Bool_lit t2] -> Value.Bool_lit (Bool.equal t1 t2)
-        | Prim.Int_eq, Value.[Int_lit t1; Int_lit t2] -> Value.Bool_lit (Int.equal t1 t2)
-        | Prim.Int_add, Value.[Int_lit t1; Int_lit t2] -> Value.Int_lit (Int.add t1 t2)
-        | Prim.Int_sub, Value.[Int_lit t1; Int_lit t2] -> Value.Int_lit (Int.sub t1 t2)
-        | Prim.Int_mul, Value.[Int_lit t1; Int_lit t2] -> Value.Int_lit (Int.mul t1 t2)
-        | Prim.Int_neg, Value.[Int_lit t1] -> Value.Int_lit (Int.neg t1)
         | _ -> invalid_arg "eval"
         end
 
