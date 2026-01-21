@@ -116,58 +116,10 @@ module Semantics = struct
 
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
-    | Neu of ntm
-    | Forall_lit of name * (vty -> vtm)
-    | Fun_lit of name * vty * (vtm -> vtm)
+    | Prim_app of Prim.t * vtm list
+    | Fun_lit of (vtm -> vtm)
     | Int_lit of int
     | Bool_lit of bool
-
-  (** Neutral values that could not be reduced to a normal form as a result of
-      being stuck on something else that would not reduce further.
-
-      For simple (non-dependent) type systems these are not actually required,
-      however they allow us to {!quote} terms back to syntax, which is useful
-      for pretty printing under binders.
-  *)
-  and ntm =
-    | Var of level
-    | Forall_app of ntm * vty
-    | Prim_app of Prim.t * vtm list
-    | Fun_app of ntm * vtm
-    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
-
-
-  (** {1 Eliminators} *)
-
-  let forall_app (head : vtm) (arg : vty) : vtm =
-    match head with
-    | Neu ntm -> Neu (Forall_app (ntm, arg))
-    | Forall_lit (_, body) -> body arg
-    | _ -> invalid_arg "expected type function"
-
-  let prim_app (prim : Prim.t) (args : vtm list) : vtm =
-    match prim, args with
-    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
-    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
-    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
-    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
-    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
-    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
-    | prim, args -> Neu (Prim_app (prim, args))
-
-  let fun_app (head : vtm) (arg : vtm) : vtm =
-    match head with
-    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
-    | Neu ntm -> Neu (Fun_app (ntm, arg))
-    | Fun_lit (_, _, body) -> body arg
-    | _ -> invalid_arg "expected function"
-
-  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
-    match head with
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> vtm1 ()
-    | Bool_lit false -> vtm2 ()
-    | _ -> invalid_arg "expected boolean"
 
 
   (** {1 Evaluation} *)
@@ -186,33 +138,41 @@ module Semantics = struct
     | Bool_type -> Bool_type
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : tm) : vtm =
+  let rec eval_tm (tm_env : vtm env) (tm : tm) : vtm =
     match tm with
     | Var tm_index -> List.nth tm_env tm_index
     | Prim prim -> prim_app prim []
     | Let (_, _, def, body) ->
-        let def = eval_tm ty_env tm_env def in
-        eval_tm ty_env (def :: tm_env) body
-    | Forall_lit (name, body) ->
-        Forall_lit (name, fun arg -> eval_tm (arg :: ty_env) tm_env body)
-    | Forall_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_ty ty_env arg in
-        forall_app head arg
-    | Fun_lit (name, param_ty, body) ->
-        let param_vty = eval_ty ty_env param_ty in
-        Fun_lit (name, param_vty, fun arg -> eval_tm ty_env (arg :: tm_env) body)
+        let def = eval_tm tm_env def in
+        eval_tm (def :: tm_env) body
+    | Forall_lit (_, body) -> eval_tm tm_env body
+    | Forall_app (head, _) -> eval_tm tm_env head
+    | Fun_lit (_, _, body) ->
+        Fun_lit (fun arg -> eval_tm (arg :: tm_env) body)
     | Fun_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_tm ty_env tm_env arg in
-        fun_app head arg
+        begin match eval_tm tm_env head with
+        | Fun_lit body -> body (eval_tm tm_env arg)
+        | Prim_app (prim, args) -> prim_app prim ((eval_tm tm_env arg) :: args)
+        | _ -> invalid_arg "expected function"
+        end
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
-        let head = eval_tm ty_env tm_env head in
-        let vtm1 () = eval_tm ty_env tm_env tm1 in
-        let vtm2 () = eval_tm ty_env tm_env tm2 in
-        bool_elim head vtm1 vtm2
+        begin match eval_tm tm_env head with
+        | Bool_lit true -> eval_tm tm_env tm1
+        | Bool_lit false -> eval_tm tm_env tm2
+        | _ -> invalid_arg "expected boolean"
+        end
+
+  and prim_app (prim : Prim.t) (args : vtm list) : vtm =
+    match prim, args with
+    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
+    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
+    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
+    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
+    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
+    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+    | prim, args -> Prim_app (prim, args)
 
 
   (** {1 Quotation} *)
@@ -230,46 +190,6 @@ module Semantics = struct
         Fun_type (param_ty, body_ty)
     | Int_type -> Int_type
     | Bool_type -> Bool_type
-
-  (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote_vtm (ty_size : level) (tm_size : level) (vtm : vtm) : tm =
-    match vtm with
-    | Neu ntm -> quote_ntm ty_size tm_size ntm
-    | Forall_lit (name, body) ->
-        let body = quote_vtm (ty_size + 1) tm_size (body (Var ty_size)) in
-        Forall_lit (name, body)
-    | Fun_lit (name, param_vty, body) ->
-        let param_ty = quote_vty ty_size param_vty in
-        let body = quote_vtm ty_size (tm_size + 1) (body (Neu (Var tm_size))) in
-        Fun_lit (name, param_ty, body)
-    | Int_lit i -> Int_lit i
-    | Bool_lit b -> Bool_lit b
-
-  and quote_ntm (ty_size : level) (tm_size : level) (ntm : ntm) : tm =
-    match ntm with
-    | Var tm_level ->
-        Var (level_to_index tm_size tm_level)
-    | Forall_app (head, arg) ->
-        Forall_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
-    | Prim_app (prim, []) -> Prim prim
-    | Prim_app (prim, arg :: args) ->
-        let head = quote_ntm ty_size tm_size (Prim_app (prim, args)) in
-        let arg = quote_vtm ty_size tm_size arg in
-        Fun_app (head, arg)
-    | Fun_app (head, arg) ->
-        Fun_app (quote_ntm ty_size tm_size head, quote_vtm ty_size tm_size arg)
-    | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote_vtm ty_size tm_size (vtm1 ()) in
-        let tm2 = quote_vtm ty_size tm_size (vtm2 ()) in
-        Bool_elim (quote_ntm ty_size tm_size head, tm1, tm2)
-
-
-  (** {1 Normalisation} *)
-
-  (** By evaluating a term then quoting the result, we can produce a term that
-      is reduced as much as possible in the current environment. *)
-  let normalise_tm (ty_env : vty env) (tm_env : vtm list) (tm : tm) : tm =
-    quote_vtm (List.length ty_env) (List.length tm_env) (eval_tm ty_env tm_env tm)
 
 
   (** {1 Conversion Checking} *)
@@ -290,6 +210,31 @@ module Semantics = struct
     | Int_type, Int_type -> true
     | Bool_type, Bool_type -> true
     | _, _ -> false
+
+
+  (** {1 Pretty printing} *)
+
+  let pp_vtm : vtm -> Format.formatter -> unit =
+    let rec pp_vtm vtm ppf =
+      match vtm with
+      | Prim_app (prim, ((_ :: _) as args)) ->
+          let pp_sep ppf () = Format.fprintf ppf "@ " in
+          Format.fprintf ppf "@[<2>#%s %t@]"
+            (Prim.name prim)
+            (Fun.flip (Format.pp_print_list (Fun.flip pp_atomic_vtm) ~pp_sep) args)
+      | vtm ->
+          pp_atomic_vtm vtm ppf
+    and pp_atomic_vtm vtm ppf =
+      match vtm with
+      | Prim_app (prim, []) -> Format.fprintf ppf "#%s" (Prim.name prim)
+      | Fun_lit _ -> Format.fprintf ppf "<function>"
+      | Bool_lit true -> Format.fprintf ppf "true"
+      | Bool_lit false -> Format.fprintf ppf "false"
+      | Int_lit i -> Format.fprintf ppf "%i" i
+      | Prim_app (_, (_ :: _)) as vtm ->
+          Format.fprintf ppf "@[(%t)@]" (pp_vtm vtm)
+    in
+    pp_vtm
 
 end
 
@@ -397,7 +342,8 @@ let pp_tm : name env -> name env -> tm -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | Let _ | Forall_lit _ | Forall_app _ | Fun_lit _ | Fun_app _ | Bool_elim _ as tm ->
+    | Let _ | Forall_lit _ | Forall_app _ | Fun_lit _ | Fun_app _
+    | Bool_elim _ ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm ty_names tm_names tm)
   in
   pp_tm

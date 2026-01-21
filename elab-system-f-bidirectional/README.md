@@ -107,8 +107,8 @@ $ system-f-bidirectional elab <<< "(fun [a] (x : a) => x) [Int] 3"
 ```
 
 ```sh
-$ system-f-bidirectional norm <<< "(fun [a] (x : a) [b] (y : b) => x) [Int] 3 [Bool]"
-fun (y : Bool) => 3 : Bool -> Int
+$ system-f-bidirectional eval <<< "(fun [a] (x : a) [b] (y : b) => x) [Int] 3 [Bool]"
+<function> : Bool -> Int
 ```
 
 More examples can be found in [`tests.t`](tests.t).
