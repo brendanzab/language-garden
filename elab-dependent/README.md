@@ -1,6 +1,6 @@
 # A small dependently typed language
 
-- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ dependent types)
+- Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ normalisation-by-evaluation, dependent types)
 
 ---
 

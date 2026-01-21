@@ -81,7 +81,7 @@ partially broken programs, e.g. in a similar way to GHC’s [deferred type error
 | [`Lexer`]     | Lexer for the surface language          |
 | [`Parser`]    | Parser for the surface language         |
 | [`Surface`]   | Surface language, including elaboration |
-| [`Core`]      | Core language, including normalisation, and pretty printing |
+| [`Core`]      | Core language, including evaluation and pretty printing |
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./main.ml

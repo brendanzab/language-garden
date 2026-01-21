@@ -71,7 +71,7 @@ end = struct
 
   (** The elaboration context *)
   type context = {
-    tys : (string option * Core.ty) Core.env;
+    tys : (Core.name * Core.ty) Core.env;
     (** A stack of bindings currently in scope *)
 
     metas : (span * string * Core.meta) Dynarray.t;
@@ -87,7 +87,7 @@ end = struct
   }
 
   (** Extend the context with a new binding *)
-  let extend (ctx : context) (name : string option) (ty : Core.ty) : context = {
+  let extend (ctx : context) (name : Core.name) (ty : Core.ty) : context = {
     ctx with
     tys = (name, ty) :: ctx.tys;
   }

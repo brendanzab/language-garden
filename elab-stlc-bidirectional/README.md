@@ -39,7 +39,7 @@ Typescript, etc.
 | [`Lexer`]     | Lexer for the surface language          |
 | [`Parser`]    | Parser for the surface language         |
 | [`Surface`]   | Surface language, including elaboration |
-| [`Core`]      | Core language, including normalisation, and pretty printing |
+| [`Core`]      | Core language, including evaluation and pretty printing |
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./main.ml

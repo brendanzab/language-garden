@@ -71,7 +71,7 @@ apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 | [`Lexer`]     | Lexer for the surface language          |
 | [`Parser`]    | Parser for the surface language         |
 | [`Surface`]   | Surface language, including elaboration |
-| [`Core`]      | Core language, including normalisation, unification, and pretty printing |
+| [`Core`]      | Core language, including evaluation, unification, and pretty printing |
 | [`Prim`]      | Primitive operations                    |
 
 [`Main`]: ./main.ml

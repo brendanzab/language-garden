@@ -1,36 +1,12 @@
 (** {0 Core language} *)
 
-(** {1 Names} *)
-
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
 type name = string option
 
-
-(** {1 Nameless binding structure} *)
-
-(** The binding structure of terms is represented in the core language by
-    using numbers that represent the distance to a binder, instead of by the
-    names attached to those binders. *)
-
 (** {i De Bruijn index} that represents a variable occurrence by the number of
     binders between the occurrence and the binder it refers to. *)
 type index = int
-
-(** {i De Bruijn level} that represents a variable occurrence by the number of
-    binders from the top of the environment to the binder that the occurrence
-    refers to. These do not change their meaning as new bindings are added to
-    the environment. *)
-type level = int
-
-(** [level_to_index size level] converts [level] to an {!index} that is bound in
-    an environment of the supplied [size], where [size] represents the next
-    fresh {!level} to be bound in the environment.
-
-    Assumes that [size > level].
-*)
-let level_to_index (size : level) (level : level) =
-  size - level - 1
 
 (** An environment of bindings that can be looked up directly using a
     {!index}, or by converting to a {!level} using {!level_to_index}. *)
@@ -112,70 +88,19 @@ module Semantics = struct
 
   (** {1 Values} *)
 
-  (** Terms in weak head normal form (i.e. values) *)
+  (** Evaluated terms *)
   type vtm =
-    | Neu of ntm
-    | Fun_lit of name * ty * (vtm -> vtm)
-    | Record_lit of vtm Label_map.t
-    | Variant_lit of label * vtm * ty
-    | Bool_lit of bool
-    | Int_lit of int
-
-  (** Neutral values that could not be reduced to a normal form as a result of
-      being stuck on something else that would not reduce further.
-
-      For simple (non-dependent) type systems these are not actually required,
-      however they allow us to {!quote} terms back to syntax, which is useful
-      for pretty printing under binders.
-  *)
-  and ntm =
-    | Var of level
     | Prim_app of Prim.t * vtm list
-    | Fun_app of ntm * vtm
-    | Record_proj of ntm * label
-    | Variant_elim of ntm * (name * (vtm -> vtm)) Label_map.t
-    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
+    | Fun_lit of clos
+    | Record_lit of vtm Label_map.t
+    | Variant_lit of label * vtm
+    | Int_lit of int
+    | Bool_lit of bool
 
-
-  (** {1 Eliminators} *)
-
-  let prim_app (prim : Prim.t) (args : vtm list) : vtm =
-    match prim, args with
-    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
-    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
-    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
-    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
-    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
-    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
-    | prim, args -> Neu (Prim_app (prim, args))
-
-  let fun_app (head : vtm) (arg : vtm) : vtm =
-    match head with
-    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
-    | Neu ntm -> Neu (Fun_app (ntm, arg))
-    | Fun_lit (_, _, body) -> body arg
-    | _ -> invalid_arg "expected function"
-
-  let record_proj (head : vtm) (label : label) : vtm =
-    match head with
-    | Neu ntm -> Neu (Record_proj (ntm, label))
-    | Record_lit fields -> Label_map.find label fields
-    | _ -> invalid_arg "expected record"
-
-  let variant_elim (head : vtm) (clauses : (name * (vtm -> vtm)) Label_map.t) : vtm =
-    match head with
-    | Neu ntm -> Neu (Variant_elim (ntm, clauses))
-    | Variant_lit (label, vtm, _) ->
-        let _, body = Label_map.find label clauses in
-        body vtm
-    | _ -> invalid_arg "expected variant"
-
-  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
-    match head with
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> vtm1 ()
-    | Bool_lit false -> vtm2 ()
-    | _ -> invalid_arg "expected boolean"
+  (** Closures that can be instantiated with a value. The environment provides
+      a value for each variable in the term, except for the variable that the
+      closure will be instantiated with during evaluation. *)
+  and clos = vtm env * tm
 
 
   (** {1 Evaluation} *)
@@ -188,81 +113,97 @@ module Semantics = struct
     | Let (_, _, def, body) ->
         let def = eval env def in
         eval (def :: env) body
-    | Fun_lit (name, param_ty, body) ->
-        Fun_lit (name, param_ty, fun arg -> eval (arg :: env) body)
+    | Fun_lit (_, _, body) ->
+        Fun_lit (env, body)
     | Fun_app (head, arg) ->
-        let head = eval env head in
-        let arg = eval env arg in
-        fun_app head arg
+        begin match eval env head with
+        | Fun_lit clos -> clos_app clos (eval env arg)
+        | Prim_app (prim, args) -> prim_app prim ((eval env arg) :: args)
+        | _ -> invalid_arg "expected function"
+        end
     | Record_lit fields ->
         Record_lit (fields |> Label_map.map (eval env))
     | Record_proj (head, label) ->
-        let head = eval env head in
-        record_proj head label
-    | Variant_lit (label, tm, ty) ->
-        Variant_lit (label, eval env tm, ty)
+        begin match eval env head with
+        | Record_lit fields -> Label_map.find label fields
+        | _ -> invalid_arg "expected record"
+        end
+    | Variant_lit (label, tm, _) ->
+        Variant_lit (label, eval env tm)
     | Variant_elim (head, clauses) ->
-        let head = eval env head in
-        let clauses =
-          clauses |> Label_map.map (fun (name, body) ->
-            name, fun arg -> eval (arg :: env) body)
-        in
-        variant_elim head clauses
+        begin match eval env head with
+        | Variant_lit (label, vtm) ->
+            let _, body = Label_map.find label clauses in
+            eval (vtm :: env) body
+        | _ -> invalid_arg "expected variant"
+        end
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
-        let head = eval env head in
-        let vtm1 () = eval env tm1 in
-        let vtm2 () = eval env tm2 in
-        bool_elim head vtm1 vtm2
+        begin match eval env head with
+        | Bool_lit true -> eval env tm1
+        | Bool_lit false -> eval env tm2
+        | _ -> invalid_arg "expected boolean"
+        end
+
+  and clos_app (env, body : clos) (arg : vtm) : vtm =
+    eval (arg :: env) body
+
+  and prim_app (prim : Prim.t) (args : vtm list) : vtm =
+    match prim, args with
+    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
+    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
+    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
+    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
+    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
+    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+    | prim, args -> Prim_app (prim, args)
 
 
-  (** {1 Quotation} *)
+  (** {1 Pretty printing} *)
 
-  (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote (size : level) (vtm : vtm) : tm =
-    match vtm with
-    | Neu ntm -> quote_neu size ntm
-    | Fun_lit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
-        Fun_lit (name, param_ty, body)
-    | Record_lit fields ->
-        Record_lit (fields |> Label_map.map (quote size))
-    | Variant_lit (label, vtm, ty) ->
-        Variant_lit (label, quote size vtm, ty)
-    | Int_lit i -> Int_lit i
-    | Bool_lit b -> Bool_lit b
-
-  and quote_neu (size : level) (ntm : ntm) : tm =
-    match ntm with
-    | Var level ->
-        Var (level_to_index size level)
-    | Prim_app (prim, []) -> Prim prim
-    | Prim_app (prim, arg :: args) ->
-        Fun_app (quote_neu size (Prim_app (prim, args)), quote size arg)
-    | Fun_app (head, arg) ->
-        Fun_app (quote_neu size head, quote size arg)
-    | Record_proj (head, label) ->
-        Record_proj (quote_neu size head, label)
-    | Variant_elim (head, clauses) ->
-        let head = quote_neu size head in
-        let clauses =
-          clauses |> Label_map.map (fun (name, body) ->
-            name, quote (size + 1) (body (Neu (Var size))))
-        in
-        Variant_elim (head, clauses)
-    | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote size (vtm1 ()) in
-        let tm2 = quote size (vtm2 ()) in
-        Bool_elim (quote_neu size head, tm1, tm2)
-
-
-  (** {1 Normalisation} *)
-
-  (** By evaluating a term then quoting the result, we can produce a term that
-      is reduced as much as possible in the current environment. *)
-  let normalise (env : vtm list) (tm : tm) : tm =
-    quote (List.length env) (eval env tm)
+  let pp_vtm : vtm -> Format.formatter -> unit =
+    let pp_trailing_semi : Format.formatter -> unit =
+      Format.pp_print_custom_break ~fits:(" ", 0, "") ~breaks:(";", 0, "")
+    in
+    let rec pp_vtm vtm ppf =
+      match vtm with
+      | Variant_lit (label, vtm) ->
+          Format.fprintf ppf "@[<2>@[[%s@ :=@]@ @[%t@]]@]"
+            label
+            (pp_vtm vtm)
+      | vtm ->
+          pp_app_vtm vtm ppf
+    and pp_app_vtm vtm ppf =
+      match vtm with
+      | Prim_app (prim, ((_ :: _) as args)) ->
+          let pp_sep ppf () = Format.fprintf ppf "@ " in
+          Format.fprintf ppf "@[<2>#%s %t@]"
+            (Prim.name prim)
+            (Fun.flip (Format.pp_print_list (Fun.flip pp_atomic_vtm) ~pp_sep) args)
+      | vtm ->
+          pp_atomic_vtm vtm ppf
+    and pp_atomic_vtm vtm ppf =
+      match vtm with
+      | Prim_app (prim, []) -> Format.fprintf ppf "#%s" (Prim.name prim)
+      | Fun_lit _ -> Format.fprintf ppf "<function>"
+      | Record_lit fields when Label_map.is_empty fields ->
+          Format.fprintf ppf "{}"
+      | Record_lit fields ->
+          Format.fprintf ppf "@[{%a%t}@]"
+            (Format.pp_print_seq
+              ~pp_sep:(fun ppf () -> Format.fprintf ppf ";")
+              (fun ppf (label, tm) ->
+                Format.fprintf ppf "@;<1 2>@[<2>@[%s@ :=@]@ @[%t@]@]" label (pp_vtm tm)))
+            (Label_map.to_seq fields)
+            pp_trailing_semi
+      | Bool_lit true -> Format.fprintf ppf "true"
+      | Bool_lit false -> Format.fprintf ppf "false"
+      | Int_lit i -> Format.fprintf ppf "%i" i
+      | Variant_lit _ | Prim_app (_, (_ :: _)) as vtm ->
+          Format.fprintf ppf "@[(%t)@]" (pp_vtm vtm)
+    in
+    pp_vtm
 
 end
 

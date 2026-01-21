@@ -80,13 +80,14 @@ Recursive bindings: Factorial
   > EOF
 
   $ cat fact.txt | executable elab
-  let fact : Int -> Int :=
-    #fix (fact : Int -> Int) =>
+  let rec {
+    fact : Int -> Int :=
       fun (n : Int) =>
         if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1));
+  };
   fact 5 : Int
 
-  $ cat fact.txt | executable norm
+  $ cat fact.txt | executable eval
   120 : Int
 
 
@@ -103,18 +104,19 @@ Recursive bindings: Factorial in terms of the fixed-point combinator
   > EOF
 
   $ cat fix.txt | executable elab
-  let fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
-    #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
+  let rec {
+    fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
       fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x;
+  };
   let fact : Int -> Int :=
     fun (n : Int) =>
       fix
-        (fun (fact : Int -> Int) => fun (n' : Int) =>
-           if #int-eq n' 0 then 1 else #int-mul n' (fact (#int-sub n' 1)))
+        (fun (fact : Int -> Int) => fun (n : Int) =>
+           if #int-eq n 0 then 1 else #int-mul n (fact (#int-sub n 1)))
         n;
   fact 5 : Int
 
-  $ cat fix.txt | executable norm
+  $ cat fix.txt | executable eval
   120 : Int
 
 
@@ -127,15 +129,14 @@ Recursive bindings: Under-applying the fixed-point combinator
   > EOF
 
   $ cat fix.txt | executable elab
-  let fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
-    #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
+  let rec {
+    fix : ((Int -> Int) -> Int -> Int) -> Int -> Int :=
       fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x;
+  };
   fix : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
-  $ cat fix.txt | executable norm
-  #fix (fix : ((Int -> Int) -> Int -> Int) -> Int -> Int) =>
-    fun (f : (Int -> Int) -> Int -> Int) => fun (x : Int) => f (fix f) x
-  : ((Int -> Int) -> Int -> Int) -> Int -> Int
+  $ cat fix.txt | executable eval
+  <function> : ((Int -> Int) -> Int -> Int) -> Int -> Int
 
 
 Recursive bindings: Naive fixed-point (this is useless in call-by-value!)
@@ -147,13 +148,11 @@ Recursive bindings: Naive fixed-point (this is useless in call-by-value!)
   > EOF
 
   $ cat fix-naive.txt | executable elab
-  let fix : (Int -> Int) -> Int :=
-    #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f);
+  let rec { fix : (Int -> Int) -> Int := fun (f : Int -> Int) => f (fix f); };
   fix : (Int -> Int) -> Int
 
-  $ cat fix-naive.txt | executable norm
-  #fix (fix : (Int -> Int) -> Int) => fun (f : Int -> Int) => f (fix f) :
-    (Int -> Int) -> Int
+  $ cat fix-naive.txt | executable eval
+  <function> : (Int -> Int) -> Int
 
 
 Recursive bindings: Ackermann function
@@ -170,8 +169,8 @@ Recursive bindings: Ackermann function
   > EOF
 
   $ cat ack.txt | executable elab
-  let ack : Int -> Int -> Int :=
-    #fix (ack : Int -> Int -> Int) =>
+  let rec {
+    ack : Int -> Int -> Int :=
       fun (m : Int) => fun (n : Int) =>
         if #int-eq m 0 then
           #int-add n 1
@@ -180,103 +179,11 @@ Recursive bindings: Ackermann function
             ack (#int-sub m 1) 1
           else
             ack (#int-sub m 1) (ack m (#int-sub n 1));
+  };
   ack 1 0 : Int
 
-  $ cat ack.txt | executable norm
+  $ cat ack.txt | executable eval
   2 : Int
-
-
-Recursive bindings: Ackermann function (partially applied)
-  $ cat >ack-partial-app.txt <<EOF
-  > let rec ack m n :=
-  >   if m = 0 then
-  >     n + 1
-  >   else if n = 0 then
-  >     ack (m - 1) 1
-  >   else
-  >     ack (m - 1) (ack m (n - 1));
-  > 
-  > ack 0
-  > EOF
-
-  $ cat ack-partial-app.txt | executable elab
-  let ack : Int -> Int -> Int :=
-    #fix (ack : Int -> Int -> Int) =>
-      fun (m : Int) => fun (n : Int) =>
-        if #int-eq m 0 then
-          #int-add n 1
-        else
-          if #int-eq n 0 then
-            ack (#int-sub m 1) 1
-          else
-            ack (#int-sub m 1) (ack m (#int-sub n 1));
-  ack 0 : Int -> Int
-
-  $ cat ack-partial-app.txt | executable norm
-  fun (n : Int) => #int-add n 1 : Int -> Int
-
-
-Recursive bindings: Count-down (partially applied)
-  $ cat >count-down.txt <<EOF
-  > let rec count-down x n :=
-  >   if n = 0 then x else count-down x (n - 1);
-  > 
-  > count-down true
-  > EOF
-
-  $ cat count-down.txt | executable elab
-  let count-down : Bool -> Int -> Bool :=
-    #fix (count-down : Bool -> Int -> Bool) =>
-      fun (x : Bool) => fun (n : Int) =>
-        if #int-eq n 0 then x else count-down x (#int-sub n 1);
-  count-down true : Int -> Bool
-
-  $ cat count-down.txt | executable norm
-  fun (n : Int) =>
-    if #int-eq n 0 then
-      true
-    else
-      (#fix (count-down : Bool -> Int -> Bool) =>
-         fun (x : Bool) => fun (n' : Int) =>
-           if #int-eq n' 0 then x else count-down x (#int-sub n' 1))
-        true
-        (#int-sub n 1)
-  : Int -> Bool
-
-
-Recursive bindings: Even/odd (partially applied)
-  $ cat >even-odd-partial-app.txt <<EOF
-  > let rec even-odd b n :=
-  >   if b then (if n = 0 then true else even-odd false (n - 1))
-  >        else (if n = 0 then false else even-odd true (n - 1));
-  > 
-  > even-odd true
-  > EOF
-
-  $ cat even-odd-partial-app.txt | executable elab
-  let even-odd : Bool -> Int -> Bool :=
-    #fix (even-odd : Bool -> Int -> Bool) =>
-      fun (b : Bool) => fun (n : Int) =>
-        if b then
-          (if #int-eq n 0 then true else even-odd false (#int-sub n 1))
-        else
-          if #int-eq n 0 then false else even-odd true (#int-sub n 1);
-  even-odd true : Int -> Bool
-
-  $ cat even-odd-partial-app.txt | executable norm
-  fun (n : Int) =>
-    if #int-eq n 0 then
-      true
-    else
-      (#fix (even-odd : Bool -> Int -> Bool) =>
-         fun (b : Bool) => fun (n' : Int) =>
-           if b then
-             (if #int-eq n' 0 then true else even-odd false (#int-sub n' 1))
-           else
-             if #int-eq n' 0 then false else even-odd true (#int-sub n' 1))
-        false
-        (#int-sub n 1)
-  : Int -> Bool
 
 
 Mutually recursive bindings: Even/odd
@@ -290,65 +197,16 @@ Mutually recursive bindings: Even/odd
   > EOF
 
   $ cat even-odd.txt | executable elab
-  let $mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool } :=
-    #fix ($mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool }) =>
-      {
-        is-even :=
-          fun (n : Int) =>
-            if #int-eq n 0 then true else $mutual-0.is-odd (#int-sub n 1);
-        is-odd :=
-          fun (n : Int) =>
-            if #int-eq n 0 then false else $mutual-0.is-even (#int-sub n 1);
-      };
-  $mutual-0.is-even 6 : Bool
+  let rec {
+    is-even : Int -> Bool :=
+      fun (n : Int) => if #int-eq n 0 then true else is-odd (#int-sub n 1);
+    is-odd : Int -> Bool :=
+      fun (n : Int) => if #int-eq n 0 then false else is-even (#int-sub n 1);
+  };
+  is-even 6 : Bool
 
-  $ cat even-odd.txt | executable norm
+  $ cat even-odd.txt | executable eval
   true : Bool
-
-
-Mutually recursive bindings: Even/odd (partially applied)
-  $ cat >even-odd.txt <<EOF
-  > let rec {
-  >   is-even n := if n = 0 then true else is-odd (n - 1);
-  >   is-odd n := if n = 0 then false else is-even (n - 1);
-  > };
-  > 
-  > is-even
-  > EOF
-
-  $ cat even-odd.txt | executable elab
-  let $mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool } :=
-    #fix ($mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool }) =>
-      {
-        is-even :=
-          fun (n : Int) =>
-            if #int-eq n 0 then true else $mutual-0.is-odd (#int-sub n 1);
-        is-odd :=
-          fun (n : Int) =>
-            if #int-eq n 0 then false else $mutual-0.is-even (#int-sub n 1);
-      };
-  $mutual-0.is-even : Int -> Bool
-
-  $ cat even-odd.txt | executable norm
-  fun (n : Int) =>
-    if #int-eq n 0 then
-      true
-    else
-      (#fix ($mutual-0 : { is-even : Int -> Bool; is-odd : Int -> Bool }) =>
-         {
-           is-even :=
-             fun (n' : Int) =>
-               if #int-eq n' 0 then true else $mutual-0.is-odd (#int-sub n' 1);
-           is-odd :=
-             fun (n' : Int) =>
-               if #int-eq n' 0 then
-                 false
-               else
-                 $mutual-0.is-even (#int-sub n' 1);
-         })
-        .is-odd
-        (#int-sub n 1)
-  : Int -> Bool
 
 
 Lexer Errors

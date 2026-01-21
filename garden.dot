@@ -76,7 +76,7 @@ digraph garden {
   "elab-stlc-bidirectional" -> "lang-doc-templates";
   "elab-stlc-unification" -> "elab-stlc-letrec-unification";
   "elab-stlc-unification" -> "elab-stlc-row-unification";
-  "elab-stlc-unification" -> "elab-generics";
+  "elab-stlc-letrec-unification" -> "elab-generics";
   "elab-stlc-unification" -> "elab-system-f-unification";
   "elab-generics" -> "elab-generics-lettype";
   "elab-system-f-bidirectional" -> "elab-system-f-unification";

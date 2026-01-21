@@ -1,6 +1,6 @@
 # Generics
 
-- Extends [**elab-generics**](../elab-generics) (+ type aliases, tuples)
+- Extends [**elab-generics**](../elab-generics) (+ type aliases, tuples, normalisation-by-evaluation)
 - Based on [**scraps/elab_poly_generics_tydefs.ml**](../scraps/elab_poly_generics_tydefs.ml)
 
 ---

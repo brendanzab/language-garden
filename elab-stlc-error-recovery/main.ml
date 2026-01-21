@@ -87,11 +87,11 @@ let elab_cmd () : unit =
     (Core.pp_tm [] tm)
     (Core.pp_ty ty)
 
-let norm_cmd () : unit =
+let eval_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.pp_tm [] (Core.Semantics.normalise [] tm))
+    (Core.Semantics.pp_vtm (Core.Semantics.eval [] tm))
     (Core.pp_ty ty)
 
 
@@ -103,8 +103,8 @@ let cmd =
   Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
     Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
       Term.(const elab_cmd $ const ());
-    Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")
-      Term.(const norm_cmd $ const ());
+    Cmd.v (Cmd.info "eval" ~doc:"elaborate and evaluate a term from standard input")
+      Term.(const eval_cmd $ const ());
   ]
 
 

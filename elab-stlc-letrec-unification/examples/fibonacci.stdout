@@ -1,5 +1,5 @@
-let fib : Int -> Int :=
-  #fix (fib : Int -> Int) =>
+let rec {
+  fib : Int -> Int :=
     fun (n : Int) =>
       if #int-eq n 0 then
         0
@@ -8,4 +8,5 @@ let fib : Int -> Int :=
           1
         else
           #int-add (fib (#int-sub n 1)) (fib (#int-sub n 2));
+};
 fib 9 : Int
