@@ -64,8 +64,8 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   in
 
   try
-    MenhirLib.Convert.Simplified.traditional2revised Parser.main
-      (Sedlexing.with_tokenizer Lexer.token lexbuf)
+    Sedlexing.with_tokenizer Lexer.token lexbuf
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
   with
   | Lexer.Error message -> report_fatal message
   | Parser.Error -> report_fatal "syntax error"

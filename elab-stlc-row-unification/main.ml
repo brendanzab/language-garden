@@ -60,8 +60,8 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   Sedlexing.set_filename lexbuf source.name;
 
   try
-    MenhirLib.Convert.Simplified.traditional2revised Parser.main
-      (Sedlexing.with_tokenizer Lexer.token lexbuf)
+    Sedlexing.with_tokenizer Lexer.token lexbuf
+    |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
   with
   | Lexer.Error message -> emit source (Surface.Diagnostic.error (lexpos ()) message); exit 1
   | Parser.Error -> emit source (Surface.Diagnostic.error (lexpos ()) "syntax error"); exit 1
