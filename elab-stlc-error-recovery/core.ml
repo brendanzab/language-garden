@@ -70,7 +70,7 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
-    | Fun_lit of name * ty * (vtm -> vtm)
+    | Fun_lit of name * ty * clos1
     | Int_lit of int
     | Bool_lit of bool
 
@@ -83,15 +83,55 @@ module Semantics = struct
   *)
   and ntm =
     | Var of level
+    | Reported_error
     | Prim_app of Prim.t * vtm list
     | Fun_app of ntm * vtm
-    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
-    | Reported_error
+    | Bool_elim of ntm * clos0 * clos0
+
+  (** Delayed computations that can be forced later. *)
+  and clos0 = Clos0 of vtm env * tm
+
+  (** Closures that can be instantiated with a value. The environment provides
+      a value for each variable in the term, except for the variable that the
+      closure will be instantiated with during evaluation. *)
+  and clos1 = Clos1 of vtm env * tm
 
 
-  (** {1 Eliminators} *)
+  (** {1 Evaluation} *)
 
-  let prim_app (prim : Prim.t) (args : vtm list) : vtm =
+  (** Evaluate a term from the syntax into its semantic interpretation *)
+  let rec eval (env : vtm env) (tm : tm) : vtm =
+    match tm with
+    | Var index -> List.nth env index
+    | Reported_error ->
+        Neu Reported_error
+    | Prim prim -> prim_app prim []
+    | Let (_, _, def, body) ->
+        let def = eval env def in
+        eval (def :: env) body
+    | Fun_lit (name, param_ty, body) ->
+        Fun_lit (name, param_ty, Clos1 (env, body))
+    | Fun_app (head, arg) ->
+        let head = eval env head in
+        let arg = eval env arg in
+        fun_app head arg
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
+    | Bool_elim (head, tm1, tm2) ->
+        let head = eval env head in
+        bool_elim head (Clos0 (env, tm1)) (Clos0 (env, tm2))
+
+  (** {2 Instantiation} *)
+
+  and inst0 (Clos0 (env, body) : clos0) : vtm =
+    eval env body
+
+  and inst1 (Clos1 (env, body) : clos1) (arg : vtm) : vtm =
+    eval (arg :: env) body
+
+  (** {2 Eliminators} *)
+
+  and prim_app (prim : Prim.t) (args : vtm list) : vtm =
     match prim, args with
     | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
     | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
@@ -101,46 +141,19 @@ module Semantics = struct
     | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
     | prim, args -> Neu (Prim_app (prim, args))
 
-  let fun_app (head : vtm) (arg : vtm) : vtm =
+  and fun_app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
     | Neu ntm -> Neu (Fun_app (ntm, arg))
-    | Fun_lit (_, _, body) -> body arg
+    | Fun_lit (_, _, body) -> inst1 body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
+  and bool_elim (head : vtm) (vtm1 : clos0) (vtm2 : clos0) : vtm =
     match head with
     | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> vtm1 ()
-    | Bool_lit false -> vtm2 ()
+    | Bool_lit true -> inst0 vtm1
+    | Bool_lit false -> inst0 vtm2
     | _ -> invalid_arg "expected boolean"
-
-
-  (** {1 Evaluation} *)
-
-  (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm env) (tm : tm) : vtm =
-    match tm with
-    | Var index -> List.nth env index
-    | Prim prim -> prim_app prim []
-    | Let (_, _, def, body) ->
-        let def = eval env def in
-        eval (def :: env) body
-    | Fun_lit (name, param_ty, body) ->
-        Fun_lit (name, param_ty, fun arg -> eval (arg :: env) body)
-    | Fun_app (head, arg) ->
-        let head = eval env head in
-        let arg = eval env arg in
-        fun_app head arg
-    | Int_lit i -> Int_lit i
-    | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, tm1, tm2) ->
-        let head = eval env head in
-        let vtm1 () = eval env tm1 in
-        let vtm2 () = eval env tm2 in
-        bool_elim head vtm1 vtm2
-    | Reported_error ->
-        Neu Reported_error
 
 
   (** {1 Quotation} *)
@@ -150,7 +163,7 @@ module Semantics = struct
     match vtm with
     | Neu ntm -> quote_neu size ntm
     | Fun_lit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
+        let body = quote (size + 1) (inst1 body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
@@ -165,8 +178,8 @@ module Semantics = struct
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
     | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote size (vtm1 ()) in
-        let tm2 = quote size (vtm2 ()) in
+        let tm1 = quote size (inst0 vtm1) in
+        let tm2 = quote size (inst0 vtm2) in
         Bool_elim (quote_neu size head, tm1, tm2)
     | Reported_error ->
         Reported_error
