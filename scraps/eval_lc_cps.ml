@@ -16,8 +16,8 @@ type index = int
 type expr =
   | Var of index                    (* variable occurrences *)
   | Let of string * expr * expr     (* let bindings *)
-  | Fun_lit of string * expr         (* function literals *)
-  | Fun_app of expr * expr           (* function applications *)
+  | Fun_lit of string * expr        (* function literals *)
+  | Fun_app of expr * expr          (* function applications *)
 
 
 (** {1 Semantics} *)
@@ -25,7 +25,7 @@ type expr =
 (** {2 Semantic domain} *)
 
 type value =
-  | Fun_lit of string * clos         (* function literals *)
+  | Fun_lit of clos         (* function literals *)
 
 and clos =
   | Clos of env * expr
@@ -37,30 +37,33 @@ and env = value list
 let ( let@ ) = ( @@ )
 
 (** Evaluation function in continuation passing style *)
-let rec eval_k : type a. env -> expr -> (value -> a) -> a =
+let rec eval : type a. env -> expr -> (value -> a) -> a =
   fun env expr k ->
     match expr with
     | Var index ->
         (k [@tailcall]) (List.nth env index)
 
     | Let (_, def, body) ->
-        let@ def = eval_k env def in
-        (eval_k [@tailcall]) (def :: env) body k
+        let@ def = eval env def in
+        (eval [@tailcall]) (def :: env) body k
 
-    | Fun_lit (name, body) ->
-        (k [@tailcall]) (Fun_lit (name, Clos (env, body)))
+    | Fun_lit (_, body) ->
+        (k [@tailcall]) (Fun_lit (Clos (env, body)))
 
     | Fun_app (head, arg) ->
-        let@ head = eval_k env head in
-        let@ arg = eval_k env arg in
-        begin match head with
-        | Fun_lit (_, Clos (env, body)) ->
-            (eval_k [@tailcall]) (arg :: env) body k
-        end
+        let@ head = eval env head in
+        let@ arg = eval env arg in
+        (apply [@tailcall]) head arg k
+
+and apply : type a. value -> value -> (value -> a) -> a =
+  fun head arg k ->
+    match head with
+    | Fun_lit (Clos (env, body)) ->
+        (eval [@tailcall]) (arg :: env) body k
 
 (** Compute the value of an expression *)
 let eval (expr : expr) : value =
-  eval_k [] expr Fun.id
+  eval [] expr Fun.id
 
 
 (** {1 Tests} *)
