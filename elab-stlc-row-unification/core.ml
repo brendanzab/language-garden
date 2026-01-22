@@ -115,7 +115,7 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
-    | Fun_lit of name * ty * (vtm -> vtm)
+    | Fun_lit of name * ty * clos1
     | Record_lit of vtm Label_map.t
     | Variant_lit of label * vtm * ty
     | Bool_lit of bool
@@ -133,49 +133,16 @@ module Semantics = struct
     | Prim_app of Prim.t * vtm list
     | Fun_app of ntm * vtm
     | Record_proj of ntm * label
-    | Variant_elim of ntm * (name * (vtm -> vtm)) Label_map.t
-    | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
+    | Variant_elim of ntm * (name * clos1) Label_map.t
+    | Bool_elim of ntm * clos0 * clos0
 
+  (** Delayed computations that can be forced later. *)
+  and clos0 = Clos0 of vtm env * tm
 
-  (** {1 Eliminators} *)
-
-  let prim_app (prim : Prim.t) (args : vtm list) : vtm =
-    match prim, args with
-    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
-    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
-    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
-    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
-    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
-    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
-    | prim, args -> Neu (Prim_app (prim, args))
-
-  let fun_app (head : vtm) (arg : vtm) : vtm =
-    match head with
-    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
-    | Neu ntm -> Neu (Fun_app (ntm, arg))
-    | Fun_lit (_, _, body) -> body arg
-    | _ -> invalid_arg "expected function"
-
-  let record_proj (head : vtm) (label : label) : vtm =
-    match head with
-    | Neu ntm -> Neu (Record_proj (ntm, label))
-    | Record_lit fields -> Label_map.find label fields
-    | _ -> invalid_arg "expected record"
-
-  let variant_elim (head : vtm) (clauses : (name * (vtm -> vtm)) Label_map.t) : vtm =
-    match head with
-    | Neu ntm -> Neu (Variant_elim (ntm, clauses))
-    | Variant_lit (label, vtm, _) ->
-        let _, body = Label_map.find label clauses in
-        body vtm
-    | _ -> invalid_arg "expected variant"
-
-  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
-    match head with
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> vtm1 ()
-    | Bool_lit false -> vtm2 ()
-    | _ -> invalid_arg "expected boolean"
+  (** Closures that can be instantiated with a value. The environment provides
+      a value for each variable in the term, except for the variable that the
+      closure will be instantiated with during evaluation. *)
+  and clos1 = Clos1 of vtm env * tm
 
 
   (** {1 Evaluation} *)
@@ -189,7 +156,7 @@ module Semantics = struct
         let def = eval env def in
         eval (def :: env) body
     | Fun_lit (name, param_ty, body) ->
-        Fun_lit (name, param_ty, fun arg -> eval (arg :: env) body)
+        Fun_lit (name, param_ty, Clos1 (env, body))
     | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
@@ -205,16 +172,62 @@ module Semantics = struct
         let head = eval env head in
         let clauses =
           clauses |> Label_map.map (fun (name, body) ->
-            name, fun arg -> eval (arg :: env) body)
+            name, Clos1 (env, body))
         in
         variant_elim head clauses
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
         let head = eval env head in
-        let vtm1 () = eval env tm1 in
-        let vtm2 () = eval env tm2 in
-        bool_elim head vtm1 vtm2
+        bool_elim head (Clos0 (env, tm1)) (Clos0 (env, tm2))
+
+  (** {2 Instantiation} *)
+
+  and inst0 (Clos0 (env, body) : clos0) : vtm =
+    eval env body
+
+  and inst1 (Clos1 (env, body) : clos1) (arg : vtm) : vtm =
+    eval (arg :: env) body
+
+  (** {2 Eliminators} *)
+
+  and prim_app (prim : Prim.t) (args : vtm list) : vtm =
+    match prim, args with
+    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
+    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
+    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
+    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
+    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
+    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+    | prim, args -> Neu (Prim_app (prim, args))
+
+  and fun_app (head : vtm) (arg : vtm) : vtm =
+    match head with
+    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
+    | Neu ntm -> Neu (Fun_app (ntm, arg))
+    | Fun_lit (_, _, body) -> inst1 body arg
+    | _ -> invalid_arg "expected function"
+
+  and record_proj (head : vtm) (label : label) : vtm =
+    match head with
+    | Neu ntm -> Neu (Record_proj (ntm, label))
+    | Record_lit fields -> Label_map.find label fields
+    | _ -> invalid_arg "expected record"
+
+  and variant_elim (head : vtm) (clauses : (name * clos1) Label_map.t) : vtm =
+    match head with
+    | Neu ntm -> Neu (Variant_elim (ntm, clauses))
+    | Variant_lit (label, vtm, _) ->
+        let _, body = Label_map.find label clauses in
+        inst1 body vtm
+    | _ -> invalid_arg "expected variant"
+
+  and bool_elim (head : vtm) (vtm1 : clos0) (vtm2 : clos0) : vtm =
+    match head with
+    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
+    | Bool_lit true -> inst0 vtm1
+    | Bool_lit false -> inst0 vtm2
+    | _ -> invalid_arg "expected boolean"
 
 
   (** {1 Quotation} *)
@@ -224,7 +237,7 @@ module Semantics = struct
     match vtm with
     | Neu ntm -> quote_neu size ntm
     | Fun_lit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
+        let body = quote (size + 1) (inst1 body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
     | Record_lit fields ->
         Record_lit (fields |> Label_map.map (quote size))
@@ -248,12 +261,12 @@ module Semantics = struct
         let head = quote_neu size head in
         let clauses =
           clauses |> Label_map.map (fun (name, body) ->
-            name, quote (size + 1) (body (Neu (Var size))))
+            name, quote (size + 1) (inst1 body (Neu (Var size))))
         in
         Variant_elim (head, clauses)
     | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote size (vtm1 ()) in
-        let tm2 = quote size (vtm2 ()) in
+        let tm1 = quote size (inst0 vtm1) in
+        let tm2 = quote size (inst0 vtm2) in
         Bool_elim (quote_neu size head, tm1, tm2)
 
 
