@@ -16,7 +16,7 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | whitespace    -> token lexbuf
   | "--"          -> line_comment lexbuf
   | "/-"          -> block_comment lexbuf 0
-  | digits        -> NUMBER (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
+  | digits        -> NUMBER (Sedlexing.Utf8.lexeme lexbuf |> int_of_string)
   | "else"        -> KEYWORD_ELSE
   | "fun"         -> KEYWORD_FUN
   | "if"          -> KEYWORD_IF

@@ -11,18 +11,23 @@ let name_start = [%sedlex.regexp? 'a'..'z' | 'A'..'Z']
 let name_continue = [%sedlex.regexp? '-' | '_' | 'a'..'z' | 'A'..'Z' | '0'..'9']
 let name = [%sedlex.regexp? name_start, Star name_continue]
 
+(** FIXME: Will be added in OCaml 5.5 https://github.com/ocaml/ocaml/pull/14362 *)
+let drop_first n s = String.(sub s n (length s - n))
+
 let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   match%sedlex lexbuf with
   | whitespace    -> token lexbuf
   | "--"          -> line_comment lexbuf
   | "/-"          -> block_comment lexbuf 0
-  | digits        -> NUMBER (int_of_string (Sedlexing.Utf8.lexeme lexbuf))
+  | digits        -> NUMBER (Sedlexing.Utf8.lexeme lexbuf |> int_of_string)
   | "else"        -> KEYWORD_ELSE
   | "fun"         -> KEYWORD_FUN
   | "if"          -> KEYWORD_IF
   | "let"         -> KEYWORD_LET
   | "then"        -> KEYWORD_THEN
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
+  | "#", name     -> PRIM (Sedlexing.Utf8.lexeme lexbuf |> drop_first 1)
+  | "#", name     -> PRIM (Sedlexing.Utf8.lexeme lexbuf |> drop_first 1)
   | "+"           -> ADD
   | "*"           -> ASTERISK
   | ":"           -> COLON

@@ -14,3 +14,13 @@ let name (prim : t) : string =
   | Int_sub -> "int-sub"
   | Int_mul -> "int-mul"
   | Int_neg -> "int-neg"
+
+let of_name (name : string) : t option =
+  match name with
+  | "bool-eq" -> Some Bool_eq
+  | "int-eq" -> Some Int_eq
+  | "int-add" -> Some Int_add
+  | "int-sub" -> Some Int_sub
+  | "int-mul" -> Some Int_mul
+  | "int-neg" -> Some Int_neg
+  | _ -> None

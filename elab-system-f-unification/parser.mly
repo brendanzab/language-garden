@@ -1,5 +1,6 @@
 %token <string> NAME
 %token <int> NUMBER
+%token <string> PRIM
 %token KEYWORD_ELSE "else"
 %token KEYWORD_FUN "fun"
 %token KEYWORD_IF "if"
@@ -91,6 +92,8 @@ let atomic_tm :=
     { tm }
 | n = NAME;
     { Surface.Name n }
+| n = PRIM;
+    { Surface.Prim n }
 | i = NUMBER;
     { Surface.Int_lit i }
 

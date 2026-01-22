@@ -1,4 +1,5 @@
 %token <string> NAME
+%token <string> PRIM
 %token <int> NUMBER
 %token KEYWORD_ELSE "else"
 %token KEYWORD_END "end"
@@ -109,6 +110,8 @@ let atomic_tm :=
     { tm }
 | n = NAME;
     { Surface.Name n }
+| n = PRIM;
+    { Surface.Prim n }
 | "{"; fs = trailing_list(";", ~ = spanned(NAME); ":="; ~ = spanned(tm); <>); "}";
     { Surface.Record_lit fs  }
 | "["; l = spanned(NAME); ":="; tm = spanned(tm); "]";

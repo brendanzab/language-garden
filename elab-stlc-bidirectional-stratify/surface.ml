@@ -26,6 +26,7 @@ type tm =
 
 and tm_data =
   | Name of string
+  | Prim of string
   | Let of binder * param list * tm option * tm * tm
   | Ann of tm * tm
   | Fun_lit of param list * tm
@@ -181,6 +182,17 @@ end = struct
         | None when n = "false" -> Expr (Core.Bool_lit false, Core.Bool_type)
         | None when n = "Int" -> Type Core.Int_type
         | None -> error tm.span "unbound name `%s`" n
+        end
+
+    | Prim name ->
+        begin match Prim.of_name name with
+        | Some (Bool_eq as prim) -> Expr (Core.Prim prim, Core.(Fun_type (Bool_type, Fun_type (Bool_type, Bool_type))))
+        | Some (Int_eq as prim) -> Expr (Core.Prim prim, Core.(Fun_type (Int_type, Fun_type (Int_type, Bool_type))))
+        | Some (Int_add as prim) -> Expr (Core.Prim prim, Core.(Fun_type (Int_type, Fun_type (Int_type, Int_type))))
+        | Some (Int_sub as prim) -> Expr (Core.Prim prim, Core.(Fun_type (Int_type, Fun_type (Int_type, Int_type))))
+        | Some (Int_mul as prim) -> Expr (Core.Prim prim, Core.(Fun_type (Int_type, Fun_type (Int_type, Int_type))))
+        | Some (Int_neg as prim) -> Expr (Core.Prim prim, Core.(Fun_type (Int_type, Int_type)))
+        | None -> error tm.span "unknown primitive operation `#%s`" name
         end
 
     | Let (def_name, params, def_body_t, def_body, body) ->

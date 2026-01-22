@@ -55,6 +55,7 @@ module Tm = struct
 
   and data =
     | Name of string Spanned.t * Ty.t list
+    | Prim of string
     | Let of [`Rec] option * def list * t
     | Let_type of Ty.def * t
     | Ann of t * Ty.t
@@ -358,6 +359,17 @@ end = struct
             (if Core.Ty.Clos.arity cty = 1 then "argument" else "arguments")
             (List.length ty_args)
       end
+
+    | Prim name ->
+        begin match Prim.of_name name with
+        | Some (Bool_eq as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Bool, Fun (Bool, Bool)))
+        | Some (Int_eq as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Bool)))
+        | Some (Int_add as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Int)))
+        | Some (Int_sub as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Int)))
+        | Some (Int_mul as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Int)))
+        | Some (Int_neg as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Int))
+        | None -> error tm.span "unknown primitive operation `#%s`" name
+        end
 
     | Tm.Let (None, [], body) ->
         infer_tm ctx body

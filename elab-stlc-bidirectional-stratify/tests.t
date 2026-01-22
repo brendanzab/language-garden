@@ -1,5 +1,19 @@
   $ alias executable=stlc-bidirectional-stratify
 
+Primitive operations
+  $ executable elab <<< "#bool-eq"
+  > executable elab <<< "#int-eq"
+  > executable elab <<< "#int-add"
+  > executable elab <<< "#int-sub"
+  > executable elab <<< "#int-mul"
+  > executable elab <<< "#int-neg"
+  #bool-eq : Bool -> Bool -> Bool
+  #int-eq : Int -> Int -> Bool
+  #int-add : Int -> Int -> Int
+  #int-sub : Int -> Int -> Int
+  #int-mul : Int -> Int -> Int
+  #int-neg : Int -> Int
+
 Boolean equality
   $ executable elab <<< "true = false"
   #bool-eq true false : Bool

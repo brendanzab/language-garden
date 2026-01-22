@@ -1,4 +1,5 @@
 %token <string> NAME
+%token <string> PRIM
 %token <int> NUMBER
 %token KEYWORD_ELSE "else"
 %token KEYWORD_FUN "fun"
@@ -118,6 +119,8 @@ let atomic_tm :=
     { Surface.Tm.Tuple (tm :: tms) }
 | n = spanned(NAME);
     { Surface.Tm.Name (n, []) }
+| n = PRIM;
+    { Surface.Tm.Prim n }
 | i = NUMBER;
     { Surface.Tm.Int i }
 
