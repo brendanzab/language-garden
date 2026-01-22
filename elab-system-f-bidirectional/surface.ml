@@ -275,8 +275,8 @@ end = struct
         let tm2, vty2 = infer_tm ctx tm2 in
         equate_vtys ctx tm.span ~found:vty2 ~expected:vty1;
         begin match vty1 with
-        | Semantics.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Semantics.Bool_type
-        | Semantics.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Semantics.Bool_type
+        | Semantics.Bool_type -> Core.(fun_app (Prim Prim.Bool_eq) [tm1; tm2]), Semantics.Bool_type
+        | Semantics.Int_type -> Core.(fun_app (Prim Prim.Int_eq) [tm1; tm2]), Semantics.Bool_type
         | vty -> error tm.span "@[unsupported type: %t@]" (pp_vty ctx vty)
         end
 
@@ -289,11 +289,11 @@ end = struct
         in
         let tm1 = check_tm ctx tm1 Semantics.Int_type in
         let tm2 = check_tm ctx tm2 Semantics.Int_type in
-        Core.Prim_app (prim, [tm1; tm2]), Semantics.Int_type
+        Core.(fun_app (Prim prim) [tm1; tm2]), Semantics.Int_type
 
     | Prefix (`Neg, tm) ->
         let tm = check_tm ctx tm Semantics.Int_type in
-        Core.Prim_app (Prim.Int_neg, [tm]), Semantics.Int_type
+        Core.(fun_app (Prim Prim.Int_neg) [tm]), Semantics.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (vty : Core.Semantics.vty) : Core.tm =

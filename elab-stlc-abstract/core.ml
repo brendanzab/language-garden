@@ -33,7 +33,7 @@ module Semantics = struct
   (** Neutral values that could not be reduced to a normal form as a result of
       being stuck on something else that would not reduce further. *)
   and ntm =
-    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
+    | Var of level
     | Fun_app of ntm * vtm
     | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
 

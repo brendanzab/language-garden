@@ -376,7 +376,7 @@ module Tm = struct
   and def =
     name * name list * Ty.t * t
 
-  (** Apply a function to a list of arguments *)
+  (** Apply a term to a list of arguments *)
   let fun_app (head : t) (args : t list) : t =
     List.fold_left (fun head arg -> Fun_app (head, arg)) head args
 

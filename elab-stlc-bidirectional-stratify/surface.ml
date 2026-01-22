@@ -233,8 +233,8 @@ end = struct
         let e2, t2 = infer_expr ctx tm2 in
         equate_ty tm.span ~found:t2 ~expected:t1;
         begin match t1 with
-        | Bool_type -> Expr (Core.Prim_app (Prim.Bool_eq, [e1; e2]), Core.Bool_type)
-        | Int_type -> Expr (Core.Prim_app (Prim.Int_eq, [e1; e2]), Core.Bool_type)
+        | Core.Bool_type -> Expr (Core.(fun_app (Prim Prim.Bool_eq) [e1; e2]), Core.Bool_type)
+        | Core.Int_type -> Expr (Core.(fun_app (Prim Prim.Int_eq) [e1; e2]), Core.Bool_type)
         | t -> error tm.span "@[unsupported type: %t@]" (Core.pp_ty t)
         end
 
@@ -247,11 +247,11 @@ end = struct
         in
         let e1 = check_expr ctx tm1 Core.Int_type in
         let e2 = check_expr ctx tm2 Core.Int_type in
-        Expr (Core.Prim_app (prim, [e1; e2]), Core.Int_type)
+        Expr (Core.(fun_app (Prim prim) [e1; e2]), Core.Int_type)
 
     | Prefix (`Neg, tm) ->
         let e = check_expr ctx tm Core.Int_type in
-        Expr (Core.Prim_app (Prim.Int_neg, [e]), Core.Int_type)
+        Expr (Core.(fun_app (Prim Prim.Int_neg) [e]), Core.Int_type)
 
   and infer_expr (ctx : context) (tm : tm) : Core.expr * Core.ty =
     match infer ctx tm with

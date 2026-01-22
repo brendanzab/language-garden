@@ -74,6 +74,7 @@ and meta = meta_state ref
 (** Term syntax *)
 type tm =
   | Var of index
+  | Prim of Prim.t
   | Let of name * ty * tm * tm
   | Fix of name * ty * tm
   | Fun_lit of name * ty * tm
@@ -83,7 +84,10 @@ type tm =
   | Int_lit of int
   | Bool_lit of bool
   | Bool_elim of tm * tm * tm
-  | Prim_app of Prim.t * tm list
+
+(** Apply a term to a list of arguments *)
+let fun_app (head : tm) (args : tm list) : tm =
+  List.fold_left (fun head arg -> Fun_app (head, arg)) head args
 
 
 module Semantics = struct
@@ -116,18 +120,29 @@ module Semantics = struct
       for pretty printing under binders.
   *)
   and ntm =
-    | Var of level              (* A fresh variable (used when evaluating under a binder) *)
+    | Var of level
+    | Prim_app of Prim.t * vtm list
     | Fix of name * ty * (eval_opts -> vtm -> vtm)
     | Fun_app of ntm * vtm
     | Record_proj of ntm * label
     | Bool_elim of ntm * (eval_opts -> vtm) * (eval_opts -> vtm)
-    | Prim_app of Prim.t * vtm list
 
 
   (** {1 Eliminators} *)
 
+  let prim_app (prim : Prim.t) (args : vtm list) : vtm =
+    match prim, args with
+    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
+    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
+    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
+    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
+    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
+    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+    | prim, args -> Neu (Prim_app (prim, args))
+
   let rec fun_app (opts : eval_opts) (head : vtm) (arg : vtm) : vtm =
     match head with
+    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
     | Neu (Fix (_, _, body)) when opts.unfold_fix ->
         fun_app opts (body opts head) arg
     | Neu ntm -> Neu (Fun_app (ntm, arg))
@@ -151,19 +166,6 @@ module Semantics = struct
     | Bool_lit false -> vtm2 opts
     | _ -> invalid_arg "expected boolean"
 
-  let prim_app (prim : Prim.t) : vtm list -> vtm =
-    let guard f args =
-      try f args with
-      | Match_failure _ -> Neu (Prim_app (prim, args))
-    in
-    match prim with
-    | Bool_eq -> guard @@ fun[@warning "-partial-match"] [Bool_lit t1; Bool_lit t2] -> Bool_lit (Bool.equal t1 t2)
-    | Int_eq -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Bool_lit (Int.equal t1 t2)
-    | Int_add -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (Int.add t1 t2)
-    | Int_sub -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (Int.sub t1 t2)
-    | Int_mul -> guard @@ fun[@warning "-partial-match"] [Int_lit t1; Int_lit t2] -> Int_lit (Int.mul t1 t2)
-    | Int_neg -> guard @@ fun[@warning "-partial-match"] [Int_lit t1] -> Int_lit (Int.neg t1)
-
 
   (** {1 Evaluation} *)
 
@@ -171,6 +173,7 @@ module Semantics = struct
   let rec eval ?(opts = default_opts) (env : vtm env) (tm : tm) : vtm =
     match tm with
     | Var index -> List.nth env index
+    | Prim prim -> prim_app prim []
     | Let (_, _, def, body) ->
         let def = eval ~opts env def in
         eval ~opts (def :: env) body
@@ -196,8 +199,6 @@ module Semantics = struct
         let vtm1 opts = eval ~opts env tm1 in
         let vtm2 opts = eval ~opts env tm2 in
         bool_elim opts head vtm1 vtm2
-    | Prim_app (prim, args) ->
-        prim_app prim (List.map (eval ~opts env) args)
 
 
   (** {1 Quotation} *)
@@ -217,6 +218,9 @@ module Semantics = struct
   and quote_neu ~opts (size : level) (ntm : ntm) : tm =
     match ntm with
     | Var level -> Var (level_to_index size level)
+    | Prim_app (prim, []) -> Prim prim
+    | Prim_app (prim, arg :: args) ->
+        Fun_app (quote_neu ~opts size (Prim_app (prim, args)), quote ~opts size arg)
     | Fix (name, self_ty, body) ->
         let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
         Fix (name, self_ty, body)
@@ -228,8 +232,6 @@ module Semantics = struct
         let tm1 = quote ~opts size (vtm1 opts) in
         let tm2 = quote ~opts size (vtm2 opts) in
         Bool_elim (quote_neu ~opts size head, tm1, tm2)
-    | Prim_app (prim, args) ->
-        Prim_app (prim, List.map (quote ~opts size) args)
 
 
   (** {1 Normalisation} *)
@@ -415,16 +417,11 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
           Format.fprintf ppf "%t@ %t"
             (go head)
             (pp_proj_tm names arg)
-      | Prim_app (prim, args) ->
-          let pp_sep ppf () = Format.fprintf ppf "@ " in
-          Format.fprintf ppf "#%s@ %t"
-            (Prim.name prim)
-            (Fun.flip (Format.pp_print_list ~pp_sep (Fun.flip (pp_proj_tm names))) args)
       | tm ->
           pp_proj_tm names tm ppf
     in
     match tm with
-    | Fun_app _ | Prim_app _ as tm ->
+    | Fun_app _ as tm ->
         Format.fprintf ppf "@[<hv 2>%t@]" (go tm)
     | tm ->
         pp_proj_tm names tm ppf
@@ -444,6 +441,7 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
   and pp_atomic_tm names tm ppf =
     match tm with
     | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
+    | Prim prim -> Format.fprintf ppf "#%s" (Prim.name prim)
     | Record_lit defs when Label_map.is_empty defs ->
         Format.fprintf ppf "{}"
     | Record_lit defs ->
@@ -457,8 +455,7 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | Let _ | Fix _ | Fun_lit _ | Fun_app _ | Record_proj _
-    | Bool_elim _ | Prim_app _ as tm ->
+    | Let _ | Fix _ | Fun_lit _ | Fun_app _ | Record_proj _ | Bool_elim _ as tm ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
   pp_tm

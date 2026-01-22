@@ -190,8 +190,8 @@ end = struct
         let tm2, ty2 = infer_tm ctx tm2 in
         equate_ty tm.span ~found:ty2 ~expected:ty1;
         begin match ty1 with
-        | Core.Bool_type -> Core.Prim_app (Prim.Bool_eq, [tm1; tm2]), Core.Bool_type
-        | Core.Int_type -> Core.Prim_app (Prim.Int_eq, [tm1; tm2]), Core.Bool_type
+        | Core.Bool_type -> Core.(fun_app (Prim Prim.Bool_eq) [tm1; tm2]), Core.Bool_type
+        | Core.Int_type -> Core.(fun_app (Prim Prim.Int_eq) [tm1; tm2]), Core.Bool_type
         | ty -> error tm.span "@[unsupported type: %t@]" (Core.pp_ty ty)
         end
 
@@ -204,11 +204,11 @@ end = struct
         in
         let tm1 = check_tm ctx tm1 Core.Int_type in
         let tm2 = check_tm ctx tm2 Core.Int_type in
-        Core.Prim_app (prim, [tm1; tm2]), Core.Int_type
+        Core.(fun_app (Prim prim) [tm1; tm2]), Core.Int_type
 
     | Prefix (`Neg, tm) ->
         let tm = check_tm ctx tm Core.Int_type in
-        Core.Prim_app (Prim.Int_neg, [tm]), Core.Int_type
+        Core.(fun_app (Prim Prim.Int_neg) [tm]), Core.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
