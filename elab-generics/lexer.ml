@@ -24,8 +24,8 @@ let rec token (lexbuf : Sedlexing.lexbuf) : Parser.token =
   | "fun"         -> KEYWORD_FUN
   | "if"          -> KEYWORD_IF
   | "let"         -> KEYWORD_LET
-  | "then"        -> KEYWORD_THEN
   | "rec"         -> KEYWORD_REC
+  | "then"        -> KEYWORD_THEN
   | name          -> NAME (Sedlexing.Utf8.lexeme lexbuf)
   | "#", name     -> PRIM (Sedlexing.Utf8.lexeme lexbuf |> drop_first 1)
   | "+"           -> ADD
