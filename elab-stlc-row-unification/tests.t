@@ -88,18 +88,18 @@ Variant literal
 Match expression
   $ executable elab <<EOF
   > fun x =>
-  >   match x with
-  >   | [a := x] => x + 1
-  >   | [b := x] => x
-  >   end
+  >   match x with {
+  >     | [a := x] => x + 1
+  >     | [b := x] => x
+  >   }
   > EOF
   fun (x : [a : Int | b : Int]) =>
-    match x with | [a := x] => #int-add x 1 | [b := x] => x end
+    match x with { | [a := x] => #int-add x 1 | [b := x] => x }
   : [a : Int | b : Int] -> Int
 
 Absurd match
-  $ executable elab <<< "(fun x => match x with end) : _ -> Int "
-  fun (x : [|]) => match x with end : [|] -> Int
+  $ executable elab <<< "(fun x => match x with {}) : _ -> Int "
+  fun (x : [|]) => match x with {} : [|] -> Int
 
 Variant constraint and variant type
   $ executable elab <<EOF
@@ -403,44 +403,44 @@ Unexpected variant
 Redundant variant pattern
   $ executable elab <<EOF
   > fun (x : [some : Int]) =>
-  >   match x with
-  >   | [some := x] => x + 1
-  >   | [some := x] => x
-  >   end
+  >   match x with {
+  >     | [some := x] => x + 1
+  >     | [some := x] => x
+  >   }
   > EOF
-  fun (x : [some : Int]) => match x with | [some := x] => #int-add x 1 end :
+  fun (x : [some : Int]) => match x with { | [some := x] => #int-add x 1 } :
     [some : Int] -> Int
   warning: redundant case pattern
-    ┌─ <stdin>:4:5
+    ┌─ <stdin>:4:7
     │
-  4 │   | [some := x] => x
-    │      ^^^^
+  4 │     | [some := x] => x
+    │        ^^^^
   
 
 Unexpected variant pattern
   $ executable elab <<EOF
   > fun (x : [some : Int]) =>
-  >   match x with
-  >   | [a := x] => x + 1
-  >   end
+  >   match x with {
+  >     | [a := x] => x + 1
+  >   }
   > EOF
   error: unexpected pattern
-    ┌─ <stdin>:3:5
+    ┌─ <stdin>:3:7
     │
-  3 │   | [a := x] => x + 1
-    │      ^
+  3 │     | [a := x] => x + 1
+    │        ^
   
   [1]
 
 Missing variant patterns
   $ executable elab <<EOF
   > fun (x : [a : Int | b : Bool]) =>
-  >   match x with end
+  >   match x with {}
   > EOF
   error: non-exhaustive match
     ┌─ <stdin>:2:8
     │
-  2 │   match x with end
+  2 │   match x with {}
     │         ^
     = missing case pattern `a`
     = missing case pattern `b`
@@ -448,11 +448,11 @@ Missing variant patterns
   [1]
 
 Unexpected pattern match
-  $ executable elab <<< "match true with [a := x] => x end"
+  $ executable elab <<< "match true with { [a := x] => x }"
   error: mismatched types
     ┌─ <stdin>:1:6
     │
-  1 │ match true with [a := x] => x end
+  1 │ match true with { [a := x] => x }
     │       ^^^^
     = expected: [a : ?0]
          found: Bool

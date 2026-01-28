@@ -8,10 +8,10 @@ let _ :=
   add (point 1 2) (point 3 4);
 
 let apply x :=
-  match x with
-  | [incr := x] => x + 1
-  | [decr := x] => x - 1
-  | [square := x] => x * x
-  end;
+  match x with {
+    | [incr := x] => x + 1
+    | [decr := x] => x - 1
+    | [square := x] => x * x
+  };
 
 apply [incr := 1]

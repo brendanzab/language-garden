@@ -24,11 +24,11 @@ let _ :=
   add (point 1 2) (point 3 4);
 
 let apply x :=
-  match x with
-  | [incr := x] => x + 1
-  | [decr := x] => x - 1
-  | [square := x] => x * x
-  end;
+  match x with {
+    | [incr := x] => x + 1
+    | [decr := x] => x - 1
+    | [square := x] => x * x
+  };
 
 apply [incr := 1]
 ```
@@ -53,11 +53,11 @@ let sub :
 let _ : { x : Int; y : Int } := add (point 1 2) (point 3 4);
 let apply : [decr : Int | incr : Int | square : Int] -> Int :=
   fun (x : [decr : Int | incr : Int | square : Int]) =>
-    match x with
-    | [decr := x] => #int-sub x 1
-    | [incr := x] => #int-add x 1
-    | [square := x] => #int-mul x x
-    end;
+    match x with {
+      | [decr := x] => #int-sub x 1
+      | [incr := x] => #int-add x 1
+      | [square := x] => #int-mul x x
+    };
 apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 ```
 

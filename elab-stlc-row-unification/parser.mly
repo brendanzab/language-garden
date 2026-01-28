@@ -2,7 +2,6 @@
 %token <string> PRIM
 %token <int> NUMBER
 %token KEYWORD_ELSE "else"
-%token KEYWORD_END "end"
 %token KEYWORD_FUN "fun"
 %token KEYWORD_IF "if"
 %token KEYWORD_LET "let"
@@ -70,7 +69,7 @@ let tm :=
     { Surface.Fun_lit (ps, t) }
 | "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
-| "match"; tm1 = spanned(eq_tm); "with"; option("|"); clauses = separated_list("|", clause); "end";
+| "match"; tm1 = spanned(eq_tm); "with"; "{"; option("|"); clauses = separated_list("|", clause); "}";
     { Surface.Match (tm1, clauses) }
 | tm = spanned(eq_tm); ":"; ty = spanned(ty);
     { Surface.Ann (tm, ty) }
