@@ -512,13 +512,13 @@ let pp_tm : name env -> tm -> Format.formatter -> unit =
         Format.fprintf ppf "@[<hv>@[match@ @[%t@]@ with@ {}@]"
           (pp_app_tm names head)
     | Variant_elim (head, clauses) ->
-        Format.fprintf ppf "@[<hv>@[match@ @[%t@]@ with@ {@]%a@;<1 0>}@]"
+        Format.fprintf ppf "@[<hv>@[match@ @[%t@]@ with@ {@]%t%a@ }@]"
           (pp_app_tm names head)
+          (Format.pp_print_custom_break ~fits:(" ", 0, "") ~breaks:("", 2, "| "))
           (Format.pp_print_seq
-            ~pp_sep:(fun ppf () -> Format.fprintf ppf "")
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@;<1 2>| ")
             (fun ppf (label, (name, body)) ->
-              (* TODO: Don't print leading `|` if in horizontal mode *)
-              Format.fprintf ppf "@;<1 2>@[@[<2>@[|@ [%s@ :=@]@ @[%t@]]@]@ =>@ @[%t@]@]"
+              Format.fprintf ppf "@[@[<2>@[[%s@ :=@]@ @[%t@]]@]@ =>@ @[%t@]@]"
                 label
                 (pp_name name)
                 (pp_tm (name :: names) body)))

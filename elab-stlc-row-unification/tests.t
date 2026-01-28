@@ -94,7 +94,7 @@ Match expression
   >   }
   > EOF
   fun (x : [a : Int | b : Int]) =>
-    match x with { | [a := x] => #int-add x 1 | [b := x] => x }
+    match x with { [a := x] => #int-add x 1 | [b := x] => x }
   : [a : Int | b : Int] -> Int
 
 Absurd match
@@ -408,7 +408,7 @@ Redundant variant pattern
   >     | [some := x] => x
   >   }
   > EOF
-  fun (x : [some : Int]) => match x with { | [some := x] => #int-add x 1 } :
+  fun (x : [some : Int]) => match x with { [some := x] => #int-add x 1 } :
     [some : Int] -> Int
   warning: redundant case pattern
     ┌─ <stdin>:4:7
