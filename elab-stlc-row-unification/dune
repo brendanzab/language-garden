@@ -16,7 +16,3 @@
 (mdx
  (package elab-stlc-row-unification)
  (deps %{bin:stlc-row-unification}))
-
-(cram
- (package elab-stlc-row-unification)
- (deps %{bin:stlc-row-unification}))

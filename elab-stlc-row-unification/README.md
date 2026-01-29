@@ -83,7 +83,8 @@ apply ([incr := 1] : [decr : Int | incr : Int | square : Int]) : Int
 
 ## Examples
 
-More examples can be found in [`tests.t`](tests.t).
+More examples can be found in the [`examples`](./examples/) and
+[`tests`](./tests/) directories.
 
 [^row]: The term “row” purportedly comes from [Algol 68](https://www.softwarepreservation.org/projects/ALGOL/report/Algol68_revised_report-AB.pdf):
 
