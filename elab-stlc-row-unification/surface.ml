@@ -363,8 +363,7 @@ end = struct
         let body_ty = fresh_meta ctx tm.span "match clauses" in
         check_tm_match ctx head clauses body_ty, body_ty
 
-    | Proj (head, label) ->
-        let head_span = head.span in
+    | Proj ({ span = head_span; _ } as head, label) ->
         let head, head_ty = infer_tm ctx head in
 
         begin match Core.force_ty head_ty with
