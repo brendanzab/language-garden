@@ -50,9 +50,9 @@
 (test (name misc_ast_submodules))
 (test (name misc_circular_traversals))
 (test (name misc_clowns_and_jokers))
+(test (name misc_effects))
 (executable (name misc_effects_build_system))  ; TODO: Tests
 (executable (name misc_effects_come_from))     ; TODO: Tests
-(test (name misc_effects_state))
 (test (name misc_isorecursion_vs_equirecursion))
 (test (name misc_landins_knot))
 (test (name misc_local_datatypes))
@@ -61,6 +61,7 @@
 (test (name misc_option_shapes))
 (test (name misc_set_objects))
 (test (name misc_unembedding_hoas))
+(test (name misc_unembedding_hoas_effects))
 (test (name misc_unembedding_hoas_gadt))
 (test (name misc_variadic_cps))
 (test (name misc_variadic_printf))

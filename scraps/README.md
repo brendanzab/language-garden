@@ -169,6 +169,9 @@ Miscellaneous:
   Comparing set ADTs vs. set objects in OCaml.
 - [**misc_unembedding_hoas**](./misc_unembedding_hoas.ml):
   Converting HOAS-encoded lambda terms into a de Bruijn-indexed representation.
+- [**misc_unembedding_hoas_effects**](./misc_unembedding_hoas_effects.ml):
+  Converting HOAS-encoded lambda terms into a de Bruijn-indexed representation,
+  implemented using algebraic effects.
 - [**misc_unembedding_hoas_gadt**](./misc_unembedding_hoas_gadt.ml):
   Converting typed HOAS-encoded lambda terms into a well-typed, de Bruijn-indexed representation.
 - [**misc_variadic_cps.ml**](./misc_variadic_cps.ml): Variadic functions using CPS.
