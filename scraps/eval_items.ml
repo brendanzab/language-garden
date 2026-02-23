@@ -8,6 +8,16 @@ module rec Item : sig
 
 end = Item
 
+and Prim : sig
+
+  type t =
+    | Int_eq
+    | Int_add
+    | Int_sub
+    | Int_mul
+
+end = Prim
+
 and Expr : sig
 
   type t =
@@ -17,10 +27,7 @@ and Expr : sig
     | Bool of bool
     | Bool_if of t * t * t
     | Int of int
-    | Int_eq of t * t
-    | Int_add of t * t
-    | Int_sub of t * t
-    | Int_mul of t * t
+    | Prim of Prim.t * t list
 
   module Value : sig
 
@@ -58,24 +65,12 @@ end = struct
         | _ -> failwith "eval"
         end
     | Int int -> Value.Int int
-    | Int_eq (expr1, expr2) ->
-        begin match eval items env expr1, eval items env expr2 with
-        | Value.Int int1, Value.Int int2 -> Value.Bool (Int.equal int1 int2)
-        | _, _ -> failwith "eval"
-        end
-    | Int_add (expr1, expr2) ->
-        begin match eval items env expr1, eval items env expr2 with
-        | Value.Int int1, Value.Int int2 -> Value.Int (Int.add int1 int2)
-        | _, _ -> failwith "eval"
-        end
-    | Int_sub (expr1, expr2) ->
-        begin match eval items env expr1, eval items env expr2 with
-        | Value.Int int1, Value.Int int2 -> Value.Int (Int.sub int1 int2)
-        | _, _ -> failwith "eval"
-        end
-    | Int_mul (expr1, expr2) ->
-        begin match eval items env expr1, eval items env expr2 with
-        | Value.Int int1, Value.Int int2 -> Value.Int (Int.mul int1 int2)
+    | Prim (prim, args) ->
+        begin match prim, List.map (eval items env) args with
+        | Prim.Int_eq, [Value.Int int1; Value.Int int2] -> Value.Bool (Int.equal int1 int2)
+        | Prim.Int_add, [Value.Int int1; Value.Int int2] -> Value.Int (Int.add int1 int2)
+        | Prim.Int_sub, [Value.Int int1; Value.Int int2] -> Value.Int (Int.sub int1 int2)
+        | Prim.Int_mul, [Value.Int int1; Value.Int int2] -> Value.Int (Int.mul int1 int2)
         | _, _ -> failwith "eval"
         end
 
