@@ -16,15 +16,7 @@
 
 module Env = Map.Make (String)
 
-module rec Item : sig
-
-  type t =
-    | Val of Expr.t
-    | Fun of string list * Expr.t
-
-end = Item
-
-and Prim : sig
+module Prim = struct
 
   type t =
     | Int_eq
@@ -32,18 +24,26 @@ and Prim : sig
     | Int_sub
     | Int_mul
 
-end = Prim
+end
+
+module rec Item : sig
+
+  type t =
+    | Val of Expr.t
+    | Fun of string Iarray.t * Expr.t
+
+end = Item
 
 and Expr : sig
 
   type t =
-    | Item of string * t list
+    | Item of string * t Iarray.t
     | Var of string
     | Let of string * t * t
     | Bool of bool
     | Bool_if of t * t * t
     | Int of int
-    | Prim of Prim.t * t list
+    | Prim of Prim.t * t Iarray.t
 
   module Value : sig
 
@@ -63,12 +63,14 @@ end = struct
     match expr with
     | Item (name, args) ->
         begin match Env.find name items with
-        | Item.Val body -> assert (List.is_empty args); eval items locals body
+        | Item.Val body ->
+            assert (Iarray.length args = 0);
+            eval items locals body
         | Item.Fun (names, body) ->
             let args =
               Seq.map2 (fun name arg -> name, eval items locals arg)
-                (List.to_seq names)
-                (List.to_seq args)
+                (Iarray.to_seq names)
+                (Iarray.to_seq args)
             in
             eval items (Env.add_seq args locals) body
         end
@@ -85,11 +87,11 @@ end = struct
         end
     | Int int -> Value.Int int
     | Prim (prim, args) ->
-        begin match prim, List.map (eval items locals) args with
-        | Prim.Int_eq, [Value.Int int1; Value.Int int2] -> Value.Bool (Int.equal int1 int2)
-        | Prim.Int_add, [Value.Int int1; Value.Int int2] -> Value.Int (Int.add int1 int2)
-        | Prim.Int_sub, [Value.Int int1; Value.Int int2] -> Value.Int (Int.sub int1 int2)
-        | Prim.Int_mul, [Value.Int int1; Value.Int int2] -> Value.Int (Int.mul int1 int2)
+        begin match prim, Iarray.map (eval items locals) args with
+        | Prim.Int_eq, [|Value.Int int1; Value.Int int2|] -> Value.Bool (Int.equal int1 int2)
+        | Prim.Int_add, [|Value.Int int1; Value.Int int2|] -> Value.Int (Int.add int1 int2)
+        | Prim.Int_sub, [|Value.Int int1; Value.Int int2|] -> Value.Int (Int.sub int1 int2)
+        | Prim.Int_mul, [|Value.Int int1; Value.Int int2|] -> Value.Int (Int.mul int1 int2)
         | _, _ -> failwith "eval"
         end
 
@@ -136,75 +138,75 @@ let () = begin
 
     let items = Env.of_list [
       "test-fact", Item.Val (
-        Expr.Item ("fact", [Expr.Int 5])
+        Expr.Item ("fact", [|Expr.Int 5|])
       );
 
       "fact", Item.Fun (
-        ["n"],
+        [|"n"|],
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
+          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
           Expr.Int 1,
-          Expr.Prim (Prim.Int_mul, [
+          Expr.Prim (Prim.Int_mul, [|
             Expr.Var "n";
-            Expr.Item ("fact", [Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])])
-          ])
+            Expr.Item ("fact", [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
+          |])
         );
       );
 
       "ackermann", Item.Fun (
-        ["m"; "n"],
+        [|"m"; "n"|],
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [Expr.Var "m"; Expr.Int 0]),
-          Expr.Prim (Prim.Int_add, [Expr.Var "n"; Expr.Int 1]),
+          Expr.Prim (Prim.Int_eq, [|Expr.Var "m"; Expr.Int 0|]),
+          Expr.Prim (Prim.Int_add, [|Expr.Var "n"; Expr.Int 1|]),
           Expr.Bool_if (
-            Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
-            Expr.Item ("ackermann", [Expr.Prim (Prim.Int_sub, [Expr.Var "m"; Expr.Int 1]); Expr.Int 1]),
-            Expr.Item ("ackermann", [
-              Expr.Prim (Prim.Int_sub, [Expr.Var "m"; Expr.Int 1]);
-              Expr.Item ("ackermann", [Expr.Var "m"; Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])]);
-            ])
+            Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
+            Expr.Item ("ackermann", [|Expr.Prim (Prim.Int_sub, [|Expr.Var "m"; Expr.Int 1|]); Expr.Int 1|]),
+            Expr.Item ("ackermann", [|
+              Expr.Prim (Prim.Int_sub, [|Expr.Var "m"; Expr.Int 1|]);
+              Expr.Item ("ackermann", [|Expr.Var "m"; Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|]);
+            |])
           )
         )
       );
 
       "is-even", Item.Fun (
-        ["n"],
+        [|"n"|],
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
+          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
           Expr.Bool true,
-          Expr.Item ("is-odd", [Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])])
+          Expr.Item ("is-odd", [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
         )
       );
 
       "is-odd", Item.Fun (
-        ["n"],
+        [|"n"|],
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
+          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
           Expr.Bool false,
-          Expr.Item ("is-even", [Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])])
+          Expr.Item ("is-even", [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
         )
       );
 
     ] in
 
     test "test-fact" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("test-fact", [])) = Expr.Value.Int 120);
+      assert (Expr.eval items Env.empty (Expr.Item ("test-fact", [||])) = Expr.Value.Int 120);
     end;
 
     test "ackermann(0, 0)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", [Expr.Int 0; Expr.Int 0])) = Expr.Value.Int 1);
+      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", [|Expr.Int 0; Expr.Int 0|])) = Expr.Value.Int 1);
     end;
 
     test "ackermann(3, 4)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", [Expr.Int 3; Expr.Int 4])) = Expr.Value.Int 125);
+      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", [|Expr.Int 3; Expr.Int 4|])) = Expr.Value.Int 125);
     end;
 
     test "is-even(6)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("is-even", [Expr.Int 6])) = Expr.Value.Bool true);
+      assert (Expr.eval items Env.empty (Expr.Item ("is-even", [|Expr.Int 6|])) = Expr.Value.Bool true);
     end;
 
     test "is-odd(6)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("is-odd", [Expr.Int 6])) = Expr.Value.Bool false);
+      assert (Expr.eval items Env.empty (Expr.Item ("is-odd", [|Expr.Int 6|])) = Expr.Value.Bool false);
     end;
 
   end
