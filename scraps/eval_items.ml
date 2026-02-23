@@ -38,7 +38,6 @@ and Expr : sig
   end
 
   val eval : (string * Item.t) list -> (string * Value.t) list -> t -> Value.t
-  [@@warning "-unused-value-declaration"]
 
 end = struct
 
@@ -73,5 +72,97 @@ end = struct
         | Prim.Int_mul, [Value.Int int1; Value.Int int2] -> Value.Int (Int.mul int1 int2)
         | _, _ -> failwith "eval"
         end
+
+end
+
+let () = begin
+
+  Printexc.record_backtrace true;
+
+  let run_tests (type a) (prog : (string -> (unit -> unit) -> unit) -> unit) : a =
+    let success_count = ref 0 in
+    let error_count = ref 0 in
+
+    let run_test (name : string) (prog : unit -> unit) : unit =
+      Printf.printf "test %s ... " name;
+
+      match prog () with
+      | () ->
+          Printf.printf "ok\n";
+          incr success_count
+      | exception e ->
+          Printf.printf "error:\n\n";
+          Printf.printf "  %s\n\n" (Printexc.to_string e);
+          String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+            Printf.printf "  %s\n" line;
+          end;
+          incr error_count
+    in
+
+    Printf.printf "Running tests in %s:\n\n" __FILE__;
+    prog run_test;
+    Printf.printf "\n";
+
+    if !error_count <= 0 then begin
+      Printf.printf "Ran %i successful tests\n\n" !success_count;
+      exit 0
+    end else begin
+      Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
+      exit 1
+    end
+  in
+
+  begin run_tests @@ fun test ->
+
+    let items = [
+      "test-fact", Item.Val (
+        Expr.Item ("fact", [Expr.Int 5])
+      );
+
+      "fact", Item.Fun (
+        ["n"],
+        Expr.Bool_if (
+          Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
+          Expr.Int 1,
+          Expr.Prim (Prim.Int_mul, [
+            Expr.Var "n";
+            Expr.Item ("fact", [Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])])
+          ])
+        );
+      );
+
+      "is-even", Item.Fun (
+        ["n"],
+        Expr.Bool_if (
+          Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
+          Expr.Bool true,
+          Expr.Item ("is-odd", [Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])])
+        )
+      );
+
+      "is-odd", Item.Fun (
+        ["n"],
+        Expr.Bool_if (
+          Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
+          Expr.Bool false,
+          Expr.Item ("is-even", [Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])])
+        )
+      );
+
+    ] in
+
+    test "test-fact" begin fun () ->
+      assert (Expr.eval items [] (Expr.Item ("test-fact", [])) = Expr.Value.Int 120);
+    end;
+
+    test "is-even 6" begin fun () ->
+      assert (Expr.eval items [] (Expr.Item ("is-even", [Expr.Int 6])) = Expr.Value.Bool true);
+    end;
+
+    test "is-odd 6" begin fun () ->
+      assert (Expr.eval items [] (Expr.Item ("is-odd", [Expr.Int 6])) = Expr.Value.Bool false);
+    end;
+
+  end
 
 end
