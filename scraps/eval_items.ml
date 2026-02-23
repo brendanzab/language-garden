@@ -40,11 +40,19 @@ module Core = struct
 
   module Env = Map.Make (String)
 
+  module Type = struct
+
+    type t =
+      | Bool
+      | Int
+
+  end
+
   module rec Item : sig
 
     type t =
-      | Val of Expr.t
-      | Fun of string Iarray.t * Expr.t
+      | Val of Type.t * Expr.t
+      | Fun of (string * Type.t) Iarray.t * Type.t * Expr.t
 
   end = Item
 
@@ -53,7 +61,7 @@ module Core = struct
     type t =
       | Item of string * t Iarray.t
       | Var of string
-      | Let of string * t * t
+      | Let of string * Type.t * t * t
       | Bool of bool
       | Bool_if of t * t * t
       | Int of int
@@ -85,19 +93,19 @@ module Core = struct
       match expr with
       | Item (name, args) ->
           begin match Env.find name items with
-          | Item.Val body ->
+          | Item.Val (_, body) ->
               assert (Iarray.length args = 0);
               eval items locals body
-          | Item.Fun (names, body) ->
+          | Item.Fun (names, _, body) ->
               let args =
-                Seq.map2 (fun name arg -> name, eval items locals arg)
+                Seq.map2 (fun (name, _) arg -> name, eval items locals arg)
                   (Iarray.to_seq names)
                   (Iarray.to_seq args)
               in
               eval items (Env.add_seq args locals) body
           end
       | Var name -> Env.find name locals
-      | Let (name, def, body) ->
+      | Let (name, _, def, body) ->
           let def = eval items locals def in
           eval items (Env.add name def locals) body
       | Bool bool -> Value.Bool bool
@@ -158,11 +166,13 @@ let () = begin
 
     let items = Env.of_list [
       "test-fact", Item.Val (
+        Type.Int,
         Expr.Item ("fact", [|Expr.Int 5|])
       );
 
       "fact", Item.Fun (
-        [|"n"|],
+        [|"n", Type.Int|],
+        Type.Int,
         Expr.Bool_if (
           Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
           Expr.Int 1,
@@ -174,7 +184,8 @@ let () = begin
       );
 
       "ackermann", Item.Fun (
-        [|"m"; "n"|],
+        [|"m", Type.Int; "n", Type.Int|],
+        Type.Int,
         Expr.Bool_if (
           Expr.Prim (Prim.Int_eq, [|Expr.Var "m"; Expr.Int 0|]),
           Expr.Prim (Prim.Int_add, [|Expr.Var "n"; Expr.Int 1|]),
@@ -190,7 +201,8 @@ let () = begin
       );
 
       "is-even", Item.Fun (
-        [|"n"|],
+        [|"n", Type.Int|],
+        Type.Bool,
         Expr.Bool_if (
           Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
           Expr.Bool true,
@@ -199,7 +211,8 @@ let () = begin
       );
 
       "is-odd", Item.Fun (
-        [|"n"|],
+        [|"n", Type.Int|],
+        Type.Bool,
         Expr.Bool_if (
           Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
           Expr.Bool false,
