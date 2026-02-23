@@ -1,4 +1,18 @@
-(** Evaluation for a first-order functional programming language with top-level items *)
+(** Evaluation for a simple, first-order functional programming language with
+    top-level items and mutual recursion.
+
+    This language could serve as a basis for exploring compilation, as it avoids
+    the complexities around closures and uncurrying.
+*)
+
+(* TODO:
+
+  - parser
+  - elaborator
+  - data structures (structs/unions)
+  - compile to A-Normal Form
+  - compile to LLVM-IR (see: https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io)
+*)
 
 module rec Item : sig
 
