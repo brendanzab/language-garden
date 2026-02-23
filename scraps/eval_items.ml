@@ -14,6 +14,8 @@
   - compile to LLVM-IR (see: https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io)
 *)
 
+module Env = Map.Make (String)
+
 module rec Item : sig
 
   type t =
@@ -51,35 +53,39 @@ and Expr : sig
 
   end
 
-  val eval : (string * Item.t) list -> (string * Value.t) list -> t -> Value.t
+  val eval : Item.t Env.t -> Value.t Env.t -> t -> Value.t
 
 end = struct
 
   include Expr
 
-  let rec eval (items : (string * Item.t) list) (env : (string * Value.t) list) (expr : t) : Value.t =
+  let rec eval (items : Item.t Env.t) (locals : Value.t Env.t) (expr : t) : Value.t =
     match expr with
     | Item (name, args) ->
-        begin match List.assoc name items with
-        | Item.Val body -> assert (List.is_empty args); eval items env body
+        begin match Env.find name items with
+        | Item.Val body -> assert (List.is_empty args); eval items locals body
         | Item.Fun (names, body) ->
-            let args = List.map2 (fun name arg -> name, eval items env arg) names args in
-            eval items (List.append args env) body
+            let args =
+              Seq.map2 (fun name arg -> name, eval items locals arg)
+                (List.to_seq names)
+                (List.to_seq args)
+            in
+            eval items (Env.add_seq args locals) body
         end
-    | Var name -> List.assoc name env
+    | Var name -> Env.find name locals
     | Let (name, def, body) ->
-        let def = eval items env def in
-        eval items ((name, def) :: env) body
+        let def = eval items locals def in
+        eval items (Env.add name def locals) body
     | Bool bool -> Value.Bool bool
     | Bool_if (expr1, expr2, expr3) ->
-        begin match eval items env expr1 with
-        | Value.Bool true -> eval items env expr2
-        | Value.Bool false -> eval items env expr3
+        begin match eval items locals expr1 with
+        | Value.Bool true -> eval items locals expr2
+        | Value.Bool false -> eval items locals expr3
         | _ -> failwith "eval"
         end
     | Int int -> Value.Int int
     | Prim (prim, args) ->
-        begin match prim, List.map (eval items env) args with
+        begin match prim, List.map (eval items locals) args with
         | Prim.Int_eq, [Value.Int int1; Value.Int int2] -> Value.Bool (Int.equal int1 int2)
         | Prim.Int_add, [Value.Int int1; Value.Int int2] -> Value.Int (Int.add int1 int2)
         | Prim.Int_sub, [Value.Int int1; Value.Int int2] -> Value.Int (Int.sub int1 int2)
@@ -128,7 +134,7 @@ let () = begin
 
   begin run_tests @@ fun test ->
 
-    let items = [
+    let items = Env.of_list [
       "test-fact", Item.Val (
         Expr.Item ("fact", [Expr.Int 5])
       );
@@ -182,23 +188,23 @@ let () = begin
     ] in
 
     test "test-fact" begin fun () ->
-      assert (Expr.eval items [] (Expr.Item ("test-fact", [])) = Expr.Value.Int 120);
+      assert (Expr.eval items Env.empty (Expr.Item ("test-fact", [])) = Expr.Value.Int 120);
     end;
 
     test "ackermann(0, 0)" begin fun () ->
-      assert (Expr.eval items [] (Expr.Item ("ackermann", [Expr.Int 0; Expr.Int 0])) = Expr.Value.Int 1);
+      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", [Expr.Int 0; Expr.Int 0])) = Expr.Value.Int 1);
     end;
 
     test "ackermann(3, 4)" begin fun () ->
-      assert (Expr.eval items [] (Expr.Item ("ackermann", [Expr.Int 3; Expr.Int 4])) = Expr.Value.Int 125);
+      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", [Expr.Int 3; Expr.Int 4])) = Expr.Value.Int 125);
     end;
 
     test "is-even(6)" begin fun () ->
-      assert (Expr.eval items [] (Expr.Item ("is-even", [Expr.Int 6])) = Expr.Value.Bool true);
+      assert (Expr.eval items Env.empty (Expr.Item ("is-even", [Expr.Int 6])) = Expr.Value.Bool true);
     end;
 
     test "is-odd(6)" begin fun () ->
-      assert (Expr.eval items [] (Expr.Item ("is-odd", [Expr.Int 6])) = Expr.Value.Bool false);
+      assert (Expr.eval items Env.empty (Expr.Item ("is-odd", [Expr.Int 6])) = Expr.Value.Bool false);
     end;
 
   end
