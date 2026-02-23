@@ -147,8 +147,8 @@ Miscellaneous:
   Memoized build system using OCaml 5’s algebraic effects and handlers.
 - [**misc_effects_come_from.ml**](./misc_effects_come_from.ml):
   COMEFROM in OCaml, implemented with algebraic effects and handlers.
-- [**misc_effects_state.ml**](./misc_effects_state.ml):
-  State effect, implemented with algebraic effects and handlers.
+- [**misc_effects.ml**](./misc_effects.ml):
+  Some basic effects, implemented with algebraic effects and handlers.
 - [**misc_isorecursion_vs_equirecursion.ml**](./misc_isorecursion_vs_equirecursion.ml):
   Comparing isorecursive variant types with equirecursive variant types in OCaml.
 - [**misc_landins_knot.ml**](./misc_landins_knot.ml):
