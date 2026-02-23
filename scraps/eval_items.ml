@@ -14,8 +14,6 @@
   - compile to LLVM-IR (see: https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io)
 *)
 
-module Env = Map.Make (String)
-
 module Prim = struct
 
   type t =
@@ -24,76 +22,96 @@ module Prim = struct
     | Int_sub
     | Int_mul
 
+  type value =
+    | Bool of bool
+    | Int of int
+
+  let app (op : t) (args : value Iarray.t) =
+    match op, args with
+    | Int_eq, [|Int int1; Int int2|] -> Bool (Int.equal int1 int2)
+    | Int_add, [|Int int1; Int int2|] -> Int (Int.add int1 int2)
+    | Int_sub, [|Int int1; Int int2|] -> Int (Int.sub int1 int2)
+    | Int_mul, [|Int int1; Int int2|] -> Int (Int.mul int1 int2)
+    | _, _ -> failwith "Prim.app"
+
 end
 
-module rec Item : sig
+module Core = struct
 
-  type t =
-    | Val of Expr.t
-    | Fun of string Iarray.t * Expr.t
+  module Env = Map.Make (String)
 
-end = Item
-
-and Expr : sig
-
-  type t =
-    | Item of string * t Iarray.t
-    | Var of string
-    | Let of string * t * t
-    | Bool of bool
-    | Bool_if of t * t * t
-    | Int of int
-    | Prim of Prim.t * t Iarray.t
-
-  module Value : sig
+  module rec Item : sig
 
     type t =
+      | Val of Expr.t
+      | Fun of string Iarray.t * Expr.t
+
+  end = Item
+
+  and Expr : sig
+
+    type t =
+      | Item of string * t Iarray.t
+      | Var of string
+      | Let of string * t * t
       | Bool of bool
+      | Bool_if of t * t * t
       | Int of int
+      | Prim of Prim.t * t Iarray.t
+
+    module Value : sig
+
+      type t =
+        | Bool of bool
+        | Int of int
+
+    end
+
+    val eval : Item.t Env.t -> Value.t Env.t -> t -> Value.t
+
+  end = struct
+
+    include Expr
+
+    module Value = struct
+
+      type t = Prim.value =
+        | Bool of bool
+        | Int of int
+
+    end
+
+    let rec eval (items : Item.t Env.t) (locals : Value.t Env.t) (expr : t) : Value.t =
+      match expr with
+      | Item (name, args) ->
+          begin match Env.find name items with
+          | Item.Val body ->
+              assert (Iarray.length args = 0);
+              eval items locals body
+          | Item.Fun (names, body) ->
+              let args =
+                Seq.map2 (fun name arg -> name, eval items locals arg)
+                  (Iarray.to_seq names)
+                  (Iarray.to_seq args)
+              in
+              eval items (Env.add_seq args locals) body
+          end
+      | Var name -> Env.find name locals
+      | Let (name, def, body) ->
+          let def = eval items locals def in
+          eval items (Env.add name def locals) body
+      | Bool bool -> Value.Bool bool
+      | Bool_if (expr1, expr2, expr3) ->
+          begin match eval items locals expr1 with
+          | Value.Bool true -> eval items locals expr2
+          | Value.Bool false -> eval items locals expr3
+          | _ -> failwith "Expr.eval"
+          end
+      | Int int -> Value.Int int
+      | Prim (prim, args) ->
+          Prim.app prim (Iarray.map (eval items locals) args)
 
   end
-
-  val eval : Item.t Env.t -> Value.t Env.t -> t -> Value.t
-
-end = struct
-
-  include Expr
-
-  let rec eval (items : Item.t Env.t) (locals : Value.t Env.t) (expr : t) : Value.t =
-    match expr with
-    | Item (name, args) ->
-        begin match Env.find name items with
-        | Item.Val body ->
-            assert (Iarray.length args = 0);
-            eval items locals body
-        | Item.Fun (names, body) ->
-            let args =
-              Seq.map2 (fun name arg -> name, eval items locals arg)
-                (Iarray.to_seq names)
-                (Iarray.to_seq args)
-            in
-            eval items (Env.add_seq args locals) body
-        end
-    | Var name -> Env.find name locals
-    | Let (name, def, body) ->
-        let def = eval items locals def in
-        eval items (Env.add name def locals) body
-    | Bool bool -> Value.Bool bool
-    | Bool_if (expr1, expr2, expr3) ->
-        begin match eval items locals expr1 with
-        | Value.Bool true -> eval items locals expr2
-        | Value.Bool false -> eval items locals expr3
-        | _ -> failwith "eval"
-        end
-    | Int int -> Value.Int int
-    | Prim (prim, args) ->
-        begin match prim, Iarray.map (eval items locals) args with
-        | Prim.Int_eq, [|Value.Int int1; Value.Int int2|] -> Value.Bool (Int.equal int1 int2)
-        | Prim.Int_add, [|Value.Int int1; Value.Int int2|] -> Value.Int (Int.add int1 int2)
-        | Prim.Int_sub, [|Value.Int int1; Value.Int int2|] -> Value.Int (Int.sub int1 int2)
-        | Prim.Int_mul, [|Value.Int int1; Value.Int int2|] -> Value.Int (Int.mul int1 int2)
-        | _, _ -> failwith "eval"
-        end
 
 end
 
@@ -135,6 +153,8 @@ let () = begin
   in
 
   begin run_tests @@ fun test ->
+
+    let open Core in
 
     let items = Env.of_list [
       "test-fact", Item.Val (
