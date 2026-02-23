@@ -145,6 +145,22 @@ let () = begin
         );
       );
 
+      "ackermann", Item.Fun (
+        ["m"; "n"],
+        Expr.Bool_if (
+          Expr.Prim (Prim.Int_eq, [Expr.Var "m"; Expr.Int 0]),
+          Expr.Prim (Prim.Int_add, [Expr.Var "n"; Expr.Int 1]),
+          Expr.Bool_if (
+            Expr.Prim (Prim.Int_eq, [Expr.Var "n"; Expr.Int 0]),
+            Expr.Item ("ackermann", [Expr.Prim (Prim.Int_sub, [Expr.Var "m"; Expr.Int 1]); Expr.Int 1]),
+            Expr.Item ("ackermann", [
+              Expr.Prim (Prim.Int_sub, [Expr.Var "m"; Expr.Int 1]);
+              Expr.Item ("ackermann", [Expr.Var "m"; Expr.Prim (Prim.Int_sub, [Expr.Var "n"; Expr.Int 1])]);
+            ])
+          )
+        )
+      );
+
       "is-even", Item.Fun (
         ["n"],
         Expr.Bool_if (
@@ -167,6 +183,14 @@ let () = begin
 
     test "test-fact" begin fun () ->
       assert (Expr.eval items [] (Expr.Item ("test-fact", [])) = Expr.Value.Int 120);
+    end;
+
+    test "ackermann(0, 0)" begin fun () ->
+      assert (Expr.eval items [] (Expr.Item ("ackermann", [Expr.Int 0; Expr.Int 0])) = Expr.Value.Int 1);
+    end;
+
+    test "ackermann(3, 4)" begin fun () ->
+      assert (Expr.eval items [] (Expr.Item ("ackermann", [Expr.Int 3; Expr.Int 4])) = Expr.Value.Int 125);
     end;
 
     test "is-even(6)" begin fun () ->
