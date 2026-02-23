@@ -34,6 +34,8 @@ Evaluation:
   lambda calculus and arithmetic expressions.
 - [**eval_imp.ml**](./eval_imp.ml):
   A simple imperative language.
+- [**eval_items.ml**](./eval_items.ml):
+  Evaluation for a first-order functional programming language with top-level items.
 - [**eval_stlc_gadt.ml**](./eval_stlc_gadt.ml):
   A well-typed lambda calculus evaluator using GADTs.
 - [**eval_stlc_gadt_values_hoas.ml**](./eval_stlc_gadt_values_hoas.ml):
