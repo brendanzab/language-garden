@@ -169,11 +169,11 @@ let () = begin
       assert (Expr.eval items [] (Expr.Item ("test-fact", [])) = Expr.Value.Int 120);
     end;
 
-    test "is-even 6" begin fun () ->
+    test "is-even(6)" begin fun () ->
       assert (Expr.eval items [] (Expr.Item ("is-even", [Expr.Int 6])) = Expr.Value.Bool true);
     end;
 
-    test "is-odd 6" begin fun () ->
+    test "is-odd(6)" begin fun () ->
       assert (Expr.eval items [] (Expr.Item ("is-odd", [Expr.Int 6])) = Expr.Value.Bool false);
     end;
 
