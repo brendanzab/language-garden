@@ -32,11 +32,11 @@ Evaluation:
   using continuation passing style
 - [**eval_extensible.ml**](./eval_extensible.ml): Extensible interpreters for
   lambda calculus and arithmetic expressions.
-- [**eval_imp.ml**](./eval_imp.ml):
-  A simple imperative language.
-- [**eval_items.ml**](./eval_items.ml):
+- [**eval_fofl.ml**](./eval_fofl.ml):
   Evaluation for a simple, first-order functional programming language with
   top-level items and mutual recursion.
+- [**eval_imp.ml**](./eval_imp.ml):
+  A simple imperative language.
 - [**eval_stlc_gadt.ml**](./eval_stlc_gadt.ml):
   A well-typed lambda calculus evaluator using GADTs.
 - [**eval_stlc_gadt_values_hoas.ml**](./eval_stlc_gadt_values_hoas.ml):
@@ -117,6 +117,8 @@ Compilation:
   Compiling de Bruijn indexed lambda terms to de Bruijn indexed lambda terms in A-normal form.
 - [**compile_lc_secd.ml**](compile_lc_secd.ml):
   Compiling untyped lambda expressions to Landin’s SECD Machine.
+- [**compile_fofl_anf.ml**](./compile_fofl_anf.ml):
+  Compiling a first-order functional programming language to A-normal form.
 
 Languages and embedded DSLs:
 

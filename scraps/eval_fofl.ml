@@ -5,15 +5,6 @@
     the complexities around closures and uncurrying.
 *)
 
-(* TODO:
-
-  - parser
-  - elaborator
-  - data structures (structs/unions)
-  - compile to A-Normal Form
-  - compile to LLVM-IR (see: https://mapping-high-level-constructs-to-llvm-ir.readthedocs.io)
-*)
-
 module Prim = struct
 
   type t =
@@ -222,25 +213,15 @@ let () = begin
 
     ] in
 
-    test "test-fact" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("test-fact", None)) = Expr.Value.Int 120);
-    end;
+    let check_eval expr expected =
+      assert (Expr.eval items Env.empty expr = expected)
+    in
 
-    test "ackermann(0, 0)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", Some [|Expr.Int 0; Expr.Int 0|])) = Expr.Value.Int 1);
-    end;
-
-    test "ackermann(3, 4)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("ackermann", Some [|Expr.Int 3; Expr.Int 4|])) = Expr.Value.Int 125);
-    end;
-
-    test "is-even(6)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("is-even", Some [|Expr.Int 6|])) = Expr.Value.Bool true);
-    end;
-
-    test "is-odd(6)" begin fun () ->
-      assert (Expr.eval items Env.empty (Expr.Item ("is-odd", Some [|Expr.Int 6|])) = Expr.Value.Bool false);
-    end;
+    test "test-fact" Expr.(fun () -> check_eval (Item ("test-fact", None)) (Value.Int 120));
+    test "ackermann(0, 0)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|Int 0; Int 0|])) (Expr.Value.Int 1));
+    test "ackermann(3, 4)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|Int 3; Int 4|])) (Value.Int 125));
+    test "is-even(6)" Expr.(fun () -> check_eval (Item ("is-even", Some [|Int 6|])) (Value.Bool true));
+    test "is-odd(6)" Expr.(fun () -> check_eval (Item ("is-odd", Some [|Int 6|])) (Value.Bool false));
 
   end
 
