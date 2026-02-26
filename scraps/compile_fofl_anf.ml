@@ -261,73 +261,76 @@ module Anf = struct
 
   end
 
-  let ( let@ ) = ( @@ )
-
   type local_env = (Local_name.t * Type.t) Core.Env.t
 
-  let comp_k = fun (expr, _) -> Expr.Comp expr
+  let translate_expr (item_tys : string -> Type.t) (locals : local_env) (expr : Core.Expr.t) =
+    let ( let@ ) = ( @@ ) in
 
-  let rec translate_expr (item_tys : string -> Type.t) (locals : local_env) (expr : Core.Expr.t) (k : Expr.comp * Type.t  -> Expr.t) : Expr.t =
-    (* Compiles an expression and binds it to an intermediate definition if necessary *)
-    let translate_def item_tys locals (expr : Core.Expr.t) (k : Expr.atom -> Expr.t) : Expr.t =
-      let@ expr, ty = translate_expr item_tys locals expr in
+    let rec go_expr (locals : local_env) (expr : Core.Expr.t) (k : Expr.comp * Type.t -> Expr.t) : Expr.t =
+      match expr with
+      | Core.Expr.Item (name, None) ->
+          k (Expr.Atom (Item name), item_tys name)
+      | Core.Expr.Item (name, Some args) ->
+          let@ args = go_defs locals (Iarray.to_list args) in
+          k (Expr.Item (name, Iarray.of_list args), item_tys name)
+      | Core.Expr.Var name ->
+          let name', ty = Core.Env.find name locals in
+          k (Expr.Atom (Var name'), ty)
+      | Core.Expr.Let (name, def_ty, def, body) ->
+          let name' = Local_name.fresh name in
+          let@ def, _ = go_expr locals def in
+          let body = go_expr (Core.Env.add name (name', def_ty) locals) body k in
+          Expr.Let (name', def_ty, def, body)
+      | Core.Expr.Bool bool ->
+          k (Expr.Atom (Bool bool), Type.Bool)
+      | Core.Expr.Bool_if (expr1, expr2, expr3) ->
+          let@ expr1 = go_def locals expr1 in
+          let expr2 = go_expr locals expr2 k in (* FIXME: join point *)
+          let expr3 = go_expr locals expr3 k in (* FIXME: join point *)
+          Expr.Bool_if (expr1, expr2, expr3)
+      | Core.Expr.Int int ->
+          k (Expr.Atom (Int int), Type.Int)
+      | Core.Expr.Prim (prim, args) ->
+          let@ args = go_defs locals (Iarray.to_list args) in
+          begin match prim with
+          | Prim.Int_eq -> k (Expr.Prim (prim, Iarray.of_list args), Type.Bool)
+          | Prim.Int_add -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
+          | Prim.Int_sub -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
+          | Prim.Int_mul -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
+          end
+
+    (* Compile an expression, and binding it to an intermediate definition if necessary *)
+    and go_def (locals : local_env) (expr : Core.Expr.t) (k : Expr.atom -> Expr.t) : Expr.t =
+      let@ expr, ty = go_expr locals expr in
       match expr with
       | Expr.Atom expr -> k expr
       | expr ->
           let name' = Local_name.fresh "x" in
           Expr.Let (name', ty, expr, k (Expr.Var name'))
-    in
-    (* Compiles a series of expressions to intermediate definitions *)
-    let rec translate_defs item_tys locals (exprs : Core.Expr.t list) (k : Expr.atom list -> Expr.t) : Expr.t =
+
+    (* Compile a series of expressions to intermediate definitions *)
+    and go_defs (locals : local_env) (exprs : Core.Expr.t list) (k : Expr.atom list -> Expr.t) : Expr.t =
       match exprs with
       | [] -> k []
       | expr :: exprs ->
-          let@ expr = translate_def item_tys locals expr in
-          let@ exprs = translate_defs item_tys locals exprs in
+          let@ expr = go_def locals expr in
+          let@ exprs = go_defs locals exprs in
           k (expr :: exprs)
     in
-    match expr with
-    | Core.Expr.Item (name, None) ->
-        k (Expr.Atom (Item name), item_tys name)
-    | Core.Expr.Item (name, Some args) ->
-        let@ args = translate_defs item_tys locals (Iarray.to_list args) in
-        k (Expr.Item (name, Iarray.of_list args), item_tys name)
-    | Core.Expr.Var name ->
-        let name', ty = Core.Env.find name locals in
-        k (Expr.Atom (Var name'), ty)
-    | Core.Expr.Let (name, def_ty, def, body) ->
-        let name' = Local_name.fresh name in
-        let@ def, _ = translate_expr item_tys locals def in
-        let body = translate_expr item_tys (Core.Env.add name (name', def_ty) locals) body k in
-        Expr.Let (name', def_ty, def, body)
-    | Core.Expr.Bool bool ->
-        k (Expr.Atom (Bool bool), Type.Bool)
-    | Core.Expr.Bool_if (expr1, expr2, expr3) ->
-        let@ expr1 = translate_def item_tys locals expr1 in
-        let expr2 = translate_expr item_tys locals expr2 k in (* FIXME: join point *)
-        let expr3 = translate_expr item_tys locals expr3 k in (* FIXME: join point *)
-        Expr.Bool_if (expr1, expr2, expr3)
-    | Core.Expr.Int int ->
-        k (Expr.Atom (Int int), Type.Int)
-    | Core.Expr.Prim (prim, args) ->
-        let@ args = translate_defs item_tys locals (Iarray.to_list args) in
-        begin match prim with
-        | Prim.Int_eq -> k (Expr.Prim (prim, Iarray.of_list args), Type.Bool)
-        | Prim.Int_add -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
-        | Prim.Int_sub -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
-        | Prim.Int_mul -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
-        end
+
+    let@ expr, _ = go_expr locals expr in
+    Expr.Comp expr
+
+  let translate_item (item_tys : string -> Type.t) (item : Core.Item.t) : Item.t =
+    match item with
+    | Core.Item.Val (ty, def) ->
+        Item.Val (ty, translate_expr item_tys Core.Env.empty def)
+    | Core.Item.Fun (params, ty, body) ->
+        let params' = params |> Iarray.map (fun (name, ty) -> Local_name.fresh name, ty) in
+        let locals = Seq.zip (Iarray.to_seq params |> Seq.map fst) (Iarray.to_seq params') |> Core.Env.of_seq in
+        Item.Fun (params', ty, translate_expr item_tys locals body)
 
   let translate_program (program : Core.Program.t) : Program.t =
-    let translate_item (item_tys : string -> Type.t) (item : Core.Item.t) : Item.t =
-      match item with
-      | Core.Item.Val (ty, def) ->
-          Item.Val (ty, translate_expr item_tys Core.Env.empty def comp_k)
-      | Core.Item.Fun (params, ty, body) ->
-          let params' = params |> Iarray.map (fun (name, ty) -> Local_name.fresh name, ty) in
-          let locals = Seq.zip (Iarray.to_seq params |> Seq.map fst) (Iarray.to_seq params') |> Core.Env.of_seq in
-          Item.Fun (params', ty, translate_expr item_tys locals body comp_k)
-    in
     program |> Iarray.map @@ fun (name, item) ->
       name, translate_item (Core.Program.item_ty program) item
 
@@ -445,7 +448,7 @@ let () = begin
     let check_eval expr expected_value =
       let value = Expr.eval items Env.empty expr in
       assert (value = expected_value);
-      let anf_expr = Anf.translate_expr (Program.item_ty program) Env.empty expr Anf.comp_k in
+      let anf_expr = Anf.translate_expr (Program.item_ty program) Env.empty expr in
       let anf_value = Anf.Expr.eval anf_items Anf.Local_env.empty anf_expr in
       assert (decode_anf_value anf_value = expected_value);
     in
