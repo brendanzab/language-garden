@@ -1,8 +1,5 @@
-(** Evaluation for a simple, first-order functional programming language with
-    top-level items and mutual recursion.
-
-    This language could serve as a basis for exploring compilation, as it avoids
-    the complexities around closures and uncurrying.
+(** Evaluation for a simple, first-order functional language with top-level
+    items and mutual recursion.
 *)
 
 module Prim = struct
@@ -87,11 +84,8 @@ module Core = struct
           | Item.Val (_, body), None ->
               eval items locals body
           | Item.Fun (names, _, body), Some args ->
-              let args =
-                Seq.map2 (fun (name, _) arg -> name, eval items locals arg)
-                  (Iarray.to_seq names)
-                  (Iarray.to_seq args)
-              in
+              let eval_arg (name, _) arg = name, eval items locals arg in
+              let args = Seq.map2 eval_arg (Iarray.to_seq names) (Iarray.to_seq args) in
               eval items (Env.add_seq args locals) body
           | _, _ -> failwith "Expr.eval"
           end

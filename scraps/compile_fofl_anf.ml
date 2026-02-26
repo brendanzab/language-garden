@@ -1,5 +1,8 @@
 (** Compiling a first-order functional programming language to A-normal form.
 
+    This language could serve as a simpler basis to exploring compilation, as it
+    avoids the complexity of closures and uncurrying.
+
     Extends [eval_fofl].
 *)
 
@@ -25,6 +28,8 @@ module Prim = struct
 
 end
 
+
+(** Core language *)
 module Core = struct
 
   module Env = Map.Make (String)
@@ -85,11 +90,8 @@ module Core = struct
           | Item.Val (_, body), None ->
               eval items locals body
           | Item.Fun (names, _, body), Some args ->
-              let args =
-                Seq.map2 (fun (name, _) arg -> name, eval items locals arg)
-                  (Iarray.to_seq names)
-                  (Iarray.to_seq args)
-              in
+              let eval_arg (name, _) arg = name, eval items locals arg in
+              let args = Seq.map2 eval_arg (Iarray.to_seq names) (Iarray.to_seq args) in
               eval items (Env.add_seq args locals) body
           | _, _ -> failwith "Expr.eval"
           end
@@ -126,11 +128,17 @@ module Core = struct
 
 end
 
+
+(** The language in A-Normal Form, with the results of computations bound to
+    intermediate bindings. This should be easier to compile to other backends,
+    like LLVM-IR or Wasm. *)
 module Anf = struct
 
-  module Name : sig
+  module Item_name = String
 
-    type t = private string
+  module Local_name : sig
+
+    type t
 
     val fresh : string -> t
 
@@ -138,27 +146,28 @@ module Anf = struct
 
   end = struct
 
-    type t = string
+    type t = int * string
 
     let fresh : string -> t =
       let next_id = ref 0 in
       fun name ->
         let id = !next_id in
         incr next_id;
-        Printf.sprintf "%s$%i" name id
+        id, name
 
-    let compare = String.compare
+    let compare (i1, _) (i2, _) = Int.compare i1 i2
 
   end
 
-  module Env = Map.Make (Name)
+  module Item_env = Map.Make (Item_name)
+  module Local_env = Map.Make (Local_name)
 
   module Type = Core.Type
 
   module rec Expr : sig
 
     type t =
-      | Let of Name.t * Type.t * comp * t
+      | Let of Local_name.t * Type.t * comp * t
       | Bool_if of atom * t * t
       | Comp of comp
 
@@ -169,7 +178,7 @@ module Anf = struct
 
     and atom =
       | Item of string
-      | Var of Name.t
+      | Var of Local_name.t
       | Bool of bool
       | Int of int
 
@@ -181,7 +190,7 @@ module Anf = struct
 
     end
 
-    val eval : Item.t Core.Env.t -> Value.t Env.t -> t -> Value.t
+    val eval : Item.t Item_env.t -> Value.t Local_env.t -> t -> Value.t
 
   end = struct
 
@@ -195,39 +204,11 @@ module Anf = struct
 
     end
 
-    let rec eval_atom (items : Item.t Core.Env.t) (locals : Value.t Env.t) (expr : atom) : Value.t =
-      match expr with
-      | Item name ->
-          begin match Core.Env.find name items with
-          | Item.Val (_, body) -> eval items locals body
-          | _ -> failwith "Expr.eval_atom"
-          end
-      | Var name -> Env.find name locals
-      | Bool bool -> Value.Bool bool
-      | Int int -> Value.Int int
-
-    and eval_comp (items : Item.t Core.Env.t) (locals : Value.t Env.t) (expr : comp) : Value.t =
-      match expr with
-      | Prim (prim, args) ->
-          Prim.app prim (Iarray.map (eval_atom items locals) args)
-      | Item (name, args) ->
-          begin match Core.Env.find name items with
-          | Item.Fun (names, _, body) ->
-              let args =
-                Seq.map2 (fun (name, _) arg -> name, eval_atom items locals arg)
-                  (Iarray.to_seq names)
-                  (Iarray.to_seq args)
-              in
-              eval items (Env.add_seq args locals) body
-          | _ -> failwith "Expr.eval_comp"
-          end
-      | Atom expr -> eval_atom items locals expr
-
-    and eval (items : Item.t Core.Env.t) (locals : Value.t Env.t) (expr : t) : Value.t =
+    let rec eval (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : t) : Value.t =
       match expr with
       | Let (name, _, def, body) ->
           let def = eval_comp items locals def in
-          eval items (Env.add name def locals) body
+          eval items (Local_env.add name def locals) body
       | Bool_if (expr1, expr2, expr3) ->
           begin match eval_atom items locals expr1 with
           | Value.Bool true -> eval items locals expr2
@@ -236,13 +217,38 @@ module Anf = struct
           end
       | Comp expr -> eval_comp items locals expr
 
+    and eval_comp (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : comp) : Value.t =
+      match expr with
+      | Prim (prim, args) ->
+          Prim.app prim (Iarray.map (eval_atom items locals) args)
+      | Item (name, args) ->
+          begin match Item_env.find name items with
+          | Item.Fun (names, _, body) ->
+              let eval_arg (name, _) arg = name, eval_atom items locals arg in
+              let args = Seq.map2 eval_arg (Iarray.to_seq names) (Iarray.to_seq args) in
+              eval items (Local_env.add_seq args locals) body
+          | _ -> failwith "Expr.eval_comp"
+          end
+      | Atom expr -> eval_atom items locals expr
+
+    and eval_atom (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : atom) : Value.t =
+      match expr with
+      | Item name ->
+          begin match Item_env.find name items with
+          | Item.Val (_, body) -> eval items locals body
+          | _ -> failwith "Expr.eval_atom"
+          end
+      | Var name -> Local_env.find name locals
+      | Bool bool -> Value.Bool bool
+      | Int int -> Value.Int int
+
   end
 
   and Item : sig
 
     type t =
       | Val of Type.t * Expr.t
-      | Fun of (Name.t * Type.t) Iarray.t * Type.t * Expr.t
+      | Fun of (Local_name.t * Type.t) Iarray.t * Type.t * Expr.t
 
   end = Item
 
@@ -254,11 +260,27 @@ module Anf = struct
 
   let ( let@ ) = ( @@ )
 
-  type local_env = (Name.t * Type.t) Core.Env.t
+  type local_env = (Local_name.t * Type.t) Core.Env.t
 
   let comp_k = fun (expr, _) -> Expr.Comp expr
 
   let rec translate_expr (item_tys : string -> Type.t) (locals : local_env) (expr : Core.Expr.t) (k : Expr.comp * Type.t  -> Expr.t) : Expr.t =
+    let translate_def item_tys locals (expr : Core.Expr.t) (k : Expr.atom -> Expr.t) : Expr.t =
+      let@ expr, ty = translate_expr item_tys locals expr in
+      match expr with
+      | Expr.Atom expr -> k expr
+      | expr ->
+          let name' = Local_name.fresh "x" in
+          Expr.Let (name', ty, expr, k (Expr.Var name'))
+    in
+    let rec translate_defs item_tys locals (exprs : Core.Expr.t list) (k : Expr.atom list -> Expr.t) : Expr.t =
+      match exprs with
+      | [] -> k []
+      | expr :: exprs ->
+          let@ expr = translate_def item_tys locals expr in
+          let@ exprs = translate_defs item_tys locals exprs in
+          k (expr :: exprs)
+    in
     match expr with
     | Core.Expr.Item (name, None) ->
         k (Expr.Atom (Item name), item_tys name)
@@ -269,7 +291,7 @@ module Anf = struct
         let name', ty = Core.Env.find name locals in
         k (Expr.Atom (Var name'), ty)
     | Core.Expr.Let (name, def_ty, def, body) ->
-        let name' = Name.fresh name in
+        let name' = Local_name.fresh name in
         let@ def, _ = translate_expr item_tys locals def in
         let body = translate_expr item_tys (Core.Env.add name (name', def_ty) locals) body k in
         Expr.Let (name', def_ty, def, body)
@@ -291,32 +313,16 @@ module Anf = struct
         | Prim.Int_mul -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
         end
 
-  and translate_def (item_tys : string -> Type.t) (locals : local_env) (expr : Core.Expr.t) (k : Expr.atom -> Expr.t) : Expr.t =
-    let@ expr, ty = translate_expr item_tys locals expr in
-    match expr with
-    | Expr.Atom expr -> k expr
-    | expr ->
-        let name' = Name.fresh "x" in
-        Expr.Let (name', ty, expr, k (Expr.Var name'))
-
-  and translate_defs (item_tys : string -> Type.t) (locals : local_env) (exprs : Core.Expr.t list) (k : Expr.atom list -> Expr.t) : Expr.t =
-    match exprs with
-    | [] -> k []
-    | expr :: exprs ->
-        let@ expr = translate_def item_tys locals expr in
-        let@ exprs = translate_defs item_tys locals exprs in
-        k (expr :: exprs)
-
-  let translate_item (item_tys : string -> Type.t) (item : Core.Item.t) : Item.t =
-    match item with
-    | Core.Item.Val (ty, def) ->
-        Item.Val (ty, translate_expr item_tys Core.Env.empty def comp_k)
-    | Core.Item.Fun (params, ty, body) ->
-        let params' = params |> Iarray.map (fun (name, ty) -> Name.fresh name, ty) in
-        let locals = Seq.zip (Iarray.to_seq params |> Seq.map fst) (Iarray.to_seq params') |> Core.Env.of_seq in
-        Item.Fun (params', ty, translate_expr item_tys locals body comp_k)
-
   let translate_program (program : Core.Program.t) : Program.t =
+    let translate_item (item_tys : string -> Type.t) (item : Core.Item.t) : Item.t =
+      match item with
+      | Core.Item.Val (ty, def) ->
+          Item.Val (ty, translate_expr item_tys Core.Env.empty def comp_k)
+      | Core.Item.Fun (params, ty, body) ->
+          let params' = params |> Iarray.map (fun (name, ty) -> Local_name.fresh name, ty) in
+          let locals = Seq.zip (Iarray.to_seq params |> Seq.map fst) (Iarray.to_seq params') |> Core.Env.of_seq in
+          Item.Fun (params', ty, translate_expr item_tys locals body comp_k)
+    in
     program |> Iarray.map @@ fun (name, item) ->
       name, translate_item (Core.Program.item_ty program) item
 
@@ -434,7 +440,7 @@ let () = begin
       let value = Expr.eval items Env.empty expr in
       assert (value = expected_value);
       let anf_expr = Anf.translate_expr (Program.item_ty program) Env.empty expr Anf.comp_k in
-      let anf_value = Anf.Expr.eval anf_items Anf.Env.empty anf_expr in
+      let anf_value = Anf.Expr.eval anf_items Anf.Local_env.empty anf_expr in
       assert (decode_anf_value anf_value = expected_value);
     in
 
