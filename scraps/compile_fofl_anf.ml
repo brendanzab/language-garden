@@ -129,27 +129,67 @@ module Core = struct
 end
 
 
-(** Creates an environment of fresh names *)
-module Fresh () : sig
+(** A space of names that are structurally equivalent. This is effectively a
+    wrapper around strings, but with an additional layer of type safety.
 
-  type t
+    {2 Properties}
 
-  val fresh : string -> t
+    - [compare (make n) (make n) = 0].
+*)
+module Label = struct
 
-  val compare : t -> t -> int
+  module type S = sig
 
-end = struct
+    type t
 
-  type t = int * string
+    val make : string -> t
+    val compare : t -> t -> int
 
-  let next_id = ref 0
+  end
 
-  let fresh (name : string) : t =
-    let id = !next_id in
-    incr next_id;
-    id, name
+  module Make () : S = struct
 
-  let compare (i1, _) (i2, _) = Int.compare i1 i2
+    type t = string
+
+    let make name = name
+    let compare = String.compare
+
+  end
+
+end
+
+
+(** A space of fresh names.
+
+    {2 Properties}
+
+    -  [compare (fresh n) (fresh n) <> 0]
+*)
+module Fresh = struct
+
+  module type S = sig
+
+    type t
+
+    val fresh : string -> t
+    val compare : t -> t -> int
+
+  end
+
+  module Make () : S = struct
+
+    type t = int * string
+
+    let next_id = ref 0
+
+    let fresh (name : string) : t =
+      let id = !next_id in
+      incr next_id;
+      id, name
+
+    let compare (i1, _) (i2, _) = Int.compare i1 i2
+
+  end
 
 end
 
@@ -159,8 +199,8 @@ end
     like LLVM-IR or Wasm. *)
 module Anf = struct
 
-  module Item_name = String
-  module Local_name = Fresh ()
+  module Item_name = Label.Make ()
+  module Local_name = Fresh.Make ()
 
   module Item_env = Map.Make (Item_name)
   module Local_env = Map.Make (Local_name)
@@ -257,7 +297,7 @@ module Anf = struct
 
   module Program = struct
 
-    type t = (string * Item.t) Iarray.t
+    type t = (Item_name.t * Item.t) Iarray.t
 
   end
 
@@ -269,10 +309,10 @@ module Anf = struct
     let rec go_expr (locals : local_env) (expr : Core.Expr.t) (k : Expr.comp * Type.t -> Expr.t) : Expr.t =
       match expr with
       | Core.Expr.Item (name, None) ->
-          k (Expr.Atom (Item name), item_tys name)
+          k (Expr.Atom (Item (Item_name.make name)), item_tys name)
       | Core.Expr.Item (name, Some args) ->
           let@ args = go_defs locals (Iarray.to_list args) in
-          k (Expr.Item (name, Iarray.of_list args), item_tys name)
+          k (Expr.Item (Item_name.make name, Iarray.of_list args), item_tys name)
       | Core.Expr.Var name ->
           let name', ty = Core.Env.find name locals in
           k (Expr.Atom (Var name'), ty)
@@ -332,7 +372,8 @@ module Anf = struct
 
   let translate_program (program : Core.Program.t) : Program.t =
     program |> Iarray.map @@ fun (name, item) ->
-      name, translate_item (Core.Program.item_ty program) item
+      Item_name.make name,
+      translate_item (Core.Program.item_ty program) item
 
 end
 
@@ -437,7 +478,7 @@ let () = begin
     |] in
 
     let items = Iarray.to_seq program |> Env.of_seq in
-    let anf_items = Anf.translate_program program |> Iarray.to_seq |> Env.of_seq in
+    let anf_items = Anf.translate_program program |> Iarray.to_seq |> Anf.Item_env.of_seq in
 
     let decode_anf_value anf_value =
       match anf_value with
