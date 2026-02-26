@@ -110,6 +110,20 @@ module Core = struct
 
   end
 
+  module Program = struct
+
+    type t = (string * Item.t) Iarray.t
+
+    let item_ty (program : t) (name : string) : Type.t =
+      program
+      |> Iarray.find_map (function
+        | n, Item.Val (ty, _) when n = name -> Some ty
+        | n, Item.Fun (_, ty, _) when n = name -> Some ty
+        | _, _ -> None)
+      |> Option.get
+
+  end
+
 end
 
 module Anf = struct
@@ -163,27 +177,25 @@ module Anf = struct
 
   end
 
+  module Program = struct
+
+    type t = (string * Item.t) Iarray.t
+
+  end
+
   let ( let@ ) = ( @@ )
 
-  type item_ty_env = Type.t Core.Env.t
   type local_env = (Name.t * Type.t) Core.Env.t
 
   let comp_k = fun (expr, _) -> Expr.Comp expr
 
-  let item_tys_of_program program =
-    Iarray.to_seq program
-    |> Seq.map (function
-      | name, Core.Item.Val (ty, _) -> name, ty
-      | name, Core.Item.Fun (_, ty, _) -> name, ty)
-    |> Core.Env.of_seq
-
-  let rec translate_expr (item_tys : item_ty_env) (locals : local_env) (expr : Core.Expr.t) (k : Expr.comp * Type.t  -> Expr.t) : Expr.t =
+  let rec translate_expr (item_tys : string -> Type.t) (locals : local_env) (expr : Core.Expr.t) (k : Expr.comp * Type.t  -> Expr.t) : Expr.t =
     match expr with
     | Core.Expr.Item (name, None) ->
-        k (Expr.Atom (Item name), Core.Env.find name item_tys)
+        k (Expr.Atom (Item name), item_tys name)
     | Core.Expr.Item (name, Some args) ->
         let@ args = translate_defs item_tys locals (Iarray.to_list args) in
-        k (Expr.Item (name, Iarray.of_list args), Core.Env.find name item_tys)
+        k (Expr.Item (name, Iarray.of_list args), item_tys name)
     | Core.Expr.Var name ->
         let name', ty = Core.Env.find name locals in
         k (Expr.Atom (Var name'), ty)
@@ -210,7 +222,7 @@ module Anf = struct
         | Prim.Int_mul -> k (Expr.Prim (prim, Iarray.of_list args), Type.Int)
         end
 
-  and translate_def (item_tys : item_ty_env) (locals : local_env) (expr : Core.Expr.t) (k : Expr.atom -> Expr.t) : Expr.t =
+  and translate_def (item_tys : string -> Type.t) (locals : local_env) (expr : Core.Expr.t) (k : Expr.atom -> Expr.t) : Expr.t =
     let@ expr, ty = translate_expr item_tys locals expr in
     match expr with
     | Expr.Atom expr -> k expr
@@ -218,7 +230,7 @@ module Anf = struct
         let name' = Name.fresh "x" in
         Expr.Let (name', ty, expr, k (Expr.Var name'))
 
-  and translate_defs (item_tys : item_ty_env) (locals : local_env) (exprs : Core.Expr.t list) (k : Expr.atom list -> Expr.t) : Expr.t =
+  and translate_defs (item_tys : string -> Type.t) (locals : local_env) (exprs : Core.Expr.t list) (k : Expr.atom list -> Expr.t) : Expr.t =
     match exprs with
     | [] -> k []
     | expr :: exprs ->
@@ -226,7 +238,7 @@ module Anf = struct
         let@ exprs = translate_defs item_tys locals exprs in
         k (expr :: exprs)
 
-  let translate_item (item_tys : item_ty_env) (item : Core.Item.t) : Item.t =
+  let translate_item (item_tys : string -> Type.t) (item : Core.Item.t) : Item.t =
     match item with
     | Core.Item.Val (ty, def) ->
         Item.Val (ty, translate_expr item_tys Core.Env.empty def comp_k)
@@ -238,10 +250,9 @@ module Anf = struct
         in
         Item.Fun (params, ty, translate_expr item_tys locals body comp_k)
 
-  let translate_program (program : (string * Core.Item.t) Iarray.t) : (string * Item.t) Iarray.t =
-    let item_tys = item_tys_of_program program in
+  let translate_program (program : Core.Program.t) : Program.t =
     program |> Iarray.map @@ fun (name, item) ->
-      name, translate_item item_tys item
+      name, translate_item (Core.Program.item_ty program) item
 
 end
 
@@ -345,13 +356,12 @@ let () = begin
     |] in
 
     let items = Iarray.to_seq program |> Env.of_seq in
-    let anf_item_tys = Anf.item_tys_of_program program in
     let _anf_items = Anf.translate_program program |> Iarray.to_seq |> Env.of_seq in
 
     let check_eval expr expected_value =
       let value = Expr.eval items Env.empty expr in
       assert (value = expected_value);
-      let _anf_expr = Anf.translate_expr anf_item_tys Env.empty expr Anf.comp_k in
+      let _anf_expr = Anf.translate_expr (Program.item_ty program) Env.empty expr Anf.comp_k in
       (* TODO: Ensure that the compiled version evaluates to the same value *)
       ()
     in
