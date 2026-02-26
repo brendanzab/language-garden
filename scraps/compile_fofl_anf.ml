@@ -129,35 +129,38 @@ module Core = struct
 end
 
 
+(** Creates an environment of fresh names *)
+module Fresh () : sig
+
+  type t
+
+  val fresh : string -> t
+
+  val compare : t -> t -> int
+
+end = struct
+
+  type t = int * string
+
+  let next_id = ref 0
+
+  let fresh (name : string) : t =
+    let id = !next_id in
+    incr next_id;
+    id, name
+
+  let compare (i1, _) (i2, _) = Int.compare i1 i2
+
+end
+
+
 (** The language in A-Normal Form, with the results of computations bound to
     intermediate bindings. This should be easier to compile to other backends,
     like LLVM-IR or Wasm. *)
 module Anf = struct
 
   module Item_name = String
-
-  module Local_name : sig
-
-    type t
-
-    val fresh : string -> t
-
-    val compare : t -> t -> int
-
-  end = struct
-
-    type t = int * string
-
-    let fresh : string -> t =
-      let next_id = ref 0 in
-      fun name ->
-        let id = !next_id in
-        incr next_id;
-        id, name
-
-    let compare (i1, _) (i2, _) = Int.compare i1 i2
-
-  end
+  module Local_name = Fresh ()
 
   module Item_env = Map.Make (Item_name)
   module Local_env = Map.Make (Local_name)
@@ -173,11 +176,11 @@ module Anf = struct
 
     and comp =
       | Prim of Prim.t * atom Iarray.t
-      | Item of string * atom Iarray.t
+      | Item of Item_name.t * atom Iarray.t
       | Atom of atom
 
     and atom =
-      | Item of string
+      | Item of Item_name.t
       | Var of Local_name.t
       | Bool of bool
       | Int of int
@@ -329,6 +332,7 @@ module Anf = struct
       name, translate_item (Core.Program.item_ty program) item
 
 end
+
 
 let () = begin
 
