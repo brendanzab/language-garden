@@ -265,6 +265,7 @@ module Anf = struct
   let comp_k = fun (expr, _) -> Expr.Comp expr
 
   let rec translate_expr (item_tys : string -> Type.t) (locals : local_env) (expr : Core.Expr.t) (k : Expr.comp * Type.t  -> Expr.t) : Expr.t =
+    (* Compiles an expression and binds it to an intermediate definition if necessary *)
     let translate_def item_tys locals (expr : Core.Expr.t) (k : Expr.atom -> Expr.t) : Expr.t =
       let@ expr, ty = translate_expr item_tys locals expr in
       match expr with
@@ -273,6 +274,7 @@ module Anf = struct
           let name' = Local_name.fresh "x" in
           Expr.Let (name', ty, expr, k (Expr.Var name'))
     in
+    (* Compiles a series of expressions to intermediate definitions *)
     let rec translate_defs item_tys locals (exprs : Core.Expr.t list) (k : Expr.atom list -> Expr.t) : Expr.t =
       match exprs with
       | [] -> k []
