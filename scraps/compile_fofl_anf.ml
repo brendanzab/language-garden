@@ -1,7 +1,9 @@
-(** Compiling a first-order functional programming language to A-normal form.
+(** A demonstration of compiling a first-order functional programming language
+    to A-normal form.
 
-    This language could serve as a simpler basis to exploring compilation, as it
-    avoids the complexity of closures and uncurrying.
+    By “first-order” we mean that all of the functions are defined at the
+    top-level, which should make it easier to generate LLVM or WASM code, as we
+    don't need to worry about closures or currying (yet).
 
     Extends [eval_fofl].
 *)
