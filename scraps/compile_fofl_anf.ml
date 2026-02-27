@@ -114,15 +114,12 @@ module Core = struct
 
   module Program = struct
 
-    type t = (string * Item.t) Iarray.t
+    type t = Item.t Env.t
 
     let item_ty (program : t) (name : string) : Type.t =
-      program
-      |> Iarray.find_map (function
-        | n, Item.Val (ty, _) when n = name -> Some ty
-        | n, Item.Fun (_, ty, _) when n = name -> Some ty
-        | _, _ -> None)
-      |> Option.get
+      match Env.find name program with
+      | Item.Val (ty, _) -> ty
+      | Item.Fun (_, ty, _) -> ty
 
   end
 
@@ -297,7 +294,7 @@ module Anf = struct
 
   module Program = struct
 
-    type t = (Item_name.t * Item.t) Iarray.t
+    type t = Item.t Item_env.t
 
   end
 
@@ -371,9 +368,11 @@ module Anf = struct
         Item.Fun (params', ty, translate_expr item_tys locals body)
 
   let translate_program (program : Core.Program.t) : Program.t =
-    program |> Iarray.map @@ fun (name, item) ->
+    Core.Env.to_seq program
+    |> Seq.map (fun (name, item) ->
       Item_name.make name,
-      translate_item (Core.Program.item_ty program) item
+      translate_item (Core.Program.item_ty program) item)
+    |> Item_env.of_seq
 
 end
 
@@ -419,7 +418,7 @@ let () = begin
 
     let open Core in
 
-    let program : _ Iarray.t = [|
+    let program = Env.of_list [
       "test-fact", Item.Val (
         Type.Int,
         Expr.Item ("fact", Some [|Expr.Int 5|])
@@ -475,10 +474,9 @@ let () = begin
         )
       );
 
-    |] in
+    ] in
 
-    let items = Iarray.to_seq program |> Env.of_seq in
-    let anf_items = Anf.translate_program program |> Iarray.to_seq |> Anf.Item_env.of_seq in
+    let anf_items = Anf.translate_program program in
 
     let decode_anf_value anf_value =
       match anf_value with
@@ -487,8 +485,9 @@ let () = begin
     in
 
     let check_eval expr expected_value =
-      let value = Expr.eval items Env.empty expr in
+      let value = Expr.eval program Env.empty expr in
       assert (value = expected_value);
+
       let anf_expr = Anf.translate_expr (Program.item_ty program) Env.empty expr in
       let anf_value = Anf.Expr.eval anf_items Anf.Local_env.empty anf_expr in
       assert (decode_anf_value anf_value = expected_value);
