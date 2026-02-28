@@ -128,12 +128,12 @@ module Core = struct
 end
 
 
-(** A space of names that are structurally equivalent. This is effectively a
-    wrapper around strings, but with an additional layer of type safety.
+(** Names that are structurally equivalent. This is effectively a wrapper around
+    strings, but with an additional layer of type safety.
 
     {2 Properties}
 
-    - [compare (make n) (make n) = 0].
+    - [compare (make m) (make n) = String.compare m n].
 *)
 module Label = struct
 
@@ -158,7 +158,7 @@ module Label = struct
 end
 
 
-(** A space of fresh names.
+(** Fresh names.
 
     {2 Properties}
 
