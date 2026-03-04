@@ -2,6 +2,10 @@
     handling of exceptions.
 
     Extends [eval_lc_cps.ml].
+
+    {2 Resources}
+
+    - https://www.cs.cornell.edu/courses/cs6110/2025sp/lectures/exceptions.pdf
 *)
 
 (** {1 Syntax} *)
@@ -21,7 +25,7 @@ type expr =
   | Fun_app of expr * expr                (* function applications *)
   | String_lit of string                  (* string literals *)
   | Except_raise of expr                  (* raise an exception *)
-  | Except_handle of expr * name * expr   (* evaluating an expression with a handler *)
+  | Except_handle of expr * name * expr   (* handle an exception *)
 
 
 (** {1 Semantics} *)
