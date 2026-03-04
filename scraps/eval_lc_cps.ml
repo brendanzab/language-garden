@@ -1,8 +1,14 @@
 (** A tree-walking interpreter for the lambda calculus, refactored into
     continuation-passing-style.
 
+    This approach is useful for implementing the interpreter in a tail-recursive
+    fashion, and can serve as the basis for implementing non-local control flow
+    (see [eval_lc_except_cps.ml]).
+
     We can later defunctionalise the evaluation function, which will result in
-    the CEK machine (see [eval_lc_cek.ml]).
+    the CEK machine (see [eval_lc_cek.ml]). Another option is to
+    {{: https://en.wikipedia.org/wiki/Partial_evaluation#Futamura_projections}
+    specialise} the interpreter to yield a compiler to a CPS-based IR.
 *)
 
 (** {1 Syntax} *)
@@ -25,7 +31,7 @@ type expr =
 (** {2 Semantic domain} *)
 
 type value =
-  | Fun_lit of clos         (* function literals *)
+  | Fun_lit of clos         (* functions *)
 
 and clos =
   | Clos of env * expr
@@ -41,25 +47,25 @@ let rec eval : type a. env -> expr -> (value -> a) -> a =
   fun env expr k ->
     match expr with
     | Var index ->
-        (k [@tailcall]) (List.nth env index)
+        k (List.nth env index)
 
     | Let (_, def, body) ->
         let@ def = eval env def in
-        (eval [@tailcall]) (def :: env) body k
+        eval (def :: env) body k
 
     | Fun_lit (_, body) ->
-        (k [@tailcall]) (Fun_lit (Clos (env, body)))
+        k (Fun_lit (Clos (env, body)))
 
     | Fun_app (head, arg) ->
         let@ head = eval env head in
         let@ arg = eval env arg in
-        (apply [@tailcall]) head arg k
+        apply head arg k
 
 and apply : type a. value -> value -> (value -> a) -> a =
   fun head arg k ->
     match head with
     | Fun_lit (Clos (env, body)) ->
-        (eval [@tailcall]) (arg :: env) body k
+        eval (arg :: env) body k
 
 (** Compute the value of an expression *)
 let eval (expr : expr) : value =

@@ -19,6 +19,8 @@ Evaluation:
 - [**eval_lc_cek.ml**](./eval_lc_cek.ml): A tree-walking interpreter for the
   lambda calculus, refactored into continuation-passing-style in the style of
   the CEK machine.
+- [**eval_lc_except_cps.ml**](./eval_lc_except_cek.ml): An interpreter for the
+  lambda calculus that supports the raising and handling of exceptions.
 - [**eval_lc_prims_spine.ml**](./eval_lc_prims_spine.ml): A lambda calculus
   evaluator that supports the partial application of primitive operations.
 - [**eval_lc_prims_hoas.ml**](./eval_lc_prims_hoas.ml): A lambda calculus
