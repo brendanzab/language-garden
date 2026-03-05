@@ -142,47 +142,129 @@ let translate (e : L1.Expr.t) : L2.Expr.t =
   translate e Fun.id
 
 
-(* Example from https://docs.idris-lang.org/en/latest/tutorial/interfaces.html#notation *)
-let () =
-  let y = Id.fresh () in
-  let _42 = Id.fresh () in
-  let f = Id.fresh () in
-  let g = Id.fresh () in
-  let print = Id.fresh () in
-  let x = Id.fresh () in
+(* Tests *)
 
-  (*
-    let y := 42;
-    f !(g !(print y) !x)
-  *)
-  let src = L1.Expr.(
-    let ( $ ) f x = Fun_app (f, x) in
-    let ( ! ) e = Eff_action e in
-    Let (y, Var _42, Var f $ !(Var g $ !(Var print $ Var y) $ !(Var x)))
-  ) in
+let () = begin
 
-  (*
-    let y = 42;
-    let $y <- print y;
-    let $x <- x;
-    let $g <- g $y $x;
-    f $g
-  *)
-  match translate src with
-  | Let (y', Var _42',
-      Eff_bind (fresh_y, Fun_app (Var print', Var y''),
-        Eff_bind (fresh_x, Var x',
-          Eff_bind (fresh_g, Fun_app (Fun_app (Var g', Var fresh_y'), Var fresh_x'),
-            Fun_app (Var f', Var fresh_g'))))) ->
-      assert (Id.compare y y' = 0);
-      assert (Id.compare _42 _42' = 0);
-      assert (Id.compare print print' = 0);
-      assert (Id.compare y y'' = 0);
-      assert (Id.compare x x' = 0);
-      assert (Id.compare g g' = 0);
-      assert (Id.compare fresh_y fresh_y' = 0);
-      assert (Id.compare fresh_x fresh_x' = 0);
-      assert (Id.compare fresh_g fresh_g' = 0);
-      assert (Id.compare f f' = 0);
-  | _ ->
-      assert false
+  Printexc.record_backtrace true;
+
+  let run_tests (type a) (prog : (string -> (unit -> unit) -> unit) -> unit) : a =
+    let success_count = ref 0 in
+    let error_count = ref 0 in
+
+    let run_test (name : string) (prog : unit -> unit) : unit =
+      Printf.printf "test %s ... " name;
+
+      match prog () with
+      | () ->
+          Printf.printf "ok\n";
+          incr success_count
+      | exception e ->
+          Printf.printf "error:\n\n";
+          Printf.printf "  %s\n\n" (Printexc.to_string e);
+          String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+            Printf.printf "  %s\n" line;
+          end;
+          incr error_count
+    in
+
+    Printf.printf "Running tests in %s:\n\n" __FILE__;
+    prog run_test;
+    Printf.printf "\n";
+
+    if !error_count <= 0 then begin
+      Printf.printf "Ran %i successful tests\n\n" !success_count;
+      exit 0
+    end else begin
+      Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
+      exit 1
+    end
+  in
+
+  begin run_tests @@ fun test ->
+
+    begin test "simple" @@ fun () ->
+
+      let print_int = Id.fresh () in
+      let read_int = Id.fresh () in
+      let add_int = Id.fresh () in
+
+      (*
+        printInt (!readInt + !readInt)
+      *)
+      let src = L1.Expr.(
+        let ( ! ) e = Eff_action e in
+        let ( $ ) f x = Fun_app (f, x) in
+        Var print_int $ (Var add_int $ !(Var read_int) $ !(Var read_int))
+      ) in
+
+      (*
+        let x <- readInt;
+        let y <- readInt;
+        printInt (x + y)
+      *)
+      match translate src with
+      | Eff_bind (fresh_x, Var read_int',
+          Eff_bind (fresh_y, Var read_int'',
+            Fun_app (Var print_int', Fun_app (Fun_app (Var add_int', Var fresh_x'), Var fresh_y')))) ->
+          assert (Id.compare read_int read_int' = 0);
+          assert (Id.compare read_int read_int'' = 0);
+          assert (Id.compare print_int print_int' = 0);
+          assert (Id.compare add_int add_int' = 0);
+          assert (Id.compare fresh_x fresh_x' = 0);
+          assert (Id.compare fresh_y fresh_y' = 0);
+      | _ ->
+          assert false
+
+    end;
+
+    (* Example from https://docs.idris-lang.org/en/latest/tutorial/interfaces.html#notation *)
+    begin test "idris example" @@ fun () ->
+      let y = Id.fresh () in
+      let _42 = Id.fresh () in
+      let f = Id.fresh () in
+      let g = Id.fresh () in
+      let print = Id.fresh () in
+      let x = Id.fresh () in
+
+      (*
+        let y := 42;
+        f !(g !(print y) !x)
+      *)
+      let src = L1.Expr.(
+        let ( ! ) e = Eff_action e in
+        let ( $ ) f x = Fun_app (f, x) in
+        Let (y, Var _42, Var f $ !(Var g $ !(Var print $ Var y) $ !(Var x)))
+      ) in
+
+      (*
+        let y = 42;
+        let $y <- print y;
+        let $x <- x;
+        let $g <- g $y $x;
+        f $g
+      *)
+      match translate src with
+      | Let (y', Var _42',
+          Eff_bind (fresh_y, Fun_app (Var print', Var y''),
+            Eff_bind (fresh_x, Var x',
+              Eff_bind (fresh_g, Fun_app (Fun_app (Var g', Var fresh_y'), Var fresh_x'),
+                Fun_app (Var f', Var fresh_g'))))) ->
+          assert (Id.compare y y' = 0);
+          assert (Id.compare _42 _42' = 0);
+          assert (Id.compare print print' = 0);
+          assert (Id.compare y y'' = 0);
+          assert (Id.compare x x' = 0);
+          assert (Id.compare g g' = 0);
+          assert (Id.compare fresh_y fresh_y' = 0);
+          assert (Id.compare fresh_x fresh_x' = 0);
+          assert (Id.compare fresh_g fresh_g' = 0);
+          assert (Id.compare f f' = 0);
+      | _ ->
+          assert false
+
+    end;
+
+  end
+
+end
