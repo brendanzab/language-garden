@@ -1,10 +1,10 @@
 (** An example of translating “!-notation”/“nested actions” to monadic
     bind operations.
 
-    Monadic code in languages (like Haskell and OCaml) requires the result of each
-    effectful computation to be bound to an intermediate result. This results in
-    verbose, unnatural code, not unlike A-normal form. Idris and Lean on the
-    other hand allow effectful code to be expressed in a more direct style with
+    Monadic code (in languages like Haskell and OCaml) usually requires that the
+    result of each effectful computation be bound to an intermediate result.
+    This results in verbose, unnatural code. Idris and Lean on the other hand
+    allow effectful code to be expressed in a more direct style with
     “!-notation” and “nested actions” respectively.
 
     For example:
@@ -15,7 +15,7 @@
       printInt (x + y)
     ]}
 
-    Can be expressed more directly as:
+    Could be expressed more directly as:
 
     {@text[
       printInt (!readInt + !readInt)
