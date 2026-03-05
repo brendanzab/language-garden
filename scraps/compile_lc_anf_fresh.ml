@@ -95,9 +95,6 @@ module Id : sig
       guaranteed to be unique. *)
   val name : t -> string
 
-  module Set : Set.S with type elt = t
-  module Map : Map.S with type key = t
-
 end  = struct
 
   type t = int
@@ -111,9 +108,6 @@ end  = struct
 
   let name id =
     Dynarray.get names id
-
-  module Set = Set.Make (Int)
-  module Map = Map.Make (Int)
 
 end
 
