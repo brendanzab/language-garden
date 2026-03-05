@@ -96,9 +96,9 @@ end
     operations in the target language.
 
     Like in ANF-translation, our translation function takes a continuation that
-    represents “the rest of the expression” that we are currently translating.
-    This allows us to wrap the translated expression in a new monadic binding
-    whenever we hit a nested action.
+    represents parts of the expression that surround the expression that we are
+    currently translating. This allows us to wrap the translated expression in a
+    new monadic binding whenever we hit a nested action.
 
     I assume a similar approach could be used to elaborate direct-style code to
     CBPV in a type-directed way (as described by Andras Kovacs in this comment:
@@ -126,7 +126,6 @@ let rec translate (expr : L1.Expr.t) (k : L2.Expr.t -> L2.Expr.t) : L2.Expr.t =
   | L1.Expr.Eff_action expr ->
       let x = Id.fresh () in
       let@ expr = translate expr in
-      (* The “rest of the expression” will be nested inside the new binding *)
       L2.Expr.Eff_bind (x, expr, k (Var x))
 
   | L1.Expr.Fun_lit (x, body) ->
