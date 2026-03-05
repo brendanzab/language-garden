@@ -39,6 +39,7 @@
 
 (test (name compile_lc_anf_fresh))
 (test (name compile_lc_anf_nameless))
+(test (name compile_lc_nested_actions))
 (test (name compile_lc_secd))
 (test (name compile_fofl_anf))
 
