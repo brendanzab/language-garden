@@ -1,11 +1,11 @@
-(** An example of translating “nested actions” (a.k.a. “!-notation”) to monadic
+(** An example of translating “!-notation”/“nested actions” to monadic
     bind operations.
 
-    Monadic code in languages like Haskell and OCaml requires the result of each
+    Monadic code in languages (like Haskell and OCaml) requires the result of each
     effectful computation to be bound to an intermediate result. This results in
-    verbose, unnatural code, not unlike the result of translating to A-normal
-    form. Idris and Lean on the other hand allow effectful code to be expressed
-    in a more direct style with “!-notation” and “nested actions” respectively.
+    verbose, unnatural code, not unlike A-normal form. Idris and Lean on the
+    other hand allow effectful code to be expressed in a more direct style with
+    “!-notation” and “nested actions” respectively.
 
     For example:
 
@@ -101,6 +101,10 @@ end
     represents “the rest of the expression” that we are currently translating.
     This allows us to wrap the translated expression in a new monadic binding
     whenever we hit a nested action.
+
+    I assume a similar approach could be used to elaborate direct-style code to
+    CBPV in a type-directed way (as described by Andras Kovacs in this comment:
+    https://www.reddit.com/r/ProgrammingLanguages/comments/1bam7bd/im_betting_on_callbypushvalue/ku4yel3/).
 *)
 
 let ( let@ ) = ( @@ )
