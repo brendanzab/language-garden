@@ -60,15 +60,13 @@ module L1 = struct
 
   module Expr = struct
 
-    [@@@warning "-unused-constructor"]
-
     type t =
       | Var of Id.t                 (* x *)
       | Let of Id.t * t * t         (* let x := e; e *)
-      | Eff_bind of Id.t * t * t    (* let x <- e; e *)
-      | Eff_pure of t               (* pure e *)
+      | Eff_bind of Id.t * t * t    (* let x <- e; e *)   [@warning "-unused-constructor"]
+      | Eff_pure of t               (* pure e *)          [@warning "-unused-constructor"]
       | Eff_action of t             (* !e *)
-      | Fun_lit of Id.t * t         (* \x. e *)
+      | Fun_lit of Id.t * t         (* \x. e *)           [@warning "-unused-constructor"]
       | Fun_app of t * t            (* e e *)
 
   end
