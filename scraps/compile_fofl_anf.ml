@@ -143,6 +143,7 @@ module Label = struct
 
     val make : string -> t
     val compare : t -> t -> int
+    val to_string : t -> string
 
   end
 
@@ -152,6 +153,7 @@ module Label = struct
 
     let make name = name
     let compare = String.compare
+    let to_string name = name
 
   end
 
@@ -172,6 +174,7 @@ module Fresh = struct
 
     val fresh : string -> t
     val compare : t -> t -> int
+    val to_string : t -> string
 
   end
 
@@ -186,7 +189,11 @@ module Fresh = struct
       incr next_id;
       id, name
 
-    let compare (i1, _) (i2, _) = Int.compare i1 i2
+    let compare (id1, _) (id2, _) =
+      Int.compare id1 id2
+
+    let to_string (id, name) =
+      Printf.sprintf "%s%i" name id
 
   end
 
@@ -393,6 +400,140 @@ end = struct
 end
 
 
+(** Translate ANF to WAT (WebAssembly Text Format) *)
+module Emit_wat : sig
+
+  val pp_program : Anf.Program.t -> Format.formatter -> unit
+    [@@warning "-unused-value-declaration"]
+
+end = struct
+
+  type item_ty_env = Core.Type.t Anf.Item_env.t
+  type local_ty_env = Core.Type.t Anf.Local_env.t
+
+  let pp_type (ty : Anf.Type.t) (ppf : Format.formatter) =
+    match ty with
+    | Core.Type.Bool -> Format.fprintf ppf "i32"
+    | Core.Type.Int -> Format.fprintf ppf "i32"
+
+  let pp_item_name (name : Anf.Item_name.t) (ppf : Format.formatter) =
+    Format.fprintf ppf "$%s" (Anf.Item_name.to_string name)
+
+  let pp_local_name (name : Anf.Local_name.t) (ppf : Format.formatter) =
+    Format.fprintf ppf "$%s" (Anf.Local_name.to_string name)
+
+  (** Collect the types of local definitions in an expression. This is useful
+      pre-declaring locals inside function definitions *)
+  let local_def_tys_of_expr (expr : Anf.Expr.t) : local_ty_env =
+    let ( ++ ) = Anf.Local_env.union (fun _ ty _ -> Some ty) in
+    let rec go_expr expr =
+      match expr with
+      | Anf.Expr.Let (name, ty, _, body) -> Anf.Local_env.singleton name ty ++ go_expr body
+      | Anf.Expr.Bool_if (_, expr2, expr3) -> go_expr expr2 ++ go_expr expr3
+      (* In ANF all local definitions are floated to the top, so we don't need
+         to traverse any further *)
+      | Anf.Expr.Comp _ -> Anf.Local_env.empty
+    in
+    go_expr expr
+
+  (** Find the type of an expression. This is useful for finding the return
+      type of conditionals. *)
+  let ty_of_expr (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) =
+    let rec go_expr expr =
+      match expr with
+      | Anf.Expr.Let (_, _, _, body) -> go_expr body
+      | Anf.Expr.Bool_if (_, expr2, _) -> go_expr expr2
+      | Anf.Expr.Comp expr -> go_comp expr
+    and go_comp expr =
+      match expr with
+      | Anf.Expr.Prim (Prim.Int_eq, _) -> Anf.Type.Bool
+      | Anf.Expr.Prim ((Prim.Int_add | Prim.Int_sub | Prim.Int_mul), _) -> Anf.Type.Bool
+      | Anf.Expr.Item (name, _) -> Anf.Item_env.find name item_tys
+      | Anf.Expr.Atom expr -> go_atom expr
+    and go_atom expr =
+      match expr with
+      | Anf.Expr.Item name -> Anf.Item_env.find name item_tys
+      | Anf.Expr.Var name -> Anf.Local_env.find name local_tys
+      | Anf.Expr.Bool _ -> Anf.Type.Bool
+      | Anf.Expr.Int _ -> Anf.Type.Int
+    in
+    go_expr expr
+
+  (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
+      {e folded} form}. *)
+  let pp_expr (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) (ppf : Format.formatter) =
+    let rec go_expr expr ppf =
+      match expr with
+      | Anf.Expr.Let (name, _, expr, body) ->
+          Format.fprintf ppf "@[<hv 2>(local.set@ %t@ %t)@]@ %t"
+            (pp_local_name name)
+            (go_comp expr)
+            (go_expr body)
+      | Anf.Expr.Bool_if (expr1, expr2, expr3) ->
+          let ty = ty_of_expr item_tys local_tys expr2 in
+          Format.fprintf ppf "@[<hv 2>(if@ %t@ %t@ %t@ %t)@]"
+            (fun ppf -> Format.fprintf ppf "@[<hv 2>(result@ %t)@]" (pp_type ty))
+            (go_atom expr1)
+            (fun ppf -> Format.fprintf ppf "@[<hv 2>(then@ %t)@]" (go_expr expr2))
+            (fun ppf -> Format.fprintf ppf "@[<hv 2>(else@ %t)@]" (go_expr expr3))
+      | Anf.Expr.Comp expr -> go_comp expr ppf
+    and go_comp expr ppf =
+      let pp_atoms xs ppf =
+        Format.pp_print_seq (Fun.flip go_atom) ppf (Iarray.to_seq xs)
+          ~pp_sep:Format.pp_print_space
+      in
+      match expr with
+      | Anf.Expr.Prim (Prim.Int_eq, args) -> Format.fprintf ppf "@[<hv 2>(i32.eq@ %t)@]" (pp_atoms args)
+      | Anf.Expr.Prim (Prim.Int_add, args) -> Format.fprintf ppf "@[<hv 2>(i32.add@ %t)@]" (pp_atoms args)
+      | Anf.Expr.Prim (Prim.Int_sub, args) -> Format.fprintf ppf "@[<hv 2>(i32.sub@ %t)@]" (pp_atoms args)
+      | Anf.Expr.Prim (Prim.Int_mul, args) -> Format.fprintf ppf "@[<hv 2>(i32.mul@ %t)@]" (pp_atoms args)
+      | Anf.Expr.Item (name, args) ->
+          Format.fprintf ppf "@[<hv 2>(call@ %t@ %t)@]"
+            (pp_item_name name)
+            (pp_atoms args)
+      | Anf.Expr.Atom expr -> go_atom expr ppf
+    and go_atom expr ppf =
+      match expr with
+      | Anf.Expr.Item name -> Format.fprintf ppf "@[<hv 2>(call@ %t)@]" (pp_item_name name)
+      | Anf.Expr.Var name -> Format.fprintf ppf "@[<hv 2>(local.get@ %t)@]" (pp_local_name name)
+      | Anf.Expr.Bool true -> Format.fprintf ppf "@[<hv 2>(i32.const@ 1)@]"
+      | Anf.Expr.Bool false -> Format.fprintf ppf "@[<hv 2>(i32.const@ 0)@]"
+      | Anf.Expr.Int int -> Format.fprintf ppf "@[<hv 2>(i32.const@ %i)@]" int
+    in
+    go_expr expr ppf
+
+  let pp_item (item_tys : item_ty_env) (name, item : Anf.(Item_name.t * Item.t)) (ppf : Format.formatter) =
+    (* https://webassembly.github.io/spec/core/text/modules.html#functions *)
+    let pp_fun params ret_ty body ppf =
+      let pp_param ppf (name, ty) = Format.fprintf ppf "@[(param@ %t@ %t)@]@ " (pp_local_name name) (pp_type ty)
+      and pp_local ppf (name, ty) = Format.fprintf ppf "@[(local@ %t@ %t)@]@ " (pp_local_name name) (pp_type ty)
+      and local_def_tys = local_def_tys_of_expr body in
+      Format.fprintf ppf "@[<hv 2>@[<hv 2>(func@ %t@ %t@ %t%t@]@ %t%t)@]"
+        (pp_item_name name)
+        (fun ppf -> Format.fprintf ppf "@[<hv 2>(export@ \"%s\")@]" (Anf.Item_name.to_string name))
+        (fun ppf -> Format.pp_print_seq pp_param ppf (Iarray.to_seq params) ~pp_sep:Format.pp_print_nothing)
+        (fun ppf -> Format.fprintf ppf "@[<hv 2>(result@ %t)@]" (pp_type ret_ty))
+        (fun ppf -> Format.pp_print_seq pp_local ppf (Anf.Local_env.to_seq local_def_tys) ~pp_sep:Format.pp_print_nothing)
+        (let local_tys = Seq.append (Iarray.to_seq params) (Anf.Local_env.to_seq local_def_tys) |> Anf.Local_env.of_seq in
+          pp_expr item_tys local_tys body)
+    in
+    match item with
+    | Anf.Item.Val (ty, expr) -> pp_fun [||] ty expr ppf (* FIXME: re-evaluation of top-level values *)
+    | Anf.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
+
+  let pp_program (program : Anf.Program.t) (ppf : Format.formatter) =
+    let item_tys = program |> Anf.Item_env.map @@ function
+      | Anf.Item.Val (ty, _) -> ty
+      | Anf.Item.Fun (_, ret_ty, _) -> ret_ty
+    in
+    Format.fprintf ppf "@[<v 2>(module@ %t)@]"
+      (fun ppf ->
+        Format.pp_print_seq (Fun.flip (pp_item item_tys)) ppf (Anf.Item_env.to_seq program)
+          ~pp_sep:Format.pp_print_space)
+
+end
+
+
 let () = begin
 
   Printexc.record_backtrace true;
@@ -514,6 +655,8 @@ let () = begin
     test "ackermann(3, 4)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|Int 3; Int 4|])) (Value.Int 125));
     test "is-even(6)" Expr.(fun () -> check_eval (Item ("is-even", Some [|Int 6|])) (Value.Bool true));
     test "is-odd(6)" Expr.(fun () -> check_eval (Item ("is-odd", Some [|Int 6|])) (Value.Bool false));
+
+    (* Format.printf "%t" (Emit_wat.pp_program anf_items) *)
 
   end
 
