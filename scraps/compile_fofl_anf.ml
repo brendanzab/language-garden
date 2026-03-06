@@ -411,6 +411,21 @@ end = struct
   type item_ty_env = Core.Type.t Anf.Item_env.t
   type local_ty_env = Core.Type.t Anf.Local_env.t
 
+  let pp_quoted s ppf =
+    Format.fprintf ppf "\"%s\"" s
+
+  let pp_spaced_iter iter exprs ppf =
+    Format.pp_print_iter iter (fun ppf expr -> expr ppf) ppf exprs
+      ~pp_sep:Format.pp_print_space
+
+  let pp_sexpr_cmd_iter name iter exprs ppf =
+    Format.fprintf ppf "@[<hv 2>(%s@ %t)@]" name (pp_spaced_iter iter exprs)
+
+  let pp_spaced = pp_spaced_iter List.iter
+  let pp_spaced_seq = pp_spaced_iter Seq.iter
+  let pp_sexpr_cmd name = pp_sexpr_cmd_iter name List.iter
+  let pp_sexpr_cmd_seq name = pp_sexpr_cmd_iter name Seq.iter
+
   let pp_type (ty : Anf.Type.t) (ppf : Format.formatter) =
     match ty with
     | Core.Type.Bool -> Format.fprintf ppf "i32"
@@ -462,74 +477,77 @@ end = struct
   (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
       {e folded} form}. *)
   let pp_expr (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) (ppf : Format.formatter) =
-    let rec go_expr expr ppf =
+    let rec go_expr expr =
       match expr with
       | Anf.Expr.Let (name, _, expr, body) ->
-          Format.fprintf ppf "@[<hv 2>(local.set@ %t@ %t)@]@ %t"
-            (pp_local_name name)
-            (go_comp expr)
-            (go_expr body)
+          pp_spaced [
+            pp_sexpr_cmd "local.set" [
+              pp_local_name name;
+              go_comp expr;
+            ];
+            go_expr body;
+          ]
       | Anf.Expr.Bool_if (expr1, expr2, expr3) ->
-          let ty = ty_of_expr item_tys local_tys expr2 in
-          Format.fprintf ppf "@[<hv 2>(if@ %t@ %t@ %t@ %t)@]"
-            (fun ppf -> Format.fprintf ppf "@[<hv 2>(result@ %t)@]" (pp_type ty))
-            (go_atom expr1)
-            (fun ppf -> Format.fprintf ppf "@[<hv 2>(then@ %t)@]" (go_expr expr2))
-            (fun ppf -> Format.fprintf ppf "@[<hv 2>(else@ %t)@]" (go_expr expr3))
-      | Anf.Expr.Comp expr -> go_comp expr ppf
-    and go_comp expr ppf =
-      let pp_atoms xs ppf =
-        Format.pp_print_seq (Fun.flip go_atom) ppf (Iarray.to_seq xs)
-          ~pp_sep:Format.pp_print_space
-      in
+          pp_sexpr_cmd "if" [
+            pp_sexpr_cmd "result" [pp_type (ty_of_expr item_tys local_tys expr2)];
+            go_atom expr1;
+            pp_sexpr_cmd "then" [go_expr expr2];
+            pp_sexpr_cmd "else" [go_expr expr3];
+          ]
+      | Anf.Expr.Comp expr -> go_comp expr
+    and go_comp expr =
+      let pp_args args = pp_spaced_seq (Iarray.to_seq args |> Seq.map go_atom) in
       match expr with
-      | Anf.Expr.Prim (Prim.Int_eq, args) -> Format.fprintf ppf "@[<hv 2>(i32.eq@ %t)@]" (pp_atoms args)
-      | Anf.Expr.Prim (Prim.Int_add, args) -> Format.fprintf ppf "@[<hv 2>(i32.add@ %t)@]" (pp_atoms args)
-      | Anf.Expr.Prim (Prim.Int_sub, args) -> Format.fprintf ppf "@[<hv 2>(i32.sub@ %t)@]" (pp_atoms args)
-      | Anf.Expr.Prim (Prim.Int_mul, args) -> Format.fprintf ppf "@[<hv 2>(i32.mul@ %t)@]" (pp_atoms args)
-      | Anf.Expr.Item (name, args) ->
-          Format.fprintf ppf "@[<hv 2>(call@ %t@ %t)@]"
-            (pp_item_name name)
-            (pp_atoms args)
-      | Anf.Expr.Atom expr -> go_atom expr ppf
-    and go_atom expr ppf =
+      | Anf.Expr.Prim (Prim.Int_eq, args) -> pp_sexpr_cmd "i32.eq" [pp_args args];
+      | Anf.Expr.Prim (Prim.Int_add, args) -> pp_sexpr_cmd "i32.add" [pp_args args];
+      | Anf.Expr.Prim (Prim.Int_sub, args) -> pp_sexpr_cmd "i32.sub" [pp_args args];
+      | Anf.Expr.Prim (Prim.Int_mul, args) -> pp_sexpr_cmd "i32.mul" [pp_args args];
+      | Anf.Expr.Item (name, args) -> pp_sexpr_cmd "call" [pp_item_name name; pp_args args]
+      | Anf.Expr.Atom expr -> go_atom expr
+    and go_atom expr =
       match expr with
-      | Anf.Expr.Item name -> Format.fprintf ppf "@[<hv 2>(call@ %t)@]" (pp_item_name name)
-      | Anf.Expr.Var name -> Format.fprintf ppf "@[<hv 2>(local.get@ %t)@]" (pp_local_name name)
-      | Anf.Expr.Bool true -> Format.fprintf ppf "@[<hv 2>(i32.const@ 1)@]"
-      | Anf.Expr.Bool false -> Format.fprintf ppf "@[<hv 2>(i32.const@ 0)@]"
-      | Anf.Expr.Int int -> Format.fprintf ppf "@[<hv 2>(i32.const@ %i)@]" int
+      | Anf.Expr.Item name -> pp_sexpr_cmd "call" [pp_item_name name]
+      | Anf.Expr.Var name -> pp_sexpr_cmd "local.get" [pp_local_name name]
+      | Anf.Expr.Bool true -> pp_sexpr_cmd "i32.const" [fun ppf -> Format.fprintf ppf "1"]
+      | Anf.Expr.Bool false -> pp_sexpr_cmd "i32.const" [fun ppf -> Format.fprintf ppf "0"]
+      | Anf.Expr.Int int -> pp_sexpr_cmd "i32.const" [fun ppf -> Format.fprintf ppf "%i" int]
     in
     go_expr expr ppf
 
   let pp_item (item_tys : item_ty_env) (name, item : Anf.(Item_name.t * Item.t)) (ppf : Format.formatter) =
-    (* https://webassembly.github.io/spec/core/text/modules.html#functions *)
-    let pp_fun params ret_ty body ppf =
-      let pp_param ppf (name, ty) = Format.fprintf ppf "@[(param@ %t@ %t)@]@ " (pp_local_name name) (pp_type ty)
-      and pp_local ppf (name, ty) = Format.fprintf ppf "@[(local@ %t@ %t)@]@ " (pp_local_name name) (pp_type ty)
+    let pp_fun params ret_ty body =
+      let pp_param (name, ty) = pp_sexpr_cmd "param" [pp_local_name name; pp_type ty]
+      and pp_local (name, ty) = pp_sexpr_cmd "local" [pp_local_name name; pp_type ty]
       and local_def_tys = local_def_tys_of_expr body in
-      Format.fprintf ppf "@[<hv 2>@[<hv 2>(func@ %t@ %t@ %t%t@]@ %t%t)@]"
-        (pp_item_name name)
-        (fun ppf -> Format.fprintf ppf "@[<hv 2>(export@ \"%s\")@]" (Anf.Item_name.to_string name))
-        (fun ppf -> Format.pp_print_seq pp_param ppf (Iarray.to_seq params) ~pp_sep:Format.pp_print_nothing)
-        (fun ppf -> Format.fprintf ppf "@[<hv 2>(result@ %t)@]" (pp_type ret_ty))
-        (fun ppf -> Format.pp_print_seq pp_local ppf (Anf.Local_env.to_seq local_def_tys) ~pp_sep:Format.pp_print_nothing)
-        (let local_tys = Seq.append (Iarray.to_seq params) (Anf.Local_env.to_seq local_def_tys) |> Anf.Local_env.of_seq in
-          pp_expr item_tys local_tys body)
+
+      (* https://webassembly.github.io/spec/core/text/modules.html#functions *)
+      pp_sexpr_cmd_seq "func" (Seq.concat @@ List.to_seq [
+        Seq.singleton (pp_item_name name);
+        Seq.singleton (pp_sexpr_cmd "export" [pp_quoted (Anf.Item_name.to_string name)]);
+        Iarray.to_seq params |> Seq.map pp_param;
+        Seq.singleton (pp_sexpr_cmd "result" [pp_type ret_ty]);
+        Anf.Local_env.to_seq local_def_tys |> Seq.map pp_local;
+        Seq.singleton (
+          let local_tys =
+            Seq.append (Iarray.to_seq params) (Anf.Local_env.to_seq local_def_tys)
+            |> Anf.Local_env.of_seq
+          in
+          pp_expr item_tys local_tys body
+        );
+      ])
     in
     match item with
     | Anf.Item.Val (ty, expr) -> pp_fun [||] ty expr ppf (* FIXME: re-evaluation of top-level values *)
     | Anf.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
 
-  let pp_program (program : Anf.Program.t) (ppf : Format.formatter) =
+  let pp_program (program : Anf.Program.t) : Format.formatter -> unit =
     let item_tys = program |> Anf.Item_env.map @@ function
       | Anf.Item.Val (ty, _) -> ty
       | Anf.Item.Fun (_, ret_ty, _) -> ret_ty
     in
-    Format.fprintf ppf "@[<v 2>(module@ %t)@]"
-      (fun ppf ->
-        Format.pp_print_seq (Fun.flip (pp_item item_tys)) ppf (Anf.Item_env.to_seq program)
-          ~pp_sep:Format.pp_print_space)
+    (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
+    pp_sexpr_cmd_seq "module"
+      (Anf.Item_env.to_seq program |> Seq.map (pp_item item_tys))
 
 end
 
