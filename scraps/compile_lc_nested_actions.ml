@@ -21,15 +21,24 @@
       printInt (!readInt + !readInt)
     ]}
 
+    Where the nested actions will be executed sequentially in a depth-first,
+    left-to-right order.
+
     {2 Todo}
 
-    - Idiom brackets
+    It might be nice to add some additional features like:
+
+    - Idiom brackets for expressing parallel computations
     - Monad comprehensions
 
     {2 Resources}
 
-    - https://docs.idris-lang.org/en/latest/tutorial/interfaces.html#notation
-    - https://lean-lang.org/doc/reference/latest/Functors___-Monads-and--do--Notation/Syntax
+    - {{: https://www.type-driven.org.uk/edwinb/papers/dep-eff.pdf}
+      Resource-dependent Algebraic Effects § 2.2 !-notation}
+    - {{: https://docs.idris-lang.org/en/latest/tutorial/interfaces.html#notation}
+      The Idris Tutorial § !-notation}
+    - {{: https://lean-lang.org/doc/reference/latest/Functors___-Monads-and--do--Notation/Syntax}
+      The Lean Language Reference § 18.3.2.1. Sequential Computations}
 *)
 
 (** Fresh variable names *)
