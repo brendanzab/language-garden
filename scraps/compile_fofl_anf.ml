@@ -11,21 +11,21 @@
 module Prim = struct
 
   type t =
-    | Int_eq
-    | Int_add
-    | Int_sub
-    | Int_mul
+    | I32_eq
+    | I32_add
+    | I32_sub
+    | I32_mul
 
   type value =
     | Bool of bool
-    | Int of int
+    | I32 of int32
 
   let app (op : t) (args : value Iarray.t) =
     match op, args with
-    | Int_eq, [|Int int1; Int int2|] -> Bool (Int.equal int1 int2)
-    | Int_add, [|Int int1; Int int2|] -> Int (Int.add int1 int2)
-    | Int_sub, [|Int int1; Int int2|] -> Int (Int.sub int1 int2)
-    | Int_mul, [|Int int1; Int int2|] -> Int (Int.mul int1 int2)
+    | I32_eq, [|I32 int1; I32 int2|] -> Bool (Int32.equal int1 int2)
+    | I32_add, [|I32 int1; I32 int2|] -> I32 (Int32.add int1 int2)
+    | I32_sub, [|I32 int1; I32 int2|] -> I32 (Int32.sub int1 int2)
+    | I32_mul, [|I32 int1; I32 int2|] -> I32 (Int32.mul int1 int2)
     | _, _ -> failwith "Prim.app"
 
 end
@@ -40,7 +40,7 @@ module Core = struct
 
     type t =
       | Bool
-      | Int
+      | I32
 
   end
 
@@ -60,14 +60,14 @@ module Core = struct
       | Let of string * Type.t * t * t
       | Bool of bool
       | Bool_if of t * t * t
-      | Int of int
+      | I32 of int32
       | Prim of Prim.t * t Iarray.t
 
     module Value : sig
 
       type t =
         | Bool of bool
-        | Int of int
+        | I32 of int32
 
     end
 
@@ -81,7 +81,7 @@ module Core = struct
 
       type t = Prim.value =
         | Bool of bool
-        | Int of int
+        | I32 of int32
 
     end
 
@@ -108,7 +108,7 @@ module Core = struct
           | Value.Bool false -> eval items locals expr3
           | _ -> failwith "Expr.eval"
           end
-      | Int int -> Value.Int int
+      | I32 int -> Value.I32 int
       | Prim (prim, args) ->
           Prim.app prim (Iarray.map (eval items locals) args)
 
@@ -228,13 +228,13 @@ module Anf = struct
       | Item of Item_name.t
       | Var of Local_name.t
       | Bool of bool
-      | Int of int
+      | I32 of int32
 
     module Value : sig
 
       type t =
         | Bool of bool
-        | Int of int
+        | I32 of int32
 
     end
 
@@ -248,7 +248,7 @@ module Anf = struct
 
       type t = Prim.value =
         | Bool of bool
-        | Int of int
+        | I32 of int32
 
     end
 
@@ -288,7 +288,7 @@ module Anf = struct
           end
       | Var name -> Local_env.find name locals
       | Bool bool -> Value.Bool bool
-      | Int int -> Value.Int int
+      | I32 int -> Value.I32 int
 
   end
 
@@ -348,15 +348,15 @@ end = struct
           let expr2 = go_expr locals expr2 k in (* FIXME: join point *)
           let expr3 = go_expr locals expr3 k in (* FIXME: join point *)
           Anf.Expr.Bool_if (expr1, expr2, expr3)
-      | Core.Expr.Int int ->
-          k (Anf.Expr.Atom (Int int), Anf.Type.Int)
+      | Core.Expr.I32 int ->
+          k (Anf.Expr.Atom (I32 int), Anf.Type.I32)
       | Core.Expr.Prim (prim, args) ->
           let@ args = go_defs locals (Iarray.to_list args) in
           begin match prim with
-          | Prim.Int_eq -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.Bool)
-          | Prim.Int_add -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.Int)
-          | Prim.Int_sub -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.Int)
-          | Prim.Int_mul -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.Int)
+          | Prim.I32_eq -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.Bool)
+          | Prim.I32_add -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.I32)
+          | Prim.I32_sub -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.I32)
+          | Prim.I32_mul -> k (Anf.Expr.Prim (prim, Iarray.of_list args), Anf.Type.I32)
           end
 
     (* Compile an expression, and binding it to an intermediate definition if necessary *)
@@ -435,8 +435,8 @@ end = struct
       | Anf.Expr.Comp expr -> go_comp expr
     and go_comp expr =
       match expr with
-      | Anf.Expr.Prim (Prim.Int_eq, _) -> Anf.Type.Bool
-      | Anf.Expr.Prim ((Prim.Int_add | Prim.Int_sub | Prim.Int_mul), _) -> Anf.Type.Bool
+      | Anf.Expr.Prim (Prim.I32_eq, _) -> Anf.Type.Bool
+      | Anf.Expr.Prim ((Prim.I32_add | Prim.I32_sub | Prim.I32_mul), _) -> Anf.Type.Bool
       | Anf.Expr.Item (name, _) -> Anf.Item_env.find name item_tys
       | Anf.Expr.Atom expr -> go_atom expr
     and go_atom expr =
@@ -444,12 +444,12 @@ end = struct
       | Anf.Expr.Item name -> Anf.Item_env.find name item_tys
       | Anf.Expr.Var name -> Anf.Local_env.find name local_tys
       | Anf.Expr.Bool _ -> Anf.Type.Bool
-      | Anf.Expr.Int _ -> Anf.Type.Int
+      | Anf.Expr.I32 _ -> Anf.Type.I32
     in
     go_expr expr
 
-  let pp_quoted s ppf =
-    Format.fprintf ppf "\"%s\"" s
+  let pp_quoted s ppf = Format.fprintf ppf "\"%s\"" s
+  let pp_i32 i ppf = Format.fprintf ppf "%li" i
 
   let pp_spaced_iter iter exprs ppf =
     Format.pp_print_iter iter (fun ppf expr -> expr ppf) ppf exprs
@@ -472,7 +472,7 @@ end = struct
   let pp_type (ty : Anf.Type.t) (ppf : Format.formatter) =
     match ty with
     | Core.Type.Bool -> Format.fprintf ppf "i32"
-    | Core.Type.Int -> Format.fprintf ppf "i32"
+    | Core.Type.I32 -> Format.fprintf ppf "i32"
 
   (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
       {e folded} form}. *)
@@ -498,19 +498,19 @@ end = struct
     and go_comp expr =
       let pp_args args = pp_spaced_seq (Iarray.to_seq args |> Seq.map go_atom) in
       match expr with
-      | Anf.Expr.Prim (Prim.Int_eq, args) -> pp_sexpr_cmd "i32.eq" [pp_args args];
-      | Anf.Expr.Prim (Prim.Int_add, args) -> pp_sexpr_cmd "i32.add" [pp_args args];
-      | Anf.Expr.Prim (Prim.Int_sub, args) -> pp_sexpr_cmd "i32.sub" [pp_args args];
-      | Anf.Expr.Prim (Prim.Int_mul, args) -> pp_sexpr_cmd "i32.mul" [pp_args args];
+      | Anf.Expr.Prim (Prim.I32_eq, args) -> pp_sexpr_cmd "i32.eq" [pp_args args];
+      | Anf.Expr.Prim (Prim.I32_add, args) -> pp_sexpr_cmd "i32.add" [pp_args args];
+      | Anf.Expr.Prim (Prim.I32_sub, args) -> pp_sexpr_cmd "i32.sub" [pp_args args];
+      | Anf.Expr.Prim (Prim.I32_mul, args) -> pp_sexpr_cmd "i32.mul" [pp_args args];
       | Anf.Expr.Item (name, args) -> pp_sexpr_cmd "call" [pp_item_name name; pp_args args]
       | Anf.Expr.Atom expr -> go_atom expr
     and go_atom expr =
       match expr with
       | Anf.Expr.Item name -> pp_sexpr_cmd "call" [pp_item_name name]
       | Anf.Expr.Var name -> pp_sexpr_cmd "local.get" [pp_local_name name]
-      | Anf.Expr.Bool true -> pp_sexpr_cmd "i32.const" [fun ppf -> Format.fprintf ppf "1"]
-      | Anf.Expr.Bool false -> pp_sexpr_cmd "i32.const" [fun ppf -> Format.fprintf ppf "0"]
-      | Anf.Expr.Int int -> pp_sexpr_cmd "i32.const" [fun ppf -> Format.fprintf ppf "%i" int]
+      | Anf.Expr.Bool true -> pp_sexpr_cmd "i32.const" [pp_i32 1l]
+      | Anf.Expr.Bool false -> pp_sexpr_cmd "i32.const" [pp_i32 0l]
+      | Anf.Expr.I32 int -> pp_sexpr_cmd "i32.const" [pp_i32 int]
     in
     go_expr expr ppf
 
@@ -595,57 +595,57 @@ let () = begin
 
     let program = Env.of_list [
       "test-fact", Item.Val (
-        Type.Int,
-        Expr.Item ("fact", Some [|Expr.Int 5|])
+        Type.I32,
+        Expr.Item ("fact", Some [|Expr.I32 5l|])
       );
 
       "fact", Item.Fun (
-        [|"n", Type.Int|],
-        Type.Int,
+        [|"n", Type.I32|],
+        Type.I32,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
-          Expr.Int 1,
-          Expr.Prim (Prim.Int_mul, [|
+          Expr.Prim (Prim.I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
+          Expr.I32 1l,
+          Expr.Prim (Prim.I32_mul, [|
             Expr.Var "n";
-            Expr.Item ("fact", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
+            Expr.Item ("fact", Some [|Expr.Prim (Prim.I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|])
           |])
         );
       );
 
       "ackermann", Item.Fun (
-        [|"m", Type.Int; "n", Type.Int|],
-        Type.Int,
+        [|"m", Type.I32; "n", Type.I32|],
+        Type.I32,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "m"; Expr.Int 0|]),
-          Expr.Prim (Prim.Int_add, [|Expr.Var "n"; Expr.Int 1|]),
+          Expr.Prim (Prim.I32_eq, [|Expr.Var "m"; Expr.I32 0l|]),
+          Expr.Prim (Prim.I32_add, [|Expr.Var "n"; Expr.I32 1l|]),
           Expr.Bool_if (
-            Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
-            Expr.Item ("ackermann", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "m"; Expr.Int 1|]); Expr.Int 1|]),
+            Expr.Prim (Prim.I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
+            Expr.Item ("ackermann", Some [|Expr.Prim (Prim.I32_sub, [|Expr.Var "m"; Expr.I32 1l|]); Expr.I32 1l|]),
             Expr.Item ("ackermann", Some [|
-              Expr.Prim (Prim.Int_sub, [|Expr.Var "m"; Expr.Int 1|]);
-              Expr.Item ("ackermann", Some [|Expr.Var "m"; Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|]);
+              Expr.Prim (Prim.I32_sub, [|Expr.Var "m"; Expr.I32 1l|]);
+              Expr.Item ("ackermann", Some [|Expr.Var "m"; Expr.Prim (Prim.I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|]);
             |])
           )
         )
       );
 
       "is-even", Item.Fun (
-        [|"n", Type.Int|],
+        [|"n", Type.I32|],
         Type.Bool,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
+          Expr.Prim (Prim.I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
           Expr.Bool true,
-          Expr.Item ("is-odd", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
+          Expr.Item ("is-odd", Some [|Expr.Prim (Prim.I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|])
         )
       );
 
       "is-odd", Item.Fun (
-        [|"n", Type.Int|],
+        [|"n", Type.I32|],
         Type.Bool,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
+          Expr.Prim (Prim.I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
           Expr.Bool false,
-          Expr.Item ("is-even", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
+          Expr.Item ("is-even", Some [|Expr.Prim (Prim.I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|])
         )
       );
 
@@ -656,7 +656,7 @@ let () = begin
     let decode_anf_value anf_value =
       match anf_value with
       | Anf.Expr.Value.Bool b -> Expr.Value.Bool b
-      | Anf.Expr.Value.Int i -> Expr.Value.Int i
+      | Anf.Expr.Value.I32 i -> Expr.Value.I32 i
     in
 
     let check_eval expr expected_value =
@@ -668,11 +668,11 @@ let () = begin
       assert (decode_anf_value anf_value = expected_value);
     in
 
-    test "test-fact" Expr.(fun () -> check_eval (Item ("test-fact", None)) (Value.Int 120));
-    test "ackermann(0, 0)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|Int 0; Int 0|])) (Expr.Value.Int 1));
-    test "ackermann(3, 4)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|Int 3; Int 4|])) (Value.Int 125));
-    test "is-even(6)" Expr.(fun () -> check_eval (Item ("is-even", Some [|Int 6|])) (Value.Bool true));
-    test "is-odd(6)" Expr.(fun () -> check_eval (Item ("is-odd", Some [|Int 6|])) (Value.Bool false));
+    test "test-fact" Expr.(fun () -> check_eval (Item ("test-fact", None)) (Value.I32 120l));
+    test "ackermann(0, 0)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|I32 0l; I32 0l|])) (Expr.Value.I32 1l));
+    test "ackermann(3, 4)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|I32 3l; I32 4l|])) (Value.I32 125l));
+    test "is-even(6)" Expr.(fun () -> check_eval (Item ("is-even", Some [|I32 6l|])) (Value.Bool true));
+    test "is-odd(6)" Expr.(fun () -> check_eval (Item ("is-odd", Some [|I32 6l|])) (Value.Bool false));
 
     (* Format.printf "%t" (Emit_wat.pp_program anf_items) *)
 
