@@ -411,32 +411,6 @@ end = struct
   type item_ty_env = Core.Type.t Anf.Item_env.t
   type local_ty_env = Core.Type.t Anf.Local_env.t
 
-  let pp_quoted s ppf =
-    Format.fprintf ppf "\"%s\"" s
-
-  let pp_spaced_iter iter exprs ppf =
-    Format.pp_print_iter iter (fun ppf expr -> expr ppf) ppf exprs
-      ~pp_sep:Format.pp_print_space
-
-  let pp_sexpr_cmd_iter name iter exprs ppf =
-    Format.fprintf ppf "@[<hv 2>(%s@ %t)@]" name (pp_spaced_iter iter exprs)
-
-  let pp_spaced = pp_spaced_iter List.iter
-  let pp_spaced_seq = pp_spaced_iter Seq.iter
-  let pp_sexpr_cmd name = pp_sexpr_cmd_iter name List.iter
-  let pp_sexpr_cmd_seq name = pp_sexpr_cmd_iter name Seq.iter
-
-  let pp_type (ty : Anf.Type.t) (ppf : Format.formatter) =
-    match ty with
-    | Core.Type.Bool -> Format.fprintf ppf "i32"
-    | Core.Type.Int -> Format.fprintf ppf "i32"
-
-  let pp_item_name (name : Anf.Item_name.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "$%s" (Anf.Item_name.to_string name)
-
-  let pp_local_name (name : Anf.Local_name.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "$%s" (Anf.Local_name.to_string name)
-
   (** Collect the types of local definitions in an expression. This is useful
       pre-declaring locals inside function definitions *)
   let local_def_tys_of_expr (expr : Anf.Expr.t) : local_ty_env =
@@ -473,6 +447,32 @@ end = struct
       | Anf.Expr.Int _ -> Anf.Type.Int
     in
     go_expr expr
+
+  let pp_quoted s ppf =
+    Format.fprintf ppf "\"%s\"" s
+
+  let pp_spaced_iter iter exprs ppf =
+    Format.pp_print_iter iter (fun ppf expr -> expr ppf) ppf exprs
+      ~pp_sep:Format.pp_print_space
+
+  let pp_sexpr_cmd_iter name iter exprs ppf =
+    Format.fprintf ppf "@[<hv 2>(%s@ %t)@]" name (pp_spaced_iter iter exprs)
+
+  let pp_spaced = pp_spaced_iter List.iter
+  let pp_spaced_seq = pp_spaced_iter Seq.iter
+  let pp_sexpr_cmd name = pp_sexpr_cmd_iter name List.iter
+  let pp_sexpr_cmd_seq name = pp_sexpr_cmd_iter name Seq.iter
+
+  let pp_item_name (name : Anf.Item_name.t) (ppf : Format.formatter) =
+    Format.fprintf ppf "$%s" (Anf.Item_name.to_string name)
+
+  let pp_local_name (name : Anf.Local_name.t) (ppf : Format.formatter) =
+    Format.fprintf ppf "$%s" (Anf.Local_name.to_string name)
+
+  let pp_type (ty : Anf.Type.t) (ppf : Format.formatter) =
+    match ty with
+    | Core.Type.Bool -> Format.fprintf ppf "i32"
+    | Core.Type.Int -> Format.fprintf ppf "i32"
 
   (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
       {e folded} form}. *)
