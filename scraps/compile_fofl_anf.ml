@@ -408,8 +408,8 @@ module Emit_wat : sig
 
 end = struct
 
-  type item_ty_env = Core.Type.t Anf.Item_env.t
-  type local_ty_env = Core.Type.t Anf.Local_env.t
+  type item_ty_env = Anf.Type.t Anf.Item_env.t
+  type local_ty_env = Anf.Type.t Anf.Local_env.t
 
   (** Collect the types of local definitions in an expression. This is useful
       pre-declaring locals inside function definitions *)
