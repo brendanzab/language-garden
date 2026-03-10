@@ -123,6 +123,8 @@ Compilation:
   Compiling untyped lambda expressions to Landin’s SECD Machine.
 - [**compile_fofl_anf.ml**](./compile_fofl_anf.ml):
   Compiling a first-order functional programming language to A-normal form.
+- [**compile_fofl_wasm.ml**](./compile_fofl_wasm.ml):
+  Compiling a first-order functional programming language to Web Assembly.
 
 Languages and embedded DSLs:
 

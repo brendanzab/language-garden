@@ -42,6 +42,7 @@
 (test (name compile_lc_nested_actions))
 (test (name compile_lc_secd))
 (test (name compile_fofl_anf))
+(test (name compile_fofl_wasm))
 
 (test (name lang_miniadapton))
 (executable (name lang_triple_store))          ; TODO: Tests
