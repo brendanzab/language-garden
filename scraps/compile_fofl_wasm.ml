@@ -94,8 +94,8 @@ end = struct
 end
 
 
-module Item_env = Map.Make (Item_name)
-module Local_env = Map.Make (Local_name)
+module Item_map = Map.Make (Item_name)
+module Local_map = Map.Make (Local_name)
 
 
 (** Core language *)
@@ -136,7 +136,7 @@ module Core = struct
 
     end
 
-    val eval : Item.t Item_env.t -> Value.t Local_env.t -> t -> Value.t
+    val eval : Item.t Item_map.t -> Value.t Local_map.t -> t -> Value.t
 
   end = struct
 
@@ -150,22 +150,22 @@ module Core = struct
 
     end
 
-    let rec eval (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : t) : Value.t =
+    let rec eval (items : Item.t Item_map.t) (locals : Value.t Local_map.t) (expr : t) : Value.t =
       match expr with
       | Item (name, args) ->
-          begin match Item_env.find name items, args with
+          begin match Item_map.find name items, args with
           | Item.Val (_, body), None ->
               eval items locals body
           | Item.Fun (names, _, body), Some args ->
               let eval_arg (name, _) arg = name, eval items locals arg in
               let args = Seq.map2 eval_arg (Iarray.to_seq names) (Iarray.to_seq args) in
-              eval items (Local_env.add_seq args locals) body
+              eval items (Local_map.add_seq args locals) body
           | _, _ -> failwith "Expr.eval"
           end
-      | Var name -> Local_env.find name locals
+      | Var name -> Local_map.find name locals
       | Let (name, _, def, body) ->
           let def = eval items locals def in
-          eval items (Local_env.add name def locals) body
+          eval items (Local_map.add name def locals) body
       | Bool bool -> Value.Bool bool
       | Bool_if (expr1, expr2, expr3) ->
           begin match eval items locals expr1 with
@@ -181,10 +181,10 @@ module Core = struct
 
   module Program = struct
 
-    type t = Item.t Item_env.t
+    type t = Item.t Item_map.t
 
     let item_ty (program : t) (name : Item_name.t) : Type.t =
-      match Item_env.find name program with
+      match Item_map.find name program with
       | Item.Val (ty, _) -> ty
       | Item.Fun (_, ty, _) -> ty
 
@@ -222,7 +222,7 @@ module Let_hoisted = struct
 
     end
 
-    val eval : Item.t Item_env.t -> Value.t Local_env.t -> t -> Value.t
+    val eval : Item.t Item_map.t -> Value.t Local_map.t -> t -> Value.t
 
   end = struct
 
@@ -236,11 +236,11 @@ module Let_hoisted = struct
 
     end
 
-    let rec eval (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : t) : Value.t =
+    let rec eval (items : Item.t Item_map.t) (locals : Value.t Local_map.t) (expr : t) : Value.t =
       match expr with
       | Let (name, _, def, body) ->
           let def = eval_comp items locals def in
-          eval items (Local_env.add name def locals) body
+          eval items (Local_map.add name def locals) body
       | Bool_if (expr1, expr2, expr3) ->
           begin match eval_comp items locals expr1 with
           | Value.Bool true -> eval items locals expr2
@@ -249,20 +249,20 @@ module Let_hoisted = struct
           end
       | Comp expr -> eval_comp items locals expr
 
-    and eval_comp (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : comp) : Value.t =
+    and eval_comp (items : Item.t Item_map.t) (locals : Value.t Local_map.t) (expr : comp) : Value.t =
       match expr with
       | Item (name, args) ->
-          begin match Item_env.find name items, args with
+          begin match Item_map.find name items, args with
           | Item.Fun (names, _, body), Some args ->
               let eval_arg (name, _) arg = name, eval_comp items locals arg in
               let args = Seq.map2 eval_arg (Iarray.to_seq names) (Iarray.to_seq args) in
-              eval items (Local_env.add_seq args locals) body
+              eval items (Local_map.add_seq args locals) body
           | Item.Val (_, body), None -> eval items locals body
           | _ -> failwith "Expr.eval_atom"
           end
       | Prim (prim, args) ->
           Prim.app prim (Iarray.map (eval_comp items locals) args)
-      | Var name -> Local_env.find name locals
+      | Var name -> Local_map.find name locals
       | Bool bool -> Value.Bool bool
       | I32 int -> Value.I32 int
 
@@ -278,7 +278,7 @@ module Let_hoisted = struct
 
   module Program = struct
 
-    type t = Item.t Item_env.t
+    type t = Item.t Item_map.t
 
   end
 
@@ -289,7 +289,7 @@ end
 module Hoist_lets : sig
 
   type item_ty_env = Item_name.t -> Core.Type.t
-  type local_ty_env = Core.Type.t Local_env.t
+  type local_ty_env = Core.Type.t Local_map.t
 
   val translate_expr : item_ty_env -> local_ty_env -> Core.Expr.t -> Let_hoisted.Expr.t
   val translate_program : Core.Program.t -> Let_hoisted.Program.t
@@ -299,7 +299,7 @@ end = struct
   module Lh = Let_hoisted
 
   type item_ty_env = Item_name.t -> Core.Type.t
-  type local_ty_env = Lh.Type.t Local_env.t
+  type local_ty_env = Lh.Type.t Local_map.t
 
   let translate_expr (item_tys : item_ty_env) (locals : local_ty_env) (expr : Core.Expr.t) : Lh.Expr.t =
     let ( let@ ) = ( @@ ) in
@@ -312,10 +312,10 @@ end = struct
           let@ args = go_exprs locals (Iarray.to_list args) in
           k (Lh.Expr.Item (name, Some (Iarray.of_list args)), item_tys name)
       | Core.Expr.Var name ->
-          k (Lh.Expr.Var name, Local_env.find name locals)
+          k (Lh.Expr.Var name, Local_map.find name locals)
       | Core.Expr.Let (name, def_ty, def, body) ->
           let@ def, _ = go_expr locals def in
-          let body = go_expr (Local_env.add name def_ty locals) body k in
+          let body = go_expr (Local_map.add name def_ty locals) body k in
           Lh.Expr.Let (name, def_ty, def, body)
       | Core.Expr.Bool bool ->
           k (Lh.Expr.Bool bool, Lh.Type.Bool)
@@ -350,13 +350,13 @@ end = struct
   let translate_item (item_tys : item_ty_env) (item : Core.Item.t) : Lh.Item.t =
     match item with
     | Core.Item.Val (ty, def) ->
-        Lh.Item.Val (ty, translate_expr item_tys Local_env.empty def)
+        Lh.Item.Val (ty, translate_expr item_tys Local_map.empty def)
     | Core.Item.Fun (params, ty, body) ->
-        let locals = Iarray.to_seq params |> Local_env.of_seq in
+        let locals = Iarray.to_seq params |> Local_map.of_seq in
         Lh.Item.Fun (params, ty, translate_expr item_tys locals body)
 
   let translate_program (program : Core.Program.t) : Lh.Program.t =
-    program |> Item_env.map (translate_item (Core.Program.item_ty program))
+    program |> Item_map.map (translate_item (Core.Program.item_ty program))
 
 end
 
@@ -371,20 +371,20 @@ end = struct
 
   module Lh = Let_hoisted
 
-  type item_ty_env = Lh.Type.t Item_env.t
-  type local_ty_env = Lh.Type.t Local_env.t
+  type item_ty_env = Lh.Type.t Item_map.t
+  type local_ty_env = Lh.Type.t Local_map.t
 
   (** Collect the types of local definitions in an expression. This is useful
       pre-declaring locals inside function definitions *)
   let local_def_tys_of_expr (expr : Lh.Expr.t) : local_ty_env =
-    let ( ++ ) = Local_env.union (fun _ ty _ -> Some ty) in
+    let ( ++ ) = Local_map.union (fun _ ty _ -> Some ty) in
     let rec go_expr expr =
       match expr with
-      | Lh.Expr.Let (name, ty, _, body) -> Local_env.singleton name ty ++ go_expr body
+      | Lh.Expr.Let (name, ty, _, body) -> Local_map.singleton name ty ++ go_expr body
       | Lh.Expr.Bool_if (_, expr2, expr3) -> go_expr expr2 ++ go_expr expr3
       (* In ANF all local definitions are floated to the top, so we don't need
          to traverse any further *)
-      | Lh.Expr.Comp _ -> Local_env.empty
+      | Lh.Expr.Comp _ -> Local_map.empty
     in
     go_expr expr
 
@@ -400,8 +400,8 @@ end = struct
       match expr with
       | Lh.Expr.Prim (Prim.I32_eq, _) -> Lh.Type.Bool
       | Lh.Expr.Prim ((Prim.I32_add | Prim.I32_sub | Prim.I32_mul), _) -> Lh.Type.Bool
-      | Lh.Expr.Item (name, _) -> Item_env.find name item_tys
-      | Lh.Expr.Var name -> Local_env.find name local_tys
+      | Lh.Expr.Item (name, _) -> Item_map.find name item_tys
+      | Lh.Expr.Var name -> Local_map.find name local_tys
       | Lh.Expr.Bool _ -> Lh.Type.Bool
       | Lh.Expr.I32 _ -> Lh.Type.I32
     in
@@ -482,11 +482,11 @@ end = struct
         Seq.singleton (pp_sexpr_cmd "export" [pp_quoted (Item_name.to_string name)]);
         Iarray.to_seq params |> Seq.map pp_param;
         Seq.singleton (pp_sexpr_cmd "result" [pp_type ret_ty]);
-        Local_env.to_seq local_def_tys |> Seq.map pp_local;
+        Local_map.to_seq local_def_tys |> Seq.map pp_local;
         Seq.singleton (
           let local_tys =
-            Seq.append (Iarray.to_seq params) (Local_env.to_seq local_def_tys)
-            |> Local_env.of_seq
+            Seq.append (Iarray.to_seq params) (Local_map.to_seq local_def_tys)
+            |> Local_map.of_seq
           in
           pp_expr item_tys local_tys body
         );
@@ -497,13 +497,13 @@ end = struct
     | Lh.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
 
   let pp_program (program : Lh.Program.t) : Format.formatter -> unit =
-    let item_tys = program |> Item_env.map @@ function
+    let item_tys = program |> Item_map.map @@ function
       | Lh.Item.Val (ty, _) -> ty
       | Lh.Item.Fun (_, ret_ty, _) -> ret_ty
     in
     (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
     pp_sexpr_cmd_seq "module"
-      (Item_env.to_seq program |> Seq.map (pp_item item_tys))
+      (Item_map.to_seq program |> Seq.map (pp_item item_tys))
 
 end
 
@@ -549,7 +549,7 @@ let () = begin
 
     let open Core in
 
-    let program = Item_env.of_list [
+    let program = Item_map.of_list [
       Item_name.make "test-fact", Item.Val (
         Type.I32,
         Expr.Item (Item_name.make "fact", Some [|Expr.I32 5l|])
@@ -641,11 +641,11 @@ let () = begin
     in
 
     let check_eval expr expected_value =
-      let value = Expr.eval program Local_env.empty expr in
+      let value = Expr.eval program Local_map.empty expr in
       assert (value = expected_value);
 
-      let anf_expr = Hoist_lets.translate_expr (Program.item_ty program) Local_env.empty expr in
-      let anf_value = Let_hoisted.Expr.eval anf_items Local_env.empty anf_expr in
+      let anf_expr = Hoist_lets.translate_expr (Program.item_ty program) Local_map.empty expr in
+      let anf_value = Let_hoisted.Expr.eval anf_items Local_map.empty anf_expr in
       assert (decode_anf_value anf_value = expected_value);
     in
 

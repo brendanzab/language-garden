@@ -207,8 +207,8 @@ module Anf = struct
   module Item_name = Label.Make ()
   module Local_name = Fresh.Make ()
 
-  module Item_env = Map.Make (Item_name)
-  module Local_env = Map.Make (Local_name)
+  module Item_map = Map.Make (Item_name)
+  module Local_map = Map.Make (Local_name)
 
   module Type = Core.Type
 
@@ -238,7 +238,7 @@ module Anf = struct
 
     end
 
-    val eval : Item.t Item_env.t -> Value.t Local_env.t -> t -> Value.t
+    val eval : Item.t Item_map.t -> Value.t Local_map.t -> t -> Value.t
 
   end = struct
 
@@ -252,11 +252,11 @@ module Anf = struct
 
     end
 
-    let rec eval (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : t) : Value.t =
+    let rec eval (items : Item.t Item_map.t) (locals : Value.t Local_map.t) (expr : t) : Value.t =
       match expr with
       | Let (name, _, def, body) ->
           let def = eval_comp items locals def in
-          eval items (Local_env.add name def locals) body
+          eval items (Local_map.add name def locals) body
       | Bool_if (expr1, expr2, expr3) ->
           begin match eval_atom items locals expr1 with
           | Value.Bool true -> eval items locals expr2
@@ -265,28 +265,28 @@ module Anf = struct
           end
       | Comp expr -> eval_comp items locals expr
 
-    and eval_comp (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : comp) : Value.t =
+    and eval_comp (items : Item.t Item_map.t) (locals : Value.t Local_map.t) (expr : comp) : Value.t =
       match expr with
       | Prim (prim, args) ->
           Prim.app prim (Iarray.map (eval_atom items locals) args)
       | Item (name, args) ->
-          begin match Item_env.find name items with
+          begin match Item_map.find name items with
           | Item.Fun (names, _, body) ->
               let eval_arg (name, _) arg = name, eval_atom items locals arg in
               let args = Seq.map2 eval_arg (Iarray.to_seq names) (Iarray.to_seq args) in
-              eval items (Local_env.add_seq args locals) body
+              eval items (Local_map.add_seq args locals) body
           | _ -> failwith "Expr.eval_comp"
           end
       | Atom expr -> eval_atom items locals expr
 
-    and eval_atom (items : Item.t Item_env.t) (locals : Value.t Local_env.t) (expr : atom) : Value.t =
+    and eval_atom (items : Item.t Item_map.t) (locals : Value.t Local_map.t) (expr : atom) : Value.t =
       match expr with
       | Item name ->
-          begin match Item_env.find name items with
+          begin match Item_map.find name items with
           | Item.Val (_, body) -> eval items locals body
           | _ -> failwith "Expr.eval_atom"
           end
-      | Var name -> Local_env.find name locals
+      | Var name -> Local_map.find name locals
       | Bool bool -> Value.Bool bool
       | I32 int -> Value.I32 int
 
@@ -302,7 +302,7 @@ module Anf = struct
 
   module Program = struct
 
-    type t = Item.t Item_env.t
+    type t = Item.t Item_map.t
 
   end
 
@@ -395,7 +395,7 @@ end = struct
     |> Seq.map (fun (name, item) ->
       Anf.Item_name.make name,
       translate_item (Core.Program.item_ty program) item)
-    |> Anf.Item_env.of_seq
+    |> Anf.Item_map.of_seq
 
 end
 
@@ -408,20 +408,20 @@ module Emit_wat : sig
 
 end = struct
 
-  type item_ty_env = Anf.Type.t Anf.Item_env.t
-  type local_ty_env = Anf.Type.t Anf.Local_env.t
+  type item_ty_env = Anf.Type.t Anf.Item_map.t
+  type local_ty_env = Anf.Type.t Anf.Local_map.t
 
   (** Collect the types of local definitions in an expression. This is useful
       pre-declaring locals inside function definitions *)
   let local_def_tys_of_expr (expr : Anf.Expr.t) : local_ty_env =
-    let ( ++ ) = Anf.Local_env.union (fun _ ty _ -> Some ty) in
+    let ( ++ ) = Anf.Local_map.union (fun _ ty _ -> Some ty) in
     let rec go_expr expr =
       match expr with
-      | Anf.Expr.Let (name, ty, _, body) -> Anf.Local_env.singleton name ty ++ go_expr body
+      | Anf.Expr.Let (name, ty, _, body) -> Anf.Local_map.singleton name ty ++ go_expr body
       | Anf.Expr.Bool_if (_, expr2, expr3) -> go_expr expr2 ++ go_expr expr3
       (* In ANF all local definitions are floated to the top, so we don't need
          to traverse any further *)
-      | Anf.Expr.Comp _ -> Anf.Local_env.empty
+      | Anf.Expr.Comp _ -> Anf.Local_map.empty
     in
     go_expr expr
 
@@ -437,12 +437,12 @@ end = struct
       match expr with
       | Anf.Expr.Prim (Prim.I32_eq, _) -> Anf.Type.Bool
       | Anf.Expr.Prim ((Prim.I32_add | Prim.I32_sub | Prim.I32_mul), _) -> Anf.Type.Bool
-      | Anf.Expr.Item (name, _) -> Anf.Item_env.find name item_tys
+      | Anf.Expr.Item (name, _) -> Anf.Item_map.find name item_tys
       | Anf.Expr.Atom expr -> go_atom expr
     and go_atom expr =
       match expr with
-      | Anf.Expr.Item name -> Anf.Item_env.find name item_tys
-      | Anf.Expr.Var name -> Anf.Local_env.find name local_tys
+      | Anf.Expr.Item name -> Anf.Item_map.find name item_tys
+      | Anf.Expr.Var name -> Anf.Local_map.find name local_tys
       | Anf.Expr.Bool _ -> Anf.Type.Bool
       | Anf.Expr.I32 _ -> Anf.Type.I32
     in
@@ -526,11 +526,11 @@ end = struct
         Seq.singleton (pp_sexpr_cmd "export" [pp_quoted (Anf.Item_name.to_string name)]);
         Iarray.to_seq params |> Seq.map pp_param;
         Seq.singleton (pp_sexpr_cmd "result" [pp_type ret_ty]);
-        Anf.Local_env.to_seq local_def_tys |> Seq.map pp_local;
+        Anf.Local_map.to_seq local_def_tys |> Seq.map pp_local;
         Seq.singleton (
           let local_tys =
-            Seq.append (Iarray.to_seq params) (Anf.Local_env.to_seq local_def_tys)
-            |> Anf.Local_env.of_seq
+            Seq.append (Iarray.to_seq params) (Anf.Local_map.to_seq local_def_tys)
+            |> Anf.Local_map.of_seq
           in
           pp_expr item_tys local_tys body
         );
@@ -541,13 +541,13 @@ end = struct
     | Anf.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
 
   let pp_program (program : Anf.Program.t) : Format.formatter -> unit =
-    let item_tys = program |> Anf.Item_env.map @@ function
+    let item_tys = program |> Anf.Item_map.map @@ function
       | Anf.Item.Val (ty, _) -> ty
       | Anf.Item.Fun (_, ret_ty, _) -> ret_ty
     in
     (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
     pp_sexpr_cmd_seq "module"
-      (Anf.Item_env.to_seq program |> Seq.map (pp_item item_tys))
+      (Anf.Item_map.to_seq program |> Seq.map (pp_item item_tys))
 
 end
 
@@ -664,7 +664,7 @@ let () = begin
       assert (value = expected_value);
 
       let anf_expr = Anf_conv.translate_expr (Program.item_ty program) Env.empty expr in
-      let anf_value = Anf.Expr.eval anf_items Anf.Local_env.empty anf_expr in
+      let anf_value = Anf.Expr.eval anf_items Anf.Local_map.empty anf_expr in
       assert (decode_anf_value anf_value = expected_value);
     in
 
