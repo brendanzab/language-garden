@@ -494,8 +494,11 @@ end = struct
             pp_sexpr_cmd "then" [go_expr expr2];
             pp_sexpr_cmd "else" [go_expr expr3];
           ]
+      (* Emit tail-calls if possible *)
+      (* TODO: Make this configurable as not all WASM implementations support these *)
       | Anf.Expr.Comp (Item (name, args)) -> pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
       | Anf.Expr.Comp (Atom (Item name)) -> pp_sexpr_cmd "return_call" [pp_item_name name]
+      (* Otherwise emit a return instruction *)
       | Anf.Expr.Comp expr -> pp_sexpr_cmd "return" [go_comp expr]
     and go_comp expr =
       match expr with
