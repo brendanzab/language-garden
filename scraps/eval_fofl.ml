@@ -2,25 +2,34 @@
     items and mutual recursion.
 *)
 
+(** Primitive values and operations *)
 module Prim = struct
 
-  type t =
-    | Int_eq
-    | Int_add
-    | Int_sub
-    | Int_mul
+  module Value = struct
 
-  type value =
-    | Bool of bool
-    | Int of int
+    type t =
+      | Bool of bool
+      | I32 of int32
 
-  let app (op : t) (args : value Iarray.t) =
-    match op, args with
-    | Int_eq, [|Int int1; Int int2|] -> Bool (Int.equal int1 int2)
-    | Int_add, [|Int int1; Int int2|] -> Int (Int.add int1 int2)
-    | Int_sub, [|Int int1; Int int2|] -> Int (Int.sub int1 int2)
-    | Int_mul, [|Int int1; Int int2|] -> Int (Int.mul int1 int2)
-    | _, _ -> failwith "Prim.app"
+  end
+
+  module Op = struct
+
+    type t =
+      | I32_eq
+      | I32_add
+      | I32_sub
+      | I32_mul
+
+    let app (op : t) (args : Value.t Iarray.t) : Value.t =
+      match op, args with
+      | I32_eq, Value.[|I32 int1; I32 int2|] -> Value.Bool (Int32.equal int1 int2)
+      | I32_add, Value.[|I32 int1; I32 int2|] -> Value.I32 (Int32.add int1 int2)
+      | I32_sub, Value.[|I32 int1; I32 int2|] -> Value.I32 (Int32.sub int1 int2)
+      | I32_mul, Value.[|I32 int1; I32 int2|] -> Value.I32 (Int32.mul int1 int2)
+      | _, _ -> failwith "Prim.Op.app"
+
+  end
 
 end
 
@@ -32,7 +41,7 @@ module Core = struct
 
     type t =
       | Bool
-      | Int
+      | I32
 
   end
 
@@ -52,14 +61,14 @@ module Core = struct
       | Let of string * Type.t * t * t
       | Bool of bool
       | Bool_if of t * t * t
-      | Int of int
-      | Prim of Prim.t * t Iarray.t
+      | I32 of int32
+      | Prim of Prim.Op.t * t Iarray.t
 
     module Value : sig
 
       type t =
         | Bool of bool
-        | Int of int
+        | I32 of int32
 
     end
 
@@ -69,13 +78,7 @@ module Core = struct
 
     include Expr
 
-    module Value = struct
-
-      type t = Prim.value =
-        | Bool of bool
-        | Int of int
-
-    end
+    module Value = Prim.Value
 
     let rec eval (items : Item.t Env.t) (locals : Value.t Env.t) (expr : t) : Value.t =
       match expr with
@@ -100,9 +103,9 @@ module Core = struct
           | Value.Bool false -> eval items locals expr3
           | _ -> failwith "Expr.eval"
           end
-      | Int int -> Value.Int int
-      | Prim (prim, args) ->
-          Prim.app prim (Iarray.map (eval items locals) args)
+      | I32 int -> Value.I32 int
+      | Prim (op, args) ->
+          Prim.Op.app op (Iarray.map (eval items locals) args)
 
   end
 
@@ -148,60 +151,61 @@ let () = begin
   begin run_tests @@ fun test ->
 
     let open Core in
+    let open Prim.Op in
 
     let items = Env.of_list [
       "test-fact", Item.Val (
-        Type.Int,
-        Expr.Item ("fact", Some [|Expr.Int 5|])
+        Type.I32,
+        Expr.Item ("fact", Some [|Expr.I32 5l|])
       );
 
       "fact", Item.Fun (
-        [|"n", Type.Int|],
-        Type.Int,
+        [|"n", Type.I32|],
+        Type.I32,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
-          Expr.Int 1,
-          Expr.Prim (Prim.Int_mul, [|
+          Expr.Prim (I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
+          Expr.I32 1l,
+          Expr.Prim (I32_mul, [|
             Expr.Var "n";
-            Expr.Item ("fact", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
+            Expr.Item ("fact", Some [|Expr.Prim (I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|])
           |])
         );
       );
 
       "ackermann", Item.Fun (
-        [|"m", Type.Int; "n", Type.Int|],
-        Type.Int,
+        [|"m", Type.I32; "n", Type.I32|],
+        Type.I32,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "m"; Expr.Int 0|]),
-          Expr.Prim (Prim.Int_add, [|Expr.Var "n"; Expr.Int 1|]),
+          Expr.Prim (I32_eq, [|Expr.Var "m"; Expr.I32 0l|]),
+          Expr.Prim (I32_add, [|Expr.Var "n"; Expr.I32 1l|]),
           Expr.Bool_if (
-            Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
-            Expr.Item ("ackermann", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "m"; Expr.Int 1|]); Expr.Int 1|]),
+            Expr.Prim (I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
+            Expr.Item ("ackermann", Some [|Expr.Prim (I32_sub, [|Expr.Var "m"; Expr.I32 1l|]); Expr.I32 1l|]),
             Expr.Item ("ackermann", Some [|
-              Expr.Prim (Prim.Int_sub, [|Expr.Var "m"; Expr.Int 1|]);
-              Expr.Item ("ackermann", Some [|Expr.Var "m"; Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|]);
+              Expr.Prim (I32_sub, [|Expr.Var "m"; Expr.I32 1l|]);
+              Expr.Item ("ackermann", Some [|Expr.Var "m"; Expr.Prim (I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|]);
             |])
           )
         )
       );
 
       "is-even", Item.Fun (
-        [|"n", Type.Int|],
+        [|"n", Type.I32|],
         Type.Bool,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
+          Expr.Prim (I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
           Expr.Bool true,
-          Expr.Item ("is-odd", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
+          Expr.Item ("is-odd", Some [|Expr.Prim (I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|])
         )
       );
 
       "is-odd", Item.Fun (
-        [|"n", Type.Int|],
+        [|"n", Type.I32|],
         Type.Bool,
         Expr.Bool_if (
-          Expr.Prim (Prim.Int_eq, [|Expr.Var "n"; Expr.Int 0|]),
+          Expr.Prim (I32_eq, [|Expr.Var "n"; Expr.I32 0l|]),
           Expr.Bool false,
-          Expr.Item ("is-even", Some [|Expr.Prim (Prim.Int_sub, [|Expr.Var "n"; Expr.Int 1|])|])
+          Expr.Item ("is-even", Some [|Expr.Prim (I32_sub, [|Expr.Var "n"; Expr.I32 1l|])|])
         )
       );
 
@@ -211,11 +215,11 @@ let () = begin
       assert (Expr.eval items Env.empty expr = expected)
     in
 
-    test "test-fact" Expr.(fun () -> check_eval (Item ("test-fact", None)) (Value.Int 120));
-    test "ackermann(0, 0)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|Int 0; Int 0|])) (Expr.Value.Int 1));
-    test "ackermann(3, 4)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|Int 3; Int 4|])) (Value.Int 125));
-    test "is-even(6)" Expr.(fun () -> check_eval (Item ("is-even", Some [|Int 6|])) (Value.Bool true));
-    test "is-odd(6)" Expr.(fun () -> check_eval (Item ("is-odd", Some [|Int 6|])) (Value.Bool false));
+    test "test-fact" Expr.(fun () -> check_eval (Item ("test-fact", None)) (Value.I32 120l));
+    test "ackermann(0, 0)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|I32 0l; I32 0l|])) (Expr.Value.I32 1l));
+    test "ackermann(3, 4)" Expr.(fun () -> check_eval (Item ("ackermann", Some [|I32 3l; I32 4l|])) (Value.I32 125l));
+    test "is-even(6)" Expr.(fun () -> check_eval (Item ("is-even", Some [|I32 6l|])) (Value.Bool true));
+    test "is-odd(6)" Expr.(fun () -> check_eval (Item ("is-odd", Some [|I32 6l|])) (Value.Bool false));
 
   end
 
