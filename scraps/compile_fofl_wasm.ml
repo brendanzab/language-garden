@@ -2,6 +2,26 @@
     to Web Assembly.
 
     Extends [eval_fofl].
+
+    We first hoist let-bindings and conditionals to the top of expressions. The
+    resulting program is then emitted to the WebAssembly Text Format:
+
+    {@text[
+            Core.Program.t
+                  │
+                  │    Hoist_lets.translate_program
+                  │
+                  ▼
+        Let_hoisted.Program.t
+                  │
+                  │    Emit_wat.pp_program
+                  │
+                  ▼
+      Format.formatter -> unit
+    ]}
+
+    A tool like {{: https://github.com/WebAssembly/binaryen} wasm-opt} could
+    be used to perform optimisations to the resulting WASM.
 *)
 
 module Prim = struct
