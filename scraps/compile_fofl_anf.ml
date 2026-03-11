@@ -403,10 +403,14 @@ end
 (** Translate ANF to WAT (WebAssembly Text Format) *)
 module Emit_wat : sig
 
-  val pp_program : Anf.Program.t -> Format.formatter -> unit
+  val pp_program : ?tail_call:bool -> Anf.Program.t -> Format.formatter -> unit
     [@@warning "-unused-value-declaration"]
 
 end = struct
+
+  type features = {
+    tail_call : bool;
+  }
 
   type item_ty_env = Anf.Type.t Anf.Item_map.t
   type local_ty_env = Anf.Type.t Anf.Local_map.t
@@ -476,7 +480,7 @@ end = struct
 
   (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
       {e folded} form}. *)
-  let pp_expr (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) (ppf : Format.formatter) =
+  let pp_expr (fs : features) (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) (ppf : Format.formatter) =
     let rec go_expr expr =
       match expr with
       | Anf.Expr.Let (name, _, expr, body) ->
@@ -495,9 +499,10 @@ end = struct
             pp_sexpr_cmd "else" [go_expr expr3];
           ]
       (* Emit tail-calls if possible *)
-      (* TODO: Make this configurable as not all WASM implementations support these *)
-      | Anf.Expr.Comp (Item (name, args)) -> pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
-      | Anf.Expr.Comp (Atom (Item name)) -> pp_sexpr_cmd "return_call" [pp_item_name name]
+      | Anf.Expr.Comp (Item (name, args)) when fs.tail_call ->
+          pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
+      | Anf.Expr.Comp (Atom (Item name)) when fs.tail_call ->
+          pp_sexpr_cmd "return_call" [pp_item_name name]
       (* Otherwise emit a return instruction *)
       | Anf.Expr.Comp expr -> pp_sexpr_cmd "return" [go_comp expr]
     and go_comp expr =
@@ -520,7 +525,7 @@ end = struct
     in
     go_expr expr ppf
 
-  let pp_item (item_tys : item_ty_env) (name, item : Anf.(Item_name.t * Item.t)) (ppf : Format.formatter) =
+  let pp_item (fs : features) (item_tys : item_ty_env) (name, item : Anf.(Item_name.t * Item.t)) (ppf : Format.formatter) =
     let pp_fun params ret_ty body =
       let pp_param (name, ty) = pp_sexpr_cmd "param" [pp_local_name name; pp_type ty]
       and pp_local (name, ty) = pp_sexpr_cmd "local" [pp_local_name name; pp_type ty]
@@ -538,7 +543,7 @@ end = struct
             Seq.append (Iarray.to_seq params) (Anf.Local_map.to_seq local_def_tys)
             |> Anf.Local_map.of_seq
           in
-          pp_expr item_tys local_tys body
+          pp_expr fs item_tys local_tys body
         );
       ])
     in
@@ -546,14 +551,15 @@ end = struct
     | Anf.Item.Val (ty, expr) -> pp_fun [||] ty expr ppf (* FIXME: re-evaluation of top-level values *)
     | Anf.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
 
-  let pp_program (program : Anf.Program.t) : Format.formatter -> unit =
+  let pp_program ?(tail_call = false) (program : Anf.Program.t) : Format.formatter -> unit =
+    let fs = { tail_call } in
     let item_tys = program |> Anf.Item_map.map @@ function
       | Anf.Item.Val (ty, _) -> ty
       | Anf.Item.Fun (_, ret_ty, _) -> ret_ty
     in
     (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
     pp_sexpr_cmd_seq "module"
-      (Anf.Item_map.to_seq program |> Seq.map (pp_item item_tys))
+      (Anf.Item_map.to_seq program |> Seq.map (pp_item fs item_tys))
 
 end
 
@@ -681,6 +687,7 @@ let () = begin
     test "is-odd(6)" Expr.(fun () -> check_eval (Item ("is-odd", Some [|I32 6l|])) (Value.Bool false));
 
     (* Format.printf "%t" (Emit_wat.pp_program anf_items) *)
+    (* Format.printf "%t" (Emit_wat.pp_program ~tail_call:true anf_items) *)
 
   end
 

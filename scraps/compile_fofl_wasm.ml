@@ -352,12 +352,16 @@ end
 (** Translate ANF to WAT (WebAssembly Text Format) *)
 module Emit_wat : sig
 
-  val pp_program : Let_hoisted.Program.t -> Format.formatter -> unit
+  val pp_program : ?tail_call:bool ->  Let_hoisted.Program.t -> Format.formatter -> unit
     [@@warning "-unused-value-declaration"]
 
 end = struct
 
   module Lh = Let_hoisted
+
+  type features = {
+    tail_call : bool;
+  }
 
   type item_ty_env = Lh.Type.t Item_map.t
   type local_ty_env = Lh.Type.t Local_map.t
@@ -423,7 +427,7 @@ end = struct
 
   (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
       {e folded} form}. *)
-  let pp_expr (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Lh.Expr.t) (ppf : Format.formatter) =
+  let pp_expr (fs : features) (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Lh.Expr.t) (ppf : Format.formatter) =
     let rec go_expr expr =
       match expr with
       | Lh.Expr.Let (name, _, expr, body) ->
@@ -442,11 +446,13 @@ end = struct
             pp_sexpr_cmd "else" [go_expr expr3];
           ]
       (* Emit tail-calls if possible *)
-      (* TODO: Make this configurable as not all WASM implementations support these *)
-      | Lh.Expr.Comp (Item (name, Some args)) -> pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
-      | Lh.Expr.Comp (Item (name, None)) -> pp_sexpr_cmd "return_call" [pp_item_name name]
+      | Lh.Expr.Comp (Item (name, Some args)) when fs.tail_call ->
+          pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
+      | Lh.Expr.Comp (Item (name, None)) when fs.tail_call ->
+          pp_sexpr_cmd "return_call" [pp_item_name name]
       (* Otherwise emit a return instruction *)
-      | Lh.Expr.Comp expr -> pp_sexpr_cmd "return" [go_comp expr]
+      | Lh.Expr.Comp expr ->
+          pp_sexpr_cmd "return" [go_comp expr]
     and go_comp expr =
       match expr with
       | Lh.Expr.Prim (Prim.I32_eq, args) -> pp_sexpr_cmd "i32.eq" [go_args args];
@@ -464,7 +470,7 @@ end = struct
     in
     go_expr expr ppf
 
-  let pp_item (item_tys : item_ty_env) (name, item : Lh.(Item_name.t * Item.t)) (ppf : Format.formatter) =
+  let pp_item (fs : features) (item_tys : item_ty_env) (name, item : Lh.(Item_name.t * Item.t)) (ppf : Format.formatter) =
     let pp_fun params ret_ty body =
       let pp_param (name, ty) = pp_sexpr_cmd "param" [pp_local_name name; pp_type ty]
       and pp_local (name, ty) = pp_sexpr_cmd "local" [pp_local_name name; pp_type ty]
@@ -482,7 +488,7 @@ end = struct
             Seq.append (Iarray.to_seq params) (Local_map.to_seq local_def_tys)
             |> Local_map.of_seq
           in
-          pp_expr item_tys local_tys body
+          pp_expr fs item_tys local_tys body
         );
       ])
     in
@@ -490,14 +496,15 @@ end = struct
     | Lh.Item.Val (ty, expr) -> pp_fun [||] ty expr ppf (* FIXME: re-evaluation of top-level values *)
     | Lh.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
 
-  let pp_program (program : Lh.Program.t) : Format.formatter -> unit =
+  let pp_program ?(tail_call = false) (program : Lh.Program.t) : Format.formatter -> unit =
+    let fs = { tail_call } in
     let item_tys = program |> Item_map.map @@ function
       | Lh.Item.Val (ty, _) -> ty
       | Lh.Item.Fun (_, ret_ty, _) -> ret_ty
     in
     (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
     pp_sexpr_cmd_seq "module"
-      (Item_map.to_seq program |> Seq.map (pp_item item_tys))
+      (Item_map.to_seq program |> Seq.map (pp_item fs item_tys))
 
 end
 
@@ -626,10 +633,10 @@ let () = begin
 
     ] in
 
-    let anf_items = Hoist_lets.translate_program program in
+    let lh_items = Hoist_lets.translate_program program in
 
-    let decode_anf_value anf_value =
-      match anf_value with
+    let decode_lh_value lh_value =
+      match lh_value with
       | Let_hoisted.Expr.Value.Bool b -> Expr.Value.Bool b
       | Let_hoisted.Expr.Value.I32 i -> Expr.Value.I32 i
     in
@@ -638,9 +645,9 @@ let () = begin
       let value = Expr.eval program Local_map.empty expr in
       assert (value = expected_value);
 
-      let anf_expr = Hoist_lets.translate_expr expr in
-      let anf_value = Let_hoisted.Expr.eval anf_items Local_map.empty anf_expr in
-      assert (decode_anf_value anf_value = expected_value);
+      let lh_expr = Hoist_lets.translate_expr expr in
+      let lh_value = Let_hoisted.Expr.eval lh_items Local_map.empty lh_expr in
+      assert (decode_lh_value lh_value = expected_value);
     in
 
     test "test-fact" Expr.(fun () -> check_eval (Item (Item_name.make "test-fact", None)) (Value.I32 120l));
@@ -650,7 +657,8 @@ let () = begin
     test "is-odd(6)" Expr.(fun () -> check_eval (Item (Item_name.make "is-odd", Some [|I32 6l|])) (Value.Bool false));
 
     (* https://taubyte.com/tools/wasm *)
-    (* Format.printf "%t" (Emit_wat.pp_program anf_items) *)
+    (* Format.printf "%t" (Emit_wat.pp_program lh_items) *)
+    (* Format.printf "%t" (Emit_wat.pp_program ~tail_call:true lh_items) *)
 
   end
 
