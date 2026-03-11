@@ -441,20 +441,23 @@ end = struct
             pp_sexpr_cmd "then" [go_expr expr2];
             pp_sexpr_cmd "else" [go_expr expr3];
           ]
-      | Lh.Expr.Comp expr -> go_comp expr
+      | Lh.Expr.Comp (Item (name, Some args)) -> pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
+      | Lh.Expr.Comp (Item (name, None)) -> pp_sexpr_cmd "return_call" [pp_item_name name]
+      | Lh.Expr.Comp expr -> pp_sexpr_cmd "return" [go_comp expr]
     and go_comp expr =
-      let pp_args args = pp_spaced_seq (Iarray.to_seq args |> Seq.map go_comp) in
       match expr with
-      | Lh.Expr.Prim (Prim.I32_eq, args) -> pp_sexpr_cmd "i32.eq" [pp_args args];
-      | Lh.Expr.Prim (Prim.I32_add, args) -> pp_sexpr_cmd "i32.add" [pp_args args];
-      | Lh.Expr.Prim (Prim.I32_sub, args) -> pp_sexpr_cmd "i32.sub" [pp_args args];
-      | Lh.Expr.Prim (Prim.I32_mul, args) -> pp_sexpr_cmd "i32.mul" [pp_args args];
-      | Lh.Expr.Item (name, Some args) -> pp_sexpr_cmd "call" [pp_item_name name; pp_args args]
+      | Lh.Expr.Prim (Prim.I32_eq, args) -> pp_sexpr_cmd "i32.eq" [go_args args];
+      | Lh.Expr.Prim (Prim.I32_add, args) -> pp_sexpr_cmd "i32.add" [go_args args];
+      | Lh.Expr.Prim (Prim.I32_sub, args) -> pp_sexpr_cmd "i32.sub" [go_args args];
+      | Lh.Expr.Prim (Prim.I32_mul, args) -> pp_sexpr_cmd "i32.mul" [go_args args];
+      | Lh.Expr.Item (name, Some args) -> pp_sexpr_cmd "call" [pp_item_name name; go_args args]
       | Lh.Expr.Item (name, None) -> pp_sexpr_cmd "call" [pp_item_name name]
       | Lh.Expr.Var name -> pp_sexpr_cmd "local.get" [pp_local_name name]
       | Lh.Expr.Bool true -> pp_sexpr_cmd "i32.const" [pp_i32 1l]
       | Lh.Expr.Bool false -> pp_sexpr_cmd "i32.const" [pp_i32 0l]
       | Lh.Expr.I32 int -> pp_sexpr_cmd "i32.const" [pp_i32 int]
+    and go_args args =
+      pp_spaced_seq (Iarray.to_seq args |> Seq.map go_comp)
     in
     go_expr expr ppf
 
