@@ -27,6 +27,14 @@
 (** Primitive values and operations *)
 module Prim = struct
 
+  module Type = struct
+
+    type t =
+      | Bool
+      | I32
+
+  end
+
   module Value = struct
 
     type t =
@@ -42,6 +50,13 @@ module Prim = struct
       | I32_add
       | I32_sub
       | I32_mul
+
+    let ty (op : t) : Type.t Iarray.t * Type.t =
+      match op with
+      | I32_eq -> Type.[|I32; I32|], Type.Bool
+      | I32_add -> Type.[|I32; I32|], Type.I32
+      | I32_sub -> Type.[|I32; I32|], Type.I32
+      | I32_mul -> Type.[|I32; I32|], Type.I32
 
     let app (op : t) (args : Value.t Iarray.t) : Value.t =
       match op, args with
@@ -110,13 +125,7 @@ module Local_map = Map.Make (Local_name)
 (** Core language *)
 module Core = struct
 
-  module Type = struct
-
-    type t =
-      | Bool
-      | I32
-
-  end
+  module Type = Prim.Type
 
   module rec Item : sig
 
@@ -373,7 +382,7 @@ end = struct
     in
     go_expr expr
 
-  (** Find the type of an expression. This is useful for finding the return
+  (** Find the type of an expression. This is useful for finding the result
       type of conditionals. *)
   let ty_of_expr (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Lh.Expr.t) =
     let rec go_expr expr =
@@ -383,8 +392,7 @@ end = struct
       | Lh.Expr.Comp expr -> go_comp expr
     and go_comp expr =
       match expr with
-      | Lh.Expr.Prim (Prim.Op.I32_eq, _) -> Lh.Type.Bool
-      | Lh.Expr.Prim (Prim.Op.(I32_add | I32_sub | I32_mul), _) -> Lh.Type.Bool
+      | Lh.Expr.Prim (op, _) -> snd (Prim.Op.ty op)
       | Lh.Expr.Item (name, _) -> Item_map.find name item_tys
       | Lh.Expr.Var name -> Local_map.find name local_tys
       | Lh.Expr.Bool _ -> Lh.Type.Bool

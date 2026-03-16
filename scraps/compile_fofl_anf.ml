@@ -431,7 +431,7 @@ end = struct
     in
     go_expr expr
 
-  (** Find the type of an expression. This is useful for finding the return
+  (** Find the type of an expression. This is useful for finding the result
       type of conditionals. *)
   let ty_of_expr (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) =
     let rec go_expr expr =
@@ -441,8 +441,7 @@ end = struct
       | Anf.Expr.Comp expr -> go_comp expr
     and go_comp expr =
       match expr with
-      | Anf.Expr.Prim (Prim.Op.I32_eq, _) -> Anf.Type.Bool
-      | Anf.Expr.Prim (Prim.Op.(I32_add | I32_sub | I32_mul), _) -> Anf.Type.Bool
+      | Anf.Expr.Prim (op, _) -> snd (Prim.Op.ty op)
       | Anf.Expr.Item (name, _) -> Anf.Item_map.find name item_tys
       | Anf.Expr.Atom expr -> go_atom expr
     and go_atom expr =
