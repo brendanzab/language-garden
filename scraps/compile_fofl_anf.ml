@@ -419,14 +419,14 @@ end = struct
 
   (** Collect the types of local definitions in an expression. This is useful
       pre-declaring locals inside function definitions *)
-  let local_def_tys_of_expr (expr : Anf.Expr.t) : local_ty_env =
-    let ( ++ ) = Anf.Local_map.union (fun _ ty _ -> Some ty) in
+  let local_def_tys (expr : Anf.Expr.t) : local_ty_env =
+    let union = Anf.Local_map.union (fun _ ty _ -> Some ty) in
     let rec go_expr expr =
       match expr with
-      | Anf.Expr.Let (name, ty, _, body) -> Anf.Local_map.singleton name ty ++ go_expr body
-      | Anf.Expr.Bool_if (_, expr2, expr3) -> go_expr expr2 ++ go_expr expr3
-      (* In ANF all local definitions are floated to the top, so we don't need
-         to traverse any further *)
+      | Anf.Expr.Let (name, ty, _, body) -> Anf.Local_map.add name ty (go_expr body)
+      | Anf.Expr.Bool_if (_, expr2, expr3) -> union (go_expr expr2) (go_expr expr3)
+      (* All local definitions are floated to the top, so we don't need to
+         traverse any further *)
       | Anf.Expr.Comp _ -> Anf.Local_map.empty
     in
     go_expr expr
@@ -531,7 +531,7 @@ end = struct
     let pp_fun params ret_ty body =
       let pp_param (name, ty) = pp_sexpr_cmd "param" [pp_local_name name; pp_type ty]
       and pp_local (name, ty) = pp_sexpr_cmd "local" [pp_local_name name; pp_type ty]
-      and local_def_tys = local_def_tys_of_expr body in
+      and locals = local_def_tys body in
 
       (* https://webassembly.github.io/spec/core/text/modules.html#functions *)
       pp_sexpr_cmd_seq "func" (Seq.concat @@ List.to_seq [
@@ -539,10 +539,10 @@ end = struct
         Seq.singleton (pp_sexpr_cmd "export" [pp_quoted (Anf.Item_name.to_string name)]);
         Iarray.to_seq params |> Seq.map pp_param;
         Seq.singleton (pp_sexpr_cmd "result" [pp_type ret_ty]);
-        Anf.Local_map.to_seq local_def_tys |> Seq.map pp_local;
+        Anf.Local_map.to_seq locals |> Seq.map pp_local;
         Seq.singleton (
           let local_tys =
-            Seq.append (Iarray.to_seq params) (Anf.Local_map.to_seq local_def_tys)
+            Seq.append (Iarray.to_seq params) (Anf.Local_map.to_seq locals)
             |> Anf.Local_map.of_seq
           in
           pp_expr fs item_tys local_tys body
