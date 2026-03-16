@@ -3,7 +3,7 @@
 
     Extends [eval_fofl].
 
-    We first hoist let-bindings and conditionals to the top of expressions. The
+    We first hoist let bindings and conditionals to the top of expressions. The
     resulting program is then emitted to the WebAssembly Text Format:
 
     {@text[
@@ -200,9 +200,13 @@ module Core = struct
 end
 
 
-(* An intermediate language where nested let expressions are hoisted to the top
-   of expressions. This will be easier easier to translate to web assembly,
-   which does not support these kinds of expressions. *)
+(** An intermediate language where nested let expressions and conditionals are
+    hoisted to the top of expressions.
+
+    This language is very close to A-Normal form, but computations can still
+    nested inside other expressions. This reduces the number of intermediate
+    bindings we need when translating to web assembly.
+*)
 module Let_hoisted = struct
 
   module Type = Core.Type
@@ -286,7 +290,7 @@ module Let_hoisted = struct
 end
 
 
-(** Hoist let expressions to the top of expressions *)
+(** Hoist let expressions and conditionals to the top of expressions. *)
 module Hoist_lets : sig
 
   val translate_expr : Core.Expr.t -> Let_hoisted.Expr.t
