@@ -352,7 +352,7 @@ end = struct
 
   module Lh = Let_hoisted
 
-  type features = {
+  type options = {
     tail_call : bool;
   }
 
@@ -420,7 +420,7 @@ end = struct
 
   (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
       {e folded} form}. *)
-  let pp_expr (fs : features) (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Lh.Expr.t) (ppf : Format.formatter) =
+  let pp_expr (opts : options) (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Lh.Expr.t) (ppf : Format.formatter) =
     let rec go_expr expr =
       match expr with
       | Lh.Expr.Let (name, _, expr, body) ->
@@ -439,9 +439,9 @@ end = struct
             pp_sexpr_cmd "else" [go_expr expr3];
           ]
       (* Emit tail-calls if possible *)
-      | Lh.Expr.Comp (Item (name, Some args)) when fs.tail_call ->
+      | Lh.Expr.Comp (Item (name, Some args)) when opts.tail_call ->
           pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
-      | Lh.Expr.Comp (Item (name, None)) when fs.tail_call ->
+      | Lh.Expr.Comp (Item (name, None)) when opts.tail_call ->
           pp_sexpr_cmd "return_call" [pp_item_name name]
       (* Otherwise emit a return instruction *)
       | Lh.Expr.Comp expr ->
@@ -463,7 +463,7 @@ end = struct
     in
     go_expr expr ppf
 
-  let pp_item (fs : features) (item_tys : item_ty_env) (name, item : Lh.(Item_name.t * Item.t)) (ppf : Format.formatter) =
+  let pp_item (opts : options) (item_tys : item_ty_env) (name, item : Lh.(Item_name.t * Item.t)) (ppf : Format.formatter) =
     let pp_fun params ret_ty body =
       let pp_param (name, ty) = pp_sexpr_cmd "param" [pp_local_name name; pp_type ty]
       and pp_local (name, ty) = pp_sexpr_cmd "local" [pp_local_name name; pp_type ty]
@@ -481,7 +481,7 @@ end = struct
             Seq.append (Iarray.to_seq params) (Local_map.to_seq locals)
             |> Local_map.of_seq
           in
-          pp_expr fs item_tys local_tys body
+          pp_expr opts item_tys local_tys body
         );
       ])
     in
@@ -490,14 +490,14 @@ end = struct
     | Lh.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
 
   let pp_program ?(tail_call = false) (program : Lh.Program.t) : Format.formatter -> unit =
-    let fs = { tail_call } in
+    let opts = { tail_call } in
     let item_tys = program |> Item_map.map @@ function
       | Lh.Item.Val (ty, _) -> ty
       | Lh.Item.Fun (_, ret_ty, _) -> ret_ty
     in
     (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
     pp_sexpr_cmd_seq "module"
-      (Item_map.to_seq program |> Seq.map (pp_item fs item_tys))
+      (Item_map.to_seq program |> Seq.map (pp_item opts item_tys))
 
 end
 

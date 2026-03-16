@@ -337,7 +337,7 @@ end = struct
       | Core.Expr.Item (name, None) ->
           k (Anf.Expr.Atom (Item (Anf.Item_name.make name)), item_tys name)
       | Core.Expr.Item (name, Some args) ->
-          let@ args = go_defs locals (Iarray.to_list args) in
+          let@ args = go_deopts locals (Iarray.to_list args) in
           k (Anf.Expr.Item (Anf.Item_name.make name, Iarray.of_list args), item_tys name)
       | Core.Expr.Var name ->
           let name', ty = Core.Env.find name locals in
@@ -357,7 +357,7 @@ end = struct
       | Core.Expr.I32 int ->
           k (Anf.Expr.Atom (I32 int), Anf.Type.I32)
       | Core.Expr.Prim (op, args) ->
-          let@ args = go_defs locals (Iarray.to_list args) in
+          let@ args = go_deopts locals (Iarray.to_list args) in
           let _, ty = Prim.Op.ty op in
           k (Anf.Expr.Prim (op, Iarray.of_list args), ty)
 
@@ -371,12 +371,12 @@ end = struct
           Anf.Expr.Let (name', ty, expr, k (Anf.Expr.Var name'))
 
     (* Compile a series of expressions to intermediate definitions *)
-    and go_defs (locals : local_ty_env) (exprs : Core.Expr.t list) (k : Anf.Expr.atom list -> Anf.Expr.t) : Anf.Expr.t =
+    and go_deopts (locals : local_ty_env) (exprs : Core.Expr.t list) (k : Anf.Expr.atom list -> Anf.Expr.t) : Anf.Expr.t =
       match exprs with
       | [] -> k []
       | expr :: exprs ->
           let@ expr = go_def locals expr in
-          let@ exprs = go_defs locals exprs in
+          let@ exprs = go_deopts locals exprs in
           k (expr :: exprs)
     in
 
@@ -410,7 +410,7 @@ module Emit_wat : sig
 
 end = struct
 
-  type features = {
+  type options = {
     tail_call : bool;
   }
 
@@ -482,7 +482,7 @@ end = struct
 
   (** Emit expressions in {{: https://webassembly.github.io/spec/core/text/instructions.html#folded-instructions}
       {e folded} form}. *)
-  let pp_expr (fs : features) (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) (ppf : Format.formatter) =
+  let pp_expr (opts : options) (item_tys : item_ty_env) (local_tys : local_ty_env) (expr : Anf.Expr.t) (ppf : Format.formatter) =
     let rec go_expr expr =
       match expr with
       | Anf.Expr.Let (name, _, expr, body) ->
@@ -501,9 +501,9 @@ end = struct
             pp_sexpr_cmd "else" [go_expr expr3];
           ]
       (* Emit tail-calls if possible *)
-      | Anf.Expr.Comp (Item (name, args)) when fs.tail_call ->
+      | Anf.Expr.Comp (Item (name, args)) when opts.tail_call ->
           pp_sexpr_cmd "return_call" [pp_item_name name; go_args args]
-      | Anf.Expr.Comp (Atom (Item name)) when fs.tail_call ->
+      | Anf.Expr.Comp (Atom (Item name)) when opts.tail_call ->
           pp_sexpr_cmd "return_call" [pp_item_name name]
       (* Otherwise emit a return instruction *)
       | Anf.Expr.Comp expr -> pp_sexpr_cmd "return" [go_comp expr]
@@ -527,7 +527,7 @@ end = struct
     in
     go_expr expr ppf
 
-  let pp_item (fs : features) (item_tys : item_ty_env) (name, item : Anf.(Item_name.t * Item.t)) (ppf : Format.formatter) =
+  let pp_item (opts : options) (item_tys : item_ty_env) (name, item : Anf.(Item_name.t * Item.t)) (ppf : Format.formatter) =
     let pp_fun params ret_ty body =
       let pp_param (name, ty) = pp_sexpr_cmd "param" [pp_local_name name; pp_type ty]
       and pp_local (name, ty) = pp_sexpr_cmd "local" [pp_local_name name; pp_type ty]
@@ -545,7 +545,7 @@ end = struct
             Seq.append (Iarray.to_seq params) (Anf.Local_map.to_seq locals)
             |> Anf.Local_map.of_seq
           in
-          pp_expr fs item_tys local_tys body
+          pp_expr opts item_tys local_tys body
         );
       ])
     in
@@ -554,14 +554,14 @@ end = struct
     | Anf.Item.Fun (params, ret_ty, body) -> pp_fun params ret_ty body ppf
 
   let pp_program ?(tail_call = false) (program : Anf.Program.t) : Format.formatter -> unit =
-    let fs = { tail_call } in
+    let opts = { tail_call } in
     let item_tys = program |> Anf.Item_map.map @@ function
       | Anf.Item.Val (ty, _) -> ty
       | Anf.Item.Fun (_, ret_ty, _) -> ret_ty
     in
     (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
     pp_sexpr_cmd_seq "module"
-      (Anf.Item_map.to_seq program |> Seq.map (pp_item fs item_tys))
+      (Anf.Item_map.to_seq program |> Seq.map (pp_item opts item_tys))
 
 end
 
