@@ -146,6 +146,8 @@ Miscellaneous:
 - [**misc_ast_submodules.ml**](./misc_ast_submodules.ml):
   A pattern for nesting mutually recursive datatypes in submodules without
   duplicating the datatype definitions.
+- [**misc_ast_subst_monad.ml**](./misc_ast_subst_monad.ml):
+  Variable Substitution as a monad.
 - [**misc_circular_traversals.ml**](./misc_circular_traversals.ml):
   Using laziness to patch up a data structure after-the-fact in a single
   traversal, without using mutable references.
