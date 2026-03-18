@@ -76,6 +76,8 @@ related to compiling functional programming languages.
   Compiling arithmetic expressions to stack machine instructions and A-Normal Form.
 - [**compile-arithcond**](./compile-arithcond/):
   Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
+- [**compile-fofl**](./compile-fofl/):
+  Compiling a first-order functional programming language to Web Assembly.
 
 ### Languages
 

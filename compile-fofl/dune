@@ -1,0 +1,22 @@
+(executable
+ (name main)
+ (public_name fofl)
+ (package compile-fofl)
+ (preprocess
+  (per_module
+   ((pps sedlex.ppx) lexer)))
+ (libraries
+  cmdliner
+  menhirLib))
+
+(menhir
+ (modules parser)
+ (flags --strict))
+
+(mdx
+ (package compile-fofl)
+ (deps %{bin:generics}))
+
+; (cram
+;  (package compile-fofl)
+;  (deps %{bin:generics}))

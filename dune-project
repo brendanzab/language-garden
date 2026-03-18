@@ -40,6 +40,15 @@
   (qcheck-alcotest (and (>= "0.91") :with-test))
   (sedlex (>= "3.7"))))
 
+(package
+ (name compile-fofl)
+ (depends
+  (cmdliner (>= "2.1"))
+  (mdx (and (>= "2.5") :with-test))
+  (menhir (and (>= "20250912") :build))
+  (menhirLib (>= "20250912"))
+  (sedlex (>= "3.7"))))
+
 
 ; Elaboration
 

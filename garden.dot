@@ -52,6 +52,7 @@ digraph garden {
 
     "compile-arith";
     "compile-arithcond";
+    "compile-fofl";
   }
 
   subgraph lang {
@@ -74,6 +75,7 @@ digraph garden {
   "elab-stlc-bidirectional" -> "elab-system-f-bidirectional";
   "elab-stlc-bidirectional" -> "elab-dependent";
   "elab-stlc-bidirectional" -> "lang-doc-templates";
+  "elab-stlc-bidirectional" -> "compile-fofl";
   "elab-stlc-unification" -> "elab-stlc-letrec-unification";
   "elab-stlc-unification" -> "elab-stlc-row-unification";
   "elab-stlc-unification" -> "elab-generics";
