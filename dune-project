@@ -22,8 +22,8 @@
   (alcotest (and (>= "1.9") :with-test))
   (cmdliner (>= "2.1"))
   (mdx (and (>= "2.5") :with-test))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (qcheck-core (and (>= "0.91") :with-test))
   (qcheck-alcotest (and (>= "0.91") :with-test))
   (sedlex (>= "3.7"))))
@@ -34,8 +34,8 @@
   (alcotest (and (>= "1.9") :with-test))
   (cmdliner (>= "2.1"))
   (mdx (and (>= "2.5") :with-test))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (qcheck-core (and (>= "0.91") :with-test))
   (qcheck-alcotest (and (>= "0.91") :with-test))
   (sedlex (>= "3.7"))))
@@ -47,8 +47,8 @@
  (name elab-dependent)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -56,8 +56,8 @@
  (name elab-dependent-sugar)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -65,8 +65,8 @@
  (name elab-generics)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -74,8 +74,8 @@
  (name elab-generics-lettype)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -83,8 +83,8 @@
  (name elab-stlc-abstract)
  (depends
   ; (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   ; (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -92,8 +92,8 @@
  (name elab-stlc-bidirectional)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -101,8 +101,8 @@
  (name elab-stlc-error-recovery)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -110,8 +110,8 @@
  (name elab-stlc-bidirectional-stratify)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -119,8 +119,8 @@
  (name elab-stlc-letrec-unification)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -128,8 +128,8 @@
  (name elab-stlc-unification)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -137,8 +137,8 @@
  (name elab-stlc-row-unification)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -146,8 +146,8 @@
  (name elab-system-f-bidirectional)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -155,8 +155,8 @@
  (name elab-system-f-unification)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -164,8 +164,8 @@
  (name elab-record-patching)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -175,23 +175,23 @@
 (package
  (name lang-datalog)
  (depends
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
 (package
  (name lang-declarative-graphics)
  (depends
-  (js_of_ocaml-compiler (>= "6.2"))
-  (js_of_ocaml (>= "6.2"))
-  (js_of_ocaml-ppx (>= "6.2"))))
+  (js_of_ocaml-compiler (>= "6.3"))
+  (js_of_ocaml (>= "6.3"))
+  (js_of_ocaml-ppx (>= "6.3"))))
 
 (package
  (name lang-doc-templates)
  (depends
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -206,15 +206,15 @@
  (allow_empty)
  (depends
   lang-declarative-graphics
-  (js_of_ocaml-compiler (>= "6.2"))
-  (js_of_ocaml (>= "6.2"))
-  (js_of_ocaml-ppx (>= "6.2"))))
+  (js_of_ocaml-compiler (>= "6.3"))
+  (js_of_ocaml (>= "6.3"))
+  (js_of_ocaml-ppx (>= "6.3"))))
 
 (package
  (name lang-lc-interpreters)
  (depends
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (sedlex (>= "3.7"))))
 
 (package
@@ -230,16 +230,16 @@
  (name wip-compile-closure-conv)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
 (package
  (name wip-compile-stlc)
  (depends
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))
   (sedlex (>= "3.7"))))
 
@@ -253,6 +253,6 @@
  (name wip-elab-builtins)
  (depends
   (cmdliner (>= "2.1"))
-  (menhir (and (>= "20250912") :build))
-  (menhirLib (>= "20250912"))
+  (menhir (and (>= "20260209") :build))
+  (menhirLib (>= "20260209"))
   (mdx (and (>= "2.5") :with-test))))
