@@ -122,3 +122,26 @@ Mismatched recursive call
     │                                                       ^^^^^
   
   [1]
+
+Ambiguous mutually recursive bindings
+  $ executable elab <<EOF
+  > let rec {
+  >   foo n := bar n;
+  >   bar n := foo n;
+  > };
+  > 
+  > foo
+  > EOF
+  error: ambiguous definition type
+    ┌─ <stdin>:2:2
+    │
+  2 │   foo n := bar n;
+    │   ^^^
+  
+  error: ambiguous parameter type
+    ┌─ <stdin>:3:6
+    │
+  3 │   bar n := foo n;
+    │       ^
+  
+  [1]
