@@ -65,8 +65,8 @@ let tm :=
 | "let"; n = spanned(binder); ps = list(param); ty = option(":"; ty = spanned(ty); { ty }); ":=";
     tm1 = spanned(tm); ";"; tm2 = spanned(tm);
     { Surface.Let (n, ps, ty, tm1, tm2) }
-| "fun"; ps = nonempty_list(param); "=>"; t = spanned(tm);
-    { Surface.Fun_lit (ps, t) }
+| "fun"; ps = nonempty_list(param); ty = option(":"; ty = spanned(ty); { ty }); "=>"; tm = spanned(tm);
+    { Surface.Fun_lit (ps, ty, tm) }
 | "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
 | "match"; tm1 = spanned(eq_tm); "with"; "{"; option("|"); clauses = separated_list("|", clause); "}";

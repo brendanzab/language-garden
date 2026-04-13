@@ -1,5 +1,5 @@
 Initial setup
-  $ alias executable=generics
+  $ alias executable=stlc-row-unification
 
 --------------------------------------------------------------------------------
 
@@ -70,13 +70,13 @@ Ambiguous function application
 
 Mismatched return type
   $ executable elab <<< "fun (x : Int) : Bool => x"
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:1:24
     │
   1 │ fun (x : Int) : Bool => x
     │                         ^
+    = expected: Bool
+         found: Int
   
   [1]
 
@@ -122,10 +122,11 @@ Ambiguous placeholder
 
 Unsupported equality
   $ executable elab <<< "(fun (x : Bool) => x) = (fun (x : Bool) => x)"
-  error: unsupported type: Bool -> Bool
+  error: cannot compare operands of type `Bool -> Bool`
     ┌─ <stdin>:1:0
     │
   1 │ (fun (x : Bool) => x) = (fun (x : Bool) => x)
     │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = expected `Bool` or `Int`
   
   [1]

@@ -1,5 +1,5 @@
 Initial setup
-  $ alias executable=generics
+  $ alias executable=stlc-row-unification
 
 --------------------------------------------------------------------------------
 
@@ -61,24 +61,24 @@ Unbound variable
 
 Mismatched if expression branches
   $ executable elab <<< "if false then true else 3"
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:1:24
     │
   1 │ if false then true else 3
     │                         ^
+    = expected: Bool
+         found: Int
   
   [1]
 
 Mismatched equality
   $ executable elab <<< "1 = false"
-  error: mismatched types:
-    expected: Int
-       found: Bool
+  error: mismatched types
     ┌─ <stdin>:1:0
     │
   1 │ 1 = false
     │ ^^^^^^^^^
+    = expected: Int
+         found: Bool
   
   [1]

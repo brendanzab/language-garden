@@ -52,7 +52,7 @@ and tm_data =
   | Prim of string
   | Let of binder * param list * ty option * tm * tm
   | Ann of tm * ty
-  | Fun_lit of param list * tm
+  | Fun_lit of param list * ty option * tm
   | Record_lit of (label * tm) list
   | Variant_lit of label * tm
   | Int_lit of int
@@ -259,8 +259,8 @@ end = struct
         let body = check_tm (extend ctx def_name.data def_ty) body body_ty in
         Core.Let (def_name.data, def_ty, def, body)
 
-    | Fun_lit (params, body), ty ->
-        check_fun_lit ctx tm.span params body ty
+    | Fun_lit (params, body_ty, body), ty ->
+        check_fun_lit ctx tm.span params body_ty body ty
 
     | Variant_lit (label, tm), Core.Variant_type (Core.Row_entries row) ->
         begin match Label_map.find_opt label.data row with
@@ -319,8 +319,8 @@ end = struct
         let ty = check_ty ctx ty in
         check_tm ctx tm ty, ty
 
-    | Fun_lit (params, body) ->
-        infer_fun_lit ctx params None body
+    | Fun_lit (params, body_ty, body) ->
+        infer_fun_lit ctx params body_ty body
 
     | Record_lit entries ->
         let rec go acc entries =
@@ -423,18 +423,18 @@ end = struct
         Core.(fun_app (Prim Prim.Int_neg) [tm]), Core.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
-  and check_fun_lit (ctx : context) (span : span) (params : param list) (body : tm) (ty : Core.ty) : Core.tm =
+  and check_fun_lit (ctx : context) (span : span) (params : param list) (body_ty : ty option) (body : tm) (ty : Core.ty) : Core.tm =
     match params, Core.force_ty ty with
     | [], ty ->
         check_tm ctx body ty
-    | (name, None) :: params, Core.Fun_type (param_ty, body_ty) ->
-        let body = check_fun_lit (extend ctx name.data param_ty) span params body body_ty in
+    | (name, None) :: params, Core.Fun_type (param_ty, ty) ->
+        let body = check_fun_lit (extend ctx name.data param_ty) span params body_ty body ty in
         Core.Fun_lit (name.data, param_ty, body)
-    | (name, Some param_ty) :: params, Core.Fun_type (param_ty', body_ty) ->
+    | (name, Some param_ty) :: params, Core.Fun_type (param_ty', ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys ctx param_ty_span ~found:param_ty ~expected:param_ty';
-        let body = check_fun_lit (extend ctx name.data param_ty) span params body body_ty in
+        let body = check_fun_lit (extend ctx name.data param_ty) span params body_ty body ty in
         Core.Fun_lit (name.data, param_ty, body)
     | (_ :: _) as params, Core.Meta_var _ ->
         let tm', ty' = infer_fun_lit ctx params None body in
