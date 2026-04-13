@@ -39,7 +39,7 @@ and tm_data =
   | Let of defn * tm
   | Let_rec of defn list * tm
   | Ann of tm * ty
-  | Fun_lit of param list * tm
+  | Fun_lit of param list * ty option * tm
   | Int_lit of int
   | App of tm * tm
   | If_then_else of tm * tm * tm
@@ -180,8 +180,8 @@ end = struct
         let body = check_tm (extend ctx defs_entry) body ty in
         Core.Let (def_name, def_ty, def, body)
 
-    | Fun_lit (params, body) ->
-        check_fun_lit ctx tm.span params None body ty
+    | Fun_lit (params, body_ty, body) ->
+        check_fun_lit ctx tm.span params body_ty body ty
 
     | If_then_else (head, tm1, tm2) ->
         let head = check_tm ctx head Core.Bool_type in
@@ -231,8 +231,8 @@ end = struct
         let ty = check_ty ctx ty in
         check_tm ctx tm ty, ty
 
-    | Fun_lit (params, body) ->
-        infer_fun_lit ctx params None body
+    | Fun_lit (params, body_ty, body) ->
+        infer_fun_lit ctx params body_ty body
 
     | Int_lit i ->
         Core.Int_lit i, Core.Int_type

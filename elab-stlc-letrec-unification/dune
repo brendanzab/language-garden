@@ -16,7 +16,3 @@
 (mdx
  (package elab-stlc-letrec-unification)
  (deps %{bin:stlc-letrec-unification}))
-
-(cram
- (package elab-stlc-letrec-unification)
- (deps %{bin:stlc-letrec-unification}))

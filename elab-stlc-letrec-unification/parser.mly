@@ -57,8 +57,8 @@ let tm :=
     { Surface.Let_rec ([d], tm) }
 | "let"; "rec"; "{"; ds = trailing_nonempty_list(";", defn); "}"; ";"; tm = spanned(tm);
     { Surface.Let_rec (ds, tm) }
-| "fun"; ps = nonempty_list(param); "=>"; t = spanned(tm);
-    { Surface.Fun_lit (ps, t) }
+| "fun"; ps = nonempty_list(param); ty = option(":"; ty = spanned(ty); { ty }); "=>"; tm = spanned(tm);
+    { Surface.Fun_lit (ps, ty, tm) }
 | "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
 | tm = spanned(eq_tm); ":"; ty = spanned(ty);

@@ -1,0 +1,3 @@
+(cram
+ (package elab-stlc-letrec-unification)
+ (deps %{bin:stlc-letrec-unification}))
