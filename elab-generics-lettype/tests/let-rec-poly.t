@@ -1,5 +1,5 @@
 Initial setup
-  $ alias executable=generics
+  $ alias executable=generics-lettype
 
 --------------------------------------------------------------------------------
 
