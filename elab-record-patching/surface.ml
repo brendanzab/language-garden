@@ -224,21 +224,21 @@ end = struct
     | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
         (* TODO: bind [tm] to a local variable to avoid duplicating records *)
         let rec go from_decls to_decls =
-          match from_decls, to_decls with
-          | Semantics.Nil, Semantics.Nil -> []
+          match Semantics.(uncons_decls from_decls, uncons_decls to_decls) with
+          | None, None -> []
           (* Use eta-expansion to coerce fields that share the same label *)
-          | Semantics.Cons (from_label, from_vty, from_decls)
-          , Semantics.Cons (to_label, to_vty, to_decls) when from_label = to_label ->
+          | Some (from_label, from_vty, from_decls)
+          , Some (to_label, to_vty, to_decls) when from_label = to_label ->
               let from_vtm = lazy (Ctx.eval ctx (Syntax.Rec_proj (tm, from_label))) in
               let to_tm = coerce span ctx from_vty to_vty (Syntax.Rec_proj (tm, from_label)) in
               (to_label, to_tm) :: go (from_decls from_vtm) (to_decls (lazy (Ctx.eval ctx to_tm)))
           (* When the type of the target field is a singleton we can use it to
               fill in the definition of a missing field in the source term. This
               is similar to how we handle missing fields in {!check}. *)
-          | from_decls, Semantics.Cons (to_label, Semantics.Sing_type (_, _), to_decls) ->
+          | _, Some (to_label, Semantics.Sing_type (_, _), to_decls) ->
               let to_tm = Syntax.Sing_intro in
               (to_label, to_tm) :: go from_decls (to_decls (lazy (Ctx.eval ctx to_tm)))
-          | Semantics.Cons (from_label, _, _), Semantics.Cons (to_label, _, _) ->
+          | Some (from_label, _, _), Some (to_label, _, _) ->
               error span "@[<v 2>@[field mismatch@]@ @[expected label: `%s`@]@ @[   found label: `%s`@]@]"
                 to_label from_label
           | _, _ -> Semantics.error "mismatched telescope length"
@@ -280,11 +280,11 @@ end = struct
     | Rec_lit defns, Semantics.Rec_type decls ->
         (* TODO: elaborate fields out of order? *)
         let rec go defns decls =
-          match defns, decls with
-          | [], Semantics.Nil -> []
+          match defns, Semantics.uncons_decls decls with
+          | [], None -> []
           (* When the labels match, check the term against the type, handling
             punned fields appropriately. *)
-          | (label, tm) :: defns, Semantics.Cons (label', vty, decls) when label.data = label' ->
+          | (label, tm) :: defns, Some (label', vty, decls) when label.data = label' ->
               let tm = match tm with
                 | Some (params, ty, tm) -> check_fun_lit ctx params ty tm vty (* explicit field definition *)
                 | None -> check ctx ({ span = label.span; data = Name label.data }) vty (* punned field definition *)
@@ -292,12 +292,12 @@ end = struct
               (label.data, tm) :: go defns (decls (lazy (Ctx.eval ctx tm)))
           (* When the expected type of a field is a singleton we can use it to
               fill in the definition of a missing fields in the record literal. *)
-          | defns, Semantics.Cons (label, Semantics.Sing_type (_, _), decls) ->
+          | defns, Some (label, Semantics.Sing_type (_, _), decls) ->
               let tm = Syntax.Sing_intro in
               (label, tm) :: go defns (decls (lazy (Ctx.eval ctx tm)))
-          | _, Semantics.Cons (label, _, _) ->
+          | _, Some (label, _, _) ->
               error tm.span "field with label `%s` not found in record" label
-          | (label, _) :: _, Semantics.Nil ->
+          | (label, _) :: _, None ->
               error label.span "unexpected field `%s` in record literal" label.data
         in
         Syntax.Rec_lit (go defns decls)
@@ -413,7 +413,8 @@ end = struct
               match elim_implicits ctx head head_vty with
               | head, Semantics.Fun_type (_, param_vty, body_vty) ->
                   let arg = check ctx arg (Lazy.force param_vty) in
-                  go ctx (Syntax.Fun_app (head, arg), body_vty (lazy (Ctx.eval ctx arg))) args
+                  let body_vty = Semantics.inst_clos body_vty (lazy (Ctx.eval ctx arg)) in
+                  go ctx (Syntax.Fun_app (head, arg), body_vty) args
               | _ -> error arg.span "unexpected argument"
         in
         go ctx (infer ctx head) args
@@ -426,7 +427,7 @@ end = struct
           | label :: labels ->
               match elim_implicits ctx head head_vty with
               | head, Semantics.Rec_type decls ->
-                  begin match Semantics.proj_ty (Ctx.eval ctx head) decls label.data with
+                  begin match Semantics.find_decl (Ctx.eval ctx head) decls label.data with
                   | Some vty -> go ctx (Syntax.Rec_proj (head, label.data), vty) labels
                   | None -> error label.span "field with label `%s` not found in record" label.data
                   end
@@ -438,12 +439,12 @@ end = struct
         type with singletons in place of the patched fields  *)
     | Patch ({ span = head_span; _ } as head, patches) ->
         let rec go ctx decls patches =
-          match decls, patches with
-          | Semantics.Nil, [] -> []
-          | Semantics.Nil, (label, _) :: _ ->
+          match Semantics.uncons_decls decls, patches with
+          | None, [] -> []
+          | None, (label, _) :: _ ->
               (* FIXME: use label location *)
               error head.span "field `%s` not found in record type" label
-          | Semantics.Cons (label, vty, ty_env), patches ->
+          | Some (label, vty, decls), patches ->
               let ty = Ctx.quote ctx vty in
               begin match List.assoc_opt label patches with
               | Some patch_tm ->
@@ -451,11 +452,11 @@ end = struct
                   let vtm = lazy (Ctx.eval ctx tm) in
                   let ctx = Ctx.add_def ctx (Some label) (Semantics.Sing_type (vty, vtm)) vtm in
                   let patches = List.remove_assoc label patches in
-                  (label, Syntax.Sing_type (ty, tm)) :: go ctx (ty_env vtm) patches
+                  (label, Syntax.Sing_type (ty, tm)) :: go ctx (decls vtm) patches
               | None ->
                   let var = Ctx.next_var ctx in
                   let ctx = Ctx.add_def ctx (Some label) vty var in
-                  (label, ty) :: go ctx (ty_env var) patches
+                  (label, ty) :: go ctx (decls var) patches
               end
         in
 
@@ -493,7 +494,7 @@ end = struct
               param_vty
         in
         let ctx = Ctx.add_def ctx name.data param_ty var in
-        let body = check_fun_lit ctx params body_ty body (body_vty' var) in
+        let body = check_fun_lit ctx params body_ty body (Semantics.inst_clos body_vty' var) in
         Syntax.Fun_lit (name.data, body)
 
     | (name, _) :: _, _, _ ->

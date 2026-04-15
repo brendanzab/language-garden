@@ -288,17 +288,12 @@ module Semantics = struct
   and vtm =
     | Neu of neu                          (** Neutral terms *)
     | Univ
-    | Fun_type of name * vty Lazy.t * (vtm Lazy.t -> vty)
-    | Fun_lit of name * (vtm Lazy.t -> vtm)
+    | Fun_type of name * vty Lazy.t * clos
+    | Fun_lit of name * clos
     | Rec_type of decls
     | Rec_lit of (label * vtm Lazy.t) list
     | Sing_type of vty * vtm Lazy.t
     | Sing_intro                          (** Singleton introduction *)
-
-  (** Field declarations *)
-  and decls =
-    | Nil
-    | Cons of label * vty * (vtm Lazy.t -> decls)
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
       result of being stuck on something else that would not reduce further.
@@ -308,6 +303,16 @@ module Semantics = struct
     | Var of level                        (** Variable that could not be reduced further *)
     | Fun_app of neu * vtm Lazy.t         (** Function application *)
     | Rec_proj of neu * label             (** Record projection *)
+
+  (** Closures that can be instantiated with a value. The environment provides
+      a value for each variable in the term, except for the variable that the
+      closure will be instantiated with during evaluation. *)
+  and clos = vtm Lazy.t env * Syntax.tm
+
+  (** Field declarations *)
+  and decls =
+    | Nil
+    | Cons of label * vty * vtm Lazy.t env * (label * Syntax.ty) list
 
 
   (** {1 Error handling} *)
@@ -321,40 +326,6 @@ module Semantics = struct
     raise (Error message)
 
 
-  (** {1 Eliminators} *)
-
-  (** The following functions trigger computation if the head term is in the
-      appropriate normal form, otherwise queuing up the elimination if the
-      term is in a neutral form. *)
-
-  (** Compute a function application *)
-  let app (head : vtm) (arg : vtm Lazy.t) : vtm =
-    match head with
-    | Neu neu -> Neu (Fun_app (neu, arg))
-    | Fun_lit (_, body) -> body arg
-    | _ -> error "invalid application"
-
-  (** Compute a record projection *)
-  let proj (head : vtm) (label : label) : vtm =
-    match head with
-    | Rec_lit defns -> defns |> List.assoc label |> Lazy.force
-    | Neu neu -> Neu (Rec_proj (neu, label))
-    | _ -> error "invalid projection"
-
-
-  (** {1 Finding the types of record projections} *)
-
-  (** Returns the type of a record projection *)
-  let proj_ty (head : vtm) (decls : decls) (label : label) : vty option =
-    let rec go decls =
-      match decls with
-        | Nil -> None
-        | Cons (l, ty, _) when l = label -> Some ty
-        | Cons (l, _, decls) -> go (decls (lazy (proj head l)))
-    in
-    go decls
-
-
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
@@ -365,22 +336,54 @@ module Semantics = struct
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
         let param_vty = lazy (eval env param_ty) in
-        let body_vty = fun x -> eval (x :: env) body_ty in
-        Fun_type (name, param_vty, body_vty)
-    | Fun_lit (name, body) -> Fun_lit (name, fun x -> eval (x :: env) body)
-    | Fun_app (head, arg) -> app (eval env head) (lazy (eval env arg))
-    | Rec_type decls -> Rec_type (eval_decls env decls)
+        Fun_type (name, param_vty, (env, body_ty))
+    | Fun_lit (name, body) -> Fun_lit (name, (env, body))
+    | Fun_app (head, arg) -> fun_app (eval env head) (lazy (eval env arg))
+    | Rec_type []  -> Rec_type Nil
+    | Rec_type ((label, ty) :: decls) -> Rec_type (Cons (label, eval env ty, env, decls))
     | Rec_lit defns ->
         Rec_lit (List.map (fun (label, expr) -> (label, lazy (eval env expr))) defns)
-    | Rec_proj (head, label) -> proj (eval env head) label
+    | Rec_proj (head, label) -> record_proj (eval env head) label
     | Sing_type (ty, sing_tm) ->
         Sing_type (eval env ty, lazy (eval env sing_tm))
     | Sing_intro -> Sing_intro
-  and eval_decls (env : vtm Lazy.t env) (decls : (label * Syntax.ty) list) : decls =
+
+  and inst_clos (env, body : clos) (arg : vtm Lazy.t) : vtm =
+    eval (arg :: env) body
+
+  and uncons_decls (decls : decls) : (label * vty * (vtm Lazy.t -> decls)) option =
     match decls with
-    | [] -> Nil
-    | (label, ty) :: decls ->
-        Cons (label, eval env ty, fun x -> eval_decls (x :: env) decls)
+    | Nil -> None
+    | Cons (label, vty, _, []) -> Some (label, vty, fun _ -> Nil)
+    | Cons (label, vty, env, (label', ty') :: decls) ->
+        Some (label, vty, fun vtm -> Cons (label', eval (vtm :: env) ty', vtm :: env, decls))
+
+  and find_decl (head : vtm) (decls : decls) (label : label) : vty option =
+    match uncons_decls decls with
+    | None -> None
+    | Some (l, ty, _) when l = label -> Some ty
+    | Some (l, _, decls) -> find_decl head (decls (lazy (record_proj head l))) label
+
+
+  (** {1 Eliminators} *)
+
+  (** The following functions trigger computation if the head term is in the
+      appropriate normal form, otherwise queuing up the elimination if the
+      term is in a neutral form. *)
+
+  (** Compute a function application *)
+  and fun_app (head : vtm) (arg : vtm Lazy.t) : vtm =
+    match head with
+    | Neu neu -> Neu (Fun_app (neu, arg))
+    | Fun_lit (_, body) -> inst_clos body arg
+    | _ -> error "invalid application"
+
+  (** Compute a record projection *)
+  and record_proj (head : vtm) (label : label) : vtm =
+    match head with
+    | Rec_lit defns -> defns |> List.assoc label |> Lazy.force
+    | Neu neu -> Neu (Rec_proj (neu, label))
+    | _ -> error "invalid projection"
 
 
   (** {1 Quotation} *)
@@ -402,11 +405,11 @@ module Semantics = struct
     | Fun_type (name, param_vty, body_vty) ->
         let x = Lazy.from_val (Neu (Var size)) in
         let param_ty = quote size (Lazy.force param_vty) in
-        let body_ty = quote (size + 1) (body_vty x) in
+        let body_ty = quote (size + 1) (inst_clos body_vty x) in
         Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
         let x = Lazy.from_val (Neu (Var size)) in
-        Fun_lit (name, quote (size + 1) (body x))
+        Fun_lit (name, quote (size + 1) (inst_clos body x))
     | Rec_type decls -> Rec_type (quote_decls size decls)
     | Rec_lit defns ->
         Rec_lit (defns |> List.map (fun (label, vtm) -> (label, quote size (Lazy.force vtm))))
@@ -422,9 +425,9 @@ module Semantics = struct
     | Rec_proj (head, label) ->
         Syntax.Rec_proj (quote_neu size head, label)
   and quote_decls (size : level) (decls : decls) : (label * Syntax.ty) list =
-    match decls with
-    | Nil -> []
-    | Cons (label, ty, decls) ->
+    match uncons_decls decls with
+    | None -> []
+    | Some (label, ty, decls) ->
         let x = Lazy.from_val (Neu (Var size)) in
         (label, quote size ty) :: quote_decls (size + 1) (decls x)
 
@@ -455,10 +458,10 @@ module Semantics = struct
     | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
         let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
-          && is_convertible (size + 1) (body_vty1 x) (body_vty2 x)
+          && is_convertible (size + 1) (inst_clos body_vty1 x) (inst_clos body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Lazy.from_val (Neu (Var size)) in
-        is_convertible (size + 1) (body1 x) (body2 x)
+        is_convertible (size + 1) (inst_clos body1 x) (inst_clos body2 x)
     | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
     | Sing_type (vty1, sing_vtm1), Sing_type (vty2, sing_vtm2) ->
@@ -469,10 +472,10 @@ module Semantics = struct
     (* Eta rules *)
     | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
         let x = Lazy.from_val (Neu (Var size)) in
-        is_convertible size (body x) (app fun_tm x)
+        is_convertible size (inst_clos body x) (fun_app fun_tm x)
     | Rec_lit decls, rec_vtm | rec_vtm, Rec_lit decls ->
         decls |> List.for_all (fun (label, elem) ->
-          is_convertible size (Lazy.force elem) (proj rec_vtm label))
+          is_convertible size (Lazy.force elem) (record_proj rec_vtm label))
     | Sing_intro, _ | _, Sing_intro -> true
 
     | _, _ -> false
@@ -486,9 +489,9 @@ module Semantics = struct
         label1 = label2 && is_convertible_neu size record1 record2
     | _, _ -> false
   and is_convertible_decls (size : level) (decls1 : decls) (decls2 : decls) =
-    match decls1, decls2 with
-    | Nil, Nil -> true
-    | Cons (label1, vty1, decls1), Cons (label2, vty2, decls2) when label1 = label2 ->
+    match uncons_decls decls1, uncons_decls decls2 with
+    | None, None -> true
+    | Some (label1, vty1, decls1), Some (label2, vty2, decls2) when label1 = label2 ->
         let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size vty1 vty2
           && is_convertible_decls (size + 1) (decls1 x) (decls2 x)

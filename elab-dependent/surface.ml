@@ -179,7 +179,7 @@ end = struct
               | Semantics.Fun_type (_, param_vty, body_vty) ->
                   let var = Ctx.next_var ctx in
                   let ctx = Ctx.add_def ctx name.data (Lazy.force param_vty) var in
-                  Syntax.Fun_lit (name.data, go ctx names (body_vty var))
+                  Syntax.Fun_lit (name.data, go ctx names (Semantics.inst_clos body_vty var))
               | _ -> error tm.span "too many parameters in function literal"
               end
         in
@@ -260,7 +260,8 @@ end = struct
               match head_vty with
               | Semantics.Fun_type (_, param_vty, body_vty) ->
                   let arg = check ctx arg (Lazy.force param_vty) in
-                  go ctx (Syntax.Fun_app (head, arg), body_vty (lazy (Ctx.eval ctx arg))) args
+                  let body_vty = Semantics.inst_clos body_vty (lazy (Ctx.eval ctx arg)) in
+                  go ctx (Syntax.Fun_app (head, arg), body_vty) args
               | _ -> error arg.span "unexpected argument"
         in
         go ctx (infer ctx head) args

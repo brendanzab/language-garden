@@ -276,8 +276,8 @@ module Semantics = struct
   and vtm =
     | Neu of neu                            (** Neutral terms *)
     | Univ
-    | Fun_type of name * vty Lazy.t * (vtm Lazy.t -> vty)
-    | Fun_lit of name * (vtm Lazy.t -> vtm)
+    | Fun_type of name * vty Lazy.t * clos
+    | Fun_lit of name * clos
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
       result of being stuck on something else that would not reduce further.
@@ -287,26 +287,17 @@ module Semantics = struct
     | Var of level                (** Variable that could not be reduced further *)
     | Fun_app of neu * vtm Lazy.t  (** Function application *)
 
+  (** Closures that can be instantiated with a value. The environment provides
+      a value for each variable in the term, except for the variable that the
+      closure will be instantiated with during evaluation. *)
+  and clos = vtm Lazy.t list * Syntax.tm
+
 
   (** {1 Exceptions} *)
 
   (** An error that was encountered during computation. This should only ever
       be raised if ill-typed terms were supplied to the semantics. *)
   exception Error of string
-
-
-  (** {1 Eliminators} *)
-
-  (** The following functions trigger computation if the head term is in the
-      appropriate normal form, otherwise queuing up the elimination if the
-      term is in a neutral form. *)
-
-  (** Compute a function application *)
-  let app (head : vtm) (arg : vtm Lazy.t) : vtm =
-    match head with
-    | Neu neu -> Neu (Fun_app (neu, arg))
-    | Fun_lit (_, body) -> body arg
-    | _ -> raise (Error "invalid application")
 
 
   (** {1 Evaluation} *)
@@ -320,12 +311,28 @@ module Semantics = struct
     | Syntax.Univ ->  Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
         let param_vty = lazy (eval env param_ty) in
-        let body_vty = fun x -> eval (x :: env) body_ty in
-        Fun_type (name, param_vty, body_vty)
+        Fun_type (name, param_vty, (env, body_ty))
     | Syntax.Fun_lit (name, body) ->
-        Fun_lit (name, fun x -> eval (x :: env) body)
+        Fun_lit (name, (env, body))
     | Syntax.Fun_app (head, arg) ->
-        app (eval env head) (lazy (eval env arg))
+        fun_app (eval env head) (lazy (eval env arg))
+
+  and inst_clos (env, body : clos) (arg : vtm Lazy.t) : vtm =
+    eval (arg :: env) body
+
+
+  (** {1 Eliminators} *)
+
+  (** The following functions trigger computation if the head term is in the
+      appropriate normal form, otherwise queuing up the elimination if the
+      term is in a neutral form. *)
+
+  (** Compute a function application *)
+  and fun_app (head : vtm) (arg : vtm Lazy.t) : vtm =
+    match head with
+    | Neu neu -> Neu (Fun_app (neu, arg))
+    | Fun_lit (_, body) -> inst_clos body arg
+    | _ -> raise (Error "invalid application")
 
 
   (** {1 Quotation} *)
@@ -345,10 +352,10 @@ module Semantics = struct
     | Univ -> Syntax.Univ
     | Fun_type (name, param_vty, body_vty) ->
         let param_ty = quote size (Lazy.force param_vty) in
-        let body_ty = quote (size + 1) (body_vty (Lazy.from_val (Neu (Var size)))) in
+        let body_ty = quote (size + 1) (inst_clos body_vty (Lazy.from_val (Neu (Var size)))) in
         Syntax.Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        Fun_lit (name, quote (size + 1) (body (Lazy.from_val (Neu (Var size)))))
+        Fun_lit (name, quote (size + 1) (inst_clos body (Lazy.from_val (Neu (Var size)))))
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
     | Var level ->
@@ -381,14 +388,14 @@ module Semantics = struct
     | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
         let x = Lazy.from_val (Neu (Var size)) in
         is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
-          && is_convertible (size + 1) (body_vty1 x) (body_vty2 x)
+          && is_convertible (size + 1) (inst_clos body_vty1 x) (inst_clos body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = Lazy.from_val (Neu (Var size)) in
-        is_convertible (size + 1) (body1 x) (body2 x)
+        is_convertible (size + 1) (inst_clos body1 x) (inst_clos body2 x)
     (* Eta for functions *)
     | Fun_lit (_, body), fun_vtm | fun_vtm, Fun_lit (_, body)  ->
         let x = Lazy.from_val (Neu (Var size)) in
-        is_convertible size (body x) (app fun_vtm x)
+        is_convertible size (inst_clos body x) (fun_app fun_vtm x)
     | _, _ -> false
   and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
     match neu1, neu2 with

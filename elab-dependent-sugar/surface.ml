@@ -254,7 +254,8 @@ end = struct
               match head_vty with
               | Semantics.Fun_type (_, param_vty, body_vty) ->
                   let arg = check ctx arg (Lazy.force param_vty) in
-                  go ctx (Syntax.Fun_app (head, arg), body_vty (lazy (Ctx.eval ctx arg))) args
+                  let body_vty = Semantics.inst_clos body_vty (lazy (Ctx.eval ctx arg)) in
+                  go ctx (Syntax.Fun_app (head, arg), body_vty) args
               | _ -> error arg.span "unexpected argument"
         in
         go ctx (infer ctx head) args
@@ -283,7 +284,7 @@ end = struct
               param_vty
         in
         let ctx = Ctx.add_def ctx name.data param_ty var in
-        let body = check_fun_lit ctx params body_ty body (body_vty' var) in
+        let body = check_fun_lit ctx params body_ty body (Semantics.inst_clos body_vty' var) in
         Syntax.Fun_lit (name.data, body)
 
     | (name, _) :: _, _, _ ->
