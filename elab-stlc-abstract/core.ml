@@ -26,7 +26,7 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
-    | Fun_lit of name * ty * clos1
+    | Fun_lit of name * ty * clos
     | Int_lit of int
     | Bool_lit of bool
 
@@ -35,15 +35,15 @@ module Semantics = struct
   and ntm =
     | Var of level
     | Fun_app of ntm * vtm
-    | Bool_elim of ntm * clos0 * clos0
-
-  (** Delayed computations that can be forced later. *)
-  and clos0 = Clos0 of vtm list * tm
+    | Bool_elim of ntm * bool branches
 
   (** Closures that can be instantiated with a value. The environment provides
       a value for each variable in the term, except for the variable that the
       closure will be instantiated with during evaluation. *)
-  and clos1 = Clos1 of vtm list * tm
+  and clos = vtm list * tm
+
+  (** Closures over a series of conditional branches *)
+  and 'a branches = vtm list * ('a * tm) list
 
   let rec eval (env : vtm list) (tm : tm) : vtm =
     match tm with
@@ -53,7 +53,7 @@ module Semantics = struct
         let def = eval env def in
         eval (def :: env) body
     | Fun_lit (x, param_ty, body) ->
-        Fun_lit (x, param_ty, Clos1 (env, body))
+        Fun_lit (x, param_ty, (env, body))
     | Fun_app (head, arg) ->
         let head = eval env head in
         let arg = eval env arg in
@@ -62,32 +62,31 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
         let head = eval env head in
-        bool_elim head (Clos0 (env, tm1)) (Clos0 (env, tm2))
+        bool_elim head (env, [true, tm1; false, tm2])
 
-  and inst0 (Clos0 (env, body) : clos0) : vtm =
-    eval env body
-
-  and inst1 (Clos1 (env, body) : clos1) (arg : vtm) : vtm =
+  and inst_clos ((env, body) : clos) (arg : vtm) : vtm =
     eval (arg :: env) body
+
+  and choose_branch (type a) ((env, branches) : a branches) (label : a) : vtm =
+    eval env (List.assoc label branches)
 
   and fun_app (head : vtm) (arg : vtm) : vtm =
     match head with
     | Neu ntm -> Neu (Fun_app (ntm, arg))
-    | Fun_lit (_, _, body) -> inst1 body arg
+    | Fun_lit (_, _, body) -> inst_clos body arg
     | _ -> invalid_arg "expected function"
 
-  and bool_elim (head : vtm) (vtm1 : clos0) (vtm2 : clos0) : vtm =
+  and bool_elim (head : vtm) (branches : bool branches) : vtm =
     match head with
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> inst0 vtm1
-    | Bool_lit false -> inst0 vtm2
+    | Neu ntm -> Neu (Bool_elim (ntm, branches))
+    | Bool_lit b -> choose_branch branches b
     | _ -> invalid_arg "expected boolean"
 
   let rec quote (size : level) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_neu size ntm
     | Fun_lit (x, param_ty, body) ->
-        let body = quote (size + 1) (inst1 body (Neu (Var size))) in
+        let body = quote (size + 1) (inst_clos body (Neu (Var size))) in
         Fun_lit (x, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
@@ -98,9 +97,9 @@ module Semantics = struct
         Var (size - level - 1)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
-    | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote size (inst0 vtm1) in
-        let tm2 = quote size (inst0 vtm2) in
+    | Bool_elim (head, branches) ->
+        let tm1 = quote size (choose_branch branches true) in
+        let tm2 = quote size (choose_branch branches false) in
         Bool_elim (quote_neu size head, tm1, tm2)
 
   let normalise (env : vtm list) (tm : tm) : tm =
