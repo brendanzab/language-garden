@@ -272,7 +272,7 @@ module Semantics = struct
     | Syntax.Let (_, def, body) -> eval (lazy (eval env def) :: env) body
     | Syntax.Ann (tm, _) -> eval env tm
     | Syntax.Var index -> Lazy.force (List.nth env index)
-    | Syntax.Univ ->  Univ
+    | Syntax.Univ -> Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
         Fun_type (name, lazy (eval env param_ty), Clos (env, body_ty))
     | Syntax.Fun_lit (name, body) ->
