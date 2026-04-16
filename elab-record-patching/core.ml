@@ -309,10 +309,8 @@ module Semantics = struct
       closure will be instantiated with during evaluation. *)
   and clos = vtm Lazy.t env * Syntax.tm
 
-  (** Field declarations *)
-  and decls =
-    | Nil
-    | Cons of label * vty * vtm Lazy.t env * (label * Syntax.ty) list
+  (** Declaration closures *)
+  and decls = vtm Lazy.t env * (label * Syntax.ty) list
 
 
   (** {1 Error handling} *)
@@ -339,8 +337,7 @@ module Semantics = struct
         Fun_type (name, param_vty, (env, body_ty))
     | Fun_lit (name, body) -> Fun_lit (name, (env, body))
     | Fun_app (head, arg) -> fun_app (eval env head) (lazy (eval env arg))
-    | Rec_type []  -> Rec_type Nil
-    | Rec_type ((label, ty) :: decls) -> Rec_type (Cons (label, eval env ty, env, decls))
+    | Rec_type decls  -> Rec_type (env, decls)
     | Rec_lit defns ->
         Rec_lit (List.map (fun (label, expr) -> (label, lazy (eval env expr))) defns)
     | Rec_proj (head, label) -> record_proj (eval env head) label
@@ -351,18 +348,10 @@ module Semantics = struct
   and inst_clos (env, body : clos) (arg : vtm Lazy.t) : vtm =
     eval (arg :: env) body
 
-  and uncons_decls (decls : decls) : (label * vty * (vtm Lazy.t -> decls)) option =
+  and uncons_decls (env, decls : decls) : (label * vty * (vtm Lazy.t -> decls)) option =
     match decls with
-    | Nil -> None
-    | Cons (label, vty, _, []) -> Some (label, vty, fun _ -> Nil)
-    | Cons (label, vty, env, (label', ty') :: decls) ->
-        Some (label, vty, fun vtm -> Cons (label', eval (vtm :: env) ty', vtm :: env, decls))
-
-  and find_decl (head : vtm) (decls : decls) (label : label) : vty option =
-    match uncons_decls decls with
-    | None -> None
-    | Some (l, ty, _) when l = label -> Some ty
-    | Some (l, _, decls) -> find_decl head (decls (lazy (record_proj head l))) label
+    | [] -> None
+    | (label, ty) :: decls -> Some (label, eval env ty, fun vtm -> vtm :: env, decls)
 
 
   (** {1 Eliminators} *)

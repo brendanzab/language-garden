@@ -306,7 +306,7 @@ end = struct
         annotation. *)
     | Rec_unit, Semantics.Univ ->
         Syntax.Rec_type []
-    | Rec_unit, Semantics.Rec_type Semantics.Nil ->
+    | Rec_unit, Semantics.Rec_type (_, []) ->
         Syntax.Rec_lit []
 
     (* Singleton introduction. No need for any syntax in the surface language
@@ -420,20 +420,27 @@ end = struct
         go ctx (infer ctx head) args
 
     (* Field projection *)
-    | Proj (head, labels) ->
-        let rec go ctx (head, head_vty) labels =
-          match labels with
+    | Proj (head, path) ->
+        let rec proj_ty head decls label =
+          match Semantics.uncons_decls decls with
+          | None -> None
+          | Some (l, ty, _) when l = label -> Some ty
+          | Some (l, _, decls) ->
+              proj_ty head (decls (lazy (Semantics.record_proj head l))) label
+        in
+        let rec go ctx (head, head_vty) path =
+          match path with
           | [] -> head, head_vty
-          | label :: labels ->
+          | label :: path ->
               match elim_implicits ctx head head_vty with
               | head, Semantics.Rec_type decls ->
-                  begin match Semantics.find_decl (Ctx.eval ctx head) decls label.data with
-                  | Some vty -> go ctx (Syntax.Rec_proj (head, label.data), vty) labels
+                  begin match proj_ty (Ctx.eval ctx head) decls label.data with
+                  | Some vty -> go ctx (Syntax.Rec_proj (head, label.data), vty) path
                   | None -> error label.span "field with label `%s` not found in record" label.data
                   end
               | _ -> error label.span "field with label `%s` not found in record" label.data
         in
-        go ctx (infer ctx head) labels
+        go ctx (infer ctx head) path
 
     (* Patches. Here we add patches to record types by creating a copy of the
         type with singletons in place of the patched fields  *)
