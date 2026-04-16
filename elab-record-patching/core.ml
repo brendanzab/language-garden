@@ -307,7 +307,8 @@ module Semantics = struct
   (** Closures that can be instantiated with a value. The environment provides
       a value for each variable in the term, except for the variable that the
       closure will be instantiated with during evaluation. *)
-  and clos = vtm Lazy.t env * Syntax.tm
+  and clos =
+    | Clos of vtm Lazy.t env * Syntax.tm
 
   (** A telescope of declarations, where the type of each declaration depends on
       the value of the previous entries.
@@ -316,7 +317,8 @@ module Semantics = struct
       old-fashioned instrument consisting of segments that slide one into
       another” ({{: https://doi.org/10.1016/0890-5401(91)90066-B} N.G. de
       Bruijn, 1991}). *)
-  and decls = vtm Lazy.t env * (label * Syntax.ty) list
+  and decls =
+    | Decls of vtm Lazy.t env * (label * Syntax.ty) list
 
 
   (** {1 Error handling} *)
@@ -339,20 +341,19 @@ module Semantics = struct
     | Var index -> Lazy.force (List.nth env index)
     | Univ -> Univ
     | Fun_type (name, param_ty, body_ty) ->
-        let param_vty = lazy (eval env param_ty) in
-        Fun_type (name, param_vty, (env, body_ty))
-    | Fun_lit (name, body) -> Fun_lit (name, (env, body))
+        Fun_type (name, lazy (eval env param_ty), Clos (env, body_ty))
+    | Fun_lit (name, body) -> Fun_lit (name, Clos (env, body))
     | Fun_app (head, arg) -> fun_app (eval env head) (lazy (eval env arg))
-    | Rec_type decls  -> Rec_type (env, decls)
+    | Rec_type decls  -> Rec_type (Decls (env, decls))
     | Rec_lit defns ->
-        Rec_lit (List.map (fun (label, expr) -> (label, lazy (eval env expr))) defns)
+        Rec_lit (defns |> List.map (fun (label, expr) -> (label, lazy (eval env expr))))
     | Rec_proj (head, label) -> record_proj (eval env head) label
     | Sing_type (ty, sing_tm) ->
         Sing_type (eval env ty, lazy (eval env sing_tm))
     | Sing_intro -> Sing_intro
 
   (** Instantiate a closure with a value *)
-  and inst_clos (env, body : clos) (arg : vtm Lazy.t) : vtm =
+  and inst_clos (Clos (env, body) : clos) (arg : vtm Lazy.t) : vtm =
     eval (arg :: env) body
 
   (** Break a telescope of declarations into a pair of the first declaration and
@@ -361,10 +362,11 @@ module Semantics = struct
 
       This can be used to iterate over declarations, for example when finding
       the type of a record projection. *)
-  and uncons_decls (env, decls : decls) : (label * vty * (vtm Lazy.t -> decls)) option =
+  and uncons_decls (Decls (env, decls) : decls) : (label * vty * (vtm Lazy.t -> decls)) option =
     match decls with
     | [] -> None
-    | (label, ty) :: decls -> Some (label, eval env ty, fun vtm -> vtm :: env, decls)
+    | (label, ty) :: decls ->
+        Some (label, eval env ty, fun vtm -> Decls (vtm :: env, decls))
 
 
   (** {1 Eliminators} *)

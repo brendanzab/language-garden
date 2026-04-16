@@ -290,7 +290,8 @@ module Semantics = struct
   (** Closures that can be instantiated with a value. The environment provides
       a value for each variable in the term, except for the variable that the
       closure will be instantiated with during evaluation. *)
-  and clos = vtm Lazy.t list * Syntax.tm
+  and clos =
+    | Clos of vtm Lazy.t list * Syntax.tm
 
 
   (** {1 Exceptions} *)
@@ -310,15 +311,14 @@ module Semantics = struct
     | Syntax.Var index -> Lazy.force (List.nth env index)
     | Syntax.Univ ->  Univ
     | Syntax.Fun_type (name, param_ty, body_ty) ->
-        let param_vty = lazy (eval env param_ty) in
-        Fun_type (name, param_vty, (env, body_ty))
+        Fun_type (name, lazy (eval env param_ty), Clos (env, body_ty))
     | Syntax.Fun_lit (name, body) ->
-        Fun_lit (name, (env, body))
+        Fun_lit (name, Clos (env, body))
     | Syntax.Fun_app (head, arg) ->
         fun_app (eval env head) (lazy (eval env arg))
 
   (** Instantiate a closure with a value *)
-  and inst_clos (env, body : clos) (arg : vtm Lazy.t) : vtm =
+  and inst_clos (Clos (env, body) : clos) (arg : vtm Lazy.t) : vtm =
     eval (arg :: env) body
 
 

@@ -306,7 +306,7 @@ end = struct
         annotation. *)
     | Rec_unit, Semantics.Univ ->
         Syntax.Rec_type []
-    | Rec_unit, Semantics.Rec_type (_, []) ->
+    | Rec_unit, Semantics.Rec_type (Decls (_, [])) ->
         Syntax.Rec_lit []
 
     (* Singleton introduction. No need for any syntax in the surface language
