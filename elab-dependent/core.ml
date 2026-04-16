@@ -317,6 +317,7 @@ module Semantics = struct
     | Syntax.Fun_app (head, arg) ->
         fun_app (eval env head) (lazy (eval env arg))
 
+  (** Instantiate a closure with a value *)
   and inst_clos (env, body : clos) (arg : vtm Lazy.t) : vtm =
     eval (arg :: env) body
 

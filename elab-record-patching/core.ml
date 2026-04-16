@@ -309,7 +309,13 @@ module Semantics = struct
       closure will be instantiated with during evaluation. *)
   and clos = vtm Lazy.t env * Syntax.tm
 
-  (** Declaration closures *)
+  (** A telescope of declarations, where the type of each declaration depends on
+      the value of the previous entries.
+
+      The name “telescope” was coined by de Bruijn, in reference to “the
+      old-fashioned instrument consisting of segments that slide one into
+      another” ({{: https://doi.org/10.1016/0890-5401(91)90066-B} N.G. de
+      Bruijn, 1991}). *)
   and decls = vtm Lazy.t env * (label * Syntax.ty) list
 
 
@@ -345,9 +351,16 @@ module Semantics = struct
         Sing_type (eval env ty, lazy (eval env sing_tm))
     | Sing_intro -> Sing_intro
 
+  (** Instantiate a closure with a value *)
   and inst_clos (env, body : clos) (arg : vtm Lazy.t) : vtm =
     eval (arg :: env) body
 
+  (** Break a telescope of declarations into a pair of the first declaration and
+      a function from the value of the first declaration to the rest of the
+      declarations.
+
+      This can be used to iterate over declarations, for example when finding
+      the type of a record projection. *)
   and uncons_decls (env, decls : decls) : (label * vty * (vtm Lazy.t -> decls)) option =
     match decls with
     | [] -> None
