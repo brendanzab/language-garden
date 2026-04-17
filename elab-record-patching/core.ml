@@ -278,8 +278,17 @@ module Semantics = struct
 
   (** {1 Semantic domain} *)
 
-  (** The following data structures represent the semantic interpretation of
-      the core syntax. *)
+  (** We first define some datatypes that represent our terms in a partially
+      evaluated form. This is a key part of our approach of managing variable
+      bindings during computation, and for only computing as much as is needed
+      during type checking.
+
+      OCaml’s {!Lazy.t} type is used in a number of places in order to reduce
+      the number of things we need to compute. For example we don’t need to
+      fully evaluate a type when we are just putting it in the typing context,
+      as this type might never actually be used when checking the rest of the
+      program. These uses of laziness could be omitted as a simplification.
+  *)
 
   (** Types *)
   type vty = vtm

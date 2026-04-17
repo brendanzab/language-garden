@@ -218,18 +218,14 @@ module Semantics = struct
 
   (** We first define some datatypes that represent our terms in a partially
       evaluated form. This is a key part of our approach of managing variable
-      bindings during computation, and for aiming to only compute as much as
-      is needed during type checking.
+      bindings during computation, and for only computing as much as is needed
+      during type checking.
 
-      Binding structures are represented using higher-order functions in our
-      host language (OCaml) that capture environment at the time where they
-      were created. This technique is is often called {i higher-order abstract
-      syntax}. This is convenient, but in an actual implementation we might
-      want to instead use a pair of the environment and a term from the syntax
-      ({i defunctionalising} the closure representation).
-
-      We also make use of OCaml’s {!Lazy.t} type in a number of places to
-      explicitly defer some computation until it is absolutely needed.
+      OCaml’s {!Lazy.t} type is used in a number of places in order to reduce
+      the number of things we need to compute. For example we don’t need to
+      fully evaluate a type when we are just putting it in the typing context,
+      as this type might never actually be used when checking the rest of the
+      program. These uses of laziness could be omitted as a simplification.
   *)
 
   (** Types *)
