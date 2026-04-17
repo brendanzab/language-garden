@@ -216,7 +216,7 @@ module Semantics = struct
   (** Convert terms from the semantic domain back into syntax. *)
   let rec quote ~opts (size : level) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_neu ~opts size ntm
+    | Neu ntm -> quote_ntm ~opts size ntm
     | Fun_lit (name, param_ty, body) ->
         let body = quote ~opts (size + 1) (inst_clos ~opts body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
@@ -225,23 +225,23 @@ module Semantics = struct
     | Bool_lit b -> Bool_lit b
     | Int_lit i -> Int_lit i
 
-  and quote_neu ~opts (size : level) (ntm : ntm) : tm =
+  and quote_ntm ~opts (size : level) (ntm : ntm) : tm =
     match ntm with
     | Var level -> Var (level_to_index size level)
     | Prim_app (prim, []) -> Prim prim
     | Prim_app (prim, arg :: args) ->
-        Fun_app (quote_neu ~opts size (Prim_app (prim, args)), quote ~opts size arg)
+        Fun_app (quote_ntm ~opts size (Prim_app (prim, args)), quote ~opts size arg)
     | Fix (name, self_ty, body) ->
         let body = quote ~opts (size + 1) (inst_clos ~opts body (Neu (Var size))) in
         Fix (name, self_ty, body)
     | Fun_app (head, arg) ->
-        Fun_app (quote_neu ~opts size head, quote ~opts size arg)
+        Fun_app (quote_ntm ~opts size head, quote ~opts size arg)
     | Record_proj (head, label) ->
-        Record_proj (quote_neu ~opts size head, label)
+        Record_proj (quote_ntm ~opts size head, label)
     | Bool_elim (head, vtm1, vtm2) ->
         let tm1 = quote ~opts size (force_thunk ~opts vtm1) in
         let tm2 = quote ~opts size (force_thunk ~opts vtm2) in
-        Bool_elim (quote_neu ~opts size head, tm1, tm2)
+        Bool_elim (quote_ntm ~opts size head, tm1, tm2)
 
 
   (** {1 Normalisation} *)

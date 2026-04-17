@@ -87,23 +87,23 @@ module Semantics = struct
 
   let rec quote (size : level) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_neu size ntm
+    | Neu ntm -> quote_ntm size ntm
     | Fun_lit (x, param_ty, body) ->
         let body = quote (size + 1) (inst_clos body (Neu (Var size))) in
         Fun_lit (x, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_neu (size : level) (ntm : ntm) : tm =
+  and quote_ntm (size : level) (ntm : ntm) : tm =
     match ntm with
     | Var level ->
         Var (size - level - 1)
     | Fun_app (head, arg) ->
-        Fun_app (quote_neu size head, quote size arg)
+        Fun_app (quote_ntm size head, quote size arg)
     | Bool_elim (head, vtm1, vtm2) ->
         let tm1 = quote size (force_thunk vtm1) in
         let tm2 = quote size (force_thunk vtm2) in
-        Bool_elim (quote_neu size head, tm1, tm2)
+        Bool_elim (quote_ntm size head, tm1, tm2)
 
   let normalise (env : vtm list) (tm : tm) : tm =
     quote (List.length env) (eval env tm)

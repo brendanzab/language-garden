@@ -170,26 +170,26 @@ module Semantics = struct
   (** Convert terms from the semantic domain back into syntax. *)
   let rec quote (size : level) (vtm : vtm) : tm =
     match vtm with
-    | Neu ntm -> quote_neu size ntm
+    | Neu ntm -> quote_ntm size ntm
     | Fun_lit (name, param_ty, body) ->
         let body = quote (size + 1) (inst_clos body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_neu (size : level) (ntm : ntm) : tm =
+  and quote_ntm (size : level) (ntm : ntm) : tm =
     match ntm with
     | Var level ->
         Var (level_to_index size level)
     | Prim_app (prim, []) -> Prim prim
     | Prim_app (prim, arg :: args) ->
-        Fun_app (quote_neu size (Prim_app (prim, args)), quote size arg)
+        Fun_app (quote_ntm size (Prim_app (prim, args)), quote size arg)
     | Fun_app (head, arg) ->
-        Fun_app (quote_neu size head, quote size arg)
+        Fun_app (quote_ntm size head, quote size arg)
     | Bool_elim (head, vtm1, vtm2) ->
         let tm1 = quote size (force_thunk vtm1) in
         let tm2 = quote size (force_thunk vtm2) in
-        Bool_elim (quote_neu size head, tm1, tm2)
+        Bool_elim (quote_ntm size head, tm1, tm2)
 
 
   (** {1 Normalisation} *)

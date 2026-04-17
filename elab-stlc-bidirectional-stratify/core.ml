@@ -127,12 +127,12 @@ module Semantics = struct
 
   and prim_app (prim : Prim.t) (args : vexpr list) : vexpr =
     match prim, args with
-    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
-    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
-    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
-    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
-    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
-    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+    | Bool_eq, [Bool_lit e2; Bool_lit e1] -> Bool_lit (Bool.equal e1 e2)
+    | Int_eq, [Int_lit e2; Int_lit e1] -> Bool_lit (Int.equal e1 e2)
+    | Int_add, [Int_lit e2; Int_lit e1] -> Int_lit (Int.add e1 e2)
+    | Int_sub, [Int_lit e2; Int_lit e1] -> Int_lit (Int.sub e1 e2)
+    | Int_mul, [Int_lit e2; Int_lit e1] -> Int_lit (Int.mul e1 e2)
+    | Int_neg, [Int_lit e1] -> Int_lit (Int.neg e1)
     | prim, args -> Neu (Prim_app (prim, args))
 
   and fun_app (head : vexpr) (arg : vexpr) : vexpr =
@@ -153,28 +153,28 @@ module Semantics = struct
   (** {1 Quotation} *)
 
   (** Convert expressions from the semantic domain back into syntax. *)
-  let rec quote (size : level) (ve : vexpr) : expr =
-    match ve with
-    | Neu ne -> quote_neu size ne
+  let rec quote (size : level) (vexpr : vexpr) : expr =
+    match vexpr with
+    | Neu nexpr -> quote_nexpr size nexpr
     | Fun_lit (name, param_ty, body) ->
         let body = quote (size + 1) (inst_clos body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
 
-  and quote_neu (size : level) (ne : nexpr) : expr =
-    match ne with
+  and quote_nexpr (size : level) (nexpr : nexpr) : expr =
+    match nexpr with
     | Var level ->
         Var (level_to_index size level)
     | Prim_app (prim, []) -> Prim prim
     | Prim_app (prim, arg :: args) ->
-        Fun_app (quote_neu size (Prim_app (prim, args)), quote size arg)
+        Fun_app (quote_nexpr size (Prim_app (prim, args)), quote size arg)
     | Fun_app (head, arg) ->
-        Fun_app (quote_neu size head, quote size arg)
+        Fun_app (quote_nexpr size head, quote size arg)
     | Bool_elim (head, vexpr1, vexpr2) ->
         let e1 = quote size (force_thunk vexpr1) in
         let e2 = quote size (force_thunk vexpr2) in
-        Bool_elim (quote_neu size head, e1, e2)
+        Bool_elim (quote_nexpr size head, e1, e2)
 
 
   (** {1 Normalisation} *)

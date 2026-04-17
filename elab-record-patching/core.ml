@@ -295,7 +295,7 @@ module Semantics = struct
 
   (** Terms in weak head normal form *)
   and vtm =
-    | Neu of neu                          (** Neutral terms *)
+    | Neu of ntm                          (** Neutral terms *)
     | Univ
     | Fun_type of name * vty Lazy.t * clos
     | Fun_lit of name * clos
@@ -308,10 +308,10 @@ module Semantics = struct
       result of being stuck on something else that would not reduce further.
       I’m not sure why they are called ‘neutral terms’. Perhaps they are...
       ambivalent about what they might compute to? *)
-  and neu =
+  and ntm =
     | Var of level                        (** Variable that could not be reduced further *)
-    | Fun_app of neu * vtm Lazy.t         (** Function application *)
-    | Rec_proj of neu * label             (** Record projection *)
+    | Fun_app of ntm * vtm Lazy.t         (** Function application *)
+    | Rec_proj of ntm * label             (** Record projection *)
 
   (** Closures that can be instantiated with a value. The environment provides
       a value for each variable in the term, except for the variable that the
@@ -387,7 +387,7 @@ module Semantics = struct
   (** Compute a function application *)
   and fun_app (head : vtm) (arg : vtm Lazy.t) : vtm =
     match head with
-    | Neu neu -> Neu (Fun_app (neu, arg))
+    | Neu ntm -> Neu (Fun_app (ntm, arg))
     | Fun_lit (_, body) -> inst_clos body arg
     | _ -> error "invalid application"
 
@@ -395,7 +395,7 @@ module Semantics = struct
   and record_proj (head : vtm) (label : label) : vtm =
     match head with
     | Rec_lit defns -> defns |> List.assoc label |> Lazy.force
-    | Neu neu -> Neu (Rec_proj (neu, label))
+    | Neu ntm -> Neu (Rec_proj (ntm, label))
     | _ -> error "invalid projection"
 
 
@@ -413,7 +413,7 @@ module Semantics = struct
   *)
   let rec quote (size : level) (tm : vtm) : Syntax.tm =
     match tm with
-    | Neu neu -> quote_neu size neu
+    | Neu ntm -> quote_ntm size ntm
     | Univ -> Univ
     | Fun_type (name, lazy param_vty, body_vty) ->
         let x = lazy (Neu (Var size)) in
@@ -429,14 +429,16 @@ module Semantics = struct
     | Sing_type (vty, lazy sing_vtm) ->
         Sing_type (quote size vty, quote size sing_vtm)
     | Sing_intro -> Sing_intro
-  and quote_neu (size : level) (neu : neu) : Syntax.tm =
-    match neu with
+
+  and quote_ntm (size : level) (ntm : ntm) : Syntax.tm =
+    match ntm with
     | Var level ->
         Syntax.Var (level_to_index size level)
     | Fun_app (head, lazy arg) ->
-        Syntax.Fun_app (quote_neu size head, quote size arg)
+        Syntax.Fun_app (quote_ntm size head, quote size arg)
     | Rec_proj (head, label) ->
-        Syntax.Rec_proj (quote_neu size head, label)
+        Syntax.Rec_proj (quote_ntm size head, label)
+
   and quote_decls (size : level) (decls : decls) : (label * Syntax.ty) list =
     match uncons_decls decls with
     | None -> []
@@ -466,7 +468,7 @@ module Semantics = struct
       elaboration-zoo/03-holes-unit-eta}. *)
   let rec is_convertible (size : level) (vtm1 : vtm) (vtm2 : vtm) : bool =
     match vtm1, vtm2 with
-    | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
+    | Neu neu1, Neu neu2 -> is_convertible_ntm size neu1 neu2
     | Univ, Univ -> true
     | Fun_type (_, lazy param_vty1, body_vty1), Fun_type (_, lazy param_vty2, body_vty2) ->
         let x = lazy (Neu (Var size)) in
@@ -492,15 +494,17 @@ module Semantics = struct
     | Sing_intro, _ | _, Sing_intro -> true
 
     | _, _ -> false
-  and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
+
+  and is_convertible_ntm (size : level) (neu1 : ntm) (neu2 : ntm) =
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
     | Fun_app (func1, lazy arg1), Fun_app (func2, lazy arg2) ->
-        is_convertible_neu size func1 func2
+        is_convertible_ntm size func1 func2
           && is_convertible size arg1 arg2
     | Rec_proj (record1, label1), Rec_proj (record2, label2) ->
-        label1 = label2 && is_convertible_neu size record1 record2
+        label1 = label2 && is_convertible_ntm size record1 record2
     | _, _ -> false
+
   and is_convertible_decls (size : level) (decls1 : decls) (decls2 : decls) =
     match uncons_decls decls1, uncons_decls decls2 with
     | None, None -> true

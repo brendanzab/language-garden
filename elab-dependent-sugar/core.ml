@@ -233,7 +233,7 @@ module Semantics = struct
 
   (** Terms in weak head normal form *)
   and vtm =
-    | Neu of neu                            (** Neutral terms *)
+    | Neu of ntm                            (** Neutral terms *)
     | Univ
     | Fun_type of name * vty Lazy.t * clos
     | Fun_lit of name * clos
@@ -242,9 +242,9 @@ module Semantics = struct
       result of being stuck on something else that would not reduce further.
       I’m not sure why they are called ‘neutral terms’. Perhaps they are...
       ambivalent about what they might compute to? *)
-  and neu =
-    | Var of level                (** Variable that could not be reduced further *)
-    | Fun_app of neu * vtm Lazy.t  (** Function application *)
+  and ntm =
+    | Var of level                  (** Variable that could not be reduced further *)
+    | Fun_app of ntm * vtm Lazy.t   (** Function application *)
 
   (** Closures that can be instantiated with a value. The environment provides
       a value for each variable in the term, except for the variable that the
@@ -290,7 +290,7 @@ module Semantics = struct
   (** Compute a function application *)
   and fun_app (head : vtm) (arg : vtm Lazy.t) : vtm =
     match head with
-    | Neu neu -> Neu (Fun_app (neu, arg))
+    | Neu ntm -> Neu (Fun_app (ntm, arg))
     | Fun_lit (_, body) -> inst_clos body arg
     | _ -> raise (Error "invalid application")
 
@@ -308,7 +308,7 @@ module Semantics = struct
       at binding depth that they were quoted at. *)
   let rec quote (size : level) (tm : vtm) : Syntax.tm =
     match tm with
-    | Neu neu -> quote_neu size neu
+    | Neu ntm -> quote_ntm size ntm
     | Univ -> Syntax.Univ
     | Fun_type (name, lazy param_vty, body_vty) ->
         let param_ty = quote size param_vty in
@@ -316,12 +316,13 @@ module Semantics = struct
         Syntax.Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
         Fun_lit (name, quote (size + 1) (inst_clos body (lazy (Neu (Var size)))))
-  and quote_neu (size : level) (neu : neu) : Syntax.tm =
-    match neu with
+
+  and quote_ntm (size : level) (ntm : ntm) : Syntax.tm =
+    match ntm with
     | Var level ->
         Syntax.Var (level_to_index size level)
-    | Fun_app (neu, lazy arg) ->
-        Syntax.Fun_app (quote_neu size neu, quote size arg)
+    | Fun_app (ntm, lazy arg) ->
+        Syntax.Fun_app (quote_ntm size ntm, quote size arg)
 
 
   (** {1 Normalisation} *)
@@ -343,7 +344,7 @@ module Semantics = struct
       functions. *)
   let rec is_convertible (size : level) (vtm1 : vtm) (vtm2 : vtm) : bool =
     match vtm1, vtm2 with
-    | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
+    | Neu neu1, Neu neu2 -> is_convertible_ntm size neu1 neu2
     | Univ, Univ -> true
     | Fun_type (_, lazy param_vty1, body_vty1), Fun_type (_, lazy param_vty2, body_vty2) ->
         let x = lazy (Neu (Var size)) in
@@ -357,11 +358,12 @@ module Semantics = struct
         let x = lazy (Neu (Var size)) in
         is_convertible size (inst_clos body x) (fun_app fun_vtm x)
     | _, _ -> false
-  and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
+
+  and is_convertible_ntm (size : level) (neu1 : ntm) (neu2 : ntm) =
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
     | Fun_app (neu1, lazy arg1), Fun_app (neu2, lazy arg2)  ->
-        is_convertible_neu size neu1 neu2 && is_convertible size arg1 arg2
+        is_convertible_ntm size neu1 neu2 && is_convertible size arg1 arg2
     | _, _ -> false
 
 end
