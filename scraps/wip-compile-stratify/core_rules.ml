@@ -169,8 +169,8 @@ module Fun = struct
   let intro_check ?name ?ty:param_ty (body : synth -> check) : check =
     fun ctx expected_ty ->
       match expected_ty with
-      | Semantics.Fun_type (_, expected_param_ty, body_ty) ->
-          let expected_param_ty = Lazy.force expected_param_ty in
+      | Semantics.Fun_type (_, lazy expected_param_ty, body_ty) ->
+          let expected_param_ty = expected_param_ty in
           let param_ty = check_param_ty param_ty ctx expected_param_ty in
           Context.assume ctx name expected_param_ty
             (fun ctx x ->
@@ -182,8 +182,8 @@ module Fun = struct
   let app (head : synth) (arg : check) : synth =
     fun ctx ->
       match head ctx with
-      | Semantics.Fun_type (_, param_ty, body_ty), head ->
-          let arg = arg ctx (Lazy.force param_ty) in
+      | Semantics.Fun_type (_, lazy param_ty, body_ty), head ->
+          let arg = arg ctx param_ty in
           let body_ty = body_ty (Context.eval ctx arg) in
           body_ty, Syntax.Fun_app (head, arg)
       | _, _ -> raise (Error "expected a function type")

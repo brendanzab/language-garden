@@ -99,10 +99,10 @@ end = struct
 
     (** Returns the next variable that will be bound in the context after
         calling {!add_def} or {!add_param} *)
-    val next_var : t -> Semantics.vtm lazy_t
+    val next_var : t -> Semantics.vtm Lazy.t
 
     (** Binds a definition in the context *)
-    val add_def : t -> string option -> Semantics.vtm -> Semantics.vtm lazy_t -> t
+    val add_def : t -> string option -> Semantics.vtm -> Semantics.vtm Lazy.t -> t
 
     (** Binds a parameter in the context *)
     val add_param : t -> string option -> Semantics.vtm -> t
@@ -136,7 +136,7 @@ end = struct
     }
 
     let next_var (ctx : t) : Semantics.vtm Lazy.t =
-      Lazy.from_val (Semantics.Neu (Semantics.Var ctx.size))
+      lazy (Semantics.Neu (Semantics.Var ctx.size))
 
     let add_def (ctx : t) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm Lazy.t) = {
       size = ctx.size + 1;
@@ -209,16 +209,16 @@ end = struct
 
     (* Coerce the term to a singleton with {!Syntax.Sing_intro}, if the term is
       convertible to the term expected by the singleton *)
-    | from_vty, Semantics.Sing_type (to_vty, sing_vtm) ->
+    | from_vty, Semantics.Sing_type (to_vty, lazy sing_vtm) ->
         check_convertible_vtms ctx span
           ~found:(Ctx.eval ctx (coerce span ctx from_vty to_vty tm))
-          ~expected:(Lazy.force sing_vtm);
+          ~expected:sing_vtm;
         Syntax.Sing_intro
 
     (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
       and attempt further coercions from its underlying type *)
-    | Semantics.Sing_type (from_vty, sing_tm), to_vty ->
-        coerce span ctx from_vty to_vty (Ctx.quote ctx (Lazy.force sing_tm))
+    | Semantics.Sing_type (from_vty, lazy sing_tm), to_vty ->
+        coerce span ctx from_vty to_vty (Ctx.quote ctx sing_tm)
 
     (* Coerce the fields of a record with record eta expansion *)
     | Semantics.Rec_type from_decls, Semantics.Rec_type to_decls ->
@@ -311,10 +311,10 @@ end = struct
 
     (* Singleton introduction. No need for any syntax in the surface language
         here, instead we use the type annotation to drive this. *)
-    | _, Semantics.Sing_type (vty, sing_vtm) ->
+    | _, Semantics.Sing_type (vty, lazy sing_vtm) ->
         check_convertible_vtms ctx tm.span
           ~found:(Ctx.eval ctx (check ctx tm vty))
-          ~expected:(Lazy.force sing_vtm);
+          ~expected:sing_vtm;
         Syntax.Sing_intro
 
     (* For anything else, try inferring the type of the term, then attempting to
@@ -411,8 +411,8 @@ end = struct
           | [] -> head, head_vty
           | arg :: args ->
               match elim_implicits ctx head head_vty with
-              | head, Semantics.Fun_type (_, param_vty, body_vty) ->
-                  let arg = check ctx arg (Lazy.force param_vty) in
+              | head, Semantics.Fun_type (_, lazy param_vty, body_vty) ->
+                  let arg = check ctx arg param_vty in
                   let body_vty = Semantics.inst_clos body_vty (lazy (Ctx.eval ctx arg)) in
                   go ctx (Syntax.Fun_app (head, arg), body_vty) args
               | _ -> error arg.span "unexpected argument"
@@ -489,15 +489,15 @@ end = struct
         check_convertible_vtys ctx body_ty_span ~found:body_vty ~expected:vty;
         check ctx body body_vty
 
-    | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, param_vty', body_vty') ->
+    | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, lazy param_vty', body_vty') ->
         let var = Ctx.next_var ctx in
         let param_ty =
           match param_ty with
-          | None -> Lazy.force param_vty'
+          | None -> param_vty'
           | Some param_ty ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let param_vty = Ctx.eval ctx param_ty in
-              check_convertible_vtys ctx name.span ~found:param_vty ~expected:(Lazy.force param_vty');
+              check_convertible_vtys ctx name.span ~found:param_vty ~expected:param_vty';
               param_vty
         in
         let ctx = Ctx.add_def ctx name.data param_ty var in
@@ -538,8 +538,8 @@ end = struct
   and elim_implicits (ctx : Ctx.t) (tm : Syntax.tm) (vty : Semantics.vty) : Syntax.tm * Semantics.vty =
     match vty with
     (* Eliminate the singleton, converting it back to its underlying term *)
-    | Semantics.Sing_type (vty, sing_vtm) ->
-        elim_implicits ctx (Ctx.quote ctx (Lazy.force sing_vtm)) vty
+    | Semantics.Sing_type (vty, lazy sing_vtm) ->
+        elim_implicits ctx (Ctx.quote ctx sing_vtm) vty
     (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
       for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
     | vty -> tm, vty

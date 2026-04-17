@@ -406,33 +406,33 @@ module Semantics = struct
     match tm with
     | Neu neu -> quote_neu size neu
     | Univ -> Univ
-    | Fun_type (name, param_vty, body_vty) ->
-        let x = Lazy.from_val (Neu (Var size)) in
-        let param_ty = quote size (Lazy.force param_vty) in
+    | Fun_type (name, lazy param_vty, body_vty) ->
+        let x = lazy (Neu (Var size)) in
+        let param_ty = quote size param_vty in
         let body_ty = quote (size + 1) (inst_clos body_vty x) in
         Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        let x = Lazy.from_val (Neu (Var size)) in
+        let x = lazy (Neu (Var size)) in
         Fun_lit (name, quote (size + 1) (inst_clos body x))
     | Rec_type decls -> Rec_type (quote_decls size decls)
     | Rec_lit defns ->
-        Rec_lit (defns |> List.map (fun (label, vtm) -> (label, quote size (Lazy.force vtm))))
-    | Sing_type (vty, sing_vtm) ->
-        Sing_type (quote size vty, quote size (Lazy.force sing_vtm))
+        Rec_lit (defns |> List.map (fun (label, lazy vtm) -> label, quote size vtm))
+    | Sing_type (vty, lazy sing_vtm) ->
+        Sing_type (quote size vty, quote size sing_vtm)
     | Sing_intro -> Sing_intro
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
     | Var level ->
         Syntax.Var (level_to_index size level)
-    | Fun_app (head, arg) ->
-        Syntax.Fun_app (quote_neu size head, quote size (Lazy.force arg))
+    | Fun_app (head, lazy arg) ->
+        Syntax.Fun_app (quote_neu size head, quote size arg)
     | Rec_proj (head, label) ->
         Syntax.Rec_proj (quote_neu size head, label)
   and quote_decls (size : level) (decls : decls) : (label * Syntax.ty) list =
     match uncons_decls decls with
     | None -> []
     | Some (label, ty, decls) ->
-        let x = Lazy.from_val (Neu (Var size)) in
+        let x = lazy (Neu (Var size)) in
         (label, quote size ty) :: quote_decls (size + 1) (decls x)
 
 
@@ -459,36 +459,36 @@ module Semantics = struct
     match vtm1, vtm2 with
     | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
-    | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
-        let x = Lazy.from_val (Neu (Var size)) in
-        is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
+    | Fun_type (_, lazy param_vty1, body_vty1), Fun_type (_, lazy param_vty2, body_vty2) ->
+        let x = lazy (Neu (Var size)) in
+        is_convertible size param_vty1 param_vty2
           && is_convertible (size + 1) (inst_clos body_vty1 x) (inst_clos body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
-        let x = Lazy.from_val (Neu (Var size)) in
+        let x = lazy (Neu (Var size)) in
         is_convertible (size + 1) (inst_clos body1 x) (inst_clos body2 x)
     | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
-    | Sing_type (vty1, sing_vtm1), Sing_type (vty2, sing_vtm2) ->
+    | Sing_type (vty1, lazy sing_vtm1), Sing_type (vty2, lazy sing_vtm2) ->
         is_convertible size vty1 vty2
-          && is_convertible size (Lazy.force sing_vtm1) (Lazy.force sing_vtm2)
+          && is_convertible size sing_vtm1 sing_vtm2
     | Sing_intro, Sing_intro -> true
 
     (* Eta rules *)
     | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
-        let x = Lazy.from_val (Neu (Var size)) in
+        let x = lazy (Neu (Var size)) in
         is_convertible size (inst_clos body x) (fun_app fun_tm x)
     | Rec_lit decls, rec_vtm | rec_vtm, Rec_lit decls ->
-        decls |> List.for_all (fun (label, elem) ->
-          is_convertible size (Lazy.force elem) (record_proj rec_vtm label))
+        decls |> List.for_all (fun (label, lazy elem) ->
+          is_convertible size elem (record_proj rec_vtm label))
     | Sing_intro, _ | _, Sing_intro -> true
 
     | _, _ -> false
   and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
-    | Fun_app (func1, arg1), Fun_app (func2, arg2) ->
+    | Fun_app (func1, lazy arg1), Fun_app (func2, lazy arg2) ->
         is_convertible_neu size func1 func2
-          && is_convertible size (Lazy.force arg1) (Lazy.force arg2)
+          && is_convertible size arg1 arg2
     | Rec_proj (record1, label1), Rec_proj (record2, label2) ->
         label1 = label2 && is_convertible_neu size record1 record2
     | _, _ -> false
@@ -496,7 +496,7 @@ module Semantics = struct
     match uncons_decls decls1, uncons_decls decls2 with
     | None, None -> true
     | Some (label1, vty1, decls1), Some (label2, vty2, decls2) when label1 = label2 ->
-        let x = Lazy.from_val (Neu (Var size)) in
+        let x = lazy (Neu (Var size)) in
         is_convertible size vty1 vty2
           && is_convertible_decls (size + 1) (decls1 x) (decls2 x)
     | _, _ -> false

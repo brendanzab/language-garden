@@ -101,6 +101,6 @@ module Tests = struct
 
   let () =
     let result = Single_traversal_functional.transform tree in
-    assert (Tree.equal (fun n1 n2 -> Lazy.force n1 = n2) result expected)
+    assert (Tree.equal (fun (lazy n1) n2 -> n1 = n2) result expected)
 
 end

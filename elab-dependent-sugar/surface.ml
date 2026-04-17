@@ -70,10 +70,10 @@ end = struct
 
     (** Returns the next variable that will be bound in the context after
         calling {!add_def} or {!add_param} *)
-    val next_var : t -> Semantics.vtm lazy_t
+    val next_var : t -> Semantics.vtm Lazy.t
 
     (** Binds a definition in the context *)
-    val add_def : t -> string option -> Semantics.vtm -> Semantics.vtm lazy_t -> t
+    val add_def : t -> string option -> Semantics.vtm -> Semantics.vtm Lazy.t -> t
 
     (** Binds a parameter in the context *)
     val add_param : t -> string option -> Semantics.vtm -> t
@@ -107,7 +107,7 @@ end = struct
     }
 
     let next_var (ctx : t) : Semantics.vtm Lazy.t =
-      Lazy.from_val (Semantics.Neu (Semantics.Var ctx.size))
+      lazy (Semantics.Neu (Semantics.Var ctx.size))
 
     let add_def (ctx : t) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm Lazy.t) = {
       size = ctx.size + 1;
@@ -252,8 +252,8 @@ end = struct
           | [] -> head, head_vty
           | arg :: args ->
               match head_vty with
-              | Semantics.Fun_type (_, param_vty, body_vty) ->
-                  let arg = check ctx arg (Lazy.force param_vty) in
+              | Semantics.Fun_type (_, lazy param_vty, body_vty) ->
+                  let arg = check ctx arg param_vty in
                   let body_vty = Semantics.inst_clos body_vty (lazy (Ctx.eval ctx arg)) in
                   go ctx (Syntax.Fun_app (head, arg), body_vty) args
               | _ -> error arg.span "unexpected argument"
@@ -272,15 +272,15 @@ end = struct
         check ctx body body_vty
 
     (* Elaborate a new parameter *)
-    | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, param_vty', body_vty') ->
+    | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, lazy param_vty', body_vty') ->
         let var = Ctx.next_var ctx in
         let param_ty =
           match param_ty with
-          | None -> Lazy.force param_vty'
+          | None -> param_vty'
           | Some param_ty ->
               let param_ty = check ctx param_ty Semantics.Univ in
               let param_vty = Ctx.eval ctx param_ty in
-              check_convertible ctx name.span ~found:param_vty ~expected:(Lazy.force param_vty');
+              check_convertible ctx name.span ~found:param_vty ~expected:param_vty';
               param_vty
         in
         let ctx = Ctx.add_def ctx name.data param_ty var in

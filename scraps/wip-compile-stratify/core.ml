@@ -98,7 +98,7 @@ module Semantics = struct
 
   let app (head : vtm) (arg : vtm) : vtm =
     match head with
-    | Neu neu -> Neu (Fun_app (neu, Lazy.from_val arg))
+    | Neu neu -> Neu (Fun_app (neu, lazy arg))
     | Fun_lit (_, _, body) -> body arg
     | _ -> raise (Error "invalid application")
 
@@ -126,19 +126,19 @@ module Semantics = struct
   let rec quote size : vtm -> Syntax.tm = function
     | Neu neu -> quote_neu size neu
     | Univ l -> Syntax.Univ l
-    | Fun_type (name, param_ty, body_ty) ->
+    | Fun_type (name, lazy param_ty, body_ty) ->
         let x = Neu (Var (Env.next_level size)) in
-        let param_ty = quote size (Lazy.force param_ty) in
+        let param_ty = quote size param_ty in
         let body_ty = quote (Env.bind_level size) (body_ty x) in
         Syntax.Fun_type (name, param_ty, body_ty)
-    | Fun_lit (name, param_ty, body) ->
+    | Fun_lit (name, lazy param_ty, body) ->
         let x = Neu (Var (Env.next_level size)) in
-        let param_ty = quote size (Lazy.force param_ty) in
+        let param_ty = quote size param_ty in
         let body = quote (Env.bind_level size) (body x) in
         Syntax.Fun_lit (name, param_ty, body)
   and quote_neu size : neu -> Syntax.tm = function
     | Var level -> Syntax.Var (Env.level_to_index size level)
-    | Fun_app (neu, arg) -> Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
+    | Fun_app (neu, lazy arg) -> Syntax.Fun_app (quote_neu size neu, quote size arg)
 
 
   (** {1 Normalisation} *)
@@ -152,13 +152,13 @@ module Semantics = struct
   let rec is_convertible size : vty * vty -> bool = function
     | Neu neu1, Neu neu2 -> is_convertible_neu size (neu1, neu2)
     | Univ l1, Univ l2 -> l1 = l2
-    | Fun_type (_, param_ty1, body_ty1), Fun_type (_, param_ty2, body_ty2) ->
+    | Fun_type (_, lazy param_ty1, body_ty1), Fun_type (_, lazy param_ty2, body_ty2) ->
         let x = Neu (Var (Env.next_level size)) in
-        is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
+        is_convertible size (param_ty1, param_ty2)
           && is_convertible (Env.bind_level size) (body_ty1 x, body_ty2 x)
-    | Fun_lit (_, param_ty1, body1), Fun_lit (_, param_ty2, body2) ->
+    | Fun_lit (_, lazy param_ty1, body1), Fun_lit (_, lazy param_ty2, body2) ->
         let x = Neu (Var (Env.next_level size)) in
-        is_convertible size (Lazy.force param_ty1, Lazy.force param_ty2)
+        is_convertible size (param_ty1, param_ty2)
           && is_convertible (Env.bind_level size) (body1 x, body2 x)
     (* Eta for functions *)
     | Fun_lit (_, _, body), fun_tm | fun_tm, Fun_lit (_, _, body)  ->
@@ -167,9 +167,8 @@ module Semantics = struct
     | _, _ -> false
   and is_convertible_neu size : neu * neu -> bool = function
     | Var level1, Var level2 -> level1 = level2
-    | Fun_app (neu1, arg1), Fun_app (neu2, arg2)  ->
-        is_convertible_neu size (neu1, neu2)
-          && is_convertible size (Lazy.force arg1, Lazy.force arg2)
+    | Fun_app (neu1, lazy arg1), Fun_app (neu2, lazy arg2)  ->
+        is_convertible_neu size (neu1, neu2) && is_convertible size (arg1, arg2)
     | _, _ -> false
 
 end
@@ -251,8 +250,8 @@ module Validation = struct
     (* Elimination rule for functions *)
     | Fun_app (head, arg) ->
         match synth ctx head with
-        | Fun_type (_, param_ty, body_ty) ->
-            check ctx arg (Lazy.force param_ty);
+        | Fun_type (_, lazy param_ty, body_ty) ->
+            check ctx arg param_ty;
             body_ty (Semantics.eval ctx.tms arg)
         | _ -> raise (Error "expected a function type")
 

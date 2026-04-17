@@ -314,18 +314,18 @@ module Semantics = struct
     match tm with
     | Neu neu -> quote_neu size neu
     | Univ -> Syntax.Univ
-    | Fun_type (name, param_vty, body_vty) ->
-        let param_ty = quote size (Lazy.force param_vty) in
-        let body_ty = quote (size + 1) (inst_clos body_vty (Lazy.from_val (Neu (Var size)))) in
+    | Fun_type (name, lazy param_vty, body_vty) ->
+        let param_ty = quote size param_vty in
+        let body_ty = quote (size + 1) (inst_clos body_vty (lazy (Neu (Var size)))) in
         Syntax.Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        Fun_lit (name, quote (size + 1) (inst_clos body (Lazy.from_val (Neu (Var size)))))
+        Fun_lit (name, quote (size + 1) (inst_clos body (lazy (Neu (Var size)))))
   and quote_neu (size : level) (neu : neu) : Syntax.tm =
     match neu with
     | Var level ->
         Syntax.Var (level_to_index size level)
-    | Fun_app (neu, arg) ->
-        Syntax.Fun_app (quote_neu size neu, quote size (Lazy.force arg))
+    | Fun_app (neu, lazy arg) ->
+        Syntax.Fun_app (quote_neu size neu, quote size arg)
 
 
   (** {1 Normalisation} *)
@@ -349,24 +349,23 @@ module Semantics = struct
     match vtm1, vtm2 with
     | Neu neu1, Neu neu2 -> is_convertible_neu size neu1 neu2
     | Univ, Univ -> true
-    | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
-        let x = Lazy.from_val (Neu (Var size)) in
-        is_convertible size (Lazy.force param_vty1) (Lazy.force param_vty2)
+    | Fun_type (_, lazy param_vty1, body_vty1), Fun_type (_, lazy param_vty2, body_vty2) ->
+        let x = lazy (Neu (Var size)) in
+        is_convertible size param_vty1 param_vty2
           && is_convertible (size + 1) (inst_clos body_vty1 x) (inst_clos body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
-        let x = Lazy.from_val (Neu (Var size)) in
+        let x = lazy (Neu (Var size)) in
         is_convertible (size + 1) (inst_clos body1 x) (inst_clos body2 x)
     (* Eta for functions *)
     | Fun_lit (_, body), fun_vtm | fun_vtm, Fun_lit (_, body)  ->
-        let x = Lazy.from_val (Neu (Var size)) in
+        let x = lazy (Neu (Var size)) in
         is_convertible size (inst_clos body x) (fun_app fun_vtm x)
     | _, _ -> false
   and is_convertible_neu (size : level) (neu1 : neu) (neu2 : neu) =
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
-    | Fun_app (neu1, arg1), Fun_app (neu2, arg2)  ->
-        is_convertible_neu size neu1 neu2
-          && is_convertible size (Lazy.force arg1) (Lazy.force arg2)
+    | Fun_app (neu1, lazy arg1), Fun_app (neu2, lazy arg2)  ->
+        is_convertible_neu size neu1 neu2 && is_convertible size arg1 arg2
     | _, _ -> false
 
 end
