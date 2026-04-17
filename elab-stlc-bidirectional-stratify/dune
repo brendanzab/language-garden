@@ -19,4 +19,9 @@
 
 (cram
  (package elab-stlc-bidirectional-stratify)
- (deps %{bin:stlc-bidirectional-stratify}))
+ (deps %{bin:stlc-bidirectional-stratify})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:stlc-bidirectional-stratify}"))

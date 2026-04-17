@@ -1,5 +1,3 @@
-  $ alias executable=dependent
-
 Usage
   $ executable
   Usage: dependent [--help] COMMAND …

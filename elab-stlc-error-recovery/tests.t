@@ -1,5 +1,3 @@
-  $ alias executable=stlc-error-recovery
-
 Primitive operations
   $ executable elab <<< "#bool-eq"
   > executable elab <<< "#int-eq"

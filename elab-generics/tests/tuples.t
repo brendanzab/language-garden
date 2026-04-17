@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=generics
-
---------------------------------------------------------------------------------
-
 Infer unit
   $ executable elab <<< "()"
   () : ()

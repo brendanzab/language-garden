@@ -1,5 +1,8 @@
 (cram
  (package elab-stlc-abstract)
- (deps
-  %{bin:stlc-abstract}
-  (glob_files ./*.txt)))
+ (deps %{bin:stlc-abstract} (glob_files ./*.txt))
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:stlc-abstract}"))

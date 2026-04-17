@@ -1,7 +1,3 @@
-  $ alias executable=stlc-row-unification
-
---------------------------------------------------------------------------------
-
 Record literal
   $ executable elab <<< "{ x := 1; y := 2; foo := { bar := true } }"
   { foo := { bar := true }; x := 1; y := 2 } :

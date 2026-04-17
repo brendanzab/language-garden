@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=generics
-
---------------------------------------------------------------------------------
-
 Factorial
   $ cat >fact.txt <<EOF
   > let rec fact n :=

@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=generics-lettype
-
---------------------------------------------------------------------------------
-
 Simple type definition
   $ executable elab <<< "let type Nat := Int; 4 : Nat"
   let type Nat := Int;

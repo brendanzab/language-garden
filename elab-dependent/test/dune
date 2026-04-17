@@ -1,3 +1,8 @@
 (cram
  (package elab-dependent)
- (deps %{bin:dependent}))
+ (deps %{bin:dependent})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:dependent}"))

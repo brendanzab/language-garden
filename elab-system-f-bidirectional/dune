@@ -19,4 +19,9 @@
 
 (cram
  (package elab-system-f-bidirectional)
- (deps %{bin:system-f-bidirectional}))
+ (deps %{bin:system-f-bidirectional})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:system-f-bidirectional}"))

@@ -19,4 +19,9 @@
 
 (cram
  (package elab-stlc-error-recovery)
- (deps %{bin:stlc-error-recovery}))
+ (deps %{bin:stlc-error-recovery})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:stlc-error-recovery}"))

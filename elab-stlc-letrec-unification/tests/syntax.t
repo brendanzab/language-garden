@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=stlc-letrec-unification
-
---------------------------------------------------------------------------------
-
 Lexer Errors
 ------------
 

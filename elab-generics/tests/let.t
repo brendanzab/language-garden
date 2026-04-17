@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=generics
-
---------------------------------------------------------------------------------
-
 Simple definition
   $ executable elab <<< "let x := 2; x"
   let x : Int := 2;

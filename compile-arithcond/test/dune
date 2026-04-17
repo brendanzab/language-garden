@@ -1,6 +1,11 @@
 (cram
  (package compile-arithcond)
- (deps %{bin:arithcond}))
+ (deps %{bin:arithcond})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:arithcond}"))
 
 (tests
  (names properties)

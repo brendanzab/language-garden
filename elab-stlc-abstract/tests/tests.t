@@ -1,5 +1,3 @@
-  $ alias executable=stlc-abstract
-
 Test files
 ----------
 

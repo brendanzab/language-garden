@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=stlc-row-unification
-
---------------------------------------------------------------------------------
-
 Lexer Errors
 ------------
 

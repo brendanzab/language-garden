@@ -1,7 +1,3 @@
-  $ alias executable=stlc-row-unification
-
---------------------------------------------------------------------------------
-
 Variant literal
   $ executable elab <<< "[some := 1]"
   [some := 1] : [some : Int] : [some : Int]

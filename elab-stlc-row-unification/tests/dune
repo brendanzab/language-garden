@@ -1,3 +1,8 @@
 (cram
  (package elab-stlc-row-unification)
- (deps %{bin:stlc-row-unification}))
+ (deps %{bin:stlc-row-unification})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:stlc-row-unification}"))

@@ -19,4 +19,9 @@
 
 (cram
  (package elab-stlc-bidirectional)
- (deps %{bin:stlc-bidirectional}))
+ (deps %{bin:stlc-bidirectional})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:stlc-bidirectional}"))

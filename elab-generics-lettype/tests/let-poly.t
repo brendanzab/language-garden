@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=generics-lettype
-
---------------------------------------------------------------------------------
-
 Identity function
   $ executable elab <<< "let id [A] (x : A) : A := x; id 42"
   let id [A] : A -> A := fun (x : A) => x;

@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=generics
-
---------------------------------------------------------------------------------
-
 Factorial in terms of the fixed-point combinator
   $ cat >fix.txt <<EOF
   > let rec fix [A, B] (f : (A -> B) -> A -> B) (x : A) : B :=

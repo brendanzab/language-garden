@@ -1,3 +1,8 @@
 (cram
  (package elab-generics-lettype)
- (deps %{bin:generics-lettype}))
+ (deps %{bin:generics-lettype})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:generics-lettype}"))

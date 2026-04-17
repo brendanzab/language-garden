@@ -1,3 +1,8 @@
 (cram
  (package elab-dependent-sugar)
- (deps %{bin:dependent-sugar}))
+ (deps %{bin:dependent-sugar})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:dependent-sugar}"))

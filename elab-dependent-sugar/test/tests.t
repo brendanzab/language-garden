@@ -1,5 +1,3 @@
-  $ alias executable=dependent-sugar
-
 Usage
   $ executable
   Usage: dependent-sugar [--help] COMMAND …

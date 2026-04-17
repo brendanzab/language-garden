@@ -1,3 +1,8 @@
 (cram
  (package elab-stlc-letrec-unification)
- (deps %{bin:stlc-letrec-unification}))
+ (deps %{bin:stlc-letrec-unification})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:stlc-letrec-unification}"))

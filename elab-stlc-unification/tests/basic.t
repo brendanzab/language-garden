@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=stlc-unification
-
---------------------------------------------------------------------------------
-
 Integers
   $ executable elab <<< "3 : _"
   3 : Int

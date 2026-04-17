@@ -1,5 +1,3 @@
-  $ alias executable=arithcond
-
 Usage
   $ executable
   Usage: arithcond [--help] COMMAND …

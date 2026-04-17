@@ -1,8 +1,3 @@
-Initial setup
-  $ alias executable=stlc-row-unification
-
---------------------------------------------------------------------------------
-
 Check id function
   $ executable elab <<< "(fun x => x) : Bool -> Bool"
   fun (x : Bool) => x : Bool -> Bool
