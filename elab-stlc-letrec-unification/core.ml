@@ -107,7 +107,7 @@ module Semantics = struct
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
     | Neu of ntm
-    | Fun_lit of name * ty * (eval_opts -> vtm -> vtm)
+    | Fun_lit of name * ty * clos
     | Record_lit of vtm Label_map.t
     | Bool_lit of bool
     | Int_lit of int
@@ -122,49 +122,20 @@ module Semantics = struct
   and ntm =
     | Var of level
     | Prim_app of Prim.t * vtm list
-    | Fix of name * ty * (eval_opts -> vtm -> vtm)
+    | Fix of name * ty * clos
     | Fun_app of ntm * vtm
     | Record_proj of ntm * label
-    | Bool_elim of ntm * (eval_opts -> vtm) * (eval_opts -> vtm)
+    | Bool_elim of ntm * thunk * thunk
 
+  (** Closures that can be instantiated with a value. The environment provides
+      a value for each variable in the term, except for the variable that the
+      closure will be instantiated with during evaluation. *)
+  and clos =
+    | Clos of vtm list * tm
 
-  (** {1 Eliminators} *)
-
-  let prim_app (prim : Prim.t) (args : vtm list) : vtm =
-    match prim, args with
-    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
-    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
-    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
-    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
-    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
-    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
-    | prim, args -> Neu (Prim_app (prim, args))
-
-  let rec fun_app (opts : eval_opts) (head : vtm) (arg : vtm) : vtm =
-    match head with
-    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
-    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
-        fun_app opts (body opts head) arg
-    | Neu ntm -> Neu (Fun_app (ntm, arg))
-    | Fun_lit (_, _, body) -> body opts arg
-    | _ -> invalid_arg "expected function"
-
-  let rec record_proj (opts : eval_opts) (head : vtm) (label : label) =
-    match head with
-    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
-        record_proj opts (body opts head) label
-    | Neu ntm -> Neu (Record_proj (ntm, label))
-    | Record_lit elems -> Label_map.find label elems
-    | _ -> invalid_arg "expected tuple"
-
-  let rec bool_elim (opts : eval_opts) (head : vtm) (vtm1 : eval_opts -> vtm) (vtm2 : eval_opts -> vtm) : vtm =
-    match head with
-    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
-        bool_elim opts (body opts head) vtm1 vtm2
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> vtm1 opts
-    | Bool_lit false -> vtm2 opts
-    | _ -> invalid_arg "expected boolean"
+  (** A delayed computation, used in the branches of conditionals. *)
+  and thunk =
+    | Thunk of vtm list * tm
 
 
   (** {1 Evaluation} *)
@@ -175,30 +146,69 @@ module Semantics = struct
     | Var index -> List.nth env index
     | Prim prim -> prim_app prim []
     | Let (_, _, def, body) ->
-        let def = eval ~opts env def in
-        eval ~opts (def :: env) body
+        eval ~opts (eval ~opts env def :: env) body
     | Fix (name, self_ty, body) ->
-        let body' opts self = eval ~opts (self :: env) body in
-        Neu (Fix (name, self_ty, body'))
+        Neu (Fix (name, self_ty, Clos (env, body)))
     | Fun_lit (name, param_ty, body) ->
-        let body opts arg = eval ~opts (arg :: env) body in
-        Fun_lit (name, param_ty, body)
+        Fun_lit (name, param_ty, Clos (env, body))
     | Fun_app (head, arg) ->
-        let head = eval ~opts env head in
-        let arg = eval ~opts env arg in
-        fun_app opts head arg
+        fun_app ~opts (eval ~opts env head) (eval ~opts env arg)
     | Record_lit defs ->
         Record_lit (Label_map.map (eval ~opts env) defs)
     | Record_proj (head, label) ->
-        let head = eval ~opts env head in
-        record_proj opts head label
+        record_proj ~opts (eval ~opts env head) label
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
     | Bool_elim (head, tm1, tm2) ->
         let head = eval ~opts env head in
-        let vtm1 opts = eval ~opts env tm1 in
-        let vtm2 opts = eval ~opts env tm2 in
-        bool_elim opts head vtm1 vtm2
+        bool_elim ~opts head (Thunk (env, tm1)) (Thunk (env, tm2))
+
+  (** Instantiate a closure with a value *)
+  and inst_clos ~(opts : eval_opts) (Clos (env, body) : clos) (arg : vtm) : vtm =
+    eval ~opts (arg :: env) body
+
+  (** Force the computation of a thunk *)
+  and force_thunk ~(opts : eval_opts) (Thunk (env, body) : thunk) : vtm =
+    eval ~opts env body
+
+
+  (** {1 Eliminators} *)
+
+  and prim_app (prim : Prim.t) (args : vtm list) : vtm =
+    match prim, args with
+    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
+    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
+    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
+    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
+    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
+    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+    | prim, args -> Neu (Prim_app (prim, args))
+
+  and fun_app ~(opts : eval_opts) (head : vtm) (arg : vtm) : vtm =
+    match head with
+    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
+    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
+        fun_app ~opts (inst_clos ~opts body head) arg
+    | Neu ntm -> Neu (Fun_app (ntm, arg))
+    | Fun_lit (_, _, body) -> inst_clos ~opts body arg
+    | _ -> invalid_arg "expected function"
+
+  and record_proj ~(opts : eval_opts) (head : vtm) (label : label) =
+    match head with
+    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
+        record_proj ~opts (inst_clos ~opts body head) label
+    | Neu ntm -> Neu (Record_proj (ntm, label))
+    | Record_lit elems -> Label_map.find label elems
+    | _ -> invalid_arg "expected tuple"
+
+  and bool_elim ~(opts : eval_opts) (head : vtm) (vtm1 : thunk) (vtm2 : thunk) : vtm =
+    match head with
+    | Neu (Fix (_, _, body)) when opts.unfold_fix ->
+        bool_elim ~opts (inst_clos ~opts body head) vtm1 vtm2
+    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
+    | Bool_lit true -> force_thunk ~opts vtm1
+    | Bool_lit false -> force_thunk ~opts vtm2
+    | _ -> invalid_arg "expected boolean"
 
 
   (** {1 Quotation} *)
@@ -208,7 +218,7 @@ module Semantics = struct
     match vtm with
     | Neu ntm -> quote_neu ~opts size ntm
     | Fun_lit (name, param_ty, body) ->
-        let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
+        let body = quote ~opts (size + 1) (inst_clos ~opts body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
     | Record_lit defs ->
         Record_lit (Label_map.map (quote ~opts size) defs)
@@ -222,15 +232,15 @@ module Semantics = struct
     | Prim_app (prim, arg :: args) ->
         Fun_app (quote_neu ~opts size (Prim_app (prim, args)), quote ~opts size arg)
     | Fix (name, self_ty, body) ->
-        let body = quote ~opts (size + 1) (body opts (Neu (Var size))) in
+        let body = quote ~opts (size + 1) (inst_clos ~opts body (Neu (Var size))) in
         Fix (name, self_ty, body)
     | Fun_app (head, arg) ->
         Fun_app (quote_neu ~opts size head, quote ~opts size arg)
     | Record_proj (head, label) ->
         Record_proj (quote_neu ~opts size head, label)
     | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote ~opts size (vtm1 opts) in
-        let tm2 = quote ~opts size (vtm2 opts) in
+        let tm1 = quote ~opts size (force_thunk ~opts vtm1) in
+        let tm2 = quote ~opts size (force_thunk ~opts vtm2) in
         Bool_elim (quote_neu ~opts size head, tm1, tm2)
 
 

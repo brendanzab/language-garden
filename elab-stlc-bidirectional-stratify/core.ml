@@ -68,7 +68,7 @@ module Semantics = struct
   (** Expressions in weak head normal form (i.e. values) *)
   type vexpr =
     | Neu of nexpr
-    | Fun_lit of name * ty * (vexpr -> vexpr)
+    | Fun_lit of name * ty * clos
     | Int_lit of int
     | Bool_lit of bool
 
@@ -83,12 +83,49 @@ module Semantics = struct
     | Var of level
     | Prim_app of Prim.t * vexpr list
     | Fun_app of nexpr * vexpr
-    | Bool_elim of nexpr * (unit -> vexpr) * (unit -> vexpr)
+    | Bool_elim of nexpr * thunk * thunk
+
+  (** Closures that can be instantiated with a value. The environment provides
+      a value for each variable in the term, except for the variable that the
+      closure will be instantiated with during evaluation. *)
+  and clos =
+    | Clos of vexpr list * expr
+
+  (** A delayed computation, used in the branches of conditionals. *)
+  and thunk =
+    | Thunk of vexpr list * expr
+
+
+  (** {1 Evaluation} *)
+
+  (** Evaluate an expression from the syntax into its semantic interpretation *)
+  let rec eval (env : vexpr env) (expr : expr) : vexpr =
+    match expr with
+    | Var index -> List.nth env index
+    | Prim prim -> prim_app prim []
+    | Let (_, _, def, body) ->
+        eval (eval env def :: env) body
+    | Fun_lit (name, param_ty, body) ->
+        Fun_lit (name, param_ty, Clos (env, body))
+    | Fun_app (head, arg) ->
+        fun_app (eval env head) (eval env arg)
+    | Int_lit i -> Int_lit i
+    | Bool_lit b -> Bool_lit b
+    | Bool_elim (head, expr1, expr2) ->
+        bool_elim (eval env head) (Thunk (env, expr1)) (Thunk (env, expr2))
+
+  (** Instantiate a closure with a value *)
+  and inst_clos (Clos (env, body) : clos) (arg : vexpr) : vexpr =
+    eval (arg :: env) body
+
+  (** Force the computation of a thunk *)
+  and force_thunk (Thunk (env, body) : thunk) : vexpr =
+    eval env body
 
 
   (** {1 Eliminators} *)
 
-  let prim_app (prim : Prim.t) (args : vexpr list) : vexpr =
+  and prim_app (prim : Prim.t) (args : vexpr list) : vexpr =
     match prim, args with
     | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
     | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
@@ -98,54 +135,29 @@ module Semantics = struct
     | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
     | prim, args -> Neu (Prim_app (prim, args))
 
-  let fun_app (head : vexpr) (arg : vexpr) : vexpr =
+  and fun_app (head : vexpr) (arg : vexpr) : vexpr =
     match head with
     | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
     | Neu nexpr -> Neu (Fun_app (nexpr, arg))
-    | Fun_lit (_, _, body) -> body arg
+    | Fun_lit (_, _, body) -> inst_clos body arg
     | _ -> invalid_arg "expected function"
 
-  let bool_elim (head : vexpr) (vexpr1 : unit -> vexpr) (vexpr2 : unit -> vexpr) : vexpr =
+  and bool_elim (head : vexpr) (vexpr1 : thunk) (vexpr2 : thunk) : vexpr =
     match head with
     | Neu nexpr -> Neu (Bool_elim (nexpr, vexpr1, vexpr2))
-    | Bool_lit true -> vexpr1 ()
-    | Bool_lit false -> vexpr2 ()
+    | Bool_lit true -> force_thunk vexpr1
+    | Bool_lit false -> force_thunk vexpr2
     | _ -> invalid_arg "expected boolean"
-
-
-  (** {1 Evaluation} *)
-
-  (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vexpr env) (e : expr) : vexpr =
-    match e with
-    | Var index -> List.nth env index
-    | Prim prim -> prim_app prim []
-    | Let (_, _, def, body) ->
-        let def = eval env def in
-        eval (def :: env) body
-    | Fun_lit (name, param_ty, body) ->
-        Fun_lit (name, param_ty, fun arg -> eval (arg :: env) body)
-    | Fun_app (head, arg) ->
-        let head = eval env head in
-        let arg = eval env arg in
-        fun_app head arg
-    | Int_lit i -> Int_lit i
-    | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, e1, e2) ->
-        let head = eval env head in
-        let ve1 () = eval env e1 in
-        let ve2 () = eval env e2 in
-        bool_elim head ve1 ve2
 
 
   (** {1 Quotation} *)
 
-  (** Convert terms from the semantic domain back into syntax. *)
+  (** Convert expressions from the semantic domain back into syntax. *)
   let rec quote (size : level) (ve : vexpr) : expr =
     match ve with
     | Neu ne -> quote_neu size ne
     | Fun_lit (name, param_ty, body) ->
-        let body = quote (size + 1) (body (Neu (Var size))) in
+        let body = quote (size + 1) (inst_clos body (Neu (Var size))) in
         Fun_lit (name, param_ty, body)
     | Int_lit i -> Int_lit i
     | Bool_lit b -> Bool_lit b
@@ -160,8 +172,8 @@ module Semantics = struct
     | Fun_app (head, arg) ->
         Fun_app (quote_neu size head, quote size arg)
     | Bool_elim (head, vexpr1, vexpr2) ->
-        let e1 = quote size (vexpr1 ()) in
-        let e2 = quote size (vexpr2 ()) in
+        let e1 = quote size (force_thunk vexpr1) in
+        let e2 = quote size (force_thunk vexpr2) in
         Bool_elim (quote_neu size head, e1, e2)
 
 
