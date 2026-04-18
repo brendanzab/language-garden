@@ -474,8 +474,7 @@ end = struct
           let head = check ctx head Semantics.Univ in
           begin match Ctx.eval ctx head with
           | Semantics.Rec_type decls ->
-              let decls = go ctx decls patches in
-              Syntax.Rec_type decls, Semantics.Univ
+              Syntax.Rec_type (go ctx decls patches), Semantics.Univ
           | _ -> error head_span "can only patch record types"
           end
 
