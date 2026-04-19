@@ -474,18 +474,18 @@ module Semantics = struct
     match vtm1, vtm2 with
     | Neu neu1, Neu neu2 -> is_convertible_ntm size neu1 neu2
     | Univ, Univ -> true
-    | Fun_type (_, lazy param_vty1, body_vty1), Fun_type (_, lazy param_vty2, body_vty2) ->
+    | Fun_type (_, param_vty1, body_vty1), Fun_type (_, param_vty2, body_vty2) ->
         let x = lazy (next_var size) in
-        is_convertible size param_vty1 param_vty2
+        is_convertible_lazy size param_vty1 param_vty2
           && is_convertible (size + 1) (inst_clos body_vty1 x) (inst_clos body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
         let x = lazy (next_var size) in
         is_convertible (size + 1) (inst_clos body1 x) (inst_clos body2 x)
     | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
-    | Sing_type (vty1, lazy sing_vtm1), Sing_type (vty2, lazy sing_vtm2) ->
+    | Sing_type (vty1, sing_vtm1), Sing_type (vty2, sing_vtm2) ->
         is_convertible size vty1 vty2
-          && is_convertible size sing_vtm1 sing_vtm2
+          && is_convertible_lazy size sing_vtm1 sing_vtm2
     | Sing_intro, Sing_intro -> true
 
     (* Eta rules *)
@@ -499,12 +499,16 @@ module Semantics = struct
 
     | _, _ -> false
 
+  and is_convertible_lazy (size : level) (vtm1 : vtm Lazy.t) (vtm2 : vtm Lazy.t) : bool =
+    vtm1 == vtm2 (* Fast path, avoiding forcing when the values are physically identical *)
+      || is_convertible size (Lazy.force vtm1) (Lazy.force vtm2)
+
   and is_convertible_ntm (size : level) (neu1 : ntm) (neu2 : ntm) =
     match neu1, neu2 with
     | Var level1, Var level2 -> level1 = level2
-    | Fun_app (func1, lazy arg1), Fun_app (func2, lazy arg2) ->
+    | Fun_app (func1, arg1), Fun_app (func2, arg2) ->
         is_convertible_ntm size func1 func2
-          && is_convertible size arg1 arg2
+          && is_convertible_lazy size arg1 arg2
     | Rec_proj (record1, label1), Rec_proj (record2, label2) ->
         label1 = label2 && is_convertible_ntm size record1 record2
     | _, _ -> false
