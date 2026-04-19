@@ -13,8 +13,8 @@ module Id : sig
   val fresh : unit -> t
   (** Generate a new, unique id *)
 
-  module Map : Map.S
-    with type key = t
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
 
 end = struct
 
@@ -27,9 +27,12 @@ end = struct
     incr next_id;
     i
 
-  module Map = Map.Make (Int)
+  let equal = Int.equal
+  let compare = Int.compare
 
 end
+
+module Id_map = Map.Make (Id)
 
 
 (** {1 Syntax} *)
@@ -53,18 +56,18 @@ let of_named (e : Named.expr) : expr =
   go [] e
 
 let to_named (e : expr) : Named.expr =
-  let rec go (ns : Named.String_set.t) (m : string Id.Map.t) (e : expr) : Named.expr =
+  let rec go (ns : Named.String_set.t) (m : string Id_map.t) (e : expr) : Named.expr =
     match e with
-    | Var i -> Var (Id.Map.find i m)
+    | Var i -> Var (Id_map.find i m)
     | Let (x, i, def, body) ->
         let x = Named.fresh ns x in
-        Let (x, go ns m def, go (Named.String_set.add x ns) (Id.Map.add i x m) body)
+        Let (x, go ns m def, go (Named.String_set.add x ns) (Id_map.add i x m) body)
     | Fun_lit (x, i, body) ->
         let x = Named.fresh ns x in
-        Fun_lit (x, go (Named.String_set.add x ns) (Id.Map.add i x m) body)
+        Fun_lit (x, go (Named.String_set.add x ns) (Id_map.add i x m) body)
     | Fun_app (head, arg) -> Fun_app (go ns m head, go ns m arg)
   in
-  go Named.String_set.empty Id.Map.empty e
+  go Named.String_set.empty Id_map.empty e
 
 (** {2 Alpha Equivalence} *)
 
@@ -76,43 +79,43 @@ let alpha_equiv (e1 : expr) (e2 : expr) =
     {{: https://davidchristiansen.dk/tutorials/implementing-types-hs.pdf}
     “Checking Dependent Types with Normalization by Evaluation: A Tutorial
     (Haskell Version)”} by David Christiansen. *)
-  let rec go (size : int) (ns1, e1 : int Id.Map.t * expr) (ns2, e2 : int Id.Map.t * expr) : bool =
+  let rec go (size : int) (ns1, e1 : int Id_map.t * expr) (ns2, e2 : int Id_map.t * expr) : bool =
     match e1, e2 with
     | Var i1, Var i2 -> begin
-        match Id.Map.find_opt i1 ns1, Id.Map.find_opt i2 ns2 with
-        | None, None -> i1 = i2
+        match Id_map.find_opt i1 ns1, Id_map.find_opt i2 ns2 with
+        | None, None -> Id.equal i1 i2
         | Some l1, Some l2  -> l1 = l2
         | _, _ -> false
     end
     | Let (_, i1, def1, body1), Let (_, i2, def2, body2) ->
         go size (ns1, def1) (ns2, def2)
-          && go (size + 1) (Id.Map.add i1 size ns1, body1) (Id.Map.add i2 size ns2, body2)
+          && go (size + 1) (Id_map.add i1 size ns1, body1) (Id_map.add i2 size ns2, body2)
     | Fun_lit (_, i1, body1), Fun_lit (_, i2, body2) ->
-        go (size + 1) (Id.Map.add i1 size ns1, body1) (Id.Map.add i2 size ns2, body2)
+        go (size + 1) (Id_map.add i1 size ns1, body1) (Id_map.add i2 size ns2, body2)
     | Fun_app (head1, arg1), Fun_app (head2, arg2) ->
         go size (ns1, head1) (ns2, head2) && go size (ns1, arg1) (ns2, arg2)
     | _, _ -> false
   in
-  go 0 (Id.Map.empty, e1) (Id.Map.empty, e2)
+  go 0 (Id_map.empty, e1) (Id_map.empty, e2)
 
 (** {2 Substitution} *)
 
 let subst (i, s : Id.t * expr) (e : expr) : expr =
   let clone (e : expr) : expr =
     (* Rename all binders with fresh ids *)
-    let rec rename (m : Id.t Id.Map.t) (e : expr) : expr =
+    let rec rename (m : Id.t Id_map.t) (e : expr) : expr =
       match e with
       | Var i -> begin
-          match Id.Map.find_opt i m with
+          match Id_map.find_opt i m with
           | None -> e
           | Some i -> Var i
       end
       | Let (x, i, def, body) ->
           let i' = Id.fresh () in
-          Let (x, i', rename m def, rename (Id.Map.add i i' m) body)
+          Let (x, i', rename m def, rename (Id_map.add i i' m) body)
       | Fun_lit (x, i, body) ->
           let i' = Id.fresh () in
-          Fun_lit (x, i', rename (Id.Map.add i i' m) body)
+          Fun_lit (x, i', rename (Id_map.add i i' m) body)
       | Fun_app (head, arg) ->
           Fun_app (rename m head, rename m arg)
     in
@@ -121,7 +124,7 @@ let subst (i, s : Id.t * expr) (e : expr) : expr =
       match e with
       | Var _ -> None
       | Let _ | Fun_lit _ ->
-          Some (rename Id.Map.empty e)
+          Some (rename Id_map.empty e)
       | Fun_app (head, arg) -> begin
           match rename_binders head, rename_binders arg with
           | Some head, None -> Some (Fun_app (head, arg))
@@ -135,7 +138,7 @@ let subst (i, s : Id.t * expr) (e : expr) : expr =
   in
   let rec go (e : expr) : expr =
     match e with
-    | Var j -> if i = j then clone s else e
+    | Var j -> if Id.equal i j then clone s else e
     | Let (x, j, def, body) -> Let (x, j, go def, go body)
     | Fun_lit (x, j, body) -> Fun_lit (x, j, go body)
     | Fun_app (head, arg) -> Fun_app (go head, go arg)

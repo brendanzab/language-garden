@@ -58,10 +58,10 @@ module Unique : Lang = Unique
 
 module Unique_nbe_closures : Lang = struct
   include Unique_nbe_closures
-  let normalise = normalise Id.Map.empty
+  let normalise = normalise Id_map.empty
 end
 
 module Unique_nbe_hoas : Lang = struct
   include Unique_nbe_hoas
-  let normalise = normalise Id.Map.empty
+  let normalise = normalise Id_map.empty
 end

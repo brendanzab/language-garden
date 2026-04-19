@@ -4,6 +4,7 @@
 *)
 
 module Id = Unique.Id
+module Id_map = Unique.Id_map
 
 
 (** {1 Syntax} *)
@@ -40,15 +41,15 @@ and neu =
   | Fun_app of neu * value
 
 and clos = Id.t * env * expr
-and env = value Id.Map.t
+and env = value Id_map.t
 
 (** {2 Evaluation} *)
 
 let rec eval (vs : env) (e : expr) : value =
   match e with
-  | Var x -> Id.Map.find x vs
-  | Let (_, i, def, body) -> eval (Id.Map.add i (eval vs def) vs) body
-  | Fun_lit (x, i, body) -> Fun_lit (x, fun v -> eval (Id.Map.add i v vs) body)
+  | Var x -> Id_map.find x vs
+  | Let (_, i, def, body) -> eval (Id_map.add i (eval vs def) vs) body
+  | Fun_lit (x, i, body) -> Fun_lit (x, fun v -> eval (Id_map.add i v vs) body)
   | Fun_app (head, arg) -> fun_app (eval vs head) (eval vs arg)
 
 and fun_app (head : value) (arg : value) =
