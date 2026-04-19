@@ -119,7 +119,7 @@ end = struct
     let add_param (ctx : t) (name : string option) (vty : Semantics.vty) =
       add_def ctx name vty (next_var ctx)
 
-    let lookup (ctx : t) (name : string) : (Core.index * Core.Semantics.vty) option =
+    let lookup (ctx : t) (name : string) : (Core.index * Semantics.vty) option =
       (* Find the index of most recent binding in the context identified by
           [name], starting from the most recent binding. This gives us the
           corresponding de Bruijn index of the variable. *)
@@ -336,10 +336,10 @@ end = struct
 
   (** {2 Public API} *)
 
-  let check (tm : tm) (vty : Semantics.vty) : (Core.Syntax.tm, span * string) result =
+  let check (tm : tm) (vty : Semantics.vty) : (Syntax.tm, span * string) result =
     run_elab (fun () -> check Ctx.empty tm vty)
 
-  let infer (tm : tm) : (Core.Syntax.tm * Core.Semantics.vty, span * string) result =
+  let infer (tm : tm) : (Syntax.tm * Semantics.vty, span * string) result =
     run_elab (fun () -> infer Ctx.empty tm)
 
 end
