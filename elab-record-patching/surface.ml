@@ -99,7 +99,7 @@ end = struct
 
     (** Returns the next variable that will be bound in the context after
         calling {!add_def} or {!add_param} *)
-    val next_var : t -> Semantics.vtm Lazy.t
+    val next_var : t -> Semantics.vtm
 
     (** Binds a definition in the context *)
     val add_def : t -> string option -> Semantics.vtm -> Semantics.vtm Lazy.t -> t
@@ -135,8 +135,8 @@ end = struct
       tm_env = [];
     }
 
-    let next_var (ctx : t) : Semantics.vtm Lazy.t =
-      lazy (Semantics.Neu (Semantics.Var ctx.size))
+    let next_var (ctx : t) : Semantics.vtm =
+      Semantics.next_var ctx.size
 
     let add_def (ctx : t) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm Lazy.t) = {
       size = ctx.size + 1;
@@ -146,7 +146,7 @@ end = struct
     }
 
     let add_param (ctx : t) (name : string option) (vty : Semantics.vty) =
-      add_def ctx name vty (next_var ctx)
+      add_def ctx name vty (lazy (next_var ctx))
 
     let lookup (ctx : t) (name : string) : (Core.index * Semantics.vty) option =
       (* Find the index of most recent binding in the context identified by
@@ -461,7 +461,7 @@ end = struct
                   let patches = List.remove_assoc label patches in
                   (label, Syntax.Sing_type (ty, tm)) :: go ctx (decls vtm) patches
               | None ->
-                  let var = Ctx.next_var ctx in
+                  let var = lazy (Ctx.next_var ctx) in
                   let ctx = Ctx.add_def ctx (Some label) vty var in
                   (label, ty) :: go ctx (decls var) patches
               end
@@ -489,7 +489,7 @@ end = struct
         check ctx body body_vty
 
     | (name, param_ty) :: params, body_ty, Semantics.Fun_type (_, lazy param_vty', body_vty') ->
-        let var = Ctx.next_var ctx in
+        let var = lazy (Ctx.next_var ctx) in
         let param_ty =
           match param_ty with
           | None -> param_vty'
@@ -516,7 +516,7 @@ end = struct
         let body_ty = check ctx body_ty Semantics.Univ in
         check ctx body (Ctx.eval ctx body_ty), body_ty
     | (name, param_ty) :: params, body_ty ->
-        let var = Ctx.next_var ctx in
+        let var = lazy (Ctx.next_var ctx) in
         let param_ty =
           match param_ty with
           (* We’re in inference mode, so function parameters need annotations *)

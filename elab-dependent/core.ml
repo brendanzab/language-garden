@@ -343,16 +343,20 @@ module Semantics = struct
       variables in the semantic domain back to an {!index} representation
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at. *)
+
+  let next_var (size : level) : vtm =
+    Neu (Var size)
+
   let rec quote (size : level) (tm : vtm) : Syntax.tm =
     match tm with
     | Neu ntm -> quote_ntm size ntm
     | Univ -> Syntax.Univ
     | Fun_type (name, lazy param_vty, body_vty) ->
         let param_ty = quote size param_vty in
-        let body_ty = quote (size + 1) (inst_clos body_vty (lazy (Neu (Var size)))) in
+        let body_ty = quote (size + 1) (inst_clos body_vty (lazy (next_var size))) in
         Syntax.Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        Fun_lit (name, quote (size + 1) (inst_clos body (lazy (Neu (Var size)))))
+        Fun_lit (name, quote (size + 1) (inst_clos body (lazy (next_var size))))
 
   and quote_ntm (size : level) (ntm : ntm) : Syntax.tm =
     match ntm with
@@ -381,19 +385,18 @@ module Semantics = struct
       functions. *)
   let rec is_convertible (size : level) (vtm1 : vtm) (vtm2 : vtm) : bool =
     match vtm1, vtm2 with
-    | Neu neu1, Neu neu2 ->
-        is_convertible_ntm size neu1 neu2
+    | Neu neu1, Neu neu2 -> is_convertible_ntm size neu1 neu2
     | Univ, Univ -> true
     | Fun_type (_, lazy param_vty1, body_vty1), Fun_type (_, lazy param_vty2, body_vty2) ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         is_convertible size param_vty1 param_vty2
           && is_convertible (size + 1) (inst_clos body_vty1 x) (inst_clos body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         is_convertible (size + 1) (inst_clos body1 x) (inst_clos body2 x)
     (* Eta for functions *)
     | Fun_lit (_, body), fun_vtm | fun_vtm, Fun_lit (_, body)  ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         is_convertible size (inst_clos body x) (fun_app fun_vtm x)
     | _, _ -> false
 

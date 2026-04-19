@@ -67,7 +67,7 @@ end = struct
 
     (** Returns the next variable that will be bound in the context after
         calling {!add_def} or {!add_param} *)
-    val next_var : t -> Semantics.vtm Lazy.t
+    val next_var : t -> Semantics.vtm
 
     (** Binds a definition in the context *)
     val add_def : t -> string option -> Semantics.vtm -> Semantics.vtm Lazy.t -> t
@@ -102,8 +102,8 @@ end = struct
       tm_env = [];
     }
 
-    let next_var (ctx : t) : Semantics.vtm Lazy.t =
-      lazy (Semantics.Neu (Semantics.Var ctx.size))
+    let next_var (ctx : t) : Semantics.vtm =
+      Semantics.next_var ctx.size
 
     let add_def (ctx : t) (name : string option) (vty : Semantics.vty) (vtm : Semantics.vtm Lazy.t) = {
       size = ctx.size + 1;
@@ -113,7 +113,7 @@ end = struct
     }
 
     let add_param (ctx : t) (name : string option) (vty : Semantics.vty) =
-      add_def ctx name vty (next_var ctx)
+      add_def ctx name vty (lazy (next_var ctx))
 
     let lookup (ctx : t) (name : string) : (Core.index * Semantics.vty) option =
       (* Find the index of most recent binding in the context identified by
@@ -177,7 +177,7 @@ end = struct
           | name :: names ->
               begin match body_vty with
               | Semantics.Fun_type (_, lazy param_vty, body_vty) ->
-                  let var = Ctx.next_var ctx in
+                  let var = lazy (Ctx.next_var ctx) in
                   let ctx = Ctx.add_def ctx name.data param_vty var in
                   Syntax.Fun_lit (name.data, go ctx names (Semantics.inst_clos body_vty var))
               | _ -> error tm.span "too many parameters in function literal"

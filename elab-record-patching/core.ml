@@ -411,17 +411,21 @@ module Semantics = struct
       with {!level_to_size}. It’s important to only use the resulting terms
       at binding depth that they were quoted at.
   *)
+
+  let next_var (size : level) : vtm =
+    Neu (Var size)
+
   let rec quote (size : level) (tm : vtm) : Syntax.tm =
     match tm with
     | Neu ntm -> quote_ntm size ntm
     | Univ -> Univ
     | Fun_type (name, lazy param_vty, body_vty) ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         let param_ty = quote size param_vty in
         let body_ty = quote (size + 1) (inst_clos body_vty x) in
         Fun_type (name, param_ty, body_ty)
     | Fun_lit (name, body) ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         Fun_lit (name, quote (size + 1) (inst_clos body x))
     | Rec_type decls -> Rec_type (quote_decls size decls)
     | Rec_lit defns ->
@@ -443,7 +447,7 @@ module Semantics = struct
     match uncons_decls decls with
     | None -> []
     | Some (label, ty, decls) ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         (label, quote size ty) :: quote_decls (size + 1) (decls x)
 
 
@@ -471,11 +475,11 @@ module Semantics = struct
     | Neu neu1, Neu neu2 -> is_convertible_ntm size neu1 neu2
     | Univ, Univ -> true
     | Fun_type (_, lazy param_vty1, body_vty1), Fun_type (_, lazy param_vty2, body_vty2) ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         is_convertible size param_vty1 param_vty2
           && is_convertible (size + 1) (inst_clos body_vty1 x) (inst_clos body_vty2 x)
     | Fun_lit (_, body1), Fun_lit (_, body2) ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         is_convertible (size + 1) (inst_clos body1 x) (inst_clos body2 x)
     | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
@@ -486,7 +490,7 @@ module Semantics = struct
 
     (* Eta rules *)
     | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         is_convertible size (inst_clos body x) (fun_app fun_tm x)
     | Rec_lit decls, rec_vtm | rec_vtm, Rec_lit decls ->
         decls |> List.for_all (fun (label, lazy elem) ->
@@ -509,7 +513,7 @@ module Semantics = struct
     match uncons_decls decls1, uncons_decls decls2 with
     | None, None -> true
     | Some (label1, vty1, decls1), Some (label2, vty2, decls2) when label1 = label2 ->
-        let x = lazy (Neu (Var size)) in
+        let x = lazy (next_var size) in
         is_convertible size vty1 vty2
           && is_convertible_decls (size + 1) (decls1 x) (decls2 x)
     | _, _ -> false
