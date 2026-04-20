@@ -301,7 +301,7 @@ module Semantics = struct
     | Fun_lit of name * clos
     | Rec_type of decls
     | Rec_lit of (label * vtm Lazy.t) list
-    | Sing_type of vty * vtm Lazy.t
+    | Sing_type of vty Lazy.t * vtm Lazy.t
     | Sing_intro                          (** Singleton introduction *)
 
   (** Neutral terms are terms that could not be reduced to a normal form as a
@@ -358,7 +358,7 @@ module Semantics = struct
         Rec_lit (defns |> List.map (fun (label, expr) -> (label, lazy (eval env expr))))
     | Rec_proj (head, label) -> record_proj (eval env head) label
     | Sing_type (ty, sing_tm) ->
-        Sing_type (eval env ty, lazy (eval env sing_tm))
+        Sing_type (lazy (eval env ty), lazy (eval env sing_tm))
     | Sing_intro -> Sing_intro
 
   (** Instantiate a closure with a value *)
@@ -430,7 +430,7 @@ module Semantics = struct
     | Rec_type decls -> Rec_type (quote_decls size decls)
     | Rec_lit defns ->
         Rec_lit (defns |> List.map (fun (label, lazy vtm) -> label, quote size vtm))
-    | Sing_type (vty, lazy sing_vtm) ->
+    | Sing_type (lazy vty, lazy sing_vtm) ->
         Sing_type (quote size vty, quote size sing_vtm)
     | Sing_intro -> Sing_intro
 
@@ -484,7 +484,7 @@ module Semantics = struct
     | Rec_type decls1, Rec_type decls2 ->
         is_convertible_decls size decls1 decls2
     | Sing_type (vty1, sing_vtm1), Sing_type (vty2, sing_vtm2) ->
-        is_convertible size vty1 vty2
+        is_convertible_lazy size vty1 vty2
           && is_convertible_lazy size sing_vtm1 sing_vtm2
     | Sing_intro, Sing_intro -> true
 

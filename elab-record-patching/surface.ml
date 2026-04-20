@@ -209,7 +209,7 @@ end = struct
 
     (* Coerce the term to a singleton with {!Syntax.Sing_intro}, if the term is
       convertible to the term expected by the singleton *)
-    | from_vty, Semantics.Sing_type (to_vty, lazy sing_vtm) ->
+    | from_vty, Semantics.Sing_type (lazy to_vty, lazy sing_vtm) ->
         check_convertible_vtms ctx span
           ~found:(Ctx.eval ctx (coerce span ctx from_vty to_vty tm))
           ~expected:sing_vtm;
@@ -217,7 +217,7 @@ end = struct
 
     (* Coerce the singleton back to its underlying term with {!Syntax.Sing_elim}
       and attempt further coercions from its underlying type *)
-    | Semantics.Sing_type (from_vty, lazy sing_tm), to_vty ->
+    | Semantics.Sing_type (lazy from_vty, lazy sing_tm), to_vty ->
         coerce span ctx from_vty to_vty (Ctx.quote ctx sing_tm)
 
     (* Coerce the fields of a record with record eta expansion *)
@@ -311,7 +311,7 @@ end = struct
 
     (* Singleton introduction. No need for any syntax in the surface language
         here, instead we use the type annotation to drive this. *)
-    | _, Semantics.Sing_type (vty, lazy sing_vtm) ->
+    | _, Semantics.Sing_type (lazy vty, lazy sing_vtm) ->
         check_convertible_vtms ctx tm.span
           ~found:(Ctx.eval ctx (check ctx tm vty))
           ~expected:sing_vtm;
@@ -457,7 +457,7 @@ end = struct
               | Some patch_tm ->
                   let tm = check ctx patch_tm vty in
                   let vtm = lazy (Ctx.eval ctx tm) in
-                  let ctx = Ctx.add_def ctx (Some label) (Semantics.Sing_type (vty, vtm)) vtm in
+                  let ctx = Ctx.add_def ctx (Some label) (Semantics.Sing_type (lazy vty, vtm)) vtm in
                   let patches = List.remove_assoc label patches in
                   (label, Syntax.Sing_type (ty, tm)) :: go ctx (decls vtm) patches
               | None ->
@@ -537,7 +537,7 @@ end = struct
   and elim_implicits (ctx : Ctx.t) (tm : Syntax.tm) (vty : Semantics.vty) : Syntax.tm * Semantics.vty =
     match vty with
     (* Eliminate the singleton, converting it back to its underlying term *)
-    | Semantics.Sing_type (vty, lazy sing_vtm) ->
+    | Semantics.Sing_type (lazy vty, lazy sing_vtm) ->
         elim_implicits ctx (Ctx.quote ctx sing_vtm) vty
     (* TODO: we can eliminate implicit functions here. See the elaboration-zoo
       for ideas on how to do this: https://github.com/AndrasKovacs/elaboration-zoo/blob/master/04-implicit-args/Elaboration.hs#L48-L53 *)
