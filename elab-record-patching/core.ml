@@ -101,7 +101,7 @@ module Syntax = struct
 
   (** This optionally adds back some of the sugar that may have been removed
       during elaboration to make the terms easier to read. Down the line we
-      could move this dusugaring step into a {i delaborator}/{i distillation}
+      could move this desugaring step into a {i delaborator}/{i distillation}
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
   let pp ?(resugar = true) : name env -> tm -> Format.formatter -> unit =
