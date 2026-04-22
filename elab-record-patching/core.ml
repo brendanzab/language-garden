@@ -109,6 +109,9 @@ module Syntax = struct
       match name with
       | Some name -> Format.pp_print_string ppf name
       | None -> Format.pp_print_string ppf "_"
+
+    and pp_trailing_semi : Format.formatter -> unit =
+      Format.pp_print_custom_break ~fits:(" ", 0, "") ~breaks:(";", 0, "")
     in
 
     let rec pp_tm names tm ppf =
@@ -142,12 +145,9 @@ module Syntax = struct
                   (go (name :: names) body_ty)
             (* Open record types on same line as parameter list *)
             | Rec_type (_ :: _ as decls) ->
-                Format.fprintf ppf "@[<hv>@[->@ {@]%t@ }@]"
-                  (pp_decls names decls)
+                Format.fprintf ppf "@[<hv>@[->@ {@]%t}@]" (pp_decls names decls)
             | body_ty ->
-                (* TODO: improve printing of record types *)
-                Format.fprintf ppf "@[->@ @[%t@]@]"
-                  (pp_tm names body_ty)
+                Format.fprintf ppf "@[->@ @[%t@]@]" (pp_tm names body_ty)
           in
           Format.fprintf ppf "@[<4>fun %t@]" (go names tm)
       | Fun_lit (name, body) ->
@@ -159,14 +159,11 @@ module Syntax = struct
                   (go (name :: names) body)
             (* Open record types and literals on same line as parameter list *)
             | Rec_type (_ :: _ as decls) ->
-                Format.fprintf ppf "=>@ {@]%t@ }@]"
-                  (pp_decls names decls)
+                Format.fprintf ppf "=>@ {@]%t}@]" (pp_decls names decls)
             | Rec_lit (_ :: _ as defns) ->
-                Format.fprintf ppf "=>@ {@]%t@ }@]"
-                  (pp_defns names defns)
+                Format.fprintf ppf "=>@ {@]%t}@]" (pp_defns names defns)
             | tm ->
-                Format.fprintf ppf "=>@]@;<1 2>@[%t@]@]"
-                  (pp_tm names tm)
+                Format.fprintf ppf "=>@]@;<1 2>@[%t@]@]" (pp_tm names tm)
           in
           Format.fprintf ppf "@[<hv>@[fun@ %t@ %t"
             (pp_name name)
@@ -178,13 +175,9 @@ module Syntax = struct
       let rec go tm ppf =
         match tm with
         | Fun_app (head, arg) ->
-            Format.fprintf ppf "%t@ %t"
-              (go head)
-              (pp_proj_tm names arg)
+            Format.fprintf ppf "%t@ %t" (go head) (pp_proj_tm names arg)
         | Sing_type (head, sing_tm) ->
-            Format.fprintf ppf "%t@ @[[=@ %t]@]"
-              (go head)
-              (pp_tm names sing_tm)
+            Format.fprintf ppf "%t@ @[[=@ %t]@]" (go head) (pp_tm names sing_tm)
         | tm ->
             pp_proj_tm names tm ppf
       in
@@ -197,30 +190,21 @@ module Syntax = struct
     and pp_proj_tm names tm ppf =
       let rec go tm ppf =
         match tm with
-        | Rec_proj (head, label) ->
-              Format.fprintf ppf "%t@,.%s" (go head) label
-        | tm ->
-            pp_atomic_tm names tm ppf
+        | Rec_proj (head, label) -> Format.fprintf ppf "%t@,.%s" (go head) label
+        | tm -> pp_atomic_tm names tm ppf
       in
       match tm with
-      | Rec_proj _ as tm ->
-          Format.fprintf ppf "@[<2>%t@]" (go tm)
-      | tm ->
-          pp_atomic_tm names tm ppf
+      | Rec_proj _ as tm -> Format.fprintf ppf "@[<2>%t@]" (go tm)
+      | tm -> pp_atomic_tm names tm ppf
 
     and pp_atomic_tm names tm ppf =
       match tm with
       | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
       | Univ -> Format.fprintf ppf "Type"
       | Rec_type [] | Rec_lit [] -> Format.fprintf ppf "{}"
-      | Rec_type decls ->
-          Format.fprintf ppf "@[<hv>{%t@ }@]"
-            (pp_decls names decls)
-      | Rec_lit defns ->
-          Format.fprintf ppf "@[<hv>{%t@ }@]"
-            (pp_defns names defns)
-      | Sing_intro ->
-          Format.fprintf ppf "#sing-intro"
+      | Rec_type decls -> Format.fprintf ppf "@[<hv>{%t}@]" (pp_decls names decls)
+      | Rec_lit defns -> Format.fprintf ppf "@[<hv>{%t}@]" (pp_defns names defns)
+      | Sing_intro -> Format.fprintf ppf "#sing-intro"
       | Let _ | Fun_type _ | Fun_lit _ | Fun_app _ | Rec_proj _ | Sing_type _ ->
           Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
 
@@ -243,9 +227,9 @@ module Syntax = struct
       match tm with
       | [] -> Format.fprintf ppf ""
       | [label, ty] ->
-          (* TODO: use trailing semicolons when splitting over multiple lines *)
-          Format.fprintf ppf "@;<1 2>@[<2>%t@]"
+          Format.fprintf ppf "@;<1 2>@[<2>%t@]%t"
             (pp_decl names (Some label) ty)
+            pp_trailing_semi
       | (label, ty) :: decls ->
           Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
             (pp_decl names (Some label) ty)
@@ -255,9 +239,9 @@ module Syntax = struct
       match tm with
       | [] -> Format.fprintf ppf ""
       | (label, ty) :: [] ->
-          (* TODO: use trailing semicolons when splitting over multiple lines *)
-          Format.fprintf ppf "@;<1 2>@[<2>%t@]"
+          Format.fprintf ppf "@;<1 2>@[<2>%t@]%t"
             (pp_defn names (Some label) ty)
+            pp_trailing_semi
       | (label, ty) :: decls ->
           Format.fprintf ppf "@;<1 2>@[<2>%t;@]%t"
             (pp_defn names (Some label) ty)
@@ -313,11 +297,13 @@ module Semantics = struct
     | Fun_app of ntm * vtm Lazy.t         (** Function application *)
     | Rec_proj of ntm * label             (** Record projection *)
 
+  and vtm_env = vtm Lazy.t env
+
   (** Closures that can be instantiated with a value. The environment provides
       a value for each variable in the term, except for the variable that the
       closure will be instantiated with during evaluation. *)
   and clos =
-    | Clos of vtm Lazy.t env * Syntax.tm
+    | Clos of vtm_env * Syntax.tm
 
   (** A telescope of declarations, where the type of each declaration depends on
       the value of the previous entries.
@@ -327,7 +313,7 @@ module Semantics = struct
       another” ({{: https://doi.org/10.1016/0890-5401(91)90066-B} N.G. de
       Bruijn, 1991}). *)
   and decls =
-    | Decls of vtm Lazy.t env * (label * Syntax.ty) list
+    | Decls of vtm_env * (label * Syntax.ty) list
 
 
   (** {1 Error handling} *)
@@ -344,7 +330,7 @@ module Semantics = struct
   (** {1 Evaluation} *)
 
   (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval (env : vtm Lazy.t env) (tm : Syntax.tm) : vtm =
+  let rec eval (env : vtm_env) (tm : Syntax.tm) : vtm =
     match tm with
     | Let (_, _, def, body) -> eval (lazy (eval env def) :: env) body
     | Var index -> Lazy.force (List.nth env index)
@@ -455,7 +441,7 @@ module Semantics = struct
 
   (** By evaluating a term then quoting the result, we can produce a term that
       is reduced as much as possible in the current environment. *)
-  let normalise (size : level) (env : vtm Lazy.t env) (tm : Syntax.tm) : Syntax.tm =
+  let normalise (size : level) (env : vtm_env) (tm : Syntax.tm) : Syntax.tm =
     quote size (eval env tm)
 
 

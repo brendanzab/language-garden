@@ -26,7 +26,7 @@
                 (_ :
                   fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out)
                       -> Out)
-                (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out
+                (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out;
         }
   := { T := #sing-intro; empty := zero; append := add };
   let multiplicative-monoid :
@@ -41,7 +41,7 @@
                 (_ :
                   fun (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out)
                       -> Out)
-                (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out
+                (Out : Type) (_ : fun (_ : Out) -> Out) (_ : Out) -> Out;
         }
   := { T := #sing-intro; empty := one; append := mul };
   Type

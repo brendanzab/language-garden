@@ -2,7 +2,7 @@
   let Functor : Type :=
     {
       T : fun (_ : Type) -> Type;
-      map : fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A) -> T B
+      map : fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A) -> T B;
     };
   let Applicative : Type :=
     {
@@ -11,11 +11,11 @@
         {
           T : (fun (_ : Type) -> Type) [= T];
           map :
-            fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A) -> T B
+            fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A) -> T B;
         };
       pure : fun (A : Type) (_ : A) -> T A;
       apply :
-        fun (A : Type) (B : Type) (_ : T (fun (_ : A) -> B)) (_ : T A) -> T B
+        fun (A : Type) (B : Type) (_ : T (fun (_ : A) -> B)) (_ : T A) -> T B;
     };
   let Monad : Type :=
     {
@@ -28,15 +28,15 @@
               T : (fun (_ : Type) -> Type) [= T];
               map :
                 fun (A : Type) (B : Type) (_ : fun (_ : A) -> B) (_ : T A)
-                    -> T B
+                    -> T B;
             };
           pure : fun (A : Type) (_ : A) -> T A;
           apply :
             fun (A : Type) (B : Type) (_ : T (fun (_ : A) -> B)) (_ : T A)
-                -> T B
+                -> T B;
         };
       flat-map :
-        fun (A : Type) (B : Type) (_ : fun (_ : A) -> T B) (_ : T A) -> T B
+        fun (A : Type) (B : Type) (_ : fun (_ : A) -> T B) (_ : T A) -> T B;
     };
   let Option : fun (A : Type) -> Type :=
     fun A =>
@@ -49,7 +49,7 @@
       T := Option;
       map :=
         fun A B f opt-A =>
-          opt-A (Option B) { some := fun x => some B (f x); none := none B }
+          opt-A (Option B) { some := fun x => some B (f x); none := none B };
     };
   let option-applicative : Applicative :=
     {
@@ -61,8 +61,8 @@
           opt-f (Option B)
             {
               some := fun f => option-functor.map A B f opt-A;
-              none := none B
-            }
+              none := none B;
+            };
     };
   let option-monad : Monad :=
     {
@@ -72,9 +72,9 @@
           T := #sing-intro;
           functor := option-applicative.functor;
           pure := option-applicative.pure;
-          apply := option-applicative.apply
+          apply := option-applicative.apply;
         };
       flat-map :=
-        fun A B f opt-A => opt-A (Option B) { some := f; none := none B }
+        fun A B f opt-A => opt-A (Option B) { some := f; none := none B };
     };
   Type

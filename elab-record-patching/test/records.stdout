@@ -14,7 +14,7 @@
               {
                 A : Type [= A];
                 B : Type [= A];
-                f : (fun (_ : A) -> A) [= fun x => x]
+                f : (fun (_ : A) -> A) [= fun x => x];
               })
             -> F
   := fun A x => { A := A; B := A; f := fun x => x };
@@ -24,7 +24,7 @@
               {
                 A : Type [= A];
                 B : Type [= A];
-                f : (fun (_ : A) -> A) [= fun x => x]
+                f : (fun (_ : A) -> A) [= fun x => x];
               })
             -> F
   := fun A x => { A := A; B := A; f := fun x => x };
@@ -52,7 +52,7 @@
             -> {
               A : Type [= C];
               B : Type [= C];
-              f : (fun (_ : C) -> C) [= fun x => x]
+              f : (fun (_ : C) -> C) [= fun x => x];
             }
   := fun C => { A := #sing-intro; B := #sing-intro; f := #sing-intro };
   let coerce-missing-3 :
