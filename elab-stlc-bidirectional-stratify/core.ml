@@ -56,10 +56,6 @@ type expr =
   | Bool_lit of bool
   | Bool_elim of expr * expr * expr
 
-(** Apply an expression to a list of arguments *)
-let fun_app (head : expr) (args : expr list) : expr =
-  List.fold_left (fun head arg -> Fun_app (head, arg)) head args
-
 
 module Semantics = struct
 

@@ -395,8 +395,8 @@ end = struct
         let tm2, ty2 = infer_tm ctx tm2 in
         unify_tys ctx tm.span ~found:ty2 ~expected:ty1;
         begin match Core.force_ty ty1 with
-        | Core.Bool_type -> Core.(fun_app (Prim Prim.Bool_eq) [tm1; tm2]), Core.Bool_type
-        | Core.Int_type -> Core.(fun_app (Prim Prim.Int_eq) [tm1; tm2]), Core.Bool_type
+        | Core.Bool_type -> Core.Fun_app (Fun_app (Prim Prim.Bool_eq, tm1), tm2), Core.Bool_type
+        | Core.Int_type -> Core.Fun_app (Fun_app (Prim Prim.Int_eq, tm1), tm2), Core.Bool_type
         | ty ->
             error ctx tm.span "@[<h>cannot compare operands of type `%t`@]"
               (Core.pp_ty ty)
@@ -416,11 +416,11 @@ end = struct
         in
         let tm1 = check_tm ctx tm1 Core.Int_type in
         let tm2 = check_tm ctx tm2 Core.Int_type in
-        Core.(fun_app (Prim prim) [tm1; tm2]), Core.Int_type
+        Core.Fun_app (Fun_app (Prim prim, tm1), tm2), Core.Int_type
 
     | Prefix (`Neg, tm) ->
         let tm = check_tm ctx tm Core.Int_type in
-        Core.(fun_app (Prim Prim.Int_neg) [tm]), Core.Int_type
+        Core.Fun_app (Prim Prim.Int_neg, tm), Core.Int_type
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (span : span) (params : param list) (body_ty : ty option) (body : tm) (ty : Core.ty) : Core.tm =

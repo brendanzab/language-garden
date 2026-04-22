@@ -120,10 +120,6 @@ type tm =
   | Bool_lit of bool
   | Bool_elim of tm * tm * tm
 
-(** Apply a term to a list of arguments *)
-let fun_app (head : tm) (args : tm list) : tm =
-  List.fold_left (fun head arg -> Fun_app (head, arg)) head args
-
 (** Terms in weak head normal form (i.e. values) *)
 type vtm =
   | Neu of ntm
