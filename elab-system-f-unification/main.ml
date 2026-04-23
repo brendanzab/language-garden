@@ -58,10 +58,10 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
-let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
+let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.Tm.t * Core.Ty.t =
   match Surface.Elab.infer_tm tm with
   | Ok (tm, vty) ->
-      tm, Core.quote_vty 0 vty
+      tm, Core.(Ty.quote 0 vty)
   | Error errors ->
       errors |> List.iter (fun (pos, reason) -> emit source "error" pos reason);
       exit 1
@@ -72,15 +72,15 @@ let elab_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.pp_tm [] [] tm)
-    (Core.pp_ty [] ty)
+    Core.(Tm.pp [] [] tm)
+    Core.(Ty.pp [] ty)
 
 let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.pp_tm [] [] (Core.normalise_tm [] [] tm))
-    (Core.pp_ty [] ty)
+    Core.(Tm.pp [] [] (Tm.normalise [] [] tm))
+    Core.(Ty.pp [] ty)
 
 
 (** {1 CLI options} *)
