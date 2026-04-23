@@ -73,9 +73,6 @@ module Elab : sig
 
 end = struct
 
-  module Semantics = Core.Semantics
-
-
   (** {2 Elaboration context} *)
 
   (** The elaboration context *)
@@ -135,13 +132,13 @@ end = struct
     Core.Meta_var m
 
   let eval_ty (ctx : context) (ty : Core.ty) : Core.vty =
-    Semantics.eval_ty ctx.ty_env ty
+    Core.eval_ty ctx.ty_env ty
 
   let quote_vty (ctx : context) (vty : Core.vty) : Core.ty =
-    Semantics.quote_vty ctx.ty_size vty
+    Core.quote_vty ctx.ty_size vty
 
   let close_vty ({ ty_env; ty_size; _ } : context) (body : Core.vty) : (Core.vty -> Core.vty) =
-    fun vty -> Semantics.(eval_ty (vty :: ty_env) (quote_vty (ty_size + 1) body))
+    fun vty -> Core.(eval_ty (vty :: ty_env) (quote_vty (ty_size + 1) body))
 
   let pp_ty (ctx : context) (ty : Core.ty) : Format.formatter -> unit =
     Core.pp_ty ctx.ty_names ty

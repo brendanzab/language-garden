@@ -61,7 +61,7 @@ let parse_tm (source : Source_file.t) : Surface.tm =
 let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
   match Surface.Elab.infer_tm tm with
   | Ok (tm, vty) ->
-      tm, Core.Semantics.quote_vty 0 vty
+      tm, Core.quote_vty 0 vty
   | Error errors ->
       errors |> List.iter (fun (pos, reason) -> emit source "error" pos reason);
       exit 1
@@ -79,7 +79,7 @@ let norm_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   let tm, ty = parse_tm source |> elab_tm source in
   Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-    (Core.pp_tm [] [] (Core.Semantics.normalise_tm [] [] tm))
+    (Core.pp_tm [] [] (Core.normalise_tm [] [] tm))
     (Core.pp_ty [] ty)
 
 

@@ -143,146 +143,143 @@ and ntm =
   | Bool_elim of ntm * (unit -> vtm) * (unit -> vtm)
 
 
-(** Semantics of the core language *)
-module Semantics = struct
+(** {1 Semantics of the core language} *)
 
-  (** {1 Eliminators} *)
+(** {2 Eliminators} *)
 
-  let forall_app (head : vtm) (arg : vty) : vtm =
-    match head with
-    | Neu ntm -> Neu (Forall_app (ntm, arg))
-    | Forall_lit (_, body) -> body arg
-    | _ -> invalid_arg "expected type function"
+let forall_app (head : vtm) (arg : vty) : vtm =
+  match head with
+  | Neu ntm -> Neu (Forall_app (ntm, arg))
+  | Forall_lit (_, body) -> body arg
+  | _ -> invalid_arg "expected type function"
 
-  let prim_app (prim : Prim.t) (args : vtm list) : vtm =
-    match prim, args with
-    | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
-    | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
-    | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
-    | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
-    | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
-    | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
-    | prim, args -> Neu (Prim_app (prim, args))
+let prim_app (prim : Prim.t) (args : vtm list) : vtm =
+  match prim, args with
+  | Bool_eq, [Bool_lit t2; Bool_lit t1] -> Bool_lit (Bool.equal t1 t2)
+  | Int_eq, [Int_lit t2; Int_lit t1] -> Bool_lit (Int.equal t1 t2)
+  | Int_add, [Int_lit t2; Int_lit t1] -> Int_lit (Int.add t1 t2)
+  | Int_sub, [Int_lit t2; Int_lit t1] -> Int_lit (Int.sub t1 t2)
+  | Int_mul, [Int_lit t2; Int_lit t1] -> Int_lit (Int.mul t1 t2)
+  | Int_neg, [Int_lit t1] -> Int_lit (Int.neg t1)
+  | prim, args -> Neu (Prim_app (prim, args))
 
-  let fun_app (head : vtm) (arg : vtm) : vtm =
-    match head with
-    | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
-    | Neu ntm -> Neu (Fun_app (ntm, arg))
-    | Fun_lit (_, _, body) -> body arg
-    | _ -> invalid_arg "expected function"
+let fun_app (head : vtm) (arg : vtm) : vtm =
+  match head with
+  | Neu (Prim_app (prim, args)) -> prim_app prim (arg :: args)
+  | Neu ntm -> Neu (Fun_app (ntm, arg))
+  | Fun_lit (_, _, body) -> body arg
+  | _ -> invalid_arg "expected function"
 
-  let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
-    match head with
-    | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
-    | Bool_lit true -> vtm1 ()
-    | Bool_lit false -> vtm2 ()
-    | _ -> invalid_arg "expected boolean"
-
-
-  (** {1 Evaluation} *)
-
-  (** Evaluate a type from the syntax into its semantic interpretation *)
-  let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
-    match ty with
-    | Local_var ty_index -> List.nth ty_env ty_index
-    | Meta_var m -> Meta_var m
-    | Forall_type (name, body_ty) ->
-        Forall_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
-    | Fun_type (param_ty, body_ty) ->
-        let param_vty = eval_ty ty_env param_ty in
-        let body_vty = eval_ty ty_env body_ty in
-        Fun_type (param_vty, body_vty)
-    | Int_type -> Int_type
-    | Bool_type -> Bool_type
-
-  (** Evaluate a term from the syntax into its semantic interpretation *)
-  let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : tm) : vtm =
-    match tm with
-    | Local_var tm_index -> List.nth tm_env tm_index
-    | Prim prim -> prim_app prim []
-    | Let (_, _, def, body) ->
-        let def = eval_tm ty_env tm_env def in
-        eval_tm ty_env (def :: tm_env) body
-    | Forall_lit (name, body) ->
-        Forall_lit (name, fun arg -> eval_tm (arg :: ty_env) tm_env body)
-    | Forall_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_ty ty_env arg in
-        forall_app head arg
-    | Fun_lit (name, param_ty, body) ->
-        let param_vty = eval_ty ty_env param_ty in
-        Fun_lit (name, param_vty, fun arg -> eval_tm ty_env (arg :: tm_env) body)
-    | Fun_app (head, arg) ->
-        let head = eval_tm ty_env tm_env head in
-        let arg = eval_tm ty_env tm_env arg in
-        fun_app head arg
-    | Int_lit i -> Int_lit i
-    | Bool_lit b -> Bool_lit b
-    | Bool_elim (head, tm1, tm2) ->
-        let head = eval_tm ty_env tm_env head in
-        let vtm1 () = eval_tm ty_env tm_env tm1 in
-        let vtm2 () = eval_tm ty_env tm_env tm2 in
-        bool_elim head vtm1 vtm2
+let bool_elim (head : vtm) (vtm1 : unit -> vtm) (vtm2 : unit -> vtm) : vtm =
+  match head with
+  | Neu ntm -> Neu (Bool_elim (ntm, vtm1, vtm2))
+  | Bool_lit true -> vtm1 ()
+  | Bool_lit false -> vtm2 ()
+  | _ -> invalid_arg "expected boolean"
 
 
-  (** {1 Quotation} *)
+(** {2 Evaluation} *)
 
-  (** Convert types from the semantic domain back into syntax. *)
-  let rec quote_vty  (ty_size : level) (vty : vty) : ty =
-    match vty with
-    | Local_var ty_level -> Local_var (level_to_index ty_size ty_level)
-    | Meta_var id -> Meta_var id
-    | Forall_type (name, body_vty) ->
-        let body = quote_vty (ty_size + 1) (body_vty (Local_var ty_size)) in
-        Forall_type (name, body)
-    | Fun_type (param_vty, body_vty) ->
-        let param_ty = quote_vty ty_size param_vty in
-        let body_ty = quote_vty ty_size body_vty in
-        Fun_type (param_ty, body_ty)
-    | Int_type -> Int_type
-    | Bool_type -> Bool_type
+(** Evaluate a type from the syntax into its semantic interpretation *)
+let rec eval_ty (ty_env : vty env) (ty : ty) : vty =
+  match ty with
+  | Local_var ty_index -> List.nth ty_env ty_index
+  | Meta_var m -> Meta_var m
+  | Forall_type (name, body_ty) ->
+      Forall_type (name, fun arg -> eval_ty (arg :: ty_env) body_ty)
+  | Fun_type (param_ty, body_ty) ->
+      let param_vty = eval_ty ty_env param_ty in
+      let body_vty = eval_ty ty_env body_ty in
+      Fun_type (param_vty, body_vty)
+  | Int_type -> Int_type
+  | Bool_type -> Bool_type
 
-  (** Convert terms from the semantic domain back into syntax. *)
-  let rec quote_vtm (ty_size : level) (tm_size : level) (vtm : vtm) : tm =
-    match vtm with
-    | Neu ntm -> quote_ntm ty_size tm_size ntm
-    | Forall_lit (name, body) ->
-        let body = quote_vtm (ty_size + 1) tm_size (body (Local_var ty_size)) in
-        Forall_lit (name, body)
-    | Fun_lit (name, param_vty, body) ->
-        let param_ty = quote_vty ty_size param_vty in
-        let body = quote_vtm ty_size (tm_size + 1) (body (Neu (Local_var tm_size))) in
-        Fun_lit (name, param_ty, body)
-    | Int_lit i -> Int_lit i
-    | Bool_lit b -> Bool_lit b
-
-  and quote_ntm (ty_size : level) (tm_size : level) (ntm : ntm) : tm =
-    match ntm with
-    | Local_var tm_level ->
-        Local_var (level_to_index tm_size tm_level)
-    | Forall_app (head, arg) ->
-        Forall_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
-    | Prim_app (prim, []) -> Prim prim
-    | Prim_app (prim, arg :: args) ->
-        let head = quote_ntm ty_size tm_size (Prim_app (prim, args)) in
-        let arg = quote_vtm ty_size tm_size arg in
-        Fun_app (head, arg)
-    | Fun_app (head, arg) ->
-        Fun_app (quote_ntm ty_size tm_size head, quote_vtm ty_size tm_size arg)
-    | Bool_elim (head, vtm1, vtm2) ->
-        let tm1 = quote_vtm ty_size tm_size (vtm1 ()) in
-        let tm2 = quote_vtm ty_size tm_size (vtm2 ()) in
-        Bool_elim (quote_ntm ty_size tm_size head, tm1, tm2)
+(** Evaluate a term from the syntax into its semantic interpretation *)
+let rec eval_tm (ty_env : vty env) (tm_env : vtm env) (tm : tm) : vtm =
+  match tm with
+  | Local_var tm_index -> List.nth tm_env tm_index
+  | Prim prim -> prim_app prim []
+  | Let (_, _, def, body) ->
+      let def = eval_tm ty_env tm_env def in
+      eval_tm ty_env (def :: tm_env) body
+  | Forall_lit (name, body) ->
+      Forall_lit (name, fun arg -> eval_tm (arg :: ty_env) tm_env body)
+  | Forall_app (head, arg) ->
+      let head = eval_tm ty_env tm_env head in
+      let arg = eval_ty ty_env arg in
+      forall_app head arg
+  | Fun_lit (name, param_ty, body) ->
+      let param_vty = eval_ty ty_env param_ty in
+      Fun_lit (name, param_vty, fun arg -> eval_tm ty_env (arg :: tm_env) body)
+  | Fun_app (head, arg) ->
+      let head = eval_tm ty_env tm_env head in
+      let arg = eval_tm ty_env tm_env arg in
+      fun_app head arg
+  | Int_lit i -> Int_lit i
+  | Bool_lit b -> Bool_lit b
+  | Bool_elim (head, tm1, tm2) ->
+      let head = eval_tm ty_env tm_env head in
+      let vtm1 () = eval_tm ty_env tm_env tm1 in
+      let vtm2 () = eval_tm ty_env tm_env tm2 in
+      bool_elim head vtm1 vtm2
 
 
-  (** {1 Normalisation} *)
+(** {2 Quotation} *)
 
-  (** By evaluating a term then quoting the result, we can produce a term that
-      is reduced as much as possible in the current environment. *)
-  let normalise_tm (ty_env : vty env) (tm_env : vtm list) (tm : tm) : tm =
-    quote_vtm (List.length ty_env) (List.length tm_env) (eval_tm ty_env tm_env tm)
+(** Convert types from the semantic domain back into syntax. *)
+let rec quote_vty  (ty_size : level) (vty : vty) : ty =
+  match vty with
+  | Local_var ty_level -> Local_var (level_to_index ty_size ty_level)
+  | Meta_var id -> Meta_var id
+  | Forall_type (name, body_vty) ->
+      let body = quote_vty (ty_size + 1) (body_vty (Local_var ty_size)) in
+      Forall_type (name, body)
+  | Fun_type (param_vty, body_vty) ->
+      let param_ty = quote_vty ty_size param_vty in
+      let body_ty = quote_vty ty_size body_vty in
+      Fun_type (param_ty, body_ty)
+  | Int_type -> Int_type
+  | Bool_type -> Bool_type
 
-end
+(** Convert terms from the semantic domain back into syntax. *)
+let rec quote_vtm (ty_size : level) (tm_size : level) (vtm : vtm) : tm =
+  match vtm with
+  | Neu ntm -> quote_ntm ty_size tm_size ntm
+  | Forall_lit (name, body) ->
+      let body = quote_vtm (ty_size + 1) tm_size (body (Local_var ty_size)) in
+      Forall_lit (name, body)
+  | Fun_lit (name, param_vty, body) ->
+      let param_ty = quote_vty ty_size param_vty in
+      let body = quote_vtm ty_size (tm_size + 1) (body (Neu (Local_var tm_size))) in
+      Fun_lit (name, param_ty, body)
+  | Int_lit i -> Int_lit i
+  | Bool_lit b -> Bool_lit b
+
+and quote_ntm (ty_size : level) (tm_size : level) (ntm : ntm) : tm =
+  match ntm with
+  | Local_var tm_level ->
+      Local_var (level_to_index tm_size tm_level)
+  | Forall_app (head, arg) ->
+      Forall_app (quote_ntm ty_size tm_size head, quote_vty ty_size arg)
+  | Prim_app (prim, []) -> Prim prim
+  | Prim_app (prim, arg :: args) ->
+      let head = quote_ntm ty_size tm_size (Prim_app (prim, args)) in
+      let arg = quote_vtm ty_size tm_size arg in
+      Fun_app (head, arg)
+  | Fun_app (head, arg) ->
+      Fun_app (quote_ntm ty_size tm_size head, quote_vtm ty_size tm_size arg)
+  | Bool_elim (head, vtm1, vtm2) ->
+      let tm1 = quote_vtm ty_size tm_size (vtm1 ()) in
+      let tm2 = quote_vtm ty_size tm_size (vtm2 ()) in
+      Bool_elim (quote_ntm ty_size tm_size head, tm1, tm2)
+
+
+(** {2 Normalisation} *)
+
+(** By evaluating a term then quoting the result, we can produce a term that
+    is reduced as much as possible in the current environment. *)
+let normalise_tm (ty_env : vty env) (tm_env : vtm list) (tm : tm) : tm =
+  quote_vtm (List.length ty_env) (List.length tm_env) (eval_tm ty_env tm_env tm)
 
 
 (** {1 Functions related to metavariables} *)
@@ -420,7 +417,7 @@ let pp_ty : name env -> ty -> Format.formatter -> unit =
         Format.fprintf ppf "@[(%t)@]" (pp_ty ty_names ty)
   and pp_meta pp_ty ty_names m ppf =
     match !m with
-    | Solved vty -> pp_ty ty_names (Semantics.quote_vty (List.length ty_names) vty) ppf
+    | Solved vty -> pp_ty ty_names (quote_vty (List.length ty_names) vty) ppf
     | Unsolved { id; _ } -> Format.fprintf ppf "?%i" id
   in
   pp_ty
