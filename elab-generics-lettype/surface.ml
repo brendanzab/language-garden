@@ -116,20 +116,20 @@ end = struct
     val create : unit -> t
 
     val fresh_ty : t -> Span.t -> string -> Ty.t
-    val fresh_vty : t -> Span.t -> string -> Ty.Value.t
+    val fresh_vty : t -> Span.t -> string -> Ty.value
 
     val extend_ty_param : t -> Core.name -> t
-    val extend_poly_ty : t -> Core.name -> Ty.Clos.t -> t
-    val lookup_ty : t -> string -> (Core.index * Ty.Clos.t) option
+    val extend_poly_ty : t -> Core.name -> Ty.clos -> t
+    val lookup_ty : t -> string -> (Core.index * Ty.clos) option
 
-    val extend_poly_tm : t -> Core.name -> Ty.Clos.t -> t
-    val extend_tm : t -> Core.name -> Ty.Value.t -> t
-    val lookup_tm : t -> string -> (Core.index * Ty.Clos.t) option
+    val extend_poly_tm : t -> Core.name -> Ty.clos -> t
+    val extend_tm : t -> Core.name -> Ty.value -> t
+    val lookup_tm : t -> string -> (Core.index * Ty.clos) option
 
-    val eval_ty : t -> Ty.t -> Ty.Value.t
-    val quote_vty : t -> Ty.Value.t -> Ty.t
-    val close_ty : t -> Core.name list -> Ty.t -> Ty.Clos.t
-    val pp_vty : t -> Ty.Value.t -> Format.formatter -> unit
+    val eval_ty : t -> Ty.t -> Ty.value
+    val quote_vty : t -> Ty.value -> Ty.t
+    val close_ty : t -> Core.name list -> Ty.t -> Ty.clos
+    val pp_vty : t -> Ty.value -> Format.formatter -> unit
 
     val unsolved_metas : t -> (Span.t * string) Seq.t
 
@@ -141,10 +141,10 @@ end = struct
     type t = {
       ty_size : Core.level;
       ty_names : Core.name Core.Env.t;
-      ty_defs : Ty.Clos.t Core.Env.t;
+      ty_defs : Ty.clos Core.Env.t;
 
       tm_names : Core.name Core.Env.t;
-      tm_tys : Ty.Clos.t Core.Env.t;
+      tm_tys : Ty.clos Core.Env.t;
 
       metas : (Ty.meta * Span.t * string) Dynarray.t;
       (** A list of the metavariables that have been inserted during elaboration.
@@ -161,57 +161,57 @@ end = struct
       metas = Dynarray.create ();
     }
 
-    let fresh_vty (ctx : t) (span : Span.t) (desc : string) : Ty.Value.t =
+    let fresh_vty (ctx : t) (span : Span.t) (desc : string) : Ty.value =
       let meta = Ty.fresh_meta () in
       Dynarray.add_last ctx.metas (meta, span, desc);
-      Ty.Value.Meta meta
+      Ty.Meta meta
 
     let fresh_ty (ctx : t) (span : Span.t) (desc : string) : Ty.t =
       Ty.quote ctx.ty_size (fresh_vty ctx span desc)
 
-    let extend_poly_ty (ctx : t) (name : Core.name) (cty : Ty.Clos.t) : t =
+    let extend_poly_ty (ctx : t) (name : Core.name) (cty : Ty.clos) : t =
       { ctx with
         ty_size = 1 + ctx.ty_size;
         ty_names = Core.Env.extend name ctx.ty_names;
         ty_defs = Core.Env.extend cty ctx.ty_defs;
       }
 
-    let extend_ty (ctx : t) (name : Core.name) (ty : Ty.Value.t) : t =
-      extend_poly_ty ctx name (Ty.Clos.value ty)
+    let extend_ty (ctx : t) (name : Core.name) (ty : Ty.value) : t =
+      extend_poly_ty ctx name (Ty.Value ty)
 
     let extend_ty_param (ctx : t) (name : Core.name) : t =
-      extend_ty ctx name (Ty.Value.Var ctx.ty_size)
+      extend_ty ctx name (Ty.Var ctx.ty_size)
 
-    let lookup_ty (ctx : t) (name : string) : (Core.index * Ty.Clos.t) option =
+    let lookup_ty (ctx : t) (name : string) : (Core.index * Ty.clos) option =
       Core.Env.find (Option.fold ~some:((=) name) ~none:false) ctx.ty_names
       |> Option.map (fun index -> index, Core.Env.lookup index ctx.ty_defs)
 
-    let extend_poly_tm (ctx : t) (name : Core.name) (cty : Ty.Clos.t) : t =
+    let extend_poly_tm (ctx : t) (name : Core.name) (cty : Ty.clos) : t =
       { ctx with
         tm_names = Core.Env.extend name ctx.tm_names;
         tm_tys = Core.Env.extend cty ctx.tm_tys;
       }
 
-    let extend_tm (ctx : t) (name : Core.name) (ty : Ty.Value.t) : t =
-      extend_poly_tm ctx name (Ty.Clos.value ty)
+    let extend_tm (ctx : t) (name : Core.name) (ty : Ty.value) : t =
+      extend_poly_tm ctx name (Ty.Value ty)
 
-    let lookup_tm (ctx : t) (name : string) : (Core.index * Ty.Clos.t) option =
+    let lookup_tm (ctx : t) (name : string) : (Core.index * Ty.clos) option =
       Core.Env.find (Option.fold ~some:((=) name) ~none:false) ctx.tm_names
       |> Option.map (fun index -> index, Core.Env.lookup index ctx.tm_tys)
 
-    let eval_ty (ctx : t) (ty : Ty.t) : Ty.Value.t =
+    let eval_ty (ctx : t) (ty : Ty.t) : Ty.value =
       Ty.eval ctx.ty_defs ty
 
-    let quote_vty (ctx : t) (vty : Ty.Value.t) : Ty.t =
+    let quote_vty (ctx : t) (vty : Ty.value) : Ty.t =
       Ty.quote ctx.ty_size vty
 
-    let close_ty (ctx : t) (ty_params : Core.name list) (ty : Ty.t) : Ty.Clos.t =
-      Ty.Clos.make ctx.ty_defs (List.length ty_params) ty
+    let close_ty (ctx : t) (ty_params : Core.name list) (ty : Ty.t) : Ty.clos =
+      Ty.Clos (ctx.ty_defs, List.length ty_params, ty)
 
     let pp_ty (ctx : t) (ty : Ty.t) (ppf : Format.formatter) : unit =
       Ty.pp ctx.ty_names ty ppf
 
-    let pp_vty (ctx : t) (vty : Ty.Value.t) (ppf : Format.formatter) : unit =
+    let pp_vty (ctx : t) (vty : Ty.value) (ppf : Format.formatter) : unit =
       pp_ty ctx (quote_vty ctx vty) ppf
 
     let unsolved_metas (ctx : t) : (Span.t * string) Seq.t =
@@ -237,10 +237,10 @@ end = struct
   let error (type a b) (span : Span.t) : (b, Format.formatter, unit, a) format4 -> b =
     Format.kasprintf (fun message -> raise (Error (span, message)))
 
-  let unify_vtys (ctx : Ctx.t) (span : Span.t) ~(found : Core.Ty.Value.t) ~(expected : Core.Ty.Value.t) =
-    try Core.Ty.Value.unify found expected with
-    | Core.Ty.Value.Infinite_type -> error span "infinite type"
-    | Core.Ty.Value.Mismatched_types ->
+  let unify_vtys (ctx : Ctx.t) (span : Span.t) ~(found : Core.Ty.value) ~(expected : Core.Ty.value) =
+    try Core.Ty.unify found expected with
+    | Core.Ty.Infinite_type -> error span "infinite type"
+    | Core.Ty.Mismatched_types ->
         error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
           (Ctx.pp_vty ctx expected)
           (Ctx.pp_vty ctx found)
@@ -262,7 +262,7 @@ end = struct
       | Ty.Name ({ span; data = name }, ty_args) ->
           let arity, ty =
             match Ctx.lookup_ty ctx name with
-            | Some (index, cty) -> Core.Ty.(Clos.arity cty, fun ty_args -> Var (index, ty_args))
+            | Some (index, cty) -> Core.Ty.(clos_arity cty, fun ty_args -> (Var (index, ty_args) : t))
             | None when name = "Bool" -> Core.Ty.(0, fun _ -> Bool)
             | None when name = "Int" -> Core.Ty.(0, fun _ -> Int)
             | None -> error ty.span "unbound type name `%s`" name
@@ -284,8 +284,8 @@ end = struct
         Ctx.fresh_ty ctx ty.span "placeholder"
 
   (** Elaborate a surface term into a core term, given an expected type. *)
-  let rec check_tm (ctx : Ctx.t) (tm : Tm.t) (ty : Core.Ty.Value.t) : Core.Tm.t =
-    match tm.data, Core.Ty.Value.force ty with
+  let rec check_tm (ctx : Ctx.t) (tm : Tm.t) (ty : Core.Ty.value) : Core.Tm.t =
+    match tm.data, Core.Ty.force ty with
     | Tm.Let (None, [], body), body_ty ->
         check_tm ctx body body_ty
 
@@ -307,7 +307,7 @@ end = struct
     | Tm.Fun fun_, fun_vty ->
         check_fun ctx tm.span fun_ fun_vty
 
-    | Tm.Tuple elems, Core.Ty.Value.Tuple elem_vtys ->
+    | Tm.Tuple elems, Core.Ty.Tuple elem_vtys ->
         if List.length elems <> List.length elem_vtys then
           error tm.span "expected %i elements, found %i elements"
             (List.length elem_vtys)
@@ -315,7 +315,7 @@ end = struct
         Core.Tm.Tuple_lit (List.map2 (check_tm ctx) elems elem_vtys)
 
     | Tm.If_then_else (head, tm1, tm2), body_vty ->
-        let head = check_tm ctx head Core.Ty.Value.Bool in
+        let head = check_tm ctx head Core.Ty.Bool in
         let tm1 = check_tm ctx tm1 body_vty in
         let tm2 = check_tm ctx tm2 body_vty in
         Core.Tm.Bool_elim (head, tm1, tm2)
@@ -327,14 +327,14 @@ end = struct
         tm'
 
   (** Elaborate a surface term into a core term, inferring its type. *)
-  and infer_tm (ctx : Ctx.t) (tm : Tm.t) : Core.Tm.t * Core.Ty.Value.t =
+  and infer_tm (ctx : Ctx.t) (tm : Tm.t) : Core.Tm.t * Core.Ty.value =
     match tm.data with
     | Tm.Name ({ span; data = name }, ty_args) ->
         let tm, cty =
           match Ctx.lookup_tm ctx name with
           | Some (index, cty) -> Core.((fun ty_args -> Tm.Var (index, ty_args)), cty)
-          | None when name = "true" -> Core.((fun _ -> Tm.Bool_lit true), Ty.Clos.value Ty.Value.Bool)
-          | None when name = "false" -> Core.((fun _ -> Tm.Bool_lit false), Ty.Clos.value Ty.Value.Bool)
+          | None when name = "true" -> Core.((fun _ -> Tm.Bool_lit true), Ty.Value Ty.Bool)
+          | None when name = "false" -> Core.((fun _ -> Tm.Bool_lit false), Ty.Value Ty.Bool)
           | None -> error tm.span "unbound name `%s`" name
         in
 
@@ -343,31 +343,31 @@ end = struct
          metavariables *)
       | cty, [] ->
           let ty_args =
-            List.init (Core.Ty.Clos.arity cty) @@ fun _ ->
+            List.init (Core.Ty.clos_arity cty) @@ fun _ ->
               Ctx.fresh_vty ctx span "type argument"
           in
-          tm (List.map (Ctx.quote_vty ctx) ty_args), Core.Ty.Clos.inst cty ty_args
+          tm (List.map (Ctx.quote_vty ctx) ty_args), Core.Ty.inst_clos cty ty_args
 
       (* Explicit type arguments were provided *)
-      | cty, ty_args when Core.Ty.Clos.arity cty = List.length ty_args ->
+      | cty, ty_args when Core.Ty.clos_arity cty = List.length ty_args ->
           let ty_args = List.map (check_ty ctx) ty_args in
-          tm ty_args, Core.Ty.Clos.inst cty (List.map (Ctx.eval_ty ctx) ty_args)
+          tm ty_args, Core.Ty.inst_clos cty (List.map (Ctx.eval_ty ctx) ty_args)
 
       | cty, ty_args ->
           error span "expected %i type %s, found %i"
-            (Core.Ty.Clos.arity cty)
-            (if Core.Ty.Clos.arity cty = 1 then "argument" else "arguments")
+            (Core.Ty.clos_arity cty)
+            (if Core.Ty.clos_arity cty = 1 then "argument" else "arguments")
             (List.length ty_args)
       end
 
     | Prim name ->
         begin match Prim.of_name name with
-        | Some (Bool_eq as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Bool, Fun (Bool, Bool)))
-        | Some (Int_eq as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Bool)))
-        | Some (Int_add as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Int)))
-        | Some (Int_sub as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Int)))
-        | Some (Int_mul as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Fun (Int, Int)))
-        | Some (Int_neg as prim) -> Core.Tm.Prim prim, Core.Ty.Value.(Fun (Int, Int))
+        | Some (Bool_eq as prim) -> Core.Tm.Prim prim, Core.Ty.(Fun (Bool, Fun (Bool, Bool)))
+        | Some (Int_eq as prim) -> Core.Tm.Prim prim, Core.Ty.(Fun (Int, Fun (Int, Bool)))
+        | Some (Int_add as prim) -> Core.Tm.Prim prim, Core.Ty.(Fun (Int, Fun (Int, Int)))
+        | Some (Int_sub as prim) -> Core.Tm.Prim prim, Core.Ty.(Fun (Int, Fun (Int, Int)))
+        | Some (Int_mul as prim) -> Core.Tm.Prim prim, Core.Ty.(Fun (Int, Fun (Int, Int)))
+        | Some (Int_neg as prim) -> Core.Tm.Prim prim, Core.Ty.(Fun (Int, Int))
         | None -> error tm.span "unknown primitive operation `#%s`" name
         end
 
@@ -400,28 +400,28 @@ end = struct
 
     | Tm.Tuple elems ->
         let elems, elem_vtys = List.split (List.map (infer_tm ctx) elems) in
-        Core.Tm.Tuple_lit elems, Core.Ty.Value.Tuple elem_vtys
+        Core.Tm.Tuple_lit elems, Core.Ty.Tuple elem_vtys
 
     | Tm.Int i ->
-        Core.Tm.Int_lit i, Core.Ty.Value.Int
+        Core.Tm.Int_lit i, Core.Ty.Int
 
     | Tm.App ({ span = head_span; _ } as head, arg) ->
         let head, head_vty = infer_tm ctx head in
-        begin match Core.Ty.Value.force head_vty with
-        | Core.Ty.Value.Fun (param_vty, body_vty) ->
+        begin match Core.Ty.force head_vty with
+        | Core.Ty.Fun (param_vty, body_vty) ->
             let arg = check_tm ctx arg param_vty in
             Core.Tm.Fun_app (head, arg), body_vty
-        | Core.Ty.Value.Meta _ as head_vty ->
+        | Core.Ty.Meta _ as head_vty ->
             let arg_vty = Ctx.fresh_vty ctx arg.span "function argument" in
             let body_vty = Ctx.fresh_vty ctx head_span "function return type" in
-            unify_vtys ctx head_span ~found:head_vty ~expected:(Core.Ty.Value.Fun (arg_vty, body_vty));
+            unify_vtys ctx head_span ~found:head_vty ~expected:(Core.Ty.Fun (arg_vty, body_vty));
             let arg = check_tm ctx arg arg_vty in
             Core.Tm.Fun_app (head, arg), body_vty
         | _ -> error arg.span "unexpected argument"
         end
 
     | Tm.If_then_else (head, tm1, tm2) ->
-        let head = check_tm ctx head Core.Ty.Value.Bool in
+        let head = check_tm ctx head Core.Ty.Bool in
         let body_vty = Ctx.fresh_vty ctx tm.span "if branches" in
         let tm1 = check_tm ctx tm1 body_vty in
         let tm2 = check_tm ctx tm2 body_vty in
@@ -431,9 +431,9 @@ end = struct
         let tm1, vty1 = infer_tm ctx tm1 in
         let tm2, vty2 = infer_tm ctx tm2 in
         unify_vtys ctx tm.span ~found:vty2 ~expected:vty1;
-        begin match Core.Ty.Value.force vty1 with
-        | Core.Ty.Value.Bool -> Core.Tm.(fun_app (Prim Prim.Bool_eq) [tm1; tm2]), Core.Ty.Value.Bool
-        | Core.Ty.Value.Int -> Core.Tm.(fun_app (Prim Prim.Int_eq) [tm1; tm2]), Core.Ty.Value.Bool
+        begin match Core.Ty.force vty1 with
+        | Core.Ty.Bool -> Core.Tm.(fun_app (Prim Prim.Bool_eq) [tm1; tm2]), Core.Ty.Bool
+        | Core.Ty.Int -> Core.Tm.(fun_app (Prim Prim.Int_eq) [tm1; tm2]), Core.Ty.Bool
         | vty -> error tm.span "@[unsupported type: %t@]" (Ctx.pp_vty ctx vty)
         end
 
@@ -444,14 +444,14 @@ end = struct
           | `Sub -> Prim.Int_sub
           | `Mul -> Prim.Int_mul
         in
-        let tm1 = check_tm ctx tm1 Core.Ty.Value.Int in
-        let tm2 = check_tm ctx tm2 Core.Ty.Value.Int in
-        Core.Tm.(fun_app (Prim prim) [tm1; tm2]), Core.Ty.Value.Int
+        let tm1 = check_tm ctx tm1 Core.Ty.Int in
+        let tm2 = check_tm ctx tm2 Core.Ty.Int in
+        Core.Tm.(fun_app (Prim prim) [tm1; tm2]), Core.Ty.Int
 
     | Tm.Proj ({ span = head_span; _ } as head, index) ->
         let head, head_vty = infer_tm ctx head in
-        begin match Core.Ty.Value.force head_vty with
-        | Core.Ty.Value.Tuple elem_vtys ->
+        begin match Core.Ty.force head_vty with
+        | Core.Ty.Tuple elem_vtys ->
             begin match List.nth_opt elem_vtys index.data with
             | Some ty -> Core.Tm.Tuple_proj (head, index.data), ty
             | None -> error index.span "unknown field `%i`" index.data
@@ -460,29 +460,29 @@ end = struct
         end
 
     | Tm.Prefix (`Neg, tm) ->
-        let tm = check_tm ctx tm Core.Ty.Value.Int in
-        Core.Tm.(fun_app (Prim Prim.Int_neg) [tm]), Core.Ty.Value.Int
+        let tm = check_tm ctx tm Core.Ty.Int in
+        Core.Tm.(fun_app (Prim Prim.Int_neg) [tm]), Core.Ty.Int
 
   (** Elaborate a function into a core term, given an expected type. *)
-  and check_fun (ctx : Ctx.t) (span : Span.t) (params, body_ty, body : Tm.fun_) (vty : Core.Ty.Value.t) : Core.Tm.t =
-    match params, body_ty, Core.Ty.Value.force vty with
+  and check_fun (ctx : Ctx.t) (span : Span.t) (params, body_ty, body : Tm.fun_) (vty : Core.Ty.value) : Core.Tm.t =
+    match params, body_ty, Core.Ty.force vty with
     | [], None, body_vty ->
         check_tm ctx body body_vty
     | [], Some ({ span = body_ty_span; _ } as body_ty), body_vty' ->
         let body_ty = check_ty ctx body_ty in
         unify_vtys ctx body_ty_span ~found:(Ctx.eval_ty ctx body_ty) ~expected:body_vty';
         check_tm ctx body body_vty'
-    | (name, None) :: params, body_ty, Core.Ty.Value.Fun (param_vty, vty) ->
+    | (name, None) :: params, body_ty, Core.Ty.Fun (param_vty, vty) ->
         let body = check_fun (Ctx.extend_tm ctx name.data param_vty) span (params, body_ty, body) vty in
         Core.Tm.Fun_lit (name.data, Ctx.quote_vty ctx param_vty, body)
-    | (name, Some param_ty) :: params, body_ty, Core.Ty.Value.Fun (param_vty', vty) ->
+    | (name, Some param_ty) :: params, body_ty, Core.Ty.Fun (param_vty', vty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         let param_vty = Ctx.eval_ty ctx param_ty in
         unify_vtys ctx param_ty_span ~found:param_vty ~expected:param_vty';
         let body = check_fun (Ctx.extend_tm ctx name.data param_vty) span (params, body_ty, body) vty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
-    | (_ :: _) as params, body_ty, Core.Ty.Value.Meta _ ->
+    | (_ :: _) as params, body_ty, Core.Ty.Meta _ ->
         let tm', ty' = infer_fun ctx (params, body_ty, body) in
         unify_vtys ctx span ~found:(Ctx.eval_ty ctx ty') ~expected:vty;
         tm'
@@ -546,9 +546,9 @@ end = struct
 
     (* Elaborate a function against an expected type *)
     let rec check_fun ctx params body fun_vty =
-      match params, Core.Ty.Value.force fun_vty with
+      match params, Core.Ty.force fun_vty with
       | [], body_vty -> check_tm ctx body body_vty
-      | (name, _ : Tm.param) :: params, Core.Ty.Value.Fun (param_vty, body_vty) ->
+      | (name, _ : Tm.param) :: params, Core.Ty.Fun (param_vty, body_vty) ->
           let body = check_fun (Ctx.extend_tm ctx name.data param_vty) params body body_vty in
           Core.Tm.Fun_lit (name.data, Ctx.quote_vty ctx param_vty, body)
       | (name, _ : Tm.param) :: _, _ -> error name.span "unexpected parameter"

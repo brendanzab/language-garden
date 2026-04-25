@@ -53,8 +53,9 @@ end = struct
 
 end
 
-(** Base datatypes describing the syntax of types. *)
-module rec Ty_data : sig
+
+(** Types in the core language *)
+module Ty = struct
 
   (** Types *)
   type t =
@@ -62,6 +63,16 @@ module rec Ty_data : sig
     | Meta of meta            (* Metavariables (used for unification) *)
     | Fun of t * t
     | Tuple of t list
+    | Bool
+    | Int
+
+  (** Evaluated types. These can be used at deeper parts of the program without
+      needing to be re-indexed. *)
+  and value =
+    | Var of level
+    | Meta of meta
+    | Fun of value * value
+    | Tuple of value list
     | Bool
     | Int
 
@@ -77,112 +88,38 @@ module rec Ty_data : sig
 
   (** The current state of a metavariable. *)
   and meta_state =
-    | Solved of Ty_data.Value.t
+    | Solved of value
     | Unsolved of meta_id
-
-  (** Evaluated types. *)
-  module Value : sig
-
-    (** Types *)
-    type t =
-      | Var of level
-      | Meta of meta
-      | Fun of t * t
-      | Tuple of t list
-      | Bool
-      | Int
-
-  end
-
-end = Ty_data
-
-
-(** Types in the core language *)
-module rec Ty : sig
-
-  include module type of Ty_data
-
-  (** Create a fresh, unsolved metavariable *)
-  val fresh_meta : unit -> meta
-
-  (** Evaluate a type into a value *)
-  val eval : Ty.Clos.t Env.t -> t -> Ty.Value.t
-
-  (** Quote an evaluated type back into its normal form *)
-  val quote : level -> Ty.Value.t -> t
-
-  (** Pretty print a type *)
-  val pp : name Env.t -> t -> Format.formatter -> unit
-
-  (** Evaluated types. These can be used at deeper parts of the program without
-      needing to be re-indexed. *)
-  module Value : sig
-
-    include module type of Value
-
-    (** Force any solved metavariables on the outermost part of a type. This is
-        usually done before pattern matching on a type. *)
-    val force : t -> t
-
-    exception Mismatched_types
-    exception Infinite_type
-
-    (** Check that two types are the same, wile updating unsolved
-        metavariables with known type information as required. *)
-    val unify : t -> t -> unit
-
-  end
 
   (** Types that can be instantiated with a series of type arguments.
       These are used as polymorphic types during elaboration, either for
       parameterised type definitions, or for the types of polymorphic term
       definitions. *)
-  module Clos : sig
-
-    type t
-
-    (** Create a closure must be instantiated with a given number of types. *)
-    val make : t Env.t -> int -> Ty.t -> t
-
-    (** Create a closure that is instantiated with no types. *)
-    val value : Value.t -> t
-
-    (** The number of type arguments this closure should be instantiated with *)
-    val arity : t -> int
-
-    (** Instantiate the closure with a list of types. *)
-    val inst : t -> Value.t list -> Value.t
-
-  end
-
-end = struct
-
-  include Ty_data
-
-  let fresh_meta : unit -> meta =
-    let next = ref 0 in
-    fun () ->
-      let id = !next in
-      incr next;
-      ref (Unsolved id)
-
-  (** Defunctionalised closure representation. We define {!clos} and {!inst}
-      before the {!Clos} module in order to make it easier to deal with the
-      mutual recursion with the {!eval} function. *)
   type clos =
     | Clos of clos Env.t * int * t
-    | Value of Value.t
+    (** A closure must be instantiated with a given number of types. *)
 
-  let rec eval (env : clos Env.t) (ty : t) : Value.t =
+    | Value of value
+    (** A closure that is instantiated with no types. *)
+
+  (** The number of type arguments this closure should be instantiated with *)
+  let clos_arity (cty : clos) : int =
+    match cty with
+    | Clos (_, arity, _) -> arity
+    | Value _ -> 0
+
+  (** Evaluate a type into a value *)
+  let rec eval (env : clos Env.t) (ty : t) : value =
     match ty with
-    | Var (index, args) -> inst (Env.lookup index env) (List.map (eval env) args)
-    | Meta meta -> Value.Meta meta
-    | Fun (param_ty, body_ty) -> Value.Fun (eval env param_ty, eval env body_ty)
-    | Tuple elem_tys -> Value.Tuple (List.map (eval env) elem_tys)
-    | Bool -> Value.Bool
-    | Int -> Value.Int
+    | Var (index, args) -> inst_clos (Env.lookup index env) (List.map (eval env) args)
+    | Meta meta -> Meta meta
+    | Fun (param_ty, body_ty) -> Fun (eval env param_ty, eval env body_ty)
+    | Tuple elem_tys -> Tuple (List.map (eval env) elem_tys)
+    | Bool -> Bool
+    | Int -> Int
 
-  and inst (cty : clos) (args : Value.t list) =
+  (** Instantiate the closure with a list of type arguments. *)
+  and inst_clos (cty : clos) (args : value list) =
     match cty, args with
     | Clos (env, arity, body), args when List.length args = arity ->
         let extend_value acc arg = Env.extend (Value arg) acc in
@@ -190,14 +127,15 @@ end = struct
     | Value vty, [] -> vty
     | _, _ -> failwith "mismatched arity"
 
-  let rec quote (size : level) (vty : Value.t) : t =
+  (** Quote an evaluated type back into its normal form *)
+  let rec quote (size : level) (vty : value) : t =
     match vty with
-    | Value.Var level -> Var (level_to_index size level, [])
-    | Value.Meta meta -> Meta meta
-    | Value.Fun (param_ty, body_ty) -> Fun (quote size param_ty, quote size body_ty)
-    | Value.Tuple elem_tys -> Tuple (List.map (quote size) elem_tys)
-    | Value.Bool -> Bool
-    | Value.Int -> Int
+    | Var level -> Var (level_to_index size level, [])
+    | Meta meta -> Meta meta
+    | Fun (param_ty, body_ty) -> Fun (quote size param_ty, quote size body_ty)
+    | Tuple elem_tys -> Tuple (List.map (quote size) elem_tys)
+    | Bool -> Bool
+    | Int -> Int
 
   let pp (names : name Env.t) (ty : t) (ppf : Format.formatter) : unit =
     let size = Env.size names in
@@ -208,7 +146,7 @@ end = struct
       | None -> Format.pp_print_string ppf "_"
     in
 
-    let rec pp_ty ty ppf =
+    let rec pp_ty (ty : t) ppf =
       match ty with
       | Meta m -> pp_meta pp_ty m ppf
       | Fun (param_ty, body_ty) ->
@@ -217,7 +155,7 @@ end = struct
             (pp_ty body_ty)
       | ty ->
           pp_app_ty ty ppf
-    and pp_app_ty ty ppf =
+    and pp_app_ty (ty : t) ppf =
       match ty with
       | Var (index, ((_ :: _) as args)) ->
           Format.fprintf ppf "@[<hv 2>%t@ %a@]"
@@ -227,7 +165,7 @@ end = struct
             args
       | ty ->
           pp_atomic_ty ty ppf
-    and pp_atomic_ty ty ppf =
+    and pp_atomic_ty (ty : t) ppf =
       match ty with
       | Var (index, []) -> Format.fprintf ppf "%t" (pp_name (Env.lookup index names))
       | Meta m -> pp_meta pp_atomic_ty m ppf
@@ -248,80 +186,70 @@ end = struct
     in
     pp_ty ty ppf
 
-  module Value = struct
+  (** Create a fresh, unsolved metavariable *)
+  let fresh_meta : unit -> meta =
+    let next = ref 0 in
+    fun () ->
+      let id = !next in
+      incr next;
+      ref (Unsolved id)
 
-    include Value
+  (** Force any solved metavariables on the outermost part of a type. This is
+      usually done before pattern matching on a type. *)
+  let rec force (ty : value) : value =
+    match ty with
+    | Meta ({ contents = Solved ty } as m) ->
+        let ty = force ty in
+        m := Solved ty;
+        ty
+    | ty -> ty
 
-    let rec force (ty : t) : t =
-      match ty with
-      | Meta ({ contents = Solved ty } as m) ->
-          let ty = force ty in
-          m := Solved ty;
-          ty
-      | ty -> ty
+  exception Mismatched_types
+  exception Infinite_type
 
-    exception Mismatched_types
-    exception Infinite_type
+  (** Ensure that the candidate type does not refer to the to-be-solved
+      metavariable *)
+  let rec occurs (m : meta) (ty : value) =
+    match ty with
+    | Var _ -> ()
+    | Meta m' when m == m' -> raise Infinite_type
+    | Meta { contents = Solved ty } -> occurs m ty
+    | Meta { contents = Unsolved _ } -> ()
+    | Fun (param_ty, body_ty) ->
+        occurs m param_ty;
+        occurs m body_ty
+    | Tuple elem_tys ->
+        List.iter (occurs m) elem_tys
+    | Bool -> ()
+    | Int -> ()
 
-    (** Ensure that the candidate type does not refer to the to-be-solved
-        metavariable *)
-    let rec occurs (m : meta) (ty : t) =
-      match ty with
-      | Var _ -> ()
-      | Meta m' when m == m' -> raise Infinite_type
-      | Meta { contents = Solved ty } -> occurs m ty
-      | Meta { contents = Unsolved _ } -> ()
-      | Fun (param_ty, body_ty) ->
-          occurs m param_ty;
-          occurs m body_ty
-      | Tuple elem_tys ->
-          List.iter (occurs m) elem_tys
-      | Bool -> ()
-      | Int -> ()
+  (** Check that two types are the same, wile updating unsolved
+      metavariables with known type information as required. *)
+  let rec unify (ty1 : value) (ty2 : value) =
+    match force ty1, force ty2 with
+    | Var name1, Var name2 when name1 = name2 -> ()
+    | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
+    | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
+        unify param_ty1 param_ty2;
+        unify body_ty1 body_ty2
+    | Tuple [], Tuple [] -> ()
+    | Tuple (elem_ty1 :: elem_tys1), Tuple (elem_ty2 :: elem_tys2) ->
+        unify elem_ty1 elem_ty2;
+        unify (Tuple elem_tys1) (Tuple elem_tys2)
+    | Bool, Bool -> ()
+    | Int, Int -> ()
 
-    let rec unify (ty1 : t) (ty2 : t) =
-      match force ty1, force ty2 with
-      | Var name1, Var name2 when name1 = name2 -> ()
-      | Meta m1, Meta m2 when m1 == m2 -> ()    (* NOTE: using pointer equality for references *)
-      | Fun (param_ty1, body_ty1), Fun (param_ty2, body_ty2) ->
-          unify param_ty1 param_ty2;
-          unify body_ty1 body_ty2
-      | Tuple [], Tuple [] -> ()
-      | Tuple (elem_ty1 :: elem_tys1), Tuple (elem_ty2 :: elem_tys2) ->
-          unify elem_ty1 elem_ty2;
-          unify (Tuple elem_tys1) (Tuple elem_tys2)
-      | Bool, Bool -> ()
-      | Int, Int -> ()
+    (* Unify through solved metavariables *)
+    | Meta { contents = Solved ty1 }, ty2 -> unify ty1 ty2
+    | ty1, Meta { contents = Solved ty2 } -> unify ty1 ty2
 
-      (* Unify through solved metavariables *)
-      | Meta { contents = Solved ty1 }, ty2 -> unify ty1 ty2
-      | ty1, Meta { contents = Solved ty2 } -> unify ty1 ty2
+    (* Update unsolved metavariables in-place *)
+    | Meta ({ contents = Unsolved _ } as m), ty
+    | ty, Meta ({ contents = Unsolved _ } as m) ->
+        occurs m ty;
+        m := Solved ty
 
-      (* Update unsolved metavariables in-place *)
-      | Meta ({ contents = Unsolved _ } as m), ty
-      | ty, Meta ({ contents = Unsolved _ } as m) ->
-          occurs m ty;
-          m := Solved ty
-
-      | _, _ -> raise Mismatched_types
-
-  end
-
-  module Clos = struct
-
-    type t = clos
-
-    let make env arity ty = Clos (env, arity, ty)
-    let value vty = Value vty
-
-    let arity (cty : t) : int =
-      match cty with
-      | Clos (_, arity, _) -> arity
-      | Value _ -> 0
-
-    let inst = inst
-
-  end
+    | _, _ -> raise Mismatched_types
 
 end
 
