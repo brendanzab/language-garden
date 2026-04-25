@@ -260,21 +260,21 @@ end = struct
   let rec check_ty (ctx : Ctx.t) (ty : Ty.t) : Core.Ty.t =
     match ty.data with
       | Ty.Name ({ span; data = name }, ty_args) ->
-          let arity, ty =
-            match Ctx.lookup_ty ctx name with
-            | Some (index, cty) -> Core.Ty.(clos_arity cty, fun ty_args -> (Var (index, ty_args) : t))
-            | None when name = "Bool" -> Core.Ty.(0, fun _ -> Bool)
-            | None when name = "Int" -> Core.Ty.(0, fun _ -> Int)
-            | None -> error ty.span "unbound type name `%s`" name
+          let check_arity arity =
+            if arity <> List.length ty_args then
+              error span "expected %i type %s, found %i"
+                arity
+                (if arity = 1 then "argument" else "arguments")
+                (List.length ty_args)
           in
-
-          if arity = List.length ty_args then
-            ty (List.map (check_ty ctx) ty_args)
-          else
-            error span "expected %i type %s, found %i"
-              arity
-              (if arity = 1 then "argument" else "arguments")
-              (List.length ty_args)
+          begin match Ctx.lookup_ty ctx name with
+          | Some (index, cty) ->
+              check_arity (Core.Ty.clos_arity cty);
+              Core.Ty.Var (index, List.map (check_ty ctx) ty_args)
+          | None when name = "Bool" -> check_arity 0; Core.Ty.Bool
+          | None when name = "Int" -> check_arity 0; Core.Ty.Int
+          | None -> error ty.span "unbound type name `%s`" name
+          end
 
     | Ty.Fun (ty1, ty2) ->
         Core.Ty.Fun (check_ty ctx ty1, check_ty ctx ty2)
