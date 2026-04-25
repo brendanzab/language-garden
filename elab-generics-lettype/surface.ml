@@ -120,11 +120,11 @@ end = struct
 
     val extend_ty_param : t -> Core.name -> t
     val extend_poly_ty : t -> Core.name -> Ty.clos -> t
-    val lookup_ty : t -> string -> (Core.index * Ty.clos) option
+    val lookup_ty : t -> string -> (Ty.Index.t * Ty.clos) option
 
     val extend_poly_tm : t -> Core.name -> Ty.clos -> t
     val extend_tm : t -> Core.name -> Ty.value -> t
-    val lookup_tm : t -> string -> (Core.index * Ty.clos) option
+    val lookup_tm : t -> string -> (Tm.Index.t * Ty.clos) option
 
     val eval_ty : t -> Ty.t -> Ty.value
     val quote_vty : t -> Ty.value -> Ty.t
@@ -139,12 +139,12 @@ end = struct
     module Tm = Core.Tm
 
     type t = {
-      ty_size : Core.level;
-      ty_names : Core.name Core.Env.t;
-      ty_defs : Ty.clos Core.Env.t;
+      ty_size : Ty.Level.t;
+      ty_names : Core.name Ty.Env.t;
+      ty_defs : Ty.clos Ty.Env.t;
 
-      tm_names : Core.name Core.Env.t;
-      tm_tys : Ty.clos Core.Env.t;
+      tm_names : Core.name Core.Tm.Env.t;
+      tm_tys : Ty.clos Core.Tm.Env.t;
 
       metas : (Ty.meta * Span.t * string) Dynarray.t;
       (** A list of the metavariables that have been inserted during elaboration.
@@ -153,11 +153,11 @@ end = struct
     }
 
     let create () = {
-      ty_size = 0;
-      ty_names = Core.Env.empty;
-      ty_defs = Core.Env.empty;
-      tm_names = Core.Env.empty;
-      tm_tys = Core.Env.empty;
+      ty_size = Ty.Level.first;
+      ty_names = Ty.Env.empty;
+      ty_defs = Ty.Env.empty;
+      tm_names = Tm.Env.empty;
+      tm_tys = Tm.Env.empty;
       metas = Dynarray.create ();
     }
 
@@ -171,9 +171,9 @@ end = struct
 
     let extend_poly_ty (ctx : t) (name : Core.name) (cty : Ty.clos) : t =
       { ctx with
-        ty_size = 1 + ctx.ty_size;
-        ty_names = Core.Env.extend name ctx.ty_names;
-        ty_defs = Core.Env.extend cty ctx.ty_defs;
+        ty_size = Ty.Level.next ctx.ty_size;
+        ty_names = Ty.Env.extend name ctx.ty_names;
+        ty_defs = Ty.Env.extend cty ctx.ty_defs;
       }
 
     let extend_ty (ctx : t) (name : Core.name) (ty : Ty.value) : t =
@@ -182,22 +182,24 @@ end = struct
     let extend_ty_param (ctx : t) (name : Core.name) : t =
       extend_ty ctx name (Ty.Var ctx.ty_size)
 
-    let lookup_ty (ctx : t) (name : string) : (Core.index * Ty.clos) option =
-      Core.Env.find (Option.fold ~some:((=) name) ~none:false) ctx.ty_names
-      |> Option.map (fun index -> index, Core.Env.lookup index ctx.ty_defs)
+    let lookup_ty (ctx : t) (name : string) : (Ty.Index.t * Ty.clos) option =
+      ctx.ty_names
+      |> Ty.Env.find_index (function Some n -> n = name | None -> false)
+      |> Option.map (fun index -> index, Ty.Env.lookup index ctx.ty_defs)
 
     let extend_poly_tm (ctx : t) (name : Core.name) (cty : Ty.clos) : t =
       { ctx with
-        tm_names = Core.Env.extend name ctx.tm_names;
-        tm_tys = Core.Env.extend cty ctx.tm_tys;
+        tm_names = Tm.Env.extend name ctx.tm_names;
+        tm_tys = Tm.Env.extend cty ctx.tm_tys;
       }
 
     let extend_tm (ctx : t) (name : Core.name) (ty : Ty.value) : t =
       extend_poly_tm ctx name (Ty.Value ty)
 
-    let lookup_tm (ctx : t) (name : string) : (Core.index * Ty.clos) option =
-      Core.Env.find (Option.fold ~some:((=) name) ~none:false) ctx.tm_names
-      |> Option.map (fun index -> index, Core.Env.lookup index ctx.tm_tys)
+    let lookup_tm (ctx : t) (name : string) : (Tm.Index.t * Ty.clos) option =
+      ctx.tm_names
+      |> Tm.Env.find_index (function Some n -> n = name | None -> false)
+      |> Option.map (fun index -> index, Tm.Env.lookup index ctx.tm_tys)
 
     let eval_ty (ctx : t) (ty : Ty.t) : Ty.value =
       Ty.eval ctx.ty_defs ty

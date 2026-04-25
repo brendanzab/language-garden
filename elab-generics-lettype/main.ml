@@ -71,8 +71,8 @@ let elab_cmd () : int =
     let* tm = parse_tm source in
     let+ (tm, ty) = Surface.Elab.infer_tm tm in
     Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-      Core.(Tm.pp Env.empty Env.empty tm)
-      Core.(Ty.pp Env.empty ty)
+      Core.(Tm.pp Ty.Env.empty Tm.Env.empty tm)
+      Core.(Ty.pp Ty.Env.empty ty)
   with
   | Ok () -> exit_ok
   | Error errors ->
@@ -86,8 +86,8 @@ let eval_cmd () : int =
     let* tm = parse_tm source in
     let+ (tm, ty) = Surface.Elab.infer_tm tm in
     Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-      Core.(Tm.Value.pp (Core.Tm.eval Env.empty tm))
-      Core.(Ty.pp Env.empty ty)
+      Core.(Tm.Value.pp (Tm.eval Tm.Env.empty tm))
+      Core.(Ty.pp Ty.Env.empty ty)
   with
   | Ok () -> exit_ok
   | Error errors ->

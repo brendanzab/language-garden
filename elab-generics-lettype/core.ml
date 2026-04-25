@@ -4,63 +4,16 @@
     but don’t impact the equality of terms. *)
 type name = string option
 
-(** {1 Nameless binding structure} *)
-
-(** The binding structure of terms is represented in the core language by
-    using numbers that represent the distance to a binder, instead of by the
-    names attached to those binders. *)
-
-(** {i De Bruijn index} that represents a variable occurrence by the number of
-    binders between the occurrence and the binder it refers to. *)
-type index = int
-
-(** {i De Bruijn level} that represents a variable occurrence by the number of
-    binders from the top of the environment to the binder that the occurrence
-    refers to. These do not change their meaning as new bindings are added to
-    the environment. *)
-type level = int
-
-(** [level_to_index size level] converts [level] to an {!index} that is bound in
-    an environment of the supplied [size], where [size] represents the next
-    fresh {!level} to be bound in the environment.
-
-    Assumes that [size > level].
-*)
-let level_to_index (size : level) (level : level) =
-  size - level - 1
-
-(** An environment of bindings that can be looked up directly using a
-    {!index}, or by converting to a {!level} using {!level_to_index}. *)
-module Env : sig
-
-  type _ t
-
-  val empty : 'a t
-  val extend : 'a -> 'a t -> 'a t
-  val lookup : index -> 'a t -> 'a
-  val find : ('a -> bool) -> 'a t -> index option
-  val size : 'a t -> level
-
-end = struct
-
-  type 'a t = 'a list
-
-  let empty = []
-  let extend = List.cons
-  let lookup index env = List.nth env index
-  let find = List.find_index
-  let size = List.length
-
-end
-
 
 (** Types in the core language *)
 module Ty = struct
 
+  include Debruijn.Make ()
+
   (** Types *)
   type t =
-    | Var of index * t list   (* Type variables (bound by type parameters or local type definitions) *)
-    | Meta of meta            (* Metavariables (used for unification) *)
+    | Var of Index.t * t list   (* Type variables (bound by type parameters or local type definitions) *)
+    | Meta of meta              (* Metavariables (used for unification) *)
     | Fun of t * t
     | Tuple of t list
     | Bool
@@ -69,7 +22,7 @@ module Ty = struct
   (** Evaluated types. These can be used at deeper parts of the program without
       needing to be re-indexed. *)
   and value =
-    | Var of level
+    | Var of Level.t
     | Meta of meta
     | Fun of value * value
     | Tuple of value list
@@ -128,7 +81,7 @@ module Ty = struct
     | _, _ -> failwith "mismatched arity"
 
   (** Quote an evaluated type back into its normal form *)
-  let rec quote (size : level) (vty : value) : t =
+  let rec quote (size : Level.t) (vty : value) : t =
     match vty with
     | Var level -> Var (level_to_index size level, [])
     | Meta meta -> Meta meta
@@ -257,9 +210,11 @@ end
 (** Terms in the core language *)
 module Tm = struct
 
+  include Debruijn.Make ()
+
   (** Term syntax *)
   type t =
-    | Var of index * Ty.t list
+    | Var of Index.t * Ty.t list
     (** A variable that is possibly applied to a series of type arguments
         (which will be applied a type lambda in a definition). *)
 
@@ -309,14 +264,14 @@ module Tm = struct
     List.fold_left (fun head arg -> Fun_app (head, arg)) head args
 
   (** Pretty print a term *)
-  let pp (ty_names : name Env.t) (names : name Env.t) : t -> Format.formatter -> unit =
+  let pp (ty_names : name Ty.Env.t) (names : name Env.t) : t -> Format.formatter -> unit =
     let pp_name (name : name) (ppf : Format.formatter) : unit =
       match name with
       | Some name -> Format.pp_print_string ppf name
       | None -> Format.pp_print_string ppf "_"
     in
 
-    let pp_name_ann (ty_names : name Env.t) (name : name) (ty_params : name list) (ty : Ty.t) (ppf : Format.formatter) : unit =
+    let pp_name_ann (ty_names : name Ty.Env.t) (name : name) (ty_params : name list) (ty : Ty.t) (ppf : Format.formatter) : unit =
       match ty_params with
       | [] -> Format.fprintf ppf "@[<2>@[%t :@]@ %t@]" (pp_name name) (Ty.pp ty_names ty)
       | ty_params ->
@@ -324,9 +279,9 @@ module Tm = struct
           Format.fprintf ppf "@[<2>@[%t@ @[[%t]@]@ :@]@ %t@]"
             (pp_name name)
             (Fun.flip (Format.pp_print_list (Fun.flip pp_name) ~pp_sep) ty_params)
-            (Ty.pp (List.fold_left (Fun.flip Env.extend) ty_names ty_params) ty)
+            (Ty.pp (List.fold_left (Fun.flip Ty.Env.extend) ty_names ty_params) ty)
 
-    and pp_param (ty_names : name Env.t) (name : name) (ty : Ty.t) (ppf : Format.formatter) : unit =
+    and pp_param (ty_names : name Ty.Env.t) (name : name) (ty : Ty.t) (ppf : Format.formatter) : unit =
       Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]"
         (pp_name name)
         (Ty.pp ty_names ty)
@@ -340,7 +295,7 @@ module Tm = struct
             | Let ((name, ty_params, def_ty, def), body) ->
                 Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
                   (pp_name_ann ty_names name ty_params def_ty)
-                  (pp_tm (List.fold_left (Fun.flip Env.extend) ty_names ty_params) names def)
+                  (pp_tm (List.fold_left (Fun.flip Ty.Env.extend) ty_names ty_params) names def)
                   (go ty_names (Env.extend name names) body)
             | Let_rec (defs, body) ->
                 let extend names (n, _, _, _) = Env.extend n names in
@@ -352,14 +307,14 @@ module Tm = struct
                     (fun ppf (name, ty_params, def_ty, def) ->
                       Format.fprintf ppf "@;<1 2>@[<2>@[%t@ :=@]@ %t@];"
                         (pp_name_ann ty_names name ty_params def_ty)
-                        (pp_tm (List.fold_left (Fun.flip Env.extend) ty_names ty_params) rec_names def)))
+                        (pp_tm (List.fold_left (Fun.flip Ty.Env.extend) ty_names ty_params) rec_names def)))
                   (go ty_names rec_names body)
             | Let_type ((ty_name, ty_params, ty_def), body) ->
                 let pp_sep ppf () = Format.fprintf ppf "@ " in
                 Format.fprintf ppf "@[<2>@[let type @[%t@] :=@]@ @[%t;@]@]@ %t"
                   (Fun.flip (Format.pp_print_list (Fun.flip pp_name) ~pp_sep) (ty_name :: ty_params))
-                  (Ty.pp (List.fold_left (Fun.flip Env.extend) ty_names ty_params) ty_def)
-                  (go (Env.extend ty_name ty_names) names body)
+                  (Ty.pp (List.fold_left (Fun.flip Ty.Env.extend) ty_names ty_params) ty_def)
+                  (go (Ty.Env.extend ty_name ty_names) names body)
             | tm -> Format.fprintf ppf "@[%t@]" (pp_tm ty_names names tm)
           in
           Format.fprintf ppf "@[<v>%t@]"
