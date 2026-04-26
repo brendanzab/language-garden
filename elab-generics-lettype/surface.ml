@@ -184,7 +184,7 @@ end = struct
 
     let lookup_ty (ctx : t) (name : string) : (Ty.Index.t * Ty.clos) option =
       ctx.ty_names
-      |> Ty.Env.find_index (function Some n -> n = name | None -> false)
+      |> Ty.Env.find_index (( = ) (Some name))
       |> Option.map (fun index -> index, Ty.Env.lookup index ctx.ty_defs)
 
     let extend_poly_tm (ctx : t) (name : Core.name) (cty : Ty.clos) : t =
@@ -198,7 +198,7 @@ end = struct
 
     let lookup_tm (ctx : t) (name : string) : (Tm.Index.t * Ty.clos) option =
       ctx.tm_names
-      |> Tm.Env.find_index (function Some n -> n = name | None -> false)
+      |> Tm.Env.find_index (( = ) (Some name))
       |> Option.map (fun index -> index, Tm.Env.lookup index ctx.tm_tys)
 
     let eval_ty (ctx : t) (ty : Ty.t) : Ty.value =

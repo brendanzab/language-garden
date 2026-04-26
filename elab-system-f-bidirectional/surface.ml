@@ -79,7 +79,8 @@ end = struct
     ty_size : Core.level;
     ty_names : string option Core.env;
     ty_env : Core.Ty.value Core.env;
-    tm_tys : (string option * Core.Ty.value) Core.env;
+    tm_names : string option Core.env;
+    tm_tys : Core.Ty.value Core.env;
   }
 
   (** The empty context *)
@@ -87,6 +88,7 @@ end = struct
     ty_size = 0;
     ty_names = [];
     ty_env = [];
+    tm_names = [];
     tm_tys = [];
   }
 
@@ -105,22 +107,20 @@ end = struct
   (** Extend the context with a term binding *)
   let extend_tm (ctx : context) (name : string option) (vty : Core.Ty.value) : context = {
     ctx with
-    tm_tys = (name, vty) :: ctx.tm_tys;
+    tm_names = name :: ctx.tm_names;
+    tm_tys = vty :: ctx.tm_tys;
   }
 
   (** Lookup a type name in the context *)
   let lookup_ty (ctx : context) (name : string) : Core.index option =
-    ctx.ty_names |> List.find_mapi @@ fun ty_index name' ->
-      match Some name = name' with
-      | true -> Some ty_index
-      | false -> None
+    ctx.ty_names
+    |> List.find_index (( = ) (Some name))
 
   (** Lookup a term name in the context *)
   let lookup_tm (ctx : context) (name : string) : (Core.index * Core.Ty.value) option =
-    ctx.tm_tys |> List.find_mapi @@ fun tm_index (name', ty) ->
-      match Some name = name' with
-      | true -> Some (tm_index, ty)
-      | false -> None
+    ctx.tm_names
+    |> List.find_index (( = ) (Some name))
+    |> Option.map (fun index -> index, List.nth ctx.tm_tys index)
 
   let eval_ty (ctx : context) (ty : Core.Ty.t) : Core.Ty.value =
     Core.Ty.eval ctx.ty_env ty
