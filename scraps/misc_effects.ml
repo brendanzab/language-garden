@@ -95,7 +95,8 @@ module State = struct
       let open Effect.Deep in
 
       let curr = ref init in
-      try prog (), !curr with
+      match prog () with
+      | x -> x, !curr
       | effect (Set x), k -> curr := x; continue k ()
       | effect Get, k -> continue k !curr
 
@@ -104,7 +105,8 @@ module State = struct
 
       let curr = ref init in
       let log = ref [] in
-      try prog (), !log with
+      match prog () with
+      | x -> x, !log
       | effect (Set x), k -> curr := x; log := x :: !log; continue k ()
       | effect Get, k -> continue k !curr
 
@@ -141,8 +143,19 @@ let () = begin
 
   let module S = State.Make (String) in
 
-  let@ () = S.run ~init:"hello" in
-  S.modify (fun x -> x ^ " world!");
-  assert (S.get () = "hello world!");
+  let prog () =
+    S.set "hello";
+    S.set (S.get () ^ " world");
+    S.modify (fun x -> x ^ "!");
+    assert (S.get () = "hello world!");
+  in
+
+  S.run ~init:"blah" prog;
+
+  let (), state = S.run_final ~init:"" prog in
+  assert (state = "hello world!");
+
+  let (), states = S.run_log ~init:"" prog in
+  assert (states = ["hello world!"; "hello world"; "hello"]);
 
 end
