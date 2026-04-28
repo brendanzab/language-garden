@@ -53,8 +53,19 @@ module State = struct
     val get : unit -> state
 
     val modify : (state -> state) -> unit
+    (** Update the state with a closure *)
 
     val run : init:state -> (unit -> 'a) -> 'a
+    (** Run a stateful computation *)
+
+    val run_final : init:state -> (unit -> 'a) -> 'a * state
+    (** Run a stateful computation, returning the final return value of the
+        computation along with the final state *)
+
+    val run_log : init:state -> (unit -> 'a) -> 'a * state list
+    (** Run a stateful computation, returning the final return value of the
+        computation along with a log of the state updates *)
+
     val try_with : ?set:(state -> unit) -> ?get:(unit -> state) -> (unit -> 'a) -> 'a
 
   end
@@ -72,12 +83,29 @@ module State = struct
     let set x = Effect.perform (Set x)
     let get () = Effect.perform Get
 
-    let run ~(init : state) f =
+    let run ~(init : state) prog =
       let open Effect.Deep in
 
       let curr = ref init in
-      try f () with
+      try prog () with
       | effect (Set x), k -> curr := x; continue k ()
+      | effect Get, k -> continue k !curr
+
+    let run_final ~(init : state) prog =
+      let open Effect.Deep in
+
+      let curr = ref init in
+      try prog (), !curr with
+      | effect (Set x), k -> curr := x; continue k ()
+      | effect Get, k -> continue k !curr
+
+    let run_log ~(init : state) prog =
+      let open Effect.Deep in
+
+      let curr = ref init in
+      let log = ref [] in
+      try prog (), !log with
+      | effect (Set x), k -> curr := x; log := x :: !log; continue k ()
       | effect Get, k -> continue k !curr
 
     let modify f = set (f (get ()))
