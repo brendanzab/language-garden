@@ -154,7 +154,7 @@ instrumental in helping me get my head around how to implement elaborators).
 If you like this repository, you might find these interesting as well:
 
 - [github:andrejbauer/plzoo](https://github.com/andrejbauer/plzoo/):
-  Andrej Bauer’s minimnal programming language demonstrations
+  Andrej Bauer’s minimal programming language demonstrations
 - [github:AndrasKovacs/elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo/):
   Minimal implementations for dependent type checking and elaboration by Andras Kovacs
 - [github:gallais/potpourri](https://github.com/gallais/potpourri/): G. Allais’ research code
