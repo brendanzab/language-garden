@@ -9,7 +9,7 @@ first-class and where the return type of a function may depend on the arguments
 it is applied to.
 
 Type checking is is implemented in terms of an _elaborator_, which checks and
-tanslates a user-friendly _surface language_ into a simpler and more explicit
+translates a user-friendly _surface language_ into a simpler and more explicit
 _core language_ that is more closely connected to type theory. Because we need
 to simplify types during elaboration we also implement an interpreter for the
 core language.

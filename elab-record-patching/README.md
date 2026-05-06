@@ -104,7 +104,7 @@ hiding definitions behind function parameters. For example:
 Implicit function types and unification could be convenient. This could be
 challenging to implement in the presence coercive subtyping, however.
 Apparently total space conversion addresses some of the same pain points as
-implicit parameters, but I'm still somewhat skeptical of this!
+implicit parameters, but I'm still somewhat sceptical of this!
 
 ### Patches elaborate to large, unfolded terms
 
@@ -144,4 +144,4 @@ Elaborating record patches to singleton types is similar to approaches
 developed for formalising and implementing type realisation in Standard ML,
 for example in [“Extensional equivalence and singleton types”](https://doi.org/10.1145/1183278.1183281).
 Unlike this work, we avoid defining singletons in terms of extensional equality,
-which makes it much easier to maintain decideable type checking.
+which makes it much easier to maintain decidable type checking.

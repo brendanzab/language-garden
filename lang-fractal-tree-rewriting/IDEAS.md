@@ -32,7 +32,7 @@ Previous experiments:
 I was probably prompted to start re-examining the string rewriting approach that L-systems use
 as a result of reading tweets from [Eli](https://mastodon.gamedev.place/@eli)
 (one of the developers of developers of [Idu](https://idu.cyberplant.ee/))
-expressing skepticism about L-systems.
+expressing scepticism about L-systems.
 If I recall correctly, Idu is implemented using a markov-chains and a graph-based data structure.
 
 The `...` notation is inspired by the “catamorphism” notation from the [Nanopass Framework](https://nanopass.org).
@@ -112,7 +112,7 @@ def rules :=
 
 ### Anabaena Cetenula (detailed)
 
-A more detailed model of a filement of Anabaena Cetenula[^anabaena4].
+A more detailed model of a filament of Anabaena Cetenula[^anabaena4].
 
 ```text
 data polarity :=
