@@ -5,11 +5,11 @@
 
 ---
 
-A demonstration of compiling a first-order functional programming language
-with top-level, mutually recursive definitions to Web Assembly. This is a
-stepping stone towards compiling higher-order, curried functional languages,
-avoiding the complexities of closure conversion, uncurrying, and memory
-allocation for now.
+A demonstration of compiling a language with top-level, mutually recursive
+definitions to Web Assembly. This is a stepping stone towards compiling
+higher-order, curried functional languages (like STLC or System-F), avoiding
+the complexities of closure conversion, uncurrying, and memory allocation for
+now.
 
 ## Example
 

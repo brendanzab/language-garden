@@ -77,7 +77,7 @@ related to compiling functional programming languages.
 - [**compile-arithcond**](./compile-arithcond/):
   Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
 - [**compile-fofl**](./compile-fofl/):
-  Compiling a first-order functional programming language to Web Assembly.
+  Compiling a language with top-level, mutually recursive definitions to Web Assembly.
 
 ### Languages
 
