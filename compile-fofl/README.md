@@ -192,8 +192,10 @@ fun is-odd(n : I32) : Bool :=
 
 ## Compiler overview
 
-We first hoist let bindings and conditionals to the top of expressions. The
-resulting program is then emitted to the WebAssembly Text Format:
+After parsing, the surface language is elaborated to a core language, using a
+similar approach to the [elaboration projects](../README.md#elaboration).
+Following this, let bindings and conditionals are hoisted to the top of
+expressions. The resulting program is then emitted as WAT.
 
 ```text
       Surface.Program.t
@@ -214,10 +216,6 @@ resulting program is then emitted to the WebAssembly Text Format:
   Format.formatter -> unit
 ```
 
-A tool like {{: https://github.com/WebAssembly/binaryen} wasm-opt} could
-be used to perform optimisations to the resulting WASM.
-
-
 ## Todo list
 
 - [x] Hoist let expressions and conditionals
@@ -227,7 +225,7 @@ be used to perform optimisations to the resulting WASM.
   - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
   - [ ] Validate WAT against an existing WASM toolchain
 - [ ] Compile to LLVM
-- [ ] Test that each IL evaluates to the same result
+- [ ] Test that each translation preserves the semantics
 
 CLI Entrypoints:
 
