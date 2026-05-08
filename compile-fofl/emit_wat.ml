@@ -3,7 +3,6 @@
 module Emit : sig
 
   val pp_program : ?tail_call:bool ->  Hoisted.Program.t -> Format.formatter -> unit
-    [@@warning "-unused-value-declaration"]
 
 end = struct
 
