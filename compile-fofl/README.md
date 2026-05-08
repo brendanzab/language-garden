@@ -220,10 +220,14 @@ be used to perform optimisations to the resulting WASM.
 
 ## Todo list
 
-- [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
-- [ ] Generate join points during hoisting
+- [x] Hoist let expressions and conditionals
+  - [ ] Generate join points
 - [x] Compile to WASM
+  - [ ] Emit code for join points using blocks
+  - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
+  - [ ] Validate WAT against an existing WASM toolchain
 - [ ] Compile to LLVM
+- [ ] Test that each IL evaluates to the same result
 
 CLI Entrypoints:
 
@@ -231,8 +235,3 @@ CLI Entrypoints:
 - [ ] Elab
 - [ ] Elab -> Hoist
 - [x] Elab -> Hoist -> Emit WAT
-
-Tests:
-
-- [ ] Check that each IL evaluates to the same result
-- [ ] Check compiled WAT against an existing WASM toolchain
