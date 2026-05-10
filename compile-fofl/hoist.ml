@@ -22,7 +22,7 @@ end = struct
           k (H.Expr.Item (name, Some (Iarray.of_list args)))
       | C.Expr.Var index ->
           k (H.Expr.Var (C.Local.Env.lookup index env))
-      | C.Expr.Let (name, def_ty, def, body) ->
+      | C.Expr.Let ((name, def_ty, def), body) ->
           let name = H.Local_name.fresh (Option.value name ~default:"") in
           let@ def = go_expr env def in
           let body = go_expr (C.Local.Env.extend name env) body k in

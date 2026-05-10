@@ -41,11 +41,13 @@ and Expr : sig
   type t =
     | Item of Item_name.t * t Iarray.t option
     | Var of Local.Index.t
-    | Let of string option * Ty.t * t * t
+    | Let of def * t
     | Bool of bool
     | Bool_if of t * t * t
     | I32 of int32
     | Prim of Prim.Op.t * t Iarray.t
+
+  and def = string option * Ty.t * t
 
   type value = Prim.Value.t =
     | Bool of bool
@@ -69,7 +71,7 @@ end = struct
         | _, _ -> failwith "Expr.eval"
         end
     | Var index -> Local.Env.lookup index locals
-    | Let (_, _, def, body) ->
+    | Let ((_, _, def), body) ->
         let def = eval items locals def in
         eval items (Local.Env.extend def locals) body
     | Bool bool -> Bool bool
@@ -87,7 +89,7 @@ end
 
 module Program = struct
 
-  type t = Item.t Item_map.t
+  type t = Item.t Item_map.t  (* TODO: Preserve order? *)
 
   let item_ty (program : t) (name : Item_name.t) : Ty.t =
     match Item_map.find name program with

@@ -41,7 +41,7 @@ let ty :=
 let tm :=
 | "let"; n = spanned(pattern); ty = option(":"; ty = spanned(ty); { ty }); ":=";
     tm1 = spanned(tm); ";"; tm2 = spanned(tm);
-    { Surface.Expr.Let (n, ty, tm1, tm2) }
+    { Surface.Expr.Let ((n, ty, tm1), tm2) }
 | "if"; tm1 = spanned(eq_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.Expr.If_then_else (tm1, tm2, tm3) }
 | tm = spanned(eq_tm); ":"; ty = spanned(ty);
@@ -109,8 +109,8 @@ let pattern :=
     { Some n }
 
 let param :=
-| n = spanned(pattern); ":"; ty = spanned(ty);
-    { n, ty }
+| pat = spanned(pattern); ":"; ty = spanned(ty);
+    { pat, ty }
 
 
 (* Utilities *)

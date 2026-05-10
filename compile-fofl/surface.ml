@@ -45,16 +45,21 @@ module Expr = struct
   and data =
     | Name of string Spanned.t * t Iarray.t option
     | Prim of string Spanned.t * t Iarray.t
-    | Let of binder * Ty.t option * t * t
+    | Let of def * t
     | Ann of t * Ty.t
     | I32 of int32
     | If_then_else of t * t * t
     | Infix of [`Eq | `Add | `Sub | `Mul] * t * t
     | Prefix of [`Neg] * t
 
-  (** Names that bind definitions or parameters *)
-  and binder =
+  and pattern =
     string option Spanned.t
+
+  and param =
+    pattern * Ty.t
+
+  and def =
+    pattern * Ty.t option * t
 
 end
 
@@ -62,19 +67,15 @@ module Item = struct
 
   type t =
     | Val of binder * Ty.t * Expr.t
-    | Fun of binder * param Iarray.t * Ty.t * Expr.t
+    | Fun of binder * Expr.param Iarray.t * Ty.t * Expr.t
 
   and binder =
     string Spanned.t
 
-  (** Function parameters, with optional type annotations *)
-  and param =
-    Expr.binder * Ty.t
-
   let name item =
     match item with
-    | Val (name, _, _) -> Core.Item_name.make name.data
-    | Fun (name, _, _, _) -> Core.Item_name.make name.data
+    | Val (name, _, _) -> name
+    | Fun (name, _, _, _) -> name
 
 end
 
@@ -175,10 +176,10 @@ module Elab = struct
         | None -> error name.span "unknown primitive operation `#%s`" name.data
         end
 
-    | Expr.Let (name, def_ty, def, body) ->
-        let env, def, def_ty = check_def env name def_ty def in
+    | Expr.Let (def, body) ->
+        let env, def = check_def env def in
         let body, ty = infer_expr env body in
-        Core.(Expr.Let (name.data, def_ty, def, body), ty)
+        Core.(Expr.Let (def, body), ty)
 
     | Expr.Ann (expr, ty) ->
         let ty = check_ty ty in
@@ -219,10 +220,10 @@ module Elab = struct
 
   and check_expr (env : Env.t) (expr : Expr.t) (ty : Core.Ty.t) : Core.Expr.t =
     match expr.data with
-    | Expr.Let (name, def_ty, def, body) ->
-        let env, def, def_ty = check_def env name def_ty def in
+    | Expr.Let (def, body) ->
+        let env, def = check_def env def in
         let body = check_expr env body ty in
-        Core.Expr.Let (name.data, def_ty, def, body)
+        Core.Expr.Let (def, body)
 
     | Expr.If_then_else (expr1, expr2, expr3) ->
         let expr1 = check_expr env expr1 Core.Ty.Bool in
@@ -235,46 +236,43 @@ module Elab = struct
         unify_tys expr.span ~found:found_ty ~expected:ty;
         expr'
 
-  and check_def (env : Env.t) (name : Expr.binder) (def_ty : Ty.t option) (def : Expr.t) : Env.t * Core.Expr.t * Prim.Ty.t =
-    let def, def_ty =
-      match def_ty with
+  and check_def (env : Env.t) ((name, ty, expr) : Expr.def) : Env.t * Core.Expr.def =
+    let expr, ty =
+      match ty with
       | Some ty ->
           let ty = check_ty ty in
-          check_expr env def ty, ty
-      | None -> infer_expr env def
+          check_expr env expr ty, ty
+      | None ->
+          infer_expr env expr
     in
-    Env.add_local env name.data def_ty, def, def_ty
+    Env.add_local env name.data ty, (name.data, ty, expr)
 
   let check_program (prog : Program.t) : Core.Program.t =
-    let check_item_sig items_sigs item =
-      let name =
-        match item with
-        | Item.Val (n, _, _) | Item.Fun (n, _, _, _) ->
-            let name = Core.Item_name.make n.data in
-            if not (Core.Item_map.mem name items_sigs) then name else
-              error n.span "item name already used"
-      in
-      match item with
-      | Item.Val (_, ty, _) ->
-          items_sigs |> Core.Item_map.add name (Val (check_ty ty))
-      | Item.Fun (_, params, ty, _) ->
-          let params = Iarray.map (fun (_, ty) -> check_ty ty) params in
-          items_sigs |> Core.Item_map.add name (Fun (params, check_ty ty))
-    in
-
     let item_sigs =
+      let check_item_sig items_sigs item =
+        let name = Core.Item_name.make (Item.name item).data in
+        if Core.Item_map.mem name items_sigs then
+          error (Item.name item).span "item name already used";
+
+        match item with
+        | Item.Val (_, ty, _) ->
+            items_sigs |> Core.Item_map.add name (Val (check_ty ty))
+        | Item.Fun (_, params, ty, _) ->
+            let params = Iarray.map (fun (_, ty) -> check_ty ty) params in
+            items_sigs |> Core.Item_map.add name (Fun (params, check_ty ty))
+      in
       List.fold_left check_item_sig Core.Item_map.empty prog
     in
 
     let check_item item =
-      let name = Item.name item in
       let env = Env.make item_sigs in
+      let name = Core.Item_name.make (Item.name item).data in
       match item, Core.Item_map.find name item_sigs with
       | Item.Val (_, _, expr), Val ty ->
           name, Core.Item.Val (ty, check_expr env expr ty)
       | Item.Fun (_, params, _, expr), Fun (param_tys, ty) ->
-          (* FIXME: Check duplicate names *)
-          let params = Iarray.map2 (fun (name, _ : Expr.binder * _) ty -> name.data, ty) params param_tys in
+          (* FIXME: Check duplicate parameter names *)
+          let params = Iarray.map2 (fun (name, _ : Expr.param) ty -> name.data, ty) params param_tys in
           let env = Iarray.fold_right (fun (name, ty) env -> Env.add_local env name ty) params env in
           let expr = check_expr env expr ty in
           name, Core.Item.Fun (params, ty, expr)
