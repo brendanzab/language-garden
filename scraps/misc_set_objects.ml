@@ -180,37 +180,31 @@ end
 module Object_oriented = struct
 
   (** Sets as a characteristic function *)
-  module Functions = struct
+  module Function = struct
 
-    type set = int -> bool
+    type t = int -> bool
 
-    let empty : set = fun _ -> false
-    let insert (s : set) (n : int) : set = fun i -> i = n || s i
-    let union (s1 : set) (s2 : set) : set = fun i -> s1 i || s2 i
+    let empty : t = fun _ -> false
+    let insert (s : t) (n : int) : t = fun i -> i = n || s i
+    let union (s1 : t) (s2 : t) : t = fun i -> s1 i || s2 i
+
+    (* NOTE: This interface effectively only supports the “contains” method.
+       This that we cannot check if the set is empty. *)
 
   end
 
   (** OCaml’s object types are a good stand-in for the paper’s interfaces *)
-  module Objects = struct
+  module Object = struct
 
     (* Based on Figure 7 from the paper *)
-    type set = <
+    type t = <
       is_empty : bool;
       contains : int -> bool;
-      insert : int -> set;
-      union : set -> set;
+      insert : int -> t;
+      union : t -> t;
     >
 
-    (* Core implementations *)
-
-    let rec empty () : set = object(self)
-      method is_empty = true
-      method contains _ = false
-      method insert i = insert self i
-      method union s = s
-    end
-
-    and insert (s : set) (n : int) : set =
+    let rec insert (s : t) (n : int) : t =
       if s#contains n then s else
         object(self)
           method is_empty = false
@@ -219,60 +213,45 @@ module Object_oriented = struct
           method union s = union self s
         end
 
-    and union (s1 : set) (s2 : set) : set = object(self)
+    and union (s1 : t) (s2 : t) : t = object(self)
       method is_empty = s1#is_empty && s2#is_empty
       method contains i = s1#contains i || s2#contains i
       method insert i = insert self i
       method union s = union self s
     end
 
-    (* Additional implementations *)
-
-    let even : set = object(self)
-      method is_empty = false
-      method contains i = i mod 2 = 0
+    let empty : t = object(self)
+      method is_empty = true
+      method contains _ = false
       method insert i = insert self i
-      method union s = union self s
+      method union s = s (* NOTE: optimisation for empty sets *)
     end
 
-    let full : set = object(self)
-      method is_empty = false
-      method contains _ = true
-      method insert _ = self
-      method union _ = self
-    end
-
-    let interval (n : int) (m : int) : set = object(self)
-      method is_empty = n > m
-      method contains i = n <= i && i <= m
-      method insert i = insert self i
-      method union s = union self s
-    end
+    (* FIXME: [empty] needs to be defined afterwards, unlike in the [Records]
+       example below. This could be a bug in OCaml's vicious circle analysis. *)
 
   end
 
   (** We can actually just use recursive record to define objects in OCaml,
-      but it’s a little more awkward. *)
-  module Records = struct
+      but it’s a little more ugly due to the precedence of functions. *)
+  module Record = struct
 
-    type set = {
+    type t = {
       is_empty : bool;
       contains : int -> bool;
-      insert : int -> set;
-      union : set -> set;
+      insert : int -> t;
+      union : t -> t;
     }
 
-    (* Core implementations *)
-
-    let rec empty () : set =
+    let rec empty : t =
       let rec self = {
         is_empty = true;
         contains = (fun _ -> false);
         insert = (fun i -> insert self i);
-        union = (fun s -> s);
+        union = (fun s -> s); (* NOTE: optimisation for empty sets *)
       } in self
 
-    and insert (s : set) (n : int) : set =
+    and insert (s : t) (n : int) : t =
       if s.contains n then s else
         let rec self = {
           is_empty = false;
@@ -281,7 +260,7 @@ module Object_oriented = struct
           union = (fun s -> union self s);
         } in self
 
-    and union (s1 : set) (s2 : set) : set =
+    and union (s1 : t) (s2 : t) : t =
       let rec self = {
         is_empty = s1.is_empty && s2.is_empty;
         contains = (fun i -> s1.contains i || s2.contains i);
@@ -289,9 +268,86 @@ module Object_oriented = struct
         union = (fun s -> union self s);
       } in self
 
-    (* Additional implementations *)
+  end
 
-    let even : set =
+  (** Isomorphisms between presentation styles *)
+
+  (* Objects <=> Record *)
+
+  let rec record_of_object (self : Object.t) : Record.t = {
+    is_empty = self#is_empty;
+    contains = (fun i -> self#contains i);
+    insert = (fun i -> record_of_object (self#insert i));
+    union = (fun s -> record_of_object (self#union (object_of_record s)));
+  }
+
+  and object_of_record (self : Record.t) : Object.t =
+    object
+      method is_empty = self.is_empty
+      method contains i = self.contains i
+      method insert i = object_of_record (self.insert i)
+      method union s = object_of_record (self.union (record_of_object s))
+    end
+
+end
+
+(** Additional object oriented set implementations that use the interfaces
+    above, including:
+
+    - [even]: the set of all even integers
+    - [full]: the set of all integers
+    - [interval]: the set of all integers within some inclusive bounds
+
+    This shows how additional set objects can be defined based on the same
+    interface, beyond what was originally envisioned by the library author, all
+    while retaining interoperability with existing objects.
+
+    See section 3.4 of the paper.
+*)
+module Object_oriented_ext = struct
+
+  module Function = struct
+
+    open Object_oriented.Function
+
+    let even : t = fun i -> i mod 2 = 0
+    let full : t = fun _ -> true
+    let interval (n : int) (m : int) : t = fun i -> n <= i && i <= m
+
+  end
+
+  module Object = struct
+
+    open Object_oriented.Object
+
+    let even : t = object(self)
+      method is_empty = false
+      method contains i = i mod 2 = 0
+      method insert i = insert self i
+      method union s = union self s
+    end
+
+    let full : t = object(self)
+      method is_empty = false
+      method contains _ = true
+      method insert _ = self
+      method union _ = self
+    end
+
+    let interval (n : int) (m : int) : t = object(self)
+      method is_empty = n > m
+      method contains i = n <= i && i <= m
+      method insert i = insert self i
+      method union s = union self s
+    end
+
+  end
+
+  module Record = struct
+
+    open Object_oriented.Record
+
+    let even : t =
       let rec self = {
         is_empty = false;
         contains = (fun i -> i mod 2 = 0);
@@ -299,7 +355,7 @@ module Object_oriented = struct
         union = (fun s -> union self s);
       } in self
 
-    let full : set =
+    let full : t =
       let rec self = {
         is_empty = false;
         contains = (fun _ -> true);
@@ -307,7 +363,7 @@ module Object_oriented = struct
         union = (fun _ -> self);
       } in self
 
-    let interval (n : int) (m : int) : set =
+    let interval (n : int) (m : int) : t =
       let rec self = {
         is_empty = n > m;
         contains = (fun i -> n <= i && i <= m);
@@ -317,162 +373,64 @@ module Object_oriented = struct
 
   end
 
-  (** Object oriented implementation using first-class modules.
+end
 
-      I don't think anyone would usually use first-class modules like this, but
-      I’m including it to demonstrate the correspondence between modules and
-      object-oriented approaches to programming. *)
-  module Modules = struct
+(* Section 3.9: *)
 
-    module rec Set : sig
+type 'a f = {
+  is_empty : bool;
+  contains : int -> bool;
+  insert : int -> 'a;
+  union : 'a -> 'a;
+}
 
-      module type S = sig
-        val is_empty : bool
-        val contains : int -> bool
-        val insert : int -> (module Set.S)
-        val union : (module Set.S) -> (module Set.S)
-      end
+(* isomorphic to Object_oriented.Records.set *)
+type set_obj =
+  | Set_obj of set_obj f
 
-    end = Set
+let rec into (Set_obj r : set_obj) : Object_oriented.Record.t = {
+  is_empty = r.is_empty;
+  contains = (fun i -> r.contains i);
+  insert = (fun i -> into (r.insert i));
+  union = (fun s -> into (r.union (from s)));
+}
 
-    (* Core implementations *)
+and from (r : Object_oriented.Record.t) : set_obj = Set_obj {
+  is_empty = r.is_empty;
+  contains = (fun i -> r.contains i);
+  insert = (fun i -> from (r.insert i));
+  union = (fun s -> from (r.union (into s)));
+}
 
-    let rec empty () : (module Set.S) =
-      let rec self : (module Set.S) =
-        (module struct
-          let is_empty = true
-          let contains _ = false
-          let insert i = insert self i
-          let union s = s
-        end)
-      in self
+(* isomorphic to Abstract_data_types.Existential.set *)
+type set_adt =
+  | Set_adt : 'rep. 'rep * ('rep -> 'rep f) -> set_adt
 
-    and insert (module S : Set.S) (n : int) : (module Set.S) =
-      if S.contains n then (module S) else
-        let rec self : (module Set.S) =
-          (module struct
-            let is_empty = false
-            let contains i = (i = n) || S.contains i
-            let insert i = insert self i
-            let union s = union self s
-          end)
-        in self
+(* TODO: ... *)
 
-    and union (module S1 : Set.S) (module S2 : Set.S) : (module Set.S) =
-      let rec self : (module Set.S) =
-        (module struct
-          let is_empty = S1.is_empty && S2.is_empty
-          let contains i = S1.contains i || S2.contains i
-          let insert i = insert self i
-          let union s = union self s
-        end)
-      in self
 
-    (* Additional implementations *)
+(* Objects as ADTs. See end of section 4.2 *)
 
-    let even : (module Set.S) =
-      let rec self : (module Set.S) =
-        (module struct
-          let is_empty = false
-          let contains i = i mod 2 = 0
-          let insert i = insert self i
-          let union s = union self s
-        end)
-      in self
+module _ : Abstract_data_types.Module.S = struct
 
-    let full : (module Set.S) =
-      let rec self : (module Set.S) =
-        (module struct
-          let is_empty = false
-          let contains _ = true
-          let insert _ = self
-          let union _ = self
-        end)
-      in self
+  type t = Object_oriented.Object.t
 
-    let interval (n : int) (m : int) : (module Set.S) =
-      let rec self : (module Set.S) =
-        (module struct
-          let is_empty = n > m
-          let contains i = n <= i && i <= m
-          let insert i = insert self i
-          let union s = union self s
-        end)
-      in self
-
-  end
-
-  (** Isomorphisms between presentation styles *)
-
-  (* Objects <=> Records *)
-
-  let rec record_of_object (self : Objects.set) : Records.set = {
-    is_empty = self#is_empty;
-    contains = (fun i -> self#contains i);
-    insert = (fun i -> record_of_object (self#insert i));
-    union = (fun s -> record_of_object (self#union (object_of_record s)));
-  }
-
-  and object_of_record (self : Records.set) : Objects.set =
-    object
-      method is_empty = self.is_empty
-      method contains i = self.contains i
-      method insert i = object_of_record (self.insert i)
-      method union s = object_of_record (self.union (record_of_object s))
-    end
-
-  (* Records <=> Modules *)
-
-  let rec module_of_record (module Self : Modules.Set.S) : Records.set = {
-    is_empty = Self.is_empty;
-    contains = (fun i -> Self.contains i);
-    insert = (fun i -> module_of_record (Self.insert i));
-    union = (fun s -> module_of_record (Self.union (record_of_module s)));
-  }
-
-  and record_of_module  (self : Records.set) : (module Modules.Set.S) =
-    (module struct
-      let is_empty = self.is_empty
-      let contains i = self.contains i
-      let insert i = record_of_module (self.insert i)
-      let union s = record_of_module (self.union (module_of_record s))
-    end)
-
-  (* Modules <=> Objects *)
-
-  let rec object_of_module (module Self : Modules.Set.S) : Objects.set =
-    object
-      method is_empty = Self.is_empty
-      method contains i = Self.contains i
-      method insert i = object_of_module (Self.insert i)
-      method union s = object_of_module (Self.union (module_of_object s))
-    end
-
-  and module_of_object (self : Objects.set) : (module Modules.Set.S) =
-    (module struct
-      let is_empty = self#is_empty
-      let contains i = self#contains i
-      let insert i = module_of_object (self#insert i)
-      let union s = module_of_object (self#union (object_of_module s))
-    end)
+  let is_empty s = s#is_empty
+  let contains s i = s#contains i
+  let empty = Object_oriented.Object.empty
+  let insert = Object_oriented.Object.insert
+  let union = Object_oriented.Object.union
 
 end
 
-(*
+module _ : Abstract_data_types.Module.S = struct
 
-  Section 3.9:
+  type t = Object_oriented.Record.t
 
-  type 'a f = {
-    is_empty : bool;
-    contains : int -> bool;
-    insert : int -> 'a;
-    union : 'a -> 'a;
-  }
+  let is_empty s = Object_oriented.Record.(s.is_empty)
+  let contains s i = Object_oriented.Record.(s.contains) i
+  let empty = Object_oriented.Record.empty
+  let insert = Object_oriented.Record.insert
+  let union = Object_oriented.Record.union
 
-  (* isomorphic to Object_oriented.Records.set *)
-  type set_obj = Set_obj : set_obj f -> set_obj
-
-  (* isomorphic to Abstract_data_types.Existential.set *)
-  type set_adt = Set_adt : 'rep. 'rep * ('rep -> 'rep f) -> set_adt
-
-*)
+end
