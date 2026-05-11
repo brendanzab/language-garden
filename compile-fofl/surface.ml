@@ -86,27 +86,31 @@ module Program = struct
 end
 
 (** Elaboration from the surface language into the core language *)
-module Elab = struct
+module Elab : sig
+
+  val check_program : Program.t -> (Core.Program.t, Span.t * string) result
+
+end = struct
 
   (** {2 Elaboration context} *)
 
-  type item_sig =
-    | Val of Core.Ty.t
-    | Fun of Core.Ty.t Iarray.t * Core.Ty.t
-
   module Env = struct
 
+    type item_decl =
+      | Val of Core.Ty.t
+      | Fun of Core.Ty.t Iarray.t * Core.Ty.t
+
     type t = {
-      item_sigs : item_sig Core.Item_map.t;
+      item_decls : item_decl Core.Item_map.t;
       local_names : string option Core.Local.Env.t;
       local_tys : Core.Ty.t Core.Local.Env.t;
     }
 
-    let make (item_sigs : item_sig Core.Item_map.t) : t =
-      { item_sigs;
-        local_names = Core.Local.Env.empty;
-        local_tys = Core.Local.Env.empty;
-      }
+    let empty : t = {
+      item_decls = Core.Item_map.empty;
+      local_names = Core.Local.Env.empty;
+      local_tys = Core.Local.Env.empty;
+    }
 
     let add_local (env : t) (name : string option) (ty : Core.Ty.t) : t =
       { env with
@@ -114,18 +118,33 @@ module Elab = struct
         local_tys = Core.Local.Env.extend ty env.local_tys;
       }
 
+    let add_item (env : t) (name : string) (decl : item_decl) : t =
+      let name = Core.Item_name.make name in
+      { env with
+        item_decls = env.item_decls |> Core.Item_map.add name decl;
+      }
+
+    let lookup_item (env : t) (name : string) : (Core.Item_name.t * item_decl) option =
+      let name = Core.Item_name.make name in
+      Core.Item_map.find_opt name env.item_decls
+      |> Option.map (fun item -> name, item)
+
+    let lookup_local (env : t) (name : string) : (Core.Expr.t * Core.Ty.t) option =
+      match Core.Local.Env.find_index ((=) (Some name)) env.local_names with
+      | Some index -> Some (Core.(Expr.Var index, Local.Env.lookup index env.local_tys))
+      | None when name = "true" -> Some (Core.(Expr.Bool true, Ty.Bool))
+      | None when name = "false" -> Some (Core.(Expr.Bool false, Ty.Bool))
+      | None -> None
+
     let lookup (env : t) (name : string) : [
-      | `Item of  Core.Item_name.t * item_sig
+      | `Item of  Core.Item_name.t * item_decl
       | `Expr of Core.Expr.t * Core.Ty.t
     ] option =
-      let item_name = Core.Item_name.make name in
-      match Core.Item_map.find_opt item_name env.item_sigs with
-      | Some item -> Some (`Item (item_name, item))
+      match lookup_item env name with
+      | Some (name, item) -> Some (`Item (name, item))
       | None ->
-          match Core.Local.Env.find_index ((=) (Some name)) env.local_names with
-          | Some index -> Some (`Expr Core.(Expr.Var index, Local.Env.lookup index env.local_tys))
-          | None when name = "true" -> Some (`Expr Core.(Expr.Bool true, Ty.Bool))
-          | None when name = "false" -> Some (`Expr Core.(Expr.Bool false, Ty.Bool))
+          match lookup_local env name with
+          | Some (expr, ty) -> Some (`Expr (expr, ty))
           | None -> None
 
   end
@@ -157,7 +176,6 @@ module Elab = struct
   let rec infer_expr (env : Env.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
     match expr.data with
     | Expr.Name (name, args) ->
-        (* TODO: Clean this up!! *)
         begin match Env.lookup env name.data, args with
         | Some (`Item (name, Val ty)), None -> Core.Expr.Item (name, None), ty
         | Some (`Item (name, Fun (params, ty))), Some args when Iarray.length params = Iarray.length args ->
@@ -248,29 +266,25 @@ module Elab = struct
     Env.add_local env name.data ty, (name.data, ty, expr)
 
   let check_program (prog : Program.t) : Core.Program.t =
-    let item_sigs =
-      let check_item_sig items_sigs item =
-        let name = Core.Item_name.make (Item.name item).data in
-        if Core.Item_map.mem name items_sigs then
-          error (Item.name item).span "item name already used";
+    let check_item_decl (env : Env.t) (item : Item.t) : Env.t =
+      let name = Item.name item in
+      if Option.is_some (Env.lookup_item env name.data) then
+        error name.span "item name already used";
 
-        match item with
-        | Item.Val (_, ty, _) ->
-            items_sigs |> Core.Item_map.add name (Val (check_ty ty))
-        | Item.Fun (_, params, ty, _) ->
-            let params = Iarray.map (fun (_, ty) -> check_ty ty) params in
-            items_sigs |> Core.Item_map.add name (Fun (params, check_ty ty))
-      in
-      List.fold_left check_item_sig Core.Item_map.empty prog
-    in
+      match item with
+      | Item.Val (_, ty, _) ->
+          Env.add_item env name.data (Env.Val (check_ty ty))
+      | Item.Fun (_, params, ty, _) ->
+          (* FIXME: Check duplicate parameter names *)
+          let params = Iarray.map (fun (_, ty) -> check_ty ty) params in
+          Env.add_item env name.data (Env.Fun (params, check_ty ty))
 
-    let check_item item =
-      let env = Env.make item_sigs in
-      let name = Core.Item_name.make (Item.name item).data in
-      match item, Core.Item_map.find name item_sigs with
-      | Item.Val (_, _, expr), Val ty ->
+    and check_item (env : Env.t) (item : Item.t) : Core.Item_name.t * Core.Item.t =
+      match item, Env.lookup_item env (Item.name item).data with
+      | Item.Val (_, _, expr), Some (name, Env.Val ty) ->
           name, Core.Item.Val (ty, check_expr env expr ty)
-      | Item.Fun (_, params, _, expr), Fun (param_tys, ty) ->
+      | Item.Fun (_, params, _, expr), Some (name, Env.Fun (param_tys, ty))
+        when Iarray.(length params = length param_tys) ->
           (* FIXME: Check duplicate parameter names *)
           let params = Iarray.map2 (fun (name, _ : Expr.param) ty -> name.data, ty) params param_tys in
           let env = Iarray.fold_right (fun (name, ty) env -> Env.add_local env name ty) params env in
@@ -280,8 +294,17 @@ module Elab = struct
           failwith "item does not match item signature"
     in
 
+    let env = List.fold_left check_item_decl Env.empty prog in
+
     List.to_seq prog
-    |> Seq.map check_item
+    |> Seq.map (check_item env)
     |> Core.Item_map.of_seq
+
+
+  (** {2 Public API} *)
+
+  let check_program (prog : Program.t) : (Core.Program.t, Span.t * string) result =
+    try Ok (check_program prog) with
+    | Error (span, msg) -> Error (span, msg)
 
 end

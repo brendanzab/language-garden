@@ -59,8 +59,9 @@ let parse_program (source : Source_file.t) : Surface.Program.t =
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
 let elab_program (source : Source_file.t) (prog : Surface.Program.t) =
-  try Surface.Elab.check_program prog with
-  | Surface.Elab.Error (pos, msg) ->
+  match Surface.Elab.check_program prog with
+  | Ok prog -> prog
+  | Error (pos, msg) ->
       emit source "error" pos msg;
       exit 1
 
