@@ -384,7 +384,7 @@ type 'a f = {
   union : 'a -> 'a;
 }
 
-(* isomorphic to Object_oriented.Records.set *)
+(* Isomorphic to Object_oriented.Records.set *)
 type set_obj =
   | Set_obj of set_obj f
 
@@ -402,12 +402,29 @@ and from (r : Object_oriented.Record.t) : set_obj = Set_obj {
   union = (fun s -> from (r.union (into s)));
 }
 
-(* isomorphic to Abstract_data_types.Existential.set *)
+(* Isomorphic to Abstract_data_types.Existential.set *)
 type set_adt =
   | Set_adt : 'rep. 'rep * ('rep -> 'rep f) -> set_adt
 
-(* TODO: ... *)
+let rec into (Set_adt (empty, f) : set_adt) : Abstract_data_types.Existential.some_set =
+  Set {
+    empty = empty;
+    insert = (fun self -> (f self).insert);
+    is_empty = (fun self -> (f self).is_empty);
+    contains = (fun self -> (f self).contains);
+    union = (fun self -> (f self).union);
+  }
 
+and from (Set r : Abstract_data_types.Existential.some_set) : set_adt =
+  Set_adt (
+    r.empty,
+    fun self -> {
+      is_empty = r.is_empty self;
+      contains = r.contains self;
+      insert = r.insert self;
+      union = r.union self;
+    }
+  )
 
 (* Objects as ADTs. See end of section 4.2 *)
 
