@@ -283,8 +283,7 @@ end = struct
       match item, Env.lookup_item env (Item.name item).data with
       | Item.Val (_, _, expr), Some (name, Env.Val ty) ->
           name, Core.Item.Val (ty, check_expr env expr ty)
-      | Item.Fun (_, params, _, expr), Some (name, Env.Fun (param_tys, ty))
-        when Iarray.(length params = length param_tys) ->
+      | Item.Fun (_, params, _, expr), Some (name, Env.Fun (param_tys, ty)) ->
           (* FIXME: Check duplicate parameter names *)
           let params = Iarray.map2 (fun (name, _ : Expr.param) ty -> name.data, ty) params param_tys in
           let env = Iarray.fold_right (fun (name, ty) env -> Env.add_local env name ty) params env in
