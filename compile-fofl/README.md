@@ -194,8 +194,10 @@ fun is-odd(n : I32) : Bool :=
 
 After parsing, the surface language is elaborated to a core language, using a
 similar approach to the [elaboration projects](../README.md#elaboration).
-Following this, let bindings and conditionals are hoisted to the top of
-expressions. The resulting program is then emitted as WAT.
+
+The main complication in the translation to web assembly is the identification
+of tailcalls. To do this, let bindings and conditionals are hoisted to the top
+of expressions. The resulting program is then emitted as WAT.
 
 ```text
       Surface.Program.t
@@ -223,7 +225,7 @@ expressions. The resulting program is then emitted as WAT.
 - [x] Compile to WASM
   - [ ] Emit code for join points using blocks
   - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
-  - [ ] Validate WAT against an existing WASM toolchain
+  - [x] Validate WAT with [wabt](https://github.com/WebAssembly/wabt)
 - [ ] Compile to LLVM
 - [ ] Test that each translation preserves the semantics
 

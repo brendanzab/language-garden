@@ -1,28 +1,57 @@
 let bin = "fofl"
 let package = "compile-fofl"
 
+module type Test = sig
+  val wat_file : string
+  val wasm_file : string
+  val compile_args : string
+  val wat2wasm_args : string
+  val wasm_validate_args : string
+end
+
 let generate_rules base = begin
+  let txt_file = Printf.sprintf "%s.txt" base in
 
-  [`Default; `Emit_tc] |> List.iter begin fun test ->
+  let module Default = struct
+    let wat_file = Printf.sprintf "%s.wat" base
+    let wasm_file = Printf.sprintf "%s.wasm" base
+    let compile_args = "compile"
+    let wat2wasm_args = ""
+    let wasm_validate_args = ""
+  end in
 
-    let source =
-      Printf.sprintf "%s.txt" base
+  let module Emit_tc = struct
+    let wat_file = Printf.sprintf "%s.tc.wat" base
+    let wasm_file = Printf.sprintf "%s.tc.wasm" base
+    let compile_args = "compile --emit-tail-calls"
+    let wat2wasm_args = " --enable-tail-call"
+    let wasm_validate_args = " --enable-tail-call"
+  end in
 
-    and target, args =
-      match test with
-      | `Default -> Printf.sprintf "%s.wat" base, "compile"
-      | `Emit_tc -> Printf.sprintf "%s.tc.wat" base, "compile --emit-tail-calls"
-    in
+  [(module Default); (module Emit_tc)] |> List.iter begin fun (module T : Test) ->
 
-    Printf.printf "(rule";
-    Printf.printf " (with-stdin-from ../%s" source;
-    Printf.printf "  (with-stdout-to %s.tmp" target;
-    Printf.printf "   (run %%{bin:%s} %s))))" bin args;
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" T.wat_file;
+    Printf.printf "   (run %%{bin:%s} %s))))\n" bin T.compile_args;
 
-    Printf.printf "(rule";
-    Printf.printf " (alias runtest)";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)" package;
-    Printf.printf " (action (diff ../%s %s.tmp)))" target target;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" T.wat_file T.wat_file;
+
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)\n" package;
+    Printf.printf " (target %s)\n" T.wasm_file;
+    Printf.printf " (deps (:wat ../%s))\n" T.wat_file;
+    Printf.printf " (action (run wat2wasm %%{wat} -o %%{target}%s)))\n" T.wat2wasm_args;
+
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)\n" package;
+    Printf.printf " (deps (:wasm %s))\n" T.wasm_file;
+    Printf.printf " (action (run wasm-validate %%{wasm}%s)))\n" T.wasm_validate_args;
 
   end;
 

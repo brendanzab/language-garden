@@ -71,6 +71,11 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         final: prev: {
+          compile-fofl = prev.compile-fofl.overrideAttrs (previousAttrs: {
+            nativeCheckInputs = [
+              pkgs.wabt
+            ];
+          });
           lang-shader-graphics = prev.lang-shader-graphics.overrideAttrs (previousAttrs: {
             nativeCheckInputs = [
               # For `lang-shader-graphics/test/dune`
