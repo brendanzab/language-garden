@@ -1,0 +1,11 @@
+fun test(x : I32, y : I32) : I32 :=
+  (if x = 0 then y else x) + 1;
+  --                       ^^^ Without join points this code will be duplicated
+  --                           in each branch
+
+fun add_one(x : I32) : I32 :=
+  x + 1;
+
+fun test-tailcall(x : I32, y : I32) : I32 :=
+  add_one (if x = 0 then x else y);
+-- ^^^^^^ this should be compiled as a tailcall

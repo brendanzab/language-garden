@@ -1,0 +1,12 @@
+(executable
+ (name dune_inc))
+
+(subdir run
+ (dynamic_include ../generate/dune.inc))
+
+(subdir generate
+ (rule
+  (deps (glob_files ../*.txt))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))

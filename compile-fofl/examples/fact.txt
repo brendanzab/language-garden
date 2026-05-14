@@ -1,0 +1,5 @@
+val test-fact : I32 :=
+  fact(5);
+
+fun fact(n : I32) : I32 :=
+  if n = 0 then 1 else n * fact(n - 1);
