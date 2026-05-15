@@ -223,10 +223,11 @@ of expressions. The resulting program is then emitted as WAT.
 - [x] Hoist let expressions and conditionals
   - [ ] Generate join points
 - [x] Compile to WASM
-  - [ ] Emit code for join points using blocks
+  - [ ] Emit join points using blocks
   - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
   - [x] Validate WAT with [wabt](https://github.com/WebAssembly/wabt)
 - [ ] Compile to LLVM
+- [ ] Compile to JavaScript
 - [ ] Test that each translation preserves the semantics
 
 CLI Entrypoints:
