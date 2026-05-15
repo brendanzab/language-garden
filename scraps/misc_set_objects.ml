@@ -451,3 +451,5 @@ module _ : Abstract_data_types.Module.S = struct
   let union = Object_oriented.Record.union
 
 end
+
+(* TODO: ADTs as objects *)
