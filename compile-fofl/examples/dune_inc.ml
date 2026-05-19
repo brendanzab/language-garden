@@ -16,14 +16,14 @@ let generate_rules base = begin
     (module struct
       let wat_file = Printf.sprintf "%s.wat" base
       let wasm_file = Printf.sprintf "%s.wasm" base
-      let compile_args = "compile"
+      let compile_args = ""
       let wat2wasm_args = ""
       let wasm_validate_args = ""
     end);
     (module struct
       let wat_file = Printf.sprintf "%s.tc.wat" base
       let wasm_file = Printf.sprintf "%s.tc.wasm" base
-      let compile_args = "compile --emit-tail-calls"
+      let compile_args = " --emit-tail-calls"
       let wat2wasm_args = " --enable-tail-call"
       let wasm_validate_args = " --enable-tail-call"
     end);
@@ -33,7 +33,7 @@ let generate_rules base = begin
     Printf.printf "(rule\n";
     Printf.printf " (with-stdin-from ../%s\n" txt_file;
     Printf.printf "  (with-stdout-to %s.tmp\n" T.wat_file;
-    Printf.printf "   (run %%{bin:%s} %s))))\n" bin T.compile_args;
+    Printf.printf "   (run %%{bin:%s} compile%s))))\n" bin T.compile_args;
     Printf.printf "";
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
