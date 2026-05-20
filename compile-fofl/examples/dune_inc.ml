@@ -44,7 +44,7 @@ let generate_rules base = begin
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
     Printf.printf " (target %s)\n" T.wasm_file;
-    Printf.printf " (deps (:wat ../%s))\n" T.wat_file;
+    Printf.printf " (deps (:wat %s.tmp))\n" T.wat_file;
     Printf.printf " (action (run wat2wasm %%{wat} -o %%{target}%s)))\n" T.wat2wasm_args;
     Printf.printf "";
     Printf.printf "(rule\n";
