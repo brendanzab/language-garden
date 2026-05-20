@@ -43,73 +43,87 @@ fun is-odd(n : I32) : Bool :=
 ```wat
 (module
   (func
-    $ackermann
+    $ackermann0
     (export "ackermann")
     (param $m0 i32)
     (param $n1 i32)
     (result i32)
+    (local.get $m0)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $m0) (i32.const 0))
-      (then (return (i32.add (local.get $n1) (i32.const 1))))
+      (then (local.get $n1) (i32.const 1) i32.add)
       (else
+        (local.get $n1)
+        (i32.const 0)
+        i32.eq
         (if
           (result i32)
-          (i32.eq (local.get $n1) (i32.const 0))
           (then
-            (return
-              (call
-                $ackermann
-                (i32.sub (local.get $m0) (i32.const 1))
-                (i32.const 1))))
+            (local.get $m0)
+            (i32.const 1)
+            i32.sub
+            (i32.const 1)
+            (call $ackermann0))
           (else
-            (return
-              (call
-                $ackermann
-                (i32.sub (local.get $m0) (i32.const 1))
-                (call
-                  $ackermann
-                  (local.get $m0)
-                  (i32.sub (local.get $n1) (i32.const 1))))))))))
+            (local.get $m0)
+            (i32.const 1)
+            i32.sub
+            (local.get $m0)
+            (local.get $n1)
+            (i32.const 1)
+            i32.sub
+            (call $ackermann0)
+            (call $ackermann0))))))
   (func
-    $fact
+    $fact1
     (export "fact")
     (param $n2 i32)
     (result i32)
+    (local.get $n2)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $n2) (i32.const 0))
-      (then (return (i32.const 1)))
+      (then (i32.const 1))
       (else
-        (return
-          (i32.mul
-            (local.get $n2)
-            (call $fact (i32.sub (local.get $n2) (i32.const 1))))))))
+        (local.get $n2)
+        (local.get $n2)
+        (i32.const 1)
+        i32.sub
+        (call $fact1)
+        i32.mul)))
   (func
-    $is-even
+    $is-even2
     (export "is-even")
     (param $n3 i32)
     (result i32)
+    (local.get $n3)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $n3) (i32.const 0))
-      (then (return (i32.const 1)))
-      (else (return (call $is-odd (i32.sub (local.get $n3) (i32.const 1)))))))
+      (then (i32.const 1))
+      (else (local.get $n3) (i32.const 1) i32.sub (call $is-odd3))))
   (func
-    $is-odd
+    $is-odd3
     (export "is-odd")
     (param $n4 i32)
     (result i32)
+    (local.get $n4)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $n4) (i32.const 0))
-      (then (return (i32.const 0)))
-      (else (return (call $is-even (i32.sub (local.get $n4) (i32.const 1)))))))
+      (then (i32.const 0))
+      (else (local.get $n4) (i32.const 1) i32.sub (call $is-even2))))
   (func
-    $test-fact
+    $test-fact4
     (export "test-fact")
     (result i32)
-    (return (call $fact (i32.const 5)))))
+    (i32.const 5)
+    (call $fact1)))
 ```
 
 </details>
@@ -121,71 +135,87 @@ fun is-odd(n : I32) : Bool :=
 ```wat
 (module
   (func
-    $ackermann
+    $ackermann0
     (export "ackermann")
     (param $m0 i32)
     (param $n1 i32)
     (result i32)
+    (local.get $m0)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $m0) (i32.const 0))
-      (then (return (i32.add (local.get $n1) (i32.const 1))))
+      (then (local.get $n1) (i32.const 1) i32.add)
       (else
+        (local.get $n1)
+        (i32.const 0)
+        i32.eq
         (if
           (result i32)
-          (i32.eq (local.get $n1) (i32.const 0))
           (then
-            (return_call
-              $ackermann
-              (i32.sub (local.get $m0) (i32.const 1))
-              (i32.const 1)))
+            (local.get $m0)
+            (i32.const 1)
+            i32.sub
+            (i32.const 1)
+            (return_call $ackermann0))
           (else
-            (return_call
-              $ackermann
-              (i32.sub (local.get $m0) (i32.const 1))
-              (call
-                $ackermann
-                (local.get $m0)
-                (i32.sub (local.get $n1) (i32.const 1)))))))))
+            (local.get $m0)
+            (i32.const 1)
+            i32.sub
+            (local.get $m0)
+            (local.get $n1)
+            (i32.const 1)
+            i32.sub
+            (call $ackermann0)
+            (return_call $ackermann0))))))
   (func
-    $fact
+    $fact1
     (export "fact")
     (param $n2 i32)
     (result i32)
+    (local.get $n2)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $n2) (i32.const 0))
-      (then (return (i32.const 1)))
+      (then (i32.const 1))
       (else
-        (return
-          (i32.mul
-            (local.get $n2)
-            (call $fact (i32.sub (local.get $n2) (i32.const 1))))))))
+        (local.get $n2)
+        (local.get $n2)
+        (i32.const 1)
+        i32.sub
+        (call $fact1)
+        i32.mul)))
   (func
-    $is-even
+    $is-even2
     (export "is-even")
     (param $n3 i32)
     (result i32)
+    (local.get $n3)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $n3) (i32.const 0))
-      (then (return (i32.const 1)))
-      (else (return_call $is-odd (i32.sub (local.get $n3) (i32.const 1))))))
+      (then (i32.const 1))
+      (else (local.get $n3) (i32.const 1) i32.sub (return_call $is-odd3))))
   (func
-    $is-odd
+    $is-odd3
     (export "is-odd")
     (param $n4 i32)
     (result i32)
+    (local.get $n4)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $n4) (i32.const 0))
-      (then (return (i32.const 0)))
-      (else (return_call $is-even (i32.sub (local.get $n4) (i32.const 1))))))
+      (then (i32.const 0))
+      (else (local.get $n4) (i32.const 1) i32.sub (return_call $is-even2))))
   (func
-    $test-fact
+    $test-fact4
     (export "test-fact")
     (result i32)
-    (return_call $fact (i32.const 5))))
+    (i32.const 5)
+    (return_call $fact1)))
 ```
 
 </details>
@@ -194,10 +224,7 @@ fun is-odd(n : I32) : Bool :=
 
 After parsing, the surface language is elaborated to a core language, using a
 similar approach to the [elaboration projects](../README.md#elaboration).
-
-The main complication in the translation to web assembly is the identification
-of tailcalls. To do this, let bindings and conditionals are hoisted to the top
-of expressions. The resulting program is then emitted as WAT.
+The resulting program is then translated to web assembly.
 
 ```text
       Surface.Program.t
@@ -210,9 +237,9 @@ of expressions. The resulting program is then emitted as WAT.
             │    Hoist.translate_program
             │
             ▼
-    Hoisted.Program.t
+        Wat.module_
             │
-            │    Emit_wat.pp_program
+            │    Wat.Emit.pp_module_
             │
             ▼
   Format.formatter -> unit
@@ -220,14 +247,13 @@ of expressions. The resulting program is then emitted as WAT.
 
 ## Todo list
 
-- [x] Hoist let expressions and conditionals
-  - [ ] Generate join points
-- [x] Compile to WASM
-  - [ ] Emit join points using blocks
+- [x] Compile Core to WASM
   - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
   - [x] Validate WAT with [wabt](https://github.com/WebAssembly/wabt)
-- [ ] Compile to LLVM
-- [ ] Compile to JavaScript
+- [ ] Compile Core to ANF
+  - [ ] Generate join points
+- [ ] Compile ANF to LLVM
+- [ ] Compile Core to JavaScript
 - [ ] Test that each translation preserves the semantics
 
 CLI Entrypoints:

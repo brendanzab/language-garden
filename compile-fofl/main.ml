@@ -70,11 +70,11 @@ let elab_program (source : Source_file.t) (prog : Surface.Program.t) =
 
 let compile_cmd (emit_tail_calls : bool) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  Format.printf "%t"
-    (parse_program source
+  parse_program source
     |> elab_program source
-    |> Hoist.translate_program
-    |> Emit_wat.pp_program ~tail_call:emit_tail_calls)
+    |> Core_to_wat.translate_program ~tail_call:emit_tail_calls
+    |> Wat.Emit.pp_module
+    |> Format.printf "%t"
 
 
 (** {1 CLI options} *)

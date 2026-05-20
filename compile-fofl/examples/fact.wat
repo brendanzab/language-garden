@@ -1,20 +1,25 @@
 (module
   (func
-    $fact
+    $fact0
     (export "fact")
     (param $n0 i32)
     (result i32)
+    (local.get $n0)
+    (i32.const 0)
+    i32.eq
     (if
       (result i32)
-      (i32.eq (local.get $n0) (i32.const 0))
-      (then (return (i32.const 1)))
+      (then (i32.const 1))
       (else
-        (return
-          (i32.mul
-            (local.get $n0)
-            (call $fact (i32.sub (local.get $n0) (i32.const 1))))))))
+        (local.get $n0)
+        (local.get $n0)
+        (i32.const 1)
+        i32.sub
+        (call $fact0)
+        i32.mul)))
   (func
-    $test-fact
+    $test-fact1
     (export "test-fact")
     (result i32)
-    (return (call $fact (i32.const 5)))))
+    (i32.const 5)
+    (call $fact0)))
