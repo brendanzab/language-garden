@@ -65,6 +65,7 @@
 (test (name misc_objects_as_closures_over_state))
 (test (name misc_option_shapes))
 (test (name misc_set_objects))
+(test (name misc_trampoline))
 (test (name misc_unembedding_hoas))
 (test (name misc_unembedding_hoas_effects))
 (test (name misc_unembedding_hoas_gadt))

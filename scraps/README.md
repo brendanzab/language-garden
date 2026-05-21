@@ -177,6 +177,8 @@ Miscellaneous:
   exposing the underlying representation.
 - [**misc_set_objects.ml**](./misc_set_objects.ml):
   Comparing set ADTs vs. set objects in OCaml.
+- [**misc_trampoline.ml**](./misc_trampoline.ml):
+  Stepped, stack-safe computations with free monads.
 - [**misc_unembedding_hoas**](./misc_unembedding_hoas.ml):
   Converting HOAS-encoded lambda terms into a de Bruijn-indexed representation.
 - [**misc_unembedding_hoas_effects**](./misc_unembedding_hoas_effects.ml):
