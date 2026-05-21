@@ -1,7 +1,7 @@
 (** Stepped, stack-safe computations with free monads
 
-    - https://www.scala-lang.org/api/current/scala/util/control/TailDefers$.html
-    - https://github.com/scala/scala3/blob/3.8.2/library/src/scala/util/control/TailDefers.scala
+    - https://www.scala-lang.org/api/current/scala/util/control/TailCalls$.html
+    - https://github.com/scala/scala3/blob/3.8.2/library/src/scala/util/control/TailCalls.scala
     - https://blog.higher-order.com/assets/trampolines.pdf
 *)
 
