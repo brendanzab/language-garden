@@ -10,6 +10,8 @@ module Trampoline : sig
   type 'a t
   (** A computation that can be stepped through *)
 
+  (** {1 Operations }*)
+
   val defer : (unit -> 'a t) -> 'a t
   (** Defer the next step of the computation *)
 
