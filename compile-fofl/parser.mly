@@ -20,13 +20,13 @@
 %token CLOSE_PAREN ")"
 %token END
 
-%start <Surface.Program.t> main
+%start <Surface.Module.t> main
 
 %%
 
 let main :=
-| prog = program; END;
-    { prog }
+| mod_ = module_; END;
+    { mod_ }
 
 
 (* Types *)
@@ -93,9 +93,9 @@ let item :=
     { Surface.Item.Fun (n, Iarray.of_list params, ty, tm) }
 
 
-(* Programs *)
+(* Modules *)
 
-let program :=
+let module_ :=
 | items = list(i = item; ";"; { i });
     { items }
 

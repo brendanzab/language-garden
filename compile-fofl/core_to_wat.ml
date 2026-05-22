@@ -102,8 +102,7 @@ let translate_fun
 let translate_item
   ~(tail_call : bool)
   (items : Wat.Func_id.t Core.Item_map.t)
-  (name, item : Core.(Item_name.t * Item.t))
-: Wat.func =
+  (name, item : Core.(Item_name.t * Item.t)) : Wat.func =
   match item with
   (** FIXME: re-evaluation of top-level values.
 
@@ -114,15 +113,15 @@ let translate_item
   | Core.Item.Val (ty, expr) -> translate_fun ~tail_call items name [||] ty expr
   | Core.Item.Fun (params, ty, body) -> translate_fun ~tail_call items name params ty body
 
-let translate_program ~(tail_call : bool) (program : Core.Program.t) : Wat.module_ =
+let translate_module ~(tail_call : bool) (mod_ : Core.Module.t) : Wat.module_ =
   let items =
-    program |> Core.Item_map.mapi @@ fun id _ ->
+    mod_ |> Core.Item_map.mapi @@ fun id _ ->
       Wat.Func_id.fresh (Core.Item_name.to_string id)
   in
 
   Wat.{
     items =
-      Core.Item_map.to_seq program
+      Core.Item_map.to_seq mod_
       |> Seq.map (translate_item ~tail_call items)
       |> List.of_seq;
   }

@@ -227,19 +227,19 @@ similar approach to the [elaboration projects](../README.md#elaboration).
 The resulting program is then translated to web assembly.
 
 ```text
-      Surface.Program.t
+      Surface.Module.t
             │
-            │    Surface.Elab.check_program
+            │    Surface.Elab.check_module
             │
             ▼
-      Core.Program.t
+      Core.Module.t
             │
-            │    Hoist.translate_program
+            │    Hoist.translate_module
             │
             ▼
         Wat.module_
             │
-            │    Wat.Emit.pp_module_
+            │    Wat.Emit.pp_module
             │
             ▼
   Format.formatter -> unit

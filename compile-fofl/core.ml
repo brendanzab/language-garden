@@ -87,7 +87,7 @@ end = struct
 
 end
 
-module Program = struct
+module Module = struct
 
   type t = Item.t Item_map.t  (* TODO: Preserve order? *)
 

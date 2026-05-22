@@ -79,7 +79,7 @@ module Item = struct
 
 end
 
-module Program = struct
+module Module = struct
 
   type t = Item.t list
 
@@ -88,7 +88,7 @@ end
 (** Elaboration from the surface language into the core language *)
 module Elab : sig
 
-  val check_program : Program.t -> (Core.Program.t, Span.t * string) result
+  val check_module : Module.t -> (Core.Module.t, Span.t * string) result
 
 end = struct
 
@@ -265,7 +265,7 @@ end = struct
     in
     Env.add_local env name.data ty, (name.data, ty, expr)
 
-  let check_program (prog : Program.t) : Core.Program.t =
+  let check_module (prog : Module.t) : Core.Module.t =
     let check_item_decl (env : Env.t) (item : Item.t) : Env.t =
       let name = Item.name item in
       if Option.is_some (Env.lookup_item env name.data) then
@@ -302,8 +302,8 @@ end = struct
 
   (** {2 Public API} *)
 
-  let check_program (prog : Program.t) : (Core.Program.t, Span.t * string) result =
-    try Ok (check_program prog) with
+  let check_module (mod_ : Module.t) : (Core.Module.t, Span.t * string) result =
+    try Ok (check_module mod_) with
     | Error (span, msg) -> Error (span, msg)
 
 end

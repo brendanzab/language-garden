@@ -46,7 +46,7 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Lexing.posi
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
   Printf.eprintf "\n"
 
-let parse_program (source : Source_file.t) : Surface.Program.t =
+let parse_module (source : Source_file.t) : Surface.Module.t =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
   let lexpos () = Sedlexing.lexing_positions lexbuf in
   Sedlexing.set_filename lexbuf source.name;
@@ -58,9 +58,9 @@ let parse_program (source : Source_file.t) : Surface.Program.t =
   | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
   | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
 
-let elab_program (source : Source_file.t) (prog : Surface.Program.t) =
-  match Surface.Elab.check_program prog with
-  | Ok prog -> prog
+let elab_module (source : Source_file.t) (mod_ : Surface.Module.t) =
+  match Surface.Elab.check_module mod_ with
+  | Ok mod_ -> mod_
   | Error (pos, msg) ->
       emit source "error" pos msg;
       exit 1
@@ -70,9 +70,9 @@ let elab_program (source : Source_file.t) (prog : Surface.Program.t) =
 
 let compile_cmd (emit_tail_calls : bool) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  parse_program source
-    |> elab_program source
-    |> Core_to_wat.translate_program ~tail_call:emit_tail_calls
+  parse_module source
+    |> elab_module source
+    |> Core_to_wat.translate_module ~tail_call:emit_tail_calls
     |> Wat.Emit.pp_module
     |> Format.printf "%t"
 
@@ -89,7 +89,7 @@ let cmd : unit Cmdliner.Cmd.t =
   in
 
   Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
-    Cmd.v (Cmd.info "compile" ~doc:"compile a program from standard input to WAT (WebAssembly Text Format)")
+    Cmd.v (Cmd.info "compile" ~doc:"compile a module from standard input to WAT (WebAssembly Text Format)")
       Term.(const compile_cmd $ emit_tail_calls);
   ]
 
