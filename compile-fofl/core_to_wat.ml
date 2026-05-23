@@ -6,36 +6,28 @@ let translate_ty (ty : Core.Ty.t) : Wat.ty =
 let fresh_local_id (name : string option) : Wat.Local_id.t =
   Wat.Local_id.fresh (Option.value name ~default:"")
 
+let ( << ) = Fun.compose
+
 (** Translate an expression in the core language to a web assembly expression.
     A list of locals used in the expression is returned as well. *)
 let translate_expr
   ~(tail_call : bool)
   (items : Wat.Func_id.t Core.Item_map.t)
-  (locals : Wat.Local_id.t Core.Local.Env.t)
+  (params : Wat.Local_id.t Core.Local.Env.t)
   (expr : Core.Expr.t)
 : (Wat.Local_id.t * Wat.ty) list * Wat.expr =
-
-  (* This operator is useful for building up a list of instructions *)
-  let ( << ) = Fun.compose in
-
   (* The locals we've seen while translating the expression *)
   let seen_locals = Dynarray.create () in
 
-  let rec go_expr ?(tail_call = false) locals expr : Wat.expr -> Wat.expr =
+  let rec go_expr ~tail_call locals expr : Wat.expr -> Wat.expr =
     match expr with
-    | Core.Expr.Item (name, Some args) when tail_call ->
-        go_exprs locals args
+    | Core.Expr.Item (name, args) when tail_call ->
+        go_exprs locals (Option.value args ~default:[||])
           << List.cons (Wat.Return_call (Core.Item_map.find name items))
 
-    | Core.Expr.Item (name, Some args) ->
-        go_exprs locals args
+    | Core.Expr.Item (name, args) ->
+        go_exprs locals (Option.value args ~default:[||])
           << List.cons (Wat.Call (Core.Item_map.find name items))
-
-    | Core.Expr.Item (name, None) when tail_call ->
-        List.cons (Wat.Return_call (Core.Item_map.find name items))
-
-    | Core.Expr.Item (name, None) ->
-        List.cons (Wat.Call (Core.Item_map.find name items))
 
     | Core.Expr.Var index ->
         List.cons (Wat.Local_get (Core.Local.Env.lookup index locals))
@@ -43,7 +35,7 @@ let translate_expr
     | Core.Expr.Let ((name, ty, def), body) ->
         let def_id = fresh_local_id name in
         Dynarray.add_last seen_locals (def_id, translate_ty ty);
-        go_expr locals def
+        go_expr ~tail_call:false locals def
           << List.cons (Wat.Local_set def_id)
           << go_expr ~tail_call (Core.Local.Env.extend def_id locals) body
 
@@ -51,7 +43,7 @@ let translate_expr
     | Core.Expr.Bool false -> List.cons (Wat.I32_const 0l)
 
     | Core.Expr.Bool_if (expr1, expr2, expr3, ty) ->
-        go_expr locals expr1
+        go_expr ~tail_call:false locals expr1
           << List.cons (Wat.If (
             translate_ty ty,
             go_expr ~tail_call locals expr2 [],
@@ -68,10 +60,10 @@ let translate_expr
     | Core.Expr.Prim (I32_neg, args) -> go_exprs locals args << List.cons Wat.I32_neg
 
   and go_exprs locals exprs : Wat.expr -> Wat.expr =
-    Iarray.fold_right (go_expr locals) exprs
+    Iarray.fold_right (go_expr ~tail_call:false locals) exprs
   in
 
-  let expr = go_expr ~tail_call locals expr [] in
+  let expr = go_expr ~tail_call params expr [] in
   Dynarray.to_list seen_locals, expr
 
 let translate_fun
@@ -82,22 +74,21 @@ let translate_fun
   (ty : Prim.Ty.t)
   (body : Core.Expr.t)
 : Wat.func =
-  let params =
+  let export = Core.Item_name.to_string name
+  and name = Core.Item_map.find name items
+  and result = translate_ty ty
+  and params =
     Iarray.to_seq params
     |> Seq.map (fun (name, ty) -> fresh_local_id name, translate_ty ty)
     |> List.of_seq
   in
-  let param_ids = List.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
-  let locals, body = translate_expr ~tail_call items param_ids body in
 
-  Wat.{
-    name = Core.Item_map.find name items;
-    export = Core.Item_name.to_string name;
-    params;
-    result = translate_ty ty;
-    locals;
-    body;
-  }
+  let locals, body =
+    let param_ids = List.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
+    translate_expr ~tail_call items param_ids body
+  in
+
+  Wat.{ name; export; params; result; locals; body }
 
 let translate_item
   ~(tail_call : bool)
