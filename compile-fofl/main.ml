@@ -71,10 +71,10 @@ let elab_module (source : Source_file.t) (mod_ : Surface.Module.t) =
 let compile_cmd (emit_tail_calls : bool) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   parse_module source
-    |> elab_module source
-    |> Core_to_wat.translate_module ~tail_call:emit_tail_calls
-    |> Wat.Emit.pp_module
-    |> Format.printf "%t"
+  |> elab_module source
+  |> Core_to_wat.translate_module ~tail_call:emit_tail_calls
+  |> Wat.Emit.pp_module
+  |> Format.printf "%t"
 
 
 (** {1 CLI options} *)
