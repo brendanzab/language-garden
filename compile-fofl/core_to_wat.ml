@@ -21,7 +21,7 @@ let translate_expr
 
   let rec go_expr ~tail_call locals expr : Wat.expr -> Wat.expr =
     match expr with
-    | Core.Expr.Item (name, args) when tail_call ->
+    | Core.Expr.Item (name, args) when enable_tail_call && tail_call ->
         go_exprs locals (Option.value args ~default:[||])
           << List.cons (Wat.Return_call (Core.Item_map.find name items))
 
@@ -63,7 +63,7 @@ let translate_expr
     Iarray.fold_right (go_expr ~tail_call:false locals) exprs
   in
 
-  let expr = go_expr ~tail_call:enable_tail_call params expr [] in
+  let expr = go_expr ~tail_call:true params expr [] in
   Dynarray.to_list seen_locals, expr
 
 let translate_fun
