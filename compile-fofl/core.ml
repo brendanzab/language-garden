@@ -31,16 +31,19 @@ end = Item
 
 and Expr : sig
 
-  type t =
+  type t = {
+    data : data;
+    ty : Ty.t;
+  }
+
+  and data =
     | Item of Item_name.t * t Iarray.t option
     | Var of Local.Index.t
-    | Let of def * t
+    | Let of string option * t * t
     | Bool of bool
-    | Bool_if of t * t * t * Ty.t
+    | Bool_if of t * t * t
     | I32 of int32
     | Prim of Prim.Op.t * t Iarray.t
-
-  and def = string option * Ty.t * t
 
   type value = Prim.Value.t =
     | Bool of bool
@@ -53,7 +56,7 @@ end = struct
   include Expr
 
   let rec eval (items : Item.t Item_map.t) (locals : value Local.Env.t) (expr : t) : value =
-    match expr with
+    match expr.data with
     | Item (name, args) ->
         begin match Item_map.find name items, args with
         | Item.Val (_, body), None ->
@@ -64,11 +67,11 @@ end = struct
         | _, _ -> failwith "Expr.eval"
         end
     | Var index -> Local.Env.lookup index locals
-    | Let ((_, _, def), body) ->
+    | Let (_, def, body) ->
         let def = eval items locals def in
         eval items (Local.Env.extend def locals) body
     | Bool bool -> Bool bool
-    | Bool_if (expr1, expr2, expr3, _) ->
+    | Bool_if (expr1, expr2, expr3) ->
         begin match eval items locals expr1 with
         | Bool true -> eval items locals expr2
         | Bool false -> eval items locals expr3

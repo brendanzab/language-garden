@@ -29,8 +29,8 @@ let translate_expr
      This returns a function that adds a series of instructions to the start of
      an expression which avoids the exponential performance cost of repeated
      calls to [List.append]. *)
-  let rec go_expr ~tail_call local_ids expr : Wat.expr -> Wat.expr =
-    match expr with
+  let rec go_expr ~tail_call local_ids (expr : Core.Expr.t) : Wat.expr -> Wat.expr =
+    match expr.data with
     | Core.Expr.Item (name, args) when opts.enable_tail_call && tail_call ->
         go_exprs local_ids (Option.value args ~default:[||])
           << List.cons (Wat.Return_call (Core.Item_map.find name item_ids))
@@ -42,9 +42,9 @@ let translate_expr
     | Core.Expr.Var index ->
         List.cons (Wat.Local_get (Core.Local.Env.lookup index local_ids))
 
-    | Core.Expr.Let ((name, ty, def), body) ->
+    | Core.Expr.Let (name, def, body) ->
         let def_id = fresh_local_id name in
-        Dynarray.add_last seen_locals (def_id, translate_ty ty);
+        Dynarray.add_last seen_locals (def_id, translate_ty def.ty);
         go_expr ~tail_call:false local_ids def
           << List.cons (Wat.Local_set def_id)
           << go_expr ~tail_call (Core.Local.Env.extend def_id local_ids) body
@@ -52,10 +52,10 @@ let translate_expr
     | Core.Expr.Bool true -> List.cons (Wat.I32_const 1l)
     | Core.Expr.Bool false -> List.cons (Wat.I32_const 0l)
 
-    | Core.Expr.Bool_if (expr1, expr2, expr3, ty) ->
+    | Core.Expr.Bool_if (expr1, expr2, expr3) ->
         go_expr ~tail_call:false local_ids expr1
           << List.cons (Wat.If (
-            translate_ty ty,
+            translate_ty expr.ty,
             go_expr ~tail_call local_ids expr2 [],
             go_expr ~tail_call local_ids expr3 []
           ))

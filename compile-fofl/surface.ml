@@ -129,23 +129,20 @@ end = struct
       Core.Item_map.find_opt name env.item_decls
       |> Option.map (fun item -> name, item)
 
-    let lookup_local (env : t) (name : string) : (Core.Expr.t * Core.Ty.t) option =
+    let lookup_local (env : t) (name : string) : Core.Expr.t option =
       match Core.Local.Env.find_index ((=) (Some name)) env.local_names with
-      | Some index -> Some (Core.(Expr.Var index, Local.Env.lookup index env.local_tys))
-      | None when name = "true" -> Some (Core.(Expr.Bool true, Ty.Bool))
-      | None when name = "false" -> Some (Core.(Expr.Bool false, Ty.Bool))
+      | Some index -> Some (Core.(Expr.{ data = Var index; ty = Local.Env.lookup index env.local_tys }))
+      | None when name = "true" -> Some (Core.(Expr.{ data = Bool true; ty = Ty.Bool }))
+      | None when name = "false" -> Some (Core.(Expr.{ data = Bool false; ty = Ty.Bool }))
       | None -> None
 
     let lookup (env : t) (name : string) : [
       | `Item of  Core.Item_name.t * item_decl
-      | `Expr of Core.Expr.t * Core.Ty.t
+      | `Expr of Core.Expr.t
     ] option =
       match lookup_item env name with
       | Some (name, item) -> Some (`Item (name, item))
-      | None ->
-          match lookup_local env name with
-          | Some (expr, ty) -> Some (`Expr (expr, ty))
-          | None -> None
+      | None -> lookup_local env name |> Option.map (fun expr -> `Expr expr)
 
   end
 
@@ -173,14 +170,14 @@ end = struct
     | Ty.Name "I32" -> Core.Ty.I32
     | Ty.Name name -> error t.span "unbound type name `%s`" name
 
-  let rec infer_expr (env : Env.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
+  let rec infer_expr (env : Env.t) (expr : Expr.t) : Core.Expr.t =
     match expr.data with
     | Expr.Name (name, args) ->
         begin match Env.lookup env name.data, args with
-        | Some (`Item (name, Val ty)), None -> Core.Expr.Item (name, None), ty
+        | Some (`Item (name, Val ty)), None -> Core.Expr.{ data = Item (name, None); ty }
         | Some (`Item (name, Fun (params, ty))), Some args when Iarray.length params = Iarray.length args ->
-            Core.Expr.Item (name, Some (Iarray.map2 (check_expr env) args params)), ty
-        | Some (`Expr (expr, ty)), None -> expr, ty
+            Core.Expr.{ data = Item (name, Some (Iarray.map2 (check_expr env) args params)); ty }
+        | Some (`Expr expr), None -> expr
         | Some _, Some _ -> error name.span "mismatched arity"
         | Some _, None -> error name.span "unexpected arguments"
         | None, _ -> error name.span "unbound name"
@@ -189,36 +186,36 @@ end = struct
     | Expr.Prim (name, args) ->
         begin match Prim.Op.lookup name.data |> Option.map (fun op -> op, Prim.Op.ty op) with
         | Some (op, (params, ty)) when Iarray.length params = Iarray.length args ->
-            Core.Expr.Prim (op, Iarray.map2 (check_expr env) args params), ty
+            Core.Expr.{ data = Prim (op, Iarray.map2 (check_expr env) args params); ty }
         | Some _ -> error name.span "mismatched arity"
         | None -> error name.span "unknown primitive operation `#%s`" name.data
         end
 
     | Expr.Let (def, body) ->
-        let env, def = check_def env def in
-        let body, ty = infer_expr env body in
-        Core.(Expr.Let (def, body), ty)
+        let env, (name, def) = check_def env def in
+        let body = infer_expr env body in
+        Core.Expr.{ data = Let (name, def, body); ty = body.ty }
 
     | Expr.Ann (expr, ty) ->
         let ty = check_ty ty in
-        check_expr env expr ty, ty
+        check_expr env expr ty
 
     | Expr.I32 int ->
-        Core.Expr.I32 int, Core.Ty.I32
+        Core.Expr.{ data = I32 int; ty = Core.Ty.I32 }
 
     | Expr.If_then_else (expr1, expr2, expr3) ->
         let expr1 = check_expr env expr1 Core.Ty.Bool in
-        let expr2, ty = infer_expr env expr2 in
-        let expr3 = check_expr env expr3 ty in
-        Core.Expr.Bool_if (expr1, expr2, expr3, ty), ty
+        let expr2 = infer_expr env expr2 in
+        let expr3 = check_expr env expr3 expr2.ty in
+        Core.Expr.{ data = Core.Expr.Bool_if (expr1, expr2, expr3); ty = expr2.ty }
 
     | Expr.Infix (`Eq, expr1, expr2) ->
-        let expr1, ty1 = infer_expr env expr1 in
-        let expr2, ty2 = infer_expr env expr2 in
-        unify_tys expr.span ~found:ty2 ~expected:ty1;
-        begin match ty1 with
-        | Core.Ty.Bool -> Core.Expr.Prim (Prim.Op.Bool_eq, [|expr1; expr2|]), Core.Ty.Bool
-        | Core.Ty.I32 -> Core.Expr.Prim (Prim.Op.I32_eq, [|expr1; expr2|]), Core.Ty.Bool
+        let expr1 = infer_expr env expr1 in
+        let expr2 = infer_expr env expr2 in
+        unify_tys expr.span ~found:expr2.ty ~expected:expr1.ty;
+        begin match expr1.ty with
+        | Core.Ty.Bool -> Core.Expr.{ data = Prim (Bool_eq, [|expr1; expr2|]); ty = Core.Ty.Bool }
+        | Core.Ty.I32 -> Core.Expr.{ data = Prim (I32_eq, [|expr1; expr2|]); ty = Core.Ty.Bool }
         end
 
     | Expr.Infix ((`Add | `Sub | `Mul) as op, expr1, expr2) ->
@@ -230,40 +227,40 @@ end = struct
         in
         let expr1 = check_expr env expr1 Core.Ty.I32 in
         let expr2 = check_expr env expr2 Core.Ty.I32 in
-        Core.Expr.Prim (op, [|expr1; expr2|]), Core.Ty.I32
+        Core.Expr.{ data = Prim (op, [|expr1; expr2|]); ty = Core.Ty.I32 }
 
     | Expr.Prefix (`Neg, expr) ->
         let expr = check_expr env expr Core.Ty.I32 in
-        Core.Expr.Prim (Prim.Op.I32_neg, [|expr|]), Core.Ty.I32
+        Core.Expr.{ data = Prim (I32_neg, [|expr|]); ty = Core.Ty.I32 }
 
   and check_expr (env : Env.t) (expr : Expr.t) (ty : Core.Ty.t) : Core.Expr.t =
     match expr.data with
     | Expr.Let (def, body) ->
-        let env, def = check_def env def in
+        let env, (name, def) = check_def env def in
         let body = check_expr env body ty in
-        Core.Expr.Let (def, body)
+        Core.Expr.{ data = Let (name, def, body); ty }
 
     | Expr.If_then_else (expr1, expr2, expr3) ->
         let expr1 = check_expr env expr1 Core.Ty.Bool in
         let expr2 = check_expr env expr2 ty in
         let expr3 = check_expr env expr3 ty in
-        Core.Expr.Bool_if (expr1, expr2, expr3, ty)
+        Core.Expr.{ data = Core.Expr.Bool_if (expr1, expr2, expr3); ty }
 
     | _ ->
-        let expr', found_ty = infer_expr env expr in
-        unify_tys expr.span ~found:found_ty ~expected:ty;
+        let expr' = infer_expr env expr in
+        unify_tys expr.span ~found:expr'.ty ~expected:ty;
         expr'
 
-  and check_def (env : Env.t) ((name, ty, expr) : Expr.def) : Env.t * Core.Expr.def =
-    let expr, ty =
+  and check_def (env : Env.t) ((name, ty, expr) : Expr.def) : Env.t * (string option * Core.Expr.t) =
+    let expr =
       match ty with
       | Some ty ->
           let ty = check_ty ty in
-          check_expr env expr ty, ty
+          check_expr env expr ty
       | None ->
           infer_expr env expr
     in
-    Env.add_local env name.data ty, (name.data, ty, expr)
+    Env.add_local env name.data expr.ty, (name.data, expr)
 
   let check_module (prog : Module.t) : Core.Module.t =
     let check_item_decl (env : Env.t) (item : Item.t) : Env.t =
