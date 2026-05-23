@@ -1,0 +1,11 @@
+fun add_one(x0 : I32) : I32 := #i32-add(x0, 1);
+
+fun test(x1 : I32, y2 : I32) : I32 :=
+  let cond4 := #i32-eq(x1, 0);
+  join j0 (p3 : I32) := #i32-add(p3, 1);
+  if cond4 then jump j0 y2 else jump j0 x1;
+
+fun test-tailcall(x5 : I32, y6 : I32) : I32 :=
+  let cond8 := #i32-eq(x5, 0);
+  join j1 (p7 : I32) := add_one(p7);
+  if cond8 then jump j1 x5 else jump j1 y6;

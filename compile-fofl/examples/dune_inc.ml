@@ -12,6 +12,21 @@ end
 let generate_rules base = begin
   let txt_file = Printf.sprintf "%s.txt" base in
 
+  begin
+    let anf_file = Printf.sprintf "%s.anf" base in
+
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" anf_file;
+    Printf.printf "   (run %%{bin:%s} compile-anf))))\n" bin;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)" package;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" anf_file anf_file;
+    Printf.printf "\n";
+  end;
+
   [
     (module struct
       let wat_file = Printf.sprintf "%s.wat" base
@@ -34,25 +49,25 @@ let generate_rules base = begin
     Printf.printf " (with-stdin-from ../%s\n" txt_file;
     Printf.printf "  (with-stdout-to %s.tmp\n" T.wat_file;
     Printf.printf "   (run %%{bin:%s} compile-wat%s))))\n" bin T.compile_args;
-    Printf.printf "";
+    Printf.printf "\n";
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)" package;
     Printf.printf " (action (diff ../%s %s.tmp)))\n" T.wat_file T.wat_file;
-    Printf.printf "";
+    Printf.printf "\n";
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
     Printf.printf " (target %s)\n" T.wasm_file;
     Printf.printf " (deps (:wat %s.tmp))\n" T.wat_file;
     Printf.printf " (action (run wat2wasm %%{wat} -o %%{target}%s)))\n" T.wat2wasm_args;
-    Printf.printf "";
+    Printf.printf "\n";
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
     Printf.printf " (deps (:wasm %s))\n" T.wasm_file;
     Printf.printf " (action (run wasm-validate %%{wasm}%s)))\n" T.wasm_validate_args;
-    Printf.printf "";
+    Printf.printf "\n";
 
   end;
 

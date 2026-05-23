@@ -1,0 +1,12 @@
+fun fact(n0 : I32) : I32 :=
+  let cond2 := #i32-eq(n0, 0);
+  join j0 (p1 : I32) := p1;
+  if cond2 then
+    jump j0 1
+  else
+    let arg3 := #i32-sub(n0, 1);
+    let arg4 := fact(arg3);
+    let result5 := #i32-mul(n0, arg4);
+    jump j0 result5;
+
+val test-fact : I32 := fact(5);

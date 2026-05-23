@@ -1,0 +1,19 @@
+fun ackermann(m0 : I32, n1 : I32) : I32 :=
+  let cond3 := #i32-eq(m0, 0);
+  join j0 (p2 : I32) := p2;
+  if cond3 then
+    let result4 := #i32-add(n1, 1);
+    jump j0 result4
+  else
+    let cond6 := #i32-eq(n1, 0);
+    join j1 (p5 : I32) := jump j0 p5;
+    if cond6 then
+      let arg7 := #i32-sub(m0, 1);
+      let result8 := ackermann(arg7, 1);
+      jump j1 result8
+    else
+      let arg9 := #i32-sub(m0, 1);
+      let arg10 := #i32-sub(n1, 1);
+      let arg11 := ackermann(m0, arg10);
+      let result12 := ackermann(arg9, arg11);
+      jump j1 result12;

@@ -97,17 +97,24 @@ similar approach to the [elaboration projects](../README.md#elaboration).
 The resulting program is then translated to web assembly.
 
 ```text
-      Surface.Module.t
-            │
-            │    Surface.Elab.check_module
-            │
-            ▼
-      Core.Module.t
-            │
-            │    Core_to_wat.translate_module
-            │
-            ▼
-        Wat.module_
+               Surface.Module.t
+                     │
+                     │  Surface.Elab
+                     │
+                     ▼
+               Core.Module.t
+                     │
+      ┌──────────────┴─────────────┐
+      │                            │
+      │  Core_to_wat               │  Core_to_anf
+      │                            │
+      ▼                            ▼
+  Wat.module_                 Anf.module_
+                                   .
+                                   .  Anf_to_llvm (TODO)
+                                   .
+                                   ▼
+                              Llvm.module_ (TODO)
 ```
 
 ## Todo list
@@ -115,16 +122,19 @@ The resulting program is then translated to web assembly.
 - [x] Compile Core to WASM
   - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
   - [x] Validate WAT with [wabt](https://github.com/WebAssembly/wabt)
-- [ ] Compile Core to ANF
-  - [ ] Generate join points
+- [x] Compile Core to ANF
+  - [x] Generate join points
 - [ ] Compile ANF to LLVM
 - [ ] Compile Core to JavaScript
 - [ ] Test that each translation preserves the semantics
 
 CLI Entrypoints:
 
-- [ ] `repl`: REPL
-- [ ] `elab`: Elab
-- [ ] `doc`: Elab -> Doc
-- [ ] `eval`: Elab -> Eval
-- [x] `compile-wat`: Elab -> WAT
+- [ ] `repl`
+- [ ] `elab`: Surface -> Core
+- [ ] `doc`: Surface -> Doc
+- [ ] `eval`: Surface -> Core -> Value
+- [ ] `eval-anf`: Surface -> Core -> ANF -> Value
+- [x] `compile-wat`: Surface -> Core -> WAT
+- [x] `compile-anf`: Surface -> Core -> ANF
+- [ ] `compile-llvm`: Surface -> Core -> ANF -> LLVM
