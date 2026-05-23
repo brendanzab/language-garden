@@ -23,7 +23,7 @@ let generate_rules base = begin
     (module struct
       let wat_file = Printf.sprintf "%s.tc.wat" base
       let wasm_file = Printf.sprintf "%s.tc.wasm" base
-      let compile_args = " --emit-tail-calls"
+      let compile_args = " --enable-tail-call"
       let wat2wasm_args = " --enable-tail-call"
       let wasm_validate_args = " --enable-tail-call"
     end);

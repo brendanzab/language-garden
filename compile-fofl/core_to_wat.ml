@@ -11,7 +11,7 @@ let ( << ) = Fun.compose
 (** Translate an expression in the core language to a web assembly expression.
     A list of locals used in the expression is returned as well. *)
 let translate_expr
-  ~(tail_call : bool)
+  ~(enable_tail_call : bool)
   (items : Wat.Func_id.t Core.Item_map.t)
   (params : Wat.Local_id.t Core.Local.Env.t)
   (expr : Core.Expr.t)
@@ -63,11 +63,11 @@ let translate_expr
     Iarray.fold_right (go_expr ~tail_call:false locals) exprs
   in
 
-  let expr = go_expr ~tail_call params expr [] in
+  let expr = go_expr ~tail_call:enable_tail_call params expr [] in
   Dynarray.to_list seen_locals, expr
 
 let translate_fun
-  ~(tail_call : bool)
+  ~(enable_tail_call : bool)
   (items : Wat.Func_id.t Core.Item_map.t)
   (name : Core.Item_name.t)
   (params : (string option * Prim.Ty.t) Iarray.t)
@@ -85,13 +85,13 @@ let translate_fun
 
   let locals, body =
     let param_ids = List.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
-    translate_expr ~tail_call items param_ids body
+    translate_expr ~enable_tail_call items param_ids body
   in
 
   Wat.{ name; export; params; result; locals; body }
 
 let translate_item
-  ~(tail_call : bool)
+  ~(enable_tail_call : bool)
   (items : Wat.Func_id.t Core.Item_map.t)
   (name, item : Core.(Item_name.t * Item.t)) : Wat.func =
   match item with
@@ -101,10 +101,10 @@ let translate_item
       - normalise expressions and store in global
       - store global with a temporary initializer. initialize on startup
   *)
-  | Core.Item.Val (ty, expr) -> translate_fun ~tail_call items name [||] ty expr
-  | Core.Item.Fun (params, ty, body) -> translate_fun ~tail_call items name params ty body
+  | Core.Item.Val (ty, expr) -> translate_fun ~enable_tail_call items name [||] ty expr
+  | Core.Item.Fun (params, ty, body) -> translate_fun ~enable_tail_call items name params ty body
 
-let translate_module ~(tail_call : bool) (mod_ : Core.Module.t) : Wat.module_ =
+let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wat.module_ =
   let items =
     mod_ |> Core.Item_map.mapi @@ fun id _ ->
       Wat.Func_id.fresh (Core.Item_name.to_string id)
@@ -113,6 +113,6 @@ let translate_module ~(tail_call : bool) (mod_ : Core.Module.t) : Wat.module_ =
   Wat.{
     items =
       Core.Item_map.to_seq mod_
-      |> Seq.map (translate_item ~tail_call items)
+      |> Seq.map (translate_item ~enable_tail_call items)
       |> List.of_seq;
   }

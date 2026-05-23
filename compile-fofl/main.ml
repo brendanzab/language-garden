@@ -68,11 +68,11 @@ let elab_module (source : Source_file.t) (mod_ : Surface.Module.t) =
 
 (** {1 Subcommands} *)
 
-let compile_cmd (emit_tail_calls : bool) : unit =
+let compile_cmd (enable_tail_call : bool) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   parse_module source
   |> elab_module source
-  |> Core_to_wat.translate_module ~tail_call:emit_tail_calls
+  |> Core_to_wat.translate_module ~enable_tail_call
   |> Wat.Emit.pp_module
   |> Format.printf "%t"
 
@@ -84,8 +84,8 @@ let cmd : unit Cmdliner.Cmd.t =
 
   let emit_tail_calls : bool Term.t =
     Arg.(value & flag
-      & info ["emit-tail-calls"]
-          ~doc:"emit tailcalls in generated web assembly")
+      & info ["enable-tail-call"]
+          ~doc:"enable tail-calls in generated web assembly")
   in
 
   Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
