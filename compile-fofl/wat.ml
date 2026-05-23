@@ -37,7 +37,7 @@ type func = {
 }
 
 type module_ = {
-  items : func list;
+  funcs : func list;
 }
 
 module Emit = struct
@@ -105,6 +105,6 @@ module Emit = struct
 
   let pp_module (module_ : module_) =
     pp_sexpr_cmd_seq "module"
-      (List.to_seq module_.items |> Seq.map pp_func)
+      (List.to_seq module_.funcs |> Seq.map pp_func)
 
 end
