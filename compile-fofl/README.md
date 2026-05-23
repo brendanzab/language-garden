@@ -13,117 +13,45 @@ now.
 
 ## Example
 
-<!-- $MDX file=examples/readme.txt -->
+<!-- $MDX file=examples/fact.txt -->
 ```
 val test-fact : I32 :=
   fact(5);
 
 fun fact(n : I32) : I32 :=
   if n = 0 then 1 else n * fact(n - 1);
-
-fun ackermann(m : I32, n : I32) : I32 :=
-  if m = 0 then
-    n + 1
-  else if n = 0 then
-    ackermann(m - 1, 1)
-  else
-    ackermann(m - 1, ackermann(m, n - 1));
-
-fun is-even(n : I32) : Bool :=
-  if n = 0 then true else is-odd(n - 1);
-
-fun is-odd(n : I32) : Bool :=
-  if n = 0 then false else is-even(n - 1);
 ```
 
 <details>
 <summary>Compiled web assembly</summary>
 
-<!-- $MDX file=examples/readme.wat -->
+<!-- $MDX file=examples/fact.wat -->
 ```wat
 (module
   (func
-    $ackermann0
-    (export "ackermann")
-    (param $m0 i32)
-    (param $n1 i32)
-    (result i32)
-    (local.get $m0)
-    (i32.const 0)
-    i32.eq
-    (if
-      (result i32)
-      (then (local.get $n1) (i32.const 1) i32.add)
-      (else
-        (local.get $n1)
-        (i32.const 0)
-        i32.eq
-        (if
-          (result i32)
-          (then
-            (local.get $m0)
-            (i32.const 1)
-            i32.sub
-            (i32.const 1)
-            (call $ackermann0))
-          (else
-            (local.get $m0)
-            (i32.const 1)
-            i32.sub
-            (local.get $m0)
-            (local.get $n1)
-            (i32.const 1)
-            i32.sub
-            (call $ackermann0)
-            (call $ackermann0))))))
-  (func
-    $fact1
+    $fact0
     (export "fact")
-    (param $n2 i32)
+    (param $n0 i32)
     (result i32)
-    (local.get $n2)
+    (local.get $n0)
     (i32.const 0)
     i32.eq
     (if
       (result i32)
       (then (i32.const 1))
       (else
-        (local.get $n2)
-        (local.get $n2)
+        (local.get $n0)
+        (local.get $n0)
         (i32.const 1)
         i32.sub
-        (call $fact1)
+        (call $fact0)
         i32.mul)))
   (func
-    $is-even2
-    (export "is-even")
-    (param $n3 i32)
-    (result i32)
-    (local.get $n3)
-    (i32.const 0)
-    i32.eq
-    (if
-      (result i32)
-      (then (i32.const 1))
-      (else (local.get $n3) (i32.const 1) i32.sub (call $is-odd3))))
-  (func
-    $is-odd3
-    (export "is-odd")
-    (param $n4 i32)
-    (result i32)
-    (local.get $n4)
-    (i32.const 0)
-    i32.eq
-    (if
-      (result i32)
-      (then (i32.const 0))
-      (else (local.get $n4) (i32.const 1) i32.sub (call $is-even2))))
-  (func
-    $test-fact4
+    $test-fact1
     (export "test-fact")
     (result i32)
     (i32.const 5)
-    (call $fact1)))
+    (call $fact0)))
 ```
 
 </details>
@@ -131,91 +59,33 @@ fun is-odd(n : I32) : Bool :=
 <details>
 <summary>Compiled web assembly (with tailcalls)</summary>
 
-<!-- $MDX file=examples/readme.tc.wat -->
+<!-- $MDX file=examples/fact.tc.wat -->
 ```wat
 (module
   (func
-    $ackermann0
-    (export "ackermann")
-    (param $m0 i32)
-    (param $n1 i32)
-    (result i32)
-    (local.get $m0)
-    (i32.const 0)
-    i32.eq
-    (if
-      (result i32)
-      (then (local.get $n1) (i32.const 1) i32.add)
-      (else
-        (local.get $n1)
-        (i32.const 0)
-        i32.eq
-        (if
-          (result i32)
-          (then
-            (local.get $m0)
-            (i32.const 1)
-            i32.sub
-            (i32.const 1)
-            (return_call $ackermann0))
-          (else
-            (local.get $m0)
-            (i32.const 1)
-            i32.sub
-            (local.get $m0)
-            (local.get $n1)
-            (i32.const 1)
-            i32.sub
-            (call $ackermann0)
-            (return_call $ackermann0))))))
-  (func
-    $fact1
+    $fact0
     (export "fact")
-    (param $n2 i32)
+    (param $n0 i32)
     (result i32)
-    (local.get $n2)
+    (local.get $n0)
     (i32.const 0)
     i32.eq
     (if
       (result i32)
       (then (i32.const 1))
       (else
-        (local.get $n2)
-        (local.get $n2)
+        (local.get $n0)
+        (local.get $n0)
         (i32.const 1)
         i32.sub
-        (call $fact1)
+        (call $fact0)
         i32.mul)))
   (func
-    $is-even2
-    (export "is-even")
-    (param $n3 i32)
-    (result i32)
-    (local.get $n3)
-    (i32.const 0)
-    i32.eq
-    (if
-      (result i32)
-      (then (i32.const 1))
-      (else (local.get $n3) (i32.const 1) i32.sub (return_call $is-odd3))))
-  (func
-    $is-odd3
-    (export "is-odd")
-    (param $n4 i32)
-    (result i32)
-    (local.get $n4)
-    (i32.const 0)
-    i32.eq
-    (if
-      (result i32)
-      (then (i32.const 0))
-      (else (local.get $n4) (i32.const 1) i32.sub (return_call $is-even2))))
-  (func
-    $test-fact4
+    $test-fact1
     (export "test-fact")
     (result i32)
     (i32.const 5)
-    (return_call $fact1)))
+    (return_call $fact0)))
 ```
 
 </details>
