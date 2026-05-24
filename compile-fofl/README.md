@@ -104,15 +104,10 @@ The resulting program is then translated to web assembly.
             ▼
       Core.Module.t
             │
-            │    Hoist.translate_module
+            │    Core_to_wat.translate_module
             │
             ▼
         Wat.module_
-            │
-            │    Wat.Emit.pp_module
-            │
-            ▼
-  Format.formatter -> unit
 ```
 
 ## Todo list
@@ -128,7 +123,8 @@ The resulting program is then translated to web assembly.
 
 CLI Entrypoints:
 
-- [ ] REPL
-- [ ] Elab
-- [ ] Elab -> Hoist
-- [x] Elab -> Hoist -> Emit WAT
+- [ ] `repl`: REPL
+- [ ] `elab`: Elab
+- [ ] `doc`: Elab -> Doc
+- [ ] `eval`: Elab -> Eval
+- [x] `compile-wat`: Elab -> WAT

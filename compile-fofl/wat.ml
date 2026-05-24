@@ -40,7 +40,7 @@ type module_ = {
   funcs : func list;
 }
 
-module Emit = struct
+module Pretty = struct
 
   let pp_quoted s ppf = Format.fprintf ppf "\"%s\"" s
   let pp_i32 i ppf = Format.fprintf ppf "%li" i

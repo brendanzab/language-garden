@@ -33,7 +33,7 @@ let generate_rules base = begin
     Printf.printf "(rule\n";
     Printf.printf " (with-stdin-from ../%s\n" txt_file;
     Printf.printf "  (with-stdout-to %s.tmp\n" T.wat_file;
-    Printf.printf "   (run %%{bin:%s} compile%s))))\n" bin T.compile_args;
+    Printf.printf "   (run %%{bin:%s} compile-wat%s))))\n" bin T.compile_args;
     Printf.printf "";
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
