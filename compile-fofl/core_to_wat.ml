@@ -1,3 +1,5 @@
+(** Translation from the core language to the Web Assembly Text Format (WAT). *)
+
 type opts = {
   enable_tail_call : bool;
 }
@@ -17,7 +19,7 @@ let ( << ) = Fun.compose
 let translate_expr
   (opts : opts)
   (item_ids : Wat.Func_id.t Core.Item_map.t)
-  (params : (Wat.Local_id.t * Wat.ty) list)
+  (local_ids : Wat.Local_id.t Core.Local.Env.t)
   (expr : Core.Expr.t)
 : (Wat.Local_id.t * Wat.ty) list * Wat.expr =
   (* The locals we've seen while translating the expression *)
@@ -67,10 +69,7 @@ let translate_expr
     Iarray.fold_right (go_expr ~tail_call:false local_ids) exprs
   in
 
-  (* Construct an initial environment from the parameters and translate the expression *)
-  let local_ids = List.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
   let expr = go_expr ~tail_call:true local_ids expr [] in
-
   Dynarray.to_list seen_locals, expr
 
 let translate_fun
@@ -89,7 +88,12 @@ let translate_fun
     |> Seq.map (fun (name, ty) -> fresh_local_id name, translate_ty ty)
     |> List.of_seq
   in
-  let locals, body = translate_expr opts item_ids params body in
+  let local_ids =
+    List.to_seq params
+    |> Seq.map fst
+    |> Core.Local.Env.of_seq
+  in
+  let locals, body = translate_expr opts item_ids local_ids body in
 
   Wat.{ name; export; params; result; locals; body }
 
