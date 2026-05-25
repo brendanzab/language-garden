@@ -11,6 +11,9 @@ module Ty = struct
     | Bool -> "Bool"
     | I32 -> "I32"
 
+  let pp (ty : t) (ppf : Format.formatter) =
+    Format.pp_print_string ppf (name ty)
+
 end
 
 module Value = struct
@@ -58,6 +61,9 @@ module Op = struct
     | I32_sub -> "i32-sub"
     | I32_mul -> "i32-mul"
     | I32_neg -> "i32-neg"
+
+  let pp (op : t) (ppf : Format.formatter) =
+    Format.fprintf ppf "#%s" (name op)
 
   let lookup (name : string) : t option =
     match name with

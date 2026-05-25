@@ -19,14 +19,7 @@ end
 module Item_map = Map.Make (Item_name)
 module Local = Name.Debruijn.Make ()
 
-module Ty = struct
-
-  include Prim.Ty
-
-  let pp (ty : t) (ppf : Format.formatter) =
-    Format.pp_print_string ppf (name ty)
-
-end
+module Ty = Prim.Ty
 
 module rec Item : sig
 
