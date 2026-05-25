@@ -76,6 +76,14 @@ let compile_wat_cmd (enable_tail_call : bool) : unit =
   |> Wat.Pretty.pp_module
   |> Format.printf "%t"
 
+let compile_anf_cmd () : unit =
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
+  parse_module source
+  |> elab_module source
+  |> Core_to_anf.translate_module
+  |> Anf.Module.pp
+  |> Format.printf "%t"
+
 
 (** {1 CLI options} *)
 
@@ -89,6 +97,8 @@ let cmd : unit Cmdliner.Cmd.t =
   in
 
   Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
+    Cmd.v (Cmd.info "compile-anf" ~doc:"compile a module from standard input to A-normal form")
+      Term.(const compile_anf_cmd $ const ());
     Cmd.v (Cmd.info "compile-wat" ~doc:"compile a module from standard input to WAT (WebAssembly Text Format)")
       Term.(const compile_wat_cmd $ emit_tail_calls);
   ]

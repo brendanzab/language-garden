@@ -1,0 +1,19 @@
+fun is-even(n0 : I32) : Bool :=
+  let cond1 : Bool := #i32-eq(n0, 0);
+  join j0 (p2 : Bool) : Bool := p2;
+  if cond1 then
+    jump j0 true
+  else
+    let arg3 : I32 := #i32-sub(n0, 1);
+    let result4 : Bool := is-odd(arg3);
+    jump j0 result4;
+
+fun is-odd(n5 : I32) : Bool :=
+  let cond6 : Bool := #i32-eq(n5, 0);
+  join j1 (p7 : Bool) : Bool := p7;
+  if cond6 then
+    jump j1 false
+  else
+    let arg8 : I32 := #i32-sub(n5, 1);
+    let result9 : Bool := is-even(arg8);
+    jump j1 result9;
