@@ -12,8 +12,6 @@ let translate_ty (ty : Core.Ty.t) : Wat.ty =
 let fresh_local_id (name : string option) : Wat.Local_id.t =
   Wat.Local_id.fresh (Option.value name ~default:"")
 
-let ( << ) = Fun.compose
-
 (** Translate an expression in the core language, returning a list of the locals
     defined in the expression along with the translated web assembly expression. *)
 let translate_expr
@@ -25,6 +23,12 @@ let translate_expr
   (* The locals we've seen while translating the expression *)
   let seen_locals = Dynarray.create () in
 
+  let ( << ) = Fun.compose in
+
+  (* Translate a sub-expression, while updating the list of locals bindings.
+     This returns a function that adds a series of instructions to the start of
+     an expression which avoids the exponential performance cost of repeated
+     calls to [List.append]. *)
   let rec go_expr ~tail_call local_ids expr : Wat.expr -> Wat.expr =
     match expr with
     | Core.Expr.Item (name, args) when opts.enable_tail_call && tail_call ->
@@ -65,6 +69,8 @@ let translate_expr
     | Core.Expr.Prim (I32_mul, args) -> go_exprs local_ids args << List.cons Wat.I32_mul
     | Core.Expr.Prim (I32_neg, args) -> go_exprs local_ids args << List.cons Wat.I32_neg
 
+  (* Translate a series of expressions. This is useful for translating a series
+     of function arguments. *)
   and go_exprs local_ids exprs : Wat.expr -> Wat.expr =
     Iarray.fold_right (go_expr ~tail_call:false local_ids) exprs
   in
@@ -83,17 +89,17 @@ let translate_fun
   let export = Core.Item_name.to_string name
   and name = Core.Item_map.find name item_ids
   and result = translate_ty ty
+
   and params =
     Iarray.to_seq params
     |> Seq.map (fun (name, ty) -> fresh_local_id name, translate_ty ty)
     |> List.of_seq
   in
-  let local_ids =
-    List.to_seq params
-    |> Seq.map fst
-    |> Core.Local.Env.of_seq
+
+  let locals, body =
+    let local_ids = List.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
+    translate_expr opts item_ids local_ids body
   in
-  let locals, body = translate_expr opts item_ids local_ids body in
 
   Wat.{ name; export; params; result; locals; body }
 
