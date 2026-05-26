@@ -94,7 +94,25 @@ end = struct
 
   (** {2 Elaboration context} *)
 
-  module Env = struct
+  module Env : sig
+
+    type t
+
+    type item_decl =
+      | Val of Prim.Ty.t
+      | Fun of Prim.Ty.t iarray * Prim.Ty.t
+
+    val empty : t
+
+    val add_local : t -> string option -> Prim.Ty.t -> t
+    val add_item : t -> string -> item_decl -> t
+
+    val lookup : t -> string -> [
+      | `Expr of Core.Expr.t * Prim.Ty.t
+      | `Item of Core.Item_name.t * item_decl
+    ] option
+
+  end = struct
 
     type item_decl =
       | Val of Core.Ty.t
@@ -136,16 +154,10 @@ end = struct
       | None when name = "false" -> Some (Core.(Expr.Bool false, Ty.Bool))
       | None -> None
 
-    let lookup (env : t) (name : string) : [
-      | `Item of  Core.Item_name.t * item_decl
-      | `Expr of Core.Expr.t * Core.Ty.t
-    ] option =
+    let lookup (env : t) (name : string) =
       match lookup_item env name with
       | Some (name, item) -> Some (`Item (name, item))
-      | None ->
-          match lookup_local env name with
-          | Some (expr, ty) -> Some (`Expr (expr, ty))
-          | None -> None
+      | None -> lookup_local env name |> Option.map (fun (expr, ty) -> `Expr (expr, ty))
 
   end
 
