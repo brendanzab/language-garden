@@ -27,8 +27,8 @@ let translate_expr
 
   (* Translate a sub-expression, while updating the list of locals bindings.
      This returns a function that adds a series of instructions to the start of
-     an expression which avoids the exponential performance cost of repeated
-     calls to [List.append]. *)
+     an expression, avoiding the exponential complexity cost of repeated calls
+     to [List.append]. *)
   let rec go_expr ~tail_call local_ids expr : Wat.expr -> Wat.expr =
     match expr with
     | Core.Expr.Item (name, args) when opts.enable_tail_call && tail_call ->
