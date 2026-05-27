@@ -54,9 +54,9 @@ let translate_expr
     | Core.Expr.Let ((name, ty, def), body) ->
         let def_id = fresh_local_id name in
         Dynarray.add_last seen_locals (def_id, translate_ty ty);
-        go_expr ~tail_call:false local_ids def
+        go_expr local_ids def ~tail_call:false
           << List.cons (Wat.Local_set def_id)
-          << go_expr ~tail_call (Core.Local.Env.extend def_id local_ids) body
+          << go_expr (Core.Local.Env.extend def_id local_ids) body ~tail_call
 
     | Core.Expr.Bool true -> List.cons (Wat.I32_const 1l)
     | Core.Expr.Bool false -> List.cons (Wat.I32_const 0l)
@@ -65,8 +65,8 @@ let translate_expr
         go_expr ~tail_call:false local_ids expr1
           << List.cons (Wat.If (
             translate_ty ty,
-            go_expr ~tail_call local_ids expr2 [],
-            go_expr ~tail_call local_ids expr3 []
+            go_expr local_ids expr2 [] ~tail_call,
+            go_expr local_ids expr3 [] ~tail_call
           ))
 
     | Core.Expr.I32 i -> List.cons (Wat.I32_const i)
@@ -78,10 +78,10 @@ let translate_expr
   (* Translate a series of expressions. This is useful for translating a series
      of function arguments. *)
   and go_exprs local_ids exprs : Wat.expr -> Wat.expr =
-    Iarray.fold_right (go_expr ~tail_call:false local_ids) exprs
+    Iarray.fold_right (go_expr local_ids ~tail_call:false) exprs
   in
 
-  let expr = go_expr ~tail_call:true local_ids expr [] in
+  let expr = go_expr local_ids expr [] ~tail_call:true in
   Dynarray.to_list seen_locals, expr
 
 let translate_fun
