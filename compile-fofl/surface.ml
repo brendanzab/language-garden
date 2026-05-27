@@ -107,6 +107,9 @@ end = struct
     val add_local : t -> string option -> Prim.Ty.t -> t
     val add_item : t -> string -> item_decl -> t
 
+    val lookup_item : t -> string -> (Core.Item_name.t * item_decl) option
+    val lookup_local : t -> string -> (Core.Expr.t * Prim.Ty.t) option
+
     val lookup : t -> string -> [
       | `Expr of Core.Expr.t * Prim.Ty.t
       | `Item of Core.Item_name.t * item_decl
