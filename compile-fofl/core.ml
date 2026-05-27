@@ -6,15 +6,7 @@ module Local = Name.Debruijn.Make ()
 
 module Ty = Prim.Ty
 
-module rec Item : sig
-
-  type t =
-    | Val of Ty.t * Expr.t
-    | Fun of (string option * Ty.t) Iarray.t * Ty.t * Expr.t
-
-end = Item
-
-and Expr : sig
+module rec Expr : sig
 
   type t =
     | Item of Item_name.t * t Iarray.t option
@@ -64,6 +56,14 @@ end = struct
         Prim.Op.app op (Iarray.map (eval items locals) args)
 
 end
+
+and Item : sig
+
+  type t =
+    | Val of Ty.t * Expr.t
+    | Fun of (string option * Ty.t) Iarray.t * Ty.t * Expr.t
+
+end = Item
 
 module Module = struct
 
