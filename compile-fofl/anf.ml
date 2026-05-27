@@ -143,10 +143,12 @@ end = struct
                 (pp_comp def)
                 (go body)
           | Join (id, (param_id, param_ty), cont, body) ->
-              Format.fprintf ppf "@[<2>@[join %s@ @[(%s@ :@ %t)@]@ :=@]@ @[%t;@]@]@ %t"
+              Format.fprintf ppf "@[<2>@[join %s@ %t@ :=@]@ @[%t;@]@]@ %t"
                 (Join_id.to_string id)
-                (Local_id.to_string param_id)
-                (Ty.pp param_ty)
+                (fun ppf ->
+                  Format.fprintf ppf "@[<2>(@[%s@ :@]@ %t)@]"
+                    (Local_id.to_string param_id)
+                    (Ty.pp param_ty))
                 (pp cont)
                 (go body)
           | _ ->
