@@ -1,6 +1,6 @@
-(** An intermediate language that binds the result of each computation to an
-    intermediate let bindings and only branches at the top level of expressions.
-    This should make it easier to compile to target languages like LLVM-IR.
+(** A language that binds the result of each computation to an intermediate
+    definitions, and only supports branching at the top of expressions. This
+    should make it easier to translate to languages like LLVM-IR.
 
     - {{: https://en.wikipedia.org/wiki/A-normal_form} A-Normal Form} on Wikipedia
     - {{: https://doi.org/10.1145/173262.155113} The essence of compiling with continuations}
