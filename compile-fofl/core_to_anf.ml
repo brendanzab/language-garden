@@ -90,7 +90,7 @@ end = struct
     let@ expr = go_expr local_ids expr in
     Anf.Expr.Return expr
 
-  let translate_item (item_tys : Core.Item_name.t -> Core.Ty.t) (item : Core.Item.t) : Anf.Item.t =
+  let translate_item (item : Core.Item.t) : Anf.Item.t =
     let env = Core.Local.Env.empty in
 
     match item with
@@ -103,7 +103,7 @@ end = struct
         Anf.Item.Fun (params, ty, translate_expr env body)
 
   let translate_module (mod_ : Core.Module.t) : Anf.Module.t =
-    mod_ |> Core.Item_map.map (translate_item (Core.Module.item_ty mod_))
+    mod_ |> Core.Item_map.map translate_item
 
 end
 

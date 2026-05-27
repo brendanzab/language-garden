@@ -84,9 +84,4 @@ module Module = struct
 
   type t = Item.t Item_map.t  (* TODO: Preserve order? *)
 
-  let item_ty (program : t) (name : Item_name.t) : Ty.t =
-    match Item_map.find name program with
-    | Item.Val (ty, _) -> ty
-    | Item.Fun (_, ty, _) -> ty
-
 end
