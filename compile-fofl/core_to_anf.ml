@@ -99,7 +99,7 @@ end = struct
 
     | Core.Item.Fun (params, ty, body) ->
         let params = params |> Iarray.map (fun (name, ty) -> fresh_local_id name, ty) in
-        let env = Iarray.fold_right (Fun.compose Core.Local.Env.extend fst) params env in
+        let env = Iarray.fold_right (fun (id, _) -> Core.Local.Env.extend id) params env in
         Anf.Item.Fun (params, ty, translate_expr env body)
 
   let translate_module (mod_ : Core.Module.t) : Anf.Module.t =
