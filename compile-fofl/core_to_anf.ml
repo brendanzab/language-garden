@@ -12,12 +12,12 @@ module Translate : sig
 
 end = struct
 
-  type 'a k = 'a -> Anf.Expr.t
+  type 'a k = 'a -> Anf.Expr.t * Anf.Ty.t
 
   let fresh_local_id (name : string option) : Anf.Local_id.t =
     Anf.Local_id.fresh (Option.value name ~default:"")
 
-  let translate_expr (local_ids : Anf.Local_id.t Core.Local.Env.t) (expr : Core.Expr.t) : Anf.Expr.t =
+  let translate_expr (local_ids : Anf.Local_id.t Core.Local.Env.t) (expr : Core.Expr.t) (ty : Anf.Ty.t) : Anf.Expr.t =
     let ( let@ ) = ( @@ ) in
 
     let rec go_expr local_ids (expr : Core.Expr.t) : Anf.Expr.comp k k =
@@ -36,26 +36,27 @@ end = struct
         | Core.Expr.Let ((name, def_ty, def), body) ->
             let id = fresh_local_id name in
             let@ def = go_expr local_ids def in
-            let body = go_expr (Core.Local.Env.extend id local_ids) body k in
-            Anf.Expr.Let (id, Some def_ty, def, body)
+            let body, body_ty = go_expr (Core.Local.Env.extend id local_ids) body k in
+            Anf.Expr.Let (id, Some def_ty, def, body), body_ty
 
         | Core.Expr.Bool bool ->
             k (Anf.Expr.Atom (Bool bool))
 
-        | Core.Expr.Bool_if (expr1, expr2, expr3, expr_ty) ->
+        | Core.Expr.Bool_if (expr1, expr2, expr3) ->
             let@ expr1 = go_named_expr local_ids "cond" expr1 in
 
             let param_id = Anf.Local_id.fresh "p" in
-            let cont = k (Anf.Expr.Atom (Var param_id)) in
+            let cont, cont_ty = k (Anf.Expr.Atom (Var param_id)) in
 
             let join_id = Anf.Join_id.fresh "j" in
-            let jump_k x = Anf.Expr.Jump (join_id, x) in
+            let jump_k x = Anf.Expr.Jump (join_id, x), cont_ty in
 
-            let expr2 = go_named_expr local_ids "result" expr2 jump_k in
-            let expr3 = go_named_expr local_ids "result" expr3 jump_k in
+            let expr2, param_ty = go_named_expr local_ids "result" expr2 jump_k in
+            let expr3, _ = go_named_expr local_ids "result" expr3 jump_k in
 
-            Anf.Expr.Join (join_id, (param_id, expr_ty), cont,
-              Anf.Expr.Bool_if (expr1, expr2, expr3))
+            Anf.Expr.Join (join_id, (param_id, param_ty), cont,
+              Anf.Expr.Bool_if (expr1, expr2, expr3)),
+            cont_ty
 
         | Core.Expr.I32 int ->
             k (Anf.Expr.Atom (I32 int))
@@ -73,8 +74,9 @@ end = struct
         (* Bind definitions for non-atomic computations *)
         | expr ->
             let id = Anf.Local_id.fresh name in
-            let body = k (Anf.Expr.Var id) in
-            Anf.Expr.Let (id, None, expr, body)
+            let body, body_ty = k (Anf.Expr.Var id) in
+            Anf.Expr.Let (id, None, expr, body),
+            body_ty
 
     (* Compile a series of expressions to intermediate definitions *)
     and go_named_exprs local_ids (name : string) (exprs : Core.Expr.t list) : Anf.Expr.atom list k k =
@@ -87,20 +89,23 @@ end = struct
             k (expr :: exprs)
     in
 
-    let@ expr = go_expr local_ids expr in
-    Anf.Expr.Return expr
+    let expr, _ =
+      let@ expr = go_expr local_ids expr in
+      Anf.Expr.Return expr, ty
+    in
+    expr
 
   let translate_item (item_tys : Core.Item_name.t -> Core.Ty.t) (item : Core.Item.t) : Anf.Item.t =
     let env = Core.Local.Env.empty in
 
     match item with
     | Core.Item.Val (ty, def) ->
-        Anf.Item.Val (ty, translate_expr env def)
+        Anf.Item.Val (ty, translate_expr env def ty)
 
     | Core.Item.Fun (params, ty, body) ->
-        let params = params |> Iarray.map (fun (name, ty) -> fresh_local_id name, ty) in
+        let params = params |> Iarray.map (Pair.map_fst fresh_local_id) in
         let env = Iarray.fold_right (fun (id, _) -> Core.Local.Env.extend id) params env in
-        Anf.Item.Fun (params, ty, translate_expr env body)
+        Anf.Item.Fun (params, ty, translate_expr env body ty)
 
   let translate_module (mod_ : Core.Module.t) : Anf.Module.t =
     mod_ |> Core.Item_map.map (translate_item (Core.Module.item_ty mod_))

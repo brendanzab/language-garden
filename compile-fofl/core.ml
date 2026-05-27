@@ -36,7 +36,7 @@ and Expr : sig
     | Var of Local.Index.t
     | Let of def * t
     | Bool of bool
-    | Bool_if of t * t * t * Ty.t
+    | Bool_if of t * t * t
     | I32 of int32
     | Prim of Prim.Op.t * t Iarray.t
 
@@ -68,7 +68,7 @@ end = struct
         let def = eval items locals def in
         eval items (Local.Env.extend def locals) body
     | Bool bool -> Bool bool
-    | Bool_if (expr1, expr2, expr3, _) ->
+    | Bool_if (expr1, expr2, expr3) ->
         begin match eval items locals expr1 with
         | Bool true -> eval items locals expr2
         | Bool false -> eval items locals expr3

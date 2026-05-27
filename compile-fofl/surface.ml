@@ -225,7 +225,7 @@ end = struct
         let expr1 = check_expr env expr1 Core.Ty.Bool in
         let expr2, ty = infer_expr env expr2 in
         let expr3 = check_expr env expr3 ty in
-        Core.Expr.Bool_if (expr1, expr2, expr3, ty), ty
+        Core.Expr.Bool_if (expr1, expr2, expr3), ty
 
     | Expr.Infix (`Eq, expr1, expr2) ->
         let expr1, ty1 = infer_expr env expr1 in
@@ -262,7 +262,7 @@ end = struct
         let expr1 = check_expr env expr1 Core.Ty.Bool in
         let expr2 = check_expr env expr2 ty in
         let expr3 = check_expr env expr3 ty in
-        Core.Expr.Bool_if (expr1, expr2, expr3, ty)
+        Core.Expr.Bool_if (expr1, expr2, expr3)
 
     | _ ->
         let expr', found_ty = infer_expr env expr in
