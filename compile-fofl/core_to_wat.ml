@@ -12,6 +12,15 @@ let translate_ty (ty : Core.Ty.t) : Wat.ty =
 let fresh_local_id (name : string option) : Wat.Local_id.t =
   Wat.Local_id.fresh (Option.value name ~default:"")
 
+let translate_prim_op (op : Prim.Op.t) : Wat.instr =
+  match op with
+  | Prim.Op.Bool_eq -> Wat.I32_eq
+  | Prim.Op.I32_eq -> Wat.I32_eq
+  | Prim.Op.I32_add -> Wat.I32_add
+  | Prim.Op.I32_sub -> Wat.I32_sub
+  | Prim.Op.I32_mul -> Wat.I32_mul
+  | Prim.Op.I32_neg -> Wat.I32_neg
+
 (** Translate an expression in the core language, returning a list of the locals
     defined in the expression along with the translated web assembly expression. *)
 let translate_expr
@@ -62,12 +71,9 @@ let translate_expr
 
     | Core.Expr.I32 i -> List.cons (Wat.I32_const i)
 
-    | Core.Expr.Prim (Bool_eq, args) -> go_exprs local_ids args << List.cons Wat.I32_eq
-    | Core.Expr.Prim (I32_eq, args) -> go_exprs local_ids args << List.cons Wat.I32_eq
-    | Core.Expr.Prim (I32_add, args) -> go_exprs local_ids args << List.cons Wat.I32_add
-    | Core.Expr.Prim (I32_sub, args) -> go_exprs local_ids args << List.cons Wat.I32_sub
-    | Core.Expr.Prim (I32_mul, args) -> go_exprs local_ids args << List.cons Wat.I32_mul
-    | Core.Expr.Prim (I32_neg, args) -> go_exprs local_ids args << List.cons Wat.I32_neg
+    | Core.Expr.Prim (op, args) ->
+        go_exprs local_ids args
+          << List.cons (translate_prim_op op)
 
   (* Translate a series of expressions. This is useful for translating a series
      of function arguments. *)
