@@ -1,6 +1,6 @@
 fun test(b0 : Bool) : I32 :=
-  let x1 := 42;
-  join j0 (p3 : I32) := let y2 := p3;
+  let x1 : I32 := 42;
+  join j0 (p3 : I32) := let y2 : I32 := p3;
                         #i32-add(y2, x1);
   if b0 then
     let result4 := #i32-add(x1, 1);

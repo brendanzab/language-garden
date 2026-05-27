@@ -21,7 +21,7 @@ module Ty = Core.Ty
 module rec Expr : sig
 
   type t =
-    | Let of Local_id.t * comp * t
+    | Let of Local_id.t * Ty.t option * comp * t
     | Bool_if of atom * t * t
     | Return of comp
 
@@ -60,7 +60,7 @@ end = struct
   let eval (items : Item.t Item_map.t) (expr : t) : value =
     let rec eval (joins : (Local_id.t * t) Join_map.t) (locals : value Local_map.t) (expr : t) : value =
       match expr with
-      | Let (id, def, body) ->
+      | Let (id, _, def, body) ->
           let def = eval_comp joins locals def in
           eval joins (Local_map.add id def locals) body
       | Join (id, (param_id, _), cont, body) ->
@@ -125,12 +125,18 @@ end = struct
 
   let rec pp (expr : t) (ppf : Format.formatter) =
     match expr with
-    | Let (_, _, _) | Join (_, _, _, _) ->
+    | Let (_, _, _, _) | Join (_, _, _, _) ->
         let rec go expr ppf =
           match expr with
-          | Let (id, def, body) ->
-              Format.fprintf ppf "@[<2>@[let %s@ :=@]@ @[%t;@]@]@ %t"
-                (Local_id.to_string id)
+          | Let (id, def_ty, def, body) ->
+              Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+                (fun ppf ->
+                  match def_ty with
+                  | None -> Format.fprintf ppf "%s" (Local_id.to_string id)
+                  | Some def_ty ->
+                      Format.fprintf ppf "@[<2>@[%s :@]@ %t@]"
+                        (Local_id.to_string id)
+                        (Ty.pp def_ty))
                 (pp_comp def)
                 (go body)
           | Join (id, (param_id, param_ty), cont, body) ->
