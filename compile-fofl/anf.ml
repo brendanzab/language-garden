@@ -20,6 +20,7 @@ module Ty = Core.Ty
 
 module rec Expr : sig
 
+  (** Top-level expressions *)
   type t =
     | Let of Local_id.t * Ty.t option * comp * t
     | Bool_if of atom * t * t
@@ -33,11 +34,13 @@ module rec Expr : sig
     | Jump of Join_id.t * atom
     (** Jump to a join point *)
 
+  (** Computation expressions *)
   and comp =
     | Item of Item_name.t * atom Iarray.t option
     | Prim of Prim.Op.t * atom Iarray.t
     | Atom of atom
 
+  (** Atomic expressions *)
   and atom =
     | Var of Local_id.t
     | Bool of bool
