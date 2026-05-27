@@ -109,7 +109,7 @@ The resulting program is then translated to web assembly.
       │  Core_to_wat               │  Core_to_anf
       │                            │
       ▼                            ▼
-  Wat.module_                 Anf.module_
+  Wat.module_                 Anf.Module.t
                                    .
                                    .  Anf_to_llvm (TODO)
                                    .
