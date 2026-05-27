@@ -1,5 +1,29 @@
 (** Generative functors for producing new namespaces *)
 
+module Label = struct
+
+  module type S = sig
+
+    type t
+
+    val make : string -> t
+    val compare : t -> t -> int
+    val to_string : t -> string
+
+  end
+
+  module Make () : S = struct
+
+    type t = string
+
+    let make name = name
+    let compare = String.compare
+    let to_string name = name
+
+  end
+
+end
+
 module Fresh = struct
 
   module type S = sig

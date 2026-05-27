@@ -1,21 +1,6 @@
-module Item_name : sig
+(** The core language *)
 
-  type t
-
-  val make : string -> t
-  val compare : t -> t -> int
-  val to_string : t -> string
-
-end = struct
-
-  type t = string
-
-  let make name = name
-  let compare = String.compare
-  let to_string name = name
-
-end
-
+module Item_name = Name.Label.Make ()
 module Item_map = Map.Make (Item_name)
 module Local = Name.Debruijn.Make ()
 
