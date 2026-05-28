@@ -4,9 +4,9 @@ fun fact(n0 : I32) : I32 :=
   if cond1 then
     jump j0 1
   else
-    let arg3 := #i32-sub(n0, 1);
-    let arg4 := fact(arg3);
-    let result5 := #i32-mul(n0, arg4);
-    jump j0 result5;
+    let x3 := #i32-sub(n0, 1);
+    let x4 := fact(x3);
+    let r5 := #i32-mul(n0, x4);
+    jump j0 r5;
 
 val test-fact : I32 := fact(5);

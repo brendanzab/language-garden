@@ -4,9 +4,9 @@ fun is-even(n0 : I32) : Bool :=
   if cond1 then
     jump j0 true
   else
-    let arg3 := #i32-sub(n0, 1);
-    let result4 := is-odd(arg3);
-    jump j0 result4;
+    let x3 := #i32-sub(n0, 1);
+    let r4 := is-odd(x3);
+    jump j0 r4;
 
 fun is-odd(n5 : I32) : Bool :=
   let cond6 := #i32-eq(n5, 0);
@@ -14,6 +14,6 @@ fun is-odd(n5 : I32) : Bool :=
   if cond6 then
     jump j1 false
   else
-    let arg8 := #i32-sub(n5, 1);
-    let result9 := is-even(arg8);
-    jump j1 result9;
+    let x8 := #i32-sub(n5, 1);
+    let r9 := is-even(x8);
+    jump j1 r9;
