@@ -19,6 +19,21 @@ let generate_rules base = begin
     Printf.printf "\n";
   end;
 
+  begin
+    let llvm_file = Printf.sprintf "%s.ll" base in
+
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" llvm_file;
+    Printf.printf "   (run %%{bin:%s} compile-llvm))))\n" bin;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)" package;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" llvm_file llvm_file;
+    Printf.printf "\n";
+  end;
+
   let generate_wat_rules ~base ~compile_args ~wat2wasm_args ~wasm_validate_args =
     let wat_file = Printf.sprintf "%s.wat" base in
     let wasm_file = Printf.sprintf "%s.wasm" base in

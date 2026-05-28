@@ -49,15 +49,12 @@ end = struct
             k (Anf.Expr.Atom (Bool bool))
 
         | Core.Expr.Bool_if (expr1, expr2, expr3, expr_ty) ->
-            let@ expr1 = go_named_expr local_ids "cond" expr1 in
-
             let param_id = fresh_local_id (Some "result") in
-            let cont = k (Anf.Expr.Atom (Var param_id)) in
-
             let join_id = fresh_join_id "branch" in
             let jump_k result = Anf.Expr.Jump (join_id, result) in
 
-            Anf.Expr.Join (join_id, (param_id, expr_ty), cont,
+            let@ expr1 = go_named_expr local_ids "cond" expr1 in
+            Anf.Expr.Join (join_id, (param_id, expr_ty), k (Anf.Expr.Atom (Var param_id)),
               Anf.Expr.Bool_if (expr1,
                 go_named_expr local_ids "result" expr2 jump_k,
                 go_named_expr local_ids "result" expr3 jump_k))

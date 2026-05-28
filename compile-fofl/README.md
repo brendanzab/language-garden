@@ -82,6 +82,34 @@ fun fact(n : I32) : I32 :=
 
 </details>
 
+<details>
+<summary>Compiled LLVM IR</summary>
+
+<!-- $MDX file=examples/fact.ll -->
+```ll
+define i32 @fact(i32 %n) {
+  %cond = icmp eq i32 %n 0
+  br i1 %cond label %if_true, label %if_false
+if_true:
+  br label %if_end
+if_false:
+  %arg = sub i32 %n 1
+  %arg_1 = call i32 @fact(i32 %arg)
+  %false_result = mul i32 %n %arg_1
+  br label %if_end
+if_end:
+  %result = phi i32 [1, %if_true], [%false_result, %if_false]
+  ret i32 %result
+}
+
+define i32 @test-fact() {
+  %result = call i32 @fact(i32 5)
+  ret i32 %result
+}
+```
+
+</details>
+
 ## Compiler overview
 
 After parsing, the surface language is elaborated to a core language, using a
@@ -96,17 +124,12 @@ The resulting program is then translated to web assembly.
                      ▼
                Core.Module.t
                      │
-      ┌──────────────┴─────────────┐
-      │                            │
-      │  Core_to_wat               │  Core_to_anf
-      │                            │
-      ▼                            ▼
-  Wat.module_                 Anf.Module.t
-                                   .
-                                   .  Anf_to_llvm (TODO)
-                                   .
-                                   ▼
-                              Llvm.module_ (TODO)
+      ┌──────────────┴──────┬───────────────────┐
+      │                     │                   │
+      │  Core_to_wat        │  Core_to_anf      │  Core_to_llvm
+      │                     │                   │
+      ▼                     ▼                   ▼
+  Wat.module_          Anf.Module.t        Llvm.program
 ```
 
 ## Todo list
@@ -116,7 +139,7 @@ The resulting program is then translated to web assembly.
   - [x] Validate WAT with [wabt](https://github.com/WebAssembly/wabt)
 - [x] Compile Core to ANF
   - [x] Generate join points
-- [ ] Compile ANF to LLVM
+- [x] Compile Core to LLVM
 - [ ] Compile Core to JavaScript
 - [ ] Test that each translation preserves the semantics
 
@@ -129,4 +152,4 @@ CLI Entrypoints:
 - [ ] `eval-anf`: Surface -> Core -> ANF -> Value
 - [x] `compile-wat`: Surface -> Core -> WAT
 - [x] `compile-anf`: Surface -> Core -> ANF
-- [ ] `compile-llvm`: Surface -> Core -> ANF -> LLVM
+- [x] `compile-llvm`: Surface -> Core -> LLVM
