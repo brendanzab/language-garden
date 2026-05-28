@@ -59,7 +59,7 @@ fun fact(n : I32) : I32 :=
 <details>
 <summary>Compiled web assembly (with tailcalls)</summary>
 
-<!-- $MDX file=examples/fact.tc.wat -->
+<!-- $MDX file=examples/fact.tail-call.wat -->
 ```wat
 (module
   (func
