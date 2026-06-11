@@ -40,32 +40,54 @@ and env = value list
 
 (** {2 Evaluation} *)
 
-let ( let@ ) = ( @@ )
+(** A {{: https://ocaml.org/manual/5.4/bindingops.html} binding operator} that
+    applies a continuation to an intermediate computation. This allows us to
+    replace continuation applications:
+
+    {[
+      eval env head (fun head ->
+        eval env arg (fun arg ->
+          apply head arg return))
+    ]}
+
+    With the following notation:
+
+    {[
+      let@ head = eval env head in
+      let@ arg = eval env arg in
+      apply head arg return
+    ]}
+
+    This is equivalent to function application, but we use a more precise type
+    for clarity.
+*)
+let ( let@ ) : type a. ((value -> a) -> a) -> (value -> a) -> a =
+  ( @@ )
 
 (** Evaluation function in continuation passing style *)
 let rec eval : type a. env -> expr -> (value -> a) -> a =
-  fun env expr k ->
+  fun env expr return ->
     match expr with
     | Var index ->
-        k (List.nth env index)
+        return (List.nth env index)
 
     | Let (_, def, body) ->
         let@ def = eval env def in
-        eval (def :: env) body k
+        eval (def :: env) body return
 
     | Fun_lit (_, body) ->
-        k (Fun_lit (Clos (env, body)))
+        return (Fun_lit (Clos (env, body)))
 
     | Fun_app (head, arg) ->
         let@ head = eval env head in
         let@ arg = eval env arg in
-        apply head arg k
+        apply head arg return
 
 and apply : type a. value -> value -> (value -> a) -> a =
-  fun head arg k ->
+  fun head arg return ->
     match head with
     | Fun_lit (Clos (env, body)) ->
-        eval (arg :: env) body k
+        eval (arg :: env) body return
 
 (** Compute the value of an expression *)
 let eval (expr : expr) : value =
@@ -73,13 +95,6 @@ let eval (expr : expr) : value =
 
 
 (** {1 Tests} *)
-
-(** Run with:
-
-    {@command[
-    $ ocaml scraps/eval-cek.ml
-    ]}
-*)
 
 (** Interface for building well-scoped expressions *)
 module Build : sig
@@ -96,7 +111,7 @@ module Build : sig
 
   (** Notation *)
 
-  val ( let* ) : string * t -> (t -> t) -> t
+  val ( let$ ) : string * t -> (t -> t) -> t
   val ( $ ) : t -> t -> t
 
   val fun1 : string -> (t -> t) -> t
@@ -134,7 +149,7 @@ end = struct
   let run (expr : t) : expr =
     expr ~size:0
 
-  let ( let* ) = let'
+  let ( let$ ) = let'
   let ( $ ) = app
 
   let fun1 x body =
@@ -162,8 +177,8 @@ module Tests = struct
 
   let () =
     ignore @@ eval Build.(run begin
-      let* id = "id", fun1 "x" Fun.id in
-      let* const = "const", fun2 ("x", "y") Fun.const in
+      let$ id = "id", fun1 "x" Fun.id in
+      let$ const = "const", fun2 ("x", "y") Fun.const in
       (const $ id) $ id $ id
     end)
 

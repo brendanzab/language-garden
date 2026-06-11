@@ -43,57 +43,74 @@ and env = value list
 
 (** {2 Evaluation} *)
 
-let ( let@ ) = ( @@ )
+(** A {{: https://ocaml.org/manual/5.4/bindingops.html} binding operator} that
+    applies a continuation to an intermediate computation. This allows us to
+    replace continuation applications:
+
+    {[
+      eval env head (fun head ->
+        eval env arg (fun arg ->
+          apply head arg return))
+    ]}
+
+    With the following notation:
+
+    {[
+      let@ head = eval env head in
+      let@ arg = eval env arg in
+      apply head arg return
+    ]}
+
+    This is equivalent to function application, but we use a more precise type
+    for clarity.
+*)
+let ( let@ ) : type a. ((value -> a) -> a) -> (value -> a) -> a =
+  ( @@ )
 
 (** Evaluation function in continuation passing style *)
-let rec eval : type a. env -> expr -> (value -> a) -> (value -> a) -> a =
-  fun env expr h k ->
+let rec eval : type a. env -> expr -> raise:(value -> a) -> (value -> a) -> a =
+  fun env expr ~raise return ->
     match expr with
     | Var index ->
-        k (List.nth env index)
+        return (List.nth env index)
 
     | Let (_, def, body) ->
-        let@ def = eval env def h in
-        eval (def :: env) body h k
+        let@ def = eval env def ~raise in
+        eval (def :: env) body ~raise return
 
     | Fun_lit (_, body) ->
-        k (Fun_lit (Clos (env, body)))
+        return (Fun_lit (Clos (env, body)))
 
     | Fun_app (head, arg) ->
-        let@ head = eval env head h in
-        let@ arg = eval env arg h in
-        apply head arg h k
+        let@ head = eval env head ~raise in
+        let@ arg = eval env arg ~raise in
+        apply head arg ~raise return
 
     | String_lit s ->
-        k (String_lit s)
+        return (String_lit s)
 
     | Except_raise arg ->
-        let@ arg = eval env arg h in
-        h arg
+        let@ arg = eval env arg ~raise in
+        raise arg
 
     | Except_handle (expr, _, body) ->
-        eval env expr (fun arg -> eval (arg :: env) body h k) k
+        let handler arg = eval (arg :: env) body ~raise return in
+        eval env expr ~raise:handler return
 
-and apply : type a. value -> value -> (value -> a) -> (value -> a) -> a =
-  fun head arg h k ->
+and apply : type a. value -> value -> raise:(value -> a) -> (value -> a) -> a =
+  fun head arg ~raise return ->
     match head with
-    | Fun_lit (Clos (env, body)) -> eval (arg :: env) body h k
+    | Fun_lit (Clos (env, body)) ->
+        eval (arg :: env) body ~raise return
     | _ -> failwith "apply"
 
 (** Compute the value of an expression, returning an error if any unhandled
     exceptions were raised. *)
 let eval (expr : expr) : (value, value) Result.t =
-  eval [] expr Result.error Result.ok
+  eval [] expr ~raise:Result.error Result.ok
 
 
 (** {1 Tests} *)
-
-(** Run with:
-
-    {@command[
-    $ ocaml scraps/eval-cek.ml
-    ]}
-*)
 
 (** Interface for building well-scoped expressions *)
 module Build : sig
@@ -113,7 +130,7 @@ module Build : sig
 
   (** Notation *)
 
-  val ( let* ) : string * t -> (t -> t) -> t
+  val ( let$ ) : string * t -> (t -> t) -> t
   val ( $ ) : t -> t -> t
 
   val fun1 : string -> (t -> t) -> t
@@ -160,7 +177,7 @@ end = struct
   let run (expr : t) : expr =
     expr ~size:0
 
-  let ( let* ) = let'
+  let ( let$ ) = let'
   let ( $ ) = app
 
   let fun1 x body =
@@ -182,44 +199,96 @@ end
 module Tests = struct
 
   let () =
-    ignore @@ eval Build.(run begin
+    (* (fun x -> x) (fun y -> y) *)
+    let expr = Build.(run begin
       fun1 "x" Fun.id $ fun1 "y" Fun.id
-    end)
+    end) in
+    assert (eval expr |> Result.is_ok)
 
   let () =
-    ignore @@ eval Build.(run begin
-      let* id = "id", fun1 "x" Fun.id in
-      let* const = "const", fun2 ("x", "y") Fun.const in
+    (*
+      let id := fun x -> x;
+      let const := fun x y -> x;
+      const (raise "oops") id id
+    *)
+    let expr = Build.(run begin
+      let$ id = "id", fun1 "x" Fun.id in
+      let$ const = "const", fun2 ("x", "y") Fun.const in
       (const $ id) $ id $ id
-    end)
+    end) in
+    assert (eval expr |> Result.is_ok)
 
   (* Unhandled exception *)
   let () =
-    let r = eval Build.(run begin
-      let* id = "id", fun1 "x" Fun.id in
-      let* const = "const", fun2 ("x", "y") Fun.const in
+    (*
+      let id := fun x -> x;
+      let const := fun x y -> x;
+      const (raise "oops") id id
+    *)
+    let expr = Build.(run begin
+      let$ id = "id", fun1 "x" Fun.id in
+      let$ const = "const", fun2 ("x", "y") Fun.const in
       (const $ raise (string "oops")) $ id $ id
     end) in
-    assert (r = Error (String_lit "oops"))
+    assert (eval expr = Error (String_lit "oops"))
 
   (* Handled exception *)
   let () =
-    let r = eval Build.(run begin
-      let* id = "id", fun1 "x" Fun.id in
-      let* const = "const", fun2 ("x", "y") Fun.const in
-      handle ((const $ raise (string "oops")) $ id $ id) ("msg", fun x -> id $ x)
+    (*
+      let id := fun x -> x;
+      let const := fun x y -> x;
+      handle
+        const (raise "oops") id id
+      with
+      | msg -> id msg
+    *)
+    let expr = Build.(run begin
+      let$ id = "id", fun1 "x" Fun.id in
+      let$ const = "const", fun2 ("x", "y") Fun.const in
+      handle ((const $ raise (string "oops")) $ id $ id)
+        ("msg", fun msg -> id $ msg)
     end) in
-    assert (r = Ok (String_lit "oops"))
+    assert (eval expr = Ok (String_lit "oops"))
 
   (* Nested handlers *)
   let () =
-    let r = eval Build.(run begin
-      let* id = "id", fun1 "x" Fun.id in
-      let* const = "const", fun2 ("x", "y") Fun.const in
+    (*
+      let id := fun x -> x;
+      let const := fun x y -> x;
       handle
-        (handle ((const $ raise (string "oops")) $ id $ id) ("msg", fun x -> id $ x))
+        handle
+          const (raise "oops") id id
+        with
+        | msg -> id msg
+      with
+      | msg -> raise "ignored"
+    *)
+    let expr = Build.(run begin
+      let$ id = "id", fun1 "x" Fun.id in
+      let$ const = "const", fun2 ("x", "y") Fun.const in
+      handle
+        (handle ((const $ raise (string "oops")) $ id $ id)
+          ("msg", fun msg -> id $ msg))
         ("msg", fun _ -> raise (string "ignored"))
     end) in
-    assert (r = Ok (String_lit "oops"))
+    assert (eval expr = Ok (String_lit "oops"))
+
+  (* Re-raise handled exception *)
+  let () =
+    (*
+      let id := fun x -> x;
+      let const := fun x y -> x;
+      handle
+        const (raise "oops") id id
+      with
+      | msg -> raise "oh dear"
+    *)
+    let expr = Build.(run begin
+      let$ id = "id", fun1 "x" Fun.id in
+      let$ const = "const", fun2 ("x", "y") Fun.const in
+      handle ((const $ raise (string "oops")) $ id $ id)
+        ("msg", fun _ -> raise (string "oh dear"))
+    end) in
+    assert (eval expr = Error (String_lit "oh dear"))
 
 end
