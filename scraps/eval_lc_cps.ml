@@ -45,17 +45,17 @@ and env = value list
     replace continuation applications:
 
     {[
-      eval env head (fun head ->
-        eval env arg (fun arg ->
-          apply head arg return))
+      eval env e1 (fun v1 ->
+        eval env e2 (fun v2 ->
+          ...))
     ]}
 
     With the following notation:
 
     {[
-      let@ head = eval env head in
-      let@ arg = eval env arg in
-      apply head arg return
+      let@ v1 = eval env e1 in
+      let@ v2 = eval env e2 in
+      ...
     ]}
 
     This is equivalent to function application, but we use a more precise type

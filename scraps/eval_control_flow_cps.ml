@@ -48,17 +48,17 @@ type 'a ops = {
     replace continuation applications:
 
     {[
-      eval env head (fun head ->
-        eval env arg (fun arg ->
-          apply head arg return))
+      eval env e1 (fun v1 ->
+        eval env e2 (fun v2 ->
+          ...))
     ]}
 
     With the following notation:
 
     {[
-      let@ head = eval env head in
-      let@ arg = eval env arg in
-      apply head arg return
+      let@ v1 = eval env e1 in
+      let@ v2 = eval env e2 in
+      ...
     ]}
 
     This is equivalent to function application, but we use a more precise type
@@ -68,19 +68,19 @@ let ( let@ ) : type a. ((value -> a) -> a) -> (value -> a) -> a =
   ( @@ )
 
 (** Evaluate an expression. *)
-let rec eval_expr : type a. (string * value) list -> expr -> a ops -> (value -> a) -> a =
+let rec eval : type a. (string * value) list -> expr -> a ops -> (value -> a) -> a =
   fun env expr ops return ->
     match expr with
     | Var x ->
         return (List.assoc x env)
 
     | Let (x, def, body) ->
-        let@ def = eval_expr env def ops in
-        eval_expr ((x, def) :: env) body ops return
+        let@ def = eval env def ops in
+        eval ((x, def) :: env) body ops return
 
     | Seq (fst, snd) ->
-        let@ _ = eval_expr env fst ops in
-        eval_expr env snd ops return
+        let@ _ = eval env fst ops in
+        eval env snd ops return
 
     (* Unit *)
 
@@ -92,10 +92,10 @@ let rec eval_expr : type a. (string * value) list -> expr -> a ops -> (value -> 
     | Bool_false -> return Bool_false
 
     | Bool_elim (pred, true_body, false_body) ->
-        let@ pred = eval_expr env pred ops in
+        let@ pred = eval env pred ops in
         begin match pred with
-        | Bool_true -> eval_expr env true_body ops return
-        | Bool_false -> eval_expr env false_body ops return
+        | Bool_true -> eval env true_body ops return
+        | Bool_false -> eval env false_body ops return
         | _ -> failwith "expected bool"
         end
 
@@ -103,35 +103,35 @@ let rec eval_expr : type a. (string * value) list -> expr -> a ops -> (value -> 
 
     | Nat_zero -> return Nat_zero
     | Nat_succ n ->
-        let@ n = eval_expr env n ops in
+        let@ n = eval env n ops in
         return (Nat_succ n)
 
     | Nat_elim (nat, zero_body, (x, succ_body)) ->
-        let@ nat = eval_expr env nat ops in
+        let@ nat = eval env nat ops in
         begin match nat with
-        | Nat_zero -> eval_expr env zero_body ops return
-        | Nat_succ n -> eval_expr ((x, n) :: env) succ_body ops return
+        | Nat_zero -> eval env zero_body ops return
+        | Nat_succ n -> eval ((x, n) :: env) succ_body ops return
         | _ -> failwith "expected nat"
         end
 
     (* Mutable references *)
 
     | Ref_new init ->
-        let@ init = eval_expr env init ops in
+        let@ init = eval env init ops in
         return (Ref (ref init))
 
     | Ref_get curr ->
-        let@ curr = eval_expr env curr ops in
+        let@ curr = eval env curr ops in
         begin match curr with
         | Ref curr -> return !curr
         | _ -> failwith "expected ref"
         end
 
     | Ref_set (curr, replacement) ->
-        let@ curr = eval_expr env curr ops in
+        let@ curr = eval env curr ops in
         begin match curr with
         | Ref curr ->
-            let@ replacement = eval_expr env replacement ops in
+            let@ replacement = eval env replacement ops in
             curr := replacement;
             return Unit
         | _ -> failwith "expected ref"
@@ -142,7 +142,7 @@ let rec eval_expr : type a. (string * value) list -> expr -> a ops -> (value -> 
     | Loop body ->
         let rec loop () =
           (* First evaluate the body of the loop *)
-          let@ result = eval_expr env body {
+          let@ result = eval env body {
             continue = loop; (* call the loop function recursively when continuing to loop *)
             break = return; (* call the value continuation when breaking out of the loop *)
           } in
@@ -156,7 +156,7 @@ let rec eval_expr : type a. (string * value) list -> expr -> a ops -> (value -> 
 
     | Break ret ->
         (* First evaluate the return expression *)
-        let@ ret = eval_expr env ret ops in
+        let@ ret = eval env ret ops in
 
         (* Now break from the loop with the value *)
         ops.break ret
@@ -168,12 +168,12 @@ let rec eval_expr : type a. (string * value) list -> expr -> a ops -> (value -> 
 
 module Tests = struct
 
-  let eval_expr expr =
+  let eval expr =
     let ops = {
       continue = (fun () -> failwith "continue outside loop");
       break = (fun _ -> failwith "break outside loop");
     } in
-    eval_expr [] expr ops Fun.id
+    eval [] expr ops Fun.id
 
   (* let x := ref false; !x == false *)
   let () =
@@ -181,7 +181,7 @@ module Tests = struct
       Let ("x", Ref_new Bool_false,
         Ref_get (Var "x"))
     in
-    assert (eval_expr expr = Bool_false)
+    assert (eval expr = Bool_false)
 
   (* let x := ref false; x := true; !x == true *)
   let () =
@@ -190,18 +190,18 @@ module Tests = struct
         Seq (Ref_set (Var "x", Bool_true),
         Ref_get (Var "x")))
     in
-    assert (eval_expr expr = Bool_true)
+    assert (eval expr = Bool_true)
 
   (* continue == <undefined> *)
   let () =
-    assert begin match eval_expr Continue with
+    assert begin match eval Continue with
       | _ -> false
       | exception (Failure _) -> true
     end
 
   (* break () == <undefined> *)
   let () =
-    assert begin match eval_expr (Break Unit) with
+    assert begin match eval (Break Unit) with
       | _ -> false
       | exception (Failure _) -> true
     end
@@ -210,19 +210,19 @@ module Tests = struct
   let () =
     let nat_expr : expr = Nat_succ (Nat_succ Nat_zero) in
     let loop_expr : expr = Loop (Break nat_expr) in
-    assert (eval_expr loop_expr = eval_expr nat_expr)
+    assert (eval loop_expr = eval nat_expr)
 
   (* loop (break 2; continue) == 2 *)
   let () =
     let nat_expr : expr = Nat_succ (Nat_succ Nat_zero) in
     let loop_expr : expr = Loop (Seq (Break nat_expr, Continue)) in
-    assert (eval_expr loop_expr = eval_expr nat_expr)
+    assert (eval loop_expr = eval nat_expr)
 
   (* let x := ref 2; loop (break !x) == 2 *)
   let () =
     let nat_expr : expr = Nat_succ (Nat_succ Nat_zero) in
     let loop_expr : expr = Let ("x", Ref_new nat_expr, Loop (Break (Ref_get (Var "x")))) in
-    assert (eval_expr loop_expr = eval_expr nat_expr)
+    assert (eval loop_expr = eval nat_expr)
 
   (*
     let x := ref true;
@@ -235,7 +235,7 @@ module Tests = struct
           Ref_set (Var "x", Bool_false),
           Break Unit)))
     in
-    assert (eval_expr expr = Unit)
+    assert (eval expr = Unit)
 
   (*
     let x := ref true;
@@ -248,7 +248,7 @@ module Tests = struct
           Seq (Ref_set (Var "x", Bool_false), Continue),
           Break Unit)))
     in
-    assert (eval_expr expr = Unit)
+    assert (eval expr = Unit)
 
   (*
     let x := ref 2;
@@ -267,6 +267,6 @@ module Tests = struct
               Seq (Ref_set (Var "x", Var "y"),
                 Continue)))))
     in
-    assert (eval_expr expr = Nat_zero)
+    assert (eval expr = Nat_zero)
 
 end
