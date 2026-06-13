@@ -159,6 +159,8 @@ Miscellaneous:
   COMEFROM in OCaml, implemented with algebraic effects and handlers.
 - [**misc_effects.ml**](./misc_effects.ml):
   Some basic effects, implemented with algebraic effects and handlers.
+- [**misc_fresh_name_avoidance.ml**](./misc_fresh_name_avoidance.ml):
+  Fresh name generation that avoids previously used names.
 - [**misc_isorecursion_vs_equirecursion.ml**](./misc_isorecursion_vs_equirecursion.ml):
   Comparing isorecursive variant types with equirecursive variant types in OCaml.
 - [**misc_landins_knot.ml**](./misc_landins_knot.ml):
