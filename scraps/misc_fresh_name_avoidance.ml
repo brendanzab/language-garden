@@ -25,9 +25,9 @@ end = struct
     counts : (string, int) Hashtbl.t;
   }
 
-  let default_format (name : string) (count : int) : string =
-    if count = 0 then name else
-      Printf.sprintf "%s_%i" name count
+  let default_format (name : string) (n : int) : string =
+    if n = 0 then name else
+      Printf.sprintf "%s_%i" name n
 
   let create ?(format = default_format) ?(names = []) () : t =
     let counts = List.to_seq names |> Seq.map (fun n -> n, 1) |> Hashtbl.of_seq in
@@ -37,15 +37,13 @@ end = struct
     (* Search for a name that’s not currently in use *)
     let rec go count =
       let candidate_name = state.format base_name count in
-      match Hashtbl.find_opt state.counts candidate_name with
-      | Some _ -> go (count + 1)
-      | None ->
-          (* Ensure the candidate name is avoided in the future. *)
-          Hashtbl.add state.counts candidate_name 1;
-          (* Update the count of the base name so that we know where to start
-             from the next time around *)
-          Hashtbl.replace state.counts base_name count;
-          candidate_name
+      if Hashtbl.mem state.counts candidate_name then
+        go (count + 1)
+      else begin
+        Hashtbl.add state.counts candidate_name 1;
+        Hashtbl.replace state.counts base_name count;
+        candidate_name
+      end
     in
     go (Hashtbl.find_opt state.counts base_name |> Option.value ~default:0)
 
@@ -99,25 +97,16 @@ let () = begin
 
   let keywords = ["if"; "then"; "else"] in
 
-  let subscript c =
-    match c with
-    | '0' -> "₀"
-    | '1' -> "₁"
-    | '2' -> "₂"
-    | '3' -> "₃"
-    | '4' -> "₄"
-    | '5' -> "₅"
-    | '6' -> "₆"
-    | '7' -> "₇"
-    | '8' -> "₈"
-    | '9' -> "₉"
-    | c -> String.make 1 c
+  let subscript_of_char c =
+    let subs : _ Iarray.t = [| "₀"; "₁"; "₂"; "₃"; "₄"; "₅"; "₆"; "₇"; "₈"; "₉" |] in
+    try Iarray.get subs Char.(code c - code '0') with
+    | Invalid_argument _ -> String.make 1 c
   in
 
-  let format base count =
-    let s = string_of_int count in
+  let format base n =
+    let s = string_of_int n in
     let b = Buffer.create (String.length s * 2) in
-    s |> String.iter (Fun.compose (Buffer.add_string b) subscript);
+    s |> String.iter (fun c -> Buffer.add_string b (subscript_of_char c));
     base ^ (Buffer.to_bytes b |> Bytes.to_string)
   in
 
