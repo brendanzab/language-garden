@@ -9,6 +9,7 @@ module Label = struct
     val make : string -> t
     val compare : t -> t -> int
     val to_string : t -> string
+    val pp : t -> Format.formatter -> unit
 
   end
 
@@ -19,6 +20,7 @@ module Label = struct
     let make name = name
     let compare = String.compare
     let to_string name = name
+    let pp name ppf = Format.pp_print_string ppf name
 
   end
 

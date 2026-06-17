@@ -109,7 +109,7 @@ end = struct
 
   let pp_atom (expr : atom) (ppf : Format.formatter) =
     match expr with
-    | Var id -> Format.fprintf ppf "%s" (Local_id.to_string id)
+    | Var id -> Format.fprintf ppf "%t" (Local_id.pp id)
     | Bool true -> Format.fprintf ppf "true"
     | Bool false -> Format.fprintf ppf "false"
     | I32 int -> Format.fprintf ppf "%li" int
@@ -121,8 +121,8 @@ end = struct
 
   let pp_comp (expr : comp) (ppf : Format.formatter) =
     match expr with
-    | Item (id, None) -> Format.fprintf ppf "%s" (Item_name.to_string id)
-    | Item (id, Some args) -> Format.fprintf ppf "%s(%t)" (Item_name.to_string id) (pp_args args)
+    | Item (id, None) -> Format.fprintf ppf "%t" (Item_name.pp id)
+    | Item (id, Some args) -> Format.fprintf ppf "%t(%t)" (Item_name.pp id) (pp_args args)
     | Prim (op, args) -> Format.fprintf ppf "%t(%t)" (Prim.Op.pp op) (pp_args args)
     | Atom expr -> pp_atom expr ppf
 
@@ -135,10 +135,10 @@ end = struct
               Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
                 (fun ppf ->
                   match def_ty with
-                  | None -> Format.fprintf ppf "%s" (Local_id.to_string id)
+                  | None -> Format.fprintf ppf "%t" (Local_id.pp id)
                   | Some def_ty ->
-                      Format.fprintf ppf "@[<2>@[%s :@]@ %t@]"
-                        (Local_id.to_string id)
+                      Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"
+                        (Local_id.pp id)
                         (Ty.pp def_ty))
                 (pp_comp def)
                 (go body)
@@ -146,8 +146,8 @@ end = struct
               Format.fprintf ppf "@[<2>@[join %s@ %t@ :=@]@ @[%t;@]@]@ %t"
                 (Join_id.to_string id)
                 (fun ppf ->
-                  Format.fprintf ppf "@[<2>(@[%s@ :@]@ %t)@]"
-                    (Local_id.to_string param_id)
+                  Format.fprintf ppf "@[<2>(@[%t@ :@]@ %t)@]"
+                    (Local_id.pp param_id)
                     (Ty.pp param_ty))
                 (pp cont)
                 (go body)
@@ -185,21 +185,21 @@ module Module = struct
     (* TODO: trailing comma *)
     let pp_sep ppf () = Format.fprintf ppf ",@ " in
     let pp_param ppf (id, ty) =
-      Format.fprintf ppf "%s@ :@ %t" (Local_id.to_string id) (Ty.pp ty)
+      Format.fprintf ppf "%t@ :@ %t" (Local_id.pp id) (Ty.pp ty)
     in
     Format.pp_print_iter Iarray.iter pp_param ppf args ~pp_sep
 
   let rec pp_item (name, item : Item_name.t * Item.t) (ppf : Format.formatter) =
     match item with
     | Item.Val (ty, expr) ->
-        Format.fprintf ppf "@[<2>@[val %s@ :@ %t@ :=@]@ @[%t;@]@]\n"
-          (Item_name.to_string name)
+        Format.fprintf ppf "@[<2>@[val %t@ :@ %t@ :=@]@ @[%t;@]@]\n"
+          (Item_name.pp name)
           (Ty.pp ty)
           (Expr.pp expr)
 
     | Item.Fun (params, ty, expr) ->
-        Format.fprintf ppf "@[<2>@[fun %s(%t)@ :@ %t@ :=@]@ @[%t;@]@]\n"
-          (Item_name.to_string name)
+        Format.fprintf ppf "@[<2>@[fun %t(%t)@ :@ %t@ :=@]@ @[%t;@]@]\n"
+          (Item_name.pp name)
           (pp_params params)
           (Ty.pp ty)
           (Expr.pp expr)

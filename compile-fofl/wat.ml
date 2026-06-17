@@ -68,10 +68,10 @@ module Pretty = struct
   let pp_sexpr_cmd_seq name = pp_sexpr_cmd_iter name Seq.iter
 
   let pp_func_id (name : Func_id.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "$%s" (Func_id.to_string name)
+    Format.fprintf ppf "$%t" (Func_id.pp name)
 
   let pp_local_id (id : Local_id.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "$%s" (Local_id.to_string id)
+    Format.fprintf ppf "$%t" (Local_id.pp id)
 
   let pp_type (ty : ty) (ppf : Format.formatter) =
     match ty with
