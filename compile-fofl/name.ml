@@ -22,36 +22,43 @@ module Label = struct
 
   end
 
-end
-
-module Fresh = struct
-
-  module type S = sig
+  (** A supply of fresh names *)
+  module Supply (A : S) : sig
 
     type t
 
-    val fresh : string -> t
-    val compare : t -> t -> int
-    val to_string : t -> string
+    val create : ?names:string list -> unit -> t
+    val fresh : t -> string -> A.t
 
-  end
+  end = struct
 
-  module Make () : S = struct
+    type t = {
+      counts : (string, int) Hashtbl.t;
+    }
 
-    type t = int * string
+    let create ?(names = []) () : t = {
+      counts =
+        List.to_seq names
+        |> Seq.map (fun n -> n, 1)
+        |> Hashtbl.of_seq;
+    }
 
-    let next_id = ref 0
-
-    let fresh (name : string) : t =
-      let id = !next_id in
-      incr next_id;
-      id, name
-
-    let compare (id1, _) (id2, _) =
-      Int.compare id1 id2
-
-    let to_string (id, name) =
-      Printf.sprintf "%s%i" name id
+    let rec fresh (state : t) (base_name : string) : A.t =
+      (* Search for a name that’s not currently in use *)
+      let rec go count =
+        let name =
+          if count = 0 then base_name else
+            Printf.sprintf "%s_%i" base_name count
+        in
+        if Hashtbl.mem state.counts name then
+          go (count + 1)
+        else begin
+          Hashtbl.add state.counts name 1;
+          Hashtbl.replace state.counts base_name count;
+          A.make name
+        end
+      in
+      go (Hashtbl.find_opt state.counts base_name |> Option.value ~default:0)
 
   end
 

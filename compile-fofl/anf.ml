@@ -10,10 +10,10 @@
 module Item_name = Core.Item_name
 module Item_map = Core.Item_map
 
-module Local_id = Name.Fresh.Make ()
+module Local_id = Name.Label.Make ()
 module Local_map = Map.Make (Local_id)
 
-module Join_id = Name.Fresh.Make ()
+module Join_id = Name.Label.Make ()
 module Join_map = Map.Make (Join_id)
 
 module Ty = Core.Ty

@@ -14,11 +14,17 @@ end = struct
 
   type 'a k = 'a -> Anf.Expr.t
 
-  let fresh_local_id (name : string option) : Anf.Local_id.t =
-    Anf.Local_id.fresh (Option.value name ~default:"")
+  module Local_supply = Name.Label.Supply (Anf.Local_id)
+  module Join_supply = Name.Label.Supply (Anf.Join_id)
 
-  let translate_expr (local_ids : Anf.Local_id.t Core.Local.Env.t) (expr : Core.Expr.t) : Anf.Expr.t =
+  let translate_expr
+    (local_supply : Local_supply.t)
+    (local_ids : Anf.Local_id.t Core.Local.Env.t)
+    (expr : Core.Expr.t)
+  : Anf.Expr.t =
     let ( let@ ) = ( @@ ) in
+
+    let join_supply = Join_supply.create () in
 
     let rec go_expr local_ids (expr : Core.Expr.t) : Anf.Expr.comp k k =
       fun k ->
@@ -34,7 +40,7 @@ end = struct
             k (Anf.Expr.Atom (Var (Core.Local.Env.lookup index local_ids)))
 
         | Core.Expr.Let ((name, def_ty, def), body) ->
-            let id = fresh_local_id name in
+            let id = Local_supply.fresh local_supply (Option.value name ~default:"") in
             let@ def = go_expr local_ids def in
             let body = go_expr (Core.Local.Env.extend id local_ids) body k in
             Anf.Expr.Let (id, Some def_ty, def, body)
@@ -45,10 +51,10 @@ end = struct
         | Core.Expr.Bool_if (expr1, expr2, expr3, expr_ty) ->
             let@ expr1 = go_named_expr local_ids "cond" expr1 in
 
-            let param_id = Anf.Local_id.fresh "p" in
+            let param_id = Local_supply.fresh local_supply "p" in
             let cont = k (Anf.Expr.Atom (Var param_id)) in
 
-            let join_id = Anf.Join_id.fresh "j" in
+            let join_id = Join_supply.fresh join_supply "j" in
             let jump_k x = Anf.Expr.Jump (join_id, x) in
 
             Anf.Expr.Join (join_id, (param_id, expr_ty), cont,
@@ -71,7 +77,7 @@ end = struct
         | Anf.Expr.Atom expr -> k expr
         (* Bind definitions for non-atomic computations *)
         | expr ->
-            let id = Anf.Local_id.fresh name in
+            let id = Local_supply.fresh local_supply name in
             let body = k (Anf.Expr.Var id) in
             Anf.Expr.Let (id, None, expr, body)
 
@@ -90,16 +96,19 @@ end = struct
     Anf.Expr.Return expr
 
   let translate_item (item : Core.Item.t) : Anf.Item.t =
-    let env = Core.Local.Env.empty in
+    let local_supply = Local_supply.create () in
+    let local_env = Core.Local.Env.empty in
 
     match item with
     | Core.Item.Val (ty, def) ->
-        Anf.Item.Val (ty, translate_expr env def)
+        Anf.Item.Val (ty, translate_expr local_supply local_env def)
 
     | Core.Item.Fun (params, ty, body) ->
-        let params = params |> Iarray.map (fun (name, ty) -> fresh_local_id name, ty) in
-        let env = Iarray.fold_right (fun (id, _) -> Core.Local.Env.extend id) params env in
-        Anf.Item.Fun (params, ty, translate_expr env body)
+        let params = params |> Iarray.map @@ fun (name, ty) ->
+          Local_supply.fresh local_supply (Option.value name ~default:""), ty
+        in
+        let local_env = Iarray.fold_right (fun (id, _) -> Core.Local.Env.extend id) params local_env in
+        Anf.Item.Fun (params, ty, translate_expr local_supply local_env body)
 
   let translate_module (mod_ : Core.Module.t) : Anf.Module.t =
     mod_ |> Core.Item_map.map translate_item

@@ -1,25 +1,25 @@
 (module
-  (export "is-even" (func $is-even0))
-  (export "is-odd" (func $is-odd1))
+  (export "is-even" (func $is-even))
+  (export "is-odd" (func $is-odd))
   (func
-    $is-even0
-    (param $n0 i32)
+    $is-even
+    (param $n i32)
     (result i32)
-    (local.get $n0)
+    (local.get $n)
     (i32.const 0)
     i32.eq
     (if
       (result i32)
       (then (i32.const 1))
-      (else (local.get $n0) (i32.const 1) i32.sub (call $is-odd1))))
+      (else (local.get $n) (i32.const 1) i32.sub (call $is-odd))))
   (func
-    $is-odd1
-    (param $n0 i32)
+    $is-odd
+    (param $n i32)
     (result i32)
-    (local.get $n0)
+    (local.get $n)
     (i32.const 0)
     i32.eq
     (if
       (result i32)
       (then (i32.const 0))
-      (else (local.get $n0) (i32.const 1) i32.sub (call $is-even0)))))
+      (else (local.get $n) (i32.const 1) i32.sub (call $is-even)))))

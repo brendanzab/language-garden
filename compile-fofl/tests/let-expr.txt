@@ -2,3 +2,8 @@ fun test(b : Bool) : I32 :=
   let x := 42;
   let y := if b then x + 1 else x - 1;
   y + x;
+
+fun text-shadow(x : I32) : I32 :=
+  let x := x + 1;
+  let x := x * 3;
+  x;

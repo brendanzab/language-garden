@@ -1,10 +1,15 @@
-fun test(b0 : Bool) : I32 :=
-  let x1 : I32 := 42;
-  join j0 (p3 : I32) := let y2 : I32 := p3;
-                        #i32-add(y2, x1);
-  if b0 then
-    let r5 := #i32-add(x1, 1);
-    jump j0 r5
+fun test(b : Bool) : I32 :=
+  let x : I32 := 42;
+  join j (p : I32) := let y : I32 := p;
+                      #i32-add(y, x);
+  if b then
+    let r_1 := #i32-add(x, 1);
+    jump j r_1
   else
-    let r4 := #i32-sub(x1, 1);
-    jump j0 r4;
+    let r := #i32-sub(x, 1);
+    jump j r;
+
+fun text-shadow(x : I32) : I32 :=
+  let x_1 : I32 := #i32-add(x, 1);
+  let x_2 : I32 := #i32-mul(x_1, 3);
+  x_2;

@@ -186,6 +186,9 @@ module Emit : sig
 
 end = struct
 
+  module Local_supply = Name.Label.Supply (Local_id)
+  module Func_supply = Name.Label.Supply (Func_id)
+
   (* NOTE: This can be replaced with Dynarray.to_iarray when we move to OCaml 5.5
     https://github.com/ocaml/ocaml/commit/5a7ab30d9e6241c17c8f28a826b96459ca5cdd95 *)
   let make_iarray xs =
@@ -194,6 +197,7 @@ end = struct
   module Expr_ctx = struct
 
     type 'a t = {
+      local_supply : Local_supply.t;
       params : (Local_id.t * ty) Dynarray.t;
       locals : (Local_id.t * ty) Dynarray.t;
       instrs : instr Dynarray.t;
@@ -204,20 +208,19 @@ end = struct
     }
 
     let create () : 'a t = {
+      local_supply = Local_supply.create ();
       params = Dynarray.create ();
       locals = Dynarray.create ();
       instrs = Dynarray.create ();
     }
 
     let emit_param (ctx : 'a t) (name : string) (ty : ty) =
-      let n = Dynarray.length ctx.params in
-      let id = Local_id.make (Printf.sprintf "%s%i" name n) in
+      let id = Local_supply.fresh ctx.local_supply name in
       Dynarray.add_last ctx.params (id, ty);
       id
 
     let emit_local (ctx : 'a t) (name : string) (ty : ty) =
-      let n = Dynarray.length ctx.locals in
-      let id = Local_id.make (Printf.sprintf "%s%i" name n) in
+      let id = Local_supply.fresh ctx.local_supply name in
       Dynarray.add_last ctx.locals (id, ty);
       id
 
@@ -244,6 +247,7 @@ end = struct
   module Module_ctx = struct
 
     type 'a t = {
+      func_supply : Func_supply.t;
       exports : (string * export) Dynarray.t;
       funcs : func option Dynarray.t;
     }
@@ -251,6 +255,7 @@ end = struct
     type region = { run : 'a. 'a t -> unit }
 
     let create () : 'a t = {
+      func_supply = Func_supply.create ();
       exports = Dynarray.create ();
       funcs = Dynarray.create ();
     }
@@ -259,11 +264,11 @@ end = struct
       Dynarray.add_last ctx.exports (name, export)
 
     let emit_func_deferred (ctx : 'a t) (name : string) : Func_id.t * ('a t -> ty -> Expr_ctx.region -> unit) =
-      let n = Dynarray.length ctx.funcs in
-      let id = Func_id.make (Printf.sprintf "%s%i" name (Dynarray.length ctx.funcs)) in
+      let index = Dynarray.length ctx.funcs in
+      let id = Func_supply.fresh ctx.func_supply name in
       Dynarray.add_last ctx.funcs None;
       let define_func ctx result body =
-        Dynarray.set ctx.funcs n (Some (Expr_ctx.build id result body))
+        Dynarray.set ctx.funcs index (Some (Expr_ctx.build id result body))
       in
       id, define_func
 
