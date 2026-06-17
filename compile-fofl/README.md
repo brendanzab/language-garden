@@ -28,9 +28,10 @@ fun fact(n : I32) : I32 :=
 <!-- $MDX file=examples/fact.wat -->
 ```wat
 (module
+  (export "fact" (func $fact0))
+  (export "test-fact" (func $test-fact1))
   (func
     $fact0
-    (export "fact")
     (param $n0 i32)
     (result i32)
     (local.get $n0)
@@ -46,12 +47,7 @@ fun fact(n : I32) : I32 :=
         i32.sub
         (call $fact0)
         i32.mul)))
-  (func
-    $test-fact1
-    (export "test-fact")
-    (result i32)
-    (i32.const 5)
-    (call $fact0)))
+  (func $test-fact1 (result i32) (i32.const 5) (call $fact0)))
 ```
 
 </details>
@@ -62,9 +58,10 @@ fun fact(n : I32) : I32 :=
 <!-- $MDX file=examples/fact.tail-call.wat -->
 ```wat
 (module
+  (export "fact" (func $fact0))
+  (export "test-fact" (func $test-fact1))
   (func
     $fact0
-    (export "fact")
     (param $n0 i32)
     (result i32)
     (local.get $n0)
@@ -80,12 +77,7 @@ fun fact(n : I32) : I32 :=
         i32.sub
         (call $fact0)
         i32.mul)))
-  (func
-    $test-fact1
-    (export "test-fact")
-    (result i32)
-    (i32.const 5)
-    (return_call $fact0)))
+  (func $test-fact1 (result i32) (i32.const 5) (return_call $fact0)))
 ```
 
 </details>

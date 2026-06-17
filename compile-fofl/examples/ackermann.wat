@@ -1,7 +1,7 @@
 (module
+  (export "ackermann" (func $ackermann0))
   (func
     $ackermann0
-    (export "ackermann")
     (param $m0 i32)
     (param $n1 i32)
     (result i32)

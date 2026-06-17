@@ -1,7 +1,8 @@
 (module
+  (export "fact" (func $fact0))
+  (export "test-fact" (func $test-fact1))
   (func
     $fact0
-    (export "fact")
     (param $n0 i32)
     (result i32)
     (local.get $n0)
@@ -17,9 +18,4 @@
         i32.sub
         (call $fact0)
         i32.mul)))
-  (func
-    $test-fact1
-    (export "test-fact")
-    (result i32)
-    (i32.const 5)
-    (call $fact0)))
+  (func $test-fact1 (result i32) (i32.const 5) (call $fact0)))
