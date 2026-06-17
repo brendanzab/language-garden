@@ -251,7 +251,7 @@ end = struct
     type 'a t = {
       func_supply : Func_supply.t;
       exports : (string * export) Dynarray.t;
-      funcs : func option Dynarray.t;
+      funcs : (func, Func_id.t) result Dynarray.t;
     }
 
     type region = { run : 'a. 'a t -> unit }
@@ -266,22 +266,24 @@ end = struct
       Dynarray.add_last ctx.exports (name, export)
 
     let emit_func_deferred (ctx : 'a t) (name : string) : Func_id.t * ('a t -> ty -> Expr_ctx.region -> unit) =
-      let index = Dynarray.length ctx.funcs in
       let id = Func_supply.fresh ctx.func_supply name in
-      Dynarray.add_last ctx.funcs None;
-      let define_func ctx result body =
-        Dynarray.set ctx.funcs index (Some (Expr_ctx.build id result body))
-      in
-      id, define_func
+      let index = Dynarray.length ctx.funcs in
+      Dynarray.add_last ctx.funcs (Error id);
+      id, fun ctx result body ->
+        match Dynarray.get ctx.funcs index with
+        | Ok _ -> Format.kasprintf failwith "function %t already defined" (Pretty.pp_func_id id)
+        | Error _ -> Dynarray.set ctx.funcs index (Ok (Expr_ctx.build id result body))
 
     let build (body : region) : module_ =
       let ctx = create () in
       body.run ctx;
       {
         exports = make_iarray ctx.exports;
-        funcs =
-          Iarray.init (Dynarray.length ctx.funcs)
-            (fun n -> Dynarray.get ctx.funcs n |> Option.get);
+        funcs = Iarray.init (Dynarray.length ctx.funcs) begin fun index ->
+          match Dynarray.get ctx.funcs index with
+          | Ok func -> func
+          | Error id -> Format.kasprintf failwith "function %t not defined" (Pretty.pp_func_id id)
+        end;
       }
 
   end
