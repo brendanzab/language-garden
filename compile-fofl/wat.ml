@@ -145,7 +145,8 @@ module Emit : sig
 
     type 'a t
 
-    (* NOTE: Can be removed when we upgrade to OCaml 5.5 *)
+    (* NOTE: Inline wrapper record after moving to OCaml 5.5.
+       See: https://github.com/ocaml/ocaml/pull/13806 *)
     type region = {
       run : 'a. 'a t -> unit;
     }
@@ -165,7 +166,8 @@ module Emit : sig
 
     type 'a t
 
-    (* NOTE: Can be removed when we upgrade to OCaml 5.5 *)
+    (* NOTE: Inline wrapper record after moving to OCaml 5.5.
+       See: https://github.com/ocaml/ocaml/pull/13806 *)
     type region = {
       run : 'a. 'a t -> unit;
     }
@@ -175,9 +177,9 @@ module Emit : sig
     val emit_func_deferred : 'a t -> string -> Func_id.t * ('a t -> ty -> Expr_ctx.region -> unit)
     (** Begin emitting a new function.
 
-        The function's identifier will be returned, along with closure that
-        allows us to finish defining the function later on. This is useful for
-        handling mutual recursion during compilation.
+        The function’s identifier will be returned along with closure that
+        allows the function to be defined later on. This is useful for handling
+        mutual recursion during compilation.
     *)
 
     val build : region -> module_
@@ -189,8 +191,8 @@ end = struct
   module Local_supply = Name.Label.Supply (Local_id)
   module Func_supply = Name.Label.Supply (Func_id)
 
-  (* NOTE: This can be replaced with Dynarray.to_iarray when we move to OCaml 5.5
-    https://github.com/ocaml/ocaml/commit/5a7ab30d9e6241c17c8f28a826b96459ca5cdd95 *)
+  (* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
+     See: https://github.com/ocaml/ocaml/commit/5a7ab30d9e6241c17c8f28a826b96459ca5cdd95 *)
   let make_iarray xs =
     Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
