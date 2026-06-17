@@ -45,13 +45,14 @@ module Label = struct
         |> Hashtbl.of_seq;
     }
 
+    let make_name (base_name : string) (count : int) =
+      if count = 0 then base_name else
+        Printf.sprintf "%s_%i" base_name count
+
     let rec fresh (state : t) (base_name : string) : A.t =
       (* Search for a name that’s not currently in use *)
       let rec go count =
-        let name =
-          if count = 0 then base_name else
-            Printf.sprintf "%s_%i" base_name count
-        in
+        let name = make_name base_name count in
         if Hashtbl.mem state.counts name then
           go (count + 1)
         else begin
