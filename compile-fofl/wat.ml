@@ -129,9 +129,11 @@ module Pretty = struct
 end
 
 
-(** Support for emitting Web Assembly modules. Higher-rank types are used to
-    ensure that contexts do not escape their region, but this could be removed
-    as a simplification.
+(** Support for emitting Web Assembly code.
+
+    I'm not 100% happy with the design of this API, but it works for now!
+    Higher-rank types are used to ensure that contexts do not escape their
+    scope.
 
     This was inspired by Andreas Rossberg’s Emit module for Waml:
 
@@ -156,7 +158,7 @@ module Emit : sig
     val emit_instr : 'a t -> instr -> unit
 
     val emit_expr : 'a t -> region -> expr
-    (** Emit a sub-expression. Any parameters and locals emitted within the
+    (** Emit a sub-expression. Parameters and locals emitted within the
         sub-expression will be added to the root expression. *)
 
   end
@@ -192,7 +194,7 @@ end = struct
   module Func_supply = Name.Label.Supply (Func_id)
 
   (* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
-     See: https://github.com/ocaml/ocaml/commit/5a7ab30d9e6241c17c8f28a826b96459ca5cdd95 *)
+     See: https://github.com/ocaml/ocaml/pull/14693 *)
   let make_iarray xs =
     Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
