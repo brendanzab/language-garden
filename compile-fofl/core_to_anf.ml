@@ -33,7 +33,7 @@ end = struct
             k (Anf.Expr.Item (id, None))
 
         | Core.Expr.Item (id, Some args) ->
-            let@ args = go_named_exprs local_ids "x" (Iarray.to_list args) in
+            let@ args = go_named_exprs local_ids "arg" (Iarray.to_list args) in
             k (Anf.Expr.Item (id, Some (Iarray.of_list args)))
 
         | Core.Expr.Var index ->
@@ -51,22 +51,22 @@ end = struct
         | Core.Expr.Bool_if (expr1, expr2, expr3, expr_ty) ->
             let@ expr1 = go_named_expr local_ids "cond" expr1 in
 
-            let param_id = Local_supply.fresh local_supply "p" in
+            let param_id = Local_supply.fresh local_supply "result" in
             let cont = k (Anf.Expr.Atom (Var param_id)) in
 
-            let join_id = Join_supply.fresh join_supply "j" in
-            let jump_k x = Anf.Expr.Jump (join_id, x) in
+            let join_id = Join_supply.fresh join_supply "branch" in
+            let jump_k result = Anf.Expr.Jump (join_id, result) in
 
             Anf.Expr.Join (join_id, (param_id, expr_ty), cont,
               Anf.Expr.Bool_if (expr1,
-                go_named_expr local_ids "r" expr2 jump_k,
-                go_named_expr local_ids "r" expr3 jump_k))
+                go_named_expr local_ids "result" expr2 jump_k,
+                go_named_expr local_ids "result" expr3 jump_k))
 
         | Core.Expr.I32 int ->
             k (Anf.Expr.Atom (I32 int))
 
         | Core.Expr.Prim (op, args) ->
-            let@ args = go_named_exprs local_ids "x" (Iarray.to_list args) in
+            let@ args = go_named_exprs local_ids "arg" (Iarray.to_list args) in
             k (Anf.Expr.Prim (op, Iarray.of_list args))
 
     and go_named_expr local_ids (name : string) (expr : Core.Expr.t) : Anf.Expr.atom k k =

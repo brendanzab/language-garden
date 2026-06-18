@@ -1,19 +1,19 @@
 fun ackermann(m : I32, n : I32) : I32 :=
   let cond := #i32-eq(m, 0);
-  join j (p : I32) := p;
+  join branch (result : I32) := result;
   if cond then
-    let r_2 := #i32-add(n, 1);
-    jump j r_2
+    let result_4 := #i32-add(n, 1);
+    jump branch result_4
   else
     let cond_1 := #i32-eq(n, 0);
-    join j_1 (p_1 : I32) := jump j p_1;
+    join branch_1 (result_1 : I32) := jump branch result_1;
     if cond_1 then
-      let x_3 := #i32-sub(m, 1);
-      let r_1 := ackermann(x_3, 1);
-      jump j_1 r_1
+      let arg_3 := #i32-sub(m, 1);
+      let result_3 := ackermann(arg_3, 1);
+      jump branch_1 result_3
     else
-      let x := #i32-sub(m, 1);
-      let x_1 := #i32-sub(n, 1);
-      let x_2 := ackermann(m, x_1);
-      let r := ackermann(x, x_2);
-      jump j_1 r;
+      let arg := #i32-sub(m, 1);
+      let arg_1 := #i32-sub(n, 1);
+      let arg_2 := ackermann(m, arg_1);
+      let result_2 := ackermann(arg, arg_2);
+      jump branch_1 result_2;
