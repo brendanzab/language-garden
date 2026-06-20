@@ -5,27 +5,91 @@ let Pair (A : Type) (B: Type) : Type := {
 
 let List (A : Type) : Type :=
   fun (List : Type) -> {
-    cons : A -> List -> List;
     nil : List;
+    cons : A -> List -> List;
   } -> List;
 
+let nil (A : Type) : List A :=
+  fun Out cases => cases.nil;
+let cons (A : Type) (x : A) (xs : List A) : List A :=
+  fun Out cases => cases.cons x (xs Out cases);
+
+let map (A : Type) (B : Type) (f : A -> B) (xs : List A) : List B :=
+  xs (List B) {
+    nil := nil B;
+    cons x xs := cons B (f x) xs;
+  };
+
 fun (Label : Type) (Index : Type) : {
+
   Tm : Type;
-} => {
-  Tm := fun (Tm : Type) -> {
-    let_ : Tm -> Tm -> Tm -> Tm;
-    var : Index;
-    univ : Tm;
 
-    fun_type : Tm -> Tm -> Tm;
-    fun_lit : Tm -> Tm;
-    fun_app : Tm -> Tm -> Tm;
+  var : Index -> Tm;
+  univ : Tm;
 
-    rec_type : List (Pair Label Tm) -> Tm;
-    rec_lit : List (Pair Label Tm) -> Tm;
-    rec_proj : Tm -> Label -> Tm;
+  fun_type : Tm -> Tm -> Tm;
+  fun_lit : Tm -> Tm;
+  fun_app : Tm -> Tm -> Tm;
 
-    sing_type : Tm -> Tm -> Tm;
-    sing_intro : Tm;
-  } -> Tm;
-}
+  rec_type : List (Pair Label Tm) -> Tm;
+  rec_lit : List (Pair Label Tm) -> Tm;
+  rec_proj : Tm -> Label -> Tm;
+
+  sing_type : Tm -> Tm -> Tm;
+  sing_intro : Tm;
+
+} =>
+  let Tm :=
+    fun (Tm : Type) -> {
+      let_ : Tm -> Tm -> Tm -> Tm;
+      var : Index -> Tm;
+      univ : Tm;
+
+      fun_type : Tm -> Tm -> Tm;
+      fun_lit : Tm -> Tm;
+      fun_app : Tm -> Tm -> Tm;
+
+      rec_type : List (Pair Label Tm) -> Tm;
+      rec_lit : List (Pair Label Tm) -> Tm;
+      rec_proj : Tm -> Label -> Tm;
+
+      sing_type : Tm -> Tm -> Tm;
+      sing_intro : Tm;
+    } -> Tm;
+
+  let map-fields (A : Type) (B : Type) (f : A -> B) :=
+    map (Pair Label A) (Pair Label B) (fun p => { fst := p.fst; snd := f p.snd });
+
+  {
+
+    Tm := fun (Tm : Type) -> {
+      let_ : Tm -> Tm -> Tm -> Tm;
+      var : Index -> Tm;
+      univ : Tm;
+
+      fun_type : Tm -> Tm -> Tm;
+      fun_lit : Tm -> Tm;
+      fun_app : Tm -> Tm -> Tm;
+
+      rec_type : List (Pair Label Tm) -> Tm;
+      rec_lit : List (Pair Label Tm) -> Tm;
+      rec_proj : Tm -> Label -> Tm;
+
+      sing_type : Tm -> Tm -> Tm;
+      sing_intro : Tm;
+    } -> Tm;
+
+    var index := fun _ cases => cases.var index;
+    univ := fun _ cases => cases.univ;
+
+    fun_type ty1 ty2 := fun Out cases => cases.fun_type (ty1 Out cases) (ty2 Out cases);
+    fun_lit tm1 := fun Out cases => cases.fun_lit (tm1 Out cases);
+    fun_app tm1 tm2 := fun Out cases => cases.fun_app (tm1 Out cases) (tm2 Out cases);
+
+    rec_type decls := fun Out cases => cases.rec_type (map-fields Tm Out (fun ty => ty Out cases) decls);
+    rec_lit defns := fun Out cases => cases.rec_lit (map-fields Tm Out (fun tm => tm Out cases) defns);
+    rec_proj tm label := fun Out cases => cases.rec_proj (tm Out cases) label;
+
+    sing_type tm ty := fun Out cases => cases.sing_type (tm Out cases) (ty Out cases);
+    sing_intro := fun _ cases => cases.sing_intro;
+  }
