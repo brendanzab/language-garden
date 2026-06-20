@@ -1,7 +1,12 @@
 (** Translation from the core language to the Web Assembly Text Format (WAT). *)
 
-module Module_ctx = Wat.Emit.Module_ctx
-module Expr_ctx = Wat.Emit.Expr_ctx
+module Local_supply = Name.Label.Supply (Wat.Local_id)
+module Func_supply = Name.Label.Supply (Wat.Func_id)
+
+(* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
+    See: https://github.com/ocaml/ocaml/pull/14693 *)
+let make_iarray xs =
+  Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
 let translate_ty (ty : Core.Ty.t) : Wat.ty =
   match ty with
@@ -19,91 +24,111 @@ let translate_prim_op (op : Prim.Op.t) : Wat.instr =
 
 let translate_expr
   ~(enable_tail_call : bool)
-  (ctx : 'a Expr_ctx.t)
+  (fresh_local_id : string option -> Wat.Local_id.t)
   (item_env : Wat.Func_id.t Core.Item_map.t)
   (local_env : Wat.Local_id.t Core.Local.Env.t)
   (expr : Core.Expr.t)
-: unit =
-  let rec go : 'a. tail_call:bool -> 'a Expr_ctx.t -> Wat.Local_id.t Core.Local.Env.t -> Core.Expr.t -> unit =
-    fun ~tail_call ctx local_env expr ->
-      match expr with
-      | Core.Expr.Item (name, args) when enable_tail_call && tail_call ->
-          Option.value args ~default:[||] |> Iarray.iter (go ctx local_env ~tail_call:false);
-          Expr_ctx.emit_instr ctx (Wat.Return_call (Core.Item_map.find name item_env));
+: locals:(Wat.Local_id.t * Wat.ty) Iarray.t * Wat.instr Iarray.t =
+  let locals = Dynarray.create () in
+  let instrs = Dynarray.create () in
 
-      | Core.Expr.Item (name, args) ->
-          Option.value args ~default:[||] |> Iarray.iter (go ctx local_env ~tail_call:false);
-          Expr_ctx.emit_instr ctx (Wat.Call (Core.Item_map.find name item_env));
+  let rec go ~tail_call instrs local_env expr =
+    match expr with
+    | Core.Expr.Item (name, args) when enable_tail_call && tail_call ->
+        Option.value args ~default:[||] |> Iarray.iter (go instrs local_env ~tail_call:false);
+        Dynarray.add_last instrs (Wat.Return_call (Core.Item_map.find name item_env));
 
-      | Core.Expr.Var index ->
-          Expr_ctx.emit_instr ctx (Wat.Local_get (Core.Local.Env.lookup index local_env));
+    | Core.Expr.Item (name, args) ->
+        Option.value args ~default:[||] |> Iarray.iter (go instrs local_env ~tail_call:false);
+        Dynarray.add_last instrs (Wat.Call (Core.Item_map.find name item_env));
 
-      | Core.Expr.Let ((name, ty, def), body) ->
-          let def_id = Expr_ctx.emit_local ctx (Option.value name ~default:"") (translate_ty ty) in
-          go ctx local_env def ~tail_call:false;
-          Expr_ctx.emit_instr ctx (Wat.Local_set def_id);
-          go ctx (Core.Local.Env.extend def_id local_env) body ~tail_call
+    | Core.Expr.Var index ->
+        Dynarray.add_last instrs (Wat.Local_get (Core.Local.Env.lookup index local_env));
 
-      | Core.Expr.Bool true -> Expr_ctx.emit_instr ctx (Wat.I32_const 1l)
-      | Core.Expr.Bool false -> Expr_ctx.emit_instr ctx (Wat.I32_const 0l)
+    | Core.Expr.Let ((name, ty, def), body) ->
+        let def_id = fresh_local_id name in
+        Dynarray.add_last locals (def_id, translate_ty ty);
+        go instrs local_env def ~tail_call:false;
+        Dynarray.add_last instrs (Wat.Local_set def_id);
+        go instrs (Core.Local.Env.extend def_id local_env) body ~tail_call
 
-      | Core.Expr.Bool_if (expr1, expr2, expr3, ty) ->
-          go ctx ~tail_call:false local_env expr1;
-          Expr_ctx.emit_instr ctx (Wat.If (
-            translate_ty ty,
-            Expr_ctx.emit_expr ctx { run = fun (type a) (ctx : a Expr_ctx.t) ->
-              go ctx local_env expr2 ~tail_call },
-            Expr_ctx.emit_expr ctx { run = fun (type a) (ctx : a Expr_ctx.t) ->
-              go ctx local_env expr3 ~tail_call }
-          ));
+    | Core.Expr.Bool true -> Dynarray.add_last instrs (Wat.I32_const 1l)
+    | Core.Expr.Bool false -> Dynarray.add_last instrs (Wat.I32_const 0l)
 
-      | Core.Expr.I32 i -> Expr_ctx.emit_instr ctx (Wat.I32_const i)
+    | Core.Expr.Bool_if (expr1, expr2, expr3, ty) ->
+        let instrs2 = Dynarray.create () in
+        let instrs3 = Dynarray.create () in
 
-      | Core.Expr.Prim (op, args) ->
-          args |> Iarray.iter (go ctx local_env ~tail_call:false);
-          Expr_ctx.emit_instr ctx (translate_prim_op op);
+        go instrs ~tail_call:false local_env expr1;
+        go instrs2 local_env expr2 ~tail_call;
+        go instrs3 local_env expr3 ~tail_call;
+
+        Dynarray.add_last instrs (Wat.If (
+          translate_ty ty,
+          make_iarray instrs2,
+          make_iarray instrs3
+        ));
+
+    | Core.Expr.I32 i -> Dynarray.add_last instrs (Wat.I32_const i)
+
+    | Core.Expr.Prim (op, args) ->
+        args |> Iarray.iter (go instrs local_env ~tail_call:false);
+        Dynarray.add_last instrs (translate_prim_op op);
   in
 
-  go ctx local_env expr ~tail_call:true
+  go instrs local_env expr ~tail_call:enable_tail_call;
+
+  ~locals:(make_iarray locals), make_iarray instrs
 
 let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wat.module_ =
-  Module_ctx.build {
-    run = fun (type a) (ctx : a Module_ctx.t) : unit ->
-      let funcs =
-        mod_ |> Core.Item_map.mapi @@ fun id _ ->
-          Module_ctx.emit_func_deferred ctx (Core.Item_name.to_string id)
+  (* Arrays to store exports and functions *)
+  let exports = Dynarray.create () in
+  let funcs = Dynarray.create () in
+
+  (* Generate function ids for each item *)
+  let fresh_func_id = Func_supply.fresh (Func_supply.create ()) in
+  let item_env =
+    mod_ |> Core.Item_map.mapi @@ fun id _ ->
+      fresh_func_id (Core.Item_name.to_string id)
+  in
+
+  item_env |> Core.Item_map.iter begin fun name id ->
+    (** FIXME: re-evaluation of top-level values.
+
+        Possible fixes:
+        - normalise expressions (using NbE) and store in global
+        - create a global and initialise with a startup function
+    *)
+    let params, ty, body =
+      match Core.Item_map.find name mod_ with
+      | Core.Item.Val (ty, expr) -> ([||] : _ Iarray.t), ty, expr
+      | Core.Item.Fun (params, ty, body) -> params, ty, body
+    in
+
+    let fresh_local_id =
+      let supply = Local_supply.create () in
+      fun name -> Local_supply.fresh supply (Option.value name ~default:"")
+    in
+
+    let params = params |> Iarray.map (Pair.map fresh_local_id translate_ty) in
+    let result = translate_ty ty in
+
+    let ~locals, body =
+      let local_env =
+        Iarray.to_seq params
+        |> Seq.map Pair.fst
+        |> Core.Local.Env.of_seq
       in
-      let item_env = Core.Item_map.map Pair.fst funcs in
+      translate_expr fresh_local_id item_env local_env body
+        ~enable_tail_call
+    in
 
-      funcs |> Core.Item_map.iter begin fun name (id, define_func) ->
-        match Core.Item_map.find name mod_ with
-        | Core.Item.Val (ty, expr) ->
-            (** FIXME: re-evaluation of top-level values.
+    (* Emit export and function *)
+    Dynarray.add_last exports (Core.Item_name.to_string name, Wat.Func id);
+    Dynarray.add_last funcs Wat.{ id; params; result; locals; body }
+  end;
 
-                Possible fixes:
-                - normalise expressions (using NbE) and store in global
-                - create a global and initialise with a startup function
-            *)
-            Module_ctx.emit_export ctx (Core.Item_name.to_string name) (Func id);
-            define_func ctx (translate_ty ty) Expr_ctx.{
-              run = fun (type a) (ctx : a Expr_ctx.t) ->
-                translate_expr ctx item_env Core.Local.Env.empty expr
-                  ~enable_tail_call
-            }
-        | Core.Item.Fun (params, ty, body) ->
-            Module_ctx.emit_export ctx (Core.Item_name.to_string name) (Func id);
-            define_func ctx (translate_ty ty) Expr_ctx.{
-              run = fun (type a) (ctx : a Expr_ctx.t) ->
-                let compile_param (name, ty) =
-                  Expr_ctx.emit_param ctx (Option.value name ~default:"") (translate_ty ty)
-                in
-                let local_env =
-                  Iarray.to_seq params
-                  |> Seq.map compile_param
-                  |> Core.Local.Env.of_seq
-                in
-                translate_expr ctx item_env local_env body
-                  ~enable_tail_call
-            }
-      end;
+  Wat.{
+    exports = make_iarray exports;
+    funcs = make_iarray funcs;
   }
