@@ -29,12 +29,12 @@ let translate_expr
 
   let blocks = Dynarray.create () in
 
-  let bind_instr name instr return =
+  let bind_instr name instr (k : Llvm.(Local_id.t -> block)) : Llvm.block =
     let id = fresh_local_id (Some name) in
-    Llvm.Instr (id, instr, return id)
+    Llvm.Instr (id, instr, k id)
   in
 
-  let rec go_expr local_env result_name expr (k : Llvm.ty * Llvm.opr -> Llvm.block) : Llvm.block =
+  let rec go_expr local_env result_name expr (k : Llvm.(ty * opr -> block)) : Llvm.block =
     match expr with
     | Core.Expr.Item (name, args) ->
         let result_ty, item_id = Core.Item_map.find name item_env in
@@ -130,7 +130,7 @@ let translate_expr
         Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
 
   (* Compile a series of expressions to intermediate definitions *)
-  and go_exprs local_ids name exprs (k : (Llvm.ty * Llvm.opr) list -> Llvm.block) : Llvm.block =
+  and go_exprs local_ids name exprs (k : Llvm.((ty * opr) list -> block)) : Llvm.block =
     match exprs with
     | [] -> k []
     | expr :: exprs ->
