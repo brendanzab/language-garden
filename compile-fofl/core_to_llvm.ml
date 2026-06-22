@@ -19,7 +19,7 @@ let translate_ty (ty : Core.Ty.t) : Llvm.ty =
   | Core.Ty.I32 -> Llvm.I32
 
 let translate_expr
-  (fresh_local_id : string option -> Llvm.Local_id.t)
+  (fresh_local_id : string -> Llvm.Local_id.t)
   (fresh_label : string -> Llvm.Label.t)
   (item_env : Llvm.(ty * Global_id.t) Core.Item_map.t)
   (local_env : Llvm.(ty * opr) Core.Local.Env.t)
@@ -30,7 +30,7 @@ let translate_expr
   let blocks = Dynarray.create () in
 
   let bind_instr name instr (k : Llvm.(Local_id.t -> block)) : Llvm.block =
-    let id = fresh_local_id (Some name) in
+    let id = fresh_local_id name in
     Llvm.Instr (id, instr, k id)
   in
 
@@ -158,10 +158,7 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let funs = Dynarray.create () in
 
   item_env |> Core.Item_map.iter begin fun name (result_ty, id) ->
-    let fresh_local_id =
-      Option.value ~default:""
-      |> Fun.compose Local_supply.(fresh (create ()))
-    in
+    let fresh_local_id = Local_supply.(fresh (create ())) in
     let fresh_label = Label_supply.(fresh (create ())) in
 
     let params, body =
@@ -169,7 +166,7 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
       | Core.Item.Val (_, def) -> ([||] : _ Iarray.t), def
       | Core.Item.Fun (params, _, body) ->
           let params = params |> Iarray.map @@ fun (name, ty) ->
-            translate_ty ty, fresh_local_id name
+            translate_ty ty, fresh_local_id (Option.value name ~default:"")
           in
           params, body
     in
