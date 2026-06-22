@@ -14,8 +14,8 @@ end = struct
 
   type 'a k = 'a -> Anf.Expr.t
 
-  module Local_supply = Name.Label.Supply (Anf.Local_id)
-  module Join_supply = Name.Label.Supply (Anf.Join_id)
+  module Local_supply = Name.Supply (Anf.Local_id)
+  module Join_supply = Name.Supply (Anf.Join_id)
 
   let translate_expr
     (fresh_local_id : string option -> Anf.Local_id.t)

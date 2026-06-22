@@ -1,6 +1,6 @@
 (** The core language *)
 
-module Item_name = Name.Label.Make ()
+module Item_name = Name.Make ()
 module Item_map = Map.Make (Item_name)
 module Local = Name.Debruijn.Make ()
 

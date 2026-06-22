@@ -7,9 +7,9 @@
       Haskell LLVM functionality (no FFI)}
 *)
 
-module Global_id = Name.Label.Make ()
-module Local_id = Name.Label.Make ()
-module Label = Name.Label.Make ()
+module Global_id = Name.Make ()
+module Local_id = Name.Make ()
+module Label = Name.Make ()
 
 type ty =
   | I1

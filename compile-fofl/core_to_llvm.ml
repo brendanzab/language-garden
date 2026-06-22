@@ -4,9 +4,9 @@
       Mapping High Level Constructs to LLVM IR}
 *)
 
-module Global_supply = Name.Label.Supply (Llvm.Global_id)
-module Local_supply = Name.Label.Supply (Llvm.Local_id)
-module Label_supply = Name.Label.Supply (Llvm.Label)
+module Global_supply = Name.Supply (Llvm.Global_id)
+module Local_supply = Name.Supply (Llvm.Local_id)
+module Label_supply = Name.Supply (Llvm.Label)
 
 (* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
     See: https://github.com/ocaml/ocaml/pull/14693 *)

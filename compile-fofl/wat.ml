@@ -1,7 +1,7 @@
 (** A minimal representation of the Web Assembly text format *)
 
-module Func_id = Name.Label.Make ()
-module Local_id = Name.Label.Make ()
+module Func_id = Name.Make ()
+module Local_id = Name.Make ()
 
 (* https://webassembly.github.io/spec/core/text/types.html *)
 type ty =

@@ -1,69 +1,75 @@
 (** Generative functors for producing new namespaces *)
 
-module Label = struct
+module type S = sig
 
-  module type S = sig
+  type t
 
-    type t
+  val make : string -> t
+  val compare : t -> t -> int
+  val to_string : t -> string
+  val pp : t -> Format.formatter -> unit
 
-    val make : string -> t
-    val compare : t -> t -> int
-    val to_string : t -> string
-    val pp : t -> Format.formatter -> unit
+end
 
-  end
+(** Create a new namespace of names. *)
+module Make () : S = struct
 
-  module Make () : S = struct
+  type t = string
 
-    type t = string
+  let make name = name
+  let compare = String.compare
+  let to_string name = name
+  let pp name ppf = Format.pp_print_string ppf name
 
-    let make name = name
-    let compare = String.compare
-    let to_string name = name
-    let pp name ppf = Format.pp_print_string ppf name
+end
 
-  end
+(** A supply of fresh names.
 
-  (** A supply of fresh names *)
-  module Supply (A : S) : sig
+    The following pattern can be used to create a local function that
+    generates a fresh name whenever it is called:
 
-    type t
+    {[
+      let module Supply (Id) in
+      let fresh_id = Label_supply.(fresh (create ())) in
+    ]}
+*)
+module Supply (A : S) : sig
 
-    val create : ?names:string list -> unit -> t
-    val fresh : t -> string -> A.t
+  type t
 
-  end = struct
+  val create : ?names:string list -> unit -> t
+  val fresh : t -> string -> A.t
 
-    type t = {
-      counts : (string, int) Hashtbl.t;
-    }
+end = struct
 
-    let create ?(names = []) () : t = {
-      counts =
-        List.to_seq names
-        |> Seq.map (fun n -> n, 1)
-        |> Hashtbl.of_seq;
-    }
+  type t = {
+    counts : (string, int) Hashtbl.t;
+  }
 
-    let make_name (base_name : string) (count : int) =
-      if count = 0 then base_name else
-        Printf.sprintf "%s_%i" base_name count
+  let create ?(names = []) () : t = {
+    counts =
+      List.to_seq names
+      |> Seq.map (fun n -> n, 1)
+      |> Hashtbl.of_seq;
+  }
 
-    let rec fresh (state : t) (base_name : string) : A.t =
-      (* Search for a name that’s not currently in use *)
-      let rec go count =
-        let name = make_name base_name count in
-        if Hashtbl.mem state.counts name then
-          go (count + 1)
-        else begin
-          Hashtbl.add state.counts name 1;
-          Hashtbl.replace state.counts base_name count;
-          A.make name
-        end
-      in
-      go (Hashtbl.find_opt state.counts base_name |> Option.value ~default:0)
+  let make_name (base_name : string) (count : int) =
+    if count = 0 then base_name else
+      Printf.sprintf "%s_%i" base_name count
 
-  end
+  let rec fresh (state : t) (base_name : string) : A.t =
+    (* Search for a name that’s not currently in use *)
+    let rec go count =
+      let name = make_name base_name count in
+      if Hashtbl.mem state.counts name then
+        go (count + 1)
+      else begin
+        Hashtbl.add state.counts name 1;
+        Hashtbl.replace state.counts base_name count;
+        A.make name
+      end
+    in
+    go (Hashtbl.find_opt state.counts base_name |> Option.value ~default:0)
 
 end
 

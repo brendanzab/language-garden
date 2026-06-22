@@ -1,7 +1,7 @@
 (** Translation from the core language to the Web Assembly Text Format (WAT). *)
 
-module Local_supply = Name.Label.Supply (Wat.Local_id)
-module Func_supply = Name.Label.Supply (Wat.Func_id)
+module Local_supply = Name.Supply (Wat.Local_id)
+module Func_supply = Name.Supply (Wat.Func_id)
 
 (* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
     See: https://github.com/ocaml/ocaml/pull/14693 *)
