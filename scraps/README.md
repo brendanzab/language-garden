@@ -76,6 +76,8 @@ Type checking:
   A simple implementation of type inference for JSON-style objects.
 - [**check_linear_lc.ml**](./check_linear_lc.ml):
   A linear lambda calculus that ensures each binding is used exactly once.
+- [**check_arith.lean**](./check_arith.lean):
+  Verified type system implementations for arithmetic expressions.
 
 Elaboration:
 
