@@ -61,15 +61,11 @@ theorem Expr.compile.correctness (e : Expr) (program : Program) (stack : List Na
   := by
     induction e generalizing program stack with
       | nat => rfl
-      | add e₁ e₂ ih₁ ih₂ =>
-          simp [Expr.compile]
-          repeat rw [List.append_assoc]
-          rw [ih₂, ih₁]
-          rfl
+      | add e₁ e₂ ih₁ ih₂
       | sub e₁ e₂ ih₁ ih₂ =>
           simp [Expr.compile]
-          repeat rw [List.append_assoc]
-          rw [ih₂, ih₁]
+          repeat rewrite [List.append_assoc]
+          rewrite [ih₂, ih₁]
           rfl
 
 /- Compiler correctness for the nil program and stack -/
@@ -113,15 +109,11 @@ theorem Program.decompile.compile_append (e : Expr) (p : Program) (stack : List 
   := by
     induction e generalizing p stack with
       | nat => rfl
-      | add e₁ e₂ ih₁ ih₂ =>
+      | add _ _ ih₁ ih₂
+      | sub _ _ ih₁ ih₂ =>
           simp [Expr.compile]
-          repeat rw [List.append_assoc]
-          rw [ih₂, ih₁]
-          rfl
-      | sub e₁ e₂ ih₁ ih₂ =>
-          simp [Expr.compile]
-          repeat rw [List.append_assoc]
-          rw [ih₂, ih₁]
+          repeat rewrite [List.append_assoc]
+          rewrite [ih₂, ih₁]
           rfl
 
 /- Decompilation preserves the semantics of arithmetic expressions -/
@@ -130,13 +122,8 @@ theorem Program.decompile.correctness (e : Expr) :
   := by
     induction e with
       | nat => rfl
-      | add e₁ e₂ =>
+      | add _ _ | sub _ _ =>
           simp [Expr.compile]
-          repeat rw [List.append_assoc]
-          repeat rw [Program.decompile.compile_append]
-          rfl
-      | sub e₁ e₂ =>
-          simp [Expr.compile]
-          repeat rw [List.append_assoc]
-          repeat rw [Program.decompile.compile_append]
+          repeat rewrite [List.append_assoc]
+          repeat rewrite [Program.decompile.compile_append]
           rfl
