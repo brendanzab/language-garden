@@ -21,16 +21,16 @@
 -/
 
 inductive Ty where
-| bool : Ty
-| int : Ty
+  | bool : Ty
+  | int : Ty
 
 inductive Tm where
-| int : Int → Tm
-| add : Tm → Tm → Tm
-| equal : Tm → Tm → Tm
-| true : Tm
-| false : Tm
-| ifThenElse : Tm → Tm → Tm → Tm
+  | int : Int → Tm
+  | add : Tm → Tm → Tm
+  | equal : Tm → Tm → Tm
+  | true : Tm
+  | false : Tm
+  | ifThenElse : Tm → Tm → Tm → Tm
 
 
 /-! Typing Rules
@@ -41,11 +41,11 @@ inductive Tm where
 
       t₁ : Int    t₂ : Int
     ────────────────────────
-        t₁ + t₂  : Int
+        t₁ + t₂ : Int
 
       t₁ : Int    t₂ : Int
     ────────────────────────
-        t₁ == t₂  : Bool
+        t₁ == t₂ : Bool
 
     ───────────────     ────────────────
       true : Bool         false : Bool
@@ -57,22 +57,22 @@ inductive Tm where
 -/
 
 inductive HasType : Tm → Ty → Prop where
-| int {n} : HasType (.int n) .int
-| add {tm₁ tm₂} :
-    HasType tm₁ .int →
-    HasType tm₂ .int →
-    HasType (.add tm₁ tm₂) .int
-| equal {tm₁ tm₂} :
-    HasType tm₁ .int →
-    HasType tm₂ .int →
-    HasType (.equal tm₁ tm₂) .bool
-| true : HasType .true .bool
-| false : HasType .false .bool
-| ifThenElse {tm₁ tm₂ tm₃ ty} :
-    HasType tm₁ .bool →
-    HasType tm₂ ty →
-    HasType tm₃ ty →
-    HasType (.ifThenElse tm₁ tm₂ tm₃) ty
+  | int {n} : HasType (.int n) .int
+  | add {tm₁ tm₂} :
+      HasType tm₁ .int →
+      HasType tm₂ .int →
+      HasType (.add tm₁ tm₂) .int
+  | equal {tm₁ tm₂} :
+      HasType tm₁ .int →
+      HasType tm₂ .int →
+      HasType (.equal tm₁ tm₂) .bool
+  | true : HasType .true .bool
+  | false : HasType .false .bool
+  | ifThenElse {tm₁ tm₂ tm₃ ty} :
+      HasType tm₁ .bool →
+      HasType tm₂ ty →
+      HasType tm₃ ty →
+      HasType (.ifThenElse tm₁ tm₂ tm₃) ty
 
 
 /-! Type system implementations -/

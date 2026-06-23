@@ -16,9 +16,9 @@ inductive Expr : Type
 
 /- The semantics of arithmetic expressions -/
 def Expr.eval : (expr : Expr) → Nat
-  | Expr.nat n => n
-  | Expr.add e₁ e₂ => e₁.eval + e₂.eval
-  | Expr.sub e₁ e₂ => e₁.eval - e₂.eval
+| Expr.nat n => n
+| Expr.add e₁ e₂ => e₁.eval + e₂.eval
+| Expr.sub e₁ e₂ => e₁.eval - e₂.eval
 
 
 /- A stack machine language for arithmetic expressions -/
@@ -36,11 +36,11 @@ abbrev Program :=
 
 /- The semantics of the stack machine language -/
 def Program.eval : (program : Program) → (stack : List Nat) → List Nat
-  | [], stack => stack
-  | (Command.nat n :: program), stack => eval program (n :: stack)
-  | (Command.add :: program), (n₁ :: n₂ :: stack) => eval program ((n₁ + n₂) :: stack)
-  | (Command.sub :: program), (n₁ :: n₂ :: stack) => eval program ((n₁ - n₂) :: stack)
-  | _, _ => []
+| [], stack => stack
+| (Command.nat n :: program), stack => eval program (n :: stack)
+| (Command.add :: program), (n₁ :: n₂ :: stack) => eval program ((n₁ + n₂) :: stack)
+| (Command.sub :: program), (n₁ :: n₂ :: stack) => eval program ((n₁ - n₂) :: stack)
+| _, _ => []
 
 example : Program.eval [Command.nat 1, Command.nat 2, Command.add] [] = [3] := rfl
 example : Program.eval [Command.nat 1, Command.nat 2, Command.sub] [] = [1] := rfl
@@ -50,46 +50,45 @@ example : Program.eval [Command.nat 1, Command.nat 2, Command.sub] [] = [1] := r
 
 /- Compile an arithmetic expression to a stack machine program -/
 def Expr.compile : (expr : Expr) → Program
-  | Expr.nat n => [Command.nat n]
-  | Expr.add e₁ e₂ => e₂.compile ++ e₁.compile ++ [Command.add]
-  | Expr.sub e₁ e₂ => e₂.compile ++ e₁.compile ++ [Command.sub]
+| Expr.nat n => [Command.nat n]
+| Expr.add e₁ e₂ => e₂.compile ++ e₁.compile ++ [Command.add]
+| Expr.sub e₁ e₂ => e₂.compile ++ e₁.compile ++ [Command.sub]
 
 
 /- Compilation preserves the semantics of arithmetic expressions -/
 theorem Expr.compile.correctness (e : Expr) (program : Program) (stack : List Nat) :
-    Program.eval (e.compile ++ program) stack = Program.eval program (e.eval :: stack)
-  := by
-    induction e generalizing program stack with
-      | nat => rfl
-      | add e₁ e₂ ih₁ ih₂
-      | sub e₁ e₂ ih₁ ih₂ =>
-          simp [Expr.compile]
-          repeat rewrite [List.append_assoc]
-          rewrite [ih₂, ih₁]
-          rfl
+    Program.eval (e.compile ++ program) stack = Program.eval program (e.eval :: stack) := by
+  induction e generalizing program stack with
+  | nat => rfl
+  | add e₁ e₂ ih₁ ih₂
+  | sub e₁ e₂ ih₁ ih₂ =>
+      simp [Expr.compile]
+      repeat rewrite [List.append_assoc]
+      rewrite [ih₂, ih₁]
+      rfl
 
 /- Compiler correctness for the nil program and stack -/
 theorem Expr.compile.correctness_nil (e : Expr) :
-    Program.eval e.compile [] = [e.eval]
-  := by
-    rw [← List.append_nil (Expr.compile e)]
-    exact correctness e (program := []) (stack := [])
+  Program.eval e.compile [] = [e.eval]
+:= by
+  rw [← List.append_nil (Expr.compile e)]
+  exact correctness e (program := []) (stack := [])
 
 
 /- Decompilation -/
 
 /- Decompile a stack machine program back into an arithmetic expression -/
 def Program.decompile : (program : Program) → (stack : List Expr := []) → Option Expr
-  | [], [expr] =>
-      some expr
-  | (Command.nat n :: program), stack =>
-      decompile program (Expr.nat n :: stack)
-  | (Command.add :: program), e₁ :: e₂ :: stack =>
-      decompile program (Expr.add e₁ e₂ :: stack)
-  | (Command.sub :: program), e₁ :: e₂ :: stack =>
-      decompile program (Expr.sub e₁ e₂ :: stack)
-  | _, _ =>
-      none
+| [], [expr] =>
+    some expr
+| (Command.nat n :: program), stack =>
+    decompile program (Expr.nat n :: stack)
+| (Command.add :: program), e₁ :: e₂ :: stack =>
+    decompile program (Expr.add e₁ e₂ :: stack)
+| (Command.sub :: program), e₁ :: e₂ :: stack =>
+    decompile program (Expr.sub e₁ e₂ :: stack)
+| _, _ =>
+    none
 
 example :
   Program.decompile [Command.nat 1]
@@ -105,25 +104,23 @@ example (n₁ n₂ n₃ : Nat) :
 
 
 theorem Program.decompile.compile_append (e : Expr) (p : Program) (stack : List Expr) :
-    Program.decompile ((Expr.compile e) ++ p) stack = Program.decompile p (e :: stack)
-  := by
-    induction e generalizing p stack with
-      | nat => rfl
-      | add _ _ ih₁ ih₂
-      | sub _ _ ih₁ ih₂ =>
-          simp [Expr.compile]
-          repeat rewrite [List.append_assoc]
-          rewrite [ih₂, ih₁]
-          rfl
+    Program.decompile ((Expr.compile e) ++ p) stack = Program.decompile p (e :: stack) := by
+  induction e generalizing p stack with
+  | nat => rfl
+  | add _ _ ih₁ ih₂
+  | sub _ _ ih₁ ih₂ =>
+      simp [Expr.compile]
+      repeat rewrite [List.append_assoc]
+      rewrite [ih₂, ih₁]
+      rfl
 
 /- Decompilation preserves the semantics of arithmetic expressions -/
 theorem Program.decompile.correctness (e : Expr) :
-    Program.decompile e.compile = some e
-  := by
-    induction e with
-      | nat => rfl
-      | add _ _ | sub _ _ =>
-          simp [Expr.compile]
-          repeat rewrite [List.append_assoc]
-          repeat rewrite [Program.decompile.compile_append]
-          rfl
+    Program.decompile e.compile = some e := by
+  induction e with
+  | nat => rfl
+  | add _ _ | sub _ _ =>
+      simp [Expr.compile]
+      repeat rewrite [List.append_assoc]
+      repeat rewrite [Program.decompile.compile_append]
+      rfl
