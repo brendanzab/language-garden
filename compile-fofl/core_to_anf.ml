@@ -12,10 +12,10 @@ module Translate : sig
 
 end = struct
 
-  type 'a k = 'a -> Anf.Expr.t
-
   module Local_supply = Name.Supply (Anf.Local_id)
   module Join_supply = Name.Supply (Anf.Join_id)
+
+  type 'a k = 'a -> Anf.Expr.t
 
   let translate_expr
     (fresh_local_id : string option -> Anf.Local_id.t)
