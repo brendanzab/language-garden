@@ -25,36 +25,38 @@ type 'a k = 'a -> Llvm.block
 let translate_expr
   (fresh_local_id : string -> Llvm.Local_id.t)
   (fresh_label : string -> Llvm.Label.t)
-  (item_env : Llvm.(ty * Global_id.t) Core.Item_map.t)
-  (local_env : Llvm.(ty * opr) Core.Local.Env.t)
+  (item_env : Llvm.(ty * Global_id.t * ty Iarray.t) Core.Item_map.t)
+  (local_env : Llvm.opr Core.Local.Env.t)
   (expr : Core.Expr.t)
+  ty
 : Llvm.cfg =
   let ( let@ ) = ( @@ ) in
 
   let blocks = Dynarray.create () in
 
-  let bind_instr name (instr : Llvm.instr) (k : Llvm.(opr -> block)) : Llvm.block =
+  let bind_instr name (instr : Llvm.instr) (k : Llvm.opr k) : Llvm.block =
     let id = fresh_local_id name in
     Llvm.Instr (id, instr, k (Local id))
   in
 
-  let rec go_expr local_env result_name expr (k : Llvm.(ty * opr) k) : Llvm.block =
+  let rec go_expr local_env result_name expr (k : Llvm.opr k) : Llvm.block =
     match expr with
     | Core.Expr.Item (name, args) ->
-        let result_ty, item_id = Core.Item_map.find name item_env in
+        let result_ty, item_id, param_tys = Core.Item_map.find name item_env in
         let@ args = go_exprs local_env "arg" (Option.value args ~default:[||] |> Iarray.to_list) in
-        let@ result = bind_instr result_name Llvm.(Call (result_ty, Global item_id, Iarray.of_list args)) in
-        k (result_ty, result)
+        let args = Iarray.combine param_tys (Iarray.of_list args) in
+        let@ result = bind_instr result_name Llvm.(Call (result_ty, Global item_id, args)) in
+        k result
 
     | Core.Expr.Var index ->
         k (Core.Local.Env.lookup index local_env)
 
     | Core.Expr.Let ((name, _, def), body) ->
-        let@ def_ty, def = go_expr local_env (Option.value name ~default:"") def in
-        go_expr (Core.Local.Env.extend (def_ty, def) local_env) result_name body k
+        let@ def = go_expr local_env (Option.value name ~default:"") def in
+        go_expr (Core.Local.Env.extend def local_env) result_name body k
 
-    | Core.Expr.Bool true -> k Llvm.(I1, I1 true)
-    | Core.Expr.Bool false -> k Llvm.(I1, I1 false)
+    | Core.Expr.Bool true -> k Llvm.(I1 true)
+    | Core.Expr.Bool false -> k Llvm.(I1 false)
 
     | Core.Expr.Bool_if (expr1, expr2, expr3, result_ty) ->
         (* Generate some fresh labels to allow us to wire together the basic
@@ -65,14 +67,14 @@ let translate_expr
 
         let result_true = ref None in
         Dynarray.add_last blocks (true_label, begin
-          let@ _, result_true' = go_expr local_env "true_result" expr2 in
+          let@ result_true' = go_expr local_env "true_result" expr2 in
           result_true := Some result_true';
           Llvm.(Term (Br end_label))
         end);
 
         let result_false = ref None in
         Dynarray.add_last blocks (false_label, begin
-          let@ _, result_false' = go_expr local_env "false_result" expr3 in
+          let@ result_false' = go_expr local_env "false_result" expr3 in
           result_false := Some result_false';
           Llvm.(Term (Br end_label))
         end);
@@ -86,55 +88,49 @@ let translate_expr
             Option.get !result_true, true_label;
             Option.get !result_false, false_label;
           |])) in
-          k (result_ty, result)
+          k result
         end);
 
         (* Translate the entrypoint of the if expression *)
-        let@ _, cond = go_expr local_env "cond" expr1 in
+        let@ cond = go_expr local_env "cond" expr1 in
         Llvm.(Term (Br_i1 (cond, true_label, false_label)))
 
-    | Core.Expr.I32 i -> k Llvm.(I32, I32 i)
+    | Core.Expr.I32 i -> k Llvm.(I32 i)
 
     | Core.Expr.Prim (Bool_eq, [|x; y|]) ->
-        let@ _, x = go_expr local_env "arg" x in
-        let@ _, y = go_expr local_env "arg" y in
-        let@ result = bind_instr result_name Llvm.(Icmp (Eq, I1, x, y)) in
-        k Llvm.(I1, result)
+        let@ x = go_expr local_env "arg" x in
+        let@ y = go_expr local_env "arg" y in
+        bind_instr result_name Llvm.(Icmp (Eq, I1, x, y)) k
 
     | Core.Expr.Prim (I32_eq, [|x; y|]) ->
-        let@ _, x = go_expr local_env "arg" x in
-        let@ _, y = go_expr local_env "arg" y in
-        let@ result = bind_instr result_name Llvm.(Icmp (Eq, I32, x, y)) in
-        k Llvm.(I1, result)
+        let@ x = go_expr local_env "arg" x in
+        let@ y = go_expr local_env "arg" y in
+        bind_instr result_name Llvm.(Icmp (Eq, I32, x, y)) k
 
     | Core.Expr.Prim (I32_add, [|x; y|]) ->
-        let@ _, x = go_expr local_env "arg" x in
-        let@ _, y = go_expr local_env "arg" y in
-        let@ result = bind_instr result_name Llvm.(Add (I32, x, y)) in
-        k Llvm.(I32, result)
+        let@ x = go_expr local_env "arg" x in
+        let@ y = go_expr local_env "arg" y in
+        bind_instr result_name Llvm.(Add (I32, x, y)) k
 
     | Core.Expr.Prim (I32_sub, [|x; y|]) ->
-        let@ _, x = go_expr local_env "arg" x in
-        let@ _, y = go_expr local_env "arg" y in
-        let@ result = bind_instr result_name Llvm.(Sub (I32, x, y)) in
-        k Llvm.(I32, result)
+        let@ x = go_expr local_env "arg" x in
+        let@ y = go_expr local_env "arg" y in
+        bind_instr result_name Llvm.(Sub (I32, x, y)) k
 
     | Core.Expr.Prim (I32_mul, [|x; y|]) ->
-        let@ _, x = go_expr local_env "arg" x in
-        let@ _, y = go_expr local_env "arg" y in
-        let@ result = bind_instr result_name Llvm.(Mul (I32, x, y)) in
-        k Llvm.(I32, result)
+        let@ x = go_expr local_env "arg" x in
+        let@ y = go_expr local_env "arg" y in
+        bind_instr result_name Llvm.(Mul (I32, x, y)) k
 
     | Core.Expr.Prim (I32_neg, [|x|]) ->
-        let@ _, x = go_expr local_env "arg" x in
-        let@ result = bind_instr result_name Llvm.(Sub (I32, I32 0l, x)) in
-        k Llvm.(I32, result)
+        let@ x = go_expr local_env "arg" x in
+        bind_instr result_name Llvm.(Sub (I32, I32 0l, x)) k
 
     | Core.Expr.Prim (op, _) ->
         Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
 
   (* Compile a series of expressions to intermediate definitions *)
-  and go_exprs local_ids name exprs (k : Llvm.(ty * opr) list k) : Llvm.block =
+  and go_exprs local_ids name exprs (k : Llvm.opr list k) : Llvm.block =
     match exprs with
     | [] -> k []
     | expr :: exprs ->
@@ -144,8 +140,8 @@ let translate_expr
   in
 
   let entry =
-    let@ result_ty, result = go_expr local_env "result" expr in
-    Llvm.(Term (Ret (result_ty, result)))
+    let@ result = go_expr local_env "result" expr in
+    Llvm.(Term (Ret (ty, result)))
   in
   let blocks = make_iarray blocks in
 
@@ -155,33 +151,35 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let item_env =
     let fresh_global_id = Global_supply.(fresh (create ())) in
     mod_ |> Core.Item_map.mapi @@ fun name item ->
-      let Core.Item.(Val (ty, _) | Fun (_, ty, _)) = item in
-      translate_ty ty, fresh_global_id (Core.Item_name.to_string name)
+      let id = fresh_global_id (Core.Item_name.to_string name) in
+      match item with
+      | Core.Item.Val (ty, def) -> translate_ty ty, id, ([||] : _ Iarray.t)
+      | Core.Item.Fun (params, ty, body) ->
+          translate_ty ty, id, params |> Iarray.map (fun (_, ty) -> translate_ty ty)
   in
 
   let funs = Dynarray.create () in
 
-  item_env |> Core.Item_map.iter begin fun name (result_ty, id) ->
+  item_env |> Core.Item_map.iter begin fun name (result_ty, id, param_tys) ->
     let fresh_local_id = Local_supply.(fresh (create ())) in
     let fresh_label = Label_supply.(fresh (create ())) in
 
     let params, body =
       match Core.Item_map.find name mod_ with
       | Core.Item.Val (_, def) -> ([||] : _ Iarray.t), def
-      | Core.Item.Fun (params, _, body) ->
-          let params = params |> Iarray.map @@ fun (name, ty) ->
-            translate_ty ty, fresh_local_id (Option.value name ~default:"")
-          in
-          params, body
+      | Core.Item.Fun (params, _, body) -> params, body
     in
-
+    let params = params |> Iarray.mapi @@ fun i (name, _) ->
+      Iarray.get param_tys i,
+      fresh_local_id (Option.value name ~default:"")
+    in
     let cfg =
       let local_env =
         Iarray.to_seq params
-        |> Seq.map (Pair.map_snd (fun id -> Llvm.Local id))
+        |> Seq.map (fun (_, id) -> Llvm.Local id)
         |> Core.Local.Env.of_seq
       in
-      translate_expr fresh_local_id fresh_label item_env local_env body
+      translate_expr fresh_local_id fresh_label item_env local_env body result_ty
      in
 
     Dynarray.add_last funs Llvm.(id, { result_ty; params; cfg });
