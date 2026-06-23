@@ -22,13 +22,16 @@ let translate_ty (ty : Core.Ty.t) : Llvm.ty =
 
 type 'a k = 'a -> Llvm.block
 
+type item_decl =
+  | Fun of Llvm.ty * Llvm.Global_id.t * Llvm.ty Iarray.t
+
 let translate_expr
   (fresh_local_id : string -> Llvm.Local_id.t)
   (fresh_label : string -> Llvm.Label.t)
-  (item_env : Llvm.(ty * Global_id.t * ty Iarray.t) Core.Item_map.t)
+  (item_env : item_decl Core.Item_map.t)
   (local_env : Llvm.opr Core.Local.Env.t)
   (expr : Core.Expr.t)
-  ty
+  (ty : Llvm.ty)
 : Llvm.cfg =
   let ( let@ ) = ( @@ ) in
 
@@ -42,7 +45,7 @@ let translate_expr
   let rec go_expr local_env result_name expr (k : Llvm.opr k) : Llvm.block =
     match expr with
     | Core.Expr.Item (name, args) ->
-        let result_ty, item_id, param_tys = Core.Item_map.find name item_env in
+        let Fun (result_ty, item_id, param_tys) = Core.Item_map.find name item_env in
         let@ args = go_exprs local_env "arg" (Option.value args ~default:[||] |> Iarray.to_list) in
         let args = Iarray.combine param_tys (Iarray.of_list args) in
         let@ result = bind_instr result_name Llvm.(Call (result_ty, Global item_id, args)) in
@@ -148,19 +151,20 @@ let translate_expr
   Llvm.{ entry; blocks }
 
 let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
+  let fresh_global_id = Global_supply.(fresh (create ())) in
   let item_env =
-    let fresh_global_id = Global_supply.(fresh (create ())) in
     mod_ |> Core.Item_map.mapi @@ fun name item ->
       let id = fresh_global_id (Core.Item_name.to_string name) in
       match item with
-      | Core.Item.Val (ty, def) -> translate_ty ty, id, ([||] : _ Iarray.t)
+      | Core.Item.Val (ty, def) ->
+          Fun (translate_ty ty, id, ([||] : _ Iarray.t))
       | Core.Item.Fun (params, ty, body) ->
-          translate_ty ty, id, params |> Iarray.map (fun (_, ty) -> translate_ty ty)
+          Fun (translate_ty ty, id, params |> Iarray.map (fun (_, ty) -> translate_ty ty))
   in
 
   let funs = Dynarray.create () in
 
-  item_env |> Core.Item_map.iter begin fun name (result_ty, id, param_tys) ->
+  item_env |> Core.Item_map.iter begin fun name (Fun (result_ty, id, param_tys)) ->
     let fresh_local_id = Local_supply.(fresh (create ())) in
     let fresh_label = Label_supply.(fresh (create ())) in
 
