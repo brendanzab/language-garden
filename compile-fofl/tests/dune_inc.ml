@@ -20,17 +20,25 @@ let generate_rules base = begin
   end;
 
   begin
-    let llvm_file = Printf.sprintf "%s.ll" base in
+    let ll_file = Printf.sprintf "%s.ll" base in  (* LLVM IR *)
+    let bc_file = Printf.sprintf "%s.bc" base in  (* LLVM bitcode *)
 
     Printf.printf "(rule\n";
     Printf.printf " (with-stdin-from ../%s\n" txt_file;
-    Printf.printf "  (with-stdout-to %s.tmp\n" llvm_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" ll_file;
     Printf.printf "   (run %%{bin:%s} compile-llvm))))\n" bin;
     Printf.printf "\n";
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)" package;
-    Printf.printf " (action (diff ../%s %s.tmp)))\n" llvm_file llvm_file;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" ll_file ll_file;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)\n" package;
+    Printf.printf " (target %s)\n" bc_file;
+    Printf.printf " (deps (:ll %s.tmp))\n" ll_file;
+    Printf.printf " (action (run llvm-as %%{ll} -o %%{target})))\n";
     Printf.printf "\n";
   end;
 

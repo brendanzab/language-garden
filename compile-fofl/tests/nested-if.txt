@@ -1,0 +1,9 @@
+fun nested-if(x : I32, y : I32) : I32 := (
+  (if x = 0 then
+    (if y = 0 then
+      1000000000
+    else
+      y + 100) + 3
+  else
+    x + 100) + 4
+);

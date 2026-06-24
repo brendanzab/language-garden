@@ -66,21 +66,35 @@ let translate_expr
            blocks of the if expression *)
         let true_label = fresh_label "if_true" in
         let false_label = fresh_label "if_false" in
+        let true_end_label = fresh_label "if_true_end" in
+        let false_end_label = fresh_label "if_false_end" in
         let end_label = fresh_label "if_end" in
 
         let result_true = ref None in
+        let result_false = ref None in
+
         Dynarray.add_last blocks (true_label, begin
           let@ result_true' = go_expr local_env "true_result" expr2 in
           result_true := Some result_true';
-          Llvm.(Term (Br end_label))
+          Llvm.(Term (Br true_end_label))
         end);
 
-        let result_false = ref None in
         Dynarray.add_last blocks (false_label, begin
           let@ result_false' = go_expr local_env "false_result" expr3 in
           result_false := Some result_false';
-          Llvm.(Term (Br end_label))
+          Llvm.(Term (Br false_end_label))
         end);
+
+        (* We don't know what the exit block of the branches are, so these
+           blocks will be used by the phi instruction to identify which branch
+           we have come from.
+
+           Another solution would be to return the label of the exit block when
+           compiling expressions, but that would involve threading through a lot
+           of state, and this seems like a simpler and less invasive approach,
+           even if it results in more blocks being generated. *)
+        Dynarray.add_last blocks (true_end_label, Llvm.(Term (Br end_label)));
+        Dynarray.add_last blocks (false_end_label, Llvm.(Term (Br end_label)));
 
         (* Translate the blocks that will be run after the if expression has
            been evaluated (i.e. the continuation). The result of the true and
@@ -88,8 +102,8 @@ let translate_expr
         Dynarray.add_last blocks (end_label, begin
           let result_ty = translate_ty result_ty in
           let@ result = bind_instr result_name Llvm.(Phi (result_ty, [|
-            Option.get !result_true, true_label;
-            Option.get !result_false, false_label;
+            Option.get !result_true, true_end_label;
+            Option.get !result_false, false_end_label;
           |])) in
           k result
         end);

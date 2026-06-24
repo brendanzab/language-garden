@@ -1,0 +1,16 @@
+fun nested-if(x : I32, y : I32) : I32 :=
+  let cond := #i32-eq(x, 0);
+  join branch (result : I32) := #i32-add(result, 4);
+  if cond then
+    let cond_1 := #i32-eq(y, 0);
+    join branch_1 (result_2 : I32) :=
+      let result_4 := #i32-add(result_2, 3);
+      jump branch result_4;
+    if cond_1 then
+      jump branch_1 1000000000
+    else
+      let result_3 := #i32-add(y, 100);
+      jump branch_1 result_3
+  else
+    let result_1 := #i32-add(x, 100);
+    jump branch result_1;

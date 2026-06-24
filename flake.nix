@@ -74,6 +74,7 @@
           compile-fofl = prev.compile-fofl.overrideAttrs (previousAttrs: {
             nativeCheckInputs = [
               pkgs.wabt
+              pkgs.llvm
             ];
           });
           lang-shader-graphics = prev.lang-shader-graphics.overrideAttrs (previousAttrs: {
@@ -144,6 +145,8 @@
             inputsFrom = lib.attrValues packages;
             buildInputs = lib.attrValues devPackages.${system} ++ [
               pkgs.graphviz
+              pkgs.llvm
+              pkgs.wabt
 
               # Packages from NixPkgs can be added here
               pkgs.nixpkgs-fmt
