@@ -1,19 +1,19 @@
 define i32 @test(i1 %b) {
-  br i1 %b label %if_true, label %if_false
+  br i1 %b, label %if_true, label %if_false
 if_true:
-  %true_result = add i32 42 1
+  %true_result = add i32 42, 1
   br label %if_end
 if_false:
-  %false_result = sub i32 42 1
+  %false_result = sub i32 42, 1
   br label %if_end
 if_end:
   %y = phi i32 [%true_result, %if_true], [%false_result, %if_false]
-  %result = add i32 %y 42
+  %result = add i32 %y, 42
   ret i32 %result
 }
 
 define i32 @text-shadow(i32 %x) {
-  %x_1 = add i32 %x 1
-  %x_2 = mul i32 %x_1 3
+  %x_1 = add i32 %x, 1
+  %x_2 = mul i32 %x_1, 3
   ret i32 %x_2
 }

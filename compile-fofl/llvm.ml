@@ -101,7 +101,7 @@ end = struct
 
   let pp_instr (instr : instr) (ppf : Format.formatter) =
     let pp_binop_instr (name, ty, opr1, opr2) ppf =
-      Format.fprintf ppf "@[%s@ %t@ %t@ %t@]" name (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
+      Format.fprintf ppf "@[%s@ %t@ %t,@ %t@]" name (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
     and pp_pred (opr, label) ppf = Format.fprintf ppf "[@[%t,@ %t@]]" (pp_opr opr) (pp_label label)
     and pp_arg (ty, opr) ppf = Format.fprintf ppf "@[%t@ %t@]" (pp_ty ty) (pp_opr opr)
     in
@@ -114,7 +114,7 @@ end = struct
           match cond with
           | Eq -> "eq"
         in
-        Format.fprintf ppf "@[icmp@ %s@ %t@ %t@ %t@]" cond (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
+        Format.fprintf ppf "@[icmp@ %s@ %t@ %t,@ %t@]" cond (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
     | Phi (ty, preds) ->
         Format.fprintf ppf "@[phi@ %t@ %t@]"
           (pp_ty ty)
@@ -123,13 +123,13 @@ end = struct
         Format.fprintf ppf "@[call@ %t@ %t(%t)@]"
           (pp_ty ty)
           (pp_opr fn)
-          (args |> pp_iarray pp_arg ~pp_sep:Format.pp_print_space)
+          (args |> pp_iarray pp_arg ~pp_sep:pp_comma_sep)
 
   let pp_term (term : term) (ppf : Format.formatter) =
     match term with
     | Br dest -> Format.fprintf ppf "@[  @[br@ label@ %t@]@]" (pp_label dest)
     | Br_i1 (cond, if_true, if_false) ->
-        Format.fprintf ppf "@[  @[br@ i1@ %t@ label@ %t,@ label@ %t@]@]"
+        Format.fprintf ppf "@[  @[br@ i1@ %t,@ label@ %t,@ label@ %t@]@]"
           (pp_opr cond) (pp_label if_true) (pp_label if_false)
     | Ret (ty, opr) -> Format.fprintf ppf "@[  @[ret@ %t@ %t@]@]" (pp_ty ty) (pp_opr opr)
 
