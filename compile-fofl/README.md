@@ -14,7 +14,7 @@ now.
 ## Example
 
 <!-- $MDX file=examples/fact.txt -->
-```
+```text
 val test-fact : I32 :=
   fact(5);
 
@@ -23,7 +23,7 @@ fun fact(n : I32) : I32 :=
 ```
 
 <details>
-<summary>Compiled web assembly</summary>
+<summary>Compiled Web Assembly</summary>
 
 <!-- $MDX file=examples/fact.wat -->
 ```wat
@@ -78,6 +78,27 @@ fun fact(n : I32) : I32 :=
         (call $fact)
         i32.mul)))
   (func $test-fact (result i32) (i32.const 5) (return_call $fact)))
+```
+
+</details>
+
+<details>
+<summary>Compiled A-Normal Form</summary>
+
+<!-- $MDX file=examples/fact.anf -->
+```text
+fun fact(n : I32) : I32 :=
+  let cond := #i32-eq(n, 0);
+  join branch (result : I32) := result;
+  if cond then
+    jump branch 1
+  else
+    let arg := #i32-sub(n, 1);
+    let arg_1 := fact(arg);
+    let result_1 := #i32-mul(n, arg_1);
+    jump branch result_1;
+
+val test-fact : I32 := fact(5);
 ```
 
 </details>
