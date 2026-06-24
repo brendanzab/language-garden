@@ -11,6 +11,8 @@ Parsing:
   Parser for a simple grammar specification language.
 - [**parse_grammar_lexer.ml**](./parse_grammar_lexer.ml):
   A simple grammar specification language with support for custom lexers.
+- [**parse_regex_derivatives.ml**](./parse_regex_derivatives.ml):
+  Regular expression matching with derivatives.
 
 Evaluation:
 

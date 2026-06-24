@@ -1,0 +1,511 @@
+(** Regular expression matching with derivatives.
+
+    This implementation was based on the following paper:
+
+    - Scott Owens, John Reppy, and Aaron Turon. 2009.
+      Regular-expression derivatives re-examined.
+      https://doi.org/10.1017/S0956796808007090
+
+    I’ve only implemented matching with derivatives at the moment - DFA
+    construction and support for character classes are left for future work.
+
+    I found the biggest challenge was figuring out how to normalise the regular
+    expressions based on the equivalences in section 4.1. Initially I naively
+    implemented the matching from section 3.2 without this, then realised the
+    algorithm could only make progress if the expressions were normalised first.
+
+    Related implementations:
+
+    - https://github.com/ulysses4ever/rere/blob/master/rere.m
+    - https://github.com/bobatkey/foveran/blob/master/src/Data/FiniteStateMachine/RegexpDerivatives.hs
+    - https://github.com/monaddle/regex-deriv/blob/master/src/main/scala/com/github/dlomsak/regex/deriv/
+*)
+
+module type Symbol = sig
+
+  type t
+
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
+  val pp : t -> Format.formatter -> unit
+
+end
+
+module Regex = struct
+
+  module type S = sig
+
+    type t
+    (** Regular expressions, in normal form *)
+
+    type symbol
+    (** An alphabet of symbols *)
+
+    val fail : t
+    val empty : t
+    val symbol : symbol -> t
+    val concat : t -> t -> t
+    val union : t -> t -> t
+    val inter : t -> t -> t
+    val repeat : t -> t
+    val compl : t -> t
+
+    val compare : t -> t -> int
+    (** Compare two regular expressions lexicographically *)
+
+    val pp : t -> Format.formatter -> unit
+    (** Pretty print a regular expression *)
+
+
+    (** Regular expression matching with derivatives *)
+
+    val nullable : t -> t
+    (** [nullable r] returns either:
+
+        - [empty] if the expression matches the empty string
+        - [fail] if the expression never matches the empty string
+    *)
+
+    val derivative : t -> symbol -> t
+    (** [derivative r a] returns a regular expression that matches the suffix of
+        strings matched by [r], beginning with a leading [a] symbol. *)
+
+    val match_seq : t -> symbol Seq.t -> bool
+    (** [match_seq r seq] returns true if the sequence of symbols [seq] is in
+        the language described by [r]. *)
+
+  end
+
+  module Make (A : Symbol) : S
+    with type symbol = A.t
+  = struct
+
+    (** {1 Syntax (Section 2.1)} *)
+
+    type t =
+      | Fail                  (* ∅ *)
+      | Empty                 (* ε *)
+      | Symbol of A.t         (* ɑ *)
+      | Concat of t * t       (* r · s *)
+      | Repeat of t           (* r* *)
+      | Union of t * t        (* r + s *)
+      | Inter of t * t        (* r & s *)
+      | Compl of t            (* ¬r *)
+
+    type symbol = A.t
+
+
+    (** {1 Pretty printing} *)
+
+    let rec pp (r : t) (ppf : Format.formatter) =
+      match r with
+      (* | Concat (r, (Concat _ as s)) -> Format.fprintf ppf "%t · %t" (pp_atom r) (pp s)
+      | Union (r, (Union _ as s)) -> Format.fprintf ppf "%t + %t" (pp_atom r) (pp s)
+      | Inter (r, (Inter _ as s)) -> Format.fprintf ppf "%t & %t" (pp_atom r) (pp s) *)
+      | Concat (r, s) -> Format.fprintf ppf "%t · %t" (pp_atom r) (pp_atom s)
+      | Union (r, s) -> Format.fprintf ppf "%t + %t" (pp_atom r) (pp_atom s)
+      | Inter (r, s) -> Format.fprintf ppf "%t & %t" (pp_atom r) (pp_atom s)
+      | Repeat r -> Format.fprintf ppf "%t*" (pp_atom r)
+      | Compl r -> Format.fprintf ppf "¬%t" (pp_atom r)
+      | r -> pp_atom r ppf
+
+    and pp_atom (r : t) (ppf : Format.formatter) =
+      match r with
+      | Fail -> Format.fprintf ppf "∅"
+      | Empty -> Format.fprintf ppf "ε"
+      | Symbol a -> Format.fprintf ppf "%t" (A.pp a)
+      | Concat _ | Union _ | Inter _ | Repeat _ | Compl _ as r ->
+          Format.fprintf ppf "(%t)" (pp r)
+
+
+    (** {1 Lexicographic ordering (Section 4.1)} *)
+
+    (* NOTE: we could use ppx_derive if this was a full project *)
+
+    let variant_id r =
+      match r with
+      | Fail -> 0
+      | Empty -> 1
+      | Symbol _ -> 2
+      | Concat _ -> 3
+      | Repeat _ -> 4
+      | Union _ -> 5
+      | Inter _ -> 6
+      | Compl _ -> 7
+
+    let rec compare (r : t) (s : t) : int =
+      let compare_pair = Pair.compare compare compare in
+      match r, s with
+      | Fail, Fail -> 0
+      | Empty, Empty -> 0
+      | Symbol a, Symbol b -> A.compare a b
+      | Concat (r1, s1), Concat (r2, s2)  -> compare_pair (r1, s1) (r2, s2)
+      | Repeat r, Repeat s -> compare r s
+      | Union (r1, s1), Union (r2, s2) -> compare_pair (r1, s1) (r2, s2)
+      | Inter (r1, s1), Inter (r2, s2) -> compare_pair (r1, s1) (r2, s2)
+      | Compl r, Compl s -> compare r s
+      | r, s -> Int.compare (variant_id r) (variant_id s)
+
+
+    (** {1 Smart constructors (Section 4.1)} *)
+
+    (** Smart constructors for building regular expressions in normal form.
+        These are based on the equivalences in section 4.1. *)
+
+    let fail = Fail
+    let empty = Empty
+    let symbol s = Symbol s
+
+    let concat r s =
+      match r, s with
+      | Fail, _ -> Fail                               (* ∅ · r ≈ ∅ *)
+      | _, Fail -> Fail                               (* r · ∅ ≈ ∅ *)
+      | Empty, r -> r                                 (* ε · r ≈ r *)
+      | r, Empty -> r                                 (* r · ε ≈ r *)
+      | Concat (r, s), t -> Concat (r, Concat (s, t)) (* (r · s) · t ≈ r · (s · t) *)
+      | r, s -> Concat (r, s)
+
+    let rec repeat r =
+      match r with
+      | Repeat r -> repeat r                          (* ( r* )* ≈ r* *)
+      | Empty -> Empty                                (* ε* ≈ ε *)
+      | Fail -> Empty                                 (* ∅* ≈ ε *)
+      | r -> Repeat r
+
+    let compl r =
+      match r with
+      | Compl r -> r                                  (* ¬(¬r) ≈ r *)
+      | r -> Compl r
+
+    (** Assumes [r < s] *)
+    let assoc_right_idemp ctor (r, s) t =
+      let c_tr = compare t r in
+      if c_tr = 0 then ctor r s
+      else if c_tr < 0 then ctor t (ctor r s)
+      else
+        let c_st = compare s t in
+        if c_st = 0 then ctor r s
+        else if c_st < 0 then ctor r (ctor s t)
+        else ctor r (ctor t s)
+
+    let commute_right_idemp ctor r s =
+      let c_rt = compare r s in
+      if c_rt = 0 then r
+      else if c_rt > 0 then ctor s r
+      else ctor r s
+
+    let union r s =
+      match r, s with
+      | Fail, r | r, Fail -> r                        (* ∅ + r ≈ r *)
+      | Compl Fail, r | r, Compl Fail -> Compl Fail   (* ¬∅ + r ≈ ¬∅ *)
+      | Union (r, s), t | t, Union (r, s) ->
+          (* r + r ≈ r *)
+          (* (r + s) + t ≈ r + (s + t) *)
+          assoc_right_idemp (fun r s -> Union (r, s)) (r, s) t
+      | r, s ->
+          (* r + r ≈ r *)
+          (* r + s ≈ s + r *)
+          commute_right_idemp (fun r s -> Union (r, s)) r s
+
+    let inter r s =
+      match r, s with
+      | Fail, r | r, Fail -> Fail                     (* ∅ & r ≈ ∅ *)
+      | Compl Fail, r | r, Compl Fail -> r            (* ¬∅ + r ≈ r *)
+      | Inter (r, s), t | t, Inter (r, s) ->
+          (* r + r ≈ r *)
+          (* (r & s) & t ≈ r & (s & t) *)
+          assoc_right_idemp (fun r s -> Inter (r, s)) (r, s) t
+      | r, s ->
+          (* r & r ≈ r *)
+          (* r & s ≈ s & r *)
+          commute_right_idemp (fun r s -> Inter (r, s)) r s
+
+
+    (** {1 Derivatives (Section 3.1)} *)
+
+    (** These operations return expressions in normal form (Section 4.1),
+        avoiding the need to perform this step during [match_seq]. *)
+
+    (** Instead of returning a regular expression, we could return a boolean
+        instead, as demonstrated in {{: https://doi.org/10.1145/2034574.2034801}
+        “Parsing with Derivatives: A Functional Pearl”} by Might, Darais, and
+        Spiewak. This might skip some of the overhead of normalising
+        derivatives. *)
+    let rec nullable (r : t) : t =
+      match r with
+      | Fail -> fail
+      | Empty -> empty
+      | Symbol _ -> fail
+      | Concat (r, s) -> inter (nullable r) (nullable s)
+      | Repeat _ -> empty
+      | Union (r, s) -> union (nullable r) (nullable s)
+      | Inter (r, s) -> inter (nullable r) (nullable s)
+      | Compl r ->
+          match nullable r with
+          | Fail -> empty
+          | Empty -> fail
+          | _ -> failwith "expected Fail or Empty"
+
+    let rec derivative (r : t) (a : symbol) : t =
+      match r with
+      | Fail -> fail
+      | Empty -> fail
+      | Symbol b -> if A.equal a b then empty else fail
+      | Concat (r, s) -> union (concat (derivative r a) s) (concat (nullable r) (derivative s a))
+      | Repeat r -> concat (derivative r a) (repeat r)
+      | Union (r, s) -> union (derivative r a) (derivative s a)
+      | Inter (r, s) -> inter (derivative r a) (derivative s a)
+      | Compl r -> compl (derivative r a)
+
+
+    (** {1 Matching (Section 3.2)} *)
+
+    let rec match_seq (r : t) (cs : symbol Seq.t) =
+      match Seq.uncons cs with
+      | None -> nullable r = Empty
+      | Some (c, cs) -> match_seq (derivative r c) cs
+
+
+    (** {1 DFA (Section 3.3)} *)
+
+    (* TODO *)
+
+  end
+
+end
+
+
+module Char_regex : sig
+
+  include Regex.S with type symbol = char
+
+  val string : string -> t
+  val match_string : t -> string -> bool
+
+end = struct
+
+  include Regex.Make (struct
+    include Char
+    let pp c ppf = Format.pp_print_char ppf c
+  end)
+
+  let char (c : char) : t =
+    symbol c
+
+  let string (s : string) : t =
+    String.fold_right (fun c r -> concat (char c) r) s empty
+
+  let rec match_string (r : t) (cs : string) =
+    match_seq r (String.to_seq cs)
+
+end
+
+
+module Test = struct
+
+  module R = Char_regex
+
+  let ( <*> ) = R.concat
+  let ( <&> ) = R.inter
+  let ( <|> ) = R.union
+
+  (* Test normal forms (Section 4.1) *)
+  let () = begin
+
+    let a = R.symbol 'a' in
+    let b = R.symbol 'b' in
+    let c = R.symbol 'c' in
+
+    (* NOTE: would probably be better to use property based tests here *)
+
+    let failures = ref 0 in
+    let expect_equals l r =
+      if R.compare l r = 0 then () else begin
+        Format.eprintf "FAILED: %t = %t\n" R.(pp l) R.(pp r);
+        incr failures
+      end
+    and expect_not_equals l r =
+      if R.compare l r <> 0 then () else begin
+        Format.eprintf "FAILED: %t <> %t\n" R.(pp l) R.(pp r);
+        incr failures
+      end
+    in
+
+    (* Intersection *)
+    begin
+
+      expect_not_equals (a <&> b) a;
+
+      (* Idempotence *)
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (r <&> r) r;
+        expect_equals r (r <&> r);
+      end;
+
+      (* Commutativity *)
+      [a; b; c] |> List.iter begin fun r ->
+        [a; b; c] |> List.iter begin fun s ->
+          expect_equals (r <&> s) (r <&> s);
+          expect_equals (s <&> r) (r <&> s);
+        end;
+      end;
+
+      (* Associativity *)
+      [a; b; c] |> List.iter begin fun r ->
+        [a; b; c] |> List.iter begin fun s ->
+          [a; b; c] |> List.iter begin fun t ->
+            expect_equals (r <&> (s <&> t)) ((r <&> s) <&> t);
+            expect_equals ((r <&> s) <&> t) (r <&> (s <&> t));
+          end;
+        end;
+      end;
+
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (R.fail <&> r) R.fail;
+        expect_equals (r <&> R.fail) R.fail;
+      end;
+
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (R.compl R.fail <&> r) r;
+        expect_equals (r <&> R.compl R.fail) r;
+      end;
+
+    end;
+
+    (* Union *)
+    begin
+
+      expect_not_equals (a <|> b) a;
+
+      (* Idempotence *)
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (r <|> r) r;
+        expect_equals r (r <|> r);
+      end;
+
+      (* Commutativity *)
+      [a; b; c] |> List.iter begin fun r ->
+        [a; b; c] |> List.iter begin fun s ->
+          expect_equals (r <|> s) (r <|> s);
+          expect_equals (s <|> r) (r <|> s);
+        end;
+      end;
+
+      (* Associativity *)
+      [a; b; c] |> List.iter begin fun r ->
+        [a; b; c] |> List.iter begin fun s ->
+          [a; b; c] |> List.iter begin fun t ->
+            expect_equals (r <|> (s <|> t)) ((r <|> s) <|> t);
+            expect_equals ((r <|> s) <|> t) (r <|> (s <|> t));
+          end;
+        end;
+      end;
+
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (R.fail <|> r) r;
+        expect_equals (r <|> R.fail) r;
+      end;
+
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (R.compl R.fail <|> r) (R.compl R.fail);
+        expect_equals (r <|> R.compl R.fail) (R.compl R.fail);
+      end;
+
+    end;
+
+    (* Concatenation *)
+    begin
+
+      (* Associativity *)
+      [a; b; c] |> List.iter begin fun r ->
+        [a; b; c] |> List.iter begin fun s ->
+          [a; b; c] |> List.iter begin fun t ->
+            expect_equals (r <*> (s <*> t)) ((r <*> s) <*> t);
+            expect_equals ((r <*> s) <*> t) (r <*> (s <*> t));
+          end;
+        end;
+      end;
+
+      (* Annihilation *)
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (r <*> R.fail) R.fail;
+        expect_equals (R.fail <*> r) R.fail;
+      end;
+
+      (* Absorption *)
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (r <*> R.empty) r;
+        expect_equals (R.empty <*> r) r;
+      end;
+
+    end;
+
+    (* Repetition *)
+    begin
+
+      expect_equals (R.repeat R.empty) R.empty;
+      expect_equals R.empty (R.repeat R.empty);
+
+      [a; b; c] |> List.iter begin fun r ->
+        expect_equals (R.repeat (R.repeat r)) (R.repeat r);
+      end;
+
+    end;
+
+    (* Complement *)
+    [a; b; c] |> List.iter begin fun r ->
+      expect_equals (R.compl (R.compl r)) r;
+      expect_not_equals (R.compl r) r;
+    end;
+
+    if !failures > 0 then
+      Printf.ksprintf failwith "failed %i test%s"
+        !failures
+        (if !failures = 1 then "" else "s");
+
+  end
+
+  (* Matching tests *)
+
+  let () = begin
+    let r = R.(concat (symbol 'a') (repeat (symbol 'b'))) in
+    assert (R.match_string r "abb" = true);
+    assert (R.match_string r "aba" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (symbol 'b') (symbol 'b')) in
+    assert (R.match_string r "b" = true);
+    assert (R.match_string r "bb" = false);
+    assert (R.match_string r "a" = false);
+    assert (R.match_string r "c" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (repeat (symbol 'b')) (symbol 'b')) in
+    assert (R.match_string r "b" = true);
+    assert (R.match_string r "bb" = false);
+    assert (R.match_string r "bbb" = false);
+    assert (R.match_string r "a" = false);
+    assert (R.match_string r "c" = false);
+    assert (R.match_string r "ba" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (union (symbol 'a') (repeat (symbol 'b'))) (union (symbol 'b') (symbol 'c'))) in
+    assert (R.match_string r "b" = true);
+    assert (R.match_string r "bb" = false);
+    assert (R.match_string r "a" = false);
+    assert (R.match_string r "c" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (repeat (string "bb")) (repeat (symbol 'b'))) in
+    assert (R.match_string r "bb" = true);
+    assert (R.match_string r "bbb" = false);
+    assert (R.match_string r "bbbb" = true);
+    assert (R.match_string r "bbbbb" = false);
+    assert (R.match_string r "aba" = false);
+  end
+
+end

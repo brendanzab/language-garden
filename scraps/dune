@@ -1,6 +1,7 @@
 (test (name parse_sexpr))
 (test (name parse_grammar))
 (test (name parse_grammar_lexer))
+(test (name parse_regex_derivatives))
 
 (test (name eval_lc_cps))
 (test (name eval_lc_cek))
