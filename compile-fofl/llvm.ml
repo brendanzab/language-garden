@@ -67,6 +67,8 @@ type module_ = {                            (* https://llvm.org/docs/LangRef.htm
 module Pretty : sig
 
   val pp_module : module_ -> Format.formatter -> unit
+  val pp_block : block -> Format.formatter -> unit
+  val pp_ty : ty -> Format.formatter -> unit
 
   val pp_global_id : Global_id.t -> Format.formatter -> unit
   val pp_local_id : Local_id.t -> Format.formatter -> unit
@@ -116,7 +118,7 @@ end = struct
         in
         Format.fprintf ppf "@[icmp@ %s@ %t@ %t,@ %t@]" cond (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
     | Phi (ty, preds) ->
-        Format.fprintf ppf "@[phi@ %t@ %t@]"
+        Format.fprintf ppf "@[<hv 2>@[phi@ %t@]@ %t@]"
           (pp_ty ty)
           (preds |> pp_iarray pp_pred ~pp_sep:pp_comma_sep)
     | Call (ty, fn, args) ->
@@ -165,5 +167,90 @@ end = struct
 
   let pp_module ({ funs } : module_) : Format.formatter -> unit =
     funs |> pp_iarray pp_fun ~pp_sep:Format.pp_print_newline
+
+end
+
+module Graphvis = struct
+
+  let pp_block (fun_id : Global_id.t) (label : Label.t) (block : block) (out : Out_channel.t) = begin
+    let rec outgoing_labels block =
+      match block with
+      | Instr (_, _, block) -> outgoing_labels block
+      | Term (Br label) -> [label]
+      | Term (Br_i1 (_, label1, label2)) -> [label1; label2]
+      | Term (Ret (_, _)) -> []
+    in
+    let label_string label =
+      Format.asprintf "\"%t.%t\"" (Global_id.pp fun_id) (Label.pp label)
+    in
+    let block_label =
+      Format.asprintf "@[<v>%t@]"
+        (fun ppf ->
+          Format.pp_set_margin ppf 70;
+          Pretty.pp_block block ppf)
+    in
+
+    (* Basic block *)
+    Printf.fprintf out "\n";
+    Printf.fprintf out "    %s [\n" (label_string label);
+    Printf.fprintf out "      label=<<table border=\"0\" cellborder=\"0\" cellpadding=\"3\">\n";
+    Printf.fprintf out "        <th><td align=\"left\" border=\"1\" sides=\"b\">%s:</td></th>\n" (Label.to_string label);
+    String.split_on_char '\n' block_label |> List.iter begin fun line ->
+      Printf.fprintf out "        <tr><td align=\"left\">%s</td></tr>\n" line;
+    end;
+    Printf.fprintf out "      </table>>\n";
+    Printf.fprintf out "    ];\n";
+
+    (* Control flow edges *)
+    outgoing_labels block |> List.iter begin fun end_label ->
+      Printf.fprintf out "    %s -> %s;\n" (label_string label) (label_string end_label)
+    end
+  end
+
+  let pp_module ({ funs } : module_) (out : Out_channel.t) = begin
+    Printf.fprintf out "digraph llvm_ir {\n";
+    Printf.fprintf out "  graph [\n";
+    Printf.fprintf out "    fontname=\"Monaco\";\n";
+    Printf.fprintf out "    color=\"none\";\n";
+    Printf.fprintf out "    fillcolor=\"gainsboro\";\n";
+    Printf.fprintf out "    style=\"filled, rounded\";\n";
+    Printf.fprintf out "  ]\n";
+    Printf.fprintf out "\n";
+    Printf.fprintf out "  node [\n";
+    Printf.fprintf out "    fontname=\"Monaco\";\n";
+    Printf.fprintf out "    shape=\"box\";\n";
+    Printf.fprintf out "    fillcolor=\"white\";\n";
+    Printf.fprintf out "    style=\"filled, rounded\";\n";
+    Printf.fprintf out "  ]\n";
+    Printf.fprintf out "\n";
+
+    (* Functions *)
+    funs |> Iarray.iter begin fun (id, { result_ty; params; cfg }) ->
+      Printf.fprintf out "  subgraph \"%s\" {\n" (Global_id.to_string id);
+
+      (* Function signature *)
+      Printf.fprintf out "    label=\"%s %s(%t)\";\n"
+        (Pretty.pp_ty result_ty |> Format.asprintf "%t")
+        (Pretty.pp_global_id id |> Format.asprintf "%t")
+        (fun out ->
+          params |> Iarray.iteri begin fun i (ty, id) ->
+            if i <> 0 then Printf.fprintf out ", ";
+            Printf.fprintf out "%s %s"
+              (Pretty.pp_ty ty |> Format.asprintf "%t")
+              (Pretty.pp_local_id id |> Format.asprintf "%t");
+          end);
+      Printf.fprintf out "    cluster=true;\n";
+
+      (* Control flow graph *)
+      pp_block id (Label.make "entry") cfg.entry out;
+      cfg.blocks |> Iarray.iter begin fun (label, block) ->
+        pp_block id label block out;
+      end;
+
+      Printf.fprintf out "  }\n";
+    end;
+
+    Printf.fprintf out "}\n";
+  end
 
 end

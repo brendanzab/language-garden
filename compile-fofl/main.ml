@@ -84,35 +84,42 @@ let compile_anf_cmd () : unit =
   |> Anf.Module.pp
   |> Format.printf "%t"
 
-let compile_llvm_cmd () : unit =
+let compile_llvm_cmd (output_format : [`Ll | `Dot]) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  parse_module source
-  |> elab_module source
-  |> Core_to_llvm.translate_module
-  |> Llvm.Pretty.pp_module
-  |> Format.printf "%t"
-
+  let module_ =
+    parse_module source
+    |> elab_module source
+    |> Core_to_llvm.translate_module
+  in
+  match output_format with
+  | `Ll -> Format.printf "%t" (Llvm.Pretty.pp_module module_)
+  | `Dot -> Llvm.Graphvis.pp_module module_ Out_channel.stdout
 
 (** {1 CLI options} *)
 
 let cmd : unit Cmdliner.Cmd.t =
   let open Cmdliner in
 
-  let emit_tail_calls : bool Term.t =
+  let enable_tail_call : bool Term.t =
     Arg.(value & flag
       & info ["enable-tail-call"]
-          ~doc:"enable tail-calls in generated web assembly")
+          ~doc:"Output tail-calls in generated WebAssembly")
+  and llvm_output_format : [`Ll | `Dot] Term.t =
+    Arg.(value
+      & opt (enum ["ll", `Ll; "dot", `Dot]) `Ll
+      & info ["output-format"] ~docv:"FORMAT"
+          ~doc:"The output format to emit. The value of $(docv) must be either \
+                $(b,ll) for LLVM IR, or $(b,dot) for Graphviz DOT.")
   in
 
   Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
-    Cmd.v (Cmd.info "compile-anf" ~doc:"compile a module from standard input to A-normal form")
+    Cmd.v (Cmd.info "compile-anf" ~doc:"Compile a module from standard input to A-normal form")
       Term.(const compile_anf_cmd $ const ());
-    Cmd.v (Cmd.info "compile-llvm" ~doc:"compile a module from standard input to LLVM IR")
-      Term.(const compile_llvm_cmd $ const ());
-    Cmd.v (Cmd.info "compile-wat" ~doc:"compile a module from standard input to WAT (WebAssembly Text Format)")
-      Term.(const compile_wat_cmd $ emit_tail_calls);
+    Cmd.v (Cmd.info "compile-llvm" ~doc:"Compile a module from standard input to LLVM IR")
+      Term.(const compile_llvm_cmd $ llvm_output_format);
+    Cmd.v (Cmd.info "compile-wat" ~doc:"Compile a module from standard input to WAT (WebAssembly Text Format)")
+      Term.(const compile_wat_cmd $ enable_tail_call);
   ]
-
 
 (** {1 Main entrypoint} *)
 
