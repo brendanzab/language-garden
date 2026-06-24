@@ -247,10 +247,16 @@ module Syntax = struct
             (pp_defn names (Some label) ty)
             (pp_defns names decls)
 
-    and pp_param names name def_ty ppf =
-      Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]"
-        (pp_name name)
-        (pp_tm names def_ty)
+    and pp_param names name ty ppf =
+      match ty with
+      | Rec_type (_ :: _ as decls) ->
+          Format.fprintf ppf "@[<hv>(@[%t : {@]%t})@]"
+            (pp_name name)
+            (pp_decls names decls)
+      | ty ->
+          Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]"
+            (pp_name name)
+            (pp_tm names ty)
     in
 
     pp_tm

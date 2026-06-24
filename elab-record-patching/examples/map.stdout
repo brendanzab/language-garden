@@ -38,14 +38,16 @@
               eq :
                 fun (_ :
                       fun (Out : Type)
-                          (_ :
-                            { some : fun (_ : eq-a.T) -> Out; none : Out })
-                          -> Out)
+                          (_ : {
+                            some : fun (_ : eq-a.T) -> Out;
+                            none : Out;
+                          }) -> Out)
                     (_ :
                       fun (Out : Type)
-                          (_ :
-                            { some : fun (_ : eq-a.T) -> Out; none : Out })
-                          -> Out)
+                          (_ : {
+                            some : fun (_ : eq-a.T) -> Out;
+                            none : Out;
+                          }) -> Out)
                     (Out : Type) (_ : { true : Out; false : Out }) -> Out;
             }
   :=

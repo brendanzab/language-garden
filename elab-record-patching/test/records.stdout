@@ -10,23 +10,19 @@
   := fun A x => { A := A; B := A; f := x.f };
   let patch-3 :
         fun (A : Type)
-            (_ :
-              {
-                A : Type [= A];
-                B : Type [= A];
-                f : (fun (_ : A) -> A) [= fun x => x];
-              })
-            -> F
+            (_ : {
+              A : Type [= A];
+              B : Type [= A];
+              f : (fun (_ : A) -> A) [= fun x => x];
+            }) -> F
   := fun A x => { A := A; B := A; f := fun x => x };
   let patch-3b :
         fun (A : Type)
-            (_ :
-              {
-                A : Type [= A];
-                B : Type [= A];
-                f : (fun (_ : A) -> A) [= fun x => x];
-              })
-            -> F
+            (_ : {
+              A : Type [= A];
+              B : Type [= A];
+              f : (fun (_ : A) -> A) [= fun x => x];
+            }) -> F
   := fun A x => { A := A; B := A; f := fun x => x };
   let patch-4 :
         fun (A : Type)
