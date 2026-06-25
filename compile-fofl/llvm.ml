@@ -64,6 +64,7 @@ type module_ = {                            (* https://llvm.org/docs/LangRef.htm
   funs : (Global_id.t * fun_) Iarray.t;
 }
 
+(** Output the LLVM IR as the human readable text representation *)
 module Pretty : sig
 
   val pp_module : module_ -> Format.formatter -> unit
@@ -170,6 +171,8 @@ end = struct
 
 end
 
+(** Output the LLVM IR as the Graphvis {{: https://graphviz.org/doc/info/lang.html}
+    DOT language}. This can help with visualising control-flow graphs. *)
 module Graphvis = struct
 
   let pp_block (fun_id : Global_id.t) (label : Label.t) (block : block) (out : Out_channel.t) = begin
