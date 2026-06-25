@@ -70,18 +70,21 @@ let translate_expr
         let false_end_label = fresh_label "if_false_end" in
         let end_label = fresh_label "if_end" in
 
-        let result_true = ref None in
-        let result_false = ref None in
+        (* These operands store the result of executing either branch of the if
+           expression, and will be used as arguments to the phi instruction in
+           the end block *)
+        let true_result = ref None in
+        let false_result = ref None in
 
         Dynarray.add_last blocks (true_label, begin
-          let@ result_true' = go_expr local_env "true_result" expr2 in
-          result_true := Some result_true';
+          let@ true_result' = go_expr local_env "true_result" expr2 in
+          true_result := Some true_result';
           Llvm.(Term (Br true_end_label))
         end);
 
         Dynarray.add_last blocks (false_label, begin
-          let@ result_false' = go_expr local_env "false_result" expr3 in
-          result_false := Some result_false';
+          let@ false_result' = go_expr local_env "false_result" expr3 in
+          false_result := Some false_result';
           Llvm.(Term (Br false_end_label))
         end);
 
@@ -102,8 +105,8 @@ let translate_expr
         Dynarray.add_last blocks (end_label, begin
           let result_ty = translate_ty result_ty in
           let@ result = bind_instr result_name Llvm.(Phi (result_ty, [|
-            Option.get !result_true, true_end_label;
-            Option.get !result_false, false_end_label;
+            Option.get !true_result, true_end_label;
+            Option.get !false_result, false_end_label;
           |])) in
           k result
         end);
