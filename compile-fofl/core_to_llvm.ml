@@ -1,4 +1,14 @@
-(** Translate the core language into LLVM IR
+(** Translation from the core language into LLVM IR.
+
+    We don’t have mutation in our core language, so it turns out (as Appel has
+    noted in the past) that the mapping to LLVM’s static single assignment is
+    {e relatively} straightforward, and is quite similar to the {!Core_to_anf}
+    translation.
+
+    The main complication in this translation is conditionals, which
+    requires us to create “join nodes” with phi-instructions where the branching
+    paths of computation come together. This is a similar idea to the “join
+    points” found in the {!Anf} language.
 
     - Andrew Appel. 1998. {{: https://dl.acm.org/doi/10.1145/278283.278285}
       SSA is Functional Programming}
@@ -15,16 +25,19 @@ module Label_supply = Name.Supply (Llvm.Label)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
+(** Translate a type in the core language into an LLVM type *)
 let translate_ty (ty : Core.Ty.t) : Llvm.ty =
   match ty with
   | Core.Ty.Bool -> Llvm.I1
   | Core.Ty.I32 -> Llvm.I32
 
-type 'a k = 'a -> Llvm.block
-
+(** Item declarations *)
 type item_decl =
   | Fun of Llvm.ty * Llvm.Global_id.t * Llvm.ty Iarray.t
 
+type 'a k = 'a -> Llvm.block
+
+(** Translate an expression into a control flow graph. *)
 let translate_expr
   (fresh_local_id : string -> Llvm.Local_id.t)
   (fresh_label : string -> Llvm.Label.t)
@@ -37,12 +50,15 @@ let translate_expr
 
   let blocks = Dynarray.create () in
 
+  (* Bind an instruction to variable in the current block  *)
   let bind_instr name (instr : Llvm.instr) (k : Llvm.opr k) : Llvm.block =
     let id = fresh_local_id name in
     Llvm.Instr (id, instr, k (Local id))
   in
 
-  let rec go_expr local_env result_name expr (k : Llvm.opr k) : Llvm.block =
+  (* Translate a sub-expression in the current block. While doing this, more
+     blocks might be added to the control flow graph. *)
+  let rec go_expr local_env result_name (expr : Core.Expr.t) (k : Llvm.opr k) : Llvm.block =
     match expr with
     | Core.Expr.Item (name, args) ->
         let Fun (result_ty, item_id, param_tys) = Core.Item_map.find name item_env in
@@ -149,8 +165,8 @@ let translate_expr
     | Core.Expr.Prim (op, _) ->
         Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
 
-  (* Compile a series of expressions to intermediate definitions *)
-  and go_exprs local_ids name exprs (k : Llvm.opr list k) : Llvm.block =
+  (* Translate a series of expressions in the current block *)
+  and go_exprs local_ids name (exprs : Core.Expr.t list) (k : Llvm.opr list k) : Llvm.block =
     match exprs with
     | [] -> k []
     | expr :: exprs ->
@@ -167,8 +183,12 @@ let translate_expr
 
   Llvm.{ entry; blocks }
 
+(** Translate a core language module into an LLVM module  *)
 let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let fresh_global_id = Global_supply.(fresh (create ())) in
+
+  (* Top-level items might be mutually recursive, so we first process their
+     declarations before we can translate them to definitions. *)
   let item_env =
     mod_ |> Core.Item_map.mapi @@ fun name item ->
       let id = fresh_global_id (Core.Item_name.to_string name) in
@@ -181,6 +201,7 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
 
   let funs = Dynarray.create () in
 
+  (* Translate items in the core language into LLVM function definitions *)
   item_env |> Core.Item_map.iter begin fun name (Fun (result_ty, id, param_tys)) ->
     let fresh_local_id = Local_supply.(fresh (create ())) in
     let fresh_label = Label_supply.(fresh (create ())) in
