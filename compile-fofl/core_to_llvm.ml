@@ -5,10 +5,10 @@
     {e relatively} straightforward, and is quite similar to the {!Core_to_anf}
     translation.
 
-    The main complication in this translation is conditionals, which
-    requires us to create “join nodes” with phi-instructions where the branching
-    paths of computation come together. This is a similar idea to the “join
-    points” found in the {!Anf} language.
+    The main complication in this translation is conditionals. These require us
+    to create “join nodes” with phi-instructions where the branching paths of
+    computation come together, similar to the “join points” found in the {!Anf}
+    language.
 
     - Andrew Appel. 1998. {{: https://dl.acm.org/doi/10.1145/278283.278285}
       SSA is Functional Programming}
@@ -187,7 +187,7 @@ let translate_expr
 let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let fresh_global_id = Global_supply.(fresh (create ())) in
 
-  (* Top-level items might be mutually recursive, so we first process their
+  (* Top-level items might be mutually recursive, so we need to process their
      declarations before we can translate them to definitions. *)
   let item_env =
     mod_ |> Core.Item_map.mapi @@ fun name item ->

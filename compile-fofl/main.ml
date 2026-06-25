@@ -73,7 +73,7 @@ let compile_wat_cmd (enable_tail_call : bool) : unit =
   parse_module source
   |> elab_module source
   |> Core_to_wat.translate_module ~enable_tail_call
-  |> Wat.Pretty.pp_module
+  |> Wat.Output_wat.pp_module
   |> Format.printf "%t"
 
 let compile_anf_cmd () : unit =
@@ -92,8 +92,8 @@ let compile_llvm_cmd (output_format : [`Ll | `Dot]) : unit =
     |> Core_to_llvm.translate_module
   in
   match output_format with
-  | `Ll -> Format.printf "%t" (Llvm.Pretty.pp_module module_)
-  | `Dot -> Llvm.Graphvis.pp_module module_ Out_channel.stdout
+  | `Ll -> Llvm.Output_ll.pp_module module_ |> Format.printf "%t"
+  | `Dot -> Llvm.Output_dot.pp_module module_ Out_channel.stdout
 
 (** {1 CLI options} *)
 

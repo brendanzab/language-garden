@@ -1,4 +1,10 @@
-(** A minimal representation of LLVM IR
+(** A minimal representation of LLVM IR.
+
+    I found that the process of defining this AST helped me to gain a better
+    understanding of the surface area of the LLVM language. That said, in a
+    production compiler it might be better to use bindings that manipulate
+    LLVM’s in-memory data structures directly, for example Ocaml’s
+    {{: https://ocaml.org/p/llvm} llvm} package.
 
     - {{: https://llvm.org/docs/LangRef.html} LLVM Language Reference Manual}
     - {{: https://web.archive.org/web/20210503233207/https://www.cis.upenn.edu/~cis341/20sp/hw/hw03/llvmlite.shtml}
@@ -14,17 +20,20 @@ module Label = Name.Make ()
 type ty =
   | I1
   | I32
+  (* ... *)
 
 (** Operands *)
 type opr =
   | I1 of bool
   | I32 of Int32.t
+  (* ... *)
   | Global of Global_id.t
   | Local of Local_id.t
 
 (** Comparison condition codes *)
 type icmp_cond =    (* https://llvm.org/docs/LangRef.html#icmp-instruction *)
   | Eq              (* equal *)
+  (* ... *)
 
 (** Instructions *)
 type instr =
@@ -34,12 +43,14 @@ type instr =
   | Icmp of icmp_cond * ty * opr * opr      (* https://llvm.org/docs/LangRef.html#icmp-instruction *)
   | Phi of ty * (opr * Label.t) Iarray.t    (* https://llvm.org/docs/LangRef.html#phi-instruction *)
   | Call of ty * opr * (ty * opr) Iarray.t  (* https://llvm.org/docs/LangRef.html#call-instruction *)
+  (* ... *)
 
 (** Terminator instructions *)
 type term =                                 (* Terminator instructions  https://llvm.org/docs/LangRef.html#terminator-instructions *)
   | Br of Label.t                           (* Unconditional branch     https://llvm.org/docs/LangRef.html#i-br *)
   | Br_i1 of opr * Label.t * Label.t        (* Conditional branch       https://llvm.org/docs/LangRef.html#i-br *)
   | Ret of ty * opr                         (* Return instruction       https://llvm.org/docs/LangRef.html#ret-instruction *)
+  (* ... *)
 
 (** Basic blocks *)
 type block =
@@ -64,8 +75,8 @@ type module_ = {                            (* https://llvm.org/docs/LangRef.htm
   funs : (Global_id.t * fun_) Iarray.t;
 }
 
-(** Output the LLVM IR as the human readable text representation *)
-module Pretty : sig
+(** Output the AST in LLVM’s human readable assembly language representation *)
+module Output_ll : sig
 
   val pp_module : module_ -> Format.formatter -> unit
   val pp_block : block -> Format.formatter -> unit
@@ -171,9 +182,9 @@ end = struct
 
 end
 
-(** Output the LLVM IR as the Graphvis {{: https://graphviz.org/doc/info/lang.html}
-    DOT language}. This can help with visualising control-flow graphs. *)
-module Graphvis = struct
+(** Output the AST in Graphviz’s {{: https://graphviz.org/doc/info/lang.html}
+    DOT language}. This can help with visualising control flow graphs. *)
+module Output_dot = struct
 
   let pp_block (fun_id : Global_id.t) (label : Label.t) (block : block) (out : Out_channel.t) = begin
     let rec outgoing_labels block =
@@ -183,14 +194,16 @@ module Graphvis = struct
       | Term (Br_i1 (_, label1, label2)) -> [label1; label2]
       | Term (Ret (_, _)) -> []
     in
+
     let label_string label =
       Format.asprintf "\"%t.%t\"" (Global_id.pp fun_id) (Label.pp label)
     in
-    let block_label =
+
+    let block_text =
       Format.asprintf "@[<v>%t@]"
         (fun ppf ->
-          Format.pp_set_margin ppf 70;
-          Pretty.pp_block block ppf)
+          (* Format.pp_set_margin ppf 70; *)
+          Output_ll.pp_block block ppf)
     in
 
     (* Basic block *)
@@ -198,16 +211,14 @@ module Graphvis = struct
     Printf.fprintf out "    %s [\n" (label_string label);
     Printf.fprintf out "      label=<<table color=\"black\" border=\"0\" cellborder=\"0\" cellpadding=\"3\">\n";
     Printf.fprintf out "        <th><td align=\"left\" border=\"1\" sides=\"b\">%s:</td></th>\n" (Label.to_string label);
-    String.split_on_char '\n' block_label |> List.iter begin fun line ->
-      Printf.fprintf out "        <tr><td align=\"left\">%s</td></tr>\n" line;
-    end;
+    String.split_on_char '\n' block_text |> List.iter (Printf.fprintf out "        <tr><td align=\"left\">%s</td></tr>\n");
     Printf.fprintf out "      </table>>\n";
     Printf.fprintf out "    ];\n";
 
     (* Control flow edges *)
     outgoing_labels block |> List.iter begin fun end_label ->
       Printf.fprintf out "    %s -> %s;\n" (label_string label) (label_string end_label)
-    end
+    end;
   end
 
   let pp_module ({ funs } : module_) (out : Out_channel.t) = begin
@@ -236,14 +247,14 @@ module Graphvis = struct
       Printf.fprintf out "    label=<<table color=\"black\" border=\"0\" cellborder=\"0\" cellpadding=\"3\">\n";
       Printf.fprintf out "      <th><td align=\"left\" border=\"1\" sides=\"b\">\n";
       Printf.fprintf out "        %s %s(%t)\n"
-        (Pretty.pp_ty result_ty |> Format.asprintf "%t")
-        (Pretty.pp_global_id id |> Format.asprintf "%t")
+        (Output_ll.pp_ty result_ty |> Format.asprintf "%t")
+        (Output_ll.pp_global_id id |> Format.asprintf "%t")
         (fun out ->
           params |> Iarray.iteri begin fun i (ty, id) ->
             if i <> 0 then Printf.fprintf out ", ";
             Printf.fprintf out "%s %s"
-              (Pretty.pp_ty ty |> Format.asprintf "%t")
-              (Pretty.pp_local_id id |> Format.asprintf "%t");
+              (Output_ll.pp_ty ty |> Format.asprintf "%t")
+              (Output_ll.pp_local_id id |> Format.asprintf "%t");
           end);
       Printf.fprintf out "      </td></th>\n";
       Printf.fprintf out "    </table>>;\n";

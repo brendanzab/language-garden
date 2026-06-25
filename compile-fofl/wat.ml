@@ -49,8 +49,8 @@ type module_ = {
 }
 
 
-(** Pretty printing to the web assembly text format *)
-module Pretty = struct
+(** Output the AST to the WebAssembly text format (WAT) *)
+module Output_wat = struct
 
   let pp_quoted s ppf = Format.fprintf ppf "\"%s\"" s
   let pp_i32 i ppf = Format.fprintf ppf "%li" i
