@@ -193,7 +193,7 @@ module Graphvis = struct
     (* Basic block *)
     Printf.fprintf out "\n";
     Printf.fprintf out "    %s [\n" (label_string label);
-    Printf.fprintf out "      label=<<table border=\"0\" cellborder=\"0\" cellpadding=\"3\">\n";
+    Printf.fprintf out "      label=<<table color=\"black\" border=\"0\" cellborder=\"0\" cellpadding=\"3\">\n";
     Printf.fprintf out "        <th><td align=\"left\" border=\"1\" sides=\"b\">%s:</td></th>\n" (Label.to_string label);
     String.split_on_char '\n' block_label |> List.iter begin fun line ->
       Printf.fprintf out "        <tr><td align=\"left\">%s</td></tr>\n" line;
@@ -210,15 +210,16 @@ module Graphvis = struct
   let pp_module ({ funs } : module_) (out : Out_channel.t) = begin
     Printf.fprintf out "digraph llvm_ir {\n";
     Printf.fprintf out "  graph [\n";
-    Printf.fprintf out "    fontname=\"Monaco\";\n";
+    Printf.fprintf out "    fontname=\"Monaco, monospace\";\n";
     Printf.fprintf out "    color=\"none\";\n";
     Printf.fprintf out "    fillcolor=\"gainsboro\";\n";
     Printf.fprintf out "    style=\"filled, rounded\";\n";
     Printf.fprintf out "  ]\n";
     Printf.fprintf out "\n";
     Printf.fprintf out "  node [\n";
-    Printf.fprintf out "    fontname=\"Monaco\";\n";
+    Printf.fprintf out "    fontname=\"Monaco, monospace\";\n";
     Printf.fprintf out "    shape=\"box\";\n";
+    Printf.fprintf out "    color=\"none\";\n";
     Printf.fprintf out "    fillcolor=\"white\";\n";
     Printf.fprintf out "    style=\"filled, rounded\";\n";
     Printf.fprintf out "  ]\n";
@@ -229,7 +230,9 @@ module Graphvis = struct
       Printf.fprintf out "  subgraph \"%s\" {\n" (Global_id.to_string id);
 
       (* Function signature *)
-      Printf.fprintf out "    label=\"%s %s(%t)\";\n"
+      Printf.fprintf out "    label=<<table color=\"black\" border=\"0\" cellborder=\"0\" cellpadding=\"3\">\n";
+      Printf.fprintf out "      <th><td align=\"left\" border=\"1\" sides=\"b\">\n";
+      Printf.fprintf out "        %s %s(%t)\n"
         (Pretty.pp_ty result_ty |> Format.asprintf "%t")
         (Pretty.pp_global_id id |> Format.asprintf "%t")
         (fun out ->
@@ -239,6 +242,8 @@ module Graphvis = struct
               (Pretty.pp_ty ty |> Format.asprintf "%t")
               (Pretty.pp_local_id id |> Format.asprintf "%t");
           end);
+      Printf.fprintf out "      </td></th>\n";
+      Printf.fprintf out "    </table>>;\n";
       Printf.fprintf out "    cluster=true;\n";
 
       (* Control flow graph *)
