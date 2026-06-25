@@ -175,13 +175,16 @@ let translate_expr
         k (expr :: exprs)
   in
 
-  let entry =
+  let entry_label = fresh_label "entry" in
+  let entry_block =
     let@ result = go_expr local_env "result" expr in
     Llvm.(Term (Ret (ty, result)))
   in
-  let blocks = make_iarray blocks in
 
-  Llvm.{ entry; blocks }
+  Llvm.{
+    entry = entry_label, entry_block;
+    blocks = make_iarray blocks;
+  }
 
 (** Translate a core language module into an LLVM module  *)
 let translate_module (mod_ : Core.Module.t) : Llvm.module_ =

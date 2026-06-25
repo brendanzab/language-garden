@@ -1,4 +1,5 @@
 define i32 @nested-if(i32 %x, i32 %y) {
+entry:
   %cond_1 = icmp eq i32 %x, 0
   br i1 %cond_1, label %if_true, label %if_false
 if_true_1:

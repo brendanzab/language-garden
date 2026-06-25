@@ -59,7 +59,7 @@ type block =
 
 (* Control flow graph of a function *)
 type cfg = {
-  entry : block;
+  entry : Label.t * block;
   blocks : (Label.t * block) Iarray.t;
 }
 
@@ -158,14 +158,15 @@ end = struct
         pp_term term ppf
 
   let pp_cfg ({ entry; blocks; } : cfg) (ppf : Format.formatter) =
+    let pp_labelled_block (label, block) ppf =
+      Format.fprintf ppf "%t:@,%t" (Label.pp label) (pp_block block)
+    in
     if Iarray.length blocks = 0 then
-      pp_block entry ppf
+      pp_labelled_block entry ppf
     else
       Format.fprintf ppf "%t@ %t"
-        (pp_block entry)
-        (blocks |> pp_iarray
-          (fun (label, block) ppf ->
-            Format.fprintf ppf "%t:@,%t" (Label.pp label) (pp_block block)))
+        (pp_labelled_block entry)
+        (blocks |> pp_iarray pp_labelled_block)
 
   let pp_fun (id, { result_ty; params; cfg } : Global_id.t * fun_) (ppf : Format.formatter) =
     let pp_param (ty, id) ppf =
@@ -186,7 +187,7 @@ end
     DOT language}. This can help with visualising control flow graphs. *)
 module Output_dot = struct
 
-  let pp_block (fun_id : Global_id.t) (label : Label.t) (block : block) (out : Out_channel.t) = begin
+  let pp_block (fun_id : Global_id.t) (label, block : Label.t * block) (out : Out_channel.t) = begin
     let rec outgoing_labels block =
       match block with
       | Instr (_, _, block) -> outgoing_labels block
@@ -261,9 +262,9 @@ module Output_dot = struct
       Printf.fprintf out "    cluster=true;\n";
 
       (* Control flow graph *)
-      pp_block id (Label.make "entry") cfg.entry out;
+      pp_block id cfg.entry out;
       cfg.blocks |> Iarray.iter begin fun (label, block) ->
-        pp_block id label block out;
+        pp_block id (label, block) out;
       end;
 
       Printf.fprintf out "  }\n";

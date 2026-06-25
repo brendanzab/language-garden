@@ -1,4 +1,5 @@
 define i32 @fact(i32 %n) {
+entry:
   %cond = icmp eq i32 %n, 0
   br i1 %cond, label %if_true, label %if_false
 if_true:
@@ -18,6 +19,7 @@ if_end:
 }
 
 define i32 @test-fact() {
+entry:
   %result = call i32 @fact(i32 5)
   ret i32 %result
 }

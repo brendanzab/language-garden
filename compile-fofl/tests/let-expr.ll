@@ -1,4 +1,5 @@
 define i32 @test(i1 %b) {
+entry:
   br i1 %b, label %if_true, label %if_false
 if_true:
   %true_result = add i32 42, 1
@@ -17,6 +18,7 @@ if_end:
 }
 
 define i32 @text-shadow(i32 %x) {
+entry:
   %x_1 = add i32 %x, 1
   %x_2 = mul i32 %x_1, 3
   ret i32 %x_2

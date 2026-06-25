@@ -1,4 +1,5 @@
 define i32 @ackermann(i32 %m, i32 %n) {
+entry:
   %cond_1 = icmp eq i32 %m, 0
   br i1 %cond_1, label %if_true, label %if_false
 if_true:
