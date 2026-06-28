@@ -105,39 +105,41 @@ def infer : Tm → Option Ty
     | some .bool, some .bool, some .bool => some .bool
     | _, _, _ => none
 
-theorem has_type_implies_check (tm : Tm) (ty : Ty) : HasType tm ty → check tm ty = true := by
+/-- Proofs -/
+
+theorem has_type_implies_check {tm : Tm} {ty : Ty} : HasType tm ty → check tm ty = true := by
   intros h
   induction h with
   | int | true | false => rfl
-  | add _ _ ih₁ ih₂
-  | equal _ _ ih₁ ih₂ =>
+  | add tm₁ tm₂ ih₁ ih₂
+  | equal tm₁ tm₂ ih₁ ih₂ =>
       simp [check]
       exact ⟨ih₁, ih₂⟩
-  | ifThenElse _ _ _ ih₁ ih₂ ih₃ =>
+  | ifThenElse tm₁ tm₂ tm₃ ih₁ ih₂ ih₃ =>
       simp [check]
       exact ⟨⟨ih₁, ih₂⟩, ih₃⟩
 
-theorem check_implies_has_type (tm : Tm) (ty : Ty) : check tm ty = true → HasType tm ty := by
+theorem check_implies_has_type {tm : Tm} {ty : Ty} : check tm ty = true → HasType tm ty := by
   intros h
   induction tm generalizing ty with
   | int =>
       cases ty with
       | int => exact HasType.int
       | bool => simp [check] at h
-  | add _ _ ih₁ ih₂ =>
+  | add tm₁ tm₂ ih₁ ih₂ =>
       cases ty with
       | int =>
           simp [check] at h
           obtain ⟨h₁, h₂⟩ := h
-          exact HasType.add (ih₁ _ h₁) (ih₂ _ h₂)
+          exact HasType.add (ih₁ h₁) (ih₂ h₂)
       | bool => simp [check] at h
-  | equal _ _ ih₁ ih₂ =>
+  | equal tm₁ tm₂ ih₁ ih₂ =>
       cases ty with
       | int => simp [check] at h
       | bool =>
           simp [check] at h
           obtain ⟨h₁, h₂⟩ := h
-          exact HasType.equal (ih₁ _ h₁) (ih₂ _ h₂)
+          exact HasType.equal (ih₁ h₁) (ih₂ h₂)
   | true =>
       cases ty with
       | int => simp [check] at h
@@ -146,57 +148,61 @@ theorem check_implies_has_type (tm : Tm) (ty : Ty) : check tm ty = true → HasT
       cases ty with
       | int => simp [check] at h
       | bool => exact HasType.false
-  | ifThenElse _ _ _ ih₁ ih₂ ih₃ =>
+  | ifThenElse tm₁ tm₂ tm₃ ih₁ ih₂ ih₃ =>
       simp [check] at h
       obtain ⟨⟨h₁, h₂⟩, h₃⟩ := h
-      exact HasType.ifThenElse (ih₁ _ h₁) (ih₂ _ h₂) (ih₃ _ h₃)
+      exact HasType.ifThenElse (ih₁ h₁) (ih₂ h₂) (ih₃ h₃)
 
-theorem check_correct (tm : Tm) (ty : Ty) : (check tm ty = true) = HasType tm ty :=
-  Eq.propIntro (check_implies_has_type tm ty) (has_type_implies_check tm ty)
+theorem check_correct {tm : Tm} {ty : Ty} : (check tm ty = true) = HasType tm ty :=
+  Eq.propIntro check_implies_has_type has_type_implies_check
 
-theorem has_type_implies_infer (tm : Tm) (ty : Ty) : HasType tm ty → infer tm = some ty := by
+theorem has_type_implies_infer {tm : Tm} {ty : Ty} : HasType tm ty → infer tm = some ty := by
   intros h
   induction h with
   | int | true | false => rfl
-  | add _ _ ih₁ ih₂
-  | equal _ _ ih₁ ih₂ =>
+  | add tm₁ tm₂ ih₁ ih₂
+  | equal tm₁ tm₂ ih₁ ih₂ =>
       simp [infer]
       split
       . case h_1 => rfl
       . case h_2 hf => exact False.elim (hf ih₁ ih₂)
-  | @ifThenElse _ _ _ ty h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
+  | @ifThenElse tm₁ tm₂ tm₃ ty h₁ h₂ h₃ ih₁ ih₂ ih₃ =>
       simp [infer]
       split
-      .case h_1 _ he₂ _ => rw [← ih₂]; exact he₂.symm
-      .case h_2 _ he₂ _ => rw [← ih₂]; exact he₂.symm
-      .case h_3 hf₁ hf₂ =>
+      . case h_1 heq₁ heq₂ heq₃ =>
+          rw [← ih₂]
+          exact heq₂.symm
+      . case h_2 heq₁ heq₂ heq₃ =>
+          rw [← ih₂]
+          exact heq₂.symm
+      . case h_3 hf₁ hf₂ =>
           cases ty with
           | int => exact False.elim (hf₁ ih₁ ih₂ ih₃)
           | bool => exact False.elim (hf₂ ih₁ ih₂ ih₃)
 
-theorem infer_implies_has_type (tm : Tm) (ty : Ty) : (infer tm = some ty) → HasType tm ty := by
+theorem infer_implies_has_type {tm : Tm} {ty : Ty} : (infer tm = some ty) → HasType tm ty := by
   intros h
   induction tm generalizing ty with
   | int =>
       cases ty with
       | int => exact HasType.int
       | bool => simp [infer] at h
-  | add _ _ ih₁ ih₂ =>
+  | add tm₁ tm₂ ih₁ ih₂ =>
       simp [infer] at h
       split at h
-      . case h_1 h₁ h₂ =>
+      . case h_1 heq₁ heq₂ =>
           injection h with hty
           rw [← hty]
-          exact HasType.add (ih₁ _ h₁) (ih₂ _ h₂)
+          exact HasType.add (ih₁ heq₁) (ih₂ heq₂)
       . case h_2 =>
           nomatch h
-  | equal _ _ ih₁ ih₂ =>
+  | equal tm₁ tm₂ ih₁ ih₂ =>
       simp [infer] at h
       split at h
-      . case h_1 h₁ h₂ =>
+      . case h_1 heq₁ heq₂ =>
           injection h with hty
           rw [← hty]
-          exact HasType.equal (ih₁ _ h₁) (ih₂ _ h₂)
+          exact HasType.equal (ih₁ heq₁) (ih₂ heq₂)
       . case h_2 =>
           nomatch h
   | true =>
@@ -207,26 +213,45 @@ theorem infer_implies_has_type (tm : Tm) (ty : Ty) : (infer tm = some ty) → Ha
       cases ty with
       | int => simp [infer] at h
       | bool => exact HasType.false
-  | ifThenElse  _ _ _ ih₁ ih₂ ih₃ =>
+  | ifThenElse  tm₁ tm₂ tm₃ ih₁ ih₂ ih₃ =>
       simp [infer] at h
       split at h
-      . case h_1 h₁ h₂ h₃ =>
+      . case h_1 heq₁ heq₂ heq₃ =>
           injection h with hty
           rw [← hty]
-          exact HasType.ifThenElse (ih₁ _ h₁) (ih₂ _ h₂) (ih₃ _ h₃)
-      . case h_2 h₁ h₂ h₃ =>
+          exact HasType.ifThenElse (ih₁ heq₁) (ih₂ heq₂) (ih₃ heq₃)
+      . case h_2 heq₁ heq₂ heq₃ =>
           injection h with hty
           rw [← hty]
-          exact HasType.ifThenElse (ih₁ _ h₁) (ih₂ _ h₂) (ih₃ _ h₃)
+          exact HasType.ifThenElse (ih₁ heq₁) (ih₂ heq₂) (ih₃ heq₃)
       . case h_3 =>
           nomatch h
 
-theorem infer_correct (tm : Tm) (ty : Ty) : (infer tm = some ty) = HasType tm ty :=
-  Eq.propIntro (infer_implies_has_type tm ty) (has_type_implies_infer tm ty)
+theorem infer_correct {tm : Tm} {ty : Ty} : (infer tm = some ty) = HasType tm ty :=
+  Eq.propIntro infer_implies_has_type has_type_implies_infer
 
--- We can actually use the grind tactic here, but it’s not very illuminating
-theorem check_correct' (tm : Tm) (ty : Ty) : (check tm ty = true) = HasType tm ty := by
+-- The grind tactic can be used to golf some of these proofs, trading clarity
+-- for succinctness:
+
+theorem check_correct' {tm : Tm} {ty : Ty} : (check tm ty = true) = HasType tm ty := by
   fun_induction check <;> grind [HasType]
 
--- theorem infer_correct' (tm : Tm) (ty : Ty) : (infer tm = some ty) = HasType tm ty := by
---   fun_induction infer <;> grind [HasType]
+theorem infer_correct' {tm : Tm} {ty : Ty} : (infer tm = some ty) = HasType tm ty := by
+  apply Eq.propIntro
+  . case h₁ =>
+      intro (h : infer tm = some ty)
+      induction tm generalizing ty with
+      | int | true | false =>
+          cases ty <;> simp [infer] at h
+          constructor
+      | add | equal | ifThenElse =>
+          simp [infer] at h
+          split at h <;> grind [HasType]
+  . case h₂ =>
+      intro (h : HasType tm ty)
+      induction h with
+      | int | true | false => rfl
+      | add | equal => grind [infer]
+      | @ifThenElse tm₁ tm₂ tm₃ ty =>
+          simp [infer]
+          split <;> cases ty <;> grind
