@@ -11,11 +11,13 @@
     implemented the matching from section 3.2 without this, then realised the
     algorithm could only make progress if the expressions were normalised first.
 
-    Related implementations:
+    Related implementations and links:
 
-    - https://github.com/ulysses4ever/rere/blob/master/rere.m
-    - https://github.com/bobatkey/foveran/blob/master/src/Data/FiniteStateMachine/RegexpDerivatives.hs
     - https://github.com/monaddle/regex-deriv/blob/master/src/main/scala/com/github/dlomsak/regex/deriv/
+    - https://github.com/bobatkey/foveran/blob/master/src/Data/FiniteStateMachine/RegexpDerivatives.hs
+    - https://matt.might.net/articles/implementation-of-regular-expression-matching-in-scheme-with-derivatives/
+    - https://well-typed.com/blog/2020/06/fix-ing-regular-expressions/
+      - https://github.com/ulysses4ever/rere/blob/master/rere.m
 *)
 
 module type Symbol = sig
