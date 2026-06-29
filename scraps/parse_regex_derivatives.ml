@@ -367,48 +367,48 @@ module Regex = struct
 
   end
 
-end
+  (** Regular expressions over strings of characters *)
+  module Char : sig
 
+    include S with type Symbol.t = char
 
-module Char_regex : sig
-
-  include Regex.S with type Symbol.t = char
-
-  val char : char -> t
-  val string : string -> t
-
-  val match_string : t -> string -> bool
-
-  module Dfa : sig
-
-    include module type of Dfa
+    val char : char -> t
+    val string : string -> t
 
     val match_string : t -> string -> bool
 
-  end
+    module Dfa : sig
 
-end = struct
+      include module type of Dfa
 
-  include Regex.Make (struct
-    include Char
-    let pp c ppf = Format.pp_print_char ppf c
-  end)
+      val match_string : t -> string -> bool
 
-  let char (c : char) : t =
-    symbol c
+    end
 
-  let string (s : string) : t =
-    String.fold_right (fun c r -> concat (char c) r) s empty
+  end = struct
 
-  let rec match_string (r : t) (cs : string) =
-    match_seq r (String.to_seq cs)
+    include Make (struct
+      include Char
+      let pp c ppf = Format.pp_print_char ppf c
+    end)
 
-  module Dfa = struct
+    let char (c : char) : t =
+      symbol c
 
-    include Dfa
+    let string (s : string) : t =
+      String.fold_right (fun c r -> concat (char c) r) s empty
 
-    let rec match_string (dfa : t) (cs : string) =
-      match_seq dfa (String.to_seq cs)
+    let rec match_string (r : t) (cs : string) =
+      match_seq r (String.to_seq cs)
+
+    module Dfa = struct
+
+      include Dfa
+
+      let rec match_string (dfa : t) (cs : string) =
+        match_seq dfa (String.to_seq cs)
+
+    end
 
   end
 
@@ -419,7 +419,7 @@ module Test = struct
 
   Printexc.record_backtrace true
 
-  module R = Char_regex
+  module R = Regex.Char
 
   let ( <*> ) = R.concat
   let ( <&> ) = R.inter
