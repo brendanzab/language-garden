@@ -87,6 +87,9 @@ module Regex = struct
       (** [match_seq dfa seq] returns true if the sequence of symbols is
           accepted by the DFA. *)
 
+      (* TODO: Would be neat if we could output the DFA as Graphviz DOT
+         See https://github.com/katef/libfsm for inspiration! *)
+
     end
 
   end
