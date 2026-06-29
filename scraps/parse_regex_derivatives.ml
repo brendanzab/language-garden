@@ -6,9 +6,6 @@
       Regular-expression derivatives re-examined.
       https://doi.org/10.1017/S0956796808007090
 
-    I’ve only implemented matching with derivatives at the moment - DFA
-    construction and support for character classes are left for future work.
-
     I found the biggest challenge was figuring out how to normalise the regular
     expressions based on the equivalences in section 4.1. Initially I naively
     implemented the matching from section 3.2 without this, then realised the
@@ -36,14 +33,14 @@ module Regex = struct
   module type S = sig
 
     type t
-    (** Regular expressions, in normal form *)
+    (** Regular expressions in normal form *)
 
-    type symbol
+    module Symbol : Symbol
     (** An alphabet of symbols *)
 
     val fail : t
     val empty : t
-    val symbol : symbol -> t
+    val symbol : Symbol.t -> t
     val concat : t -> t -> t
     val union : t -> t -> t
     val inter : t -> t -> t
@@ -66,34 +63,49 @@ module Regex = struct
         - [fail] if the expression never matches the empty string
     *)
 
-    val derivative : t -> symbol -> t
+    val derivative : t -> Symbol.t -> t
     (** [derivative r a] returns a regular expression that matches the suffix of
         strings matched by [r], beginning with a leading [a] symbol. *)
 
-    val match_seq : t -> symbol Seq.t -> bool
+    val match_seq : t -> Symbol.t Seq.t -> bool
     (** [match_seq r seq] returns true if the sequence of symbols [seq] is in
         the language described by [r]. *)
+
+    type regex = t
+
+    module Dfa : sig
+
+      type t
+      (** Deterministic finite automaton (DFA) *)
+
+      val make : regex -> t
+      (** Compile a regular expression to a DFA *)
+
+      val match_seq : t -> Symbol.t Seq.t -> bool
+      (** [match_seq dfa seq] returns true if the sequence of symbols is
+          accepted by the DFA. *)
+
+    end
 
   end
 
   module Make (A : Symbol) : S
-    with type symbol = A.t
+    with type Symbol.t = A.t
   = struct
 
     (** {1 Syntax (Section 2.1)} *)
 
+    module Symbol = A
+
     type t =
       | Fail                  (* ∅ *)
       | Empty                 (* ε *)
-      | Symbol of A.t         (* ɑ *)
+      | Symbol of Symbol.t         (* ɑ *)
       | Concat of t * t       (* r · s *)
       | Repeat of t           (* r* *)
       | Union of t * t        (* r + s *)
       | Inter of t * t        (* r & s *)
       | Compl of t            (* ¬r *)
-
-    type symbol = A.t
-
 
     (** {1 Pretty printing} *)
 
@@ -242,7 +254,7 @@ module Regex = struct
           | Empty -> fail
           | _ -> failwith "expected Fail or Empty"
 
-    let rec derivative (r : t) (a : symbol) : t =
+    let rec derivative (r : t) (a : Symbol.t) : t =
       match r with
       | Fail -> fail
       | Empty -> fail
@@ -256,15 +268,102 @@ module Regex = struct
 
     (** {1 Matching (Section 3.2)} *)
 
-    let rec match_seq (r : t) (cs : symbol Seq.t) =
+    let rec match_seq (r : t) (cs : Symbol.t Seq.t) =
       match Seq.uncons cs with
       | None -> nullable r = Empty
       | Some (c, cs) -> match_seq (derivative r c) cs
 
 
-    (** {1 DFA (Section 3.3)} *)
+    (** {1 DFAs (Section 3.3)} *)
 
-    (* TODO *)
+    type regex = t
+
+    module Dfa = struct
+
+      (* NOTE: This currently uses regular expressions directly for states.
+         Interning these as integers might help to improve the performance of
+         map operations. *)
+
+      module Symbol_set = Set.Make (Symbol)
+
+      module State_set = Set.Make (struct
+        type t = regex
+        let compare = compare
+      end)
+
+      module Trans_map = Map.Make (struct
+        type t = regex * Symbol.t
+        let compare = Pair.compare compare Symbol.compare
+      end)
+
+      type t = {
+        states : State_set.t;
+        start_state : regex;
+        final_states : State_set.t;
+        trans : regex Trans_map.t;
+      }
+
+      (** {1 DFA Construction (Section 3.3)} *)
+
+      type partial_dfa = {
+        used_symbols : Set.Make (Symbol).t;
+        states : State_set.t;
+        trans : regex Trans_map.t;
+      }
+
+      (** Returns a set of the symbols that appear in a regular expression *)
+      let used_symbols (r : regex) : Symbol_set.t =
+        let module S = Set.Make (Symbol) in
+        let rec go r symbols =
+          match r with
+          | Fail -> symbols
+          | Empty -> symbols
+          | Symbol a -> S.add a symbols
+          | Repeat r | Compl r -> go r symbols
+          | Concat (r, s) | Union (r, s) | Inter (r, s) -> symbols |> go r |> go s
+        in
+        go r S.empty
+
+      let rec goto (q : regex) (c : Symbol.t) (dfa : partial_dfa) : partial_dfa =
+        let qc = derivative q c in
+        if State_set.mem qc dfa.states then begin
+          let trans = dfa.trans |> Trans_map.add (q, c) qc in
+          { dfa with trans }
+        end else
+          let states = dfa.states |> State_set.add qc in
+          let trans = dfa.trans |> Trans_map.add (q, c) qc in
+          explore qc { dfa with states; trans }
+
+      and explore (q : regex) (dfa : partial_dfa) : partial_dfa =
+        Symbol_set.fold (goto q) dfa.used_symbols dfa
+
+      (** Construct a DFA from a regular expression *)
+      let make (r : regex) : t =
+        let start_state = r in
+        let { states; trans; _ } = explore start_state {
+          used_symbols = used_symbols r;
+          states = State_set.singleton start_state;
+          trans = Trans_map.empty;
+        } in
+        let final_states = states |> State_set.filter (fun q -> nullable q = Empty) in
+        { states; start_state; final_states; trans }
+
+      (** Match a sequence of characters using a DFA (See section 2.2) *)
+      let match_seq (dfa : t) (cs : Symbol.t Seq.t) =
+        let ( let* ) = Option.bind in
+
+        let rec trans q cs =
+          match Seq.uncons cs with
+          | None -> Some q
+          | Some (c, cs) ->
+              let* q' = Trans_map.find_opt (q, c) dfa.trans in
+              trans q' cs
+        in
+        match trans dfa.start_state cs with
+        | Some final_state -> State_set.mem final_state dfa.final_states
+        | None -> false
+
+    end
 
   end
 
@@ -273,10 +372,20 @@ end
 
 module Char_regex : sig
 
-  include Regex.S with type symbol = char
+  include Regex.S with type Symbol.t = char
 
+  val char : char -> t
   val string : string -> t
+
   val match_string : t -> string -> bool
+
+  module Dfa : sig
+
+    include module type of Dfa
+
+    val match_string : t -> string -> bool
+
+  end
 
 end = struct
 
@@ -294,10 +403,21 @@ end = struct
   let rec match_string (r : t) (cs : string) =
     match_seq r (String.to_seq cs)
 
+  module Dfa = struct
+
+    include Dfa
+
+    let rec match_string (dfa : t) (cs : string) =
+      match_seq dfa (String.to_seq cs)
+
+  end
+
 end
 
 
 module Test = struct
+
+  Printexc.record_backtrace true
 
   module R = Char_regex
 
@@ -502,6 +622,49 @@ module Test = struct
     assert (R.match_string r "bbbb" = true);
     assert (R.match_string r "bbbbb" = false);
     assert (R.match_string r "aba" = false);
+  end
+
+  (* DFA matching tests *)
+
+  let () = begin
+    let r = R.(concat (symbol 'a') (repeat (symbol 'b')) |> Dfa.make) in
+    assert (R.Dfa.match_string r "abb" = true);
+    assert (R.Dfa.match_string r "aba" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (symbol 'b') (symbol 'b') |> Dfa.make) in
+    assert (R.Dfa.match_string r "b" = true);
+    assert (R.Dfa.match_string r "bb" = false);
+    assert (R.Dfa.match_string r "a" = false);
+    assert (R.Dfa.match_string r "c" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (repeat (symbol 'b')) (symbol 'b') |> Dfa.make) in
+    assert (R.Dfa.match_string r "b" = true);
+    assert (R.Dfa.match_string r "bb" = false);
+    assert (R.Dfa.match_string r "bbb" = false);
+    assert (R.Dfa.match_string r "a" = false);
+    assert (R.Dfa.match_string r "c" = false);
+    assert (R.Dfa.match_string r "ba" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (union (symbol 'a') (repeat (symbol 'b'))) (union (symbol 'b') (symbol 'c')) |> Dfa.make) in
+    assert (R.Dfa.match_string r "b" = true);
+    assert (R.Dfa.match_string r "bb" = false);
+    assert (R.Dfa.match_string r "a" = false);
+    assert (R.Dfa.match_string r "c" = false);
+  end
+
+  let () = begin
+    let r = R.(inter (repeat (string "bb")) (repeat (symbol 'b')) |> Dfa.make) in
+    assert (R.Dfa.match_string r "bb" = true);
+    assert (R.Dfa.match_string r "bbb" = false);
+    assert (R.Dfa.match_string r "bbbb" = true);
+    assert (R.Dfa.match_string r "bbbbb" = false);
+    assert (R.Dfa.match_string r "aba" = false);
   end
 
 end
