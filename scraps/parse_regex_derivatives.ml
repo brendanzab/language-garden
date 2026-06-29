@@ -177,48 +177,44 @@ module Regex = struct
       | Compl r -> r                                  (* ¬(¬r) ≈ r *)
       | r -> Compl r
 
-    (** Assumes [r < s] *)
-    let assoc_right_idemp ctor (r, s) t =
-      let c_tr = compare t r in
-      if c_tr = 0 then ctor r s
-      else if c_tr < 0 then ctor t (ctor r s)
-      else
-        let c_st = compare s t in
-        if c_st = 0 then ctor r s
-        else if c_st < 0 then ctor r (ctor s t)
-        else ctor r (ctor t s)
-
-    let commute_right_idemp ctor r s =
-      let c_rt = compare r s in
-      if c_rt = 0 then r
-      else if c_rt > 0 then ctor s r
+    (** [sort_commute ctor r s] will apply [ctor], sorting the arguments
+        lexically, and avoiding idempotent calls. *)
+    let sort_commute ctor r s =
+      let c_rs = compare r s in
+      if c_rs = 0 then r
+      else if c_rs > 0 then ctor s r
       else ctor r s
 
+    (** [sort_assoc ctor (r, s)] will right-associate nested [ctor]
+        applications, assuming [r < s]. The arguments will be sorted lexically,
+        and idempotent calls will be avoided. *)
+    let sort_assoc ctor (r, s) t =
+      let c_rt = compare r t in
+      if c_rt = 0 then ctor r s
+      else if c_rt > 0 then ctor t (ctor r s)
+      else ctor r (sort_commute ctor s t)
+
     let union r s =
+      let union r s = Union (r, s) in
       match r, s with
       | Fail, r | r, Fail -> r                        (* ∅ + r ≈ r *)
       | Compl Fail, r | r, Compl Fail -> Compl Fail   (* ¬∅ + r ≈ ¬∅ *)
-      | Union (r, s), t | t, Union (r, s) ->
-          (* r + r ≈ r *)
-          (* (r + s) + t ≈ r + (s + t) *)
-          assoc_right_idemp (fun r s -> Union (r, s)) (r, s) t
-      | r, s ->
-          (* r + r ≈ r *)
-          (* r + s ≈ s + r *)
-          commute_right_idemp (fun r s -> Union (r, s)) r s
+      (* r + r ≈ r *)
+      (* r + s ≈ s + r *)
+      (* (r + s) + t ≈ r + (s + t) *)
+      | Union (r, s), t | t, Union (r, s) -> sort_assoc union (r, s) t
+      | r, s ->  sort_commute union r s
 
     let inter r s =
+      let inter r s = Inter (r, s) in
       match r, s with
       | Fail, r | r, Fail -> Fail                     (* ∅ & r ≈ ∅ *)
       | Compl Fail, r | r, Compl Fail -> r            (* ¬∅ + r ≈ r *)
-      | Inter (r, s), t | t, Inter (r, s) ->
-          (* r + r ≈ r *)
-          (* (r & s) & t ≈ r & (s & t) *)
-          assoc_right_idemp (fun r s -> Inter (r, s)) (r, s) t
-      | r, s ->
-          (* r & r ≈ r *)
-          (* r & s ≈ s & r *)
-          commute_right_idemp (fun r s -> Inter (r, s)) r s
+      (* r & r ≈ r *)
+      (* r & s ≈ s & r *)
+      (* (r & s) & t ≈ r & (s & t) *)
+      | Inter (r, s), t | t, Inter (r, s) -> sort_assoc inter (r, s) t
+      | r, s -> sort_commute inter r s
 
 
     (** {1 Derivatives (Section 3.1)} *)
