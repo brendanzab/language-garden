@@ -326,10 +326,10 @@ module Regex = struct
 
       let rec goto (q : regex) (c : Symbol.t) (dfa : partial_dfa) : partial_dfa =
         let qc = derivative q c in
-        if State_set.mem qc dfa.states then begin
+        if State_set.mem qc dfa.states then
           let trans = dfa.trans |> Trans_map.add (q, c) qc in
           { dfa with trans }
-        end else
+        else
           let states = dfa.states |> State_set.add qc in
           let trans = dfa.trans |> Trans_map.add (q, c) qc in
           explore qc { dfa with states; trans }
@@ -425,12 +425,12 @@ module Test = struct
   let ( <&> ) = R.inter
   let ( <|> ) = R.union
 
+  let a = R.symbol 'a'
+  let b = R.symbol 'b'
+  let c = R.symbol 'c'
+
   (* Test normal forms (Section 4.1) *)
   let () = begin
-
-    let a = R.symbol 'a' in
-    let b = R.symbol 'b' in
-    let c = R.symbol 'c' in
 
     (* NOTE: would probably be better to use property based tests here *)
 
@@ -582,89 +582,85 @@ module Test = struct
   end
 
   (* Matching tests *)
-
   let () = begin
-    let r = R.(concat (symbol 'a') (repeat (symbol 'b'))) in
-    assert (R.match_string r "abb" = true);
-    assert (R.match_string r "aba" = false);
-  end
 
-  let () = begin
-    let r = R.(inter (symbol 'b') (symbol 'b')) in
-    assert (R.match_string r "b" = true);
-    assert (R.match_string r "bb" = false);
-    assert (R.match_string r "a" = false);
-    assert (R.match_string r "c" = false);
-  end
+    let failures = ref 0 in
+    let expect_match r s e =
+      if R.match_string r s = e then () else begin
+        Format.eprintf "FAILED: R.match_string %t ~ \"%s\" = %b\n" R.(pp r) s e;
+        incr failures
+      end
+    and expect_dfa_match r dfa s e =
+      if R.Dfa.match_string dfa s = e then () else begin
+        Format.eprintf "FAILED: R.Dfa.match_string %t ~ \"%s\" = %b\n" R.(pp r) s e;
+        incr failures
+      end
+    in
 
-  let () = begin
-    let r = R.(inter (repeat (symbol 'b')) (symbol 'b')) in
-    assert (R.match_string r "b" = true);
-    assert (R.match_string r "bb" = false);
-    assert (R.match_string r "bbb" = false);
-    assert (R.match_string r "a" = false);
-    assert (R.match_string r "c" = false);
-    assert (R.match_string r "ba" = false);
-  end
+    begin
+      let r = R.(concat a (repeat b)) in
+      let dfa = R.Dfa.make r in
 
-  let () = begin
-    let r = R.(inter (union (symbol 'a') (repeat (symbol 'b'))) (union (symbol 'b') (symbol 'c'))) in
-    assert (R.match_string r "b" = true);
-    assert (R.match_string r "bb" = false);
-    assert (R.match_string r "a" = false);
-    assert (R.match_string r "c" = false);
-  end
+      [expect_match r; expect_dfa_match r dfa] |> List.iter begin fun expect_match ->
+        expect_match "abb" true;
+        expect_match "aba" false;
+      end;
+    end;
 
-  let () = begin
-    let r = R.(inter (repeat (string "bb")) (repeat (symbol 'b'))) in
-    assert (R.match_string r "bb" = true);
-    assert (R.match_string r "bbb" = false);
-    assert (R.match_string r "bbbb" = true);
-    assert (R.match_string r "bbbbb" = false);
-    assert (R.match_string r "aba" = false);
-  end
+    begin
+      let r = R.(inter b b) in
+      let dfa = R.Dfa.make r in
 
-  (* DFA matching tests *)
+      [expect_match r; expect_dfa_match r dfa] |> List.iter begin fun expect_match ->
+        expect_match "b" true;
+        expect_match "bb" false;
+        expect_match "a" false;
+      end;
+    end;
 
-  let () = begin
-    let r = R.(concat (symbol 'a') (repeat (symbol 'b')) |> Dfa.make) in
-    assert (R.Dfa.match_string r "abb" = true);
-    assert (R.Dfa.match_string r "aba" = false);
-  end
+    begin
+      let r = R.(inter (repeat b) b) in
+      let dfa = R.Dfa.make r in
 
-  let () = begin
-    let r = R.(inter (symbol 'b') (symbol 'b') |> Dfa.make) in
-    assert (R.Dfa.match_string r "b" = true);
-    assert (R.Dfa.match_string r "bb" = false);
-    assert (R.Dfa.match_string r "a" = false);
-    assert (R.Dfa.match_string r "c" = false);
-  end
+      [expect_match r; expect_dfa_match r dfa] |> List.iter begin fun expect_match ->
+        expect_match "b" true;
+        expect_match "bb" false;
+        expect_match "bbb" false;
+        expect_match "a" false;
+        expect_match "ba" false;
+      end;
+    end;
 
-  let () = begin
-    let r = R.(inter (repeat (symbol 'b')) (symbol 'b') |> Dfa.make) in
-    assert (R.Dfa.match_string r "b" = true);
-    assert (R.Dfa.match_string r "bb" = false);
-    assert (R.Dfa.match_string r "bbb" = false);
-    assert (R.Dfa.match_string r "a" = false);
-    assert (R.Dfa.match_string r "c" = false);
-    assert (R.Dfa.match_string r "ba" = false);
-  end
+    begin
+      let r = R.(inter (union a (repeat b)) (union b c)) in
+      let dfa = R.Dfa.make r in
 
-  let () = begin
-    let r = R.(inter (union (symbol 'a') (repeat (symbol 'b'))) (union (symbol 'b') (symbol 'c')) |> Dfa.make) in
-    assert (R.Dfa.match_string r "b" = true);
-    assert (R.Dfa.match_string r "bb" = false);
-    assert (R.Dfa.match_string r "a" = false);
-    assert (R.Dfa.match_string r "c" = false);
-  end
+      [expect_match r; expect_dfa_match r dfa] |> List.iter begin fun expect_match ->
+        expect_match "b" true;
+        expect_match "bb" false;
+        expect_match "a" false;
+        expect_match "c" false;
+      end;
+    end;
 
-  let () = begin
-    let r = R.(inter (repeat (string "bb")) (repeat (symbol 'b')) |> Dfa.make) in
-    assert (R.Dfa.match_string r "bb" = true);
-    assert (R.Dfa.match_string r "bbb" = false);
-    assert (R.Dfa.match_string r "bbbb" = true);
-    assert (R.Dfa.match_string r "bbbbb" = false);
-    assert (R.Dfa.match_string r "aba" = false);
+    begin
+      let r = R.(inter (repeat (string "bb")) (repeat b)) in
+      let dfa = R.Dfa.make r in
+
+      [expect_match r; expect_dfa_match r dfa] |> List.iter begin fun expect_match ->
+        expect_match "bb" true;
+        expect_match "bbb" false;
+        expect_match "bbbb" true;
+        expect_match "bbbbb" false;
+        expect_match "aba" false;
+      end;
+    end;
+
+    if !failures > 0 then
+      Printf.ksprintf failwith "failed %i test%s"
+        !failures
+        (if !failures = 1 then "" else "s");
+
   end
 
 end
