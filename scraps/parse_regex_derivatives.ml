@@ -105,7 +105,7 @@ module Regex = struct
     type t =
       | Fail                  (* ∅ *)
       | Empty                 (* ε *)
-      | Symbol of Symbol.t         (* ɑ *)
+      | Symbol of Symbol.t    (* ɑ *)
       | Concat of t * t       (* r · s *)
       | Repeat of t           (* r* *)
       | Union of t * t        (* r + s *)
