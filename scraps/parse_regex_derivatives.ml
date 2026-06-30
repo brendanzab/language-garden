@@ -426,9 +426,9 @@ module Test = struct
 
   module R = Regex.Char
 
-  let ( <*> ) = R.concat
-  let ( <&> ) = R.inter
-  let ( <|> ) = R.union
+  let ( * ) = R.concat
+  let ( + ) = R.union
+  let ( & ) = R.inter
 
   let a = R.symbol 'a'
   let b = R.symbol 'b'
@@ -440,12 +440,15 @@ module Test = struct
     (* NOTE: would probably be better to use property based tests here *)
 
     let failures = ref 0 in
+
     let expect_equals l r =
       if R.compare l r = 0 then () else begin
         Format.eprintf "FAILED: %t = %t\n" R.(pp l) R.(pp r);
         incr failures
       end
-    and expect_not_equals l r =
+    in
+
+    let expect_not_equals l r =
       if R.compare l r <> 0 then () else begin
         Format.eprintf "FAILED: %t <> %t\n" R.(pp l) R.(pp r);
         incr failures
@@ -455,19 +458,19 @@ module Test = struct
     (* Intersection *)
     begin
 
-      expect_not_equals (a <&> b) a;
+      expect_not_equals (a & b) a;
 
       (* Idempotence *)
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (r <&> r) r;
-        expect_equals r (r <&> r);
+        expect_equals (r & r) r;
+        expect_equals r (r & r);
       end;
 
       (* Commutativity *)
       [a; b; c] |> List.iter begin fun r ->
         [a; b; c] |> List.iter begin fun s ->
-          expect_equals (r <&> s) (r <&> s);
-          expect_equals (s <&> r) (r <&> s);
+          expect_equals (r & s) (r & s);
+          expect_equals (s & r) (r & s);
         end;
       end;
 
@@ -475,20 +478,20 @@ module Test = struct
       [a; b; c] |> List.iter begin fun r ->
         [a; b; c] |> List.iter begin fun s ->
           [a; b; c] |> List.iter begin fun t ->
-            expect_equals (r <&> (s <&> t)) ((r <&> s) <&> t);
-            expect_equals ((r <&> s) <&> t) (r <&> (s <&> t));
+            expect_equals (r & (s & t)) ((r & s) & t);
+            expect_equals ((r & s) & t) (r & (s & t));
           end;
         end;
       end;
 
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (R.fail <&> r) R.fail;
-        expect_equals (r <&> R.fail) R.fail;
+        expect_equals (R.fail & r) R.fail;
+        expect_equals (r & R.fail) R.fail;
       end;
 
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (R.compl R.fail <&> r) r;
-        expect_equals (r <&> R.compl R.fail) r;
+        expect_equals (R.compl R.fail & r) r;
+        expect_equals (r & R.compl R.fail) r;
       end;
 
     end;
@@ -496,19 +499,19 @@ module Test = struct
     (* Union *)
     begin
 
-      expect_not_equals (a <|> b) a;
+      expect_not_equals (a + b) a;
 
       (* Idempotence *)
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (r <|> r) r;
-        expect_equals r (r <|> r);
+        expect_equals (r + r) r;
+        expect_equals r (r + r);
       end;
 
       (* Commutativity *)
       [a; b; c] |> List.iter begin fun r ->
         [a; b; c] |> List.iter begin fun s ->
-          expect_equals (r <|> s) (r <|> s);
-          expect_equals (s <|> r) (r <|> s);
+          expect_equals (r + s) (r + s);
+          expect_equals (s + r) (r + s);
         end;
       end;
 
@@ -516,20 +519,20 @@ module Test = struct
       [a; b; c] |> List.iter begin fun r ->
         [a; b; c] |> List.iter begin fun s ->
           [a; b; c] |> List.iter begin fun t ->
-            expect_equals (r <|> (s <|> t)) ((r <|> s) <|> t);
-            expect_equals ((r <|> s) <|> t) (r <|> (s <|> t));
+            expect_equals (r + (s + t)) ((r + s) + t);
+            expect_equals ((r + s) + t) (r + (s + t));
           end;
         end;
       end;
 
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (R.fail <|> r) r;
-        expect_equals (r <|> R.fail) r;
+        expect_equals (R.fail + r) r;
+        expect_equals (r + R.fail) r;
       end;
 
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (R.compl R.fail <|> r) (R.compl R.fail);
-        expect_equals (r <|> R.compl R.fail) (R.compl R.fail);
+        expect_equals (R.compl R.fail + r) (R.compl R.fail);
+        expect_equals (r + R.compl R.fail) (R.compl R.fail);
       end;
 
     end;
@@ -541,22 +544,22 @@ module Test = struct
       [a; b; c] |> List.iter begin fun r ->
         [a; b; c] |> List.iter begin fun s ->
           [a; b; c] |> List.iter begin fun t ->
-            expect_equals (r <*> (s <*> t)) ((r <*> s) <*> t);
-            expect_equals ((r <*> s) <*> t) (r <*> (s <*> t));
+            expect_equals (r * (s * t)) ((r * s) * t);
+            expect_equals ((r * s) * t) (r * (s * t));
           end;
         end;
       end;
 
       (* Annihilation *)
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (r <*> R.fail) R.fail;
-        expect_equals (R.fail <*> r) R.fail;
+        expect_equals (r * R.fail) R.fail;
+        expect_equals (R.fail * r) R.fail;
       end;
 
       (* Absorption *)
       [a; b; c] |> List.iter begin fun r ->
-        expect_equals (r <*> R.empty) r;
-        expect_equals (R.empty <*> r) r;
+        expect_equals (r * R.empty) r;
+        expect_equals (R.empty * r) r;
       end;
 
     end;
