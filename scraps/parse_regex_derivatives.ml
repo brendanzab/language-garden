@@ -318,16 +318,15 @@ module Regex = struct
 
       (** Returns a set of the symbols that appear in a regular expression *)
       let used_symbols (r : regex) : Symbol_set.t =
-        let module S = Set.Make (Symbol) in
         let rec go r symbols =
           match r with
           | Fail -> symbols
           | Empty -> symbols
-          | Symbol a -> S.add a symbols
+          | Symbol a -> Symbol_set.add a symbols
           | Repeat r | Compl r -> go r symbols
           | Concat (r, s) | Union (r, s) | Inter (r, s) -> symbols |> go r |> go s
         in
-        go r S.empty
+        go r Symbol_set.empty
 
       let rec goto (q : regex) (c : Symbol.t) (dfa : partial_dfa) : partial_dfa =
         let qc = derivative q c in
