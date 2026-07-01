@@ -72,8 +72,8 @@ let compile_wat_cmd (enable_tail_call : bool) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   parse_module source
   |> elab_module source
-  |> Core_to_wat.translate_module ~enable_tail_call
-  |> Wat.Output_wat.pp_module
+  |> Core_to_wasm.translate_module ~enable_tail_call
+  |> Wasm.Output_wat.pp_module
   |> Format.printf "%t"
 
 let compile_anf_cmd () : unit =

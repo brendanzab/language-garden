@@ -153,10 +153,10 @@ The resulting program is then translated to web assembly.
                      │
       ┌──────────────┴──────┬───────────────────┐
       │                     │                   │
-      │  Core_to_wat        │  Core_to_anf      │  Core_to_llvm
+      │  Core_to_wasm       │  Core_to_anf      │  Core_to_llvm
       │                     │                   │
       ▼                     ▼                   ▼
-  Wat.module_          Anf.Module.t        Llvm.program
+  Wasm.module_         Anf.Module.t        Llvm.program
 ```
 
 ## Todo list
