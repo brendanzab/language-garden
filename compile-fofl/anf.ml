@@ -133,22 +133,20 @@ end = struct
           match expr with
           | Let (id, def_ty, def, body) ->
               Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
-                (fun ppf ->
-                  match def_ty with
-                  | None -> Format.fprintf ppf "%t" (Local_id.pp id)
-                  | Some def_ty ->
-                      Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"
-                        (Local_id.pp id)
-                        (Ty.pp def_ty))
+                (match def_ty with
+                | None -> Format.dprintf "%t" (Local_id.pp id)
+                | Some def_ty ->
+                    Format.dprintf "@[<2>@[%t :@]@ %t@]"
+                      (Local_id.pp id)
+                      (Ty.pp def_ty))
                 (pp_comp def)
                 (go body)
           | Join (id, (param_id, param_ty), cont, body) ->
               Format.fprintf ppf "@[<2>@[join %s@ %t@ :=@]@ @[%t;@]@]@ %t"
                 (Join_id.to_string id)
-                (fun ppf ->
-                  Format.fprintf ppf "@[<2>(@[%t@ :@]@ %t)@]"
-                    (Local_id.pp param_id)
-                    (Ty.pp param_ty))
+                (Format.dprintf "@[<2>(@[%t@ :@]@ %t)@]"
+                  (Local_id.pp param_id)
+                  (Ty.pp param_ty))
                 (pp cont)
                 (go body)
           | _ ->

@@ -90,11 +90,11 @@ module Output_wat = struct
     | Local_set id -> pp_sexpr_cmd "local.set" [pp_local_id id];
     | Local_get id -> pp_sexpr_cmd "local.get" [pp_local_id id];
     | I32_const i -> pp_sexpr_cmd "i32.const" [pp_i32 i]
-    | I32_eq -> fun ppf -> Format.fprintf ppf "i32.eq"
-    | I32_add -> fun ppf -> Format.fprintf ppf "i32.add"
-    | I32_sub -> fun ppf -> Format.fprintf ppf "i32.sub"
-    | I32_mul -> fun ppf -> Format.fprintf ppf "i32.mul"
-    | I32_neg -> fun ppf -> Format.fprintf ppf "i32.neg"
+    | I32_eq -> Format.dprintf "i32.eq"
+    | I32_add -> Format.dprintf "i32.add"
+    | I32_sub -> Format.dprintf "i32.sub"
+    | I32_mul -> Format.dprintf "i32.mul"
+    | I32_neg -> Format.dprintf "i32.neg"
 
   and pp_expr (expr : expr) (ppf : Format.formatter) =
     Format.pp_print_iter Iarray.iter (Fun.flip pp_instr) ppf expr
