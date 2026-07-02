@@ -91,94 +91,89 @@ end = struct
   let pp_iarray ?pp_sep f list ppf =
     Format.pp_print_iter Iarray.iter (Fun.flip f) ppf list ?pp_sep
 
-  let pp_global_id (id : Global_id.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "%s%t" "@" (Global_id.pp id)
+  let pp_global_id (id : Global_id.t) = Format.dprintf "%s%t" "@" (Global_id.pp id)
+  let pp_local_id (id : Local_id.t) = Format.dprintf "%s%t" "%" (Local_id.pp id)
+  let pp_label (id : Label.t) = Format.dprintf "%s%t" "%" (Label.pp id)
 
-  let pp_local_id (id : Local_id.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "%s%t" "%" (Local_id.pp id)
-
-  let pp_label (id : Label.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "%s%t" "%" (Label.pp id)
-
-  let pp_ty (ty : ty) (ppf : Format.formatter) =
+  let pp_ty (ty : ty) =
     match ty with
-    | I1 -> Format.fprintf ppf "i1"
-    | I32 -> Format.fprintf ppf "i32"
+    | I1 -> Format.dprintf "i1"
+    | I32 -> Format.dprintf "i32"
 
-  let pp_opr (opr : opr) (ppf : Format.formatter) =
+  let pp_opr (opr : opr) =
     match opr with
-    | I1 true -> Format.fprintf ppf "true"
-    | I1 false -> Format.fprintf ppf "false"
-    | I32 int -> Format.fprintf ppf "%li" int
-    | Global id -> pp_global_id id ppf
-    | Local id -> pp_local_id id ppf
+    | I1 true -> Format.dprintf "true"
+    | I1 false -> Format.dprintf "false"
+    | I32 int -> Format.dprintf "%li" int
+    | Global id -> pp_global_id id
+    | Local id -> pp_local_id id
 
-  let pp_instr (instr : instr) (ppf : Format.formatter) =
-    let pp_binop_instr (name, ty, opr1, opr2) ppf =
-      Format.fprintf ppf "@[%s@ %t@ %t,@ %t@]" name (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
-    and pp_pred (opr, label) ppf = Format.fprintf ppf "[@[%t,@ %t@]]" (pp_opr opr) (pp_label label)
-    and pp_arg (ty, opr) ppf = Format.fprintf ppf "@[%t@ %t@]" (pp_ty ty) (pp_opr opr)
+  let pp_instr (instr : instr) =
+    let pp_binop_instr (name, ty, opr1, opr2) =
+      Format.dprintf "@[%s@ %t@ %t,@ %t@]" name (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
+    and pp_pred (opr, label) = Format.dprintf "[@[%t,@ %t@]]" (pp_opr opr) (pp_label label)
+    and pp_arg (ty, opr) = Format.dprintf "@[%t@ %t@]" (pp_ty ty) (pp_opr opr)
     in
     match instr with
-    | Add (ty, opr1, opr2) -> pp_binop_instr ("add", ty, opr1, opr2) ppf
-    | Sub (ty, opr1, opr2) -> pp_binop_instr ("sub", ty, opr1, opr2) ppf
-    | Mul (ty, opr1, opr2) -> pp_binop_instr ("mul", ty, opr1, opr2) ppf
+    | Add (ty, opr1, opr2) -> pp_binop_instr ("add", ty, opr1, opr2)
+    | Sub (ty, opr1, opr2) -> pp_binop_instr ("sub", ty, opr1, opr2)
+    | Mul (ty, opr1, opr2) -> pp_binop_instr ("mul", ty, opr1, opr2)
     | Icmp (cond, ty, opr1, opr2) ->
         let cond =
           match cond with
           | Eq -> "eq"
         in
-        Format.fprintf ppf "@[icmp@ %s@ %t@ %t,@ %t@]" cond (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
+        Format.dprintf "@[icmp@ %s@ %t@ %t,@ %t@]" cond (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
     | Phi (ty, preds) ->
-        Format.fprintf ppf "@[<hv 2>@[phi@ %t@]@ %t@]"
+        Format.dprintf "@[<hv 2>@[phi@ %t@]@ %t@]"
           (pp_ty ty)
           (preds |> pp_iarray pp_pred ~pp_sep:pp_comma_sep)
     | Call (ty, fn, args) ->
-        Format.fprintf ppf "@[call@ %t@ %t(%t)@]"
+        Format.dprintf "@[call@ %t@ %t(%t)@]"
           (pp_ty ty)
           (pp_opr fn)
           (args |> pp_iarray pp_arg ~pp_sep:pp_comma_sep)
 
-  let pp_term (term : term) (ppf : Format.formatter) =
+  let pp_term (term : term) =
     match term with
-    | Br dest -> Format.fprintf ppf "@[  @[br@ label@ %t@]@]" (pp_label dest)
+    | Br dest -> Format.dprintf "@[  @[br@ label@ %t@]@]" (pp_label dest)
     | Br_i1 (cond, if_true, if_false) ->
-        Format.fprintf ppf "@[  @[br@ i1@ %t,@ label@ %t,@ label@ %t@]@]"
+        Format.dprintf "@[  @[br@ i1@ %t,@ label@ %t,@ label@ %t@]@]"
           (pp_opr cond) (pp_label if_true) (pp_label if_false)
-    | Ret (ty, opr) -> Format.fprintf ppf "@[  @[ret@ %t@ %t@]@]" (pp_ty ty) (pp_opr opr)
+    | Ret (ty, opr) -> Format.dprintf "@[  @[ret@ %t@ %t@]@]" (pp_ty ty) (pp_opr opr)
 
-  let rec pp_block (block : block) (ppf : Format.formatter) =
+  let rec pp_block (block : block) =
     match block with
     | Instr (id, instr, block) ->
-        Format.fprintf ppf "@[  @[<2>@[%t@ =@]@ %t@]@]@,%t"
+        Format.dprintf "@[  @[<2>@[%t@ =@]@ %t@]@]@,%t"
           (pp_local_id id)
           (pp_instr instr)
           (pp_block block)
     | Term term ->
-        pp_term term ppf
+        pp_term term
 
-  let pp_cfg ({ entry; blocks; } : cfg) (ppf : Format.formatter) =
-    let pp_labelled_block (label, block) ppf =
-      Format.fprintf ppf "%t:@,%t" (Label.pp label) (pp_block block)
+  let pp_cfg ({ entry; blocks; } : cfg) =
+    let pp_labelled_block (label, block) =
+      Format.dprintf "%t:@,%t" (Label.pp label) (pp_block block)
     in
     if Iarray.length blocks = 0 then
-      pp_labelled_block entry ppf
+      pp_labelled_block entry
     else
-      Format.fprintf ppf "%t@ %t"
+      Format.dprintf "%t@ %t"
         (pp_labelled_block entry)
         (blocks |> pp_iarray pp_labelled_block)
 
-  let pp_fun (id, { result_ty; params; cfg } : Global_id.t * fun_) (ppf : Format.formatter) =
-    let pp_param (ty, id) ppf =
-      Format.fprintf ppf "@[%t@ %t@]" (pp_ty ty) (pp_local_id id)
+  let pp_fun (id, { result_ty; params; cfg } : Global_id.t * fun_) =
+    let pp_param (ty, id) =
+      Format.dprintf "@[%t@ %t@]" (pp_ty ty) (pp_local_id id)
     in
-    Format.fprintf ppf "@[<v>@[define@ %t@ %t(%t)@ {@]@ %t@ }@]@."
+    Format.dprintf "@[<v>@[define@ %t@ %t(%t)@ {@]@ %t@ }@]@."
       (pp_ty result_ty)
       (pp_global_id id)
       (pp_iarray pp_param params ~pp_sep:pp_comma_sep)
       (pp_cfg cfg)
 
-  let pp_module ({ funs } : module_) : Format.formatter -> unit =
+  let pp_module ({ funs } : module_) =
     funs |> pp_iarray pp_fun ~pp_sep:Format.pp_print_newline
 
 end
@@ -201,10 +196,7 @@ module Output_dot = struct
     in
 
     let block_text =
-      Format.asprintf "@[<v>%t@]"
-        (fun ppf ->
-          (* Format.pp_set_margin ppf 70; *)
-          Output_ll.pp_block block ppf)
+      Format.asprintf "@[<v>%t@]" (Output_ll.pp_block block)
     in
 
     (* Basic block *)

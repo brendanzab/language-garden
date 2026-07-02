@@ -59,23 +59,21 @@ module Output_wat = struct
     Format.pp_print_iter iter (fun ppf expr -> expr ppf) ppf exprs
       ~pp_sep:Format.pp_print_space
 
-  let pp_sexpr_cmd_iter name iter exprs ppf =
-    Format.fprintf ppf "@[<hv 2>(%s@ %t)@]" name (pp_spaced_iter iter exprs)
+  let pp_sexpr_cmd_iter name iter exprs =
+    Format.dprintf "@[<hv 2>(%s@ %t)@]" name (pp_spaced_iter iter exprs)
 
-  let pp_spaced = pp_spaced_iter List.iter
-  let pp_spaced_seq = pp_spaced_iter Seq.iter
   let pp_sexpr_cmd name = pp_sexpr_cmd_iter name List.iter
   let pp_sexpr_cmd_seq name = pp_sexpr_cmd_iter name Seq.iter
 
-  let pp_func_id (name : Func_id.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "$%t" (Func_id.pp name)
+  let pp_func_id (name : Func_id.t) =
+    Format.dprintf "$%t" (Func_id.pp name)
 
-  let pp_local_id (id : Local_id.t) (ppf : Format.formatter) =
-    Format.fprintf ppf "$%t" (Local_id.pp id)
+  let pp_local_id (id : Local_id.t) =
+    Format.dprintf "$%t" (Local_id.pp id)
 
-  let pp_type (ty : ty) (ppf : Format.formatter) =
+  let pp_type (ty : ty) =
     match ty with
-    | I32 -> Format.fprintf ppf "i32"
+    | I32 -> Format.dprintf "i32"
 
   let rec pp_instr (instr : instr) =
     match instr with
