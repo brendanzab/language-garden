@@ -4,7 +4,23 @@ module Item_name = Name.Make ()
 module Item_map = Map.Make (Item_name)
 module Local = Name.Debruijn.Make ()
 
-module Ty = Prim.Ty
+module Ty = struct
+
+  type t =
+    | Bool
+    | I32
+
+  let pp (ty : t) : Format.formatter -> unit =
+    match ty with
+    | Bool -> Format.dprintf "Bool"
+    | I32 -> Format.dprintf "I32"
+
+  let of_prim (ty : Prim.Ty.t) : t =
+    match ty with
+    | Prim.Ty.Bool -> Bool
+    | Prim.Ty.I32 -> I32
+
+end
 
 module rec Expr : sig
 
@@ -19,7 +35,7 @@ module rec Expr : sig
 
   and def = string option * Ty.t * t
 
-  type value = Prim.Value.t =
+  type value =
     | Bool of bool
     | I32 of int32
 
@@ -53,7 +69,16 @@ end = struct
         end
     | I32 int -> I32 int
     | Prim (op, args) ->
-        Prim.Op.app op (Iarray.map (eval items locals) args)
+        let args =
+          args |> Iarray.map @@ fun arg ->
+            match eval items locals arg with
+            | Bool bool -> Prim.Value.Bool bool
+            | I32 int -> Prim.Value.I32 int
+        in
+        begin match Prim.Op.app op args with
+        | Prim.Value.Bool bool -> Bool bool
+        | Prim.Value.I32 int -> I32 int
+        end
 
 end
 

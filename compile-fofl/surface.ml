@@ -99,19 +99,19 @@ end = struct
     type t
 
     type item_decl =
-      | Val of Prim.Ty.t
-      | Fun of Prim.Ty.t iarray * Prim.Ty.t
+      | Val of Core.Ty.t
+      | Fun of Core.Ty.t iarray * Core.Ty.t
 
     val empty : t
 
-    val add_local : t -> string option -> Prim.Ty.t -> t
+    val add_local : t -> string option -> Core.Ty.t -> t
     val add_item : t -> string -> item_decl -> t
 
     val lookup_item : t -> string -> (Core.Item_name.t * item_decl) option
-    val lookup_local : t -> string -> (Core.Expr.t * Prim.Ty.t) option
+    val lookup_local : t -> string -> (Core.Expr.t * Core.Ty.t) option
 
     val lookup : t -> string -> [
-      | `Expr of Core.Expr.t * Prim.Ty.t
+      | `Expr of Core.Expr.t * Core.Ty.t
       | `Item of Core.Item_name.t * item_decl
     ] option
 
@@ -203,8 +203,9 @@ end = struct
 
     | Expr.Prim (name, args) ->
         begin match Prim.Op.lookup name.data |> Option.map (fun op -> op, Prim.Op.ty op) with
-        | Some (op, (params, ty)) when Iarray.length params = Iarray.length args ->
-            Core.Expr.Prim (op, Iarray.map2 (check_expr env) args params), ty
+        | Some (op, (param_tys, ty)) when Iarray.length param_tys = Iarray.length args ->
+            let param_tys = Iarray.map Core.Ty.of_prim param_tys in
+            Core.Expr.Prim (op, Iarray.map2 (check_expr env) args param_tys), Core.Ty.of_prim ty
         | Some _ -> error name.span "mismatched arity"
         | None -> error name.span "unknown primitive operation `#%s`" name.data
         end

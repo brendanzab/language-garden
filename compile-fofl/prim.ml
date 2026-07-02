@@ -6,14 +6,6 @@ module Ty = struct
     | Bool
     | I32
 
-  let name (ty : t) : string =
-    match ty with
-    | Bool -> "Bool"
-    | I32 -> "I32"
-
-  let pp (ty : t) (ppf : Format.formatter) =
-    Format.pp_print_string ppf (name ty)
-
 end
 
 module Value = struct

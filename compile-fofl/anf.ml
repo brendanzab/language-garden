@@ -46,7 +46,7 @@ module rec Expr : sig
     | Bool of bool
     | I32 of int32
 
-  type value = Prim.Value.t =
+  type value =
     | Bool of bool
     | I32 of int32
 
@@ -91,7 +91,16 @@ end = struct
           | _ -> failwith "Expr.eval_atom"
           end
       | Prim (op, args) ->
-          Prim.Op.app op (Iarray.map (eval_atom locals) args)
+          let args =
+            args |> Iarray.map @@ fun arg ->
+              match eval_atom locals arg with
+              | Bool bool -> Prim.Value.Bool bool
+              | I32 int -> Prim.Value.I32 int
+          in
+          begin match Prim.Op.app op args with
+          | Prim.Value.Bool bool -> Bool bool
+          | Prim.Value.I32 int -> I32 int
+          end
       | Atom expr ->
           eval_atom locals expr
 
