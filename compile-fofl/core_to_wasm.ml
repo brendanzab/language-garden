@@ -8,7 +8,7 @@ module Func_supply = Name.Supply (Wasm.Func_id)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
-let translate_ty (ty : Core.Ty.t) : Wasm.ty =
+let translate_ty (ty : Core.Ty.t) : Wasm.value_type =
   match ty with
   | Core.Ty.Bool -> Wasm.I32
   | Core.Ty.I32 -> Wasm.I32
@@ -28,7 +28,7 @@ let translate_expr
   (item_env : Wasm.Func_id.t Core.Item_map.t)
   (local_env : Wasm.Local_id.t Core.Local.Env.t)
   (expr : Core.Expr.t)
-: locals:(Wasm.Local_id.t * Wasm.ty) Iarray.t * Wasm.instr Iarray.t =
+: locals:(Wasm.Local_id.t * Wasm.value_type) Iarray.t * Wasm.instr Iarray.t =
   let locals = Dynarray.create () in
   let instrs = Dynarray.create () in
 
@@ -106,18 +106,18 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
         - create a global and initialise with a startup function
     *)
     | Core.Item.Val (ty, expr) ->
-        let result = translate_ty ty in
+        let results = ([|translate_ty ty|] : _ Iarray.t) in
 
         let ~locals, body =
           translate_expr fresh_local_id item_env Core.Local.Env.empty expr
             ~enable_tail_call
         in
         Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        Dynarray.add_last funcs Wasm.{ id; params = [||]; result; locals; body }
+        Dynarray.add_last funcs Wasm.{ id; params = [||]; results; locals; body }
 
     | Core.Item.Fun (params, ty, body) ->
         let params = params |> Iarray.map (Pair.map fresh_local_id translate_ty) in
-        let result = translate_ty ty in
+        let results = ([|translate_ty ty|] : _ Iarray.t) in
 
         let ~locals, body =
           let local_env = Iarray.to_seq params |> Seq.map Pair.fst |> Core.Local.Env.of_seq in
@@ -125,7 +125,7 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
             ~enable_tail_call
         in
         Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        Dynarray.add_last funcs Wasm.{ id; params; result; locals; body }
+        Dynarray.add_last funcs Wasm.{ id; params; results; locals; body }
   end;
 
   Wasm.{

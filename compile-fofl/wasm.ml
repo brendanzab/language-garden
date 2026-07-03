@@ -3,14 +3,14 @@
 module Func_id = Name.Make ()
 module Local_id = Name.Make ()
 
-(* https://webassembly.github.io/spec/core/text/types.html *)
-type ty =
+(* https://webassembly.github.io/spec/core/text/types.html#value-types *)
+type value_type =
   | I32
 
 (* https://webassembly.github.io/spec/core/text/instructions.html#text-instrs *)
 type instr =
   (* Control instructions *)
-  | If of ty * expr * expr
+  | If of value_type * expr * expr
   | Call of Func_id.t
   | Return_call of Func_id.t
 
@@ -32,9 +32,9 @@ and expr = instr Iarray.t
 (* https://webassembly.github.io/spec/core/text/modules.html#functions *)
 type func = {
   id : Func_id.t;
-  params : (Local_id.t * ty) Iarray.t;
-  result : ty;
-  locals : (Local_id.t * ty) Iarray.t;
+  params : (Local_id.t * value_type) Iarray.t;
+  results : value_type Iarray.t;
+  locals : (Local_id.t * value_type) Iarray.t;
   body : expr;
 }
 
@@ -71,7 +71,7 @@ module Output_wat = struct
   let pp_local_id (id : Local_id.t) =
     Format.dprintf "$%t" (Local_id.pp id)
 
-  let pp_type (ty : ty) =
+  let pp_value_type (ty : value_type) =
     match ty with
     | I32 -> Format.dprintf "i32"
 
@@ -79,7 +79,7 @@ module Output_wat = struct
     match instr with
     | If (ty, expr1, expr2) ->
         pp_sexpr_cmd "if" [
-          pp_sexpr_cmd "result" [pp_type ty];
+          pp_sexpr_cmd "result" [pp_value_type ty];
           pp_sexpr_cmd "then" [pp_expr expr1];
           pp_sexpr_cmd "else" [pp_expr expr2];
         ]
@@ -99,13 +99,13 @@ module Output_wat = struct
       ~pp_sep:Format.pp_print_space
 
   let pp_func (func : func) =
-    let pp_param (id, ty) = pp_sexpr_cmd "param" [pp_local_id id; pp_type ty]
-    and pp_local (id, ty) = pp_sexpr_cmd "local" [pp_local_id id; pp_type ty]
-    in
+    let pp_param (id, ty) = pp_sexpr_cmd "param" [pp_local_id id; pp_value_type ty] in
+    let pp_result ty = pp_sexpr_cmd "result" [pp_value_type ty] in
+    let pp_local (id, ty) = pp_sexpr_cmd "local" [pp_local_id id; pp_value_type ty] in
     pp_sexpr_cmd_seq "func" (Seq.concat @@ List.to_seq [
       Seq.singleton (pp_func_id func.id);
       Iarray.to_seq func.params |> Seq.map pp_param;
-      Seq.singleton (pp_sexpr_cmd "result" [pp_type func.result]);
+      Iarray.to_seq func.results |> Seq.map pp_result;
       Iarray.to_seq func.locals |> Seq.map pp_local;
       Seq.singleton (pp_expr func.body);
     ])
