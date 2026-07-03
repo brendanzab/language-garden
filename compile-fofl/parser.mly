@@ -75,9 +75,9 @@ let atomic_tm :=
     { tm }
 | n = spanned(NAME);
     { Surface.Expr.Name (n, None) }
-| n = spanned(NAME); "("; args = separated_nonempty_sequence(",", spanned(tm)); ")";
+| n = spanned(NAME); "("; args = trailing_list(",", spanned(tm)); ")";
     { Surface.Expr.Name (n, Some (Iarray.of_list args)) }
-| n = spanned(PRIM); "("; args = separated_nonempty_sequence(",", spanned(tm)); ")";
+| n = spanned(PRIM); "("; args = trailing_list(",", spanned(tm)); ")";
     { Surface.Expr.Prim (n, Iarray.of_list args) }
 | i = NUMBER;
     { Surface.Expr.I32 i }
@@ -88,7 +88,7 @@ let atomic_tm :=
 let item :=
 | "val"; n = spanned(NAME); ":"; ty = spanned(ty); ":="; tm = spanned(tm);
     { Surface.Item.Val (n, ty, tm) }
-| "fun"; n = spanned(NAME); "("; params = separated_nonempty_sequence(",", param); ")";
+| "fun"; n = spanned(NAME); "("; params = trailing_list(",", param); ")";
   ":"; ty = spanned(ty); ":="; tm = spanned(tm);
     { Surface.Item.Fun (n, Iarray.of_list params, ty, tm) }
 
@@ -119,8 +119,12 @@ let spanned(X) :=
 | data = X;
     { Surface.Spanned.{ span = $loc; data } }
 
-let separated_nonempty_sequence(Sep, T) :=
+let trailing_list(Sep, T) :=
+    { [] }
+| trailing_nonempty_list(Sep, T)
+
+let trailing_nonempty_list(Sep, T) :=
 | t = T; option(Sep);
     { [ t ] }
-| t = T; Sep; ts = separated_nonempty_sequence(Sep, T);
+| t = T; Sep; ts = trailing_nonempty_list(Sep, T);
     { t :: ts }
