@@ -133,45 +133,25 @@ let translate_expr
 
     | Core.Expr.I32 i -> k Llvm.(I32 i)
 
-    | Core.Expr.Prim (Bool_eq, [|x; y|]) ->
-        let@ x = go_expr local_env "arg" x in
-        let@ y = go_expr local_env "arg" y in
-        bind_instr result_name Llvm.(Icmp (Eq, I1, x, y)) k
-
-    | Core.Expr.Prim (I32_eq, [|x; y|]) ->
-        let@ x = go_expr local_env "arg" x in
-        let@ y = go_expr local_env "arg" y in
-        bind_instr result_name Llvm.(Icmp (Eq, I32, x, y)) k
-
-    | Core.Expr.Prim (I32_add, [|x; y|]) ->
-        let@ x = go_expr local_env "arg" x in
-        let@ y = go_expr local_env "arg" y in
-        bind_instr result_name Llvm.(Add (I32, x, y)) k
-
-    | Core.Expr.Prim (I32_sub, [|x; y|]) ->
-        let@ x = go_expr local_env "arg" x in
-        let@ y = go_expr local_env "arg" y in
-        bind_instr result_name Llvm.(Sub (I32, x, y)) k
-
-    | Core.Expr.Prim (I32_mul, [|x; y|]) ->
-        let@ x = go_expr local_env "arg" x in
-        let@ y = go_expr local_env "arg" y in
-        bind_instr result_name Llvm.(Mul (I32, x, y)) k
-
-    | Core.Expr.Prim (I32_neg, [|x|]) ->
-        let@ x = go_expr local_env "arg" x in
-        bind_instr result_name Llvm.(Sub (I32, I32 0l, x)) k
-
-    | Core.Expr.Prim (op, _) ->
-        Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
+    | Core.Expr.Prim (op, args) ->
+        let@ args = go_exprs local_env "arg" (Iarray.to_list args) in
+        begin match op, args with
+        | Prim.Op.Bool_eq, [x; y] -> bind_instr result_name Llvm.(Icmp (Eq, I1, x, y)) k
+        | Prim.Op.I32_eq, [x; y] -> bind_instr result_name Llvm.(Icmp (Eq, I32, x, y)) k
+        | Prim.Op.I32_add, [x; y] -> bind_instr result_name Llvm.(Add (I32, x, y)) k
+        | Prim.Op.I32_sub, [x; y] -> bind_instr result_name Llvm.(Sub (I32, x, y)) k
+        | Prim.Op.I32_mul, [x; y] -> bind_instr result_name Llvm.(Mul (I32, x, y)) k
+        | Prim.Op.I32_neg, [x] -> bind_instr result_name Llvm.(Sub (I32, I32 0l, x)) k
+        | _, _ -> Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
+        end
 
   (* Translate a series of expressions in the current block *)
-  and go_exprs local_ids name (exprs : Core.Expr.t list) (k : Llvm.opr list k) : Llvm.block =
+  and go_exprs local_env name (exprs : Core.Expr.t list) (k : Llvm.opr list k) : Llvm.block =
     match exprs with
     | [] -> k []
     | expr :: exprs ->
-        let@ expr = go_expr local_ids name expr in
-        let@ exprs = go_exprs local_ids name exprs in
+        let@ expr = go_expr local_env name expr in
+        let@ exprs = go_exprs local_env name exprs in
         k (expr :: exprs)
   in
 
