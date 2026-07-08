@@ -39,8 +39,8 @@ type 'a k = 'a -> Llvm.block
 
 (** Translate an expression into a control flow graph. *)
 let translate_expr
-  (fresh_local_id : string -> Llvm.Local_id.t)
-  (fresh_label : string -> Llvm.Label.t)
+  ~(fresh_local_id : string -> Llvm.Local_id.t)
+  ~(fresh_label : string -> Llvm.Label.t)
   (item_env : item_decl Core.Item_map.t)
   (local_env : Llvm.opr Core.Local.Env.t)
   (expr : Core.Expr.t)
@@ -71,7 +71,7 @@ let translate_expr
         k (Core.Local.Env.lookup index local_env)
 
     | Core.Expr.Let ((name, _, def), body) ->
-        let@ def = go_expr local_env (Option.value name ~default:"") def in
+        let@ def = go_expr local_env (Option.value name ~default:"_") def in
         go_expr (Core.Local.Env.extend def local_env) result_name body k
 
     | Core.Expr.Bool true -> k Llvm.(I1 true)
@@ -185,29 +185,26 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let funs = Dynarray.create () in
 
   (* Translate items in the core language into LLVM function definitions *)
-  item_env |> Core.Item_map.iter begin fun name (Fun (result_ty, id, param_tys)) ->
+  item_env |> Core.Item_map.iter begin fun name item_decl ->
     let fresh_local_id = Local_supply.(fresh (create ())) in
     let fresh_label = Label_supply.(fresh (create ())) in
+    let translate_expr = translate_expr item_env ~fresh_local_id ~fresh_label in
 
-    let params, body =
-      match Core.Item_map.find name mod_ with
-      | Core.Item.Val (_, def) -> ([||] : _ Iarray.t), def
-      | Core.Item.Fun (params, _, body) -> params, body
-    in
-    let params = params |> Iarray.mapi @@ fun i (name, _) ->
-      Iarray.get param_tys i,
-      fresh_local_id (Option.value name ~default:"")
-    in
-    let cfg =
-      let local_env =
-        Iarray.to_seq params
-        |> Seq.map (fun (_, id) -> Llvm.Local id)
-        |> Core.Local.Env.of_seq
-      in
-      translate_expr fresh_local_id fresh_label item_env local_env body result_ty
-     in
+    match Core.Item_map.find name mod_, item_decl with
+    | Core.Item.Val (_, body), Fun (result_ty, id, param_tys) ->
+        let cfg = translate_expr Core.Local.Env.empty body result_ty in
+        Dynarray.add_last funs Llvm.(id, { result_ty; params = [||]; cfg });
 
-    Dynarray.add_last funs Llvm.(id, { result_ty; params; cfg });
+    | Core.Item.Fun (params, _, body), Fun (result_ty, id, param_tys) ->
+        let param_id name = fresh_local_id (Option.value name ~default:"_") in
+        let params = Iarray.map2 (fun ty (name, _) -> ty, param_id name) param_tys params in
+        let local_env =
+          Iarray.to_seq params
+          |> Seq.map (fun (_, id) -> Llvm.Local id)
+          |> Core.Local.Env.of_seq
+        in
+        let cfg = translate_expr local_env body result_ty in
+        Dynarray.add_last funs Llvm.(id, { result_ty; params; cfg });
   end;
 
   Llvm.{
