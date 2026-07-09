@@ -3,7 +3,17 @@ fun test(b : Bool) : I32 :=
   let y := if b then x + 1 else x - 1;
   y + x;
 
-fun text-shadow(x : I32) : I32 :=
+-- Test shadowed definitions
+fun test-shadow(x : I32) : I32 :=
   let x := x + 1;
   let x := x * 3;
   x;
+
+-- Test let bindings nested inside branches
+fun test-branches(b : Bool) : I32 :=
+  if b then
+    let x := 42;
+    x + 1
+  else
+    let x := 3;
+    x - 1;
