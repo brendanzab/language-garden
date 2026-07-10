@@ -29,22 +29,31 @@ type instr =
 (* https://webassembly.github.io/spec/core/text/instructions.html#expressions *)
 and expr = instr Iarray.t
 
+(* https://webassembly.github.io/spec/core/text/types.html#text-comptype *)
+type param = Local_id.t * value_type
+
+(* https://webassembly.github.io/spec/core/text/modules.html#text-local *)
+type local = Local_id.t * value_type
+
 (* https://webassembly.github.io/spec/core/text/modules.html#functions *)
 type func = {
   id : Func_id.t;
-  params : (Local_id.t * value_type) Iarray.t;
+  params : param Iarray.t;
   results : value_type Iarray.t;
-  locals : (Local_id.t * value_type) Iarray.t;
+  locals : local Iarray.t;
   body : expr;
 }
 
-(* https://webassembly.github.io/spec/core/text/modules.html#exports *)
-type export =
+(* https://webassembly.github.io/spec/core/text/modules.html#text-externidx *)
+type extern =
   | Func of Func_id.t
+
+(* https://webassembly.github.io/spec/core/text/modules.html#exports *)
+type export = string * extern
 
 (* https://webassembly.github.io/spec/core/text/modules.html#text-module *)
 type module_ = {
-  exports : (string * export) Iarray.t;
+  exports : export Iarray.t;
   funcs : func Iarray.t;
 }
 
@@ -110,10 +119,10 @@ module Output_wat = struct
       Seq.singleton (pp_expr func.body);
     ])
 
-  let pp_export (name, export : string * export) =
+  let pp_export (name, extern : export) =
     pp_sexpr_cmd "export" [
       pp_quoted name;
-      begin match export with
+      begin match extern with
       | Func id -> pp_sexpr_cmd "func" [pp_func_id id]
       end;
     ]

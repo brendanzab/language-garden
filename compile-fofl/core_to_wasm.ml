@@ -28,7 +28,7 @@ let translate_expr
   (item_env : Wasm.Func_id.t Core.Item_map.t)
   (local_env : Wasm.Local_id.t Core.Local.Env.t)
   (expr : Core.Expr.t)
-: locals:(Wasm.Local_id.t * Wasm.value_type) Iarray.t * Wasm.instr Iarray.t =
+: locals:Wasm.local Iarray.t * Wasm.expr =
   let locals = Dynarray.create () in
   let instrs = Dynarray.create () in
 
