@@ -32,10 +32,10 @@ let translate_expr
   let locals = Dynarray.create () in
   let instrs = Dynarray.create () in
 
-  let rec go ~tail_call instrs local_env expr =
+  let rec go_expr ~tail_call instrs local_env expr =
     match expr with
     | Core.Expr.Item (name, args) ->
-        Option.value args ~default:[||] |> Iarray.iter (go instrs local_env ~tail_call:false);
+        Option.value args ~default:[||] |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         begin match enable_tail_call && tail_call with
         | true -> Dynarray.add_last instrs (Wasm.Return_call (Core.Item_map.find name item_env))
         | false -> Dynarray.add_last instrs (Wasm.Call (Core.Item_map.find name item_env))
@@ -47,9 +47,9 @@ let translate_expr
     | Core.Expr.Let ((name, ty, def), body) ->
         let def_id = fresh_local_id (Option.value name ~default:"_") in
         Dynarray.add_last locals (def_id, translate_ty ty);
-        go instrs local_env def ~tail_call:false;
+        go_expr instrs local_env def ~tail_call:false;
         Dynarray.add_last instrs (Wasm.Local_set def_id);
-        go instrs (Core.Local.Env.extend def_id local_env) body ~tail_call
+        go_expr instrs (Core.Local.Env.extend def_id local_env) body ~tail_call
 
     | Core.Expr.Bool true -> Dynarray.add_last instrs (Wasm.I32_const 1l)
     | Core.Expr.Bool false -> Dynarray.add_last instrs (Wasm.I32_const 0l)
@@ -58,9 +58,9 @@ let translate_expr
         let instrs2 = Dynarray.create () in
         let instrs3 = Dynarray.create () in
 
-        go instrs ~tail_call:false local_env expr1;
-        go instrs2 local_env expr2 ~tail_call;
-        go instrs3 local_env expr3 ~tail_call;
+        go_expr instrs ~tail_call:false local_env expr1;
+        go_expr instrs2 local_env expr2 ~tail_call;
+        go_expr instrs3 local_env expr3 ~tail_call;
 
         Dynarray.add_last instrs (Wasm.If (
           translate_ty ty,
@@ -71,11 +71,11 @@ let translate_expr
     | Core.Expr.I32 i -> Dynarray.add_last instrs (Wasm.I32_const i)
 
     | Core.Expr.Prim (op, args) ->
-        args |> Iarray.iter (go instrs local_env ~tail_call:false);
+        args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         Dynarray.add_last instrs (translate_prim_op op);
   in
 
-  go instrs local_env expr ~tail_call:enable_tail_call;
+  go_expr instrs local_env expr ~tail_call:enable_tail_call;
 
   ~locals:(make_iarray locals), make_iarray instrs
 
