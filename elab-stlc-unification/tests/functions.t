@@ -35,6 +35,10 @@ Placeholder return type
   let f : Int -> Bool -> Int := fun (x : Int) => fun (y : Bool) => x;
   f 3 true : Int
 
+Explicit return type (checking mode)
+  $ executable elab <<< "(fun x : Int => x) : Int -> Int"
+  fun (x : Int) => x : Int -> Int
+
 --------------------------------------------------------------------------------
 
 Ambiguous parameter type
@@ -72,6 +76,30 @@ Mismatched return type
     │
   1 │ fun (x : Int) : Bool => x
     │                         ^
+  
+  [1]
+
+Mismatched return type (checking mode)
+  $ executable elab <<< "(fun x : Bool => x) : Int -> Int"
+  error: mismatched types:
+    expected: Int
+       found: Bool
+    ┌─ <stdin>:1:9
+    │
+  1 │ (fun x : Bool => x) : Int -> Int
+    │          ^^^^
+  
+  [1]
+
+Mismatched return type (checking against a metavariable)
+  $ executable elab <<< "(fun f => f 1) (fun x : Bool => x)"
+  error: mismatched types:
+    expected: Bool
+       found: Int
+    ┌─ <stdin>:1:32
+    │
+  1 │ (fun f => f 1) (fun x : Bool => x)
+    │                                 ^
   
   [1]
 
