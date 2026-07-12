@@ -65,7 +65,7 @@ let translate_expr
   (* Finish the current block *)
   let close_block (term : Llvm.term_instr) : Llvm.Label.t =
     let label = Option.get !current_label in
-    Dynarray.add_last blocks (label, Llvm.{ instrs = make_iarray current_stmts; term });
+    Dynarray.add_last blocks Llvm.{ label; instrs = make_iarray current_stmts; term };
     current_label := None;
     Dynarray.clear current_stmts;
     label
@@ -118,6 +118,7 @@ let translate_expr
           true_result, true_end_label;
           false_result, false_end_label;
         |]))
+
     | Core.Expr.I32 i -> Llvm.(I32 i)
 
     | Core.Expr.Prim (op, args) ->

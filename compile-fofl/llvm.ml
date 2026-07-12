@@ -60,13 +60,14 @@ type term_instr =                           (* Terminator instructions  https://
 
 (** Basic blocks *)
 type block = {
+  label : Label.t;
   instrs : instr Iarray.t;
   term : term_instr;
 }
 
 (* Control flow graph of a function *)
 type cfg = {
-  blocks : (Label.t * block) Iarray.t;
+  blocks : block Iarray.t;
 }
 
 (** Function definitions *)
@@ -153,19 +154,16 @@ end = struct
     | Assign (id, instr) ->
         Format.dprintf "@[  @[<2>@[%t@ =@]@ %t@]@]" (pp_local_id id) (pp_value_instr instr)
 
-  let rec pp_block ({ instrs; term } : block) =
+  let rec pp_block ({ label; instrs; term } : block) =
     if Iarray.length instrs = 0 then
-      pp_term_instr term
+      Format.dprintf "%t:@,%t"
+        (Label.pp label)
+        (pp_term_instr term)
     else
-      Format.dprintf "%t@,%t"
+      Format.dprintf "%t:@,%t@,%t"
+        (Label.pp label)
         (instrs |> pp_iarray pp_instr)
         (pp_term_instr term)
-
-  let pp_cfg ({ blocks } : cfg) =
-    let pp_labelled_block (label, block) =
-      Format.dprintf "%t:@,%t" (Label.pp label) (pp_block block)
-    in
-    blocks |> pp_iarray pp_labelled_block
 
   let pp_fun (id, { result_ty; params; cfg } : Global_id.t * fun_) =
     let pp_param (ty, id) =
@@ -175,7 +173,7 @@ end = struct
       (pp_ty result_ty)
       (pp_global_id id)
       (pp_iarray pp_param params ~pp_sep:pp_comma_sep)
-      (pp_cfg cfg)
+      (cfg.blocks |> pp_iarray pp_block)
 
   let pp_module ({ funs } : module_) =
     funs |> pp_iarray pp_fun ~pp_sep:Format.pp_print_newline
@@ -186,7 +184,7 @@ end
     DOT language}. This can help with visualising control flow graphs. *)
 module Output_dot = struct
 
-  let pp_block (fun_id : Global_id.t) (label, block : Label.t * block) (out : Out_channel.t) = begin
+  let pp_block (fun_id : Global_id.t) (block : block) (out : Out_channel.t) = begin
     let rec outgoing_labels block =
       match block.term with
       | Br label -> [label]
@@ -204,16 +202,16 @@ module Output_dot = struct
 
     (* Basic block *)
     Printf.fprintf out "\n";
-    Printf.fprintf out "    %s [\n" (label_string label);
+    Printf.fprintf out "    %s [\n" (label_string block.label);
     Printf.fprintf out "      label=<<table color=\"black\" border=\"0\" cellborder=\"0\" cellpadding=\"3\">\n";
-    Printf.fprintf out "        <th><td align=\"left\" border=\"1\" sides=\"b\">%s:</td></th>\n" (Label.to_string label);
+    Printf.fprintf out "        <th><td align=\"left\" border=\"1\" sides=\"b\">%s:</td></th>\n" (Label.to_string block.label);
     String.split_on_char '\n' block_text |> List.iter (Printf.fprintf out "        <tr><td align=\"left\">%s</td></tr>\n");
     Printf.fprintf out "      </table>>\n";
     Printf.fprintf out "    ];\n";
 
     (* Control flow edges *)
     outgoing_labels block |> List.iter begin fun end_label ->
-      Printf.fprintf out "    %s -> %s;\n" (label_string label) (label_string end_label)
+      Printf.fprintf out "    %s -> %s;\n" (label_string block.label) (label_string end_label)
     end;
   end
 
@@ -257,8 +255,8 @@ module Output_dot = struct
       Printf.fprintf out "    cluster=true;\n";
 
       (* Control flow graph *)
-      cfg.blocks |> Iarray.iter begin fun (label, block) ->
-        pp_block id (label, block) out;
+      cfg.blocks |> Iarray.iter begin fun block ->
+        pp_block id block out;
       end;
 
       Printf.fprintf out "  }\n";
