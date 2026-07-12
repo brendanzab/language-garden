@@ -20,7 +20,9 @@ let translate_prim_op (op : Prim.Op.t) : Wasm.instr =
   | Prim.Op.I32_add -> Wasm.I32_add
   | Prim.Op.I32_sub -> Wasm.I32_sub
   | Prim.Op.I32_mul -> Wasm.I32_mul
-  | Prim.Op.I32_neg -> Wasm.I32_neg
+  (* Wasm has no [i32.neg] instruction, so negation is compiled to [0 - x],
+     with the zero pushed before the operand in [translate_expr] *)
+  | Prim.Op.I32_neg -> Wasm.I32_sub
 
 let translate_expr
   ~(enable_tail_call : bool)
@@ -71,6 +73,10 @@ let translate_expr
     | Core.Expr.I32 i -> Dynarray.add_last instrs (Wasm.I32_const i)
 
     | Core.Expr.Prim (op, args) ->
+        begin match op with
+        | Prim.Op.I32_neg -> Dynarray.add_last instrs (Wasm.I32_const 0l)
+        | _ -> ()
+        end;
         args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         Dynarray.add_last instrs (translate_prim_op op);
   in
