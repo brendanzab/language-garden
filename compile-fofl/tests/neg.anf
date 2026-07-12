@@ -1,0 +1,10 @@
+fun neg(x : I32) : I32 := #i32-neg(x);
+
+fun neg-expr(x : I32, y : I32) : I32 :=
+  let arg := #i32-sub(x, y);
+  #i32-neg(arg);
+
+fun neg-neg(x : I32) : I32 := let arg := #i32-neg(x);
+                              #i32-neg(arg);
+
+fun neg-prim(x : I32) : I32 := #i32-neg(x);
