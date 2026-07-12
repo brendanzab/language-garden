@@ -351,6 +351,10 @@ let pp_tm : tm -> Format.formatter -> unit =
           (pp_app_tm names head)
           (pp_app_tm names tm1)
           (pp_tm names tm2)
+    | Ann (tm, ty) ->
+        Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"
+          (pp_app_tm names tm)
+          (pp_ty ty)
     | tm ->
         pp_app_tm names tm ppf
   and pp_app_tm names tm ppf =
