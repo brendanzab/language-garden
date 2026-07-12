@@ -1,6 +1,6 @@
 # Generics with local type aliases
 
-- Extends [**elab-generics**](../elab-generics) (+ type aliases, tuples)
+- Extends [**elab-generics**](../elab-generics) (+ type aliases)
 - Based on [**scraps/elab_poly_generics_lettype.ml**](../scraps/elab_poly_generics_lettype.ml)
 
 ---
