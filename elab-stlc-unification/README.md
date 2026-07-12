@@ -77,4 +77,4 @@ fun (x : Int) => fun (y : Int) => if #int-eq x 0 then y else 3 :
   Int -> Int -> Int
 ```
 
-More examples can be found in [`tests.t`](tests.t).
+More examples can be found in the [`tests`](tests) directory.

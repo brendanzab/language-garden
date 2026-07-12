@@ -1,7 +1,7 @@
 # Compiling a first-order functional language with top-level items
 
 - Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ top-level items, compilation) (- higher-order functions, currying)
-- Based on [**scraps/compile_items_wasm.ml**](../scraps/compile_items_wasm.ml)
+- Based on [**scraps/compile_fofl_wasm.ml**](../scraps/compile_fofl_wasm.ml)
 
 ---
 

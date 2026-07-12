@@ -117,4 +117,4 @@ Some other approaches to combining fixed points with normalisation-by-evaluation
 
 ## Examples
 
-More examples can be found in [`tests.t`](tests.t).
+More examples can be found in the [`tests`](tests) directory.

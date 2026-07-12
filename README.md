@@ -31,7 +31,7 @@ Simply typed:
 - [**elab-stlc-error-recovery**](./elab-stlc-error-recovery):
   An elaborator for a simply typed lambda calculus with support for reporting
   multiple errors during type checking.
-- [**elab-stlc-bidirectional-stratify**](./elab-stlc-bidirectional):
+- [**elab-stlc-bidirectional-stratify**](./elab-stlc-bidirectional-stratify):
   An elaborator that partially stratifies a combined type and term language into
   a simply typed core language.
 - [**elab-stlc-abstract**](./elab-stlc-abstract):

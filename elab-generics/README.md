@@ -91,15 +91,15 @@ etc. This is what I think most people are asking for when they ask about
 implementing generics, as opposed to Hindley-Milner type systems (with
 generalisation[^hm]).
 
-A stripped-down version of this project can be found in [`scraps/check_poly_generics.ml`].
+A stripped-down version of this project can be found in [`scraps/elab_poly_generics.ml`].
 
 [^hm]: For examples of Hindley-Milner type system implementations that implement
   generalisation, see [`scraps/check_poly_algorithm_j.ml`] and
-  [`scraps/elab_poly_algorithm_j.ml`]).
+  [`scraps/elab_poly_algorithm_j.ml`].
 
 [`scraps/check_poly_algorithm_j.ml`]: ../scraps/check_poly_algorithm_j.ml
-[`scraps/elab_poly_algorithm_j.ml`]: ../scraps/check_poly_algorithm_j.ml
-[`scraps/check_poly_generics.ml`]: ../scraps/check_poly_generics.ml
+[`scraps/elab_poly_algorithm_j.ml`]: ../scraps/elab_poly_algorithm_j.ml
+[`scraps/elab_poly_generics.ml`]: ../scraps/elab_poly_generics.ml
 
 ## Project overview
 

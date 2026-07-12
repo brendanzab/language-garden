@@ -14,9 +14,9 @@ library.
 | [`Anf_lang`]   | Arithmetic expressions in A-Normal Form |
 | [`Stack_lang`] | Arithmetic expressions as stack machine instructions |
 
-[`Tree_lang`]: ./lib/Tree_lang.ml
-[`Anf_lang`]: ./lib/Anf_lang.ml
-[`Stack_lang`]: ./lib/Stack_lang.ml
+[`Tree_lang`]: ./lib/tree_lang.ml
+[`Anf_lang`]: ./lib/anf_lang.ml
+[`Stack_lang`]: ./lib/stack_lang.ml
 
 | Translation       |   | Source        |   | Target         |
 | ----------------- | - | ------------- | - | -------------- |
