@@ -7,6 +7,7 @@
     {{: https://ocaml.org/p/llvm} llvm} package.
 
     - {{: https://llvm.org/docs/LangRef.html} LLVM Language Reference Manual}
+    - {{: https://github.com/llir/grammar} EBNF grammar of LLVM IR assembly}
     - {{: https://web.archive.org/web/20210503233207/https://www.cis.upenn.edu/~cis341/20sp/hw/hw03/llvmlite.shtml}
       LLVMLite Documentation}
     - {{: https://hackage.haskell.org/package/llvm-hs-pure} llvm-hs-pure: Pure
@@ -35,8 +36,8 @@ type icmp_cond =    (* https://llvm.org/docs/LangRef.html#icmp-instruction *)
   | Eq              (* equal *)
   (* ... *)
 
-(** Instructions *)
-type instr =
+(** Instructions that produce values *)
+type value_instr =
   | Add of ty * opr * opr                   (* https://llvm.org/docs/LangRef.html#add-instruction *)
   | Sub of ty * opr * opr                   (* https://llvm.org/docs/LangRef.html#sub-instruction *)
   | Mul of ty * opr * opr                   (* https://llvm.org/docs/LangRef.html#mul-instruction *)
@@ -45,21 +46,26 @@ type instr =
   | Call of ty * opr * (ty * opr) Iarray.t  (* https://llvm.org/docs/LangRef.html#call-instruction *)
   (* ... *)
 
+(** Non-terminator instructions *)
+type instr =
+  | Assign of Local_id.t * value_instr
+  (* ... *)
+
 (** Terminator instructions *)
-type term =                                 (* Terminator instructions  https://llvm.org/docs/LangRef.html#terminator-instructions *)
+type term_instr =                           (* Terminator instructions  https://llvm.org/docs/LangRef.html#terminator-instructions *)
   | Br of Label.t                           (* Unconditional branch     https://llvm.org/docs/LangRef.html#i-br *)
   | Br_i1 of opr * Label.t * Label.t        (* Conditional branch       https://llvm.org/docs/LangRef.html#i-br *)
   | Ret of ty * opr                         (* Return instruction       https://llvm.org/docs/LangRef.html#ret-instruction *)
   (* ... *)
 
 (** Basic blocks *)
-type block =
-  | Instr of Local_id.t * instr * block
-  | Term of term
+type block = {
+  instrs : instr Iarray.t;
+  term : term_instr;
+}
 
 (* Control flow graph of a function *)
 type cfg = {
-  entry : Label.t * block;
   blocks : (Label.t * block) Iarray.t;
 }
 
@@ -108,7 +114,7 @@ end = struct
     | Global id -> pp_global_id id
     | Local id -> pp_local_id id
 
-  let pp_instr (instr : instr) =
+  let pp_value_instr (instr : value_instr) =
     let pp_binop_instr (name, ty, opr1, opr2) =
       Format.dprintf "@[%s@ %t@ %t,@ %t@]" name (pp_ty ty) (pp_opr opr1) (pp_opr opr2)
     and pp_pred (opr, label) = Format.dprintf "[@[%t,@ %t@]]" (pp_opr opr) (pp_label label)
@@ -134,7 +140,7 @@ end = struct
           (pp_opr fn)
           (args |> pp_iarray pp_arg ~pp_sep:pp_comma_sep)
 
-  let pp_term (term : term) =
+  let pp_term_instr (term : term_instr) =
     match term with
     | Br dest -> Format.dprintf "@[  @[br@ label@ %t@]@]" (pp_label dest)
     | Br_i1 (cond, if_true, if_false) ->
@@ -142,26 +148,24 @@ end = struct
           (pp_opr cond) (pp_label if_true) (pp_label if_false)
     | Ret (ty, opr) -> Format.dprintf "@[  @[ret@ %t@ %t@]@]" (pp_ty ty) (pp_opr opr)
 
-  let rec pp_block (block : block) =
-    match block with
-    | Instr (id, instr, block) ->
-        Format.dprintf "@[  @[<2>@[%t@ =@]@ %t@]@]@,%t"
-          (pp_local_id id)
-          (pp_instr instr)
-          (pp_block block)
-    | Term term ->
-        pp_term term
+  let pp_instr (instr : instr) =
+    match instr with
+    | Assign (id, instr) ->
+        Format.dprintf "@[  @[<2>@[%t@ =@]@ %t@]@]" (pp_local_id id) (pp_value_instr instr)
 
-  let pp_cfg ({ entry; blocks; } : cfg) =
+  let rec pp_block ({ instrs; term } : block) =
+    if Iarray.length instrs = 0 then
+      pp_term_instr term
+    else
+      Format.dprintf "%t@,%t"
+        (instrs |> pp_iarray pp_instr)
+        (pp_term_instr term)
+
+  let pp_cfg ({ blocks } : cfg) =
     let pp_labelled_block (label, block) =
       Format.dprintf "%t:@,%t" (Label.pp label) (pp_block block)
     in
-    if Iarray.length blocks = 0 then
-      pp_labelled_block entry
-    else
-      Format.dprintf "%t@ %t"
-        (pp_labelled_block entry)
-        (blocks |> pp_iarray pp_labelled_block)
+    blocks |> pp_iarray pp_labelled_block
 
   let pp_fun (id, { result_ty; params; cfg } : Global_id.t * fun_) =
     let pp_param (ty, id) =
@@ -184,11 +188,10 @@ module Output_dot = struct
 
   let pp_block (fun_id : Global_id.t) (label, block : Label.t * block) (out : Out_channel.t) = begin
     let rec outgoing_labels block =
-      match block with
-      | Instr (_, _, block) -> outgoing_labels block
-      | Term (Br label) -> [label]
-      | Term (Br_i1 (_, label1, label2)) -> [label1; label2]
-      | Term (Ret (_, _)) -> []
+      match block.term with
+      | Br label -> [label]
+      | Br_i1 (_, label1, label2) -> [label1; label2]
+      | Ret (_, _) -> []
     in
 
     let label_string label =
@@ -254,7 +257,6 @@ module Output_dot = struct
       Printf.fprintf out "    cluster=true;\n";
 
       (* Control flow graph *)
-      pp_block id cfg.entry out;
       cfg.blocks |> Iarray.iter begin fun (label, block) ->
         pp_block id (label, block) out;
       end;

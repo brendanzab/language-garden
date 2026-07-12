@@ -35,8 +35,6 @@ let translate_ty (ty : Core.Ty.t) : Llvm.ty =
 type item_decl =
   | Fun of Llvm.ty * Llvm.Global_id.t * Llvm.ty Iarray.t
 
-type 'a k = 'a -> Llvm.block
-
 (** Translate an expression into a control flow graph. *)
 let translate_expr
   ~(fresh_local_id : string -> Llvm.Local_id.t)
@@ -46,125 +44,100 @@ let translate_expr
   (expr : Core.Expr.t)
   (ty : Llvm.ty)
 : Llvm.cfg =
-  let ( let@ ) = ( @@ ) in
-
   let blocks = Dynarray.create () in
+  let current_label = ref None in
+  let current_stmts = Dynarray.create () in
 
-  (* Bind an instruction to variable in the current block  *)
-  let bind_instr name (instr : Llvm.instr) (k : Llvm.opr k) : Llvm.block =
+  (* Bind an instruction to variable in the current block *)
+  let bind_instr name (instr : Llvm.value_instr) : Llvm.opr =
     let id = fresh_local_id name in
-    Llvm.Instr (id, instr, k (Local id))
+    Dynarray.add_last current_stmts Llvm.(Assign (id, instr));
+    Local id
+  in
+
+  (* Set the label of the current block *)
+  let start_block (label : Llvm.Label.t) =
+    assert (Option.is_none !current_label);
+    assert (Dynarray.is_empty current_stmts);
+    current_label := Some label;
+  in
+
+  (* Finish the current block *)
+  let close_block (term : Llvm.term_instr) : Llvm.Label.t =
+    let label = Option.get !current_label in
+    Dynarray.add_last blocks (label, Llvm.{ instrs = make_iarray current_stmts; term });
+    current_label := None;
+    Dynarray.clear current_stmts;
+    label
   in
 
   (* Translate a sub-expression in the current block. While doing this, more
      blocks might be added to the control flow graph. *)
-  let rec go_expr local_env result_name (expr : Core.Expr.t) (k : Llvm.opr k) : Llvm.block =
+  let rec go_expr local_env result_name (expr : Core.Expr.t) : Llvm.opr =
     match expr with
     | Core.Expr.Item (name, args) ->
         let Fun (result_ty, item_id, param_tys) = Core.Item_map.find name item_env in
-        let@ args = go_exprs local_env "arg" (Option.value args ~default:[||] |> Iarray.to_list) in
-        let args = Iarray.combine param_tys (Iarray.of_list args) in
-        let@ result = bind_instr result_name Llvm.(Call (result_ty, Global item_id, args)) in
-        k result
+        let args = Option.value args ~default:[||] |> Iarray.map (go_expr local_env "arg") in
+        bind_instr result_name Llvm.(Call (result_ty, Global item_id, Iarray.combine param_tys args))
 
     | Core.Expr.Var index ->
-        k (Core.Local.Env.lookup index local_env)
+        Core.Local.Env.lookup index local_env
 
     | Core.Expr.Let ((name, _, def), body) ->
-        let@ def = go_expr local_env (Option.value name ~default:"_") def in
-        go_expr (Core.Local.Env.extend def local_env) result_name body k
+        let def = go_expr local_env (Option.value name ~default:"_") def in
+        go_expr (Core.Local.Env.extend def local_env) result_name body
 
-    | Core.Expr.Bool true -> k Llvm.(I1 true)
-    | Core.Expr.Bool false -> k Llvm.(I1 false)
+    | Core.Expr.Bool true -> Llvm.(I1 true)
+    | Core.Expr.Bool false -> Llvm.(I1 false)
 
     | Core.Expr.Bool_if (expr1, expr2, expr3, result_ty) ->
         (* Generate some fresh labels to allow us to wire together the basic
            blocks of the if expression *)
         let true_label = fresh_label "if_true" in
         let false_label = fresh_label "if_false" in
-        let true_end_label = fresh_label "if_true_end" in
-        let false_end_label = fresh_label "if_false_end" in
         let end_label = fresh_label "if_end" in
 
-        (* These operands store the result of executing either branch of the if
-           expression, and will be used as arguments to the phi instruction in
-           the end block *)
-        let true_result = ref None in
-        let false_result = ref None in
+        (* Translate the entrypoint of the if expression *)
+        let cond = go_expr local_env "cond" expr1 in
+        close_block (Br_i1 (cond, true_label, false_label)) |> ignore;
 
-        Dynarray.add_last blocks (true_label, begin
-          let@ true_result' = go_expr local_env "true_result" expr2 in
-          true_result := Some true_result';
-          Llvm.(Term (Br true_end_label))
-        end);
+        start_block true_label;
+        let true_result = go_expr local_env "true_result" expr2 in
+        let true_end_label = close_block (Br end_label) in
 
-        Dynarray.add_last blocks (false_label, begin
-          let@ false_result' = go_expr local_env "false_result" expr3 in
-          false_result := Some false_result';
-          Llvm.(Term (Br false_end_label))
-        end);
-
-        (* We don't know what the exit block of the branches are, so these
-           blocks will be used by the phi instruction to identify which branch
-           we have come from.
-
-           Another solution would be to return the label of the exit block when
-           compiling expressions, but that would involve threading through a lot
-           of state, and this seems like a simpler and less invasive approach,
-           even if it results in more blocks being generated. *)
-        Dynarray.add_last blocks (true_end_label, Llvm.(Term (Br end_label)));
-        Dynarray.add_last blocks (false_end_label, Llvm.(Term (Br end_label)));
+        start_block false_label;
+        let false_result = go_expr local_env "false_result" expr3 in
+        let false_end_label = close_block (Br end_label) in
 
         (* Translate the blocks that will be run after the if expression has
-           been evaluated (i.e. the continuation). The result of the true and
+           been evaluated (i.e. the continuation). The results of the true and
            false branches will be bound to a phi-node. *)
-        Dynarray.add_last blocks (end_label, begin
-          let result_ty = translate_ty result_ty in
-          let@ result = bind_instr result_name Llvm.(Phi (result_ty, [|
-            Option.get !true_result, true_end_label;
-            Option.get !false_result, false_end_label;
-          |])) in
-          k result
-        end);
-
-        (* Translate the entrypoint of the if expression *)
-        let@ cond = go_expr local_env "cond" expr1 in
-        Llvm.(Term (Br_i1 (cond, true_label, false_label)))
-
-    | Core.Expr.I32 i -> k Llvm.(I32 i)
+        start_block end_label;
+        let result_ty = translate_ty result_ty in
+        bind_instr result_name Llvm.(Phi (result_ty, [|
+          true_result, true_end_label;
+          false_result, false_end_label;
+        |]))
+    | Core.Expr.I32 i -> Llvm.(I32 i)
 
     | Core.Expr.Prim (op, args) ->
-        let@ args = go_exprs local_env "arg" (Iarray.to_list args) in
+        let args =  args |> Iarray.map (go_expr local_env "arg") in
         begin match op, args with
-        | Prim.Op.Bool_eq, [x; y] -> bind_instr result_name Llvm.(Icmp (Eq, I1, x, y)) k
-        | Prim.Op.I32_eq, [x; y] -> bind_instr result_name Llvm.(Icmp (Eq, I32, x, y)) k
-        | Prim.Op.I32_add, [x; y] -> bind_instr result_name Llvm.(Add (I32, x, y)) k
-        | Prim.Op.I32_sub, [x; y] -> bind_instr result_name Llvm.(Sub (I32, x, y)) k
-        | Prim.Op.I32_mul, [x; y] -> bind_instr result_name Llvm.(Mul (I32, x, y)) k
-        | Prim.Op.I32_neg, [x] -> bind_instr result_name Llvm.(Sub (I32, I32 0l, x)) k
+        | Prim.Op.Bool_eq, [|x; y|] -> bind_instr result_name Llvm.(Icmp (Eq, I1, x, y))
+        | Prim.Op.I32_eq, [|x; y|] -> bind_instr result_name Llvm.(Icmp (Eq, I32, x, y))
+        | Prim.Op.I32_add, [|x; y|] -> bind_instr result_name Llvm.(Add (I32, x, y))
+        | Prim.Op.I32_sub, [|x; y|] -> bind_instr result_name Llvm.(Sub (I32, x, y))
+        | Prim.Op.I32_mul, [|x; y|] -> bind_instr result_name Llvm.(Mul (I32, x, y))
+        | Prim.Op.I32_neg, [|x|] -> bind_instr result_name Llvm.(Sub (I32, I32 0l, x))
         | _, _ -> Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
         end
-
-  (* Translate a series of expressions in the current block *)
-  and go_exprs local_env name (exprs : Core.Expr.t list) (k : Llvm.opr list k) : Llvm.block =
-    match exprs with
-    | [] -> k []
-    | expr :: exprs ->
-        let@ expr = go_expr local_env name expr in
-        let@ exprs = go_exprs local_env name exprs in
-        k (expr :: exprs)
   in
 
-  let entry_label = fresh_label "entry" in
-  let entry_block =
-    let@ result = go_expr local_env "result" expr in
-    Llvm.(Term (Ret (ty, result)))
-  in
+  start_block (fresh_label "entry");
+  let result = go_expr local_env "result" expr in
+  close_block (Ret (ty, result)) |> ignore;
 
-  Llvm.{
-    entry = entry_label, entry_block;
-    blocks = make_iarray blocks;
-  }
+  Llvm.{ blocks = make_iarray blocks }
 
 (** Translate a core language module into an LLVM module  *)
 let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
