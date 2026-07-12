@@ -2,10 +2,10 @@ fun add_one(x : I32) : I32 := #i32-add(x, 1);
 
 fun test(x : I32, y : I32) : I32 :=
   let cond := #i32-eq(x, 0);
-  join branch (result : I32) := #i32-add(result, 1);
-  if cond then jump branch y else jump branch x;
+  join if_end (result : I32) := #i32-add(result, 1);
+  if cond then jump if_end y else jump if_end x;
 
 fun test-tailcall(x : I32, y : I32) : I32 :=
   let cond := #i32-eq(x, 0);
-  join branch (result : I32) := add_one(result);
-  if cond then jump branch x else jump branch y;
+  join if_end (result : I32) := add_one(result);
+  if cond then jump if_end x else jump if_end y;

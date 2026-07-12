@@ -50,7 +50,7 @@ end = struct
 
         | Core.Expr.Bool_if (expr1, expr2, expr3, expr_ty) ->
             let param_id = fresh_local_id "result" in
-            let join_id = fresh_join_id "branch" in
+            let join_id = fresh_join_id "if_end" in
             let jump_k result = Anf.Expr.Jump (join_id, result) in
 
             let@ expr1 = go_named_expr local_ids "cond" expr1 in
