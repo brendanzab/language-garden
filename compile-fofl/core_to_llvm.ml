@@ -46,28 +46,29 @@ let translate_expr
 : Llvm.cfg =
   let blocks = Dynarray.create () in
   let current_label = ref None in
-  let current_stmts = Dynarray.create () in
+  let current_instrs = Dynarray.create () in
 
   (* Bind an instruction to variable in the current block *)
   let bind_instr name (instr : Llvm.value_instr) : Llvm.opr =
     let id = fresh_local_id name in
-    Dynarray.add_last current_stmts Llvm.(Assign (id, instr));
+    Dynarray.add_last current_instrs Llvm.(Assign (id, instr));
     Local id
   in
 
   (* Set the label of the current block *)
   let start_block (label : Llvm.Label.t) =
     assert (Option.is_none !current_label);
-    assert (Dynarray.is_empty current_stmts);
+    assert (Dynarray.is_empty current_instrs);
     current_label := Some label;
   in
 
   (* Finish the current block *)
   let close_block (term : Llvm.term_instr) : Llvm.Label.t =
     let label = Option.get !current_label in
-    Dynarray.add_last blocks Llvm.{ label; instrs = make_iarray current_stmts; term };
+    let instrs = make_iarray current_instrs in
+    Dynarray.add_last blocks Llvm.{ label; instrs; term };
     current_label := None;
-    Dynarray.clear current_stmts;
+    Dynarray.clear current_instrs;
     label
   in
 
@@ -99,15 +100,15 @@ let translate_expr
 
         (* Translate the entrypoint of the if expression *)
         let cond = go_expr local_env "cond" expr1 in
-        close_block (Br_i1 (cond, true_label, false_label)) |> ignore;
+        close_block Llvm.(Br_i1 (cond, true_label, false_label)) |> ignore;
 
         start_block true_label;
         let true_result = go_expr local_env "true_result" expr2 in
-        let true_end_label = close_block (Br end_label) in
+        let true_end_label = close_block Llvm.(Br end_label) in
 
         start_block false_label;
         let false_result = go_expr local_env "false_result" expr3 in
-        let false_end_label = close_block (Br end_label) in
+        let false_end_label = close_block Llvm.(Br end_label) in
 
         (* Translate the blocks that will be run after the if expression has
            been evaluated (i.e. the continuation). The results of the true and
