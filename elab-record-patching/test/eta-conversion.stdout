@@ -21,4 +21,12 @@
         fun (A : Type) (B : Type) (r : { x : A; y : B })
             -> Eq { x : A; y : B } { x := r.x; y := r.y } r
   := fun A B r => refl { x : A; y : B } r;
+  let eta :
+        fun (A : Type) (f : fun (_ : A) -> A)
+            -> Eq (fun (_ : A) -> A) f (fun x => f x)
+  := fun A f => refl (fun (_ : A) -> A) f;
+  let eta :
+        fun (A : Type) (f : fun (_ : A) (_ : A) -> A)
+            -> Eq (fun (_ : A) (_ : A) -> A) f (fun x y => f x y)
+  := fun A f => refl (fun (_ : A) (_ : A) -> A) f;
   Type
