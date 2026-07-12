@@ -11,6 +11,23 @@ Elaborate identity function test
   fun (x : Int) => id x : Int -> Int
 
 
+Annotated Terms
+---------------
+
+Annotated integer literal
+  $ executable <<< "1 : Int"
+  1 : Int : Int
+
+Annotated function literal
+  $ executable <<< "(fun (a : Int) => a) : Int -> Int"
+  (fun (a : Int) => a) : Int -> Int : Int -> Int
+
+Annotated definition
+  $ executable <<< "let x : Int := 1 : Int; x"
+  let x : Int := 1 : Int;
+  x : Int
+
+
 Elaboration Errors
 ------------------
 
