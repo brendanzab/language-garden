@@ -177,7 +177,7 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
       let id = fresh_global_id (Core.Item_name.to_string name) in
       match item with
       | Core.Item.Val (ty, def) ->
-          Fun (translate_ty ty, id, ([||] : _ Iarray.t))
+          Fun (translate_ty ty, id, [||])
       | Core.Item.Fun (params, ty, body) ->
           Fun (translate_ty ty, id, params |> Iarray.map (fun (_, ty) -> translate_ty ty))
   in
