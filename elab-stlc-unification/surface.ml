@@ -287,23 +287,26 @@ end = struct
 
   (** Elaborate a function literal into a core term, given an expected type. *)
   and check_fun_lit (ctx : context) (span : span) (params : param list) (body_ty : ty option) (body : tm) (ty : Core.ty) : Core.tm =
-    match params, Core.force_ty ty with
-    | [], ty ->
-        check_tm ctx body ty
-    | (name, None) :: params, Core.Fun_type (param_ty, ty) ->
+    match params, body_ty, Core.force_ty ty with
+    | [], None, ty -> check_tm ctx body ty
+    | [], Some ({ span; _ } as body_ty), ty ->
+        let body_ty = check_ty ctx body_ty in
+        unify_tys span ~found:body_ty ~expected:ty;
+        check_tm ctx body body_ty
+    | (name, None) :: params, body_ty, Core.Fun_type (param_ty, ty) ->
         let body = check_fun_lit (extend ctx name.data param_ty) span params body_ty body ty in
         Core.Fun_lit (name.data, param_ty, body)
-    | (name, Some param_ty) :: params, Core.Fun_type (param_ty', ty) ->
+    | (name, Some param_ty) :: params, body_ty, Core.Fun_type (param_ty', ty) ->
         let param_ty_span = param_ty.span in
         let param_ty = check_ty ctx param_ty in
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
         let body = check_fun_lit (extend ctx name.data param_ty) span params body_ty body ty in
         Core.Fun_lit (name.data, param_ty, body)
-    | (_ :: _) as params, Core.Meta_var _ ->
-        let tm', ty' = infer_fun_lit ctx params None body in
+    | (_ :: _) as params, body_ty, Core.Meta_var _ ->
+        let tm', ty' = infer_fun_lit ctx params body_ty body in
         unify_tys span ~found:ty' ~expected:ty;
         tm'
-    | (name, _) :: _, _ ->
+    | (name, _) :: _, body_ty, _ ->
         error name.span "unexpected parameter"
 
   (** Elaborate a function literal, inferring its type. *)

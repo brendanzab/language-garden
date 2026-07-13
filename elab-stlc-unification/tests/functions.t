@@ -18,8 +18,12 @@ Explicit parameter type
   $ executable elab <<< "fun (x : Bool) => x"
   fun (x : Bool) => x : Bool -> Bool
 
-Explicit return type
+Explicit return type (inference mode)
   $ executable elab <<< "fun x : Int => x"
+  fun (x : Int) => x : Int -> Int
+
+Explicit return type (checking mode)
+  $ executable elab <<< "(fun x : Int => x) : Int -> Int"
   fun (x : Int) => x : Int -> Int
 
 Unused parameter
@@ -63,13 +67,49 @@ Ambiguous function application
   
   [1]
 
-Mismatched return type
+Mismatched explicit parameter type
+  $ executable elab <<< "(fun (x : Bool) => x) : Int -> Int"
+  error: mismatched types
+    ┌─ <stdin>:1:10
+    │
+  1 │ (fun (x : Bool) => x) : Int -> Int
+    │           ^^^^
+    = expected: Int
+         found: Bool
+  
+  [1]
+
+Mismatched explicit return type (inference mode)
   $ executable elab <<< "fun (x : Int) : Bool => x"
   error: mismatched types
     ┌─ <stdin>:1:24
     │
   1 │ fun (x : Int) : Bool => x
     │                         ^
+    = expected: Bool
+         found: Int
+  
+  [1]
+
+Mismatched explicit return type (checking mode)
+  $ executable elab <<< "(fun x : Bool => x) : Int -> Int"
+  error: mismatched types
+    ┌─ <stdin>:1:9
+    │
+  1 │ (fun x : Bool => x) : Int -> Int
+    │          ^^^^
+    = expected: Int
+         found: Bool
+  
+  [1]
+
+Mismatched explicit return type (checking against a metavariable)
+  $ executable elab <<< "(fun (x : Int) : Bool => x) : _"
+  error: mismatched types
+    ┌─ <stdin>:1:25
+    │
+  1 │ (fun (x : Int) : Bool => x) : _
+    │                          ^
     = expected: Bool
          found: Int
   
