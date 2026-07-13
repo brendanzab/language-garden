@@ -176,7 +176,11 @@ end
 let unify (atom1 : atom) (atom2 : atom) : Subst.t option =
   let rec go (terms1 : term list) (terms2 : term list) : Subst.t option =
     match terms1, terms2 with
-    | [], _ | _, [] -> Some Subst.empty
+    | [], [] -> Some Subst.empty
+    (* Fail on arity mismatches, otherwise unifying an atom with a shorter
+       fact would bind only some of its variables, adding non-ground facts to
+       the knowledge base *)
+    | [], _ :: _ | _ :: _, [] -> None
     | Const c1 :: rest1, Const c2 :: rest2 ->
         if c1 = c2 then go rest1 rest2 else None
     | Var v1 :: rest1, Const c2 :: rest2 ->
