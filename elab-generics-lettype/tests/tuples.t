@@ -38,13 +38,13 @@ Proj second
 
 Mismatched element type
   $ executable elab <<< "(2, true) : (Int, Int)"
-  error: mismatched types:
-    expected: Int
-       found: Bool
+  error: mismatched types
     ┌─ <stdin>:1:4
     │
   1 │ (2, true) : (Int, Int)
     │     ^^^^
+    = expected: Int
+         found: Bool
   
   [1]
 

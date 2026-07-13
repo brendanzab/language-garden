@@ -85,10 +85,28 @@ module Module = struct
 
 end
 
+
+(** {1 User-facing diagnostics} *)
+
+(** An error message that should be reported to the programmer *)
+module Error = struct
+
+  type t = {
+    span : Span.t;
+    message : string;
+    details : string list;
+  }
+
+  let make ?(details = ([] : string list)) (span : Span.t) (message : string) : t =
+    { span; message; details }
+
+end
+
+
 (** Elaboration from the surface language into the core language *)
 module Elab : sig
 
-  val check_module : Module.t -> (Core.Module.t, Span.t * string) result
+  val check_module : Module.t -> (Core.Module.t, Error.t) result
 
 end = struct
 
@@ -167,17 +185,20 @@ end = struct
 
   (** {2 Elaboration errors} *)
 
-  exception Error of Span.t * string
+  exception Error of Error.t
 
   (** Raise an elaboration error with a formatted message *)
-  let error (type a b) (span : Span.t) : (b, Format.formatter, unit, a) format4 -> b =
-    Format.kasprintf (fun message -> raise (Error (span, message)))
+  let error (type a b) ?(details : string list option)  (span : Span.t) : (a, Format.formatter, unit, b) format4 -> a =
+    Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
 
   let unify_tys (span : Span.t) ~(found : Core.Ty.t) ~(expected : Core.Ty.t) =
     if found = expected then () else
-      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-        (Core.Ty.pp expected)
-        (Core.Ty.pp found)
+      error span "mismatched types"
+        ~details:[
+          Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+            (Core.Ty.pp expected)
+            (Core.Ty.pp found);
+        ]
 
 
   (** {2 Bidirectional type checking} *)
@@ -318,8 +339,8 @@ end = struct
 
   (** {2 Public API} *)
 
-  let check_module (mod_ : Module.t) : (Core.Module.t, Span.t * string) result =
+  let check_module (mod_ : Module.t) : (Core.Module.t, Error.t) result =
     try Ok (check_module mod_) with
-    | Error (span, msg) -> Error (span, msg)
+    | Error error -> Error error
 
 end

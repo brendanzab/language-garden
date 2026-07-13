@@ -26,7 +26,8 @@ module Source_file = struct
 
 end
 
-let emit (source : Source_file.t) (severity : string) (start, stop : Surface.Span.t) (message : string) =
+let emit (source : Source_file.t) (error : Surface.Error.t) =
+  let start, stop = error.span in
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -39,14 +40,21 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Surface.Spa
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "%s: %s\n" severity message;
+  Printf.eprintf "error: %s\n" error.message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
+  error.details |> List.iter begin fun message ->
+    String.split_on_char '\n' message |> List.iteri begin fun i line ->
+      match i with
+      | 0 -> Printf.eprintf "%s = %s\n" gutter_pad line
+      | _ -> Printf.eprintf "%s   %s\n" gutter_pad line
+    end;
+  end;
   Printf.eprintf "\n"
 
-let parse_tm (source : Source_file.t) : (Surface.Tm.t, (Surface.Span.t * string) list) result =
+let parse_tm (source : Source_file.t) : (Surface.Tm.t, Surface.Error.t list) result =
   let lexbuf = Sedlexing.Utf8.from_string source.contents in
   let lexpos () = Sedlexing.lexing_positions lexbuf in
   try
@@ -55,8 +63,8 @@ let parse_tm (source : Source_file.t) : (Surface.Tm.t, (Surface.Span.t * string)
     |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
     |> Result.ok
   with
-  | Lexer.Error message -> Error [lexpos (), message]
-  | Parser.Error -> Error [lexpos (), "syntax error"]
+  | Lexer.Error message -> Error [Surface.Error.make (lexpos ()) message]
+  | Parser.Error -> Error [Surface.Error.make (lexpos ()) "syntax error"]
 
 
 (** {1 Subcommands} *)
@@ -76,7 +84,7 @@ let elab_cmd () : int =
   with
   | Ok () -> exit_ok
   | Error errors ->
-      errors |> List.iter (fun (pos, message) -> emit source "error" pos message);
+      errors |> List.iter (emit source);
       exit_error
 
 let eval_cmd () : int =
@@ -91,7 +99,7 @@ let eval_cmd () : int =
   with
   | Ok () -> exit_ok
   | Error errors ->
-      errors |> List.iter (fun (pos, message) -> emit source "error" pos message);
+      errors |> List.iter (emit source);
       exit_error
 
 

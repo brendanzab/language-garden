@@ -285,13 +285,13 @@ Mismatched recursive call
   > 
   > is-even
   > EOF
-  error: mismatched types:
-    expected: Int
-       found: Bool
+  error: mismatched types
     ┌─ <stdin>:2:54
     │
   2 │   is-even (n : Int) := if n = 0 then true else is-odd false;
     │                                                       ^^^^^
+    = expected: Int
+         found: Bool
   
   [1]
 

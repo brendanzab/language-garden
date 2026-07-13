@@ -24,7 +24,8 @@ module Source_file = struct
 
 end
 
-let emit (source : Source_file.t) (severity : string) (start, stop : Lexing.position * Lexing.position) (message : string) =
+let emit (source : Source_file.t) (error : Surface.Error.t) =
+  let start, stop = error.span in
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -37,11 +38,18 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Lexing.posi
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "%s: %s\n" severity message;
+  Printf.eprintf "error: %s\n" error.message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
+  error.details |> List.iter begin fun message ->
+    String.split_on_char '\n' message |> List.iteri begin fun i line ->
+      match i with
+      | 0 -> Printf.eprintf "%s = %s\n" gutter_pad line
+      | _ -> Printf.eprintf "%s   %s\n" gutter_pad line
+    end;
+  end;
   Printf.eprintf "\n"
 
 let parse_template (source : Source_file.t) : Surface.template =
@@ -53,8 +61,8 @@ let parse_template (source : Source_file.t) : Surface.template =
     MenhirLib.Convert.Simplified.traditional2revised Parser.template_main
       (Sedlexing.with_tokenizer (Lexer.template_token ()) lexbuf)
   with
-  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
-  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
+  | Lexer.Error message -> emit source (Surface.Error.make (lexpos ()) message); exit 1
+  | Parser.Error -> emit source (Surface.Error.make (lexpos ()) "syntax error"); exit 1
 
 let context = ref []
 let env = ref []
@@ -105,6 +113,6 @@ let () =
   with
   | Core.Semantics.Text_lit s -> print_string s
   | _ -> failwith "text literal expected"
-  | exception Surface.Elab.Error (pos, msg) ->
-      emit source "error" pos msg;
+  | exception Surface.Elab.Error error ->
+      emit source error;
       exit 1

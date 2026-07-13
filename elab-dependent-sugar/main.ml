@@ -26,7 +26,8 @@ module Source_file = struct
 
 end
 
-let emit (source : Source_file.t) (severity : string) (start, stop : Surface.span) (message : string) =
+let emit (source : Source_file.t) (error : Surface.Error.t) =
+  let start, stop = error.span in
   let start_line, start_column = start.pos_lnum, start.pos_cnum - start.pos_bol in
   let stop_line, stop_column = stop.pos_lnum, stop.pos_cnum - stop.pos_bol in
 
@@ -39,11 +40,18 @@ let emit (source : Source_file.t) (severity : string) (start, stop : Surface.spa
       String.make (stop_column - start_column) '^'
   in
 
-  Printf.eprintf "%s: %s\n" severity message;
+  Printf.eprintf "error: %s\n" error.message;
   Printf.eprintf "%s ┌─ %s:%d:%d\n" gutter_pad source.name start_line start_column;
   Printf.eprintf "%s │\n" gutter_pad;
   Printf.eprintf "%s │ %s\n" gutter_num (Source_file.get_line source start_line);
   Printf.eprintf "%s │ %s%s\n" gutter_pad underline_pad underline;
+  error.details |> List.iter begin fun message ->
+    String.split_on_char '\n' message |> List.iteri begin fun i line ->
+      match i with
+      | 0 -> Printf.eprintf "%s = %s\n" gutter_pad line
+      | _ -> Printf.eprintf "%s   %s\n" gutter_pad line
+    end;
+  end;
   Printf.eprintf "\n"
 
 let parse_tm (source : Source_file.t) : Surface.tm =
@@ -55,14 +63,14 @@ let parse_tm (source : Source_file.t) : Surface.tm =
     Sedlexing.with_tokenizer Lexer.token lexbuf
     |> MenhirLib.Convert.Simplified.traditional2revised Parser.main
   with
-  | Lexer.Error message -> emit source "error" (lexpos ()) message; exit 1
-  | Parser.Error -> emit source "error" (lexpos ()) "syntax error"; exit 1
+  | Lexer.Error message -> emit source (Surface.Error.make (lexpos ()) message); exit 1
+  | Parser.Error -> emit source (Surface.Error.make (lexpos ()) "syntax error"); exit 1
 
 let elab_tm (source : Source_file.t) (tm : Surface.tm) =
   match Surface.Elab.infer tm with
   | Ok (tm, vty) -> tm, vty
-  | Error (pos, msg) ->
-      emit source "error" pos msg;
+  | Error error ->
+      emit source error;
       exit 1
 
 let pp_tm ?resugar =

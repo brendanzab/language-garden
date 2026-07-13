@@ -49,6 +49,23 @@ and param =
   binder * ty option
 
 
+(** {1 User-facing diagnostics} *)
+
+(** An error message that should be reported to the programmer *)
+module Error = struct
+
+  type t = {
+    span : span;
+    message : string;
+    details : string list;
+  }
+
+  let make ?(details = ([] : string list)) (span : span) (message : string) : t =
+    { span; message; details }
+
+end
+
+
 (** Elaboration from the surface language into the core language
 
     This is where we implement user-facing type checking, while also translating
@@ -60,9 +77,9 @@ and param =
 *)
 module Elab : sig
 
-  val check_ty : ty -> (Core.ty, span * string) result
-  val check_tm : tm -> Core.ty -> (Core.tm, span * string) result
-  val infer_tm : tm -> (Core.tm * Core.ty, span * string) result
+  val check_ty : ty -> (Core.ty, Error.t) result
+  val check_tm : tm -> Core.ty -> (Core.tm, Error.t) result
+  val infer_tm : tm -> (Core.tm * Core.ty, Error.t) result
 
 end = struct
 
@@ -88,17 +105,20 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of span * string
+  exception Error of Error.t
 
   (** Raise an elaboration error with a formatted message *)
-  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
-    Format.kasprintf (fun message -> raise (Error (span, message)))
+  let error (type a b) ?(details : string list option)  (span : span) : (a, Format.formatter, unit, b) format4 -> a =
+    Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
 
   let equate_ty (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     if found = expected then () else
-      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-        (Core.pp_ty expected)
-        (Core.pp_ty found)
+      error span "mismatched types"
+        ~details:[
+          Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+            (Core.pp_ty expected)
+            (Core.pp_ty found);
+        ]
 
 
   (** {2 Bidirectional type checking} *)
@@ -257,21 +277,21 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : unit -> a) : (a, span * string) result =
+  let run_elab (type a) (prog : unit -> a) : (a, Error.t) result =
     match prog () with
     | result -> Ok result
-    | exception Error (span, message) -> Error (span, message)
+    | exception Error error -> Error error
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, span * string) result =
+  let check_ty (ty : ty) : (Core.ty, Error.t) result =
     run_elab (fun () -> check_ty ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, span * string) result =
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, Error.t) result =
     run_elab (fun () -> check_tm [] tm ty)
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty, span * string) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, Error.t) result =
     run_elab (fun () -> infer_tm [] tm)
 
 end

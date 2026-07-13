@@ -55,6 +55,23 @@ and defn =
   binder * param list * ty option * tm
 
 
+(** {1 User-facing diagnostics} *)
+
+(** An error message that should be reported to the programmer *)
+module Error = struct
+
+  type t = {
+    span : span;
+    message : string;
+    details : string list;
+  }
+
+  let make ?(details = ([] : string list)) (span : span) (message : string) : t =
+    { span; message; details }
+
+end
+
+
 (** Elaboration from the surface language into the core language
 
     This is where we implement user-facing type checking, while also translating
@@ -66,9 +83,9 @@ and defn =
 *)
 module Elab : sig
 
-  val check_ty : ty -> (Core.ty, (span * string) list) result
-  val check_tm : tm -> Core.ty -> (Core.tm, (span * string) list) result
-  val infer_tm : tm -> (Core.tm * Core.ty, (span * string) list) result
+  val check_ty : ty -> (Core.ty, Error.t list) result
+  val check_tm : tm -> Core.ty -> (Core.tm, Error.t list) result
+  val infer_tm : tm -> (Core.tm * Core.ty, Error.t list) result
 
 end = struct
 
@@ -131,19 +148,22 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of (span * string)
+  exception Error of Error.t
 
   (** Raise an elaboration error with a formatted message *)
-  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
-    Format.kasprintf (fun message -> raise (Error (span, message)))
+  let error (type a b) ?(details : string list option)  (span : span) : (a, Format.formatter, unit, b) format4 -> a =
+    Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
 
   let unify_tys (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     try Core.unify_tys found expected with
     | Core.Infinite_type _ -> error span "infinite type"
     | Core.Mismatched_types (_, _) ->
-        error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-          (Core.pp_ty expected)
-          (Core.pp_ty found)
+        error span "mismatched types"
+          ~details:[
+            Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+              (Core.pp_ty expected)
+              (Core.pp_ty found);
+          ]
 
 
   (** {2 Bidirectional type checking} *)
@@ -419,17 +439,17 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let collect_ambiguities (ctx : context) : (span * string) list =
+  let collect_ambiguities (ctx : context) : Error.t list =
     let ambiguity_error (span, info, m) =
       match !m with
-      | Core.Unsolved _ -> Some (span, "ambiguous " ^ info)
+      | Core.Unsolved _ -> Some (Error.make span ("ambiguous " ^ info))
       | Core.Solved _ -> None
     in
     Dynarray.to_seq ctx.metas
     |> Seq.filter_map ambiguity_error
     |> List.of_seq
 
-  let run_elab (type a) (prog : context -> a) : (a, (span * string) list) result =
+  let run_elab (type a) (prog : context -> a) : (a, Error.t list) result =
     match
       let ctx = empty () in
       let result = prog ctx in
@@ -438,18 +458,18 @@ end = struct
     with
     | result, [] -> Ok result
     | _, errors -> Error errors
-    | exception Error (span, message) -> Error [(span, message)]
+    | exception Error error -> Error [error]
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, (span * string) list) result =
+  let check_ty (ty : ty) : (Core.ty, Error.t list) result =
     run_elab (fun ctx -> check_ty ctx ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, (span * string) list) result =
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, Error.t list) result =
     run_elab (fun ctx -> check_tm ctx tm ty)
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty, (span * string) list) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, Error.t list) result =
     run_elab (fun ctx -> infer_tm ctx tm)
 
 end

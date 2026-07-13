@@ -36,11 +36,13 @@ Unexpected function literal
 
 Unexpected parameter type
   $ executable <<< "(fun (a : Int) => a) : Bool -> Bool"
-  error: mismatched parameter type, found `Int` expected `Bool`
+  error: mismatched parameter types
     ┌─ <stdin>:1:0
     │
   1 │ (fun (a : Int) => a) : Bool -> Bool
     │ ^^^^^^^^^^^^^^^^^^^^
+    = expected: Bool
+         found: Int
   
   [1]
 
@@ -56,11 +58,13 @@ Unbound variable
 
 Type mismatch
   $ executable <<< "fun (a : Int) => a : Bool"
-  error: type mismatch, found `Int` expected `Bool`
+  error: mismatched types
     ┌─ <stdin>:1:17
     │
   1 │ fun (a : Int) => a : Bool
     │                  ^
+    = expected: Bool
+         found: Int
   
   [1]
 
@@ -76,30 +80,36 @@ Missing parameter annotation
 
 Mismatched argument
   $ executable <<< "fun (f : Int -> Bool) => fun (b : Bool) => f b"
-  error: mismatched argument type, found `Bool` expected `Int`
+  error: mismatched argument type
     ┌─ <stdin>:1:45
     │
   1 │ fun (f : Int -> Bool) => fun (b : Bool) => f b
     │                                              ^
+    = expected: Int
+         found: Bool
   
   [1]
 
 Mismatched if expression
   $ executable <<< "if 32 then 3 else 43"
-  error: type mismatch, found `Int` expected `Bool`
+  error: mismatched types
     ┌─ <stdin>:1:3
     │
   1 │ if 32 then 3 else 43
     │    ^^
+    = expected: Bool
+         found: Int
   
   [1]
 
 Mismatched if expression branches
   $ executable <<< "if true then 3 else false"
-  error: type mismatch, found `Bool` expected `Int`
+  error: mismatched types
     ┌─ <stdin>:1:20
     │
   1 │ if true then 3 else false
     │                     ^^^^^
+    = expected: Int
+         found: Bool
   
   [1]

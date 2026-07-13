@@ -35,12 +35,29 @@ and tm_data =
   | If_then_else of tm * tm * tm
 
 
+(** {1 User-facing diagnostics} *)
+
+(** An error message that should be reported to the programmer *)
+module Error = struct
+
+  type t = {
+    span : span;
+    message : string;
+    details : string list;
+  }
+
+  let make ?(details = ([] : string list)) (span : span) (message : string) : t =
+    { span; message; details }
+
+end
+
+
 (** Elaboration from the surface language into the core language *)
 module Elab : sig
 
-  val check_ty : ty -> (Core.ty, span * string) result
-  val check_tm : tm -> Core.ty -> (Core.tm, span * string) result
-  val infer_tm : tm -> (Core.tm * Core.ty, span * string) result
+  val check_ty : ty -> (Core.ty, Error.t) result
+  val check_tm : tm -> Core.ty -> (Core.tm, Error.t) result
+  val infer_tm : tm -> (Core.tm * Core.ty, Error.t) result
 
 end = struct
 
@@ -51,11 +68,11 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of span * string
+  exception Error of Error.t
 
   (** Raise an elaboration error with a formatted message *)
-  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
-    Format.kasprintf (fun message -> raise (Error (span, message)))
+  let error (type a b) ?(details : string list option)  (span : span) : (a, Format.formatter, unit, b) format4 -> a =
+    Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
 
   (** The elaboration context only needs to map names to variables. The types of
       those variables are handled internally in the {!Core} module. *)
@@ -91,9 +108,12 @@ end = struct
           | `Unexpected_fun_lit expected_ty ->
               error tm.span "found function, expected `%t`" (Core.pp_ty expected_ty)
           | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
-              error tm.span "mismatched parameter type, found `%t` expected `%t`"
-                (Core.pp_ty found_ty)
-                (Core.pp_ty expected_ty)
+              error tm.span "mismatched parameter types"
+                ~details:[
+                  Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+                    (Core.pp_ty expected_ty)
+                    (Core.pp_ty found_ty);
+                ]
           end
 
     | If_then_else (head, tm1, tm2) ->
@@ -106,9 +126,12 @@ end = struct
         Core.conv (infer_tm ctx tm)
         |> Core.catch_check_tm begin function
           | `Type_mismatch Core.{ found_ty; expected_ty } ->
-              error tm.span "type mismatch, found `%t` expected `%t`"
-                (Core.pp_ty found_ty)
-                (Core.pp_ty expected_ty)
+              error tm.span "mismatched types"
+                ~details:[
+                  Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+                    (Core.pp_ty expected_ty)
+                    (Core.pp_ty found_ty);
+                ]
           end
 
   (** Elaborate a surface term into an inferrable term in the core language. *)
@@ -150,9 +173,12 @@ end = struct
           | `Unexpected_arg head_ty ->
               error head.span "unexpected argument applied to `%t`" (Core.pp_ty head_ty)
           | `Type_mismatch Core.{ found_ty; expected_ty } ->
-              error arg.span "mismatched argument type, found `%t` expected `%t`"
-                (Core.pp_ty found_ty)
-                (Core.pp_ty expected_ty)
+              error arg.span "mismatched argument type"
+                ~details:[
+                  Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+                    (Core.pp_ty expected_ty)
+                    (Core.pp_ty found_ty);
+                ]
           end
 
     | If_then_else (head, tm1, tm2) ->
@@ -164,21 +190,21 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : unit -> a) : (a, span * string) result =
+  let run_elab (type a) (prog : unit -> a) : (a, Error.t) result =
     match prog () with
     | result -> Ok result
-    | exception Error (span, message) -> Error (span, message)
+    | exception Error error -> Error error
 
 
   (** {2 Public API} *)
 
-  let check_ty (ty : ty) : (Core.ty, span * string) result =
+  let check_ty (ty : ty) : (Core.ty, Error.t) result =
     run_elab (fun () -> check_ty ty)
 
-  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, span * string) result =
+  let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, Error.t) result =
     run_elab (fun () -> Core.run (check_tm [] tm ty))
 
-  let infer_tm (tm : tm) : (Core.tm * Core.ty, span * string) result =
+  let infer_tm (tm : tm) : (Core.tm * Core.ty, Error.t) result =
     run_elab (fun () -> Core.run (infer_tm [] tm))
 
 end

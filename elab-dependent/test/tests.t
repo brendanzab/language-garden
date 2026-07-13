@@ -99,12 +99,12 @@ An example of a type error
   > 
   > true Type : Bool
   > EOF
-  error: mismatched types:
-    expected: fun (Out : Type) (true : Out) (false : Out) -> Out
-       found: fun (true : Type) (false : Type) -> Type
+  error: mismatched types
     ┌─ <stdin>:5:0
     │
   5 │ true Type : Bool
     │ ^^^^^^^^^
+    = expected: fun (Out : Type) (true : Out) (false : Out) -> Out
+         found: fun (true : Type) (false : Type) -> Type
   
   [1]

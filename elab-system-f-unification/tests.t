@@ -225,25 +225,25 @@ Unbound variable
 
 Mismatched definition type
   $ executable elab <<< "let x : Bool := 1; x"
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:1:16
     │
   1 │ let x : Bool := 1; x
     │                 ^
+    = expected: Bool
+         found: Int
   
   [1]
 
 Mismatched argument
   $ executable elab <<< "let f (x : Bool) := x; f 1"
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:1:25
     │
   1 │ let f (x : Bool) := x; f 1
     │                          ^
+    = expected: Bool
+         found: Int
   
   [1]
 
@@ -274,13 +274,13 @@ Mismatched parameter
   > 
   > f true
   > EOF
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:2:11
     │
   2 │   fun (x : Int) => x;
     │            ^^^
+    = expected: Bool
+         found: Int
   
   [1]
 
@@ -326,25 +326,25 @@ Ambiguous parameter type
 
 Mismatched if expression branches
   $ executable elab <<< "fun (x : Bool) => if x then true else 3"
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:1:38
     │
   1 │ fun (x : Bool) => if x then true else 3
     │                                       ^
+    = expected: Bool
+         found: Int
   
   [1]
 
 Mismatched equality
   $ executable elab <<< "1 = false"
-  error: mismatched types:
-    expected: Int
-       found: Bool
+  error: mismatched types
     ┌─ <stdin>:1:0
     │
   1 │ 1 = false
     │ ^^^^^^^^^
+    = expected: Int
+         found: Bool
   
   [1]
 
@@ -396,13 +396,13 @@ Ambiguous placeholder
 
 Infinite type
   $ executable elab <<< "fun f => f f"
-  error: meta variable ?1 refers to itself:
-    expected: ?1
-       found: ?1 -> ?2
+  error: meta variable ?1 refers to itself
     ┌─ <stdin>:1:11
     │
   1 │ fun f => f f
     │            ^
+    = expected: ?1
+         found: ?1 -> ?2
   
   [1]
 
@@ -413,12 +413,12 @@ Scope escape (see https://counterexamples.org/scope-escape.html)
   > 
   > fun f => test (fun x => let y := f x; x)
   > EOF
-  error: type variable $a escapes the scope of meta variable ?2:
-    expected: ?2
-       found: $a
+  error: type variable $a escapes the scope of meta variable ?2
     ┌─ <stdin>:4:35
     │
   4 │ fun f => test (fun x => let y := f x; x)
     │                                    ^
+    = expected: ?2
+         found: $a
   
   [1]

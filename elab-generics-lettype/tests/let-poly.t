@@ -56,13 +56,13 @@ Locally polymorphic definitions
 
 Invalid type application
   $ executable elab <<< "let id [A] (x : A) : A := x; id [Bool] 42"
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:1:39
     │
   1 │ let id [A] (x : A) : A := x; id [Bool] 42
     │                                        ^^
+    = expected: Bool
+         found: Int
   
   [1]
 

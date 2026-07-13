@@ -65,13 +65,13 @@ Ambiguous function application
 
 Mismatched return type
   $ executable elab <<< "fun (x : Int) : Bool => x"
-  error: mismatched types:
-    expected: Bool
-       found: Int
+  error: mismatched types
     ┌─ <stdin>:1:24
     │
   1 │ fun (x : Int) : Bool => x
     │                         ^
+    = expected: Bool
+         found: Int
   
   [1]
 

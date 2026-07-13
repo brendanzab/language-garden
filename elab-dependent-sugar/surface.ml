@@ -37,6 +37,23 @@ and param = pattern * tm option
 and params = param list
 
 
+(** {1 User-facing diagnostics} *)
+
+(** An error message that should be reported to the programmer *)
+module Error = struct
+
+  type t = {
+    span : span;
+    message : string;
+    details : string list;
+  }
+
+  let make ?(details = ([] : string list)) (span : span) (message : string) : t =
+    { span; message; details }
+
+end
+
+
 (** Elaboration from the surface language into the core language
 
     This is where we implement user-facing type checking, while also translating
@@ -48,8 +65,8 @@ and params = param list
 *)
 module Elab : sig
 
-  val check : tm -> Core.Semantics.vty -> (Core.Syntax.tm, span * string) result
-  val infer : tm -> (Core.Syntax.tm * Core.Semantics.vty, span * string) result
+  val check : tm -> Core.Semantics.vty -> (Core.Syntax.tm, Error.t) result
+  val infer : tm -> (Core.Syntax.tm * Core.Semantics.vty, Error.t) result
 
 end = struct
 
@@ -145,17 +162,20 @@ end = struct
       Real-world implementations should use error recovery so that elaboration
       can proceed after errors have been encountered. See [elab-error-recovery]
       for an example of how to implement this. *)
-  exception Error of span * string
+  exception Error of Error.t
 
   (** Raise an elaboration error with a formatted message *)
-  let error (type a b) (span : span) : (b, Format.formatter, unit, a) format4 -> b =
-    Format.kasprintf (fun message -> raise (Error (span, message)))
+  let error (type a b) ?(details : string list option)  (span : span) : (a, Format.formatter, unit, b) format4 -> a =
+    Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
 
   let check_convertible (ctx : Ctx.t) (span : span) ~(found : Semantics.vty) ~(expected : Semantics.vty) =
     if Ctx.is_convertible ctx found expected then () else
-      error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-        (Ctx.pp_vtm ctx expected)
-        (Ctx.pp_vtm ctx found)
+      error span "mismatched types"
+        ~details:[
+          Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+            (Ctx.pp_vtm ctx expected)
+            (Ctx.pp_vtm ctx found);
+        ]
 
 
   (** {2 Bidirectional type checking} *)
@@ -328,18 +348,18 @@ end = struct
 
   (** {2 Running elaboration} *)
 
-  let run_elab (type a) (prog : unit -> a) : (a, span * string) result =
+  let run_elab (type a) (prog : unit -> a) : (a, Error.t) result =
     match prog () with
     | result -> Ok result
-    | exception Error (span, message) -> Error (span, message)
+    | exception Error error -> Error error
 
 
   (** {2 Public API} *)
 
-  let check (tm : tm) (vty : Semantics.vty) : (Syntax.tm, span * string) result =
+  let check (tm : tm) (vty : Semantics.vty) : (Syntax.tm, Error.t) result =
     run_elab (fun () -> check Ctx.empty tm vty)
 
-  let infer (tm : tm) : (Syntax.tm * Semantics.vty, span * string) result =
+  let infer (tm : tm) : (Syntax.tm * Semantics.vty, Error.t) result =
     run_elab (fun () -> infer Ctx.empty tm)
 
 end
