@@ -66,7 +66,7 @@ let tm :=
 | eq_tm
 
 let eq_tm :=
-| tm1 = spanned(add_tm); "="; tm2 = spanned(eq_tm);
+| tm1 = spanned(eq_tm); "="; tm2 = spanned(add_tm);
     { Surface.Infix (`Eq, tm1, tm2) }
 | add_tm
 

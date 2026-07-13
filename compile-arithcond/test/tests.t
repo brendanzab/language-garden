@@ -96,6 +96,14 @@ Chained division is left associative
   $ cat test-div-chain | executable exec --target=tree
   1 : Int
 
+Chained equality is left associative
+  $ cat >test-eq-chain <<< "1 = 2 = false"
+  $ cat test-eq-chain | executable compile --target=anf
+  let x0 := eq 1 2;
+  eq x0 false
+  $ cat test-eq-chain | executable exec --target=tree
+  true : Bool
+
 Complicated stuff
   $ cat >test-complicated <<< "1 * -2 + (3 + 4) - 8 / 4"
   $ cat test-complicated | executable compile --target=stack

@@ -47,7 +47,7 @@ let expr :=
 | eq_expr
 
 let eq_expr :=
-| e1 = add_expr; "="; e2 = eq_expr;
+| e1 = eq_expr; "="; e2 = add_expr;
     { fun names -> Tree_lang.eq (e1 names) (e2 names) }
 | add_expr
 
