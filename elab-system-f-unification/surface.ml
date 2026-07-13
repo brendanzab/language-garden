@@ -401,7 +401,7 @@ end = struct
         let body_tm = check_fun_lit (extend_tm ctx name.data param_vty) span params body body_vty in
         Core.Tm.Fun_lit (name.data, param_ty, body_tm)
 
-    | (_ :: _) as params, Core.Ty.Meta_var _ ->
+    | (_ :: _) as params, (Core.Ty.Meta_var _ as vty) ->
         let tm', vty' = infer_fun_lit ctx params None body in
         unify_vtys ctx span ~found:vty' ~expected:vty;
         tm'

@@ -431,7 +431,7 @@ end = struct
         unify_tys param_ty_span ~found:param_ty ~expected:param_ty';
         let body = check_fun (Ctx.extend_tm ctx name.data ([], param_ty)) span (params, body_ty, body) ty in
         Core.Tm.Fun_lit (name.data, param_ty, body)
-    | (_ :: _) as params, body_ty, Core.Ty.Meta_var _ ->
+    | (_ :: _) as params, body_ty, (Core.Ty.Meta_var _ as fun_ty) ->
         let fun', fun_ty' = infer_fun ctx (params, body_ty, body) in
         unify_tys span ~found:fun_ty' ~expected:fun_ty;
         fun'
