@@ -10,3 +10,12 @@
   (action
    (with-stdout-to dune.inc
     (run ../dune_inc.exe)))))
+
+(cram
+ (package elab-record-patching)
+ (deps %{bin:record-patching})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:record-patching}"))

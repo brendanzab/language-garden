@@ -248,8 +248,8 @@ end = struct
     (* TODO: subtyping for functions! *)
     | from_vty, to_vty ->
         error span "@[<v 2>@[mismatched types:@]@ @[expected: %t@]@ @[   found: %t@]@]"
-          (Ctx.pp_vtm ctx from_vty)
           (Ctx.pp_vtm ctx to_vty)
+          (Ctx.pp_vtm ctx from_vty)
 
 
   (** {2 Bidirectional type checking} *)
