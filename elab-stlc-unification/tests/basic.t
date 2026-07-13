@@ -77,3 +77,7 @@ Mismatched equality
          found: Bool
   
   [1]
+
+Subtraction is left associative
+  $ executable elab <<< "1 - 2 - 3"
+  #int-sub (#int-sub 1 2) 3 : Int
