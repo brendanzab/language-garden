@@ -1,0 +1,11 @@
+% Unification must respect arity: the `q(X, Y)` in the rule body should
+% match the fact `q(1, 2)`, but not the shorter fact `q(1)`. Previously
+% `q(X, Y)` unified with `q(1)`, binding only `X` and adding the
+% non-ground fact `p(1, Y)` to the knowledge base.
+
+q(1).
+q(1, 2).
+
+p(X, Y) <- q(X, Y).
+
+? p(A, B).
