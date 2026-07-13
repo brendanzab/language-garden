@@ -13,15 +13,6 @@ let translate_ty (ty : Core.Ty.t) : Wasm.value_type =
   | Core.Ty.Bool -> Wasm.I32
   | Core.Ty.I32 -> Wasm.I32
 
-let translate_prim_op (op : Prim.Op.t) : Wasm.instr =
-  match op with
-  | Prim.Op.Bool_eq -> Wasm.I32_eq
-  | Prim.Op.I32_eq -> Wasm.I32_eq
-  | Prim.Op.I32_add -> Wasm.I32_add
-  | Prim.Op.I32_sub -> Wasm.I32_sub
-  | Prim.Op.I32_mul -> Wasm.I32_mul
-  | Prim.Op.I32_neg -> Wasm.I32_neg
-
 let translate_expr
   ~(enable_tail_call : bool)
   ~(fresh_local_id : string -> Wasm.Local_id.t)
@@ -71,8 +62,19 @@ let translate_expr
     | Core.Expr.I32 i -> Dynarray.add_last instrs (Wasm.I32_const i)
 
     | Core.Expr.Prim (op, args) ->
+        begin match op with
+        | Prim.Op.I32_neg -> Dynarray.add_last instrs (Wasm.I32_const 0l)
+        | _ -> ()
+        end;
         args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
-        Dynarray.add_last instrs (translate_prim_op op);
+        begin match op with
+        | Prim.Op.Bool_eq -> Dynarray.add_last instrs Wasm.I32_eq
+        | Prim.Op.I32_eq -> Dynarray.add_last instrs Wasm.I32_eq
+        | Prim.Op.I32_add -> Dynarray.add_last instrs Wasm.I32_add
+        | Prim.Op.I32_sub -> Dynarray.add_last instrs Wasm.I32_sub
+        | Prim.Op.I32_mul -> Dynarray.add_last instrs Wasm.I32_mul
+        | Prim.Op.I32_neg -> Dynarray.add_last instrs Wasm.I32_sub
+        end;
   in
 
   go_expr instrs local_env expr ~tail_call:enable_tail_call;

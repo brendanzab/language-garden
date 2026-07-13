@@ -24,7 +24,6 @@ type instr =
   | I32_add
   | I32_sub
   | I32_mul
-  | I32_neg
 
 (* https://webassembly.github.io/spec/core/text/instructions.html#expressions *)
 and expr = instr Iarray.t
@@ -101,7 +100,6 @@ module Output_wat = struct
     | I32_add -> Format.dprintf "i32.add"
     | I32_sub -> Format.dprintf "i32.sub"
     | I32_mul -> Format.dprintf "i32.mul"
-    | I32_neg -> Format.dprintf "i32.neg"
 
   and pp_expr (expr : expr) (ppf : Format.formatter) =
     Format.pp_print_iter Iarray.iter (Fun.flip pp_instr) ppf expr
