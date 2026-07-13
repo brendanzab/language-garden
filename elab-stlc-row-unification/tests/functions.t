@@ -87,11 +87,13 @@ Unexpected function application
 
 Infinite type
   $ executable elab <<< "fun f => f f"
-  error: infinite type
+  error: meta variable ?1 refers to itself
     ┌─ <stdin>:1:11
     │
   1 │ fun f => f f
     │            ^
+    = expected: ?1
+         found: ?1 -> ?2
   
   [1]
 

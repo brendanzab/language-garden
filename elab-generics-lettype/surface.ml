@@ -258,7 +258,14 @@ end = struct
 
   let unify_vtys (ctx : Ctx.t) (span : Span.t) ~(found : Core.Ty.value) ~(expected : Core.Ty.value) =
     try Core.Ty.unify found expected with
-    | Core.Ty.Infinite_type -> error span "infinite type"
+    | Core.Ty.Infinite_type m ->
+        error span "meta variable %t refers to itself"
+          (Ctx.pp_vty ctx (Core.Ty.Meta m))
+          ~details:[
+            Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+              (Ctx.pp_vty ctx expected)
+              (Ctx.pp_vty ctx found);
+          ]
     | Core.Ty.Mismatched_types ->
         error span "mismatched types"
           ~details:[

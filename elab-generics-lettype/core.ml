@@ -158,14 +158,15 @@ module Ty = struct
     | ty -> ty
 
   exception Mismatched_types
-  exception Infinite_type
+  exception Infinite_type of meta
 
   (** Ensure that the candidate type does not refer to the to-be-solved
       metavariable *)
   let rec occurs (m : meta) (ty : value) =
     match ty with
     | Var _ -> ()
-    | Meta m' when m == m' -> raise Infinite_type
+    | Meta m' when m == m' ->
+        raise (Infinite_type m)
     | Meta { contents = Solved ty } -> occurs m ty
     | Meta { contents = Unsolved _ } -> ()
     | Fun (param_ty, body_ty) ->

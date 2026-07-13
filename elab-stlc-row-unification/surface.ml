@@ -206,8 +206,17 @@ end = struct
 
   let unify_tys (ctx : context) (span : span) ~(found : Core.ty) ~(expected : Core.ty) =
     try Core.unify_tys found expected with
-    | Core.Infinite_type _ -> error ctx span "infinite type"
-    | Core.Infinite_row_type _ -> error ctx span "infinite row type"
+    | Core.Infinite_type m ->
+        error ctx span "meta variable %t refers to itself"
+          (Core.pp_ty (Core.Meta_var m))
+          ~details:[
+            Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+              (Core.pp_ty expected)
+              (Core.pp_ty found);
+          ]
+    | Core.Infinite_row_type _ ->
+        (* FIXME: Improve error message *)
+        error ctx span "infinite row type"
     | Core.Mismatched_types (_, _)
     | Core.Mismatched_row_types (_, _) ->
         error ctx span "mismatched types"

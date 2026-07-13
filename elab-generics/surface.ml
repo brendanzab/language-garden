@@ -200,7 +200,14 @@ end = struct
 
   let unify_tys (span : Span.t) ~(found : Core.Ty.t) ~(expected : Core.Ty.t) =
     try Core.Ty.unify found expected with
-    | Core.Ty.Infinite_type _ -> error span "infinite type"
+    | Core.Ty.Infinite_type m ->
+        error span "meta variable %t refers to itself"
+          (Core.Ty.pp (Core.Ty.Meta_var m))
+          ~details:[
+            Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+              (Core.Ty.pp expected)
+              (Core.Ty.pp found);
+          ]
     | Core.Ty.Mismatched_types (_, _) ->
         error span "mismatched types"
           ~details:[
