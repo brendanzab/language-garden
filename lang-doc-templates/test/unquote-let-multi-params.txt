@@ -1,0 +1,5 @@
+${let const (x : Text) (y : Text) :=
+  x
+}
+
+${const "first" "second"}
