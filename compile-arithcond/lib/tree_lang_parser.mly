@@ -52,16 +52,16 @@ let eq_expr :=
 | add_expr
 
 let add_expr :=
-| e1 = mul_expr; "+"; e2 = add_expr;
+| e1 = add_expr; "+"; e2 = mul_expr;
     { fun names -> Tree_lang.add (e1 names) (e2 names) }
-| e1 = mul_expr; "-"; e2 = add_expr;
+| e1 = add_expr; "-"; e2 = mul_expr;
     { fun names -> Tree_lang.sub (e1 names) (e2 names) }
 | mul_expr
 
 let mul_expr :=
-| e1 = atomic_expr; "*"; e2 = mul_expr;
+| e1 = mul_expr; "*"; e2 = atomic_expr;
     { fun names -> Tree_lang.mul (e1 names) (e2 names) }
-| e1 = atomic_expr; "/"; e2 = mul_expr;
+| e1 = mul_expr; "/"; e2 = atomic_expr;
     { fun names -> Tree_lang.div (e1 names) (e2 names) }
 | atomic_expr
 
