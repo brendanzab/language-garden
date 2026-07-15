@@ -1,11 +1,11 @@
 (cram
- (package compile-fofl)
- (deps %{bin:fofl})
+ (package compile-items)
+ (deps %{bin:items})
  (setup_scripts cram_setup.sh))
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:fofl}"))
+  "alias executable=%{bin:items}"))
 
 (executable
  (name dune_inc))

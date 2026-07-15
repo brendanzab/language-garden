@@ -1,10 +1,10 @@
 Help: top-level
   $ executable --help=plain
   NAME
-         fofl
+         items
   
   SYNOPSIS
-         fofl COMMAND …
+         items COMMAND …
   
   COMMANDS
          compile-anf [OPTION]…
@@ -24,7 +24,7 @@ Help: top-level
              whenever the TERM env var is dumb or undefined.
   
   EXIT STATUS
-         fofl exits with:
+         items exits with:
   
          0   on success.
   
@@ -38,11 +38,11 @@ Help: top-level
 Help: compile-anf
   $ executable compile-anf --help=plain
   NAME
-         fofl-compile-anf - Compile a module from standard input to A-normal
+         items-compile-anf - Compile a module from standard input to A-normal
          form
   
   SYNOPSIS
-         fofl compile-anf [OPTION]…
+         items compile-anf [OPTION]…
   
   COMMON OPTIONS
          --help[=FMT] (default=auto)
@@ -51,7 +51,7 @@ Help: compile-anf
              whenever the TERM env var is dumb or undefined.
   
   EXIT STATUS
-         fofl compile-anf exits with:
+         items compile-anf exits with:
   
          0   on success.
   
@@ -62,16 +62,16 @@ Help: compile-anf
          125 on unexpected internal errors (bugs).
   
   SEE ALSO
-         fofl(1)
+         items(1)
   
 
 Help: compile-llvm
   $ executable compile-llvm --help=plain
   NAME
-         fofl-compile-llvm - Compile a module from standard input to LLVM IR
+         items-compile-llvm - Compile a module from standard input to LLVM IR
   
   SYNOPSIS
-         fofl compile-llvm [--output-format=FORMAT] [OPTION]…
+         items compile-llvm [--output-format=FORMAT] [OPTION]…
   
   OPTIONS
          --output-format=FORMAT (absent=ll)
@@ -85,7 +85,7 @@ Help: compile-llvm
              whenever the TERM env var is dumb or undefined.
   
   EXIT STATUS
-         fofl compile-llvm exits with:
+         items compile-llvm exits with:
   
          0   on success.
   
@@ -96,17 +96,17 @@ Help: compile-llvm
          125 on unexpected internal errors (bugs).
   
   SEE ALSO
-         fofl(1)
+         items(1)
   
 
 Help: compile-wat
   $ executable compile-wat --help=plain
   NAME
-         fofl-compile-wat - Compile a module from standard input to WAT
+         items-compile-wat - Compile a module from standard input to WAT
          (WebAssembly Text Format)
   
   SYNOPSIS
-         fofl compile-wat [--enable-tail-call] [OPTION]…
+         items compile-wat [--enable-tail-call] [OPTION]…
   
   OPTIONS
          --enable-tail-call
@@ -119,7 +119,7 @@ Help: compile-wat
              whenever the TERM env var is dumb or undefined.
   
   EXIT STATUS
-         fofl compile-wat exits with:
+         items compile-wat exits with:
   
          0   on success.
   
@@ -130,5 +130,5 @@ Help: compile-wat
          125 on unexpected internal errors (bugs).
   
   SEE ALSO
-         fofl(1)
+         items(1)
   

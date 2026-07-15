@@ -41,7 +41,7 @@
   (sedlex (>= "3.7"))))
 
 (package
- (name compile-fofl)
+ (name compile-items)
  (depends
   (cmdliner (>= "2.1"))
   (mdx (and (>= "2.5") :with-test))

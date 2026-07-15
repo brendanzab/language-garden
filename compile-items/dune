@@ -1,7 +1,7 @@
 (executable
  (name main)
- (public_name fofl)
- (package compile-fofl)
+ (public_name items)
+ (package compile-items)
  (preprocess
   (per_module
    ((pps sedlex.ppx) lexer)))
@@ -14,9 +14,9 @@
  (flags --strict))
 
 (mdx
- (package compile-fofl)
+ (package compile-items)
  (deps %{bin:generics}))
 
 ; (cram
-;  (package compile-fofl)
+;  (package compile-items)
 ;  (deps %{bin:generics}))

@@ -1,12 +1,12 @@
-# Compiling a first-order functional language
+# Compiling a first-order functional language with top-level items
 
 - Extends [**elab-stlc-bidirectional**](../elab-stlc-bidirectional) (+ top-level items, compilation) (- higher-order functions, currying)
-- Based on [**scraps/compile_fofl_wasm.ml**](../scraps/compile_fofl_wasm.ml)
+- Based on [**scraps/compile_items_wasm.ml**](../scraps/compile_items_wasm.ml)
 
 ---
 
 A demonstration of compiling a language with top-level, mutually recursive
-definitions to Web Assembly. This is a stepping stone towards compiling
+definitions to Wasm and LLVM IR. This is a stepping stone towards compiling
 higher-order, curried functional languages (like STLC or System-F), avoiding
 the complexities of closure conversion, uncurrying, and memory allocation for
 now.

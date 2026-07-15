@@ -1,5 +1,5 @@
-let bin = "fofl"
-let package = "compile-fofl"
+let bin = "items"
+let package = "compile-items"
 
 let generate_rules base = begin
   let txt_file = Printf.sprintf "%s.txt" base in
