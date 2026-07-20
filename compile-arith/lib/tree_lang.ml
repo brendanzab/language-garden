@@ -27,24 +27,24 @@ let div e1 e2 = Div (e1, e2)
 
 (** {1 Pretty printing} *)
 
-let rec pp_expr e ppf =
-  pp_add_expr e ppf
-and pp_add_expr e ppf =
+let rec pp_expr e =
+  pp_add_expr e
+and pp_add_expr e =
   match e with
-  | Add (e1, e2) -> Format.fprintf ppf "%t@ +@ %t" (pp_mul_expr e1) (pp_add_expr e2)
-  | Sub (e1, e2) -> Format.fprintf ppf "%t@ -@ %t" (pp_mul_expr e1) (pp_add_expr e2)
-  | e -> pp_mul_expr e ppf
-and pp_mul_expr e ppf =
+  | Add (e1, e2) -> Format.dprintf "%t@ +@ %t" (pp_mul_expr e1) (pp_add_expr e2)
+  | Sub (e1, e2) -> Format.dprintf "%t@ -@ %t" (pp_mul_expr e1) (pp_add_expr e2)
+  | e -> pp_mul_expr e
+and pp_mul_expr e =
   match e with
-  | Mul (e1, e2) -> Format.fprintf ppf "%t@ *@ %t" (pp_atomic_expr e1) (pp_mul_expr e2)
-  | Div (e1, e2) -> Format.fprintf ppf "%t@ /@ %t" (pp_atomic_expr e1) (pp_mul_expr e2)
-  | e -> pp_atomic_expr e ppf
-and pp_atomic_expr e ppf =
+  | Mul (e1, e2) -> Format.dprintf "%t@ *@ %t" (pp_atomic_expr e1) (pp_mul_expr e2)
+  | Div (e1, e2) -> Format.dprintf "%t@ /@ %t" (pp_atomic_expr e1) (pp_mul_expr e2)
+  | e -> pp_atomic_expr e
+and pp_atomic_expr e =
   match e with
-  | Int i -> Format.fprintf ppf "%d" i
-  | Neg e -> Format.fprintf ppf "-%t" (pp_atomic_expr e)
+  | Int i -> Format.dprintf "%d" i
+  | Neg e -> Format.dprintf "-%t" (pp_atomic_expr e)
   | Add _ | Sub _ | Mul _ | Div _ as e ->
-      Format.fprintf ppf "@[<1>(%t)@]" (pp_expr e)
+      Format.dprintf "@[<1>(%t)@]" (pp_expr e)
 
 
 (** Semantics of arithmetic expressions *)

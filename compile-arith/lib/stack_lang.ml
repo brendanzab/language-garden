@@ -23,19 +23,19 @@ type code =
 
 (** {1 Pretty printing} *)
 
-let rec pp_inst inst ppf =
+let rec pp_inst inst =
   match inst with
-  | Int i -> Format.fprintf ppf "int %d" i
-  | Neg -> Format.fprintf ppf "neg"
-  | Add -> Format.fprintf ppf "add"
-  | Sub -> Format.fprintf ppf "sub"
-  | Mul -> Format.fprintf ppf "mul"
-  | Div -> Format.fprintf ppf "div"
-and pp_code code ppf =
+  | Int i -> Format.dprintf "int %d" i
+  | Neg -> Format.dprintf "neg"
+  | Add -> Format.dprintf "add"
+  | Sub -> Format.dprintf "sub"
+  | Mul -> Format.dprintf "mul"
+  | Div -> Format.dprintf "div"
+and pp_code code =
   match code with
-  | [] -> ()
-  | inst :: [] -> Format.fprintf ppf "%t;" (pp_inst inst)
-  | inst :: code -> Format.fprintf ppf "%t;@ %t" (pp_inst inst) (pp_code code)
+  | [] -> Format.dprintf ""
+  | inst :: [] -> Format.dprintf "%t;" (pp_inst inst)
+  | inst :: code -> Format.dprintf "%t;@ %t" (pp_inst inst) (pp_code code)
 
 
 (** Semantics of arithmetic expressions *)

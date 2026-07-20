@@ -43,43 +43,43 @@ let atom a = Atom a
 
 (** {1 Pretty printing} *)
 
-let rec pp_expr names e ppf =
+let rec pp_expr names e =
   match e with
   | Let (n, x, c, e) ->
       let n = Format.sprintf "%s%i" n x in
-      Format.fprintf ppf "@[<2>@[let@ %s@ :=@]@ %t;@]@ %t" n
+      Format.dprintf "@[<2>@[let@ %s@ :=@]@ %t;@]@ %t" n
         (pp_comp names c)
         (pp_expr ((x, n) :: names) e)
   | Let_join (n, x, (pn, px), e1, e2) ->
       let n = Format.sprintf "%s%i" n x in
       let pn = Format.sprintf "%s%i" pn px in
-      Format.fprintf ppf "@[<2>@[let join@ %s@ %s@ :=@]@ %t;@]@ %t" n pn
+      Format.dprintf "@[<2>@[let join@ %s@ %s@ :=@]@ %t;@]@ %t" n pn
         (pp_expr ((px, pn) :: names) e1)
         (pp_expr ((x, n) :: names) e2)
   | Join_app (n, a) ->
-      Format.fprintf ppf "@[jump@ j%i@ %t@]" n (pp_atom names a)
+      Format.dprintf "@[jump@ j%i@ %t@]" n (pp_atom names a)
   | If_then_else (a, e1, e2) ->
-      Format.fprintf ppf "@[<v 2>@[if@ %t@ then@]@ @[<v>%t@]@]@ @[<v 2>else@ @[<v>%t@]@]"
+      Format.dprintf "@[<v 2>@[if@ %t@ then@]@ @[<v>%t@]@]@ @[<v 2>else@ @[<v>%t@]@]"
         (pp_atom names a)
         (pp_expr names e1)
         (pp_expr names e2)
   | Comp c ->
-      Format.fprintf ppf "@[%t@]" (pp_comp names c)
-and pp_comp names c ppf =
+      Format.dprintf "@[%t@]" (pp_comp names c)
+and pp_comp names c =
   match c with
-  | Atom a -> pp_atom names a ppf
-  | Neg a -> Format.fprintf ppf "neg %t" (pp_atom names a)
-  | Add (a1, a2) -> Format.fprintf ppf "add@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
-  | Sub (a1, a2) -> Format.fprintf ppf "sub@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
-  | Mul (a1, a2) -> Format.fprintf ppf "mul@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
-  | Div (a1, a2) -> Format.fprintf ppf "div@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
-  | Eq (a1, a2) -> Format.fprintf ppf "eq@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
-and pp_atom names a ppf =
+  | Atom a -> pp_atom names a
+  | Neg a -> Format.dprintf "neg %t" (pp_atom names a)
+  | Add (a1, a2) -> Format.dprintf "add@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
+  | Sub (a1, a2) -> Format.dprintf "sub@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
+  | Mul (a1, a2) -> Format.dprintf "mul@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
+  | Div (a1, a2) -> Format.dprintf "div@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
+  | Eq (a1, a2) -> Format.dprintf "eq@ %t@ %t" (pp_atom names a1) (pp_atom names a2)
+and pp_atom names a =
   match a with
-  | Var x -> Format.fprintf ppf "%s" (List.assoc x names)
-  | Int i -> Format.pp_print_int ppf i
-  | Bool true -> Format.fprintf ppf "true"
-  | Bool false -> Format.fprintf ppf "false"
+  | Var x -> Format.dprintf "%s" (List.assoc x names)
+  | Int i -> Format.dprintf "%i" i
+  | Bool true -> Format.dprintf "true"
+  | Bool false -> Format.dprintf "false"
 
 
 (** Semantics of arithmetic expressions *)
