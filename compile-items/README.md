@@ -23,7 +23,7 @@ fun fact(n : I32) : I32 :=
 ```
 
 <details>
-<summary>Compiled Web Assembly</summary>
+<summary>Compiled Wasm</summary>
 
 <!-- $MDX file=examples/fact.wat -->
 ```wat
@@ -53,7 +53,7 @@ fun fact(n : I32) : I32 :=
 </details>
 
 <details>
-<summary>Compiled web assembly (with tailcalls)</summary>
+<summary>Compiled Wasm (with tailcalls)</summary>
 
 <!-- $MDX file=examples/fact.tail-call.wat -->
 ```wat

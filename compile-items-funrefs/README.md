@@ -28,7 +28,7 @@ val test-partial-app : I32 :=
 ```
 
 <details>
-<summary>Compiled Web Assembly</summary>
+<summary>Compiled Wasm</summary>
 
 <!-- $MDX file=examples/funrefs.wat -->
 ```wat
@@ -100,7 +100,7 @@ val test-partial-app : I32 :=
 </details>
 
 <details>
-<summary>Compiled web assembly (with tailcalls)</summary>
+<summary>Compiled Wasm (with tailcalls)</summary>
 
 <!-- $MDX file=examples/funrefs.tail-call.wat -->
 ```wat
