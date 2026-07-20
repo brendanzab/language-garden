@@ -1,16 +1,16 @@
 fun nested-if(x : I32, y : I32) : I32 :=
-  let cond := #i32-eq(x, 0);
+  let cond : Bool := #i32-eq(x, 0);
   join if_end (result : I32) := #i32-add(result, 4);
   if cond then
-    let cond_1 := #i32-eq(y, 0);
+    let cond_1 : Bool := #i32-eq(y, 0);
     join if_end_1 (result_2 : I32) :=
-      let result_4 := #i32-add(result_2, 3);
+      let result_4 : I32 := #i32-add(result_2, 3);
       jump if_end result_4;
     if cond_1 then
       jump if_end_1 1000000000
     else
-      let result_3 := #i32-add(y, 100);
+      let result_3 : I32 := #i32-add(y, 100);
       jump if_end_1 result_3
   else
-    let result_1 := #i32-add(x, 100);
+    let result_1 : I32 := #i32-add(x, 100);
     jump if_end result_1;

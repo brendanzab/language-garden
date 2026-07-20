@@ -43,7 +43,7 @@ end = struct
             let id = fresh_local_id (Option.value name ~default:"_") in
             let@ def = go_expr local_ids def in
             let body = go_expr (Core.Local.Env.extend id local_ids) body k in
-            Anf.Expr.Let (id, Some def_ty, def, body)
+            Anf.Expr.Let (id, def_ty, def, body)
 
         | Core.Expr.Bool bool ->
             k (Anf.Expr.Atom (Bool bool))
@@ -80,7 +80,7 @@ end = struct
         | expr ->
             let id = fresh_local_id name in
             let body = k (Anf.Expr.Var (id, expr_ty)) in
-            Anf.Expr.Let (id, None, expr, body)
+            Anf.Expr.Let (id, expr_ty, expr, body)
 
     (* Compile a series of expressions to intermediate definitions *)
     and go_named_exprs local_ids (name : string) (exprs : Core.Expr.t list) : Anf.Expr.atom list k k =

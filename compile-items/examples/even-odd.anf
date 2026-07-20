@@ -1,19 +1,19 @@
 fun is-even(n : I32) : Bool :=
-  let cond := #i32-eq(n, 0);
+  let cond : Bool := #i32-eq(n, 0);
   join if_end (result : Bool) := result;
   if cond then
     jump if_end true
   else
-    let arg := #i32-sub(n, 1);
-    let result_1 := is-odd(arg);
+    let arg : I32 := #i32-sub(n, 1);
+    let result_1 : Bool := is-odd(arg);
     jump if_end result_1;
 
 fun is-odd(n : I32) : Bool :=
-  let cond := #i32-eq(n, 0);
+  let cond : Bool := #i32-eq(n, 0);
   join if_end (result : Bool) := result;
   if cond then
     jump if_end false
   else
-    let arg := #i32-sub(n, 1);
-    let result_1 := is-even(arg);
+    let arg : I32 := #i32-sub(n, 1);
+    let result_1 : Bool := is-even(arg);
     jump if_end result_1;

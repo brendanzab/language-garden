@@ -22,7 +22,7 @@ module rec Expr : sig
 
   (** Top-level expressions *)
   type t =
-    | Let of Local_id.t * Ty.t option * comp * t
+    | Let of Local_id.t * Ty.t * comp * t
     | Bool_if of atom * t * t
     | Return of comp
 
@@ -142,12 +142,9 @@ end = struct
           match expr with
           | Let (id, def_ty, def, body) ->
               Format.dprintf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
-                (match def_ty with
-                  | None -> Format.dprintf "%t" (Local_id.pp id)
-                  | Some def_ty ->
-                      Format.dprintf "@[<2>@[%t :@]@ %t@]"
-                        (Local_id.pp id)
-                        (Ty.pp def_ty))
+                (Format.dprintf "@[<2>@[%t :@]@ %t@]"
+                  (Local_id.pp id)
+                  (Ty.pp def_ty))
                 (pp_comp def)
                 (go body)
           | Join (id, (param_id, param_ty), cont, body) ->
