@@ -1,0 +1,20 @@
+fun choose(b : Bool, f : fun (I32) -> I32, g : fun (I32) -> I32) :
+fun (I32) -> I32 :=
+  join if_end (result : fun (I32) -> I32) := result;
+  if b then jump if_end f else jump if_end g;
+
+fun decr(i : I32) : I32 := #i32-sub(i, 1);
+
+fun incr(i : I32) : I32 := #i32-add(i, 1);
+
+val partial-app : fun (I32) -> I32 := choose(true, incr, decr);
+
+val test-false : I32 :=
+  let fun : fun (I32) -> I32 := choose(false, incr, decr);
+  fun(42);
+
+val test-partial-app : I32 := partial-app(42);
+
+val test-true : I32 :=
+  let fun : fun (I32) -> I32 := choose(true, incr, decr);
+  fun(42);

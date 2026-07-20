@@ -1,0 +1,14 @@
+fun choose(b : Bool, f : fun (I32) -> I32, g : fun (I32) -> I32) : fun (I32) -> I32 :=
+  if b then f else g;
+
+fun incr(i : I32) : I32 := i + 1;
+fun decr(i : I32) : I32 := i - 1;
+
+val test-true : I32 := choose(true, incr, decr)(42);
+val test-false : I32 := choose(false, incr, decr)(42);
+
+val partial-app : fun (I32) -> I32 :=
+  choose(true, incr, decr);
+
+val test-partial-app : I32 :=
+  partial-app(42);

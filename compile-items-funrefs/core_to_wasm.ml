@@ -67,32 +67,16 @@ let translate_expr
         Dynarray.add_last instrs (Wasm.Local_set def_id);
         go_expr instrs (Core.Local.Env.extend def_id local_env) body ~tail_call;
 
-    (* Direct call *)
-    | Core.Expr.Fun_app (Item (name, ty), args) ->
-        let id =
-          match Core.Item_map.find name item_env with
-          | Val _ -> failwith "function expected"
-          | Fun id -> id
-        in
-        args |> Iarray.iter (fun arg -> ignore (go_expr instrs local_env ~tail_call:false arg));
-        begin match enable_tail_call && tail_call with
-        | true -> Dynarray.add_last instrs (Wasm.Return_call id);
-        | false -> Dynarray.add_last instrs (Wasm.Call id);
+    | Core.Expr.Fun_app (Item (name, ty) as fun_, args) ->
+        args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
+        begin match Core.Item_map.find name item_env with
+        | Val id -> go_indirect_call local_env instrs fun_ ~tail_call
+        | Fun id -> go_direct_call instrs id ~tail_call
         end
 
-    (* Indirect call *)
     | Core.Expr.Fun_app (fun_, args) ->
-        args |> Iarray.iter (fun arg -> ignore (go_expr instrs local_env ~tail_call:false arg));
-        go_expr instrs local_env fun_ ~tail_call:false;
-        let id =
-          match translate_ty (Core.Expr.ty_of fun_) with
-          | Wasm.Ref (_, Id id) -> id
-          | _ -> failwith "function expected"
-        in
-        begin match enable_tail_call && tail_call with
-        | true -> Dynarray.add_last instrs (Wasm.Return_call_ref id);
-        | false -> Dynarray.add_last instrs (Wasm.Call_ref id);
-        end
+        args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
+        go_indirect_call local_env instrs fun_ ~tail_call;
 
     | Core.Expr.Bool true -> Dynarray.add_last instrs (Wasm.I32_const 1l);
     | Core.Expr.Bool false -> Dynarray.add_last instrs (Wasm.I32_const 0l);
@@ -127,6 +111,18 @@ let translate_expr
         | Prim.Op.I32_mul -> Dynarray.add_last instrs Wasm.I32_mul;
         | Prim.Op.I32_neg -> Dynarray.add_last instrs Wasm.I32_sub;
         end;
+
+  and go_direct_call ~tail_call instrs (id : Wasm.Func_id.t) =
+    match enable_tail_call && tail_call with
+    | true -> Dynarray.add_last instrs (Wasm.Return_call id);
+    | false -> Dynarray.add_last instrs (Wasm.Call id);
+
+  and go_indirect_call ~tail_call local_env instrs (fun_ : Core.Expr.t) =
+    go_expr instrs local_env fun_ ~tail_call:false;
+    match translate_ty (Core.Expr.ty_of fun_), enable_tail_call && tail_call with
+    | Wasm.Ref (_, Id id), true -> Dynarray.add_last instrs (Wasm.Return_call_ref id)
+    | Wasm.Ref (_, Id id), false -> Dynarray.add_last instrs (Wasm.Call_ref id)
+    | _ -> failwith "expected reference to type id"
   in
 
   go_expr instrs local_env expr ~tail_call:enable_tail_call;
