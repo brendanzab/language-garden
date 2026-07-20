@@ -1,0 +1,23 @@
+fun bool-eq-op(x : Bool, y : Bool) : Bool := #bool-eq(x, y);
+
+fun bool-eq-prim(x : Bool, y : Bool) : Bool := #bool-eq(x, y);
+
+fun i32-add-op(x : I32, y : I32) : I32 := #i32-add(x, y);
+
+fun i32-add-prim(x : I32, y : I32) : I32 := #i32-add(x, y);
+
+fun i32-eq-op(x : I32, y : I32) : Bool := #i32-eq(x, y);
+
+fun i32-eq-prim(x : I32, y : I32) : Bool := #i32-eq(x, y);
+
+fun i32-mul-op(x : I32, y : I32) : I32 := #i32-mul(x, y);
+
+fun i32-mul-prim(x : I32, y : I32) : I32 := #i32-mul(x, y);
+
+fun i32-sub-op(x : I32, y : I32) : I32 := #i32-sub(x, y);
+
+fun i32-sub-prim(x : I32, y : I32) : I32 := #i32-sub(x, y);
+
+fun neg-op(x : I32) : I32 := #i32-neg(x);
+
+fun neg-prim(x : I32) : I32 := #i32-neg(x);

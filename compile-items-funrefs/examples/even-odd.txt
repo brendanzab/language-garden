@@ -1,0 +1,5 @@
+fun is-even(n : I32) : Bool :=
+  if n = 0 then true else is-odd(n - 1);
+
+fun is-odd(n : I32) : Bool :=
+  if n = 0 then false else is-even(n - 1);

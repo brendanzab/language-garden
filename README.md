@@ -78,6 +78,8 @@ related to compiling functional programming languages.
   Compiling arithmetic and conditional expressions to stack machine instructions and A-Normal Form.
 - [**compile-items**](./compile-items/):
   Compiling a language with top-level, mutually recursive definitions to Wasm and LLVM IR.
+- [**compile-items-funrefs**](./compile-items-funrefs/):
+  Compiling a language with top-level definitions and function references to Wasm and LLVM IR.
 
 ### Languages
 

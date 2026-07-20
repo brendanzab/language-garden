@@ -16,8 +16,8 @@
 </g>
 <g id="clust2" class="cluster">
 <title>compile</title>
-<path fill="gainsboro" stroke="none" d="M254.67,-361C254.67,-361 598.27,-361 598.27,-361 604.27,-361 610.27,-367 610.27,-373 610.27,-373 610.27,-478 610.27,-478 610.27,-484 604.27,-490 598.27,-490 598.27,-490 254.67,-490 254.67,-490 248.67,-490 242.67,-484 242.67,-478 242.67,-478 242.67,-373 242.67,-373 242.67,-367 248.67,-361 254.67,-361"/>
-<text text-anchor="middle" x="426.47" y="-472.7" font-family="Helvetica,Arial,sans-serif" font-size="14.00">compile</text>
+<path fill="gainsboro" stroke="none" d="M254.67,-361C254.67,-361 609.9,-361 609.9,-361 615.9,-361 621.9,-367 621.9,-373 621.9,-373 621.9,-478 621.9,-478 621.9,-484 615.9,-490 609.9,-490 609.9,-490 254.67,-490 254.67,-490 248.67,-490 242.67,-484 242.67,-478 242.67,-478 242.67,-373 242.67,-373 242.67,-367 248.67,-361 254.67,-361"/>
+<text text-anchor="middle" x="432.29" y="-472.7" font-family="Helvetica,Arial,sans-serif" font-size="14.00">compile</text>
 </g>
 <g id="clust3" class="cluster">
 <title>lang</title>
@@ -169,7 +169,7 @@
 <polygon fill="black" stroke="black" points="260.47,-467.78 267.73,-460.06 257.24,-461.57 260.47,-467.78"/>
 </g>
 <!-- lang&#45;doc&#45;templates -->
-<g id="node23" class="node">
+<g id="node24" class="node">
 <title>lang&#45;doc&#45;templates</title>
 <path fill="white" stroke="none" d="M367.6,-268C367.6,-268 247.3,-268 247.3,-268 241.3,-268 235.3,-262 235.3,-256 235.3,-256 235.3,-244 235.3,-244 235.3,-238 241.3,-232 247.3,-232 247.3,-232 367.6,-232 367.6,-232 373.6,-232 379.6,-238 379.6,-244 379.6,-244 379.6,-256 379.6,-256 379.6,-262 373.6,-268 367.6,-268"/>
 <text text-anchor="middle" x="307.45" y="-244.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;doc&#45;templates</text>
@@ -234,56 +234,68 @@
 <path fill="none" stroke="black" d="M361.16,-387C389.01,-387 423.76,-387 454.72,-387"/>
 <polygon fill="black" stroke="black" points="454.42,-390.5 464.42,-387 454.42,-383.5 454.42,-390.5"/>
 </g>
-<!-- lang&#45;declarative&#45;graphics -->
+<!-- compile&#45;items&#45;funrefs -->
 <g id="node18" class="node">
+<title>compile&#45;items&#45;funrefs</title>
+<path fill="white" stroke="none" d="M601.9,-459C601.9,-459 466.6,-459 466.6,-459 460.6,-459 454.6,-453 454.6,-447 454.6,-447 454.6,-435 454.6,-435 454.6,-429 460.6,-423 466.6,-423 466.6,-423 601.9,-423 601.9,-423 607.9,-423 613.9,-429 613.9,-435 613.9,-435 613.9,-447 613.9,-447 613.9,-453 607.9,-459 601.9,-459"/>
+<text text-anchor="middle" x="534.25" y="-435.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">compile&#45;items&#45;funrefs</text>
+</g>
+<!-- compile&#45;items&#45;&gt;compile&#45;items&#45;funrefs -->
+<g id="edge18" class="edge">
+<title>compile&#45;items&#45;&gt;compile&#45;items&#45;funrefs</title>
+<path fill="none" stroke="black" d="M364.6,-441C388.38,-441 416.69,-441 443.26,-441"/>
+<polygon fill="black" stroke="black" points="443.01,-444.5 453.01,-441 443,-437.5 443.01,-444.5"/>
+</g>
+<!-- lang&#45;declarative&#45;graphics -->
+<g id="node19" class="node">
 <title>lang&#45;declarative&#45;graphics</title>
 <path fill="white" stroke="none" d="M385.22,-52C385.22,-52 229.67,-52 229.67,-52 223.67,-52 217.67,-46 217.67,-40 217.67,-40 217.67,-28 217.67,-28 217.67,-22 223.67,-16 229.67,-16 229.67,-16 385.22,-16 385.22,-16 391.22,-16 397.22,-22 397.22,-28 397.22,-28 397.22,-40 397.22,-40 397.22,-46 391.22,-52 385.22,-52"/>
 <text text-anchor="middle" x="307.45" y="-28.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;declarative&#45;graphics</text>
 </g>
 <!-- lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="node20" class="node">
+<g id="node21" class="node">
 <title>lang&#45;fractal&#45;tree&#45;rewriting</title>
 <path fill="white" stroke="none" d="M611.65,-79C611.65,-79 456.85,-79 456.85,-79 450.85,-79 444.85,-73 444.85,-67 444.85,-67 444.85,-55 444.85,-55 444.85,-49 450.85,-43 456.85,-43 456.85,-43 611.65,-43 611.65,-43 617.65,-43 623.65,-49 623.65,-55 623.65,-55 623.65,-67 623.65,-67 623.65,-73 617.65,-79 611.65,-79"/>
 <text text-anchor="middle" x="534.25" y="-55.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;tree&#45;rewriting</text>
 </g>
 <!-- lang&#45;declarative&#45;graphics&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="edge20" class="edge">
+<g id="edge21" class="edge">
 <title>lang&#45;declarative&#45;graphics&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting</title>
 <path fill="none" stroke="black" d="M397.62,-44.71C409.32,-46.12 421.38,-47.56 433.25,-48.99"/>
 <polygon fill="black" stroke="black" points="432.71,-52.45 443.05,-50.17 433.54,-45.5 432.71,-52.45"/>
 </g>
 <!-- lang&#45;fractal&#45;growth -->
-<g id="node19" class="node">
+<g id="node20" class="node">
 <title>lang&#45;fractal&#45;growth</title>
 <path fill="white" stroke="none" d="M365.72,-106C365.72,-106 249.17,-106 249.17,-106 243.17,-106 237.17,-100 237.17,-94 237.17,-94 237.17,-82 237.17,-82 237.17,-76 243.17,-70 249.17,-70 249.17,-70 365.72,-70 365.72,-70 371.72,-70 377.72,-76 377.72,-82 377.72,-82 377.72,-94 377.72,-94 377.72,-100 371.72,-106 365.72,-106"/>
 <text text-anchor="middle" x="307.45" y="-82.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;fractal&#45;growth</text>
 </g>
 <!-- lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting -->
-<g id="edge19" class="edge">
+<g id="edge20" class="edge">
 <title>lang&#45;fractal&#45;growth&#45;&gt;lang&#45;fractal&#45;tree&#45;rewriting</title>
 <path fill="none" stroke="black" d="M378.04,-79.64C395.53,-77.54 414.64,-75.25 433.29,-73.01"/>
 <polygon fill="black" stroke="black" points="433.5,-76.51 443.01,-71.84 432.66,-69.56 433.5,-76.51"/>
 </g>
 <!-- lang&#45;shader&#45;graphics -->
-<g id="node21" class="node">
+<g id="node22" class="node">
 <title>lang&#45;shader&#45;graphics</title>
 <path fill="white" stroke="none" d="M373.22,-160C373.22,-160 241.67,-160 241.67,-160 235.67,-160 229.67,-154 229.67,-148 229.67,-148 229.67,-136 229.67,-136 229.67,-130 235.67,-124 241.67,-124 241.67,-124 373.22,-124 373.22,-124 379.22,-124 385.22,-130 385.22,-136 385.22,-136 385.22,-148 385.22,-148 385.22,-154 379.22,-160 373.22,-160"/>
 <text text-anchor="middle" x="307.45" y="-136.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;shader&#45;graphics</text>
 </g>
 <!-- lang&#45;datalog -->
-<g id="node22" class="node">
+<g id="node23" class="node">
 <title>lang&#45;datalog</title>
 <path fill="white" stroke="none" d="M346.97,-214C346.97,-214 267.92,-214 267.92,-214 261.92,-214 255.92,-208 255.92,-202 255.92,-202 255.92,-190 255.92,-190 255.92,-184 261.92,-178 267.92,-178 267.92,-178 346.97,-178 346.97,-178 352.97,-178 358.97,-184 358.97,-190 358.97,-190 358.97,-202 358.97,-202 358.97,-208 352.97,-214 346.97,-214"/>
 <text text-anchor="middle" x="307.45" y="-190.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;datalog</text>
 </g>
 <!-- lang&#45;lc&#45;interpreters -->
-<g id="node24" class="node">
+<g id="node25" class="node">
 <title>lang&#45;lc&#45;interpreters</title>
 <path fill="white" stroke="none" d="M366.1,-322C366.1,-322 248.8,-322 248.8,-322 242.8,-322 236.8,-316 236.8,-310 236.8,-310 236.8,-298 236.8,-298 236.8,-292 242.8,-286 248.8,-286 248.8,-286 366.1,-286 366.1,-286 372.1,-286 378.1,-292 378.1,-298 378.1,-298 378.1,-310 378.1,-310 378.1,-316 372.1,-322 366.1,-322"/>
 <text text-anchor="middle" x="307.45" y="-298.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">lang&#45;lc&#45;interpreters</text>
 </g>
 <!-- lang&#45;lc&#45;interpreters&#45;&gt;elab&#45;stlc&#45;bidirectional -->
-<g id="edge18" class="edge">
+<g id="edge19" class="edge">
 <title>lang&#45;lc&#45;interpreters&#45;&gt;elab&#45;stlc&#45;bidirectional</title>
 <path fill="none" stroke="black" d="M258.51,-322.44C240.89,-330.96 221.8,-342.46 207.55,-357 152.08,-413.6 118.09,-502.99 103.36,-548.81"/>
 <polygon fill="black" stroke="black" points="100.04,-547.7 100.4,-558.29 106.72,-549.79 100.04,-547.7"/>

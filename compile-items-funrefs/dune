@@ -1,7 +1,7 @@
 (executable
  (name main)
- (public_name items)
- (package compile-items)
+ (public_name items-funrefs)
+ (package compile-items-funrefs)
  (preprocess
   (per_module
    ((pps sedlex.ppx) lexer)))
@@ -12,7 +12,3 @@
 (menhir
  (modules parser)
  (flags --strict))
-
-(mdx
- (package compile-items)
- (deps %{bin:generics}))

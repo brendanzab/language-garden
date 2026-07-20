@@ -49,6 +49,15 @@
   (menhirLib (>= "20250912"))
   (sedlex (>= "3.7"))))
 
+(package
+ (name compile-items-funrefs)
+ (depends
+  (cmdliner (>= "2.1"))
+  (mdx (and (>= "2.5") :with-test))
+  (menhir (and (>= "20250912") :build))
+  (menhirLib (>= "20250912"))
+  (sedlex (>= "3.7"))))
+
 
 ; Elaboration
 

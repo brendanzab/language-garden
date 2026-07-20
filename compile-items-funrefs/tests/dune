@@ -1,0 +1,21 @@
+(cram
+ (package compile-items-funrefs)
+ (deps %{bin:items-funrefs})
+ (setup_scripts cram_setup.sh))
+
+(rule
+ (write-file cram_setup.sh
+  "alias executable=%{bin:items-funrefs}"))
+
+(executable
+ (name dune_inc))
+
+(subdir run
+ (dynamic_include ../generate/dune.inc))
+
+(subdir generate
+ (rule
+  (deps (glob_files ../*.txt))
+  (action
+   (with-stdout-to dune.inc
+    (run ../dune_inc.exe)))))

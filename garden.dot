@@ -53,6 +53,7 @@ digraph garden {
     "compile-arith";
     "compile-arithcond";
     "compile-items";
+    "compile-items-funrefs";
   }
 
   subgraph lang {
@@ -85,6 +86,7 @@ digraph garden {
   "elab-dependent" -> "elab-dependent-sugar";
   "elab-dependent-sugar" -> "elab-record-patching";
   "compile-arith" -> "compile-arithcond";
+  "compile-items" -> "compile-items-funrefs";
   "lang-lc-interpreters" -> "elab-stlc-bidirectional";
   "lang-fractal-growth" -> "lang-fractal-tree-rewriting";
   "lang-declarative-graphics" -> "lang-fractal-tree-rewriting";
