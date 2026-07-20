@@ -25,14 +25,14 @@ let translate_expr
 
   let rec go_expr ~tail_call instrs local_env expr =
     match expr with
-    | Core.Expr.Item (name, args) ->
+    | Core.Expr.Item (name, args, _) ->
         Option.value args ~default:[||] |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         begin match enable_tail_call && tail_call with
         | true -> Dynarray.add_last instrs (Wasm.Return_call (Core.Item_map.find name item_env))
         | false -> Dynarray.add_last instrs (Wasm.Call (Core.Item_map.find name item_env))
         end
 
-    | Core.Expr.Var index ->
+    | Core.Expr.Var (index, _) ->
         Dynarray.add_last instrs (Wasm.Local_get (Core.Local.Env.lookup index local_env));
 
     | Core.Expr.Let ((name, ty, def), body) ->
@@ -45,7 +45,7 @@ let translate_expr
     | Core.Expr.Bool true -> Dynarray.add_last instrs (Wasm.I32_const 1l)
     | Core.Expr.Bool false -> Dynarray.add_last instrs (Wasm.I32_const 0l)
 
-    | Core.Expr.Bool_if (expr1, expr2, expr3, ty) ->
+    | Core.Expr.Bool_if (expr1, expr2, expr3) ->
         let instrs2 = Dynarray.create () in
         let instrs3 = Dynarray.create () in
 
@@ -54,7 +54,7 @@ let translate_expr
         go_expr instrs3 local_env expr3 ~tail_call;
 
         Dynarray.add_last instrs (Wasm.If (
-          translate_ty ty,
+          translate_ty (Core.Expr.ty_of expr),
           make_iarray instrs2,
           make_iarray instrs3
         ));

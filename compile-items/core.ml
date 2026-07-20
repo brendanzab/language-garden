@@ -25,15 +25,17 @@ end
 module rec Expr : sig
 
   type t =
-    | Item of Item_name.t * t Iarray.t option
-    | Var of Local.Index.t
+    | Item of Item_name.t * t Iarray.t option * Ty.t
+    | Var of Local.Index.t * Ty.t
     | Let of def * t
     | Bool of bool
-    | Bool_if of t * t * t * Ty.t
+    | Bool_if of t * t * t
     | I32 of int32
     | Prim of Prim.Op.t * t Iarray.t
 
   and def = string option * Ty.t * t
+
+  val ty_of : t -> Ty.t
 
   type value =
     | Bool of bool
@@ -45,9 +47,19 @@ end = struct
 
   include Expr
 
+  let rec ty_of (expr : t) : Ty.t =
+    match expr with
+    | Item (_, _, ty) -> ty
+    | Var (_, ty) -> ty
+    | Let (_, body) -> ty_of body
+    | Bool _ -> Ty.Bool
+    | Bool_if (_, expr2, _) -> ty_of expr2
+    | I32 _ -> Ty.I32
+    | Prim (op, _) -> Ty.of_prim (snd (Prim.Op.ty op))
+
   let rec eval (items : Item.t Item_map.t) (locals : value Local.Env.t) (expr : t) : value =
     match expr with
-    | Item (name, args) ->
+    | Item (name, args, _) ->
         begin match Item_map.find name items, args with
         | Item.Val (_, body), None ->
             eval items locals body
@@ -56,12 +68,12 @@ end = struct
             eval items env body
         | _, _ -> failwith "Expr.eval"
         end
-    | Var index -> Local.Env.lookup index locals
+    | Var (index, _) -> Local.Env.lookup index locals
     | Let ((_, _, def), body) ->
         let def = eval items locals def in
         eval items (Local.Env.extend def locals) body
     | Bool bool -> Bool bool
-    | Bool_if (expr1, expr2, expr3, _) ->
+    | Bool_if (expr1, expr2, expr3) ->
         begin match eval items locals expr1 with
         | Bool true -> eval items locals expr2
         | Bool false -> eval items locals expr3

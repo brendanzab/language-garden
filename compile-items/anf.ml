@@ -36,13 +36,13 @@ module rec Expr : sig
 
   (** Computation expressions *)
   and comp =
-    | Item of Item_name.t * atom Iarray.t option
+    | Item of Item_name.t * atom Iarray.t option * Ty.t
     | Prim of Prim.Op.t * atom Iarray.t
     | Atom of atom
 
   (** Atomic expressions *)
   and atom =
-    | Var of Local_id.t
+    | Var of Local_id.t * Ty.t
     | Bool of bool
     | I32 of int32
 
@@ -81,7 +81,7 @@ end = struct
 
     and eval_comp (joins : (Local_id.t * t) Join_map.t) (locals : value Local_map.t) (expr : comp) : value =
       match expr with
-      | Item (id, args) ->
+      | Item (id, args, _) ->
           begin match Item_map.find id items, args with
           | Item.Fun (params, _, body), Some args ->
               let eval_arg (id, _) arg = id, eval_atom locals arg in
@@ -106,7 +106,7 @@ end = struct
 
     and eval_atom (locals : value Local_map.t) (expr : atom) : value =
       match expr with
-      | Var id -> Local_map.find id locals
+      | Var (id, _) -> Local_map.find id locals
       | Bool bool -> Bool bool
       | I32 int -> I32 int
     in
@@ -118,7 +118,7 @@ end = struct
 
   let pp_atom (expr : atom) =
     match expr with
-    | Var id -> Format.dprintf "%t" (Local_id.pp id)
+    | Var (id, _) -> Format.dprintf "%t" (Local_id.pp id)
     | Bool true -> Format.dprintf "true"
     | Bool false -> Format.dprintf "false"
     | I32 int -> Format.dprintf "%li" int
@@ -130,8 +130,8 @@ end = struct
 
   let pp_comp (expr : comp) =
     match expr with
-    | Item (id, None) -> Format.dprintf "%t" (Item_name.pp id)
-    | Item (id, Some args) -> Format.dprintf "%t(%t)" (Item_name.pp id) (pp_args args)
+    | Item (id, None, _) -> Format.dprintf "%t" (Item_name.pp id)
+    | Item (id, Some args, _) -> Format.dprintf "%t(%t)" (Item_name.pp id) (pp_args args)
     | Prim (op, args) -> Format.dprintf "%t(%t)" (Prim.Op.pp op) (pp_args args)
     | Atom expr -> pp_atom expr
 

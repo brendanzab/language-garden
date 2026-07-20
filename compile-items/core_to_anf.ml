@@ -29,15 +29,15 @@ end = struct
     let rec go_expr local_ids (expr : Core.Expr.t) : Anf.Expr.comp k k =
       fun k ->
         match expr with
-        | Core.Expr.Item (id, None) ->
-            k (Anf.Expr.Item (id, None))
+        | Core.Expr.Item (id, None, ty) ->
+            k (Anf.Expr.Item (id, None, ty))
 
-        | Core.Expr.Item (id, Some args) ->
+        | Core.Expr.Item (id, Some args, ty) ->
             let@ args = go_named_exprs local_ids "arg" (Iarray.to_list args) in
-            k (Anf.Expr.Item (id, Some (Iarray.of_list args)))
+            k (Anf.Expr.Item (id, Some (Iarray.of_list args), ty))
 
-        | Core.Expr.Var index ->
-            k (Anf.Expr.Atom (Var (Core.Local.Env.lookup index local_ids)))
+        | Core.Expr.Var (index, ty) ->
+            k (Anf.Expr.Atom (Var (Core.Local.Env.lookup index local_ids, ty)))
 
         | Core.Expr.Let ((name, def_ty, def), body) ->
             let id = fresh_local_id (Option.value name ~default:"_") in
@@ -48,13 +48,16 @@ end = struct
         | Core.Expr.Bool bool ->
             k (Anf.Expr.Atom (Bool bool))
 
-        | Core.Expr.Bool_if (expr1, expr2, expr3, expr_ty) ->
-            let param_id = fresh_local_id "result" in
+        | Core.Expr.Bool_if (expr1, expr2, expr3) ->
+            let result_id = fresh_local_id "result" in
+            let result_ty = Core.Expr.ty_of expr in
+
             let join_id = fresh_join_id "if_end" in
             let jump_k result = Anf.Expr.Jump (join_id, result) in
 
             let@ expr1 = go_named_expr local_ids "cond" expr1 in
-            Anf.Expr.Join (join_id, (param_id, expr_ty), k (Anf.Expr.Atom (Var param_id)),
+            Anf.Expr.Join (join_id, (result_id, result_ty),
+              k (Anf.Expr.Atom (Var (result_id, result_ty))),
               Anf.Expr.Bool_if (expr1,
                 go_named_expr local_ids "result" expr2 jump_k,
                 go_named_expr local_ids "result" expr3 jump_k))
@@ -68,6 +71,7 @@ end = struct
 
     and go_named_expr local_ids (name : string) (expr : Core.Expr.t) : Anf.Expr.atom k k =
       fun k ->
+        let expr_ty = Core.Expr.ty_of expr in
         let@ expr = go_expr local_ids expr in
         match expr with
         (* Don't bother binding definitions for atomic computations *)
@@ -75,7 +79,7 @@ end = struct
         (* Bind definitions for non-atomic computations *)
         | expr ->
             let id = fresh_local_id name in
-            let body = k (Anf.Expr.Var id) in
+            let body = k (Anf.Expr.Var (id, expr_ty)) in
             Anf.Expr.Let (id, None, expr, body)
 
     (* Compile a series of expressions to intermediate definitions *)

@@ -170,7 +170,9 @@ end = struct
 
     let lookup_local (env : t) (name : string) : (Core.Expr.t * Core.Ty.t) option =
       match Core.Local.Env.find_index ((=) (Some name)) env.local_names with
-      | Some index -> Some (Core.(Expr.Var index, Local.Env.lookup index env.local_tys))
+      | Some index ->
+          let ty = Core.Local.Env.lookup index env.local_tys in
+          Some (Core.(Expr.Var (index, ty), ty))
       | None when name = "true" -> Some (Core.(Expr.Bool true, Ty.Bool))
       | None when name = "false" -> Some (Core.(Expr.Bool false, Ty.Bool))
       | None -> None
@@ -213,9 +215,9 @@ end = struct
     match expr.data with
     | Expr.Name (name, args) ->
         begin match Env.lookup env name.data, args with
-        | Some (`Item (name, Val ty)), None -> Core.Expr.Item (name, None), ty
+        | Some (`Item (name, Val ty)), None -> Core.Expr.Item (name, None, ty), ty
         | Some (`Item (name, Fun (params, ty))), Some args when Iarray.length params = Iarray.length args ->
-            Core.Expr.Item (name, Some (Iarray.map2 (check_expr env) args params)), ty
+            Core.Expr.Item (name, Some (Iarray.map2 (check_expr env) args params), ty), ty
         | Some (`Expr (expr, ty)), None -> expr, ty
         | Some _, Some _ -> error name.span "mismatched arity"
         | Some _, None -> error name.span "unexpected arguments"
@@ -247,7 +249,7 @@ end = struct
         let expr1 = check_expr env expr1 Core.Ty.Bool in
         let expr2, ty = infer_expr env expr2 in
         let expr3 = check_expr env expr3 ty in
-        Core.Expr.Bool_if (expr1, expr2, expr3, ty), ty
+        Core.Expr.Bool_if (expr1, expr2, expr3), ty
 
     | Expr.Infix (`Eq, expr1, expr2) ->
         let expr1, ty1 = infer_expr env expr1 in
@@ -284,7 +286,7 @@ end = struct
         let expr1 = check_expr env expr1 Core.Ty.Bool in
         let expr2 = check_expr env expr2 ty in
         let expr3 = check_expr env expr3 ty in
-        Core.Expr.Bool_if (expr1, expr2, expr3, ty)
+        Core.Expr.Bool_if (expr1, expr2, expr3)
 
     | _ ->
         let expr', found_ty = infer_expr env expr in
