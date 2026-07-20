@@ -21,6 +21,8 @@ module Label = Name.Make ()
 type ty =
   | I1
   | I32
+  | Ptr of ty
+  | Fun of ty * ty Iarray.t
   (* ... *)
 
 (** Operands *)
@@ -102,10 +104,23 @@ end = struct
   let pp_local_id (id : Local_id.t) = Format.dprintf "%s%t" "%" (Local_id.pp id)
   let pp_label (id : Label.t) = Format.dprintf "%s%t" "%" (Label.pp id)
 
-  let pp_ty (ty : ty) =
+  let rec pp_ty (ty : ty) =
+    match ty with
+    | Ptr ty -> Format.dprintf "@[%t@]*" (pp_ty ty)
+    | Fun (result_ty, param_tys) ->
+        Format.dprintf "%t(%t)"
+          (pp_ty result_ty)
+          (fun ppf ->
+            Format.pp_print_iter Iarray.iter (Fun.flip pp_ty) ppf param_tys
+              ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
+    | ty -> pp_atomic_ty ty
+  and pp_atomic_ty (ty : ty) =
     match ty with
     | I1 -> Format.dprintf "i1"
     | I32 -> Format.dprintf "i32"
+    | Ptr _ | Fun _ as ty -> Format.dprintf "@[(%t)@]" (pp_ty ty)
+
+
 
   let pp_opr (opr : opr) =
     match opr with

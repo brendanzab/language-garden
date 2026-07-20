@@ -1,0 +1,22 @@
+-- Accept a function as an argument
+fun ignore-param(_ : fun (I32, Bool) -> I32) : I32 := 43;
+
+-- Return a function by value
+fun id-i32-bool(f : fun (I32) -> Bool) : fun (I32) -> Bool :=
+  f;
+
+-- Function application
+fun fun-app(f : fun (I32) -> Bool, x : I32) : Bool :=
+  f(x);
+
+-- Binding a function to a local definition, then calling it
+fun local-binding(f : fun (I32) -> I32, x : I32) : I32 :=
+  let g := f;
+  g(x);
+
+fun is-zero(x : I32) : Bool := x = 0;
+fun is-one(x : I32) : Bool := x = 1;
+
+val test-hof-1 : Bool := fun-app(is-zero, 3);
+val test-hof-2 : Bool := fun-app(is-zero, 45);  -- test WASM codegen of same function pointer
+val test-hof-3 : Bool := fun-app(is-one, 1);    -- test WASM codegen of additional function pointers

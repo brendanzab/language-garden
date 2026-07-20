@@ -14,6 +14,7 @@
 %token COMMA ","
 %token EQUALS "="
 %token HYPHEN "-"
+%token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
 %token UNDERSCORE "_"
 %token OPEN_PAREN "("
@@ -32,6 +33,13 @@ let main :=
 (* Types *)
 
 let ty :=
+| "fun"; "("; tys = trailing_list(",", spanned(ty)); ")"; "->"; ty = spanned(ty);
+    { Surface.Ty.Fun (Iarray.of_list tys, ty) }
+| atomic_ty
+
+let atomic_ty :=
+| "("; ty = ty; ")";
+    { ty }
 | n = NAME;
     { Surface.Ty.Name n }
 
@@ -68,15 +76,15 @@ let mul_tm :=
 let app_tm :=
 | "-"; tm = spanned(atomic_tm);
     { Surface.Expr.Prefix (`Neg, tm) }
+| tm = spanned(app_tm); "("; args = trailing_list(",", spanned(tm)); ")";
+    { Surface.Expr.App (tm, Iarray.of_list args) }
 | atomic_tm
 
 let atomic_tm :=
 | "("; tm = tm; ")";
     { tm }
 | n = spanned(NAME);
-    { Surface.Expr.Name (n, None) }
-| n = spanned(NAME); "("; args = trailing_list(",", spanned(tm)); ")";
-    { Surface.Expr.Name (n, Some (Iarray.of_list args)) }
+    { Surface.Expr.Name n }
 | n = spanned(PRIM); "("; args = trailing_list(",", spanned(tm)); ")";
     { Surface.Expr.Prim (n, Iarray.of_list args) }
 | i = NUMBER;

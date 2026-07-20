@@ -1,0 +1,7 @@
+fun caller() : I32 := hof(inc);
+
+fun hof(f : fun (I32) -> I32) : I32 :=
+  let arg : I32 := f(42);
+  #i32-add(10, arg);
+
+fun inc(i : I32) : I32 := #i32-add(i, 1);

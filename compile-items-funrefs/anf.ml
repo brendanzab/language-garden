@@ -36,17 +36,19 @@ module rec Expr : sig
 
   (** Computation expressions *)
   and comp =
-    | Item of Item_name.t * atom Iarray.t option * Ty.t
+    | Fun_app of atom * atom Iarray.t
     | Prim of Prim.Op.t * atom Iarray.t
     | Atom of atom
 
   (** Atomic expressions *)
   and atom =
+    | Item of Item_name.t * Ty.t
     | Var of Local_id.t * Ty.t
     | Bool of bool
     | I32 of int32
 
   type value =
+    | Item of Item.t
     | Bool of bool
     | I32 of int32
 
@@ -81,14 +83,13 @@ end = struct
 
     and eval_comp (joins : (Local_id.t * t) Join_map.t) (locals : value Local_map.t) (expr : comp) : value =
       match expr with
-      | Item (id, args, _) ->
-          begin match Item_map.find id items, args with
-          | Item.Fun (params, _, body), Some args ->
+      | Fun_app (fun_, args) ->
+          begin match eval_atom locals fun_ with
+          | Item (Item.Fun (params, _, body)) ->
               let eval_arg (id, _) arg = id, eval_atom locals arg in
               let args = Seq.map2 eval_arg (Iarray.to_seq params) (Iarray.to_seq args) in
               eval joins (Local_map.add_seq args locals) body
-          | Item.Val (_, body), None -> eval joins locals body
-          | _ -> failwith "Expr.eval_atom"
+          | _ -> failwith "Expr.eval"
           end
       | Prim (op, args) ->
           let args =
@@ -96,6 +97,7 @@ end = struct
               match eval_atom locals arg with
               | Bool bool -> Prim.Value.Bool bool
               | I32 int -> Prim.Value.I32 int
+              | _ -> failwith "Expr.eval"
           in
           begin match Prim.Op.app op args with
           | Prim.Value.Bool bool -> Bool bool
@@ -106,6 +108,11 @@ end = struct
 
     and eval_atom (locals : value Local_map.t) (expr : atom) : value =
       match expr with
+      | Item (name, _) ->
+          begin match Item_map.find name items with
+          | Item.Val (_, body) -> eval (Join_map.empty) locals body
+          | Item.Fun _ as fun_ -> Item fun_
+          end
       | Var (id, _) -> Local_map.find id locals
       | Bool bool -> Bool bool
       | I32 int -> I32 int
@@ -118,6 +125,7 @@ end = struct
 
   let pp_atom (expr : atom) =
     match expr with
+    | Item (id, _) -> Format.dprintf "%t" (Item_name.pp id)
     | Var (id, _) -> Format.dprintf "%t" (Local_id.pp id)
     | Bool true -> Format.dprintf "true"
     | Bool false -> Format.dprintf "false"
@@ -130,8 +138,7 @@ end = struct
 
   let pp_comp (expr : comp) =
     match expr with
-    | Item (id, None, _) -> Format.dprintf "%t" (Item_name.pp id)
-    | Item (id, Some args, _) -> Format.dprintf "%t(%t)" (Item_name.pp id) (pp_args args)
+    | Fun_app (fun_, args) -> Format.dprintf "%t(%t)" (pp_atom fun_) (pp_args args)
     | Prim (op, args) -> Format.dprintf "%t(%t)" (Prim.Op.pp op) (pp_args args)
     | Atom expr -> pp_atom expr
 

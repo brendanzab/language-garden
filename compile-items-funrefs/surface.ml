@@ -33,6 +33,7 @@ module Ty = struct
 
   and data =
     | Name of string
+    | Fun of t Iarray.t * t
 
 end
 
@@ -43,10 +44,11 @@ module Expr = struct
     data Spanned.t
 
   and data =
-    | Name of string Spanned.t * t Iarray.t option
+    | Name of string Spanned.t
     | Prim of string Spanned.t * t Iarray.t
     | Let of def * t
     | Ann of t * Ty.t
+    | App of t * t Iarray.t
     | I32 of int32
     | If_then_else of t * t * t
     | Infix of [`Eq | `Add | `Sub | `Mul] * t * t
@@ -116,31 +118,20 @@ end = struct
 
     type t
 
-    type item_decl =
-      | Val of Core.Ty.t
-      | Fun of Core.Ty.t iarray * Core.Ty.t
-
     val empty : t
 
     val add_local : t -> string option -> Core.Ty.t -> t
-    val add_item : t -> string -> item_decl -> t
+    val add_item : t -> string -> Core.Ty.t -> t
 
-    val lookup_item : t -> string -> (Core.Item_name.t * item_decl) option
+    val lookup_item : t -> string -> (Core.Item_name.t * Core.Ty.t) option
     val lookup_local : t -> string -> (Core.Expr.t * Core.Ty.t) option
 
-    val lookup : t -> string -> [
-      | `Expr of Core.Expr.t * Core.Ty.t
-      | `Item of Core.Item_name.t * item_decl
-    ] option
+    val lookup : t -> string -> (Core.Expr.t * Core.Ty.t) option
 
   end = struct
 
-    type item_decl =
-      | Val of Core.Ty.t
-      | Fun of Core.Ty.t Iarray.t * Core.Ty.t
-
     type t = {
-      item_decls : item_decl Core.Item_map.t;
+      item_decls : Core.Ty.t Core.Item_map.t;
       local_names : string option Core.Local.Env.t;
       local_tys : Core.Ty.t Core.Local.Env.t;
     }
@@ -157,13 +148,13 @@ end = struct
         local_tys = Core.Local.Env.extend ty env.local_tys;
       }
 
-    let add_item (env : t) (name : string) (decl : item_decl) : t =
+    let add_item (env : t) (name : string) (decl : Core.Ty.t) : t =
       let name = Core.Item_name.make name in
       { env with
         item_decls = env.item_decls |> Core.Item_map.add name decl;
       }
 
-    let lookup_item (env : t) (name : string) : (Core.Item_name.t * item_decl) option =
+    let lookup_item (env : t) (name : string) : (Core.Item_name.t * Core.Ty.t) option =
       let name = Core.Item_name.make name in
       Core.Item_map.find_opt name env.item_decls
       |> Option.map (fun item -> name, item)
@@ -177,10 +168,10 @@ end = struct
       | None when name = "false" -> Some (Core.(Expr.Bool false, Ty.Bool))
       | None -> None
 
-    let lookup (env : t) (name : string) =
+    let lookup (env : t) (name : string) : (Core.Expr.t * Core.Ty.t) option =
       match lookup_item env name with
-      | Some (name, item) -> Some (`Item (name, item))
-      | None -> lookup_local env name |> Option.map (fun (expr, ty) -> `Expr (expr, ty))
+      | Some (name, ty) -> Some (Item (name, ty), ty)
+      | None -> lookup_local env name |> Option.map (fun (expr, ty) -> expr, ty)
 
   end
 
@@ -205,23 +196,20 @@ end = struct
 
   (** {2 Bidirectional type checking} *)
 
-  let check_ty (t : Ty.t) : Core.Ty.t =
+  let rec check_ty (t : Ty.t) : Core.Ty.t =
     match t.data with
     | Ty.Name "Bool" -> Core.Ty.Bool
     | Ty.Name "I32" -> Core.Ty.I32
     | Ty.Name name -> error t.span "unbound type name `%s`" name
+    | Ty.Fun (param_tys, result_ty) ->
+        Core.Ty.Fun (Iarray.map check_ty param_tys, check_ty result_ty)
 
   let rec infer_expr (env : Env.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
     match expr.data with
-    | Expr.Name (name, args) ->
-        begin match Env.lookup env name.data, args with
-        | Some (`Item (name, Val ty)), None -> Core.Expr.Item (name, None, ty), ty
-        | Some (`Item (name, Fun (params, ty))), Some args when Iarray.length params = Iarray.length args ->
-            Core.Expr.Item (name, Some (Iarray.map2 (check_expr env) args params), ty), ty
-        | Some (`Expr (expr, ty)), None -> expr, ty
-        | Some _, Some _ -> error name.span "mismatched arity"
-        | Some _, None -> error name.span "unexpected arguments"
-        | None, _ -> error name.span "unbound name"
+    | Expr.Name name ->
+        begin match Env.lookup env name.data with
+        | Some (expr, ty) -> expr, ty
+        | None -> error name.span "unbound name"
         end
 
     | Expr.Prim (name, args) ->
@@ -229,7 +217,7 @@ end = struct
         | Some (op, (param_tys, ty)) when Iarray.length param_tys = Iarray.length args ->
             let param_tys = Iarray.map Core.Ty.of_prim param_tys in
             Core.Expr.Prim (op, Iarray.map2 (check_expr env) args param_tys), Core.Ty.of_prim ty
-        | Some _ -> error name.span "mismatched arity"
+        | Some _ -> error name.span "mismatched arity" (* FIXME: Improve error *)
         | None -> error name.span "unknown primitive operation `#%s`" name.data
         end
 
@@ -241,6 +229,14 @@ end = struct
     | Expr.Ann (expr, ty) ->
         let ty = check_ty ty in
         check_expr env expr ty, ty
+
+    | Expr.App (head, args) ->
+        begin match infer_expr env head with
+        | head, Fun (param_tys, result_ty) when Iarray.length param_tys = Iarray.length args ->
+            Core.Expr.Fun_app (head, Iarray.map2 (check_expr env) args param_tys), result_ty
+        | _, Fun (_, _) -> error head.span "mismatched arity" (* FIXME: Improve error *)
+        | _, _ -> error head.span "not a function"
+        end
 
     | Expr.I32 int ->
         Core.Expr.I32 int, Core.Ty.I32
@@ -258,6 +254,7 @@ end = struct
         begin match ty1 with
         | Core.Ty.Bool -> Core.Expr.Prim (Prim.Op.Bool_eq, [|expr1; expr2|]), Core.Ty.Bool
         | Core.Ty.I32 -> Core.Expr.Prim (Prim.Op.I32_eq, [|expr1; expr2|]), Core.Ty.Bool
+        | ty -> error expr.span "equality not supported for `%t`" (Core.Ty.pp ty)
         end
 
     | Expr.Infix ((`Add | `Sub | `Mul) as op, expr1, expr2) ->
@@ -312,17 +309,17 @@ end = struct
 
       match item with
       | Item.Val (_, ty, _) ->
-          Env.add_item env name.data (Env.Val (check_ty ty))
+          Env.add_item env name.data (check_ty ty)
       | Item.Fun (_, params, ty, _) ->
           (* FIXME: Check duplicate parameter names *)
           let params = Iarray.map (fun (_, ty) -> check_ty ty) params in
-          Env.add_item env name.data (Env.Fun (params, check_ty ty))
+          Env.add_item env name.data (Core.Ty.Fun (params, check_ty ty))
 
     and check_item (env : Env.t) (item : Item.t) : Core.Item_name.t * Core.Item.t =
       match item, Env.lookup_item env (Item.name item).data with
-      | Item.Val (_, _, expr), Some (name, Env.Val ty) ->
+      | Item.Val (_, _, expr), Some (name, ty) ->
           name, Core.Item.Val (ty, check_expr env expr ty)
-      | Item.Fun (_, params, _, expr), Some (name, Env.Fun (param_tys, ty)) ->
+      | Item.Fun (_, params, _, expr), Some (name, Core.Ty.Fun (param_tys, ty)) ->
           (* FIXME: Check duplicate parameter names *)
           let params = Iarray.map2 (fun (name, _ : Expr.param) ty -> name.data, ty) params param_tys in
           let env = Iarray.fold_right (fun (name, ty) env -> Env.add_local env name ty) params env in

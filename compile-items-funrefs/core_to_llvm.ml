@@ -25,17 +25,30 @@ module Label_supply = Name.Supply (Llvm.Label)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
+(** Translate a primitive type into an LLVM type *)
+let translate_prim_ty (ty : Prim.Ty.t) : Llvm.ty =
+  match ty with
+  | Prim.Ty.Bool -> Llvm.I1
+  | Prim.Ty.I32 -> Llvm.I32
+
 (** Translate a type in the core language into an LLVM type *)
-let translate_ty (ty : Core.Ty.t) : Llvm.ty =
+let rec translate_ty (ty : Core.Ty.t) : Llvm.ty =
   match ty with
   | Core.Ty.Bool -> Llvm.I1
   | Core.Ty.I32 -> Llvm.I32
+  | Core.Ty.Fun (param_tys, result_ty) ->
+      Llvm.Ptr (Fun (translate_ty result_ty, Iarray.map translate_ty param_tys))
+
+(** Item declarations *)
+type item_decl =
+  | Val of Llvm.Global_id.t
+  | Fun of Llvm.Global_id.t
 
 (** Translate an expression into a control flow graph. *)
 let translate_expr
   ~(fresh_local_id : string -> Llvm.Local_id.t)
   ~(fresh_label : string -> Llvm.Label.t)
-  (item_env : Llvm.Global_id.t Core.Item_map.t)
+  (item_env : item_decl Core.Item_map.t)
   (local_env : Llvm.opr Core.Local.Env.t)
   (expr : Core.Expr.t)
 : Llvm.cfg =
@@ -71,22 +84,31 @@ let translate_expr
      blocks might be added to the control flow graph. *)
   let rec go_expr local_env result_name (expr : Core.Expr.t) : Llvm.opr =
     match expr with
-    | Core.Expr.Item (name, args, result_ty) ->
-        let item_id = Core.Item_map.find name item_env in
-        let args = Option.value args ~default:[||] |> Iarray.map @@ fun arg ->
-          translate_ty (Core.Expr.ty_of arg), go_expr local_env "arg" arg
-        in
-        bind_instr result_name Llvm.(Call (translate_ty result_ty, Global item_id, args))
+    | Core.Expr.Item (name, ty) ->
+        begin match Core.Item_map.find name item_env with
+        | Val item_id -> bind_instr result_name Llvm.(Call (translate_ty ty, Global item_id, [||]))
+        | Fun item_id -> Llvm.Global item_id
+        end
 
     | Core.Expr.Var (index, _) ->
         Core.Local.Env.lookup index local_env
 
-    | Core.Expr.Let ((name, _, def), body) ->
+    | Core.Expr.Let ((name, def_ty, def), body) ->
         let def = go_expr local_env (Option.value name ~default:"_") def in
         go_expr (Core.Local.Env.extend def local_env) result_name body
 
-    | Core.Expr.Bool true -> Llvm.(I1 true)
-    | Core.Expr.Bool false -> Llvm.(I1 false)
+    | Core.Expr.Fun_app (fun_, args) ->
+        let result_ty, param_tys =
+          match Core.Expr.ty_of fun_ with
+          | Fun (param_tys, ty) -> translate_ty ty, param_tys |> Iarray.map translate_ty
+          | _ -> failwith "function type expected"
+        in
+        let fun_ = go_expr local_env "fun" fun_ in
+        let args = args |> Iarray.map (go_expr local_env "arg") in
+        bind_instr result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
+
+    | Core.Expr.Bool true -> Llvm.I1 true
+    | Core.Expr.Bool false -> Llvm.I1 false
 
     | Core.Expr.Bool_if (expr1, expr2, expr3) ->
         (* Generate some fresh labels to allow us to wire together the basic
@@ -117,7 +139,7 @@ let translate_expr
           false_result, false_end_label;
         |]))
 
-    | Core.Expr.I32 i -> Llvm.(I32 i)
+    | Core.Expr.I32 i -> Llvm.I32 i
 
     | Core.Expr.Prim (op, args) ->
         let args =  args |> Iarray.map (go_expr local_env "arg") in
@@ -147,7 +169,9 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
      declarations before we can translate them to definitions. *)
   let item_env =
     mod_ |> Core.Item_map.mapi @@ fun name item ->
-      fresh_global_id (Core.Item_name.to_string name)
+      match item with
+      | Core.Item.Val (_, _) -> Val (fresh_global_id (Core.Item_name.to_string name))
+      | Core.Item.Fun (_, _, _) -> Fun (fresh_global_id (Core.Item_name.to_string name))
   in
 
   let funs = Dynarray.create () in
@@ -159,12 +183,12 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
     let translate_expr = translate_expr item_env ~fresh_local_id ~fresh_label in
 
     match Core.Item_map.find name mod_, item_decl with
-    | Core.Item.Val (ty, body), id ->
-        let cfg = translate_expr Core.Local.Env.empty body in
+    | Core.Item.Val (ty, def), Val id ->
+        let cfg = translate_expr Core.Local.Env.empty def in
         let result_ty = translate_ty ty in
         Dynarray.add_last funs Llvm.(id, { result_ty; params = [||]; cfg });
 
-    | Core.Item.Fun (params, result_ty, body), id ->
+    | Core.Item.Fun (params, result_ty, body), Fun id ->
         let param_id name = fresh_local_id (Option.value name ~default:"_") in
         let params = params |> Iarray.map (fun (name, ty) -> translate_ty ty, param_id name) in
         let result_ty = translate_ty result_ty in
@@ -175,6 +199,9 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
         in
         let cfg = translate_expr local_env body in
         Dynarray.add_last funs Llvm.(id, { result_ty; params; cfg });
+
+    | _, _ ->
+        failwith "mismatched items"
   end;
 
   Llvm.{

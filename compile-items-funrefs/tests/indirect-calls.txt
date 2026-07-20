@@ -1,0 +1,10 @@
+-- Example based on https://github.com/WebAssembly/spec/blob/main/proposals/function-references/Overview.md#examples
+
+fun hof(f : fun (I32) -> I32) : I32 :=
+  10 + f(42);
+
+fun inc(i : I32) : I32 :=
+  i + 1;
+
+fun caller() : I32 :=
+  hof(inc);

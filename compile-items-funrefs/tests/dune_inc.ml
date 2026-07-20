@@ -74,14 +74,14 @@ let generate_rules base = begin
   generate_wat_rules
     ~base:base
     ~compile_args:""
-    ~wat2wasm_args:""
-    ~wasm_validate_args:"";
+    ~wat2wasm_args:" --enable-function-references"
+    ~wasm_validate_args:" --enable-function-references";
 
   generate_wat_rules
     ~base:(Printf.sprintf "%s.tail-call" base)
     ~compile_args:" --enable-tail-call"
-    ~wat2wasm_args:" --enable-tail-call"
-    ~wasm_validate_args:" --enable-tail-call";
+    ~wat2wasm_args:" --enable-tail-call --enable-function-references"
+    ~wasm_validate_args:" --enable-tail-call --enable-function-references";
 
 end
 

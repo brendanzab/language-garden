@@ -29,12 +29,13 @@ end = struct
     let rec go_expr local_ids (expr : Core.Expr.t) : Anf.Expr.comp k k =
       fun k ->
         match expr with
-        | Core.Expr.Item (id, None, ty) ->
-            k (Anf.Expr.Item (id, None, ty))
+        | Core.Expr.Item (id, ty) ->
+            k (Anf.Expr.Atom (Item (id, ty)))
 
-        | Core.Expr.Item (id, Some args, ty) ->
+        | Core.Expr.Fun_app (fun_, args) ->
+            let@ fun_ = go_named_expr local_ids "fun" fun_ in
             let@ args = go_named_exprs local_ids "arg" (Iarray.to_list args) in
-            k (Anf.Expr.Item (id, Some (Iarray.of_list args), ty))
+            k (Anf.Expr.Fun_app (fun_, Iarray.of_list args))
 
         | Core.Expr.Var (index, ty) ->
             k (Anf.Expr.Atom (Var (Core.Local.Env.lookup index local_ids, ty)))
