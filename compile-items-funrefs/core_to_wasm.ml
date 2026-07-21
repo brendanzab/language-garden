@@ -52,7 +52,7 @@ let translate_expr
             | false -> Dynarray.add_last instrs (Wasm.Call id);
             end
         | Fun id ->
-            add_func_ref id;
+            add_func_ref id;  (* NOTE: This is only actually needed for private functions *)
             Dynarray.add_last instrs (Wasm.Ref_func id);
         end
 

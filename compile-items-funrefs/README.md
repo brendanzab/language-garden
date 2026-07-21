@@ -4,8 +4,20 @@
 
 ---
 
-This adds the ability to pass references to functions as parameters and bind
-them as definitions to the [compile-items](../compile-items) project.
+The [compile-items](../compile-items) project requires all functions to be fully
+applied. This project lifts that restriction by adding support for function
+types, passing references to functions as arguments, and storing them as local
+or top-level definitions.
+
+This is relatively straightforward to support in LLVM IR, but the Wasm back-end
+requires a little more effort. This involves:
+
+- registering type definitions for the function types used in the program
+- registering each function reference in a global table
+- emitting `call` and `call_ref` instructions as needed
+
+Note that this project does _not_ support anonymous functions. This would
+require additional work to implement, namely closure conversion.
 
 ## Example
 
@@ -278,25 +290,3 @@ The resulting program is then translated to web assembly.
       ▼                     ▼                   ▼
   Wasm.module_         Anf.Module.t        Llvm.program
 ```
-
-## Todo list
-
-- [x] Compile Core to WASM
-  - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
-  - [x] Validate WAT with [wabt](https://github.com/WebAssembly/wabt)
-- [x] Compile Core to ANF
-  - [x] Generate join points
-- [x] Compile Core to LLVM
-- [ ] Compile Core to JavaScript
-- [ ] Test that each translation preserves the semantics
-
-CLI Entrypoints:
-
-- [ ] `repl`
-- [ ] `elab`: Surface -> Core
-- [ ] `doc`: Surface -> Doc
-- [ ] `eval`: Surface -> Core -> Value
-- [ ] `eval-anf`: Surface -> Core -> ANF -> Value
-- [x] `compile-wat`: Surface -> Core -> WAT
-- [x] `compile-anf`: Surface -> Core -> ANF
-- [x] `compile-llvm`: Surface -> Core -> LLVM
