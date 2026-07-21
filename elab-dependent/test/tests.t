@@ -108,3 +108,35 @@ An example of a type error
          found: fun (true : Type) (false : Type) -> Type
   
   [1]
+
+Eta conversion of function literals against neutral terms
+  $ executable elab <<EOF
+  > (fun A P f h => h) :
+  >   fun (A : Type) (P : (A -> A -> A) -> Type) (f : A -> A -> A)
+  >       (h : P (fun x y => f x y)) -> P f
+  > EOF
+  <stdin> :
+    fun (A : Type) (P : (A -> A -> A) -> Type) (f : A -> A -> A)
+        (h : P (fun x y => f x y)) -> P f
+  :=
+    (fun A P f h => h) :
+      fun (A : Type) (P : (A -> A -> A) -> Type) (f : A -> A -> A)
+          (h : P (fun x y => f x y)) -> P f
+
+Eta conversion must introduce distinct variables, so a function that permutes
+the arguments of a neutral term is not convertible with it (regression test
+for an off-by-one bug in conversion checking)
+  $ executable elab <<EOF
+  > (fun A P f h => h) :
+  >   fun (A : Type) (P : (A -> A -> A) -> Type) (f : A -> A -> A)
+  >       (h : P (fun x y => f y x)) -> P f
+  > EOF
+  error: mismatched types:
+    expected: P f
+       found: P (fun x y => f y x)
+    ┌─ <stdin>:1:16
+    │
+  1 │ (fun A P f h => h) :
+    │                 ^
+  
+  [1]

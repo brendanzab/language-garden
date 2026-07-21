@@ -483,7 +483,7 @@ module Semantics = struct
     (* Eta rules *)
     | Fun_lit (_, body), fun_tm | fun_tm, Fun_lit (_, body)  ->
         let x = lazy (next_var size) in
-        is_convertible size (inst_clos body x) (fun_app fun_tm x)
+        is_convertible (size + 1) (inst_clos body x) (fun_app fun_tm x)
     | Rec_lit decls, rec_vtm | rec_vtm, Rec_lit decls ->
         decls |> List.for_all (fun (label, lazy elem) ->
           is_convertible size elem (record_proj rec_vtm label))
