@@ -12,3 +12,8 @@ val partial-app : fun (I32) -> I32 :=
 
 val test-partial-app : I32 :=
   partial-app(42);
+
+val test-local-def : I32 :=
+  let partial-app : fun (I32) -> I32 :=
+    choose(true, incr, decr);
+  partial-app(42);

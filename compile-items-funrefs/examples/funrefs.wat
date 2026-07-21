@@ -4,6 +4,7 @@
   (export "incr" (func $incr))
   (export "partial-app" (func $partial-app))
   (export "test-false" (func $test-false))
+  (export "test-local-def" (func $test-local-def))
   (export "test-partial-app" (func $test-partial-app))
   (export "test-true" (func $test-true))
   (type $funty (func (param i32) (result i32)))
@@ -45,6 +46,18 @@
     (ref.func $incr)
     (ref.func $decr)
     (call $choose)
+    (call_ref $funty))
+  (func
+    $test-local-def
+    (result i32)
+    (local $partial-app (ref $funty))
+    (i32.const 1)
+    (ref.func $incr)
+    (ref.func $decr)
+    (call $choose)
+    (local.set $partial-app)
+    (i32.const 42)
+    (call $partial-app)
     (call_ref $funty))
   (func
     $test-partial-app

@@ -12,3 +12,6 @@
 (menhir
  (modules parser)
  (flags --strict))
+
+(mdx
+ (package compile-items-funrefs))

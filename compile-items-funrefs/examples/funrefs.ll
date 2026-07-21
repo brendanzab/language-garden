@@ -35,6 +35,15 @@ entry:
   ret i32 %result
 }
 
+define i32 @test-local-def() {
+entry:
+  %partial-app =
+    call i32(i32)* @choose(i1 true, i32(i32)* @incr, i32(i32)* @decr)
+  %fun = call i32(i32)* @partial-app()
+  %result = call i32 %fun(i32 42)
+  ret i32 %result
+}
+
 define i32 @test-partial-app() {
 entry:
   %fun = call i32(i32)* @partial-app()

@@ -37,6 +37,11 @@ val partial-app : fun (I32) -> I32 :=
 
 val test-partial-app : I32 :=
   partial-app(42);
+
+val test-local-def : I32 :=
+  let partial-app : fun (I32) -> I32 :=
+    choose(true, incr, decr);
+  partial-app(42);
 ```
 
 <details>
@@ -50,6 +55,7 @@ val test-partial-app : I32 :=
   (export "incr" (func $incr))
   (export "partial-app" (func $partial-app))
   (export "test-false" (func $test-false))
+  (export "test-local-def" (func $test-local-def))
   (export "test-partial-app" (func $test-partial-app))
   (export "test-true" (func $test-true))
   (type $funty (func (param i32) (result i32)))
@@ -93,6 +99,18 @@ val test-partial-app : I32 :=
     (call $choose)
     (call_ref $funty))
   (func
+    $test-local-def
+    (result i32)
+    (local $partial-app (ref $funty))
+    (i32.const 1)
+    (ref.func $incr)
+    (ref.func $decr)
+    (call $choose)
+    (local.set $partial-app)
+    (i32.const 42)
+    (call $partial-app)
+    (call_ref $funty))
+  (func
     $test-partial-app
     (result i32)
     (i32.const 42)
@@ -122,6 +140,7 @@ val test-partial-app : I32 :=
   (export "incr" (func $incr))
   (export "partial-app" (func $partial-app))
   (export "test-false" (func $test-false))
+  (export "test-local-def" (func $test-local-def))
   (export "test-partial-app" (func $test-partial-app))
   (export "test-true" (func $test-true))
   (type $funty (func (param i32) (result i32)))
@@ -165,6 +184,18 @@ val test-partial-app : I32 :=
     (call $choose)
     (return_call_ref $funty))
   (func
+    $test-local-def
+    (result i32)
+    (local $partial-app (ref $funty))
+    (i32.const 1)
+    (ref.func $incr)
+    (ref.func $decr)
+    (call $choose)
+    (local.set $partial-app)
+    (i32.const 42)
+    (call $partial-app)
+    (return_call_ref $funty))
+  (func
     $test-partial-app
     (result i32)
     (i32.const 42)
@@ -199,13 +230,19 @@ fun incr(i : I32) : I32 := #i32-add(i, 1);
 
 val partial-app : fun (I32) -> I32 := choose(true, incr, decr);
 
-val test-false : I32 := let fun := choose(false, incr, decr);
-                        fun(42);
+val test-false : I32 :=
+  let fun : fun (I32) -> I32 := choose(false, incr, decr);
+  fun(42);
+
+val test-local-def : I32 :=
+  let partial-app : fun (I32) -> I32 := choose(true, incr, decr);
+  partial-app(42);
 
 val test-partial-app : I32 := partial-app(42);
 
-val test-true : I32 := let fun := choose(true, incr, decr);
-                       fun(42);
+val test-true : I32 :=
+  let fun : fun (I32) -> I32 := choose(true, incr, decr);
+  fun(42);
 ```
 
 </details>
@@ -248,6 +285,15 @@ entry:
 define i32 @test-false() {
 entry:
   %fun = call i32(i32)* @choose(i1 false, i32(i32)* @incr, i32(i32)* @decr)
+  %result = call i32 %fun(i32 42)
+  ret i32 %result
+}
+
+define i32 @test-local-def() {
+entry:
+  %partial-app =
+    call i32(i32)* @choose(i1 true, i32(i32)* @incr, i32(i32)* @decr)
+  %fun = call i32(i32)* @partial-app()
   %result = call i32 %fun(i32 42)
   ret i32 %result
 }

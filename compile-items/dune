@@ -14,5 +14,4 @@
  (flags --strict))
 
 (mdx
- (package compile-items)
- (deps %{bin:generics}))
+ (package compile-items))
