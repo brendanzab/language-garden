@@ -37,7 +37,7 @@ let translate_expr
   (item_env : item_decl Core.Item_map.t)
   (local_env : Wasm.Local_id.t Core.Local.Env.t)
   (expr : Core.Expr.t)
-: locals:Wasm.local Iarray.t * Wasm.expr =
+: Wasm.local Iarray.t * Wasm.expr =
   let locals = Dynarray.create () in
   let instrs = Dynarray.create () in
   let translate_ty = translate_ty ~add_type_def in
@@ -127,7 +127,7 @@ let translate_expr
 
   go_expr instrs local_env expr ~tail_call:enable_tail_call;
 
-  ~locals:(make_iarray locals), make_iarray instrs
+  (make_iarray locals), make_iarray instrs
 
 let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.module_ =
   (* Arrays to store exports and functions *)
@@ -184,7 +184,7 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
     *)
     | Core.Item.Val (ty, expr), Val id ->
         let result_ty = translate_ty ty in
-        let ~locals, body = translate_expr Core.Local.Env.empty expr ~enable_tail_call in
+        let locals, body = translate_expr Core.Local.Env.empty expr ~enable_tail_call in
         Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
         Dynarray.add_last funcs Wasm.{ id; params = [||]; results = [|result_ty|]; locals; body }
 
@@ -192,7 +192,7 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
         let param_id name = fresh_local_id (Option.value name ~default:"_") in
         let params = params |> Iarray.map (fun (name, ty) -> param_id name, translate_ty ty) in
         let result_ty = translate_ty ty in
-        let ~locals, body =
+        let locals, body =
           let local_env = Iarray.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
           translate_expr local_env body ~enable_tail_call
         in
