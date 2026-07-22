@@ -104,100 +104,100 @@ module Syntax = struct
       pass that converts core terms back to surface term, and implement a
       pretty printer for the surface language. *)
   let pp ?(resugar = true) : name env -> tm -> Format.formatter -> unit =
-    let pp_name name ppf =
+    let pp_name name =
       match name with
-      | Some name -> Format.pp_print_string ppf name
-      | None -> Format.pp_print_string ppf "_"
+      | Some name -> Format.dprintf "%s" name
+      | None -> Format.dprintf "_"
     in
 
-    let rec pp_tm names tm ppf =
+    let rec pp_tm names tm =
       match tm with
       | Let _ as tm ->
-          let rec go names tm ppf =
+          let rec go names tm =
             match tm with
             | Let (name, Ann (def, def_ty), body) when resugar ->
-                Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+                Format.dprintf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
                   (pp_name_ann names name def_ty)
                   (pp_tm names def)
                   (go (name :: names) body)
             | Let (name, def, body) ->
-                Format.fprintf ppf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+                Format.dprintf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
                   (pp_name name)
                   (pp_tm names def)
                   (go (name :: names) body)
             (* Final term should be grouped in a box *)
-            | tm -> Format.fprintf ppf "@[%t@]" (pp_tm names tm)
+            | tm -> Format.dprintf "@[%t@]" (pp_tm names tm)
           in
-          go names tm ppf
+          go names tm
       | Ann (tm, ty) ->
-          Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"
+          Format.dprintf "@[<2>@[%t :@]@ %t@]"
             (pp_app_tm names tm)
             (pp_tm names ty)
       | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-          Format.fprintf ppf "@[%t@ ->@]@ %t"
+          Format.dprintf "@[%t@ ->@]@ %t"
             (pp_app_tm names param_ty)
             (pp_tm (None :: names) body_ty)
       | Fun_type _ as tm ->
-          let rec go names tm ppf =
+          let rec go names tm =
             match tm with
             | Fun_type (None, param_ty, body_ty) when resugar && not (is_bound 0 body_ty) ->
-                Format.fprintf ppf "@[%t@ ->@]@ %t"
+                Format.dprintf "@[%t@ ->@]@ %t"
                   (pp_tm names param_ty)
                   (pp_tm (None :: names) body_ty)
             | Fun_type (name, param_ty, body_ty) ->
-                Format.fprintf ppf "%t@ %t"
+                Format.dprintf "%t@ %t"
                   (pp_param names name param_ty)
                   (go (name :: names) body_ty)
             | body_ty ->
-                Format.fprintf ppf "@[->@ @[%t@]@]"
+                Format.dprintf "@[->@ @[%t@]@]"
                   (pp_tm names body_ty)
           in
-          Format.fprintf ppf "@[<4>fun %t@]" (go names tm)
+          Format.dprintf "@[<4>fun %t@]" (go names tm)
       | Fun_lit (name, body) ->
-          let rec go names tm ppf =
+          let rec go names tm =
             match tm with
             | Fun_lit (name, body) ->
-                Format.fprintf ppf "%t@ %t"
+                Format.dprintf "%t@ %t"
                   (pp_name name)
                   (go (name :: names) body)
-            | tm -> Format.fprintf ppf "=>@]@ @[%t@]@]" (pp_tm names tm)
+            | tm -> Format.dprintf "=>@]@ @[%t@]@]" (pp_tm names tm)
           in
-          Format.fprintf ppf "@[<hv 2>@[fun@ %t@ %t"
+          Format.dprintf "@[<hv 2>@[fun@ %t@ %t"
             (pp_name name)
             (go (name :: names) body)
       | tm ->
-          pp_app_tm names tm ppf
+          pp_app_tm names tm
 
-    and pp_app_tm names tm ppf =
-      let rec go tm ppf =
+    and pp_app_tm names tm =
+      let rec go tm =
         match tm with
         | Fun_app (head, arg) ->
-            Format.fprintf ppf "%t@ %t"
+            Format.dprintf "%t@ %t"
               (go head)
               (pp_atomic_tm names arg)
         | tm ->
-            pp_atomic_tm names tm ppf
+            pp_atomic_tm names tm
       in
       match tm with
       | Fun_app _ as tm ->
-          Format.fprintf ppf "@[<2>%t@]" (go tm)
+          Format.dprintf "@[<2>%t@]" (go tm)
       | tm ->
-          pp_atomic_tm names tm ppf
+          pp_atomic_tm names tm
 
-    and pp_atomic_tm names tm ppf =
+    and pp_atomic_tm names tm =
       match tm with
-      | Var index -> Format.fprintf ppf "%t" (pp_name (List.nth names index))
-      | Univ -> Format.fprintf ppf "Type"
+      | Var index -> Format.dprintf "%t" (pp_name (List.nth names index))
+      | Univ -> Format.dprintf "Type"
       | Let _ | Ann _ | Fun_type _ | Fun_lit _ | Fun_app _ as tm ->
-          Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
+          Format.dprintf "@[(%t)@]" (pp_tm names tm)
 
-    and pp_name_ann names name def_ty ppf =
-      Format.fprintf ppf "@[<2>@[%t :@]@ %t@]"
+    and pp_name_ann names name def_ty =
+      Format.dprintf "@[<2>@[%t :@]@ %t@]"
         (pp_name name)
         (pp_tm names def_ty)
 
-    and pp_param names name def_ty ppf =
-      Format.fprintf ppf "@[<2>(@[%t :@]@ %t)@]"
+    and pp_param names name def_ty =
+      Format.dprintf "@[<2>(@[%t :@]@ %t)@]"
         (pp_name name)
         (pp_tm names def_ty)
     in

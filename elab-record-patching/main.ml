@@ -76,14 +76,11 @@ let elab_tm (source : Source_file.t) (tm : Surface.tm) =
 let pp_tm ?resugar =
   Core.Syntax.pp ?resugar []
 
-let pp_def ~resugar name ty tm ppf =
-  let pp_name_ann ppf (name, ty) =
-    Format.fprintf ppf "@[<2>@[%s :@]@ @[%t@]@]"
+let pp_def ~resugar name ty tm =
+  Format.dprintf "@[<2>@[%t@ :=@]@ @[%t@]@]"
+    (Format.dprintf "@[<2>@[%s :@]@ @[%t@]@]"
       name
-      (pp_tm ~resugar ty)
-  in
-  Format.fprintf ppf "@[<2>@[%a@ :=@]@ @[%t@]@]"
-    pp_name_ann (name, ty)
+      (pp_tm ~resugar ty))
     (pp_tm ~resugar tm)
 
 
