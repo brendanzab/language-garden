@@ -129,9 +129,10 @@ let translate_expr
         let false_result = go_expr local_env "false_result" expr3 in
         let false_end_label = close_block Llvm.(Br end_label) in
 
-        (* Translate the blocks that will be run after the if expression has
-           been evaluated (i.e. the continuation). The results of the true and
-           false branches will be bound to a phi-node. *)
+        (* Start the block that will be executed after the if expression (i.e.
+           the continuation). In order to maintain static single assignment,
+           the results of the true and false branches will be bound to a single
+           variable using a phi-node. *)
         start_block end_label;
         let result_ty = translate_ty (Core.Expr.ty_of expr) in
         bind_instr result_name Llvm.(Phi (result_ty, [|
