@@ -28,8 +28,8 @@ let translate_expr
     | Core.Expr.Item (name, args, _) ->
         Option.value args ~default:[||] |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         begin match enable_tail_call && tail_call with
-        | true -> Dynarray.add_last instrs (Wasm.Return_call (Core.Item_map.find name item_env))
-        | false -> Dynarray.add_last instrs (Wasm.Call (Core.Item_map.find name item_env))
+        | true -> Dynarray.add_last instrs (Wasm.Return_call (Core.Item_map.find name item_env));
+        | false -> Dynarray.add_last instrs (Wasm.Call (Core.Item_map.find name item_env));
         end
 
     | Core.Expr.Var (index, _) ->
@@ -40,10 +40,10 @@ let translate_expr
         Dynarray.add_last locals (def_id, translate_ty ty);
         go_expr instrs local_env def ~tail_call:false;
         Dynarray.add_last instrs (Wasm.Local_set def_id);
-        go_expr instrs (Core.Local.Env.extend def_id local_env) body ~tail_call
+        go_expr instrs (Core.Local.Env.extend def_id local_env) body ~tail_call;
 
-    | Core.Expr.Bool true -> Dynarray.add_last instrs (Wasm.I32_const 1l)
-    | Core.Expr.Bool false -> Dynarray.add_last instrs (Wasm.I32_const 0l)
+    | Core.Expr.Bool true -> Dynarray.add_last instrs (Wasm.I32_const 1l);
+    | Core.Expr.Bool false -> Dynarray.add_last instrs (Wasm.I32_const 0l);
 
     | Core.Expr.Bool_if (expr1, expr2, expr3) ->
         let instrs2 = Dynarray.create () in
@@ -63,17 +63,17 @@ let translate_expr
 
     | Core.Expr.Prim (op, args) ->
         begin match op with
-        | Prim.Op.I32_neg -> Dynarray.add_last instrs (Wasm.I32_const 0l)
+        | Prim.Op.I32_neg -> Dynarray.add_last instrs (Wasm.I32_const 0l);
         | _ -> ()
         end;
         args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         begin match op with
-        | Prim.Op.Bool_eq -> Dynarray.add_last instrs Wasm.I32_eq
-        | Prim.Op.I32_eq -> Dynarray.add_last instrs Wasm.I32_eq
-        | Prim.Op.I32_add -> Dynarray.add_last instrs Wasm.I32_add
-        | Prim.Op.I32_sub -> Dynarray.add_last instrs Wasm.I32_sub
-        | Prim.Op.I32_mul -> Dynarray.add_last instrs Wasm.I32_mul
-        | Prim.Op.I32_neg -> Dynarray.add_last instrs Wasm.I32_sub
+        | Prim.Op.Bool_eq -> Dynarray.add_last instrs Wasm.I32_eq;
+        | Prim.Op.I32_eq -> Dynarray.add_last instrs Wasm.I32_eq;
+        | Prim.Op.I32_add -> Dynarray.add_last instrs Wasm.I32_add;
+        | Prim.Op.I32_sub -> Dynarray.add_last instrs Wasm.I32_sub;
+        | Prim.Op.I32_mul -> Dynarray.add_last instrs Wasm.I32_mul;
+        | Prim.Op.I32_neg -> Dynarray.add_last instrs Wasm.I32_sub;
         end;
   in
 
