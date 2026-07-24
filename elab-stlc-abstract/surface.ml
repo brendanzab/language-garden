@@ -81,6 +81,8 @@ end = struct
 
   (** {2 Bidirectional type checking} *)
 
+  let ( let@ ) = ( @@ )
+
   (** Elaborate a type, checking that it is well-formed. *)
   let rec check_ty (ty : ty) : Core.ty =
     match ty.data with
@@ -100,14 +102,14 @@ end = struct
           | Some def_ty -> Core.ann (check_tm ctx def) (check_ty def_ty)
           | None -> infer_tm ctx def
         in
-        Core.let_check (name.data, def)
-          (fun var -> check_tm ((name.data, var) :: ctx) body)
+        let@ var = Core.let_check (name.data, def) in
+        check_tm ((name.data, var) :: ctx) body
 
     | Fun_lit (name, param_ty, body) ->
-        Core.Fun.intro_check
-          (name.data, Option.map check_ty param_ty)
-          (fun var -> check_tm ((name.data, var) :: ctx) body)
-        |> Core.catch_check_tm begin function
+        begin
+          let@ var = Core.Fun.intro_check (name.data, Option.map check_ty param_ty) in
+          check_tm ((name.data, var) :: ctx) body
+        end |> Core.catch_check_tm begin function
           | `Unexpected_fun_lit expected_ty ->
               error tm.span "found function, expected `%t`" (Core.pp_ty expected_ty)
           | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
@@ -154,8 +156,8 @@ end = struct
           | Some def_ty -> Core.ann (check_tm ctx def) (check_ty def_ty)
           | None -> infer_tm ctx def
         in
-        Core.let_synth (name.data, def)
-          (fun var -> infer_tm ((name.data, var) :: ctx) body)
+        let@ var = Core.let_synth (name.data, def) in
+        infer_tm ((name.data, var) :: ctx) body
 
     | Ann (tm, ty) ->
         let ty = check_ty ty in
@@ -169,9 +171,8 @@ end = struct
 
     | Fun_lit (name, Some param_ty, body) ->
         let param_ty = check_ty param_ty in
-        Core.Fun.intro_synth
-          (name.data, param_ty)
-          (fun var -> infer_tm ((name.data, var) :: ctx) body)
+        let@ var = Core.Fun.intro_synth (name.data, param_ty) in
+        infer_tm ((name.data, var) :: ctx) body
 
     | Fun_app (head, arg) ->
         Core.Fun.elim (infer_tm ctx head) (infer_tm ctx arg)
