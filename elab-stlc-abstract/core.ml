@@ -12,7 +12,6 @@ type ty =
 
 type tm =
   | Var of index
-  | Ann of tm * ty
   | Let of name * ty * tm * tm
   | Fun_lit of name * ty * tm
   | Fun_app of tm * tm
@@ -51,7 +50,6 @@ module Semantics = struct
   let rec eval (env : vtm list) (tm : tm) : vtm =
     match tm with
     | Var index -> List.nth env index
-    | Ann (tm, _) -> eval env tm
     | Let (_, _, def, body) ->
         eval (eval env def :: env) body
     | Fun_lit (name, param_ty, body) ->
@@ -189,8 +187,7 @@ let conv (elab : infer_tm) : [> `Type_mismatch of ty_mismatch] check_tm_err =
 
 let ann (elab : check_tm) (ty : ty) : infer_tm =
   fun ctx ->
-    let tm = elab ty ctx in
-    Ann (tm, ty), ty
+    elab ty ctx, ty
 
 
 (* Structural rules *)
@@ -374,7 +371,7 @@ let pp_tm : tm -> Format.formatter -> unit =
     | Int_lit i -> Format.fprintf ppf "%i" i
     | Bool_lit true -> Format.fprintf ppf "true"
     | Bool_lit false -> Format.fprintf ppf "false"
-    | Ann _ | Let _ | Fun_lit _ | Fun_app _ | Bool_elim _ ->
+    | Let _ | Fun_lit _ | Fun_app _ | Bool_elim _ ->
         Format.fprintf ppf "@[(%t)@]" (pp_tm names tm)
   in
   pp_tm []

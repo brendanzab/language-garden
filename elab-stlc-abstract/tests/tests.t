@@ -10,6 +10,16 @@ Elaborate identity function test
   let id : Int -> Int := fun (x : Int) => x;
   fun (x : Int) => id x : Int -> Int
 
+Elaborate identity function test (with parameter annotation)
+  $ cat id-param-ann.txt | executable
+  let id : Int -> Int := fun (x : Int) => x;
+  fun (x : Int) => id x : Int -> Int
+
+Elaborate identity function test (with term annotation)
+  $ cat id-term-ann.txt | executable
+  let id : Int -> Int := fun (x : Int) => x;
+  fun (x : Int) => id x : Int -> Int
+
 
 Elaboration Errors
 ------------------
