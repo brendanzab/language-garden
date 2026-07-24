@@ -335,7 +335,12 @@ let rec occurs_ty (m : meta) (ty : ty) : unit =
   | Record_type rty | Variant_type rty ->
       begin match force_row_ty rty with
       | Row_entries row -> row |> Label_map.iter (fun _ -> occurs_ty m)
-      | Row_meta_var _ -> ()
+      (* Unsolved row metavariables might contain the metavariable in the types
+         of their row constraint *)
+      | Row_meta_var { contents = Unsolved_row (_, row) } ->
+          row |> Label_map.iter (fun _ -> occurs_ty m)
+      | Row_meta_var { contents = Solved_row _ } ->
+          failwith "expected forced row type"
       end
   | Int_type -> ()
   | Bool_type -> ()
@@ -354,9 +359,14 @@ let occurs_row_ty (rm : row_meta) (rty : row_ty) : unit =
     | Bool_type -> ()
   and go_row_ty rty =
     match force_row_ty rty with
-    | Row_meta_var rm' ->
+    | Row_meta_var ({ contents = Unsolved_row (_, row) } as rm') ->
         if rm == rm' then
-          raise (Infinite_row_type rm)
+          raise (Infinite_row_type rm);
+        (* The row metavariable might also occur in the types of the row
+           constraint *)
+        row |> Label_map.iter (fun _ -> go_ty)
+    | Row_meta_var { contents = Solved_row _ } ->
+        failwith "expected forced row type"
     | Row_entries row ->
         row |> Label_map.iter (fun _ -> go_ty)
   in
@@ -395,6 +405,9 @@ and unify_row_tys (rty1 : row_ty) (rty2 : row_ty) : unit =
   | Row_meta_var ({ contents = Unsolved_row (id, row1) } as rm1),
     (Row_meta_var ({ contents = Unsolved_row (_, row2) } as rm2) as rty) ->
       occurs_row_ty rm1 rty;
+      (* Also check the reverse direction, as the merged row constraint would
+         otherwise contain the row metavariable it constrains *)
+      occurs_row_ty rm2 (Row_meta_var rm1);
       let merge_rows =
         Label_map.merge @@ fun _ ty1 ty2 ->
           match ty1, ty2 with
