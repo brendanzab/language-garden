@@ -178,7 +178,11 @@ open Result.Syntax
 
 (** Directional rules *)
 
-let conv (elab : infer_tm) : [> `Type_mismatch of ty_mismatch] check_tm_err =
+type conv_err = [
+  | `Type_mismatch of ty_mismatch
+]
+
+let conv (elab : infer_tm) : [> conv_err] check_tm_err =
   fun expected_ty ctx ->
     let tm, found_ty = elab ctx in
     match expected_ty = found_ty with
@@ -214,10 +218,20 @@ let let_check (name, def : name * infer_tm) (body : var -> check_tm) : check_tm 
 
 module Fun = struct
 
+  type intro_check_err = [
+    | `Mismatched_param_ty of ty_mismatch
+    | `Unexpected_fun_lit of ty
+  ]
+
+  type elim_err = [
+    | `Unexpected_arg of ty
+    | `Type_mismatch of ty_mismatch
+  ]
+
   let form (param_ty : ty) (body_ty : ty) : ty =
     Fun_type (param_ty, body_ty)
 
-  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : [> `Mismatched_param_ty of ty_mismatch | `Unexpected_fun_lit of ty] check_tm_err =
+  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : [> intro_check_err] check_tm_err =
     fun fun_ty ctx ->
       match fun_ty with
       | Fun_type (expected_param_ty, body_ty) ->
@@ -241,7 +255,7 @@ module Fun = struct
       let body, body_ty = body ctx.size (add_bind param_ty ctx) in
       Fun_lit (name, param_ty, body), Fun_type (param_ty, body_ty)
 
-  let elim (head : infer_tm) (arg : infer_tm) : [> `Unexpected_arg of ty  | `Type_mismatch of ty_mismatch] infer_tm_err =
+  let elim (head : infer_tm) (arg : infer_tm) : [> elim_err] infer_tm_err =
     fun ctx ->
       match head ctx with
       | head, Fun_type (param_ty, body_ty) ->
