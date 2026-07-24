@@ -28,11 +28,15 @@ type tm =
 and tm_data =
   | Name of string
   | Ann of tm * ty
-  | Let of binder * ty option * tm * tm
-  | Fun_lit of binder * ty option * tm
+  | Let of binder * param list * ty option * tm * tm
+  | Fun_lit of param list * tm
   | Fun_app of tm * tm
   | Int_lit of int
   | If_then_else of tm * tm * tm
+
+(** Parameters, with optional type annotations *)
+and param =
+  binder * ty option
 
 
 (** {1 User-facing diagnostics} *)
@@ -96,30 +100,13 @@ end = struct
   (** Elaborate a surface term into a checkable term in the core language. *)
   let rec check_tm (ctx : context) (tm : tm) : Core.check_tm =
     match tm.data with
-    | Let (name, def_ty, def, body) ->
-        let def =
-          match def_ty with
-          | Some def_ty -> Core.ann (check_tm ctx def) (check_ty def_ty)
-          | None -> infer_tm ctx def
-        in
+    | Let (name, params, def_body_ty, def_body, body) ->
+        let def = infer_fun_lit ctx params def_body_ty def_body in
         let@ var = Core.let_check (name.data, def) in
         check_tm ((name.data, var) :: ctx) body
 
-    | Fun_lit (name, param_ty, body) ->
-        begin
-          let@ var = Core.Fun.intro_check (name.data, Option.map check_ty param_ty) in
-          check_tm ((name.data, var) :: ctx) body
-        end |> Core.catch_check_tm begin function
-          | `Unexpected_fun_lit expected_ty ->
-              error tm.span "found function, expected `%t`" (Core.pp_ty expected_ty)
-          | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
-              error tm.span "mismatched parameter types"
-                ~details:[
-                  Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
-                    (Core.pp_ty expected_ty)
-                    (Core.pp_ty found_ty);
-                ]
-          end
+    | Fun_lit (params, body) ->
+        check_fun_lit ctx params body
 
     | If_then_else (head, tm1, tm2) ->
         Core.Bool.elim_check
@@ -150,12 +137,8 @@ end = struct
         | None -> error tm.span "unbound variable `%s`" name
         end
 
-    | Let (name, def_ty, def, body) ->
-        let def =
-          match def_ty with
-          | Some def_ty -> Core.ann (check_tm ctx def) (check_ty def_ty)
-          | None -> infer_tm ctx def
-        in
+    | Let (name, params, def_body_ty, def_body, body) ->
+        let def = infer_fun_lit ctx params def_body_ty def_body in
         let@ var = Core.let_synth (name.data, def) in
         infer_tm ((name.data, var) :: ctx) body
 
@@ -166,13 +149,8 @@ end = struct
     | Int_lit i ->
         Core.Int.intro i
 
-    | Fun_lit (n, None, _) ->
-        error n.span "annotation required"
-
-    | Fun_lit (name, Some param_ty, body) ->
-        let param_ty = check_ty param_ty in
-        let@ var = Core.Fun.intro_synth (name.data, param_ty) in
-        infer_tm ((name.data, var) :: ctx) body
+    | Fun_lit (params, body) ->
+        infer_fun_lit ctx params None body
 
     | Fun_app (head, arg) ->
         Core.Fun.elim (infer_tm ctx head) (infer_tm ctx arg)
@@ -193,6 +171,41 @@ end = struct
           (check_tm ctx head)
           (infer_tm ctx tm1)
           (check_tm ctx tm2)
+
+  (** Elaborate a function literal into a core term, given an expected type. *)
+  and check_fun_lit (ctx : context) (params : param list) (body : tm) : Core.check_tm =
+    match params with
+    | [] ->
+        check_tm ctx body
+    | (name, param_ty) :: params ->
+        begin
+          let@ var = Core.Fun.intro_check (name.data, Option.map check_ty param_ty) in
+          check_tm ((name.data, var) :: ctx) body
+        end |> Core.catch_check_tm begin function
+          | `Unexpected_fun_lit expected_ty ->
+              error name.span "unexpected parameter"
+          | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
+              error name.span "mismatched parameter types"
+                ~details:[
+                  Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+                    (Core.pp_ty expected_ty)
+                    (Core.pp_ty found_ty);
+                ]
+          end
+
+  (** Elaborate a function literal into a core term, inferring its type. *)
+  and infer_fun_lit (ctx : context) (params : param list) (body_ty : ty option) (body : tm) : Core.infer_tm =
+    match params, body_ty with
+    | [], Some body_ty ->
+        Core.ann (check_tm ctx body) (check_ty body_ty)
+    | [], None ->
+        infer_tm ctx body
+    | (name, None) :: _, _ ->
+        error name.span "ambiguous parameter type"
+    | (name, Some param_ty) :: params, body_ty ->
+        let param_ty = check_ty param_ty in
+        let@ var = Core.Fun.intro_synth (name.data, param_ty) in
+        infer_tm ((name.data, var) :: ctx) body
 
 
   (** {2 Running elaboration} *)

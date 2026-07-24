@@ -15,6 +15,11 @@ Elaborate identity function test (with parameter annotation)
   let id : Int -> Int := fun (x : Int) => x;
   fun (x : Int) => id x : Int -> Int
 
+Elaborate identity function test (with parameter sugar)
+  $ cat id-param-sugar.txt | executable
+  let id : Int -> Int := fun (x : Int) => x;
+  fun (x : Int) => id x : Int -> Int
+
 Elaborate identity function test (with term annotation)
   $ cat id-term-ann.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
@@ -24,33 +29,23 @@ Elaborate identity function test (with term annotation)
 Elaboration Errors
 ------------------
 
-Unexpected function literal
+Unexpected parameter
   $ executable <<< "(fun a => a) : Bool"
-  error: found function, expected `Bool`
-    ┌─ <stdin>:1:0
+  error: unexpected parameter
+    ┌─ <stdin>:1:5
     │
   1 │ (fun a => a) : Bool
-    │ ^^^^^^^^^^^^
+    │      ^
   
   [1]
 
-Unexpected function literal
-  $ executable <<< "(fun (a : Int) => a) : Bool"
-  error: found function, expected `Bool`
-    ┌─ <stdin>:1:0
-    │
-  1 │ (fun (a : Int) => a) : Bool
-    │ ^^^^^^^^^^^^^^^^^^^^
-  
-  [1]
-
-Unexpected parameter type
+Mismatched parameter types
   $ executable <<< "(fun (a : Int) => a) : Bool -> Bool"
   error: mismatched parameter types
-    ┌─ <stdin>:1:0
+    ┌─ <stdin>:1:6
     │
   1 │ (fun (a : Int) => a) : Bool -> Bool
-    │ ^^^^^^^^^^^^^^^^^^^^
+    │       ^
     = expected: Bool
          found: Int
   
@@ -78,9 +73,9 @@ Type mismatch
   
   [1]
 
-Missing parameter annotation
+Ambiguous parameter type
   $ executable <<< "fun (f : Int -> Bool) => fun a => f a"
-  error: annotation required
+  error: ambiguous parameter type
     ┌─ <stdin>:1:29
     │
   1 │ fun (f : Int -> Bool) => fun a => f a

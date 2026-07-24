@@ -40,13 +40,11 @@ let atomic_ty :=
 (* Terms *)
 
 let tm :=
-| "let"; n = spanned(NAME); ty = option(":"; ty = spanned(ty); { ty }); ":=";
+| "let"; n = binder; ps = list(param); ty = option(":"; ty = spanned(ty); { ty }); ":=";
     tm1 = spanned(tm); ";"; tm2 = spanned(tm);
-    { Surface.Let (n, ty, tm1, tm2) }
-| "fun"; n = spanned(NAME); "=>"; tm = spanned(tm);
-    { Surface.Fun_lit (n, None, tm) }
-| "fun"; "("; n = spanned(NAME); ":"; ty = spanned(ty); ")"; "=>"; tm = spanned(tm);
-    { Surface.Fun_lit (n, Some ty, tm) }
+    { Surface.Let (n, ps, ty, tm1, tm2) }
+| "fun"; ps = nonempty_list(param); "=>"; t = spanned(tm);
+    { Surface.Fun_lit (ps, t) }
 | "if"; tm1 = spanned(app_tm); "then"; tm2 = spanned(tm); "else"; tm3 = spanned(tm);
     { Surface.If_then_else (tm1, tm2, tm3) }
 | tm = spanned(app_tm); ":"; ty = spanned(ty);
@@ -65,6 +63,18 @@ let atomic_tm :=
     { Surface.Name n }
 | i = NUMBER;
     { Surface.Int_lit i }
+
+
+(* Binders *)
+
+let binder :=
+| spanned(NAME)
+
+let param :=
+| n = binder;
+    { n, None }
+| "("; n = binder; ":"; ty = spanned(ty); ")";
+    { n, Some ty }
 
 
 (* Utilities *)
