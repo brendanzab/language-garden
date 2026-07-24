@@ -1,4 +1,4 @@
-let id : Int -> Int :=
+let id :=
   (fun x => x) : Int -> Int;
 
 fun (x : Int) =>

@@ -76,8 +76,8 @@ val ann : check_tm -> ty -> infer_tm
 (** {2 Structural rules} *)
 
 val lookup : var -> infer_tm
-val let_synth : name * ty * check_tm -> (var -> infer_tm) -> infer_tm
-val let_check : name * ty * check_tm -> (var -> check_tm) -> check_tm
+val let_synth : name * infer_tm -> (var -> infer_tm) -> infer_tm
+val let_check : name * infer_tm -> (var -> check_tm) -> check_tm
 
 (** {2 Type connectives} *)
 

@@ -197,15 +197,15 @@ let lookup (level : var) : infer_tm =
     let index = ctx.size - level - 1 in
     Var index, List.nth ctx.bindings index
 
-let let_synth (name, def_ty, def : name * ty * check_tm) (body : var -> infer_tm) : infer_tm =
+let let_synth (name, def : name * infer_tm) (body : var -> infer_tm) : infer_tm =
   fun ctx ->
-    let def = def def_ty ctx in
+    let def, def_ty = def ctx in
     let body, body_ty = body ctx.size (add_bind def_ty ctx) in
     Let (name, def_ty, def, body), body_ty
 
-let let_check (name, def_ty, def : name * ty * check_tm) (body : var -> check_tm) : check_tm =
+let let_check (name, def : name * infer_tm) (body : var -> check_tm) : check_tm =
   fun body_ty ctx ->
-    let def = def def_ty ctx in
+    let def, def_ty = def ctx in
     let body = body ctx.size body_ty (add_bind def_ty ctx) in
     Let (name, def_ty, def, body)
 

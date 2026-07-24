@@ -28,7 +28,7 @@ type tm =
 and tm_data =
   | Name of string
   | Ann of tm * ty
-  | Let of binder * ty * tm * tm
+  | Let of binder * ty option * tm * tm
   | Fun_lit of binder * ty option * tm
   | Fun_app of tm * tm
   | Int_lit of int
@@ -95,9 +95,12 @@ end = struct
   let rec check_tm (ctx : context) (tm : tm) : Core.check_tm =
     match tm.data with
     | Let (name, def_ty, def, body) ->
-        let def_ty = check_ty def_ty in
-        Core.let_check
-          (name.data, def_ty, check_tm ctx def)
+        let def =
+          match def_ty with
+          | Some def_ty -> Core.ann (check_tm ctx def) (check_ty def_ty)
+          | None -> infer_tm ctx def
+        in
+        Core.let_check (name.data, def)
           (fun var -> check_tm ((name.data, var) :: ctx) body)
 
     | Fun_lit (name, param_ty, body) ->
@@ -146,9 +149,12 @@ end = struct
         end
 
     | Let (name, def_ty, def, body) ->
-        let def_ty = check_ty def_ty in
-        Core.let_synth
-          (name.data, def_ty, check_tm ctx def)
+        let def =
+          match def_ty with
+          | Some def_ty -> Core.ann (check_tm ctx def) (check_ty def_ty)
+          | None -> infer_tm ctx def
+        in
+        Core.let_synth (name.data, def)
           (fun var -> infer_tm ((name.data, var) :: ctx) body)
 
     | Ann (tm, ty) ->

@@ -40,7 +40,8 @@ let atomic_ty :=
 (* Terms *)
 
 let tm :=
-| "let"; n = spanned(NAME); ":"; ty = spanned(ty); ":="; tm1 = spanned(tm); ";"; tm2 = spanned(tm);
+| "let"; n = spanned(NAME); ty = option(":"; ty = spanned(ty); { ty }); ":=";
+    tm1 = spanned(tm); ";"; tm2 = spanned(tm);
     { Surface.Let (n, ty, tm1, tm2) }
 | "fun"; n = spanned(NAME); "=>"; tm = spanned(tm);
     { Surface.Fun_lit (n, None, tm) }
