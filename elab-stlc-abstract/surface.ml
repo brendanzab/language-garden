@@ -143,8 +143,7 @@ end = struct
         infer_tm ((name.data, var) :: ctx) body
 
     | Ann (tm, ty) ->
-        let ty = check_ty ty in
-        Core.ann (check_tm ctx tm) ty
+        Core.ann (check_tm ctx tm) (check_ty ty)
 
     | Int_lit i ->
         Core.Int.intro i
@@ -203,8 +202,7 @@ end = struct
     | (name, None) :: _, _ ->
         error name.span "ambiguous parameter type"
     | (name, Some param_ty) :: params, body_ty ->
-        let param_ty = check_ty param_ty in
-        let@ var = Core.Fun.intro_synth (name.data, param_ty) in
+        let@ var = Core.Fun.intro_synth (name.data, check_ty param_ty) in
         infer_tm ((name.data, var) :: ctx) body
 
 
