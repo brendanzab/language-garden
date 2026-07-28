@@ -4,5 +4,5 @@ let id :=
 let const :=
   (fun x y => x) : Bool -> Int -> Bool;
 
-fun (x : Int) =>
-  id x
+fun (x : Int) (y : Bool) =>
+  const y (id x) : Bool

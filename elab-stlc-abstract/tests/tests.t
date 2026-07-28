@@ -9,25 +9,25 @@ Elaborate combinator test
   $ cat comb.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
   let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
-  fun (x : Int) => id x : Int -> Int
+  fun (x : Int) => fun (y : Bool) => const y (id x) : Int -> Bool -> Bool
 
 Elaborate combinator test (with parameter annotation)
   $ cat comb-param-ann.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
   let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
-  fun (x : Int) => id x : Int -> Int
+  fun (x : Int) => fun (y : Bool) => const y (id x) : Int -> Bool -> Bool
 
 Elaborate combinator test (with parameter sugar)
   $ cat comb-param-sugar.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
   let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
-  fun (x : Int) => id x : Int -> Int
+  fun (x : Int) => fun (y : Bool) => const y (id x) : Int -> Bool -> Bool
 
 Elaborate combinator test (with term annotation)
   $ cat comb-term-ann.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
   let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
-  fun (x : Int) => id x : Int -> Int
+  fun (x : Int) => fun (y : Bool) => const y (id x) : Int -> Bool -> Bool
 
 
 Elaboration Errors
