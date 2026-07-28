@@ -181,7 +181,7 @@ end = struct
   exception Error of Error.t
 
   (** Raise an elaboration error with a formatted message *)
-  let error (type a b) ?(details : string list option)  (span : Span.t) : (a, Format.formatter, unit, b) format4 -> a =
+  let error (type a b) ?(details : string list option) (span : Span.t) : (a, Format.formatter, unit, b) format4 -> a =
     Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
 
   let unify_tys (span : Span.t) ~(found : Core.Ty.t) ~(expected : Core.Ty.t) =

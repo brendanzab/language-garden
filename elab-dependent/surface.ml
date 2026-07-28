@@ -161,7 +161,7 @@ end = struct
   exception Error of Error.t
 
   (** Raise an elaboration error with a formatted message *)
-  let error (type a b) ?(details : string list option)  (span : span) : (a, Format.formatter, unit, b) format4 -> a =
+  let error (type a b) ?(details : string list option) (span : span) : (a, Format.formatter, unit, b) format4 -> a =
     Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
 
 
