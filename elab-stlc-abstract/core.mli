@@ -86,13 +86,12 @@ module Fun : sig
 
   type elim_err = [
     | `Unexpected_arg of ty
-    | `Type_mismatch of ty_mismatch
   ]
 
   val form : ty -> ty -> ty
   val intro_check : name * ty option -> (var -> check_tm) -> [> intro_check_err] check_tm_err
   val intro_synth : name * ty -> (var -> infer_tm) -> infer_tm
-  val elim : infer_tm -> infer_tm -> [> elim_err] infer_tm_err
+  val elim : infer_tm -> check_tm -> [> elim_err] infer_tm_err
 
 end
 

@@ -29,6 +29,11 @@ Elaborate combinator test (with term annotation)
   let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
   fun (x : Int) => fun (y : Bool) => const y (id x) : Int -> Bool -> Bool
 
+Check argument type
+  $ executable <<< "let foo (f : Int -> Int) := f 2; foo (fun x => x)"
+  let foo : (Int -> Int) -> Int := fun (f : Int -> Int) => f 2;
+  foo (fun (x : Int) => x) : Int
+
 
 Elaboration Errors
 ------------------
@@ -89,7 +94,7 @@ Ambiguous parameter type
 
 Mismatched argument
   $ executable <<< "fun (f : Int -> Bool) => fun (b : Bool) => f b"
-  error: mismatched argument type
+  error: mismatched types
     ┌─ <stdin>:1:45
     │
   1 │ fun (f : Int -> Bool) => fun (b : Bool) => f b

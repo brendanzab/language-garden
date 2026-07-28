@@ -225,7 +225,6 @@ module Fun = struct
 
   type elim_err = [
     | `Unexpected_arg of ty
-    | `Type_mismatch of ty_mismatch
   ]
 
   let form (param_ty : ty) (body_ty : ty) : ty =
@@ -255,12 +254,11 @@ module Fun = struct
       let body, body_ty = body ctx.size (add_bind param_ty ctx) in
       Fun_lit (name, param_ty, body), Fun_type (param_ty, body_ty)
 
-  let elim (head : infer_tm) (arg : infer_tm) : [> elim_err] infer_tm_err =
+  let elim (head : infer_tm) (arg : check_tm) : [> elim_err] infer_tm_err =
     fun ctx ->
       match head ctx with
       | head, Fun_type (param_ty, body_ty) ->
-          let* arg = conv arg param_ty ctx in
-          Ok (Fun_app (head, arg), body_ty)
+          Ok (Fun_app (head, arg param_ty ctx), body_ty)
       | _, head_ty ->
           Error (`Unexpected_arg head_ty)
 

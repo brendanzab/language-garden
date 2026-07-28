@@ -152,17 +152,10 @@ end = struct
         infer_fun_lit ctx params None body
 
     | Fun_app (head, arg) ->
-        Core.Fun.elim (infer_tm ctx head) (infer_tm ctx arg)
+        Core.Fun.elim (infer_tm ctx head) (check_tm ctx arg)
         |> Core.catch_infer_tm begin function
           | `Unexpected_arg head_ty ->
               error head.span "unexpected argument applied to `%t`" (Core.pp_ty head_ty)
-          | `Type_mismatch Core.{ found_ty; expected_ty } ->
-              error arg.span "mismatched argument type"
-                ~details:[
-                  Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
-                    (Core.pp_ty expected_ty)
-                    (Core.pp_ty found_ty);
-                ]
           end
 
     | If_then_else (head, tm1, tm2) ->
