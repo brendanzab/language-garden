@@ -6,6 +6,7 @@
   (per_module
    ((pps sedlex.ppx) lexer)))
  (libraries
+  cmdliner
   menhirLib))
 
 (menhir

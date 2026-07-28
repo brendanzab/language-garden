@@ -6,6 +6,7 @@ homepage: "https://github.com/brendanzab/language-garden"
 bug-reports: "https://github.com/brendanzab/language-garden/issues"
 depends: [
   "dune" {>= "3.21"}
+  "cmdliner" {>= "2.1"}
   "menhir" {>= "20260209" & build}
   "menhirLib" {>= "20260209"}
   "sedlex" {>= "3.7"}

@@ -10,6 +10,8 @@ type name = string
 type ty
 type tm
 
+val normalise : tm -> tm
+
 (** {2 Pretty printing} *)
 
 val pp_ty : ty -> Format.formatter -> unit

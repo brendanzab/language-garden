@@ -100,7 +100,7 @@
 (package
  (name elab-stlc-abstract)
  (depends
-  ; (cmdliner (>= "2.1"))
+  (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
   ; (mdx (and (>= "2.5") :with-test))

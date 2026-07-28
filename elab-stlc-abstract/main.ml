@@ -66,19 +66,46 @@ let parse_tm (source : Source_file.t) : Surface.tm =
   | Lexer.Error message -> emit source (Surface.Error.make (lexpos ()) message); exit 1
   | Parser.Error -> emit source (Surface.Error.make (lexpos ()) "syntax error"); exit 1
 
+let elab_tm (source : Source_file.t) (tm : Surface.tm) : Core.tm * Core.ty =
+  match Surface.Elab.infer_tm tm with
+  | Ok (tm, ty) -> tm, ty
+  | Error error ->
+      emit source error;
+      exit 1
+
+
+(** {1 Subcommands} *)
+
+let elab_cmd () : unit =
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
+  let tm, ty = parse_tm source |> elab_tm source in
+  Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+    (Core.pp_tm tm)
+    (Core.pp_ty ty)
+
+let norm_cmd () : unit =
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
+  let tm, ty = parse_tm source |> elab_tm source in
+  Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
+    (Core.pp_tm (Core.normalise tm))
+    (Core.pp_ty ty)
+
+
+(** {1 CLI options} *)
+
+let cmd =
+  let open Cmdliner in
+
+  Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
+    Cmd.v (Cmd.info "elab" ~doc:"elaborate a term from standard input")
+      Term.(const elab_cmd $ const ());
+    Cmd.v (Cmd.info "norm" ~doc:"elaborate and normalise a term from standard input")
+      Term.(const norm_cmd $ const ());
+  ]
+
 
 (** {1 Main entrypoint} *)
 
 let () =
   Printexc.record_backtrace true;
-
-  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-
-  match Surface.Elab.infer_tm (parse_tm source) with
-  | Ok (tm, ty) ->
-      Format.printf "@[<2>@[%t@ :@]@ @[%t@]@]@."
-        (Core.pp_tm tm)
-        (Core.pp_ty ty)
-  | Error error ->
-      emit source error;
-      exit 1
+  exit (Cmdliner.Cmd.eval cmd)

@@ -20,7 +20,10 @@ type tm =
   | Bool_elim of tm * tm * tm
 
 
-module Semantics = struct
+(** Normalisation by evaluation *)
+module Nbe = struct
+
+  (* Semantic domain *)
 
   (** Terms in weak head normal form (i.e. values) *)
   type vtm =
@@ -46,6 +49,8 @@ module Semantics = struct
   and thunk =
     | Thunk of vtm list * tm
 
+
+  (* Evaluation *)
 
   let rec eval (env : vtm list) (tm : tm) : vtm =
     match tm with
@@ -83,6 +88,8 @@ module Semantics = struct
     | _ -> invalid_arg "expected boolean"
 
 
+  (* Quotation *)
+
   let rec quote (size : level) (vtm : vtm) : tm =
     match vtm with
     | Neu ntm -> quote_ntm size ntm
@@ -103,11 +110,15 @@ module Semantics = struct
         let tm2 = quote size (force_thunk vtm2) in
         Bool_elim (quote_ntm size head, tm1, tm2)
 
+
+  (* Normalisation *)
+
   let normalise (env : vtm list) (tm : tm) : tm =
     quote (List.length env) (eval env tm)
-    [@@warning "-unused-value-declaration"]
 
 end
+
+let normalise = Nbe.normalise []
 
 
 (* Typing context *)
