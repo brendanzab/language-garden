@@ -1,4 +1,6 @@
 let id (x : Int) : Int := x;
 
+let const (x : Bool) (y : Int) : Bool := x;
+
 fun (x : Int) =>
   id x

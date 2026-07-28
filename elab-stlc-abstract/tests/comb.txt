@@ -1,5 +1,8 @@
 let id : Int -> Int :=
   fun x => x;
 
+let const : Bool -> Int -> Bool :=
+  fun x y => x;
+
 fun (x : Int) =>
   id x

@@ -179,9 +179,9 @@ end = struct
     | (name, param_ty) :: params ->
         begin
           let@ var = Core.Fun.intro_check (name.data, Option.map check_ty param_ty) in
-          check_tm ((name.data, var) :: ctx) body
+          check_fun_lit ((name.data, var) :: ctx) params body
         end |> Core.catch_check_tm begin function
-          | `Unexpected_fun_lit expected_ty ->
+          | `Unexpected_fun_lit _ ->
               error name.span "unexpected parameter"
           | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
               error name.span "mismatched parameter types"
@@ -203,7 +203,7 @@ end = struct
         error name.span "ambiguous parameter type"
     | (name, Some param_ty) :: params, body_ty ->
         let@ var = Core.Fun.intro_synth (name.data, check_ty param_ty) in
-        infer_tm ((name.data, var) :: ctx) body
+        infer_fun_lit ((name.data, var) :: ctx) params body_ty body
 
 
   (** {2 Running elaboration} *)

@@ -5,24 +5,28 @@ Elaborate test term
   $ cat term.txt | executable
   fun (f : Int -> Bool) => fun (a : Int) => f a : (Int -> Bool) -> Int -> Bool
 
-Elaborate identity function test
-  $ cat id.txt | executable
+Elaborate combinator test
+  $ cat comb.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
+  let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
   fun (x : Int) => id x : Int -> Int
 
-Elaborate identity function test (with parameter annotation)
-  $ cat id-param-ann.txt | executable
+Elaborate combinator test (with parameter annotation)
+  $ cat comb-param-ann.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
+  let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
   fun (x : Int) => id x : Int -> Int
 
-Elaborate identity function test (with parameter sugar)
-  $ cat id-param-sugar.txt | executable
+Elaborate combinator test (with parameter sugar)
+  $ cat comb-param-sugar.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
+  let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
   fun (x : Int) => id x : Int -> Int
 
-Elaborate identity function test (with term annotation)
-  $ cat id-term-ann.txt | executable
+Elaborate combinator test (with term annotation)
+  $ cat comb-term-ann.txt | executable
   let id : Int -> Int := fun (x : Int) => x;
+  let const : Bool -> Int -> Bool := fun (x : Bool) => fun (y : Int) => x;
   fun (x : Int) => id x : Int -> Int
 
 
