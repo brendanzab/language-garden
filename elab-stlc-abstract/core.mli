@@ -15,26 +15,18 @@ type tm
 val pp_ty : ty -> Format.formatter -> unit
 val pp_tm : tm -> Format.formatter -> unit
 
-
-(** {1 Elaboration effect} *)
-
-(** Total and partial elaboration effects. *)
-
-type 'a elab
-type ('a, 'e) elab_err = ('a, 'e) result elab
-
-val run : 'a. 'a elab -> 'a
-
-
 (** {1 Forms of judgement} *)
 
 type var
 
-type check_tm = ty -> tm elab
-type infer_tm = (tm * ty) elab
+type check_tm
+type infer_tm
 
-type 'e check_tm_err = ty -> (tm, 'e) elab_err
-type 'e infer_tm_err = (tm * ty, 'e) elab_err
+type 'e check_tm_err
+type 'e infer_tm_err
+
+val run_check_tm : check_tm -> ty -> tm
+val run_infer_tm : infer_tm -> tm * ty
 
 (** {2 Error handling} *)
 
@@ -43,9 +35,9 @@ type ty_mismatch = {
   expected_ty : ty;
 }
 
-val fail : 'e. 'e -> 'e infer_tm_err
-val catch_check_tm : 'e. ('e -> check_tm) -> 'e check_tm_err -> check_tm
-val catch_infer_tm : 'e. ('e -> infer_tm) -> 'e infer_tm_err -> infer_tm
+val fail : 'e -> 'e infer_tm_err
+val catch_check_tm : ('e -> check_tm) -> 'e check_tm_err -> check_tm
+val catch_infer_tm : ('e -> infer_tm) -> 'e infer_tm_err -> infer_tm
 
 
 (** {1 Inference rules} *)

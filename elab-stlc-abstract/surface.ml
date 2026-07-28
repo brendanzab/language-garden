@@ -220,9 +220,9 @@ end = struct
     run_elab (fun () -> check_ty ty)
 
   let check_tm (tm : tm) (ty : Core.ty) : (Core.tm, Error.t) result =
-    run_elab (fun () -> Core.run (check_tm [] tm ty))
+    run_elab (fun () -> Core.run_check_tm (check_tm [] tm) ty)
 
   let infer_tm (tm : tm) : (Core.tm * Core.ty, Error.t) result =
-    run_elab (fun () -> Core.run (infer_tm [] tm))
+    run_elab (fun () -> Core.run_infer_tm (infer_tm [] tm))
 
 end

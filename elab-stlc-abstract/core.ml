@@ -134,9 +134,6 @@ type 'a elab = context -> 'a
 
 type ('a, 'e) elab_err = ('a, 'e) result elab
 
-let run (type a) (elab : a elab) : a =
-  elab empty
-
 
 (* Forms of Judgement *)
 
@@ -145,8 +142,11 @@ type var = level
 type check_tm = ty -> tm elab
 type infer_tm = (tm * ty) elab
 
-type 'e check_tm_err = ty -> (tm, 'e) elab_err
-type 'e infer_tm_err = (tm * ty, 'e) elab_err
+type 'e check_tm_err = ty -> (tm, 'e) result elab
+type 'e infer_tm_err = (tm * ty, 'e) result elab
+
+let run_check_tm (elab : check_tm) (ty : ty) : tm = elab ty empty
+let run_infer_tm (elab : infer_tm) : tm * ty = elab empty
 
 
 (* Error handling *)
