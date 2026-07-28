@@ -151,11 +151,6 @@ let run_infer_tm (elab : infer_tm) : tm * ty = elab empty
 
 (* Error handling *)
 
-type ty_mismatch = {
-  found_ty : ty;
-  expected_ty : ty;
-}
-
 let fail (type a e) (e : e) : (a, e) elab_err =
   fun _ ->
     Error e
@@ -178,16 +173,15 @@ open Result.Syntax
 
 (** Directional rules *)
 
-type conv_err = [
-  | `Type_mismatch of ty_mismatch
-]
+type conv_err =
+  | Type_mismatch of { found_ty : ty; expected_ty : ty }
 
-let conv (elab : infer_tm) : [> conv_err] check_tm_err =
+let conv (elab : infer_tm) : conv_err check_tm_err =
   fun expected_ty ctx ->
     let tm, found_ty = elab ctx in
     match expected_ty = found_ty with
     | true -> Ok tm
-    | false -> Error (`Type_mismatch { found_ty; expected_ty })
+    | false -> Error (Type_mismatch { found_ty; expected_ty })
 
 let ann (elab : check_tm) (ty : ty) : infer_tm =
   fun ctx ->
@@ -218,19 +212,17 @@ let let_check (name, def : name * infer_tm) (body : var -> check_tm) : check_tm 
 
 module Fun = struct
 
-  type intro_check_err = [
-    | `Mismatched_param_ty of ty_mismatch
-    | `Unexpected_fun_lit of ty
-  ]
+  type intro_check_err =
+    | Mismatched_param_ty of { found_ty : ty; expected_ty : ty }
+    | Unexpected_fun_lit of { expected_ty : ty }
 
-  type elim_err = [
-    | `Unexpected_arg of ty
-  ]
+  type elim_err =
+    | Unexpected_arg of { fun_ty : ty }
 
   let form (param_ty : ty) (body_ty : ty) : ty =
     Fun_type (param_ty, body_ty)
 
-  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : [> intro_check_err] check_tm_err =
+  let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : intro_check_err check_tm_err =
     fun fun_ty ctx ->
       match fun_ty with
       | Fun_type (expected_param_ty, body_ty) ->
@@ -239,7 +231,7 @@ module Fun = struct
             | None -> Ok expected_param_ty
             | Some param_ty when param_ty = expected_param_ty -> Ok param_ty
             | Some param_ty ->
-                Error (`Mismatched_param_ty {
+                Error (Mismatched_param_ty {
                   found_ty = param_ty;
                   expected_ty = expected_param_ty;
                 })
@@ -247,20 +239,20 @@ module Fun = struct
           let body = body ctx.size body_ty (add_bind param_ty ctx) in
           Ok (Fun_lit (name, param_ty, body) : tm)
       | _ ->
-          Error (`Unexpected_fun_lit fun_ty)
+          Error (Unexpected_fun_lit { expected_ty = fun_ty })
 
   let intro_synth (name, param_ty : name * ty) (body : var -> infer_tm) : infer_tm =
     fun ctx ->
       let body, body_ty = body ctx.size (add_bind param_ty ctx) in
       Fun_lit (name, param_ty, body), Fun_type (param_ty, body_ty)
 
-  let elim (head : infer_tm) (arg : check_tm) : [> elim_err] infer_tm_err =
+  let elim (head : infer_tm) (arg : check_tm) : elim_err infer_tm_err =
     fun ctx ->
       match head ctx with
       | head, Fun_type (param_ty, body_ty) ->
           Ok (Fun_app (head, arg param_ty ctx), body_ty)
       | _, head_ty ->
-          Error (`Unexpected_arg head_ty)
+          Error (Unexpected_arg { fun_ty = head_ty })
 
 end
 

@@ -30,11 +30,6 @@ val run_infer_tm : infer_tm -> tm * ty
 
 (** {2 Error handling} *)
 
-type ty_mismatch = {
-  found_ty : ty;
-  expected_ty : ty;
-}
-
 val fail : 'e -> 'e infer_tm_err
 val catch_check_tm : ('e -> check_tm) -> 'e check_tm_err -> check_tm
 val catch_infer_tm : ('e -> infer_tm) -> 'e infer_tm_err -> infer_tm
@@ -62,11 +57,10 @@ val catch_infer_tm : ('e -> infer_tm) -> 'e infer_tm_err -> infer_tm
 
 (** {2 Directional rules} *)
 
-type conv_err = [
-  | `Type_mismatch of ty_mismatch
-]
+type conv_err =
+  | Type_mismatch of { found_ty : ty; expected_ty : ty }
 
-val conv : infer_tm -> [> conv_err] check_tm_err
+val conv : infer_tm -> conv_err check_tm_err
 val ann : check_tm -> ty -> infer_tm
 
 (** {2 Structural rules} *)
@@ -79,19 +73,17 @@ val let_check : name * infer_tm -> (var -> check_tm) -> check_tm
 
 module Fun : sig
 
-  type intro_check_err = [
-    | `Mismatched_param_ty of ty_mismatch
-    | `Unexpected_fun_lit of ty
-  ]
+  type intro_check_err =
+    | Mismatched_param_ty of { found_ty : ty; expected_ty : ty }
+    | Unexpected_fun_lit of { expected_ty : ty }
 
-  type elim_err = [
-    | `Unexpected_arg of ty
-  ]
+  type elim_err =
+    | Unexpected_arg of { fun_ty : ty }
 
   val form : ty -> ty -> ty
-  val intro_check : name * ty option -> (var -> check_tm) -> [> intro_check_err] check_tm_err
+  val intro_check : name * ty option -> (var -> check_tm) -> intro_check_err check_tm_err
   val intro_synth : name * ty -> (var -> infer_tm) -> infer_tm
-  val elim : infer_tm -> check_tm -> [> elim_err] infer_tm_err
+  val elim : infer_tm -> check_tm -> elim_err infer_tm_err
 
 end
 

@@ -117,7 +117,7 @@ end = struct
     | _ ->
         Core.conv (infer_tm ctx tm)
         |> Core.catch_check_tm begin function
-          | `Type_mismatch Core.{ found_ty; expected_ty } ->
+          | Core.Type_mismatch { found_ty; expected_ty } ->
               error tm.span "mismatched types"
                 ~details:[
                   Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
@@ -154,8 +154,8 @@ end = struct
     | Fun_app (head, arg) ->
         Core.Fun.elim (infer_tm ctx head) (check_tm ctx arg)
         |> Core.catch_infer_tm begin function
-          | `Unexpected_arg head_ty ->
-              error head.span "unexpected argument applied to `%t`" (Core.pp_ty head_ty)
+          | Core.Fun.Unexpected_arg { fun_ty } ->
+              error head.span "unexpected argument applied to `%t`" (Core.pp_ty fun_ty)
           end
 
     | If_then_else (head, tm1, tm2) ->
@@ -174,9 +174,9 @@ end = struct
           let@ var = Core.Fun.intro_check (name.data, Option.map check_ty param_ty) in
           check_fun_lit ((name.data, var) :: ctx) params body
         end |> Core.catch_check_tm begin function
-          | `Unexpected_fun_lit _ ->
+          | Core.Fun.Unexpected_fun_lit _ ->
               error name.span "unexpected parameter"
-          | `Mismatched_param_ty Core.{ found_ty; expected_ty } ->
+          | Core.Fun.Mismatched_param_ty { found_ty; expected_ty } ->
               error name.span "mismatched parameter types"
                 ~details:[
                   Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
