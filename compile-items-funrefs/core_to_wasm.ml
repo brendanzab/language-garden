@@ -46,11 +46,7 @@ let translate_expr
     match expr with
     | Core.Expr.Item (name, _) ->
         begin match Core.Item_map.find name item_env with
-        | Val id ->
-            begin match enable_tail_call && tail_call with
-            | true -> Dynarray.add_last instrs (Wasm.Return_call id);
-            | false -> Dynarray.add_last instrs (Wasm.Call id);
-            end
+        | Val id -> go_direct_call instrs id ~tail_call
         | Fun id ->
             add_func_ref id;  (* NOTE: This is only actually needed for private functions *)
             Dynarray.add_last instrs (Wasm.Ref_func id);
@@ -67,6 +63,7 @@ let translate_expr
         Dynarray.add_last instrs (Wasm.Local_set def_id);
         go_expr instrs (Core.Local.Env.extend def_id local_env) body ~tail_call;
 
+    (* Applications of items (possibly indirect, if calling through a value) *)
     | Core.Expr.Fun_app (Item (name, ty) as fun_, args) ->
         args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         begin match Core.Item_map.find name item_env with
@@ -74,6 +71,7 @@ let translate_expr
         | Fun id -> go_direct_call instrs id ~tail_call
         end
 
+    (* Applications of anything else (always indirect) *)
     | Core.Expr.Fun_app (fun_, args) ->
         args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         go_indirect_call local_env instrs fun_ ~tail_call;
