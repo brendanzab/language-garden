@@ -159,13 +159,6 @@ type 'e infer_tm_err = (tm * ty, 'e) elab_err
 let run_check_tm (elab : check_tm) (ty : ty) : tm = elab ty empty
 let run_infer_tm (elab : infer_tm) : tm * ty = elab empty
 
-
-(* Error handling *)
-
-let fail (type a e) (e : e) : (a, e) elab_err =
-  fun _ ->
-    Error e
-
 let catch_check_tm (type e) (f : e -> check_tm) (elab : e check_tm_err) : check_tm =
   fun ty ctx ->
     match elab ty ctx with
@@ -216,7 +209,7 @@ let let_check (name, def : name * infer_tm) (body : var -> check_tm) : check_tm 
     Let (name, def_ty, def, body)
 
 
-(* Type connectives *)
+(* Type formers *)
 
 module Fun = struct
 

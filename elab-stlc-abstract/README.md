@@ -39,6 +39,8 @@ Presentations:
 
 - Robert Atkey, “An Algebraic Approach to Typechecking and Elaboration”
   ([URL](https://bentnib.org/posts/2015-04-19-algebraic-approach-typechecking-and-elaboration.html))
+- Andrew Slattery and Jonathan Sterling, “Bidirectional Elaborators à la Carte”
+  ([DOI](https://doi.org/10.48550/arXiv.2607.09564))
 - Andrej Bauer, “Derivations as computations”, ICFP’19
   ([Video](https://www.youtube.com/watch?v=YZqOVsuyQyQ))
   ([URL](https://math.andrej.com/2019/08/21/derivations-as-computations/))

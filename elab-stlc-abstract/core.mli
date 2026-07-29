@@ -1,16 +1,19 @@
 (** The core language. *)
 
+(** {1 Syntax} *)
+
 type name = string
 (** These names are used as hints for pretty printing binders and variables,
     but don’t impact the equality of terms. *)
 
-
-(** {1 Syntax} *)
+(** Types and terms are abstract, and and only be constructed using the
+    inference rules exposed below, ensuring that they are well-typed. *)
 
 type ty
 type tm
 
 val normalise : tm -> tm
+(** Reduce a term to normal form *)
 
 (** {2 Pretty printing} *)
 
@@ -22,17 +25,17 @@ val pp_tm : tm -> Format.formatter -> unit
 type var
 
 type check_tm
-type infer_tm
+(** Check a term against an expected type. *)
 
-type 'e check_tm_err
-type 'e infer_tm_err
+type infer_tm
+(** Infer the type of a term *)
 
 val run_check_tm : check_tm -> ty -> tm
 val run_infer_tm : infer_tm -> tm * ty
 
-(** {2 Error handling} *)
+type 'e check_tm_err
+type 'e infer_tm_err
 
-val fail : 'e -> 'e infer_tm_err
 val catch_check_tm : ('e -> check_tm) -> 'e check_tm_err -> check_tm
 val catch_infer_tm : ('e -> infer_tm) -> 'e infer_tm_err -> infer_tm
 
@@ -63,7 +66,11 @@ type conv_err =
   | Type_mismatch of { found_ty : ty; expected_ty : ty }
 
 val conv : infer_tm -> conv_err check_tm_err
+(** Conversion rule. This allows [infer_tm]s to be used where [check_tm]s are
+    expected. *)
+
 val ann : check_tm -> ty -> infer_tm
+(** Annotate a checkable term with a type. *)
 
 (** {2 Structural rules} *)
 
@@ -71,7 +78,7 @@ val lookup : var -> infer_tm
 val let_synth : name * infer_tm -> (var -> infer_tm) -> infer_tm
 val let_check : name * infer_tm -> (var -> check_tm) -> check_tm
 
-(** {2 Type connectives} *)
+(** {2 Type formers} *)
 
 module Fun : sig
 
