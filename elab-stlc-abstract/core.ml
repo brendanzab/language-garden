@@ -179,9 +179,6 @@ let catch_infer_tm (type e) (f : e -> infer_tm) (elab : e infer_tm_err) : infer_
     | Error e -> f e ctx
 
 
-open Result.Syntax
-
-
 (** Directional rules *)
 
 type conv_err =
@@ -234,23 +231,25 @@ module Fun = struct
     Fun_type (param_ty, body_ty)
 
   let intro_check (name, param_ty : name * ty option) (body : var -> check_tm) : intro_check_err check_tm_err =
-    fun fun_ty ctx ->
-      match fun_ty with
-      | Fun_type (expected_param_ty, body_ty) ->
-          let* param_ty =
-            match param_ty with
-            | None -> Ok expected_param_ty
-            | Some param_ty when param_ty = expected_param_ty -> Ok param_ty
-            | Some param_ty ->
-                Error (Mismatched_param_ty {
-                  found_ty = param_ty;
-                  expected_ty = expected_param_ty;
-                })
-          in
-          let body = body ctx.size body_ty (add_bind param_ty ctx) in
-          Ok (Fun_lit (name, param_ty, body) : tm)
-      | _ ->
-          Error (Unexpected_fun_lit { expected_ty = fun_ty })
+    fun expected_ty ctx ->
+      let open Result.Syntax in
+      let* param_ty', body_ty =
+        match expected_ty with
+        | Fun_type (param_ty', body_ty) -> Ok (param_ty', body_ty)
+        | _ -> Error (Unexpected_fun_lit { expected_ty })
+      in
+      let* param_ty =
+        match param_ty with
+        | None -> Ok param_ty'
+        | Some param_ty when param_ty = param_ty' -> Ok param_ty
+        | Some param_ty ->
+            Error (Mismatched_param_ty {
+              found_ty = param_ty;
+              expected_ty = param_ty';
+            })
+      in
+      let body = body ctx.size body_ty (add_bind param_ty ctx) in
+      Ok (Fun_lit (name, param_ty, body) : tm)
 
   let intro_synth (name, param_ty : name * ty) (body : var -> infer_tm) : infer_tm =
     fun ctx ->
