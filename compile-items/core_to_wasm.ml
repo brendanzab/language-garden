@@ -108,10 +108,7 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
         let result_ty = translate_ty ty in
 
         let locals, body = translate_expr Core.Local.Env.empty expr in
-        begin match vis with
-        | Core.Item.Pub -> Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        | Core.Item.Priv -> ()
-        end;
+        if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
         Dynarray.add_last funcs Wasm.{ id; params = [||]; results = [|result_ty|]; locals; body }
 
     | Core.Item.Fun (vis, params, ty, body) ->
@@ -121,10 +118,7 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
 
         let local_env = Iarray.to_seq params |> Seq.map Pair.fst |> Core.Local.Env.of_seq in
         let locals, body = translate_expr local_env body in
-        begin match vis with
-        | Core.Item.Pub -> Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        | Core.Item.Priv -> ()
-        end;
+        if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
         Dynarray.add_last funcs Wasm.{ id; params; results = [|result_ty|]; locals; body }
   end;
 

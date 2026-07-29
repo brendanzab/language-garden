@@ -47,10 +47,8 @@ let translate_expr
     | Core.Expr.Item (name, _) ->
         begin match Core.Item_map.find name item_env with
         | Val (_, id) -> go_direct_call instrs id ~tail_call
-        | Fun (Pub, id) ->
-            Dynarray.add_last instrs (Wasm.Ref_func id);
-        | Fun (Priv, id) ->
-            add_func_ref id;
+        | Fun (vis, id) ->
+            if vis = Priv then add_func_ref id;
             Dynarray.add_last instrs (Wasm.Ref_func id);
         end
 
@@ -186,10 +184,7 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
         let result_ty = translate_ty ty in
 
         let locals, body = translate_expr Core.Local.Env.empty expr ~enable_tail_call in
-        begin match vis with
-        | Core.Item.Pub -> Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        | Core.Item.Priv -> ()
-        end;
+        if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
         Dynarray.add_last funcs Wasm.{ id; params = [||]; results = [|result_ty|]; locals; body }
 
     | Core.Item.Fun (vis, params, ty, body), Fun (_, id) ->
@@ -200,10 +195,7 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
           let local_env = Iarray.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
           translate_expr local_env body ~enable_tail_call
         in
-        begin match vis with
-        | Core.Item.Pub -> Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        | Core.Item.Priv -> ()
-        end;
+        if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
         Dynarray.add_last funcs Wasm.{ id; params; results = [|result_ty|]; locals; body }
 
     | _, _ ->
