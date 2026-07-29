@@ -1,0 +1,2 @@
+val foo : I32 := 42 + 3;
+val bar : I32 := foo * 3;

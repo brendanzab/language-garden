@@ -30,11 +30,11 @@ end = struct
       fun k ->
         match expr with
         | Core.Expr.Item (id, None, ty) ->
-            k (Anf.Expr.Item (id, None, ty))
+            k (Anf.Expr.Atom (Item (id, ty)))
 
         | Core.Expr.Item (id, Some args, ty) ->
             let@ args = go_named_exprs local_ids "arg" (Iarray.to_list args) in
-            k (Anf.Expr.Item (id, Some (Iarray.of_list args), ty))
+            k (Anf.Expr.Item (id, Iarray.of_list args, ty))
 
         | Core.Expr.Var (index, ty) ->
             k (Anf.Expr.Atom (Var (Core.Local.Env.lookup index local_ids, ty)))
