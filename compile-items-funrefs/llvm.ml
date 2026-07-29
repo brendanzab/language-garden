@@ -74,6 +74,7 @@ type cfg = {
 
 (** Function definitions *)
 type fun_ = {                               (* https://llvm.org/docs/LangRef.html#functions *)
+  visibility : [`Private] option;
   result_ty : ty;
   params : (ty * Local_id.t) Iarray.t;
   cfg : cfg;
@@ -180,11 +181,14 @@ end = struct
         (instrs |> pp_iarray pp_instr)
         (pp_term_instr term)
 
-  let pp_fun (id, { result_ty; params; cfg } : Global_id.t * fun_) =
+  let pp_fun (id, { visibility; result_ty; params; cfg } : Global_id.t * fun_) =
     let pp_param (ty, id) =
       Format.dprintf "@[%t@ %t@]" (pp_ty ty) (pp_local_id id)
     in
-    Format.dprintf "@[<v>@[define@ %t@ %t(%t)@ {@]@ %t@ }@]@."
+    Format.dprintf "@[<v>@[define@ %t%t@ %t(%t)@ {@]@ %t@ }@]@."
+      (match visibility with
+        | None -> Format.dprintf ""
+        | Some `Private -> Format.dprintf "private@ ")
       (pp_ty result_ty)
       (pp_global_id id)
       (pp_iarray pp_param params ~pp_sep:pp_comma_sep)

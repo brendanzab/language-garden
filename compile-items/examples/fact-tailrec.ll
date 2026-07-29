@@ -4,7 +4,7 @@ entry:
   ret i32 %result
 }
 
-define i32 @fact-acc(i32 %n, i32 %acc) {
+define private i32 @fact-acc(i32 %n, i32 %acc) {
 entry:
   %cond = icmp eq i32 %n, 0
   br i1 %cond, label %if_true, label %if_false

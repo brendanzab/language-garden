@@ -1,4 +1,4 @@
-fun ackermann(m : I32, n : I32) : I32 :=
+pub fun ackermann(m : I32, n : I32) : I32 :=
   let cond : Bool := #i32-eq(m, 0);
   join if_end (result : I32) := result;
   if cond then

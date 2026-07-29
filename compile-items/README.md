@@ -15,10 +15,10 @@ now.
 
 <!-- $MDX file=examples/fact-tailrec.txt -->
 ```text
-val test-fact : I32 :=
+pub val test-fact : I32 :=
   fact(5);
 
-fun fact(n : I32) : I32 :=
+pub fun fact(n : I32) : I32 :=
   fact-acc(n, 1);
 
 fun fact-acc(n : I32, acc : I32) : I32 :=
@@ -33,7 +33,6 @@ fun fact-acc(n : I32, acc : I32) : I32 :=
 ```wat
 (module
   (export "fact" (func $fact))
-  (export "fact-acc" (func $fact-acc))
   (export "test-fact" (func $test-fact))
   (func
     $fact
@@ -73,7 +72,6 @@ fun fact-acc(n : I32, acc : I32) : I32 :=
 ```wat
 (module
   (export "fact" (func $fact))
-  (export "fact-acc" (func $fact-acc))
   (export "test-fact" (func $test-fact))
   (func
     $fact
@@ -111,9 +109,9 @@ fun fact-acc(n : I32, acc : I32) : I32 :=
 
 <!-- $MDX file=examples/fact-tailrec.anf -->
 ```text
-fun fact(n : I32) : I32 := fact-acc(n, 1);
+pub fun fact(n : I32) : I32 := fact-acc(n, 1);
 
-fun fact-acc(n : I32, acc : I32) : I32 :=
+priv fun fact-acc(n : I32, acc : I32) : I32 :=
   let cond : Bool := #i32-eq(n, 0);
   join if_end (result : I32) := result;
   if cond then
@@ -124,7 +122,7 @@ fun fact-acc(n : I32, acc : I32) : I32 :=
     let result_1 : I32 := fact-acc(arg, arg_1);
     jump if_end result_1;
 
-val test-fact : I32 := fact(5);
+pub val test-fact : I32 := fact(5);
 ```
 
 </details>
@@ -140,7 +138,7 @@ entry:
   ret i32 %result
 }
 
-define i32 @fact-acc(i32 %n, i32 %acc) {
+define private i32 @fact-acc(i32 %n, i32 %acc) {
 entry:
   %cond = icmp eq i32 %n, 0
   br i1 %cond, label %if_true, label %if_false

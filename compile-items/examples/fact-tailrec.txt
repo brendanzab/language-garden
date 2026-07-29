@@ -1,7 +1,7 @@
-val test-fact : I32 :=
+pub val test-fact : I32 :=
   fact(5);
 
-fun fact(n : I32) : I32 :=
+pub fun fact(n : I32) : I32 :=
   fact-acc(n, 1);
 
 fun fact-acc(n : I32, acc : I32) : I32 :=

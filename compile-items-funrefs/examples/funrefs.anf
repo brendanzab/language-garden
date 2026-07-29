@@ -1,24 +1,36 @@
-fun choose(b : Bool, f : fun (I32) -> I32, g : fun (I32) -> I32) :
+priv fun choose(b : Bool, f : fun (I32) -> I32, g : fun (I32) -> I32) :
 fun (I32) -> I32 :=
   join if_end (result : fun (I32) -> I32) := result;
   if b then jump if_end f else jump if_end g;
 
-fun decr(i : I32) : I32 := #i32-sub(i, 1);
+pub fun decr(i : I32) : I32 := #i32-sub(i, 1);
 
-fun incr(i : I32) : I32 := #i32-add(i, 1);
+priv fun decr2(i : I32) : I32 := #i32-sub(i, 1);
 
-val partial-app : fun (I32) -> I32 := choose(true, incr, decr);
+pub fun incr(i : I32) : I32 := #i32-add(i, 1);
 
-val test-false : I32 :=
+priv fun incr2(i : I32) : I32 := #i32-add(i, 1);
+
+priv val partial-app : fun (I32) -> I32 := choose(true, incr, decr);
+
+pub val test-false : I32 :=
   let fun : fun (I32) -> I32 := choose(false, incr, decr);
   fun(42);
 
-val test-local-def : I32 :=
+pub val test-false-2 : I32 :=
+  let fun : fun (I32) -> I32 := choose(false, incr2, decr2);
+  fun(42);
+
+pub val test-local-def : I32 :=
   let partial-app : fun (I32) -> I32 := choose(true, incr, decr);
   partial-app(42);
 
-val test-partial-app : I32 := partial-app(42);
+pub val test-partial-app : I32 := partial-app(42);
 
-val test-true : I32 :=
+pub val test-true : I32 :=
   let fun : fun (I32) -> I32 := choose(true, incr, decr);
+  fun(42);
+
+pub val test-true-2 : I32 :=
+  let fun : fun (I32) -> I32 := choose(true, incr2, decr2);
   fun(42);

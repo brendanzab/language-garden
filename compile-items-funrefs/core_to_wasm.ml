@@ -10,8 +10,8 @@ let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
 type item_decl =
-  | Val of Wasm.Func_id.t
-  | Fun of Wasm.Func_id.t
+  | Val of Core.Item.vis * Wasm.Func_id.t
+  | Fun of Core.Item.vis * Wasm.Func_id.t
 
 let rec translate_ty
   ~(add_type_def : string -> Wasm.comp_type -> Wasm.Type_id.t)
@@ -46,9 +46,11 @@ let translate_expr
     match expr with
     | Core.Expr.Item (name, _) ->
         begin match Core.Item_map.find name item_env with
-        | Val id -> go_direct_call instrs id ~tail_call
-        | Fun id ->
-            add_func_ref id;  (* NOTE: This is only actually needed for private functions *)
+        | Val (_, id) -> go_direct_call instrs id ~tail_call
+        | Fun (Pub, id) ->
+            Dynarray.add_last instrs (Wasm.Ref_func id);
+        | Fun (Priv, id) ->
+            add_func_ref id;
             Dynarray.add_last instrs (Wasm.Ref_func id);
         end
 
@@ -67,8 +69,8 @@ let translate_expr
     | Core.Expr.Fun_app (Item (name, ty) as fun_, args) ->
         args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         begin match Core.Item_map.find name item_env with
-        | Val id -> go_indirect_call local_env instrs fun_ ~tail_call
-        | Fun id -> go_direct_call instrs id ~tail_call
+        | Val (_, id) -> go_indirect_call local_env instrs fun_ ~tail_call
+        | Fun (_, id) -> go_direct_call instrs id ~tail_call
         end
 
     (* Applications of anything else (always indirect) *)
@@ -164,8 +166,8 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
   let item_env =
     mod_ |> Core.Item_map.mapi @@ fun name item ->
       match item with
-      | Core.Item.Val (ty, _) -> Val (fresh_func_id (Core.Item_name.to_string name))
-      | Core.Item.Fun (params, ty, _) -> Fun (fresh_func_id (Core.Item_name.to_string name))
+      | Core.Item.Val (vis, ty, _) -> Val (vis, fresh_func_id (Core.Item_name.to_string name))
+      | Core.Item.Fun (vis, params, ty, _) -> Fun (vis, fresh_func_id (Core.Item_name.to_string name))
   in
 
   item_env |> Core.Item_map.iter begin fun name item_decl ->
@@ -180,13 +182,17 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
         - normalise expressions (using NbE) and store in global
         - create a global and initialise with a startup function
     *)
-    | Core.Item.Val (ty, expr), Val id ->
+    | Core.Item.Val (vis, ty, expr), Val (_, id) ->
         let result_ty = translate_ty ty in
+
         let locals, body = translate_expr Core.Local.Env.empty expr ~enable_tail_call in
-        Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
+        begin match vis with
+        | Core.Item.Pub -> Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
+        | Core.Item.Priv -> ()
+        end;
         Dynarray.add_last funcs Wasm.{ id; params = [||]; results = [|result_ty|]; locals; body }
 
-    | Core.Item.Fun (params, ty, body), Fun id ->
+    | Core.Item.Fun (vis, params, ty, body), Fun (_, id) ->
         let param_id name = fresh_local_id (Option.value name ~default:"_") in
         let params = params |> Iarray.map (fun (name, ty) -> param_id name, translate_ty ty) in
         let result_ty = translate_ty ty in
@@ -194,7 +200,10 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
           let local_env = Iarray.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
           translate_expr local_env body ~enable_tail_call
         in
-        Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
+        begin match vis with
+        | Core.Item.Pub -> Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
+        | Core.Item.Priv -> ()
+        end;
         Dynarray.add_last funcs Wasm.{ id; params; results = [|result_ty|]; locals; body }
 
     | _, _ ->

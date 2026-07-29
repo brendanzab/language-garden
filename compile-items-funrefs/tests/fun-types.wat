@@ -1,10 +1,4 @@
 (module
-  (export "fun-app" (func $fun-app))
-  (export "id-i32-bool" (func $id-i32-bool))
-  (export "ignore-param" (func $ignore-param))
-  (export "is-one" (func $is-one))
-  (export "is-zero" (func $is-zero))
-  (export "local-binding" (func $local-binding))
   (export "test-hof-1" (func $test-hof-1))
   (export "test-hof-2" (func $test-hof-2))
   (export "test-hof-3" (func $test-hof-3))

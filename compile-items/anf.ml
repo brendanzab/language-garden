@@ -84,7 +84,7 @@ end = struct
       match expr with
       | Item (id, args, _) ->
           begin match Item_map.find id items, args with
-          | Item.Fun (params, _, body), args ->
+          | Item.Fun (_, params, _, body), args ->
               let eval_arg (id, _) arg = id, eval_atom locals arg in
               let args = Seq.map2 eval_arg (Iarray.to_seq params) (Iarray.to_seq args) in
               eval joins (Local_map.add_seq args locals) body
@@ -108,7 +108,7 @@ end = struct
       match expr with
       | Item (name, _) ->
           begin match Item_map.find name items with
-          | Item.Val (_, body) -> eval (Join_map.empty) locals body
+          | Item.Val (_, _, body) -> eval (Join_map.empty) locals body
           | Item.Fun _ -> failwith "Expr.eval_atom"
           end
       | Var (id, _) -> Local_map.find id locals
@@ -180,9 +180,14 @@ end
 
 and Item : sig
 
+  (** Visibility of an item *)
+  type vis = Core.Item.vis =
+    | Pub
+    | Priv
+
   type t =
-    | Val of Ty.t * Expr.t
-    | Fun of (Local_id.t * Ty.t) Iarray.t * Ty.t * Expr.t
+    | Val of vis * Ty.t * Expr.t
+    | Fun of vis * (Local_id.t * Ty.t) Iarray.t * Ty.t * Expr.t
 
 end = Item
 
@@ -198,16 +203,23 @@ module Module = struct
     in
     Format.pp_print_iter Iarray.iter pp_param ppf args ~pp_sep
 
+  let pp_vis (vis : Item.vis) =
+    match vis with
+    | Pub -> Format.dprintf "pub"
+    | Priv -> Format.dprintf "priv"
+
   let rec pp_item (name, item : Item_name.t * Item.t) =
     match item with
-    | Item.Val (ty, expr) ->
-        Format.dprintf "@[<2>@[val %t@ :@ %t@ :=@]@ @[%t;@]@]\n"
+    | Item.Val (vis, ty, expr) ->
+        Format.dprintf "@[<2>@[%t@ val %t@ :@ %t@ :=@]@ @[%t;@]@]\n"
+          (pp_vis vis)
           (Item_name.pp name)
           (Ty.pp ty)
           (Expr.pp expr)
 
-    | Item.Fun (params, ty, expr) ->
-        Format.dprintf "@[<2>@[fun %t(%t)@ :@ %t@ :=@]@ @[%t;@]@]\n"
+    | Item.Fun (vis, params, ty, expr) ->
+        Format.dprintf "@[<2>@[%t@ fun %t(%t)@ :@ %t@ :=@]@ @[%t;@]@]\n"
+          (pp_vis vis)
           (Item_name.pp name)
           (pp_params params)
           (Ty.pp ty)

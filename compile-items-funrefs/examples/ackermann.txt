@@ -1,4 +1,4 @@
-fun ackermann(m : I32, n : I32) : I32 :=
+pub fun ackermann(m : I32, n : I32) : I32 :=
   if m = 0 then
     n + 1
   else if n = 0 then

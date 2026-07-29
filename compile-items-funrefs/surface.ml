@@ -68,16 +68,16 @@ end
 module Item = struct
 
   type t =
-    | Val of binder * Ty.t * Expr.t
-    | Fun of binder * Expr.param Iarray.t * Ty.t * Expr.t
+    | Val of [`Pub] option * binder * Ty.t * Expr.t
+    | Fun of [`Pub] option * binder * Expr.param Iarray.t * Ty.t * Expr.t
 
   and binder =
     string Spanned.t
 
   let name item =
     match item with
-    | Val (name, _, _) -> name
-    | Fun (name, _, _, _) -> name
+    | Val (_, name, _, _) -> name
+    | Fun (_, name, _, _, _) -> name
 
 end
 
@@ -302,29 +302,35 @@ end = struct
     Env.add_local env name.data ty, (name.data, ty, expr)
 
   let check_module (prog : Module.t) : Core.Module.t =
+    let elab_vis vis =
+      match vis with
+      | Some `Pub -> Core.Item.Pub
+      | None -> Core.Item.Priv
+    in
+
     let check_item_decl (env : Env.t) (item : Item.t) : Env.t =
       let name = Item.name item in
       if Option.is_some (Env.lookup_item env name.data) then
         error name.span "item name already used";
 
       match item with
-      | Item.Val (_, ty, _) ->
+      | Item.Val (_, _, ty, _) ->
           Env.add_item env name.data (check_ty ty)
-      | Item.Fun (_, params, ty, _) ->
+      | Item.Fun (_, _, params, ty, _) ->
           (* FIXME: Check duplicate parameter names *)
           let params = Iarray.map (fun (_, ty) -> check_ty ty) params in
           Env.add_item env name.data (Core.Ty.Fun (params, check_ty ty))
 
     and check_item (env : Env.t) (item : Item.t) : Core.Item_name.t * Core.Item.t =
       match item, Env.lookup_item env (Item.name item).data with
-      | Item.Val (_, _, expr), Some (name, ty) ->
-          name, Core.Item.Val (ty, check_expr env expr ty)
-      | Item.Fun (_, params, _, expr), Some (name, Core.Ty.Fun (param_tys, ty)) ->
+      | Item.Val (vis, _, _, expr), Some (name, ty) ->
+          name, Core.Item.Val (elab_vis vis, ty, check_expr env expr ty)
+      | Item.Fun (vis, _, params, _, expr), Some (name, Core.Ty.Fun (param_tys, ty)) ->
           (* FIXME: Check duplicate parameter names *)
           let params = Iarray.map2 (fun (name, _ : Expr.param) ty -> name.data, ty) params param_tys in
           let env = Iarray.fold_right (fun (name, ty) env -> Env.add_local env name ty) params env in
           let expr = check_expr env expr ty in
-          name, Core.Item.Fun (params, ty, expr)
+          name, Core.Item.Fun (elab_vis vis, params, ty, expr)
       | _, _ ->
           failwith "item does not match item signature"
     in

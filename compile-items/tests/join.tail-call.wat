@@ -1,5 +1,4 @@
 (module
-  (export "add_one" (func $add_one))
   (export "test" (func $test))
   (export "test-tailcall" (func $test-tailcall))
   (func

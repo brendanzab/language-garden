@@ -1,14 +1,14 @@
 (module
-  (export "choose" (func $choose))
   (export "decr" (func $decr))
   (export "incr" (func $incr))
-  (export "partial-app" (func $partial-app))
   (export "test-false" (func $test-false))
+  (export "test-false-2" (func $test-false-2))
   (export "test-local-def" (func $test-local-def))
   (export "test-partial-app" (func $test-partial-app))
   (export "test-true" (func $test-true))
+  (export "test-true-2" (func $test-true-2))
   (type $funty (func (param i32) (result i32)))
-  (elem declare func $incr $decr)
+  (elem declare func $incr2 $decr2)
   (func
     $choose
     (param $b i32)
@@ -25,7 +25,21 @@
     (i32.const 1)
     i32.sub)
   (func
+    $decr2
+    (param $i i32)
+    (result i32)
+    (local.get $i)
+    (i32.const 1)
+    i32.sub)
+  (func
     $incr
+    (param $i i32)
+    (result i32)
+    (local.get $i)
+    (i32.const 1)
+    i32.add)
+  (func
+    $incr2
     (param $i i32)
     (result i32)
     (local.get $i)
@@ -45,6 +59,15 @@
     (i32.const 0)
     (ref.func $incr)
     (ref.func $decr)
+    (call $choose)
+    (call_ref $funty))
+  (func
+    $test-false-2
+    (result i32)
+    (i32.const 42)
+    (i32.const 0)
+    (ref.func $incr2)
+    (ref.func $decr2)
     (call $choose)
     (call_ref $funty))
   (func
@@ -72,5 +95,14 @@
     (i32.const 1)
     (ref.func $incr)
     (ref.func $decr)
+    (call $choose)
+    (call_ref $funty))
+  (func
+    $test-true-2
+    (result i32)
+    (i32.const 42)
+    (i32.const 1)
+    (ref.func $incr2)
+    (ref.func $decr2)
     (call $choose)
     (call_ref $funty)))

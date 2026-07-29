@@ -5,6 +5,7 @@
 %token KEYWORD_FUN "fun"
 %token KEYWORD_IF "if"
 %token KEYWORD_LET "let"
+%token KEYWORD_PUB "pub"
 %token KEYWORD_THEN "then"
 %token KEYWORD_VAL "val"
 %token ADD "+"
@@ -93,12 +94,17 @@ let atomic_tm :=
 
 (* Items *)
 
+let vis :=
+    { None }
+| "pub";
+    { Some `Pub }
+
 let item :=
-| "val"; n = spanned(NAME); ":"; ty = spanned(ty); ":="; tm = spanned(tm);
-    { Surface.Item.Val (n, ty, tm) }
-| "fun"; n = spanned(NAME); "("; params = trailing_list(",", param); ")";
+| vis = vis; "val"; n = spanned(NAME); ":"; ty = spanned(ty); ":="; tm = spanned(tm);
+    { Surface.Item.Val (vis, n, ty, tm) }
+| vis = vis; "fun"; n = spanned(NAME); "("; params = trailing_list(",", param); ")";
   ":"; ty = spanned(ty); ":="; tm = spanned(tm);
-    { Surface.Item.Fun (n, Iarray.of_list params, ty, tm) }
+    { Surface.Item.Fun (vis, n, Iarray.of_list params, ty, tm) }
 
 
 (* Modules *)

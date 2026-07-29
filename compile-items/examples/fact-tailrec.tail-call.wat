@@ -1,6 +1,5 @@
 (module
   (export "fact" (func $fact))
-  (export "fact-acc" (func $fact-acc))
   (export "test-fact" (func $test-fact))
   (func
     $fact

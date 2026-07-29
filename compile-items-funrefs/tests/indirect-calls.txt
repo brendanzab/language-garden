@@ -6,5 +6,5 @@ fun hof(f : fun (I32) -> I32) : I32 :=
 fun inc(i : I32) : I32 :=
   i + 1;
 
-fun caller() : I32 :=
+pub fun caller() : I32 :=
   hof(inc);

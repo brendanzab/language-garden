@@ -1,7 +1,5 @@
 (module
   (export "caller" (func $caller))
-  (export "hof" (func $hof))
-  (export "inc" (func $inc))
   (type $funty (func (param i32) (result i32)))
   (elem declare func $inc)
   (func $caller (result i32) (ref.func $inc) (return_call $hof))

@@ -100,14 +100,14 @@ end = struct
     let fresh_local_id = Local_supply.(fresh (create ())) in
 
     match item with
-    | Core.Item.Val (ty, def) ->
-        Anf.Item.Val (ty, translate_expr Core.Local.Env.empty def ~fresh_local_id)
+    | Core.Item.Val (vis, ty, def) ->
+        Anf.Item.Val (vis, ty, translate_expr Core.Local.Env.empty def ~fresh_local_id)
 
-    | Core.Item.Fun (params, ty, body) ->
+    | Core.Item.Fun (vis, params, ty, body) ->
         let param_id name = fresh_local_id (Option.value name ~default:"_") in
         let params = params |> Iarray.map (Pair.map_fst param_id) in
         let local_env = Iarray.to_seq params |> Seq.map Pair.fst |> Core.Local.Env.of_seq in
-        Anf.Item.Fun (params, ty, translate_expr local_env body ~fresh_local_id)
+        Anf.Item.Fun (vis, params, ty, translate_expr local_env body ~fresh_local_id)
 
   let translate_module (mod_ : Core.Module.t) : Anf.Module.t =
     mod_ |> Core.Item_map.map translate_item

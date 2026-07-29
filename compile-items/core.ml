@@ -61,9 +61,9 @@ end = struct
     match expr with
     | Item (name, args, _) ->
         begin match Item_map.find name items, args with
-        | Item.Val (_, body), None ->
+        | Item.Val (_, _, body), None ->
             eval items locals body
-        | Item.Fun (_, _, body), Some args ->
+        | Item.Fun (_, _, _, body), Some args ->
             let env = Iarray.to_seq args |> Seq.map (eval items locals) |> Local.Env.of_seq in
             eval items env body
         | _, _ -> failwith "Expr.eval"
@@ -96,9 +96,14 @@ end
 
 and Item : sig
 
+  (** Visibility of an item *)
+  type vis =
+    | Pub
+    | Priv
+
   type t =
-    | Val of Ty.t * Expr.t
-    | Fun of (string option * Ty.t) Iarray.t * Ty.t * Expr.t
+    | Val of vis * Ty.t * Expr.t
+    | Fun of vis * (string option * Ty.t) Iarray.t * Ty.t * Expr.t
 
 end = Item
 

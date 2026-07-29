@@ -26,19 +26,30 @@ require additional work to implement, namely closure conversion.
 fun choose(b : Bool, f : fun (I32) -> I32, g : fun (I32) -> I32) : fun (I32) -> I32 :=
   if b then f else g;
 
-fun incr(i : I32) : I32 := i + 1;
-fun decr(i : I32) : I32 := i - 1;
+pub fun incr(i : I32) : I32 := i + 1;
+pub fun decr(i : I32) : I32 := i - 1;
 
-val test-true : I32 := choose(true, incr, decr)(42);
-val test-false : I32 := choose(false, incr, decr)(42);
+pub val test-true : I32 := choose(true, incr, decr)(42);
+pub val test-false : I32 := choose(false, incr, decr)(42);
+
+-- Private versions of the above functions:
+
+fun incr2(i : I32) : I32 := i + 1;
+fun decr2(i : I32) : I32 := i - 1;
+
+pub val test-true-2 : I32 := choose(true, incr2, decr2)(42);
+pub val test-false-2 : I32 := choose(false, incr2, decr2)(42);
+--                                          ^^^^^  ^^^^^
+-- When compiling to WASM, `incr2` and `decr2` will be added to the list of
+-- functions in `(elem declare func ...)`, as they are not publicly exported.
 
 val partial-app : fun (I32) -> I32 :=
   choose(true, incr, decr);
 
-val test-partial-app : I32 :=
+pub val test-partial-app : I32 :=
   partial-app(42);
 
-val test-local-def : I32 :=
+pub val test-local-def : I32 :=
   let partial-app : fun (I32) -> I32 :=
     choose(true, incr, decr);
   partial-app(42);
@@ -50,16 +61,16 @@ val test-local-def : I32 :=
 <!-- $MDX file=examples/funrefs.wat -->
 ```wat
 (module
-  (export "choose" (func $choose))
   (export "decr" (func $decr))
   (export "incr" (func $incr))
-  (export "partial-app" (func $partial-app))
   (export "test-false" (func $test-false))
+  (export "test-false-2" (func $test-false-2))
   (export "test-local-def" (func $test-local-def))
   (export "test-partial-app" (func $test-partial-app))
   (export "test-true" (func $test-true))
+  (export "test-true-2" (func $test-true-2))
   (type $funty (func (param i32) (result i32)))
-  (elem declare func $incr $decr)
+  (elem declare func $incr2 $decr2)
   (func
     $choose
     (param $b i32)
@@ -76,7 +87,21 @@ val test-local-def : I32 :=
     (i32.const 1)
     i32.sub)
   (func
+    $decr2
+    (param $i i32)
+    (result i32)
+    (local.get $i)
+    (i32.const 1)
+    i32.sub)
+  (func
     $incr
+    (param $i i32)
+    (result i32)
+    (local.get $i)
+    (i32.const 1)
+    i32.add)
+  (func
+    $incr2
     (param $i i32)
     (result i32)
     (local.get $i)
@@ -99,6 +124,15 @@ val test-local-def : I32 :=
     (call $choose)
     (call_ref $funty))
   (func
+    $test-false-2
+    (result i32)
+    (i32.const 42)
+    (i32.const 0)
+    (ref.func $incr2)
+    (ref.func $decr2)
+    (call $choose)
+    (call_ref $funty))
+  (func
     $test-local-def
     (result i32)
     (local $partial-app (ref $funty))
@@ -124,6 +158,15 @@ val test-local-def : I32 :=
     (ref.func $incr)
     (ref.func $decr)
     (call $choose)
+    (call_ref $funty))
+  (func
+    $test-true-2
+    (result i32)
+    (i32.const 42)
+    (i32.const 1)
+    (ref.func $incr2)
+    (ref.func $decr2)
+    (call $choose)
     (call_ref $funty)))
 ```
 
@@ -135,16 +178,16 @@ val test-local-def : I32 :=
 <!-- $MDX file=examples/funrefs.tail-call.wat -->
 ```wat
 (module
-  (export "choose" (func $choose))
   (export "decr" (func $decr))
   (export "incr" (func $incr))
-  (export "partial-app" (func $partial-app))
   (export "test-false" (func $test-false))
+  (export "test-false-2" (func $test-false-2))
   (export "test-local-def" (func $test-local-def))
   (export "test-partial-app" (func $test-partial-app))
   (export "test-true" (func $test-true))
+  (export "test-true-2" (func $test-true-2))
   (type $funty (func (param i32) (result i32)))
-  (elem declare func $incr $decr)
+  (elem declare func $incr2 $decr2)
   (func
     $choose
     (param $b i32)
@@ -161,7 +204,21 @@ val test-local-def : I32 :=
     (i32.const 1)
     i32.sub)
   (func
+    $decr2
+    (param $i i32)
+    (result i32)
+    (local.get $i)
+    (i32.const 1)
+    i32.sub)
+  (func
     $incr
+    (param $i i32)
+    (result i32)
+    (local.get $i)
+    (i32.const 1)
+    i32.add)
+  (func
+    $incr2
     (param $i i32)
     (result i32)
     (local.get $i)
@@ -184,6 +241,15 @@ val test-local-def : I32 :=
     (call $choose)
     (return_call_ref $funty))
   (func
+    $test-false-2
+    (result i32)
+    (i32.const 42)
+    (i32.const 0)
+    (ref.func $incr2)
+    (ref.func $decr2)
+    (call $choose)
+    (return_call_ref $funty))
+  (func
     $test-local-def
     (result i32)
     (local $partial-app (ref $funty))
@@ -209,6 +275,15 @@ val test-local-def : I32 :=
     (ref.func $incr)
     (ref.func $decr)
     (call $choose)
+    (return_call_ref $funty))
+  (func
+    $test-true-2
+    (result i32)
+    (i32.const 42)
+    (i32.const 1)
+    (ref.func $incr2)
+    (ref.func $decr2)
+    (call $choose)
     (return_call_ref $funty)))
 ```
 
@@ -219,29 +294,41 @@ val test-local-def : I32 :=
 
 <!-- $MDX file=examples/funrefs.anf -->
 ```text
-fun choose(b : Bool, f : fun (I32) -> I32, g : fun (I32) -> I32) :
+priv fun choose(b : Bool, f : fun (I32) -> I32, g : fun (I32) -> I32) :
 fun (I32) -> I32 :=
   join if_end (result : fun (I32) -> I32) := result;
   if b then jump if_end f else jump if_end g;
 
-fun decr(i : I32) : I32 := #i32-sub(i, 1);
+pub fun decr(i : I32) : I32 := #i32-sub(i, 1);
 
-fun incr(i : I32) : I32 := #i32-add(i, 1);
+priv fun decr2(i : I32) : I32 := #i32-sub(i, 1);
 
-val partial-app : fun (I32) -> I32 := choose(true, incr, decr);
+pub fun incr(i : I32) : I32 := #i32-add(i, 1);
 
-val test-false : I32 :=
+priv fun incr2(i : I32) : I32 := #i32-add(i, 1);
+
+priv val partial-app : fun (I32) -> I32 := choose(true, incr, decr);
+
+pub val test-false : I32 :=
   let fun : fun (I32) -> I32 := choose(false, incr, decr);
   fun(42);
 
-val test-local-def : I32 :=
+pub val test-false-2 : I32 :=
+  let fun : fun (I32) -> I32 := choose(false, incr2, decr2);
+  fun(42);
+
+pub val test-local-def : I32 :=
   let partial-app : fun (I32) -> I32 := choose(true, incr, decr);
   partial-app(42);
 
-val test-partial-app : I32 := partial-app(42);
+pub val test-partial-app : I32 := partial-app(42);
 
-val test-true : I32 :=
+pub val test-true : I32 :=
   let fun : fun (I32) -> I32 := choose(true, incr, decr);
+  fun(42);
+
+pub val test-true-2 : I32 :=
+  let fun : fun (I32) -> I32 := choose(true, incr2, decr2);
   fun(42);
 ```
 
@@ -252,7 +339,7 @@ val test-true : I32 :=
 
 <!-- $MDX file=examples/funrefs.ll -->
 ```ll
-define i32(i32)* @choose(i1 %b, i32(i32)* %f, i32(i32)* %g) {
+define private i32(i32)* @choose(i1 %b, i32(i32)* %f, i32(i32)* %g) {
 entry:
   br i1 %b, label %if_true, label %if_false
 if_true:
@@ -270,13 +357,25 @@ entry:
   ret i32 %result
 }
 
+define private i32 @decr2(i32 %i) {
+entry:
+  %result = sub i32 %i, 1
+  ret i32 %result
+}
+
 define i32 @incr(i32 %i) {
 entry:
   %result = add i32 %i, 1
   ret i32 %result
 }
 
-define i32(i32)* @partial-app() {
+define private i32 @incr2(i32 %i) {
+entry:
+  %result = add i32 %i, 1
+  ret i32 %result
+}
+
+define private i32(i32)* @partial-app() {
 entry:
   %result = call i32(i32)* @choose(i1 true, i32(i32)* @incr, i32(i32)* @decr)
   ret i32(i32)* %result
@@ -285,6 +384,13 @@ entry:
 define i32 @test-false() {
 entry:
   %fun = call i32(i32)* @choose(i1 false, i32(i32)* @incr, i32(i32)* @decr)
+  %result = call i32 %fun(i32 42)
+  ret i32 %result
+}
+
+define i32 @test-false-2() {
+entry:
+  %fun = call i32(i32)* @choose(i1 false, i32(i32)* @incr2, i32(i32)* @decr2)
   %result = call i32 %fun(i32 42)
   ret i32 %result
 }
@@ -308,6 +414,13 @@ entry:
 define i32 @test-true() {
 entry:
   %fun = call i32(i32)* @choose(i1 true, i32(i32)* @incr, i32(i32)* @decr)
+  %result = call i32 %fun(i32 42)
+  ret i32 %result
+}
+
+define i32 @test-true-2() {
+entry:
+  %fun = call i32(i32)* @choose(i1 true, i32(i32)* @incr2, i32(i32)* @decr2)
   %result = call i32 %fun(i32 42)
   ret i32 %result
 }

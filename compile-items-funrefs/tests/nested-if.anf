@@ -1,4 +1,4 @@
-fun nested-if(x : I32, y : I32) : I32 :=
+pub fun nested-if(x : I32, y : I32) : I32 :=
   let cond : Bool := #i32-eq(x, 0);
   join if_end (result : I32) := #i32-add(result, 4);
   if cond then

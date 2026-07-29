@@ -162,6 +162,11 @@ let translate_expr
 
   Llvm.{ blocks = make_iarray blocks }
 
+let translate_vis (vis : Core.Item.vis) :  [`Private] option =
+  match vis with
+  | Pub -> None
+  | Priv -> Some `Private
+
 (** Translate a core language module into an LLVM module  *)
 let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let fresh_global_id = Global_supply.(fresh (create ())) in
@@ -171,8 +176,8 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let item_env =
     mod_ |> Core.Item_map.mapi @@ fun name item ->
       match item with
-      | Core.Item.Val (_, _) -> Val (fresh_global_id (Core.Item_name.to_string name))
-      | Core.Item.Fun (_, _, _) -> Fun (fresh_global_id (Core.Item_name.to_string name))
+      | Core.Item.Val (_, _, _) -> Val (fresh_global_id (Core.Item_name.to_string name))
+      | Core.Item.Fun (_, _, _, _) -> Fun (fresh_global_id (Core.Item_name.to_string name))
   in
 
   let funs = Dynarray.create () in
@@ -184,12 +189,14 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
     let translate_expr = translate_expr item_env ~fresh_local_id ~fresh_label in
 
     match Core.Item_map.find name mod_, item_decl with
-    | Core.Item.Val (ty, def), Val id ->
+    | Core.Item.Val (vis, ty, def), Val id ->
+        let visibility = translate_vis vis in
         let cfg = translate_expr Core.Local.Env.empty def in
         let result_ty = translate_ty ty in
-        Dynarray.add_last funs Llvm.(id, { result_ty; params = [||]; cfg });
+        Dynarray.add_last funs Llvm.(id, { visibility; result_ty; params = [||]; cfg });
 
-    | Core.Item.Fun (params, result_ty, body), Fun id ->
+    | Core.Item.Fun (vis, params, result_ty, body), Fun id ->
+        let visibility = translate_vis vis in
         let param_id name = fresh_local_id (Option.value name ~default:"_") in
         let params = params |> Iarray.map (fun (name, ty) -> translate_ty ty, param_id name) in
         let result_ty = translate_ty result_ty in
@@ -199,7 +206,7 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
           |> Core.Local.Env.of_seq
         in
         let cfg = translate_expr local_env body in
-        Dynarray.add_last funs Llvm.(id, { result_ty; params; cfg });
+        Dynarray.add_last funs Llvm.(id, { visibility; result_ty; params; cfg });
 
     | _, _ ->
         failwith "mismatched items"
