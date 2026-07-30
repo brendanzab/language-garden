@@ -47,3 +47,34 @@ Duplicate label
     │            ^
   
   [1]
+
+Merging two open rows
+  $ executable elab <<< "fun x y => let _ := x.a + 1; let _ := y.b + 1; if true then x else y"
+  fun (x : { a : Int; b : Int }) => fun (y : { a : Int; b : Int }) =>
+    let _ : Int := #int-add x.a 1;
+    let _ : Int := #int-add y.b 1;
+    if true then x else y
+  : { a : Int; b : Int } -> { a : Int; b : Int } -> { a : Int; b : Int }
+
+Infinite type via a row constraint (regression test for an occurs check
+that previously skipped the row constraints of unsolved row metavariables,
+constructing a cyclic type that diverged during printing)
+  $ executable elab <<< "fun x => if true then x.self else x"
+  error: infinite type
+    ┌─ <stdin>:1:34
+    │
+  1 │ fun x => if true then x.self else x
+    │                                   ^
+  
+  [1]
+
+Infinite row type when merging two open rows (regression test for the
+reverse-direction occurs check when unifying two unsolved row metavariables)
+  $ executable elab <<< "fun x y => let _ := if true then x.a else y; let _ := y.b + 1; if true then x else y"
+  error: infinite row type
+    ┌─ <stdin>:1:83
+    │
+  1 │ fun x y => let _ := if true then x.a else y; let _ := y.b + 1; if true then x else y
+    │                                                                                    ^
+  
+  [1]
