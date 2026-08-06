@@ -317,8 +317,14 @@ end = struct
       | Item.Val (_, _, ty, _) ->
           Env.add_item env name.data (check_ty ty)
       | Item.Fun (_, _, params, ty, _) ->
-          (* FIXME: Check duplicate parameter names *)
-          let params = Iarray.map (fun (_, ty) -> check_ty ty) params in
+          let params =
+            let seen = Dynarray.create () in
+            params |> Iarray.map @@ fun (name, ty : Expr.param) ->
+              match name.data with
+              | Some n when Dynarray.mem n seen -> error name.span "parameter name already used"
+              | Some n -> Dynarray.add_last seen n; check_ty ty
+              | None -> check_ty ty
+          in
           Env.add_item env name.data (Core.Ty.Fun (params, check_ty ty))
 
     and check_item (env : Env.t) (item : Item.t) : Core.Item_name.t * Core.Item.t =
@@ -326,7 +332,6 @@ end = struct
       | Item.Val (vis, _, _, expr), Some (name, ty) ->
           name, Core.Item.Val (elab_vis vis, ty, check_expr env expr ty)
       | Item.Fun (vis, _, params, _, expr), Some (name, Core.Ty.Fun (param_tys, ty)) ->
-          (* FIXME: Check duplicate parameter names *)
           let params = Iarray.map2 (fun (name, _ : Expr.param) ty -> name.data, ty) params param_tys in
           let env = Iarray.fold_right (fun (name, ty) env -> Env.add_local env name ty) params env in
           let expr = check_expr env expr ty in
