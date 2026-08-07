@@ -125,7 +125,7 @@ let translate_expr
 
   go_expr instrs local_env expr ~tail_call:enable_tail_call;
 
-  (make_iarray locals), make_iarray instrs
+  make_iarray locals, make_iarray instrs
 
 let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.module_ =
   (* Arrays to store exports and functions *)
