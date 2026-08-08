@@ -163,7 +163,7 @@ module Semantics = struct
     (* Eta for functions *)
     | Fun_lit (_, _, body), fun_tm | fun_tm, Fun_lit (_, _, body)  ->
         let x = Neu (Var (Env.next_level size)) in
-        is_convertible size (body x, app fun_tm x)
+        is_convertible (Env.bind_level size) (body x, app fun_tm x)
     | _, _ -> false
   and is_convertible_neu size : neu * neu -> bool = function
     | Var level1, Var level2 -> level1 = level2

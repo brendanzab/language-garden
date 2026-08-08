@@ -397,7 +397,7 @@ module Semantics = struct
     (* Eta for functions *)
     | Fun_lit (_, body), fun_vtm | fun_vtm, Fun_lit (_, body)  ->
         let x = lazy (next_var size) in
-        is_convertible size (inst_clos body x) (fun_app fun_vtm x)
+        is_convertible (size + 1) (inst_clos body x) (fun_app fun_vtm x)
     | _, _ -> false
 
   and is_convertible_lazy (size : level) (vtm1 : vtm Lazy.t) (vtm2 : vtm Lazy.t) : bool =
