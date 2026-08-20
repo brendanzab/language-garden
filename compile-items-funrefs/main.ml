@@ -76,14 +76,6 @@ let elab_module (source : Source_file.t) (mod_ : Surface.Module.t) =
 
 (** {1 Subcommands} *)
 
-let compile_wat_cmd (enable_tail_call : bool) : unit =
-  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
-  parse_module source
-  |> elab_module source
-  |> Core_to_wasm.translate_module ~enable_tail_call
-  |> Wasm.Output_wat.pp_module
-  |> Format.printf "%t"
-
 let compile_anf_cmd () : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
   parse_module source
@@ -91,6 +83,18 @@ let compile_anf_cmd () : unit =
   |> Core_to_anf.translate_module
   |> Anf.Module.pp
   |> Format.printf "%t"
+
+let compile_anf_llvm (output_format : [`Ll | `Dot]) : unit =
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
+  let module_ =
+    parse_module source
+    |> elab_module source
+    |> Core_to_anf.translate_module
+    |> Anf_to_llvm.translate_module
+  in
+  match output_format with
+  | `Ll -> Llvm.Output_ll.pp_module module_ |> Format.printf "%t"
+  | `Dot -> Llvm.Output_dot.pp_module module_ Out_channel.stdout
 
 let compile_llvm_cmd (output_format : [`Ll | `Dot]) : unit =
   let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
@@ -102,6 +106,14 @@ let compile_llvm_cmd (output_format : [`Ll | `Dot]) : unit =
   match output_format with
   | `Ll -> Llvm.Output_ll.pp_module module_ |> Format.printf "%t"
   | `Dot -> Llvm.Output_dot.pp_module module_ Out_channel.stdout
+
+let compile_wat_cmd (enable_tail_call : bool) : unit =
+  let source = Source_file.create "<stdin>" (In_channel.input_all stdin) in
+  parse_module source
+  |> elab_module source
+  |> Core_to_wasm.translate_module ~enable_tail_call
+  |> Wasm.Output_wat.pp_module
+  |> Format.printf "%t"
 
 (** {1 CLI options} *)
 
@@ -123,6 +135,8 @@ let cmd : unit Cmdliner.Cmd.t =
   Cmd.group (Cmd.info (Filename.basename Sys.argv.(0))) [
     Cmd.v (Cmd.info "compile-anf" ~doc:"Compile a module from standard input to A-normal form")
       Term.(const compile_anf_cmd $ const ());
+    Cmd.v (Cmd.info "compile-anf-llvm" ~doc:"Compile a module from standard input to LLVM IR, via A-normal form")
+      Term.(const compile_anf_llvm $ llvm_output_format);
     Cmd.v (Cmd.info "compile-llvm" ~doc:"Compile a module from standard input to LLVM IR")
       Term.(const compile_llvm_cmd $ llvm_output_format);
     Cmd.v (Cmd.info "compile-wat" ~doc:"Compile a module from standard input to WAT (WebAssembly Text Format)")

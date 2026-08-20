@@ -107,8 +107,7 @@ let translate_expr
         let args = args |> Iarray.map (go_expr local_env "arg") in
         bind_instr result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
-    | Core.Expr.Bool true -> Llvm.I1 true
-    | Core.Expr.Bool false -> Llvm.I1 false
+    | Core.Expr.Bool b -> Llvm.I1 b
 
     | Core.Expr.Bool_if (expr1, expr2, expr3) ->
         (* Generate some fresh labels to allow us to wire together the basic

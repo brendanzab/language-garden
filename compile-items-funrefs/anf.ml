@@ -52,6 +52,9 @@ module rec Expr : sig
     | Bool of bool
     | I32 of int32
 
+  val ty_of_comp : comp -> Ty.t
+  val ty_of_atom : atom -> Ty.t
+
   val eval : Item.t Item_map.t -> t -> value
 
   val pp : t -> Format.formatter -> unit
@@ -59,6 +62,23 @@ module rec Expr : sig
 end = struct
 
   include Expr
+
+  let rec ty_of_atom (expr : atom) : Ty.t =
+    match expr with
+    | Item (_, ty) -> ty
+    | Var (_, ty) -> ty
+    | Bool _ -> Ty.Bool
+    | I32 _ -> Ty.I32
+
+  let rec ty_of_comp (expr : comp) : Ty.t =
+    match expr with
+    | Fun_app (head, args) ->
+        begin match ty_of_atom head with
+        | Ty.Fun (_, result_ty) -> result_ty
+        | _ -> invalid_arg "Core.Expr.ty_of: type error"
+        end
+    | Prim (op, _) -> Ty.of_prim (snd (Prim.Op.ty op))
+    | Atom expr -> ty_of_atom expr
 
   (* Evaluation *)
 

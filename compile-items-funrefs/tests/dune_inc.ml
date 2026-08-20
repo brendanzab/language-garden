@@ -4,6 +4,7 @@ let package = "compile-items-funrefs"
 let generate_rules base = begin
   let txt_file = Printf.sprintf "%s.txt" base in
 
+  (* compile-anf *)
   begin
     let anf_file = Printf.sprintf "%s.anf" base in
 
@@ -19,6 +20,7 @@ let generate_rules base = begin
     Printf.printf "\n";
   end;
 
+  (* compile-llvm *)
   begin
     let ll_file = Printf.sprintf "%s.ll" base in  (* LLVM IR *)
     let bc_file = Printf.sprintf "%s.bc" base in  (* LLVM bitcode *)
@@ -41,6 +43,32 @@ let generate_rules base = begin
     Printf.printf " (action (run llvm-as %%{ll} -o %%{target})))\n";
     Printf.printf "\n";
   end;
+
+  (* compile-anf-llvm *)
+  begin
+    let ll_file = Printf.sprintf "%s.anf.ll" base in  (* LLVM IR *)
+    let bc_file = Printf.sprintf "%s.anf.bc" base in  (* LLVM bitcode *)
+
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" ll_file;
+    Printf.printf "   (run %%{bin:%s} compile-anf-llvm))))\n" bin;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)" package;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" ll_file ll_file;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)\n" package;
+    Printf.printf " (target %s)\n" bc_file;
+    Printf.printf " (deps (:ll %s.tmp))\n" ll_file;
+    Printf.printf " (action (run llvm-as %%{ll} -o %%{target})))\n";
+    Printf.printf "\n";
+  end;
+
+  (* compile-wat *)
 
   let generate_wat_rules ~base ~compile_args ~wat2wasm_args ~wasm_validate_args =
     let wat_file = Printf.sprintf "%s.wat" base in

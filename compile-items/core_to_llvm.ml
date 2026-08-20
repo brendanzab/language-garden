@@ -85,8 +85,7 @@ let translate_expr
         let def = go_expr local_env (Option.value name ~default:"_") def in
         go_expr (Core.Local.Env.extend def local_env) result_name body
 
-    | Core.Expr.Bool true -> Llvm.(I1 true)
-    | Core.Expr.Bool false -> Llvm.(I1 false)
+    | Core.Expr.Bool b -> Llvm.(I1 b)
 
     | Core.Expr.Bool_if (expr1, expr2, expr3) ->
         (* Generate some fresh labels to allow us to wire together the basic

@@ -10,6 +10,9 @@ Help: top-level
          compile-anf [OPTION]…
              Compile a module from standard input to A-normal form
   
+         compile-anf-llvm [--output-format=FORMAT] [OPTION]…
+             Compile a module from standard input to LLVM IR, via A-normal form
+  
          compile-llvm [--output-format=FORMAT] [OPTION]…
              Compile a module from standard input to LLVM IR
   

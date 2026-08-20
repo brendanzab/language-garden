@@ -167,7 +167,7 @@ entry:
 
 After parsing, the surface language is elaborated to a core language, using a
 similar approach to the [elaboration projects](../README.md#elaboration).
-The resulting program is then translated to web assembly.
+The resulting program is then translated to Wasm or LLVM.
 
 ```text
                Surface.Module.t
@@ -179,10 +179,17 @@ The resulting program is then translated to web assembly.
                      │
       ┌──────────────┴──────┬───────────────────┐
       │                     │                   │
-      │  Core_to_wasm       │  Core_to_anf      │  Core_to_llvm
+      │  Core_to_wasm       │  Core_to_anf      │
       │                     │                   │
-      ▼                     ▼                   ▼
-  Wasm.module_         Anf.Module.t        Llvm.program
+      ▼                     ▼                   │
+  Wasm.module_         Anf.Module.t             │  Core_to_llvm
+                            │                   │
+                            │  Anf_to_llvm      │
+                            │                   │
+                            └─────────┬─────────┘
+                                      │
+                                      ▼
+                                Llvm.program
 ```
 
 ## Todo list
@@ -193,6 +200,7 @@ The resulting program is then translated to web assembly.
 - [x] Compile Core to ANF
   - [x] Generate join points
 - [x] Compile Core to LLVM
+- [x] Compile ANF to LLVM
 - [ ] Compile Core to JavaScript
 - [ ] Test that each translation preserves the semantics
 
@@ -205,4 +213,5 @@ CLI Entrypoints:
 - [ ] `eval-anf`: Surface -> Core -> ANF -> Value
 - [x] `compile-wat`: Surface -> Core -> WAT
 - [x] `compile-anf`: Surface -> Core -> ANF
+- [x] `compile-anf-llvm`: Surface -> Core -> ANF -> LLVM
 - [x] `compile-llvm`: Surface -> Core -> LLVM
