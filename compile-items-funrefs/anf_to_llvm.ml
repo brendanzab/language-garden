@@ -1,10 +1,17 @@
 (** Translation from ANF into LLVM IR.
 
-    This is similar to the translation in {!Core_to_llvm}, but here we translate
-    the join points already present in ANF as opposed to creating join blocks
-    for conditionals specifically. When encountering {!Anf.Expr.Jump}s, the
-    current block is terminated with a {!Llvm.Br} instruction, and an argument
-    is added to the phi-node at the start of the corresponding join block.
+    The main difference between this translation and the translation from
+    direct style core language (implemented in {!Core_to_llvm}) is in how
+    join blocks are introduced. These already correspond to the join points in
+    the ANF language so we don’t need to create them from scratch. Unfortunately
+    we don’t easily know the arguments to the phi instructions ahead of time,
+    and have to update the join-blocks whenever we see a jump expression.
+
+    Unless there’s a pressing need for A-Normal form I think it’s easier to go
+    straight from a direct style IR to SSA. That said, I still think it’s
+    interesting to compare the approaches. I’m also pretty sure that an approach
+    similar to this could be used to translate from block argument SSA to phi
+    nodes. This is something I've not been able to find documented anywhere.
 
     - Richard A. Kelsey. 1995. {{: https://doi.org/10.1145/202529.202532}
       A correspondence between continuation passing style and static single
