@@ -32,6 +32,7 @@
 (test (name elab_stlc_bidir_effects))
 (test (name elab_stlc_gadt))
 (test (name elab_stlc_gadt_bidir))
+(test (name elab_stlc_graded))
 (test (name elab_poly_generics))
 (test (name elab_poly_generics_letrec))
 (test (name elab_poly_generics_lettype))
