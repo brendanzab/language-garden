@@ -194,13 +194,14 @@ The resulting program is then translated to Wasm or LLVM.
 
 ## Todo list
 
-- [x] Compile Core to WASM
+- [x] Compile Core to Wasm
   - [ ] Apply optimisations with [wasm-opt](https://github.com/WebAssembly/binaryen)
   - [x] Validate WAT with [wabt](https://github.com/WebAssembly/wabt)
 - [x] Compile Core to ANF
   - [x] Generate join points
-- [x] Compile Core to LLVM
-- [x] Compile ANF to LLVM
+  - [x] Compile ANF to LLVM IR
+  - [ ] Compile ANF to Wasm
+- [x] Compile Core to LLVM IR
 - [ ] Compile Core to JavaScript
 - [ ] Test that each translation preserves the semantics
 
@@ -211,7 +212,8 @@ CLI Entrypoints:
 - [ ] `doc`: Surface -> Doc
 - [ ] `eval`: Surface -> Core -> Value
 - [ ] `eval-anf`: Surface -> Core -> ANF -> Value
-- [x] `compile-wat`: Surface -> Core -> WAT
+- [x] `compile-wat`: Surface -> Core -> Wasm
+- [x] `compile-llvm`: Surface -> Core -> LLVM
 - [x] `compile-anf`: Surface -> Core -> ANF
 - [x] `compile-anf-llvm`: Surface -> Core -> ANF -> LLVM
-- [x] `compile-llvm`: Surface -> Core -> LLVM
+- [ ] `compile-anf-wat`: Surface -> Core -> ANF -> WASM
