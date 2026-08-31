@@ -146,7 +146,7 @@ end
 module Ty (R : Capability) = struct
 
   type t =
-    | Fun of t * R.t * t  (* Graded functions [t1 [r] -> t2] *)
+    | Fun of t * R.t * t  (* Graded functions [t1 -[r]-> t2] *)
     | Pair of t * t       (* Multiplicative conjunction [t1 ⊗ t2] *)
     | Either of t * t     (* Additive disjunction [t1 ⊕ t2]*)
     | Unit                (* Unit type *)
@@ -157,7 +157,7 @@ module Ty (R : Capability) = struct
   let pp (ty : t) (ppf : Format.formatter) =
     let rec pp_fun ty ppf =
       match ty with
-      | Fun (ty1, r, ty2) -> Format.fprintf ppf "%t [%t] ⊸ %t" (pp_infix ty1) (R.pp r) (pp_fun ty2)
+      | Fun (ty1, r, ty2) -> Format.fprintf ppf "%t -[%t]-> %t" (pp_infix ty1) (R.pp r) (pp_fun ty2)
       | ty -> pp_infix ty ppf
     and pp_infix ty ppf =
       match ty with
@@ -232,7 +232,7 @@ end = struct
     val empty : t
 
     (** Add an unused binding to the context *)
-    val add : string -> Ty.t -> t -> t
+    val add : string -> Ty.t -> R.t -> t -> t
 
     (** Remove the most recently added binding from the context, raising a type
         error if it has not yet been used *)
@@ -250,12 +250,7 @@ end = struct
 
   end = struct
 
-    (** The number of times a binding has been used. *)
-    type uses =
-      | Zero    (* Unused *)
-      | One     (* Used once *)
-
-    type t = (string * Ty.t * uses) list
+    type t = (string * Ty.t * R.t) list
 
     let empty = []
 
@@ -266,8 +261,8 @@ end = struct
       (* TODO: return the variable names that differ to improve error reporting *)
       List.equal (fun (_, _, u1) (_, _, u2) -> u1 = u2) ctx1 ctx2
 
-    let add (x : string) (ty : Ty.t) (ctx : t) : t =
-      (x, ty, Zero) :: ctx
+    let add (x : string) (ty : Ty.t) (rig : R.t) (ctx : t) : t =
+      (x, ty, rig) :: ctx
 
     let remove (ctx : t) : t =
       match ctx with
@@ -294,16 +289,16 @@ end = struct
     match expr, ty with
     | Expr.Let (x, def, body), body_ty ->
         let ctx, def_ty = infer ctx def in
-        let ctx = check (ctx |> Ctx.add x def_ty) body body_ty in
+        let ctx = check (ctx |> Ctx.add x def_ty _) body body_ty in
         ctx |> Ctx.remove
 
-    | Expr.Fun_lit (x, body), Ty.Fun (param_ty, body_ty) ->
-        let ctx = check (ctx |> Ctx.add x param_ty) body body_ty in
+    | Expr.Fun_lit (x, body), Ty.Fun (param_ty, rig, body_ty) ->
+        let ctx = check (ctx |> Ctx.add x param_ty rig) body body_ty in
         ctx |> Ctx.remove
 
     | Expr.Pair_elim (x1, x2, pair, body), body_ty ->
         let ctx, (ty1, ty2) = expect_pair ctx pair in
-        let ctx = check (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body body_ty in
+        let ctx = check (ctx |> Ctx.add x1 ty1 _ |> Ctx.add x2 ty2 _) body body_ty in
         ctx |> Ctx.remove |> Ctx.remove
 
     | Expr.Either_left expr, Ty.Either (left_ty, _) ->
@@ -314,8 +309,8 @@ end = struct
 
     | Expr.Either_elim (either, (x1, body1), (x2, body2)), body_ty ->
         let ctx, (ty1, ty2) = expect_either ctx either in
-        let ctx1 = check (ctx |> Ctx.add x1 ty1) body1 body_ty |> Ctx.remove in
-        let ctx2 = check (ctx |> Ctx.add x2 ty2) body2 body_ty |> Ctx.remove in
+        let ctx1 = check (ctx |> Ctx.add x1 ty1 _) body1 body_ty |> Ctx.remove in
+        let ctx2 = check (ctx |> Ctx.add x2 ty2 _) body2 body_ty |> Ctx.remove in
         if Ctx.equate_usages ctx1 ctx2 then ctx1 else
           type_error "branches did not use the same variables"
 
@@ -335,7 +330,7 @@ end = struct
 
     | Expr.Let (x, def, body) ->
         let ctx, def_ty = infer ctx def in
-        let ctx, body_ty = infer (ctx |> Ctx.add x def_ty) body in
+        let ctx, body_ty = infer (ctx |> Ctx.add x def_ty _) body in
         ctx |> Ctx.remove, body_ty
 
     | Expr.Ann (expr, ty) ->
@@ -343,7 +338,7 @@ end = struct
 
     | Expr.Fun_app (fn, arg) ->
         begin match infer ctx fn with
-        | ctx, Ty.Fun (param_ty, body_ty) -> check ctx arg param_ty, body_ty
+        | ctx, Ty.Fun (param_ty, r, body_ty) -> check ctx arg param_ty, body_ty
         | _, _ -> type_error "unexpected argument"
         end
 
@@ -354,7 +349,7 @@ end = struct
 
     | Expr.Pair_elim (x1, x2, pair, body) ->
         let ctx, (ty1, ty2) = expect_pair ctx pair in
-        let ctx, body_ty = infer (ctx |> Ctx.add x1 ty1 |> Ctx.add x2 ty2) body in
+        let ctx, body_ty = infer (ctx |> Ctx.add x1 ty1 _ |> Ctx.add x2 ty2 _) body in
         ctx |> Ctx.remove |> Ctx.remove, body_ty
 
     | Expr.Unit_lit ->
@@ -461,12 +456,16 @@ let () = begin
     end
   in
 
+  let module Ty = Ty (Lnl) in
+  let module Expr = Expr (Lnl) in
+  let module Check = Check (Lnl) in
+
   let ( $ ) f x = Expr.Fun_app (f, x) in
 
   begin run_tests @@ fun test ->
 
     let id_expr = Expr.Fun_lit ("x", Var "x") in
-    let id_ty = Ty.Fun (Unit, Unit) in
+    let id_ty = Ty.Fun (Unit, _, Unit) in
 
     begin test "id" @@ fun () ->
       assert (Check.check id_expr id_ty = Ok ());
@@ -474,7 +473,7 @@ let () = begin
 
     begin test "const" @@ fun () ->
       let const_expr = Expr.Fun_lit ("x", Fun_lit ("y", Var "x")) in
-      let const_ty = Ty.Fun (Unit, Fun (Unit, Unit)) in
+      let const_ty = Ty.Fun (Unit, _, Fun (Unit, _, Unit)) in
 
       assert (Check.check const_expr const_ty = Error "unused variable `y`");
     end;
@@ -504,7 +503,7 @@ let () = begin
           Let ("x", Prim (`Alloc, [Var "v"]),
             Prim (`Free, [Var "x"])))
       in
-      assert (Check.check expr (Ty.Fun (Int, Unit)) = Ok ());
+      assert (Check.check expr (Ty.Fun (Int, _, Unit)) = Ok ());
     end;
 
     begin test "alloc/swap/free" @@ fun () ->
@@ -515,7 +514,7 @@ let () = begin
               Unit_elim (Prim (`Free, [Var "x"]),
                 Var "y"))))
       in
-      assert (Check.check expr (Ty.Fun (Int, Int)) = Ok ());
+      assert (Check.check expr (Ty.Fun (Int, _, Int)) = Ok ());
     end;
 
     (* TODO: More tests *)

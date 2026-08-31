@@ -51,30 +51,30 @@ end
 (** Linearity (none-one-tons) capability. Like QTT *)
 module Lnl = struct
 
-  type t = Zero | One | Inf
+  type t = Zero | One | Many
 
   let compare x y =
     match x, y with
     | Zero, Zero -> 0
-    | Zero, (One | Inf) -> -1
+    | Zero, (One | Many) -> -1
 
     | One, Zero -> 1
     | One, One -> 0
-    | One, Inf -> -1
+    | One, Many -> -1
 
-    | Inf, (One | Zero) -> 1
-    | Inf, Inf -> 0
+    | Many, (One | Zero) -> 1
+    | Many, Many -> 0
 
   let add x y =
     match x, y with
     | Zero, x | x, Zero -> x
-    | _, _ -> Inf
+    | _, _ -> Many
 
   let mul x y =
     match x, y with
     | Zero, x | x, Zero -> Zero
     | One, x | x, One -> x
-    | _, _ -> Inf
+    | _, _ -> Many
 
   let zero = Zero
   let one = One
@@ -96,11 +96,17 @@ module Security = struct
 
   let join (* \/ *) x y =
     match x, y with
-    | _, _ -> failwith "TODO"
+    | High, High -> failwith "TODO"
+    | High, Low -> failwith "TODO"
+    | Low, Low -> failwith "TODO"
+    | Low, High -> failwith "TODO"
 
   let meet (* /\ *) x y =
     match x, y with
-    | _, _ -> failwith "TODO"
+    | High, High -> failwith "TODO"
+    | High, Low -> failwith "TODO"
+    | Low, Low -> failwith "TODO"
+    | Low, High -> failwith "TODO"
 
   let add x y = meet x y
   let mul x y = join x y
@@ -110,12 +116,31 @@ module Security = struct
 
   let lte x y =
     match x, y with
-    | _, _ -> failwith "TODO"
+    | High, High -> true
+    | High, Low -> true
+    | Low, Low -> true
+    | Low, High -> false
 
   let pp x =
     match x with
-    | Low -> Format.dprintf "L"
-    | High -> Format.dprintf "H"
+    | Low -> Format.dprintf "Lo"
+    | High -> Format.dprintf "Hi"
+
+end
+
+module Interval (R : Capability) = struct
+
+  type t = R.t * R.t
+
+  let add (r1, r2) (s1, s2) = failwith "TODO"
+  let mul (r1, r2) (s1, s2) = failwith "TODO"
+  let lte (r1, r2) (s1, s2) = R.lte r1 s1 && R.lte s2 r2
+
+  let zero = failwith "TODO"
+  let one = failwith "TODO"
+
+  let pp (r, s) =
+    Format.dprintf "(%t..%t)" (R.pp r) (R.pp s)
 
 end
 
