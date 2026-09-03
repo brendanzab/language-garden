@@ -124,7 +124,9 @@ module Interval (R : Grade) = struct
   let zero = failwith "TODO"
   let one = failwith "TODO"
   let lte = failwith "TODO"
-  let pp = failwith "TODO"
+
+  let pp (r, s) =
+    Format.dprintf "(%t..%t)" (R.pp r) (R.pp s)
 
 end
 
@@ -147,20 +149,23 @@ end
 module Make (R : Grade) = struct
 
   type ty (* t *) =
-    | Bool                                (* Bool *)
     | Fun of ty * R.t * ty                (* t % r -> t *)
-    (* TODO: Pair *)                      (* t × t *)
-    (* TODO: Unit *)                      (* Unit *)
-    (* TODO: Either *)                    (* t + t *)
+    | Box of ty * R.t                     (* t [r] *)
+    (* TODO: | Pair of ty * ty  *)        (* t × t *)
+    (* TODO: | Either of ty * ty  *)      (* t + t *)
+    | Bool                                (* Bool *)
+    | Unit                                (* Unit *)
 
   type expr (* e *) =
     | Var of string                       (* x *)
     | Ann of expr * ty                    (* e : t *)
-    | Lam of string * expr                (* λx. e *)
-    | App of expr * expr                  (* e e *)
-    | True                                (* true *)
-    | False                               (* false *)
-    | If_then_else of expr * expr * expr  (* if e then e else e *)
+    | Fun_intro of string * expr          (* λx. e *)
+    | Fun_app of expr * expr              (* e e *)
+    | Unit_intro                          (* () *)
+    | Unit_elim of string * expr * expr   (* let x = e in e *)
+    | Bool_true                           (* true *)
+    | Bool_false                          (* false *)
+    | Bool_if of expr * expr * expr       (* if e then e else e *)
 
   (** Typing context *)
   type ctx = (string * ty) list
@@ -182,8 +187,8 @@ module Make (R : Grade) = struct
 
   exception Type_error of string
 
-  let type_error (msg : string) =
-    raise (Type_error msg)
+  let type_error (type a b) : (a, Format.formatter, unit, b) format4 -> a =
+    fun fmt -> Format.kasprintf (fun msg -> raise (Type_error msg)) fmt
 
 
   (** Bidirectional typing *)
@@ -196,23 +201,27 @@ module Make (R : Grade) = struct
     match ctx with
     | (y, t) :: ctx when x = y -> t, R.one :: List.map (Fun.const R.zero) ctx
     | _ :: ctx -> Pair.map_snd (List.cons R.zero) (lookup ctx x)
-    | [] -> type_error "unbound variable"
+    | [] -> type_error "unbound variable %s" x
 
   let rec check (ctx : ctx) (e : expr) (t : ty) : rctx =
     match e, t with
-    | Lam (x, e), Fun (t1, r, t2) ->
+    | Fun_intro (x, e), Fun (t1, r, t2) ->
         let rctx = check ((x, t1) :: ctx) e t2 in
         if R.lte (List.hd rctx) r then List.tl rctx else
-          type_error "grade mismatch"
+          type_error "grade mismatch: expected %t, found %t" (R.pp r) (R.pp (List.hd rctx))
 
-    | If_then_else (e1, e2, e3), t ->
+    | Bool_if (e1, e2, e3), t ->
         let rctx1 = check ctx e1 Bool in
         let rctx2 = check ctx e2 t in
         let rctx3 = check ctx e3 t in
-        if equal_rctx rctx2 rctx3 then
+        if equal_rctx rctx2 rctx3 then (* TODO: Approximate branches? *)
           add_rctx (scale_rctx R.one rctx1) rctx2
         else
-          type_error "grade mismatch in if branches"
+          (* TODO: Improve errors *)
+          type_error "mismatched grades in if branches"
+
+    | Unit_elim _, t ->
+        failwith "TODO"
 
     | e, t ->
         let t', rctx = infer ctx e in
@@ -227,17 +236,23 @@ module Make (R : Grade) = struct
     | Ann (e, t) ->
         t, check ctx e t
 
-    | App (e1, e2) ->
+    | Fun_app (e1, e2) ->
         begin match infer ctx e1, infer ctx e2 with
         | (Fun (t1, r, t2), rctx1), (t3, rctx2) when t1 = t3 ->
             t2, add_rctx rctx1 (scale_rctx r rctx2)
         | _ -> type_error "type mismatch"
         end
 
-    | True | False ->
+    | Bool_true | Bool_false ->
         Bool, List.map (Fun.const R.zero) ctx
 
-    | Lam _ | If_then_else _ ->
+    | Unit_intro ->
+        Unit, List.map (Fun.const R.zero) ctx
+
+    | Unit_elim _ ->
+        failwith "TODO"
+
+    | Fun_intro _ | Bool_if _ ->
         type_error "ambiguous"
 
 end
