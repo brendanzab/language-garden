@@ -31,6 +31,12 @@ module Grade = struct
 
   end
 
+  let max (type a) (module R : S with type t = a) (x : a) (y : a) : a =
+    if R.lte x y then y else x
+
+  let equal (type a) (module R : S with type t = a) (x : a) (y : a) : bool =
+    R.lte x y && R.lte y x
+
   module Unrestricted = struct
 
     type t = unit
@@ -184,10 +190,10 @@ module Make (R : Grade.S) = struct
     List.map (R.mul r) rctx
 
   let max_rctx (rctx1 : rctx) (rctx2 : rctx) : rctx =
-    List.map2 (fun r s -> if R.lte r s then s else r) rctx1 rctx2
+    List.map2 (Grade.max (module R)) rctx1 rctx2
 
   let equal_rctx (rctx1 : rctx) (rctx2 : rctx) : bool =
-    List.for_all2 (fun r s -> R.lte r s && R.lte s r) rctx1 rctx2
+    List.for_all2 (Grade.equal (module R)) rctx1 rctx2
 
 
   (** Type errors *)
