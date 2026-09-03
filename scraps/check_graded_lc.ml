@@ -179,6 +179,9 @@ module Make (R : Grade) = struct
   let scale_rctx (r : R.t) (rctx : rctx) : rctx =
     List.map (R.mul r) rctx
 
+  let max_rctx (rctx1 : rctx) (rctx2 : rctx) : rctx =
+    List.map2 (fun r s -> if R.lte r s then s else r) rctx1 rctx2
+
   let equal_rctx (rctx1 : rctx) (rctx2 : rctx) : bool =
     List.for_all2 (fun r s -> R.lte r s && R.lte s r) rctx1 rctx2
 
