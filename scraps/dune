@@ -27,12 +27,12 @@
 (test (name check_poly_algorithm_j))
 (test (name check_plain_data))
 (test (name check_linear_lc))
+(test (name check_graded_lc))
 
 (test (name elab_stlc_bidir))
 (test (name elab_stlc_bidir_effects))
 (test (name elab_stlc_gadt))
 (test (name elab_stlc_gadt_bidir))
-(test (name elab_stlc_graded))
 (test (name elab_poly_generics))
 (test (name elab_poly_generics_letrec))
 (test (name elab_poly_generics_lettype))
