@@ -13,140 +13,144 @@
 [@@@warning "-unused-value-declaration"]
 
 (** Pre-ordered semiring, used to grade function arrows *)
-module type Grade = sig
+module Grade = struct
 
-  type t
+  module type S = sig
 
-  val add : t -> t -> t
-  val mul : t -> t -> t
+    type t
 
-  val zero : t
-  val one : t
+    val add : t -> t -> t
+    val mul : t -> t -> t
 
-  val lte : t -> t -> bool
+    val zero : t
+    val one : t
 
-  val pp : t -> Format.formatter -> unit
+    val lte : t -> t -> bool
+
+    val pp : t -> Format.formatter -> unit
+
+  end
+
+  module Unrestricted = struct
+
+    type t = unit
+
+    let add () () = ()
+    let mul () () = ()
+    let zero = ()
+    let one = ()
+    let lte () () = true
+
+    let pp () = Format.dprintf "ω"
+
+  end
+
+  module Exact = struct
+
+    type t = int
+
+    let add = Int.add
+    let mul = Int.mul
+    let zero = Int.zero
+    let one = Int.one
+    let lte x y = Int.equal x y
+
+    let pp x = Format.dprintf "%i" x
+
+  end
+
+  module Linearity = struct
+
+    type t = Zero | One | Many
+
+    let add x y =
+      match x, y with
+      | Zero, x | x, Zero -> x
+      | _, _ -> Many
+
+    let mul x y =
+      match x, y with
+      | Zero, x | x, Zero -> Zero
+      | One, x | x, One -> x
+      | _, _ -> Many
+
+    let zero = Zero
+    let one = One
+
+    let lte x y =
+      match x, y with
+      | Zero, Many -> true
+      | One, Many -> true
+      | x, y -> x = y
+
+    let pp x =
+      match x with
+      | Zero -> Format.dprintf "0"
+      | One -> Format.dprintf "1"
+      | Many -> Format.dprintf "ω"
+
+  end
+
+  module Security = struct
+
+    type t = Low | High
+
+    let join (* \/ *) x y =
+      failwith "TODO"
+
+    let meet (* /\ *) x y =
+      failwith "TODO"
+
+    let add x y = meet x y
+    let mul x y = join x y
+
+    let zero = High
+    let one = Low
+
+    let lte (* ⪰ *) x y =
+      failwith "TODO"
+
+    let pp x =
+      match x with
+      | Low -> Format.dprintf "Lo"
+      | High -> Format.dprintf "Hi"
+
+  end
+
+  module Interval (R : S) = struct
+
+    type t = R.t * R.t
+
+    let add = failwith "TODO"
+    let mul = failwith "TODO"
+    let zero = failwith "TODO"
+    let one = failwith "TODO"
+    let lte = failwith "TODO"
+
+    let pp (r, s) =
+      Format.dprintf "(%t..%t)" (R.pp r) (R.pp s)
+
+  end
+
+  module Product (R : S) (S : S) = struct
+
+    type t = R.t * S.t
+
+    let add (rx, sx) (ry, sy) = R.add rx ry, S.add sx sy
+    let mul (rx, sx) (ry, sy) = R.mul rx ry, S.mul sx sy
+    let lte (rx, sx) (ry, sy) = R.lte rx ry, S.lte sx sy
+
+    let zero = R.zero, S.zero
+    let one = R.one, S.one
+
+    let pp (r, s) =
+      Format.dprintf "%t, %t" (R.pp r) (S.pp s)
+
+  end
 
 end
 
-module Unrestricted = struct
-
-  type t = unit
-
-  let add () () = ()
-  let mul () () = ()
-  let zero = ()
-  let one = ()
-  let lte () () = true
-
-  let pp () = Format.dprintf "∞"
-
-end
-
-module Exact = struct
-
-  type t = int
-
-  let add = Int.add
-  let mul = Int.mul
-  let zero = Int.zero
-  let one = Int.one
-  let lte x y = Int.equal x y
-
-  let pp x = Format.dprintf "%i" x
-
-end
-
-module Linearity = struct
-
-  type t = Zero | One | Many
-
-  let add x y =
-    match x, y with
-    | Zero, x | x, Zero -> x
-    | _, _ -> Many
-
-  let mul x y =
-    match x, y with
-    | Zero, x | x, Zero -> Zero
-    | One, x | x, One -> x
-    | _, _ -> Many
-
-  let zero = Zero
-  let one = One
-
-  let lte x y =
-    match x, y with
-    | Zero, Many -> true
-    | One, Many -> true
-    | x, y -> x = y
-
-  let pp x =
-    match x with
-    | Zero -> Format.dprintf "0"
-    | One -> Format.dprintf "1"
-    | Many -> Format.dprintf "ω"
-
-end
-
-module Security = struct
-
-  type t = Low | High
-
-  let join (* \/ *) x y =
-    failwith "TODO"
-
-  let meet (* /\ *) x y =
-    failwith "TODO"
-
-  let add x y = meet x y
-  let mul x y = join x y
-
-  let zero = High
-  let one = Low
-
-  let lte (* ⪰ *) x y =
-    failwith "TODO"
-
-  let pp x =
-    match x with
-    | Low -> Format.dprintf "Lo"
-    | High -> Format.dprintf "Hi"
-
-end
-
-module Interval (R : Grade) = struct
-
-  type t = R.t * R.t
-
-  let add = failwith "TODO"
-  let mul = failwith "TODO"
-  let zero = failwith "TODO"
-  let one = failwith "TODO"
-  let lte = failwith "TODO"
-
-  let pp (r, s) =
-    Format.dprintf "(%t..%t)" (R.pp r) (R.pp s)
-
-end
-
-module Product (R : Grade) (S : Grade) = struct
-
-  type t = R.t * S.t
-
-  let add (rx, sx) (ry, sy) = R.add rx ry, S.add sx sy
-  let mul (rx, sx) (ry, sy) = R.mul rx ry, S.mul sx sy
-  let lte (rx, sx) (ry, sy) = R.lte rx ry, S.lte sx sy
-
-  let zero = R.zero, S.zero
-  let one = R.one, S.one
-
-  let pp (r, s) =
-    Format.dprintf "%t, %t" (R.pp r) (S.pp s)
-
-end
-
-module Make (R : Grade) = struct
+module Make (R : Grade.S) = struct
 
   type ty (* t *) =
     | Fun of ty * R.t * ty                (* t % r -> t *)
@@ -218,7 +222,7 @@ module Make (R : Grade) = struct
         let rctx2 = check ctx e2 t in
         let rctx3 = check ctx e3 t in
         if equal_rctx rctx2 rctx3 then (* TODO: Approximate branches? *)
-          add_rctx (scale_rctx R.one rctx1) rctx2
+          add_rctx rctx1 rctx2
         else
           (* TODO: Improve errors *)
           type_error "mismatched grades in if branches"
@@ -258,7 +262,119 @@ module Make (R : Grade) = struct
     | Fun_intro _ | Bool_if _ ->
         type_error "ambiguous"
 
+  let check (e : expr) (t : ty) : (unit, string) result =
+    match check [] e t with
+    | uctx -> assert (List.is_empty uctx); Ok ()
+    | exception Type_error msg -> Error msg
+
+  let infer (e : expr) : (ty, string) result =
+    match infer [] e with
+    | t, uctx -> assert (List.is_empty uctx); Ok t
+    | exception Type_error msg -> Error msg
+
 end
 
+let () = begin
 
-(* TODO: tests *)
+  Printexc.record_backtrace true;
+
+  let run_tests (type a) (prog : (string -> (unit -> unit) -> unit) -> unit) : a =
+    let success_count = ref 0 in
+    let error_count = ref 0 in
+
+    let run_test (name : string) (prog : unit -> unit) : unit =
+      Printf.printf "test %s ... " name;
+
+      match prog () with
+      | () ->
+          Printf.printf "ok\n";
+          incr success_count
+      | exception e ->
+          Printf.printf "error:\n\n";
+          Printf.printf "  %s\n\n" (Printexc.to_string e);
+          String.split_on_char '\n' (Printexc.get_backtrace()) |> List.iter begin fun line ->
+            Printf.printf "  %s\n" line;
+          end;
+          incr error_count
+    in
+
+    Printf.printf "Running tests in %s:\n\n" __FILE__;
+    prog run_test;
+    Printf.printf "\n";
+
+    if !error_count <= 0 then begin
+      Printf.printf "Ran %i successful tests\n\n" !success_count;
+      exit 0
+    end else begin
+      Printf.printf "Failed %i out of %i tests\n\n" !error_count (!success_count + !error_count);
+      exit 1
+    end
+  in
+
+  begin run_tests @@ fun test ->
+
+    (* Unrestricted grade *)
+
+    begin
+
+      let open Make (Grade.Unrestricted) in
+      let module R = Grade.Unrestricted in
+
+      (* let ( $ ) f x = Fun_app (f, x) in *)
+
+      let id_ty = Fun (Unit, (), Unit) in
+      let id_expr = Fun_intro ("x", Var "x") in
+      let id_expr_ignore = Fun_intro ("x", Unit_intro) in
+
+      begin test "unrestricted: id 0" @@ fun () ->
+        assert (check id_expr id_ty = Ok ());
+      end;
+
+      begin test "unrestricted: id 0 ignore" @@ fun () ->
+        assert (check id_expr_ignore id_ty = Ok ());
+      end;
+
+    end;
+
+    (* Linearity grade *)
+
+    begin
+
+      let open Make (Grade.Linearity) in
+      let module R = Grade.Linearity in
+
+      (* let ( $ ) f x = Fun_app (f, x) in *)
+
+      let id_ty r = Fun (Unit, r, Unit) in
+      let id_expr = Fun_intro ("x", Var "x") in
+      let id_expr_ignore = Fun_intro ("x", Unit_intro) in
+
+      begin test "linear: id 0" @@ fun () ->
+        assert (check id_expr (id_ty R.Zero) |> Result.is_error);
+      end;
+
+      begin test "linear: id 1" @@ fun () ->
+        assert (check id_expr (id_ty R.One) = Ok ());
+      end;
+
+      begin test "linear: id ω" @@ fun () ->
+        assert (check id_expr (id_ty R.Many) = Ok ());
+      end;
+
+      begin test "linear: id 0 ignore" @@ fun () ->
+        assert (check id_expr_ignore (id_ty R.Zero) = Ok ());
+      end;
+
+      begin test "linear: id 1 ignore" @@ fun () ->
+        assert (check id_expr_ignore (id_ty R.One) |> Result.is_error);
+      end;
+
+      begin test "linear: id ω ignore" @@ fun () ->
+        assert (check id_expr_ignore (id_ty R.Many) = Ok ());
+      end;
+
+    end;
+
+  end;
+
+end
