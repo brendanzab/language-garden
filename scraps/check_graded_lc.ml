@@ -223,15 +223,23 @@ module Make (R : Grade.S) = struct
         if R.lte (List.hd rctx) r then List.tl rctx else
           type_error "grade mismatch: expected %t, found %t" (R.pp r) (R.pp (List.hd rctx))
 
+    (* BUG: breaks linear usages *)
     | Bool_if (e1, e2, e3), t ->
         let rctx1 = check ctx e1 Bool in
         let rctx2 = check ctx e2 t in
         let rctx3 = check ctx e3 t in
-        if equal_rctx rctx2 rctx3 then (* TODO: Approximate branches? *)
+        add_rctx rctx1 (max_rctx rctx2 rctx3)
+
+    (* BUG: breaks unrestricted usages *)
+    (*
+    | Bool_if (e1, e2, e3), t ->
+        let rctx1 = check ctx e1 Bool in
+        let rctx2 = check ctx e2 t in
+        let rctx3 = check ctx e3 t in
+        if equal_rctx rctx2 rctx3 then
           add_rctx rctx1 rctx2
         else
-          (* TODO: Improve errors *)
-          type_error "mismatched grades in if branches"
+          type_error "mismatched grades" *)
 
     | Unit_elim _, t ->
         failwith "TODO"
@@ -377,6 +385,67 @@ let () = begin
 
       begin test "linear: id ω ignore" @@ fun () ->
         assert (check id_expr_ignore (id_ty R.Many) = Ok ());
+      end;
+
+      begin test "linear: if branches" @@ fun () ->
+
+        let ty = Fun (Bool, R.One, Fun (Unit, R.One, Unit)) in
+        let expr =
+          Fun_intro ("b", Fun_intro ("x",
+            Bool_if (Var "b", Var "x", Var "x")))
+        in
+
+        assert (check expr ty = Ok ());
+
+      end;
+
+      begin test "linear: if branches ignore left 1" @@ fun () ->
+
+        let ty = Fun (Bool, R.One, Fun (Unit, R.One, Unit)) in
+        let expr =
+          Fun_intro ("b", Fun_intro ("x",
+            Bool_if (Var "b", Unit_intro, Var "x")))
+        in
+
+        assert (check expr ty |> Result.is_error);
+
+      end;
+
+      (* FIXME: Exception *)
+      begin test "linear: if branches ignore right 1" @@ fun () ->
+
+        let ty = Fun (Bool, R.One, Fun (Unit, R.One, Unit)) in
+        let expr =
+          Fun_intro ("b", Fun_intro ("x",
+            Bool_if (Var "b", Var "x", Unit_intro)))
+        in
+
+        assert (check expr ty |> Result.is_error);
+
+      end;
+
+      begin test "linear: if branches ignore left many" @@ fun () ->
+
+        let ty = Fun (Bool, R.One, Fun (Unit, R.Many, Unit)) in
+        let expr =
+          Fun_intro ("b", Fun_intro ("x",
+            Bool_if (Var "b", Unit_intro, Var "x")))
+        in
+
+        assert (check expr ty = Ok ());
+
+      end;
+
+      begin test "linear: if branches ignore right many" @@ fun () ->
+
+        let ty = Fun (Bool, R.One, Fun (Unit, R.Many, Unit)) in
+        let expr =
+          Fun_intro ("b", Fun_intro ("x",
+            Bool_if (Var "b", Var "x", Unit_intro)))
+        in
+
+        assert (check expr ty = Ok ());
+
       end;
 
     end;
