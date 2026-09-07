@@ -603,42 +603,49 @@ let () = begin
 
       end;
 
-      begin test "linear: box 1" @@ fun () ->
+      let box_ignore = Fun_intro ("x", Box_elim ("y", Var "x", Bool_false)) in
+      let box_use = Fun_intro ("x", Box_elim ("y", Var "x", Var "y")) in
+      let box_dup = Fun_intro ("x", Box_elim ("y", Var "x", Pair_intro (Var "y", Var "y"))) in
+
+      begin test "linear: box 0 ignore" @@ fun () ->
+
+        let ty = Fun (Box (Bool, R.Zero), R.One, Bool) in
+        assert (Validate.check box_ignore ty = Ok ());
+
+      end;
+
+      begin test "linear: box 1 ignore" @@ fun () ->
 
         let ty = Fun (Box (Bool, R.One), R.One, Bool) in
-        let expr =
-          Fun_intro ("b",
-            Box_elim ("b'", Var "b",
-              Var "b'"))
-        in
+        assert (Validate.check box_ignore ty |> Result.is_error);
 
-        assert (Validate.check expr ty = Ok ());
+      end;
+
+      begin test "linear: box 0 use" @@ fun () ->
+
+        let ty = Fun (Box (Bool, R.Zero), R.One, Bool) in
+        assert (Validate.check box_use ty |> Result.is_error);
+
+      end;
+
+      begin test "linear: box 1 use" @@ fun () ->
+
+        let ty = Fun (Box (Bool, R.One), R.One, Bool) in
+        assert (Validate.check box_use ty = Ok ());
 
       end;
 
       begin test "linear: box 1 dup" @@ fun () ->
 
         let ty = Fun (Box (Bool, R.One), R.One, Pair (Bool, Bool)) in
-        let expr =
-          Fun_intro ("b",
-            Box_elim ("b'", Var "b",
-              Pair_intro (Var "b'", Var "b'")))
-        in
-
-        assert (Validate.check expr ty |> Result.is_error);
+        assert (Validate.check box_dup ty |> Result.is_error);
 
       end;
 
       begin test "linear: box ω dup" @@ fun () ->
 
         let ty = Fun (Box (Bool, R.Many), R.One, Pair (Bool, Bool)) in
-        let expr =
-          Fun_intro ("b",
-            Box_elim ("b'", Var "b",
-              Pair_intro (Var "b'", Var "b'")))
-        in
-
-        assert (Validate.check expr ty = Ok ());
+        assert (Validate.check box_dup ty = Ok ());
 
       end;
 
