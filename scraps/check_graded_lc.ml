@@ -603,6 +603,45 @@ let () = begin
 
       end;
 
+      begin test "linear: box 1" @@ fun () ->
+
+        let ty = Fun (Box (Bool, R.One), R.One, Bool) in
+        let expr =
+          Fun_intro ("b",
+            Box_elim ("b'", Var "b",
+              Var "b'"))
+        in
+
+        assert (Validate.check expr ty = Ok ());
+
+      end;
+
+      begin test "linear: box 1 dup" @@ fun () ->
+
+        let ty = Fun (Box (Bool, R.One), R.One, Pair (Bool, Bool)) in
+        let expr =
+          Fun_intro ("b",
+            Box_elim ("b'", Var "b",
+              Pair_intro (Var "b'", Var "b'")))
+        in
+
+        assert (Validate.check expr ty |> Result.is_error);
+
+      end;
+
+      begin test "linear: box ω dup" @@ fun () ->
+
+        let ty = Fun (Box (Bool, R.Many), R.One, Pair (Bool, Bool)) in
+        let expr =
+          Fun_intro ("b",
+            Box_elim ("b'", Var "b",
+              Pair_intro (Var "b'", Var "b'")))
+        in
+
+        assert (Validate.check expr ty = Ok ());
+
+      end;
+
     end;
 
     (* TODO: More tests! *)
