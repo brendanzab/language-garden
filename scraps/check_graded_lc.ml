@@ -431,12 +431,12 @@ module Core (R : Grade.S) = struct
 
     let check (e : expr) (t : ty) : (unit, string) result =
       match check [] e t with
-      | uctx -> assert (List.is_empty uctx); Ok ()
+      | rctx -> assert (List.is_empty rctx); Ok ()
       | exception Type_error msg -> Error msg
 
     let infer (e : expr) : (ty, string) result =
       match infer [] e with
-      | t, uctx -> assert (List.is_empty uctx); Ok t
+      | t, rctx -> assert (List.is_empty rctx); Ok t
       | exception Type_error msg -> Error msg
 
   end
