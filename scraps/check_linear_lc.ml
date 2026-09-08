@@ -370,7 +370,7 @@ let () = begin
     let id_ty = Ty.Fun (Unit, Unit) in
 
     begin test "id" @@ fun () ->
-      assert (Check.check id_expr id_ty = Ok ());
+      Check.check id_expr id_ty |> Result.error_to_failure;
     end;
 
     begin test "const" @@ fun () ->
@@ -405,7 +405,7 @@ let () = begin
           Let ("x", Prim (`Alloc, [Var "v"]),
             Prim (`Free, [Var "x"])))
       in
-      assert (Check.check expr (Ty.Fun (Int, Unit)) = Ok ());
+      Check.check expr (Ty.Fun (Int, Unit)) |> Result.error_to_failure;
     end;
 
     begin test "alloc/swap/free" @@ fun () ->
@@ -416,7 +416,7 @@ let () = begin
               Unit_elim (Prim (`Free, [Var "x"]),
                 Var "y"))))
       in
-      assert (Check.check expr (Ty.Fun (Int, Int)) = Ok ());
+      Check.check expr (Ty.Fun (Int, Int)) |> Result.error_to_failure;
     end;
 
     (* TODO: More tests *)

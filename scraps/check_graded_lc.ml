@@ -514,11 +514,11 @@ let () = begin
       let id_expr_ignore = Fun_intro ("x", Unit_intro) in
 
       begin test "unrestricted: id" @@ fun () ->
-        assert (Validate.check id_expr id_ty = Ok ());
+        Validate.check id_expr id_ty |> Result.error_to_failure;
       end;
 
       begin test "unrestricted: id ignore" @@ fun () ->
-        assert (Validate.check id_expr_ignore id_ty = Ok ());
+        Validate.check id_expr_ignore id_ty |> Result.error_to_failure;
       end;
 
       begin test "unrestricted: either left" @@ fun () ->
@@ -558,15 +558,15 @@ let () = begin
       end;
 
       begin test "linear: id 1" @@ fun () ->
-        assert (Validate.check id_expr (id_ty R.One) = Ok ());
+        Validate.check id_expr (id_ty R.One) |> Result.error_to_failure;
       end;
 
       begin test "linear: id ω" @@ fun () ->
-        assert (Validate.check id_expr (id_ty R.Many) = Ok ());
+        Validate.check id_expr (id_ty R.Many) |> Result.error_to_failure;
       end;
 
       begin test "linear: id 0 ignore" @@ fun () ->
-        assert (Validate.check id_expr_ignore (id_ty R.Zero) = Ok ());
+        Validate.check id_expr_ignore (id_ty R.Zero) |> Result.error_to_failure;
       end;
 
       begin test "linear: id 1 ignore" @@ fun () ->
@@ -574,7 +574,7 @@ let () = begin
       end;
 
       begin test "linear: id ω ignore" @@ fun () ->
-        assert (Validate.check id_expr_ignore (id_ty R.Many) = Ok ());
+        Validate.check id_expr_ignore (id_ty R.Many) |> Result.error_to_failure;
       end;
 
       begin test "linear: if branches" @@ fun () ->
@@ -585,7 +585,7 @@ let () = begin
             Bool_if (Var "b", Var "x", Var "x")))
         in
 
-        assert (Validate.check expr ty = Ok ());
+        Validate.check expr ty |> Result.error_to_failure;
 
       end;
 
@@ -621,7 +621,7 @@ let () = begin
             Bool_if (Var "b", Unit_intro, Var "x")))
         in
 
-        assert (Validate.check expr ty = Ok ());
+        Validate.check expr ty |> Result.error_to_failure;
 
       end;
 
@@ -633,7 +633,7 @@ let () = begin
             Bool_if (Var "b", Var "x", Unit_intro)))
         in
 
-        assert (Validate.check expr ty = Ok ());
+        Validate.check expr ty |> Result.error_to_failure;
 
       end;
 
@@ -644,7 +644,7 @@ let () = begin
       begin test "linear: box 0 ignore" @@ fun () ->
 
         let ty = Fun (Box (Bool, R.Zero), R.One, Bool) in
-        assert (Validate.check box_ignore ty = Ok ());
+        Validate.check box_ignore ty |> Result.error_to_failure;
 
       end;
 
@@ -665,7 +665,7 @@ let () = begin
       begin test "linear: box 1 use" @@ fun () ->
 
         let ty = Fun (Box (Bool, R.One), R.One, Bool) in
-        assert (Validate.check box_use ty = Ok ());
+        Validate.check box_use ty |> Result.error_to_failure;
 
       end;
 
@@ -679,7 +679,7 @@ let () = begin
       begin test "linear: box ω dup" @@ fun () ->
 
         let ty = Fun (Box (Bool, R.Many), R.One, Pair (Bool, Bool)) in
-        assert (Validate.check box_dup ty = Ok ());
+        Validate.check box_dup ty |> Result.error_to_failure;
 
       end;
 
@@ -703,15 +703,15 @@ let () = begin
       end;
 
       begin test "security: id Lo" @@ fun () ->
-        assert (Validate.check id_expr (id_ty R.Low) = Ok ());
+        Validate.check id_expr (id_ty R.Low) |> Result.error_to_failure;
       end;
 
       begin test "security: id Hi ignore" @@ fun () ->
-        assert (Validate.check id_expr_ignore (id_ty R.High) = Ok ());
+        Validate.check id_expr_ignore (id_ty R.High) |> Result.error_to_failure;
       end;
 
       begin test "security: id Lo ignore" @@ fun () ->
-        assert (Validate.check id_expr_ignore (id_ty R.Low) = Ok ());
+        Validate.check id_expr_ignore (id_ty R.Low) |> Result.error_to_failure;
       end;
 
       begin test "linear: if branches Hi" @@ fun () ->
@@ -734,7 +734,7 @@ let () = begin
             Bool_if (Var "b", Var "x", Var "x")))
         in
 
-        assert (Validate.check expr ty = Ok ());
+        Validate.check expr ty |> Result.error_to_failure;
 
       end;
 
@@ -746,7 +746,7 @@ let () = begin
             Bool_if (Var "b", Var "x", Var "x"))))
         in
 
-        assert (Validate.check expr ty = Ok ());
+        Validate.check expr ty |> Result.error_to_failure;
 
       end;
 
