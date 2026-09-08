@@ -1,0 +1,13 @@
+-- Function references whose parameter types differ from their result types
+
+fun add(x : I32, y : I32) : I32 := x + y;
+fun equal(x : I32, y : I32) : Bool := x = y;
+fun forty-two() : I32 := 42;
+
+fun apply2(f : fun (I32, I32) -> I32, x : I32, y : I32) : I32 := f(x, y);
+fun compare(f : fun (I32, I32) -> Bool, x : I32, y : I32) : Bool := f(x, y);
+fun thunk(f : fun () -> I32) : I32 := f();
+
+pub val test-add : I32 := apply2(add, 1, 2);
+pub val test-equal : Bool := compare(equal, 1, 2);
+pub val test-thunk : I32 := thunk(forty-two);
