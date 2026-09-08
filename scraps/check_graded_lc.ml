@@ -250,17 +250,18 @@ module Core (R : Grade.S) = struct
   type expr (* e *) =
     | Var of var                                        (* x *)
     | Ann of expr * ty                                  (* e : t *)
+    | Let of var * expr * expr                          (* let x := e in e *)
     | Fun_intro of var * expr                           (* λx. e *)
     | Fun_app of expr * expr                            (* e e *)
     | Box_intro of expr                                 (* [e] *)
-    | Box_elim of var * expr * expr                     (* let [x] = e; e *)
+    | Box_elim of var * expr * expr                     (* let [x] := e in e *)
     | Pair_intro of expr * expr                         (* (e, e) *)
-    | Pair_elim of var * var * expr * expr              (* let (x, x) = e; e *)
+    | Pair_elim of var * var * expr * expr              (* let (x, x) := e in e *)
     | Either_left of expr                               (* inl e *)
     | Either_right of expr                              (* inr e *)
     | Either_elim of expr * (var * expr) * (var * expr) (* case e of inl x -> e | inr x -> e *)
     | Unit_intro                                        (* () *)
-    | Unit_elim of var * expr * expr                    (* let x = e in e *)
+    | Unit_elim of var * expr * expr                    (* let x := e in e *)
     | Bool_true                                         (* true *)
     | Bool_false                                        (* false *)
     | Bool_if of expr * expr * expr                     (* if e then e else e *)
@@ -314,6 +315,11 @@ module Core (R : Grade.S) = struct
 
     let rec check (ctx : ctx) (e : expr) (t : ty) : rctx =
       match e, t with
+      | Let (x, e1, e2), t2 ->
+          let t1, rctx1 = infer ctx e1 in
+          let _, rctx2 = check ((x, t1) :: ctx) e2 t2 |> List.uncons in
+          add_rctx rctx1 rctx2
+
       | Fun_intro (x, e), Fun (t1, r, t2) ->
           let r', rctx = check ((x, t1) :: ctx) e t2 |> List.uncons in
           if R.lte r' r then rctx else
@@ -363,6 +369,11 @@ module Core (R : Grade.S) = struct
 
       | Ann (e, t) ->
           t, check ctx e t
+
+      | Let (x, e1, e2) ->
+          let t1, rctx1 = infer ctx e1 in
+          let t2, (_, rctx2) = infer ((x, t1) :: ctx) e2 |> Pair.map_snd List.uncons in
+          t2, add_rctx rctx1 rctx2
 
       | Fun_app (e1, e2) ->
           let (t1, r, t2), rctx1 = infer_fun ctx e1 in
