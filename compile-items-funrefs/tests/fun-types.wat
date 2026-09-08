@@ -2,23 +2,31 @@
   (export "test-hof-1" (func $test-hof-1))
   (export "test-hof-2" (func $test-hof-2))
   (export "test-hof-3" (func $test-hof-3))
-  (type $funty (func (param i32) (result i32)))
-  (type $funty_1 (func (param i32 i32) (result i32 i32)))
+  (type $funty (func (param i32 i32) (result i32)))
+  (type $funty_1 (func (param i32) (result i32)))
   (elem declare func $is-zero $is-one)
   (func
-    $fun-app
+    $call-param
     (param $f (ref $funty))
+    (result i32)
+    (i32.const 43)
+    (i32.const 1)
+    (local.get $f)
+    (call_ref $funty))
+  (func
+    $fun-app
+    (param $f (ref $funty_1))
     (param $x i32)
     (result i32)
     (local.get $x)
     (local.get $f)
-    (call_ref $funty))
+    (call_ref $funty_1))
   (func
     $id-i32-bool
-    (param $f (ref $funty))
-    (result (ref $funty))
+    (param $f (ref $funty_1))
+    (result (ref $funty_1))
     (local.get $f))
-  (func $ignore-param (param $_ (ref $funty_1)) (result i32) (i32.const 43))
+  (func $ignore-param (param $_ (ref $funty)) (result i32) (i32.const 43))
   (func
     $is-one
     (param $x i32)
@@ -35,15 +43,15 @@
     i32.eq)
   (func
     $local-binding
-    (param $f (ref $funty))
+    (param $f (ref $funty_1))
     (param $x i32)
     (result i32)
-    (local $g (ref $funty))
+    (local $g (ref $funty_1))
     (local.get $f)
     (local.set $g)
     (local.get $x)
     (local.get $g)
-    (call_ref $funty))
+    (call_ref $funty_1))
   (func
     $test-hof-1
     (result i32)

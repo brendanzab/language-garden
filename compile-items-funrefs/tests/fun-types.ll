@@ -1,3 +1,9 @@
+define private i32 @call-param(i32(i32, i1)* %f) {
+entry:
+  %result = call i32 %f(i32 43, i1 true)
+  ret i32 %result
+}
+
 define private i1 @fun-app(i1(i32)* %f, i32 %x) {
 entry:
   %result = call i1 %f(i32 %x)

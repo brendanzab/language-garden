@@ -1,3 +1,5 @@
+priv fun call-param(f : fun (I32, Bool) -> I32) : I32 := f(43, true);
+
 priv fun fun-app(f : fun (I32) -> Bool, x : I32) : Bool := f(x);
 
 priv fun id-i32-bool(f : fun (I32) -> Bool) : fun (I32) -> Bool := f;

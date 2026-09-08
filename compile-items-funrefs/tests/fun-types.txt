@@ -1,4 +1,5 @@
--- Accept a function as an argument
+-- Accept functions as arguments
+fun call-param(f : fun (I32, Bool) -> I32) : I32 := f(43, true);
 fun ignore-param(_ : fun (I32, Bool) -> I32) : I32 := 43;
 
 -- Return a function by value
