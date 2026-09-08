@@ -223,14 +223,14 @@ module Core (R : Grade.S) = struct
       | Either (t1, t2) ->
           let rec go (t : ty) =
             match t with
-            | Either (t1, t2) -> Format.dprintf "%t × %t" (pp_atom_ty t1) (go t2)
+            | Either (t1, t2) -> Format.dprintf "%t + %t" (pp_atom_ty t1) (go t2)
             | t -> pp_atom_ty t
           in
           go t
       | Pair (t1, t2) ->
           let rec go (t : ty) =
             match t with
-            | Pair (t1, t2) -> Format.dprintf "%t * %t" (pp_atom_ty t) (go t2)
+            | Pair (t1, t2) -> Format.dprintf "%t × %t" (pp_atom_ty t1) (go t2)
             | t -> pp_atom_ty t
           in
           go t
