@@ -334,10 +334,16 @@ module Core (R : Grade.S) = struct
           let r2, r1, rctx2 = check ((y, t2) :: (x, t1) :: ctx) e2 t3 |> List.uncons2 in
           add_rctx (scale_rctx (R.max r1 r2) rctx1) rctx2
 
+      | Either_left e, Either (t1, _) ->
+          check ctx e t1
+
+      | Either_right e, Either (_, t2) ->
+          check ctx e t2
+
       | Either_elim (e1, (x, e2), (y, e3)), t3 ->
           let (t1, t2), rctx1 = infer_either ctx e1 in
-          let r1, rctx2 = check ((x, t1) :: ctx) e2 t1 |> List.uncons in
-          let r2, rctx3 = check ((x, t1) :: ctx) e3 t2 |> List.uncons in
+          let r1, rctx2 = check ((x, t1) :: ctx) e2 t3 |> List.uncons in
+          let r2, rctx3 = check ((y, t2) :: ctx) e3 t3 |> List.uncons in
           add_rctx (scale_rctx (R.max r1 r2) rctx1) (max_rctx rctx2 rctx3)
 
       | Bool_if (e1, e2, e3), t ->
