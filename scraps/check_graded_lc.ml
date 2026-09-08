@@ -223,14 +223,14 @@ module Core (R : Grade.S) = struct
       | Either (t1, t2) ->
           let rec go (t : ty) =
             match t with
-            | Either (t1, t2) -> Format.dprintf "%t × %t" (pp_atom_ty t1) (go t2)
+            | Either (t1, t2) -> Format.dprintf "%t + %t" (pp_atom_ty t1) (go t2)
             | t -> pp_atom_ty t
           in
           go t
       | Pair (t1, t2) ->
           let rec go (t : ty) =
             match t with
-            | Pair (t1, t2) -> Format.dprintf "%t * %t" (pp_atom_ty t) (go t2)
+            | Pair (t1, t2) -> Format.dprintf "%t × %t" (pp_atom_ty t) (go t2)
             | t -> pp_atom_ty t
           in
           go t
@@ -261,7 +261,7 @@ module Core (R : Grade.S) = struct
     | Either_right of expr                              (* inr e *)
     | Either_elim of expr * (var * expr) * (var * expr) (* case e of inl x -> e | inr x -> e *)
     | Unit_intro                                        (* () *)
-    | Unit_elim of var * expr * expr                    (* let x := e in e *)
+    | Unit_elim of expr * expr                          (* let () := e in e *)
     | Bool_true                                         (* true *)
     | Bool_false                                        (* false *)
     | Bool_if of expr * expr * expr                     (* if e then e else e *)
@@ -340,22 +340,28 @@ module Core (R : Grade.S) = struct
           let r2, r1, rctx2 = check ((y, t2) :: (x, t1) :: ctx) e2 t3 |> List.uncons2 in
           add_rctx (scale_rctx (R.max r1 r2) rctx1) rctx2
 
+      | Either_left e, Either (t1, _) ->
+          check ctx e t1
+
+      | Either_right e, Either (_, t2) ->
+          check ctx e t2
+
       | Either_elim (e1, (x, e2), (y, e3)), t3 ->
-          let (t1, t2), rctx1 = infer_either ctx e in
-          let r1, rctx2 = check ((x, t1) :: ctx) e2 t1 |> List.uncons in
-          let r2, rctx3 = check ((x, t1) :: ctx) e3 t2 |> List.uncons in
+          let (t1, t2), rctx1 = infer_either ctx e1 in
+          let r1, rctx2 = check ((x, t1) :: ctx) e2 t3 |> List.uncons in
+          let r2, rctx3 = check ((y, t2) :: ctx) e3 t3 |> List.uncons in
           add_rctx (scale_rctx (R.max r1 r2) rctx1) (max_rctx rctx2 rctx3)
 
       | Bool_if (e1, e2, e3), t ->
           let rctx1 = check ctx e1 Bool in
           let rctx2 = check ctx e2 t in
           let rctx3 = check ctx e3 t in
-          add_rctx rctx1 (max_rctx rctx2 rctx3)
+          add_rctx rctx1 (* FIXME: multiply by r? *) (max_rctx rctx2 rctx3)
 
-      | Unit_elim (x, e1, e2), t ->
+      | Unit_elim (e1, e2), t ->
           let rctx1 = check ctx e1 Unit in
-          let _, rctx2 = check ((x, Unit) :: ctx) e2 t |> List.uncons in
-          add_rctx rctx1 rctx2
+          let rctx2 = check ctx e2 t in
+          add_rctx rctx1 (* FIXME: multiply by r? *) rctx2
 
       | e, t ->
           let t', rctx = infer ctx e in
@@ -404,10 +410,10 @@ module Core (R : Grade.S) = struct
       | Unit_intro ->
           Unit, List.map (Fun.const R.zero) ctx
 
-      | Unit_elim (x, e1, e2) ->
+      | Unit_elim (e1, e2) ->
           let rctx1 = check ctx e1 Unit in
-          let t, (_, rctx2) = infer ((x, Unit) :: ctx) e2 |> Pair.map_snd List.uncons in
-          t, add_rctx rctx1 rctx2
+          let t, rctx2 = infer ctx e2 in
+          t, add_rctx rctx1 (* FIXME: multiply by r? *) rctx2
 
       | Fun_intro _
       | Box_intro _
@@ -513,6 +519,23 @@ let () = begin
 
       begin test "unrestricted: id ignore" @@ fun () ->
         assert (Validate.check id_expr_ignore id_ty = Ok ());
+      end;
+
+      begin test "unrestricted: either left" @@ fun () ->
+        Validate.check (Either_left Unit_intro) (Either (Unit, Bool)) |> Result.error_to_failure;
+      end;
+
+      begin test "unrestricted: either right" @@ fun () ->
+        Validate.check (Either_right Bool_true) (Either (Unit, Bool)) |> Result.error_to_failure;
+      end;
+
+      begin test "unrestricted: either elim" @@ fun () ->
+        let expr =
+          Either_elim (Ann (Either_right Bool_true, Either (Unit, Bool)),
+            ("x", Unit_elim (Var "x", Bool_true)),
+            ("x", Var "x"))
+        in
+        Validate.check expr Bool |> Result.error_to_failure;
       end;
 
     end;
