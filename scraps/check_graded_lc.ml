@@ -496,11 +496,11 @@ let () = begin
       let id_expr = Fun_intro ("x", Var "x") in
       let id_expr_ignore = Fun_intro ("x", Unit_intro) in
 
-      begin test "unrestricted: id 0" @@ fun () ->
+      begin test "unrestricted: id" @@ fun () ->
         assert (Validate.check id_expr id_ty = Ok ());
       end;
 
-      begin test "unrestricted: id 0 ignore" @@ fun () ->
+      begin test "unrestricted: id ignore" @@ fun () ->
         assert (Validate.check id_expr_ignore id_ty = Ok ());
       end;
 
@@ -646,6 +646,61 @@ let () = begin
 
         let ty = Fun (Box (Bool, R.Many), R.One, Pair (Bool, Bool)) in
         assert (Validate.check box_dup ty = Ok ());
+
+      end;
+
+    end;
+
+    (* Security grade *)
+
+    begin
+
+      let module R = Grade.Security in
+      let open Core (Grade.Security) in
+
+      (* let ( $ ) f x = Fun_app (f, x) in *)
+
+      let id_ty r = Fun (Unit, r, Unit) in
+      let id_expr = Fun_intro ("x", Var "x") in
+      let id_expr_ignore = Fun_intro ("x", Unit_intro) in
+
+      begin test "security: id Hi" @@ fun () ->
+        assert (Validate.check id_expr (id_ty R.High) |> Result.is_error);
+      end;
+
+      begin test "security: id Lo" @@ fun () ->
+        assert (Validate.check id_expr (id_ty R.Low) = Ok ());
+      end;
+
+      begin test "security: id Hi ignore" @@ fun () ->
+        assert (Validate.check id_expr_ignore (id_ty R.High) = Ok ());
+      end;
+
+      begin test "security: id Lo ignore" @@ fun () ->
+        assert (Validate.check id_expr_ignore (id_ty R.Low) = Ok ());
+      end;
+
+      begin test "linear: if branches Hi" @@ fun () ->
+
+        let ty = Fun (Bool, R.High, Fun (Unit, R.Low, Unit)) in
+        let expr =
+          Fun_intro ("b", Fun_intro ("x",
+            Bool_if (Var "b", Var "x", Var "x")))
+        in
+
+        assert (Validate.check expr ty |> Result.is_error);
+
+      end;
+
+      begin test "linear: if branches Low" @@ fun () ->
+
+        let ty = Fun (Bool, R.Low, Fun (Unit, R.Low, Unit)) in
+        let expr =
+          Fun_intro ("b", Fun_intro ("x",
+            Bool_if (Var "b", Var "x", Var "x")))
+        in
+
+        assert (Validate.check expr ty = Ok ());
 
       end;
 
