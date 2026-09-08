@@ -170,7 +170,7 @@ module Grade = struct
     let mul (x1, x2) (y1, y2) = failwith "TODO"
     let zero = R.zero, R.zero
     let one = R.one, R.one
-    let lte (x1, x2) (y1, y2) = R.lte x1 y1 && R.lte y2 x2
+    let lte (x1, x2) (y1, y2) = R.lte y1 x1 && R.lte x2 y2
     let max (x1, x2) (y1, y2) = failwith "TODO"
 
     let pp (x, y) =
