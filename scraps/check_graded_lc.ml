@@ -715,6 +715,18 @@ let () = begin
 
       end;
 
+      begin test "linear: boxed if branches Hi" @@ fun () ->
+
+        let ty = Fun (Bool, R.High, Box (Fun (Unit, R.Low, Unit), R.High)) in
+        let expr =
+          Fun_intro ("b", Box_intro (Fun_intro ("x",
+            Bool_if (Var "b", Var "x", Var "x"))))
+        in
+
+        assert (Validate.check expr ty = Ok ());
+
+      end;
+
     end;
 
     (* TODO: More tests! *)
