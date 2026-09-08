@@ -162,6 +162,8 @@ module Grade = struct
 
   end
 
+  (** Interval, from Definition 4.3 of {{: https://doi.org/10.1145/3341714}
+      Orchard et. al. 2019}. *)
   module Interval (R : S) = struct
 
     type t = R.t * R.t
@@ -170,8 +172,13 @@ module Grade = struct
     let mul (x1, x2) (y1, y2) = failwith "TODO"
     let zero = R.zero, R.zero
     let one = R.one, R.one
-    let lte (x1, x2) (y1, y2) = R.lte x1 y1 && R.lte y2 x2
-    let max (x1, x2) (y1, y2) = failwith "TODO"
+
+    let lte (x1, x2) (y1, y2) =
+      (* The swapped order of the left part of the conjunction is important! *)
+      R.lte y1 x1 && R.lte x2 y2
+
+    let max (x1, x2) (y1, y2) =
+      failwith "TODO"
 
     let pp (x, y) =
       Format.dprintf "(%t..%t)" (R.pp x) (R.pp y)
