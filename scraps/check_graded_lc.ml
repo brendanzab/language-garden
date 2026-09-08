@@ -330,12 +330,12 @@ module Core (R : Grade.S) = struct
             type_error "grade mismatch: expected %t, found %t" (R.pp r) (R.pp r')
 
       | Pair_elim (x, y, e1, e2), t3 ->
-          let (t1, t2), rctx1 = infer_pair ctx e in
+          let (t1, t2), rctx1 = infer_pair ctx e1 in
           let r2, r1, rctx2 = check ((y, t2) :: (x, t1) :: ctx) e2 t3 |> List.uncons2 in
           add_rctx (scale_rctx (R.max r1 r2) rctx1) rctx2
 
       | Either_elim (e1, (x, e2), (y, e3)), t3 ->
-          let (t1, t2), rctx1 = infer_either ctx e in
+          let (t1, t2), rctx1 = infer_either ctx e1 in
           let r1, rctx2 = check ((x, t1) :: ctx) e2 t1 |> List.uncons in
           let r2, rctx3 = check ((x, t1) :: ctx) e3 t2 |> List.uncons in
           add_rctx (scale_rctx (R.max r1 r2) rctx1) (max_rctx rctx2 rctx3)
@@ -381,7 +381,7 @@ module Core (R : Grade.S) = struct
           Pair (t1, t2), add_rctx rctx1 rctx2
 
       | Pair_elim (x, y, e1, e2) ->
-          let (t1, t2), rctx1 = infer_pair ctx e in
+          let (t1, t2), rctx1 = infer_pair ctx e1 in
           let t, (r2, r1, rctx2) =
             infer ((y, t2) :: (x, t1) :: ctx) e2 |> Pair.map_snd List.uncons2
           in
