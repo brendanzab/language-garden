@@ -3,7 +3,7 @@
   (export "test-hof-2" (func $test-hof-2))
   (export "test-hof-3" (func $test-hof-3))
   (type $funty (func (param i32) (result i32)))
-  (type $funty_1 (func (param i32 i32) (result i32 i32)))
+  (type $funty_1 (func (param i32 i32) (result i32)))
   (elem declare func $is-zero $is-one)
   (func
     $fun-app

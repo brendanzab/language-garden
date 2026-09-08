@@ -140,15 +140,7 @@ module Output_wat = struct
     | Func { params; results } ->
         pp_sexpr_cmd "func" [
           pp_sexpr_cmd_seq "param" (Iarray.to_seq params |> Seq.map pp_value_type);
-          pp_sexpr_cmd_seq "result" (Iarray.to_seq params |> Seq.map pp_value_type);
-        ]
-
-  let pp_comp_type (ty : comp_type) =
-    match ty with
-    | Func { params; results } ->
-        pp_sexpr_cmd "func" [
-          pp_sexpr_cmd_seq "param" (Iarray.to_seq params |> Seq.map pp_value_type);
-          pp_sexpr_cmd_seq "result" (Iarray.to_seq params |> Seq.map pp_value_type);
+          pp_sexpr_cmd_seq "result" (Iarray.to_seq results |> Seq.map pp_value_type);
         ]
 
   let pp_rec_type (ty : rec_type) =
