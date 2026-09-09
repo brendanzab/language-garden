@@ -71,7 +71,13 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         final: prev: {
-          compile-fofl = prev.compile-fofl.overrideAttrs (previousAttrs: {
+          compile-items = prev.compile-items.overrideAttrs (previousAttrs: {
+            nativeCheckInputs = [
+              pkgs.wabt
+              pkgs.llvm
+            ];
+          });
+          compile-items-funrefs = prev.compile-items.overrideAttrs (previousAttrs: {
             nativeCheckInputs = [
               pkgs.wabt
               pkgs.llvm
@@ -145,8 +151,6 @@
             inputsFrom = lib.attrValues packages;
             buildInputs = lib.attrValues devPackages.${system} ++ [
               pkgs.graphviz
-              pkgs.llvm
-              pkgs.wabt
               pkgs.lychee # Link checking https://github.com/lycheeverse/lychee
               pkgs.nixpkgs-fmt
             ];
