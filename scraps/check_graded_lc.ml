@@ -239,7 +239,7 @@ module Core (R : Grade.S) = struct
       | Pair (t1, t2) ->
           let rec go (t : ty) =
             match t with
-            | Pair (t1, t2) -> Format.dprintf "%t × %t" (pp_atom_ty t) (go t2)
+            | Pair (t1, t2) -> Format.dprintf "%t × %t" (pp_atom_ty t1) (go t2)
             | t -> pp_atom_ty t
           in
           go t
@@ -517,6 +517,41 @@ let () = begin
       let open Core (Grade.Unrestricted) in
 
       (* let ( $ ) f x = Fun_app (f, x) in *)
+
+
+      begin test "unrestricted: print either" @@ fun () ->
+        assert (Format.asprintf "%t" (pp_ty (Either (Unit, Bool))) = "Unit + Bool");
+      end;
+
+      begin test "unrestricted: print either nested" @@ fun () ->
+        assert (Format.asprintf "%t" (pp_ty (Either (Pair (Unit, Bool), Pair (Unit, Bool)))) =
+          "(Unit × Bool) + (Unit × Bool)");
+      end;
+
+      begin test "unrestricted: print pair" @@ fun () ->
+        assert (Format.asprintf "%t" (pp_ty (Pair (Unit, Bool))) = "Unit × Bool");
+      end;
+
+      begin test "unrestricted: print pair nested" @@ fun () ->
+        assert (Format.asprintf "%t" (pp_ty (Pair (Either (Unit, Bool), Either (Unit, Bool)))) =
+          "(Unit + Bool) × (Unit + Bool)");
+      end;
+
+      begin test "unrestricted: print box" @@ fun () ->
+        assert (Format.asprintf "%t" (pp_ty (Box (Unit, ()))) =
+          "Unit [ω]");
+      end;
+
+      begin test "unrestricted: print box either" @@ fun () ->
+        assert (Format.asprintf "%t" (pp_ty (Box (Either (Unit, Bool), ()))) =
+          "(Unit + Bool) [ω]");
+      end;
+
+      begin test "unrestricted: print fun" @@ fun () ->
+        assert (Format.asprintf "%t" (pp_ty (Fun (Unit, (), Fun (Unit, (), Unit)))) =
+          "Unit % ω -> Unit % ω -> Unit");
+      end;
+
 
       let id_ty = Fun (Unit, (), Unit) in
       let id_expr = Fun_intro ("x", Var "x") in
