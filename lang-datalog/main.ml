@@ -76,7 +76,15 @@ let () =
   program.queries |> List.iter (Format.printf "@[%a@]@\n" Datalog.pp_print_query);
   Format.printf "@\n"; *)
 
-  let kb = Datalog.solve program.rules in
+  let kb =
+    try Datalog.solve program.rules with
+    | Datalog.Range_restriction_violation (r, vs) ->
+        vs |> List.iter begin fun v ->
+          emit source "error" r.head.span
+            (Format.sprintf "error: variable `%s` does not appear in the body of the rule\n" v);
+        end;
+        exit 1
+  in
 
   Format.printf "────────────────────────────────────────────────────────────────────────────────@\n";
   Format.printf "Knowledge Base@\n";

@@ -28,7 +28,11 @@ Predicates of different arities
 
 Unrestricted range
   $ cat ./unrestricted-range.datalog | datalog
-  Fatal error: exception Failure("the input program is not range-restricted")
-  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
-  Called from Dune__exe__Main in file "lang-datalog/main.ml", line 79, characters 11-38
-  [2]
+  error: error: variable `X` does not appear in the body of the rule
+  
+    ┌─ <stdin>:3:0
+    │
+  3 │ foo(X, Y) <- thing(Y).
+    │ ^^^
+  
+  [1]

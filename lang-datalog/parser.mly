@@ -33,10 +33,10 @@ let rule :=
     { Datalog.{ head; body } }
 
 let atom :=
-| name = LOWER_NAME;
-    { Datalog.{ name; args = [] } }
-| name = LOWER_NAME; args = delimited("(", separated_list(",", term) ,")");
-    { Datalog.{ name; args } }
+| (span, name) = spanned(LOWER_NAME);
+    { Datalog.{ span; name; args = [] } }
+| (span, name) = spanned(LOWER_NAME); args = delimited("(", separated_list(",", term) ,")");
+    { Datalog.{ span; name; args } }
 
 let term :=
 | v = UPPER_NAME;
@@ -49,3 +49,10 @@ let const :=
     { Datalog.String s }
 | i = NUMBER;
     { Datalog.Int i }
+
+
+(* Utilities *)
+
+let spanned(X) :=
+| data = X;
+    { $loc, data }

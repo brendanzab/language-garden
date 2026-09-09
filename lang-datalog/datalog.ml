@@ -5,6 +5,8 @@
 
 (** {1 Abstract syntax} *)
 
+type span = Lexing.(position * position)
+
 (** Constant terms. *)
 type const =
   | String of string
@@ -18,6 +20,9 @@ type term =
 (** Atomic symbols. These are considered {i ground} if none of the [terms]
     are variables. *)
 type atom = {
+  span : span;
+  (** The span of source code of the atom's name *)
+
   name : string;
   (** The predicate symbol of the atom. *)
 
@@ -230,17 +235,19 @@ let atom_vars (atom : atom) : string list =
     |> List.filter_map (function Var v -> Some v | _ -> None)
     |> List.remove_dupes
 
-(** [is_range_restricted rule] enforces the {i range restriction} by returning
-    [true] if every variable in the head of the rule appears somewhere in the
-    body of the rule.
+exception Range_restriction_violation of rule * string list
+
+(** [is_range_restricted rule] enforces the {i range restriction} by raising
+    {!Range_restriction_violation} if any variable in the head of the rule does
+    not appear somewhere in the body of the rule.
 
     Checking that each rule obeys this property ensures that the knowledge base
-    always contains grounded atoms.
-*)
-let is_range_restricted (r : rule) : bool =
-  (* TODO: Return a list of the variables that do not exist in the body, for
-     better error reporting *)
-  List.subset (atom_vars r.head) (List.concat_map atom_vars r.body)
+    always contains grounded atoms. *)
+let ensure_range_restricted (r : rule) =
+  let body_vars = List.concat_map atom_vars r.body in
+  match atom_vars r.head |> List.filter (fun v -> not (List.mem v body_vars)) with
+  | [] -> ()
+  | vs -> raise (Range_restriction_violation (r, vs))
 
 (** Evaluate each rule independently and then combines the newly derived facts
     with what we already know. *)
@@ -256,11 +263,8 @@ let add_rules (rs : rule list) (kb : knowledge_base) : knowledge_base =
     let kb' = immediate_consequence rs kb in
     if kb = kb' then kb else (go [@tailcall]) kb'
   in
-  if List.for_all is_range_restricted rs then
-    go kb
-  else
-    (* TODO: Improve errors *)
-    failwith "the input program is not range-restricted"
+  rs |> List.iter ensure_range_restricted;
+  go kb
 
 (** Produce a new knowledge base by evaluating the rules over and over until no
     new facts are added. *)
@@ -274,6 +278,9 @@ let run_query (query : atom list) (kb : knowledge_base) : (string * term) list l
   let args = vars |> List.map (fun v -> Var v) in
 
   kb
-    |> add_rules [{ head = { name = "$query"; args }; body = query }]
+    |> add_rules [{
+      head = { span = Lexing.(dummy_pos, dummy_pos); name = "$query"; args };
+      body = query;
+    }]
     |> List.filter (fun atom -> atom.name = "$query")
     |> List.map (fun atom -> List.combine vars atom.args)
