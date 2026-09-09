@@ -8,3 +8,13 @@
  (alias all)
  (action
   (cmp garden.svg garden.svg.tmp)))
+
+; Markdown link checking
+
+(rule
+ (alias runtest)
+ (deps
+  (glob_files_rec *.{lean,rs,pl})
+  (:md (glob_files_rec *.md)))
+ (action
+  (run lychee --offline %{md})))

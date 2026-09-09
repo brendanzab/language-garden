@@ -147,8 +147,7 @@
               pkgs.graphviz
               pkgs.llvm
               pkgs.wabt
-
-              # Packages from NixPkgs can be added here
+              pkgs.lychee # Link checking https://github.com/lycheeverse/lychee
               pkgs.nixpkgs-fmt
             ];
           };

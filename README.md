@@ -284,4 +284,4 @@ Alternatively, [opam] package definitions are provided in the [`./opam`](./opam)
 directory. They drive the Nix flake, so _should_ be up to date. I don’t use opam
 however, so I’m not sure what the workflow is.
 
-[opam]: opam.ocaml.org
+[opam]: https://opam.ocaml.org

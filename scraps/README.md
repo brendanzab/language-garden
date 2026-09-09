@@ -16,12 +16,12 @@ Parsing:
 
 Evaluation:
 
-- [**eval_lc_cps.ml**](./eval_lc_cek.ml): A tree-walking interpreter for the
+- [**eval_lc_cps.ml**](./eval_lc_cps.ml): A tree-walking interpreter for the
   lambda calculus, refactored into continuation-passing-style.
 - [**eval_lc_cek.ml**](./eval_lc_cek.ml): A tree-walking interpreter for the
   lambda calculus, refactored into continuation-passing-style in the style of
   the CEK machine.
-- [**eval_lc_except_cps.ml**](./eval_lc_except_cek.ml): An interpreter for the
+- [**eval_lc_except_cps.ml**](./eval_lc_except_cps.ml): An interpreter for the
   lambda calculus that supports the raising and handling of exceptions.
 - [**eval_lc_prims_spine.ml**](./eval_lc_prims_spine.ml): A lambda calculus
   evaluator that supports the partial application of primitive operations.
@@ -29,7 +29,7 @@ Evaluation:
   evaluator that encodes primitive operations using higher order abstract syntax.
 - [**eval_lc_prims_clos.ml**](./eval_lc_prims_clos.ml): A version of
   `eval_lc_prims_hoas` with defunctionalised closures.
-- [**eval_lc_prims_clo_gadts.ml**](./eval_lc_prims_clos_gadt.ml): A version of
+- [**eval_lc_prims_clos_gadt.ml**](./eval_lc_prims_clos_gadt.ml): A version of
   `eval_lc_prims_clos` that uses GADTs to track the arity of primitives.
 - [**eval_control_flow_cps.ml**](./eval_control_flow_cps.ml):
   An evaluator for imperative control flow (loop, break, continue) implemented
@@ -50,7 +50,7 @@ Evaluation:
   time using defunctionalised closures in the semantic domain.
 - [**eval_stlc_gadt_globals.ml**](./eval_stlc_gadt_globals.ml):
   A well-typed lambda calculus evaluator, extended with some global definitions.
-- [**eval_stlc_gadt_prims.ml**](./eval_stlc_gadt_primns.ml):
+- [**eval_stlc_gadt_prims.ml**](./eval_stlc_gadt_prims.ml):
   A well-typed lambda calculus evaluator, extended with some primitive operations.
 - [**eval_stlc_gadt_index_repr.ml**](./eval_stlc_gadt_index_repr.ml):
   A well-typed lambda calculus evaluator with an optimised representation of de
@@ -100,10 +100,10 @@ Elaboration:
 - [**elab_poly_generics.ml**](./elab_poly_generics.ml):
   Elaboration for a polymorphic functional language with explicit type
   parameters (similar to languages like Rust, Typescript, C#, and Java).
-- [**elab_poly_generics_tydefs.ml**](./elab_poly_generics_tydefs.ml):
+- [**elab_poly_generics_lettype.ml**](./elab_poly_generics_lettype.ml):
   A polymorphic functional language with local type definitions, that uses
   normalisation-by-evaluation in types.
-- [**elab_poly_generics_tydefs_prams.ml**](./elab_poly_generics_tydefs_prams.ml):
+- [**elab_poly_generics_lettype_params.ml**](./elab_poly_generics_lettype_params.ml):
   A polymorphic functional language with parameterised local type definitions.
 - [**elab_poly_generics_letrec.ml**](./elab_poly_generics_letrec.ml):
   Elaboration for a polymorphic functional language with explicit type
