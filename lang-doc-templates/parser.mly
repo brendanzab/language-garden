@@ -73,7 +73,7 @@ let add_tm :=
 | app_tm
 
 let app_tm :=
-| tm1 = spanned(atomic_tm); tm2 = spanned(app_tm);
+| tm1 = spanned(app_tm); tm2 = spanned(atomic_tm);
     { Surface.App (tm1, tm2) }
 | atomic_tm
 

@@ -1,0 +1,6 @@
+${let message (greeting : Text) (subject : Text) :=
+    $"${greeting} ${subject}!"
+}
+
+${message "Hello" "world"}
+${message "Goodbye" "world"}
