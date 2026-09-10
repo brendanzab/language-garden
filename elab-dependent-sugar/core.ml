@@ -128,7 +128,7 @@ module Syntax = struct
             (* Final term should be grouped in a box *)
             | tm -> Format.dprintf "@[%t@]" (pp_tm names tm)
           in
-          go names tm
+          Format.dprintf "@[<v>%t@]" (go names tm)
       | Ann (tm, ty) ->
           Format.dprintf "@[<2>@[%t :@]@ %t@]"
             (pp_app_tm names tm)
