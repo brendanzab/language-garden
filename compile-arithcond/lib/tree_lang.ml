@@ -76,17 +76,17 @@ and  pp_let_expr names e =
 (* TODO: Let expressions *)
 and pp_eq_expr names e =
   match e with
-  | Eq (e1, e2) -> Format.dprintf "%t@ =@ %t" (pp_add_expr names e1) (pp_eq_expr names e2)
+  | Eq (e1, e2) -> Format.dprintf "%t@ =@ %t" (pp_eq_expr names e1) (pp_add_expr names e2)
   | e -> pp_add_expr names e
 and pp_add_expr names e =
   match e with
-  | Add (e1, e2) -> Format.dprintf "%t@ +@ %t" (pp_mul_expr names e1) (pp_add_expr names e2)
-  | Sub (e1, e2) -> Format.dprintf "%t@ -@ %t" (pp_mul_expr names e1) (pp_add_expr names e2)
+  | Add (e1, e2) -> Format.dprintf "%t@ +@ %t" (pp_add_expr names e1) (pp_mul_expr names e2)
+  | Sub (e1, e2) -> Format.dprintf "%t@ -@ %t" (pp_add_expr names e1) (pp_mul_expr names e2)
   | e -> pp_mul_expr names e
 and pp_mul_expr names e =
   match e with
-  | Mul (e1, e2) -> Format.dprintf "%t@ *@ %t" (pp_atomic_expr names e1) (pp_mul_expr names e2)
-  | Div (e1, e2) -> Format.dprintf "%t@ /@ %t" (pp_atomic_expr names e1) (pp_mul_expr names e2)
+  | Mul (e1, e2) -> Format.dprintf "%t@ *@ %t" (pp_mul_expr names e1) (pp_atomic_expr names e2)
+  | Div (e1, e2) -> Format.dprintf "%t@ /@ %t" (pp_mul_expr names e1) (pp_atomic_expr names e2)
   | e -> pp_atomic_expr names e
 and pp_atomic_expr names e =
   match e with

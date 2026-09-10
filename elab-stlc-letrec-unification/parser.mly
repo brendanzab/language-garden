@@ -66,19 +66,19 @@ let tm :=
 | eq_tm
 
 let eq_tm :=
-| tm1 = spanned(add_tm); "="; tm2 = spanned(eq_tm);
+| tm1 = spanned(eq_tm); "="; tm2 = spanned(add_tm);
     { Surface.Infix (`Eq, tm1, tm2) }
 | add_tm
 
 let add_tm :=
-| tm1 = spanned(mul_tm); "+"; tm2 = spanned(add_tm);
+| tm1 = spanned(add_tm); "+"; tm2 = spanned(mul_tm);
     { Surface.Infix (`Add, tm1, tm2) }
-| tm1 = spanned(mul_tm); "-"; tm2 = spanned(add_tm);
+| tm1 = spanned(add_tm); "-"; tm2 = spanned(mul_tm);
     { Surface.Infix (`Sub, tm1, tm2) }
 | mul_tm
 
 let mul_tm :=
-| tm1 = spanned(app_tm); "*"; tm2 = spanned(mul_tm);
+| tm1 = spanned(mul_tm); "*"; tm2 = spanned(app_tm);
     { Surface.Infix (`Mul, tm1, tm2) }
 | app_tm
 
