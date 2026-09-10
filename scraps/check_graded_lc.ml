@@ -357,7 +357,10 @@ module Core (R : Grade.S) = struct
           let (t1, t2), rctx1 = infer_either ctx e1 in
           let r1, rctx2 = check ((x, t1) :: ctx) e2 t3 |> List.uncons in
           let r2, rctx3 = check ((y, t2) :: ctx) e3 t3 |> List.uncons in
-          add_rctx (scale_rctx (R.max r1 r2) rctx1) (max_rctx rctx2 rctx3)
+          (* The grade must be at least one, as we have used e1 to determine
+             what branch to take *)
+          let r = R.max R.one (R.max r1 r2) in
+          add_rctx (scale_rctx r rctx1) (max_rctx rctx2 rctx3)
 
       | Bool_if (e1, e2, e3), t ->
           let rctx1 = check ctx e1 Bool in
@@ -756,7 +759,34 @@ let () = begin
         Validate.check id_expr_ignore (id_ty R.Low) |> Result.error_to_failure;
       end;
 
-      begin test "linear: if branches Hi" @@ fun () ->
+      begin test "security: either elim prevents information leaks" @@ fun () ->
+
+        let ty = Fun (Either (Unit, Bool), R.High, Bool) in
+        let expr =
+          Fun_intro ("e",
+            Either_elim (Var "e",
+              (* NOTE: bound variables are unused*)
+              ("u", Bool_true),
+              ("b", Bool_false)))
+        in
+
+        assert (Validate.check expr ty |> Result.is_error);
+
+      end;
+
+      begin test "security: if prevents information leaks" @@ fun () ->
+
+        let ty = Fun (Bool, R.High, Bool) in
+        let expr =
+          Fun_intro ("e",
+            Bool_if (Var "e", Bool_true, Bool_false))
+        in
+
+        assert (Validate.check expr ty |> Result.is_error);
+
+      end;
+
+      begin test "security: if branches Hi" @@ fun () ->
 
         let ty = Fun (Bool, R.High, Fun (Unit, R.Low, Unit)) in
         let expr =
@@ -768,7 +798,7 @@ let () = begin
 
       end;
 
-      begin test "linear: if branches Low" @@ fun () ->
+      begin test "security: if branches Low" @@ fun () ->
 
         let ty = Fun (Bool, R.Low, Fun (Unit, R.Low, Unit)) in
         let expr =
@@ -780,7 +810,7 @@ let () = begin
 
       end;
 
-      begin test "linear: boxed if branches Hi" @@ fun () ->
+      begin test "security: boxed if branches Hi" @@ fun () ->
 
         let ty = Fun (Bool, R.High, Box (Fun (Unit, R.Low, Unit), R.High)) in
         let expr =
