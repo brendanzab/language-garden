@@ -27,10 +27,11 @@ Church-encoded boolean type
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
         (Out : Type) (true : Out) (false : Out) -> Out
   :=
-    let Bool := fun (Out : Type) (true : Out) (false : Out) -> Out;
-    let true := fun Out true false => true;
-    let false := fun Out true false => false;
-    let not := fun b Out true false => b Out false true; true Bool false
+    let Bool : Type := fun (Out : Type) (true : Out) (false : Out) -> Out;
+    let true : Bool := fun Out true false => true;
+    let false : Bool := fun Out true false => false;
+    let not : Bool -> Bool := fun b Out true false => b Out false true;
+    true Bool false
   $ cat bools | executable norm
   <stdin> :
     fun (false : fun (Out : Type) (true : Out) (false : Out) -> Out)
@@ -58,10 +59,10 @@ Church-encoded option type
           Out)
         (none : Out) -> Out
   :=
-    let Option :=
+    let Option : fun (A : Type) -> Type :=
       fun A => fun (Out : Type) (some : A -> Out) (none : Out) -> Out;
-    let none := fun A Out some none => none;
-    let some := fun A a Out some none => some a;
+    let none : fun (A : Type) -> Option A := fun A Out some none => none;
+    let some : fun (A : Type) A -> Option A := fun A a Out some none => some a;
     some (Option Type) (some Type (Type -> Type))
   $ cat options | executable norm
   <stdin> :

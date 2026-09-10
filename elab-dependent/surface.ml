@@ -184,7 +184,7 @@ end = struct
         let def_vty = Ctx.eval ctx def_ty in
         let def = check ctx def def_vty in
         let body = check (Ctx.add_def ctx name.data def_vty (lazy (Ctx.eval ctx def))) body vty in
-        Syntax.Let (name.data, def, body)
+        Syntax.Let (name.data, Ann (def, def_ty), body)
 
     (* Function literals *)
     | Fun_lit (names, body) ->
@@ -229,7 +229,7 @@ end = struct
         let def_vty = Ctx.eval ctx def_ty in
         let def = check ctx def def_vty in
         let body, body_ty = infer (Ctx.add_def ctx name.data def_vty (lazy (Ctx.eval ctx def))) body in
-        Syntax.Let (name.data, def, body), body_ty
+        Syntax.Let (name.data, Ann (def, def_ty), body), body_ty
 
     (* Named terms *)
     | Name name ->
