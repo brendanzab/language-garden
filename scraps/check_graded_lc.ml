@@ -765,7 +765,8 @@ let () = begin
         let expr =
           Fun_intro ("e",
             Either_elim (Var "e",
-              (* NOTE: bound variables are unused*)
+              (* While the bound variables are unused, an outside observer can
+                 still tell the branch that was taken based on the return value *)
               ("u", Bool_true),
               ("b", Bool_false)))
         in
