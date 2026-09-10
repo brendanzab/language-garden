@@ -175,8 +175,6 @@ module Grade = struct
 
     let lte (x1, x2) (y1, y2) =
       (* The swapped order of the left part of the conjunction is important! *)
-      (* TODO: Figure out why the right side is swapped instead in Example 3. of
-         Liepelt et. al. 2026. https://doi.org/10.1007/978-3-032-08187-2_7 *)
       R.lte y1 x1 && R.lte x2 y2
 
     let max (x1, x2) (y1, y2) =
