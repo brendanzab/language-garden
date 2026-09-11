@@ -324,8 +324,8 @@ module Core (R : Grade.S) = struct
       match e, t with
       | Let (x, e1, e2), t2 ->
           let t1, rctx1 = infer ctx e1 in
-          let _, rctx2 = check ((x, t1) :: ctx) e2 t2 |> List.uncons in
-          add_rctx rctx1 rctx2
+          let r, rctx2 = check ((x, t1) :: ctx) e2 t2 |> List.uncons in
+          add_rctx (scale_rctx r rctx1) rctx2
 
       | Fun_intro (x, e), Fun (t1, r, t2) ->
           let r', rctx = check ((x, t1) :: ctx) e t2 |> List.uncons in
@@ -388,8 +388,8 @@ module Core (R : Grade.S) = struct
 
       | Let (x, e1, e2) ->
           let t1, rctx1 = infer ctx e1 in
-          let t2, (_, rctx2) = infer ((x, t1) :: ctx) e2 |> Pair.map_snd List.uncons in
-          t2, add_rctx rctx1 rctx2
+          let t2, (r, rctx2) = infer ((x, t1) :: ctx) e2 |> Pair.map_snd List.uncons in
+          t2, add_rctx (scale_rctx r rctx1) rctx2
 
       | Fun_app (e1, e2) ->
           let (t1, r, t2), rctx1 = infer_fun ctx e1 in
@@ -726,6 +726,33 @@ let () = begin
         let ty = Fun (Box (Bool, R.Many), R.One, Pair (Bool, Bool)) in
         Validate.check box_dup ty |> Result.error_to_failure;
 
+      end;
+
+      let let_use = Fun_intro ("x", Let ("y", Var "x", Var "y")) in
+      let let_ignore = Fun_intro ("x", Let ("y", Var "x", Unit_intro)) in
+
+      begin test "linear: let use 0" @@ fun () ->
+        assert (Validate.check let_use (Fun (Unit, R.Zero, Unit)) |> Result.is_error);
+      end;
+
+      begin test "linear: let use 1" @@ fun () ->
+        Validate.check let_use (Fun (Unit, R.One, Unit)) |> Result.error_to_failure;
+      end;
+
+      begin test "linear: let use  ω" @@ fun () ->
+        Validate.check let_use (Fun (Unit, R.Many, Unit)) |> Result.error_to_failure;
+      end;
+
+      begin test "linear: let ignore 0" @@ fun () ->
+        Validate.check let_ignore (Fun (Unit, R.Zero, Unit)) |> Result.error_to_failure;
+      end;
+
+      begin test "linear: let ignore 1" @@ fun () ->
+        assert (Validate.check let_ignore (Fun (Unit, R.One, Unit)) |> Result.is_error);
+      end;
+
+      begin test "linear: let ignore  ω" @@ fun () ->
+        Validate.check let_ignore (Fun (Unit, R.Many, Unit)) |> Result.error_to_failure;
       end;
 
     end;
