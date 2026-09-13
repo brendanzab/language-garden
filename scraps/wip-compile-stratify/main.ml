@@ -20,7 +20,7 @@ let () =
 
   let _, tm = R.run_synth (R.Structure.let_synth (R.Univ.univ L0) (fun u -> u)) in
   let _ = Core.Validation.(synth Context.empty tm) in
-  (* FIXME: bug: level 2 terms are too large to be typable *)
+  (* FIXME: bug: level 2 terms are too large to be typeable *)
   (* let _ = Core_to_stratified.(translate Context.empty tm) in *)
 
 

@@ -66,8 +66,8 @@ module Syntax = struct
 
       - [Fun_type11]: {v (Type 1, Type 1, Type 1) v} (types parameterised by types)
       - [Fun_type10]: {v (Type 0, Type 1, Type 1) v} (types parameterised by terms)
-      - [Fun_type01]: {v (Type 1, Type 0, Type 1) v} (terms paremeterised by types)
-      - [Fun_type00]: {v (Type 0, Type 0, Type 0) v} (terms paremeterised by terms)
+      - [Fun_type01]: {v (Type 1, Type 0, Type 1) v} (terms parameterised by types)
+      - [Fun_type00]: {v (Type 0, Type 0, Type 0) v} (terms parameterised by terms)
 
       These correspond to each function rule in the core language. For example:
 
