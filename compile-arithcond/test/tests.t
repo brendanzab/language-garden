@@ -80,6 +80,30 @@ Dividing numbers
   $ cat test-div | executable exec --target=stack
   int 0;
 
+Chained subtraction is left associative
+  $ cat >test-sub-chain <<< "1 - 2 - 3"
+  $ cat test-sub-chain | executable compile --target=anf
+  let x0 := sub 1 2;
+  sub x0 3
+  $ cat test-sub-chain | executable exec --target=tree
+  -4 : Int
+
+Chained division is left associative
+  $ cat >test-div-chain <<< "8 / 4 / 2"
+  $ cat test-div-chain | executable compile --target=anf
+  let x0 := div 8 4;
+  div x0 2
+  $ cat test-div-chain | executable exec --target=tree
+  1 : Int
+
+Chained equality is left associative
+  $ cat >test-eq-chain <<< "1 = 2 = false"
+  $ cat test-eq-chain | executable compile --target=anf
+  let x0 := eq 1 2;
+  eq x0 false
+  $ cat test-eq-chain | executable exec --target=tree
+  true : Bool
+
 Complicated stuff
   $ cat >test-complicated <<< "1 * -2 + (3 + 4) - 8 / 4"
   $ cat test-complicated | executable compile --target=stack
@@ -90,18 +114,18 @@ Complicated stuff
   int 3;
   int 4;
   add;
+  add;
   int 8;
   int 4;
   div;
   sub;
-  add;
   $ cat test-complicated | executable compile --target=anf
   let y0 := neg 2;
   let x1 := mul 1 y0;
-  let x2 := add 3 4;
-  let y3 := div 8 4;
-  let y4 := sub x2 y3;
-  add x1 y4
+  let y2 := add 3 4;
+  let x3 := add x1 y2;
+  let y4 := div 8 4;
+  sub x3 y4
   $ cat test-complicated | executable exec --target=tree
   3 : Int
   $ cat test-complicated | executable exec --target=stack

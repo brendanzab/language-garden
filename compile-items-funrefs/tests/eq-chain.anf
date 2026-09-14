@@ -1,0 +1,3 @@
+priv fun eq-chain(x : I32) : Bool :=
+  let arg : Bool := #i32-eq(x, 1);
+  #bool-eq(arg, false);

@@ -1,0 +1,3 @@
+-- Chained equality is left associative
+fun eq-chain(x : I32) : Bool :=
+  x = 1 = false;

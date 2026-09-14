@@ -31,13 +31,13 @@ let rec pp_expr e =
   pp_add_expr e
 and pp_add_expr e =
   match e with
-  | Add (e1, e2) -> Format.dprintf "%t@ +@ %t" (pp_mul_expr e1) (pp_add_expr e2)
-  | Sub (e1, e2) -> Format.dprintf "%t@ -@ %t" (pp_mul_expr e1) (pp_add_expr e2)
+  | Add (e1, e2) -> Format.dprintf "%t@ +@ %t" (pp_add_expr e1) (pp_mul_expr e2)
+  | Sub (e1, e2) -> Format.dprintf "%t@ -@ %t" (pp_add_expr e1) (pp_mul_expr e2)
   | e -> pp_mul_expr e
 and pp_mul_expr e =
   match e with
-  | Mul (e1, e2) -> Format.dprintf "%t@ *@ %t" (pp_atomic_expr e1) (pp_mul_expr e2)
-  | Div (e1, e2) -> Format.dprintf "%t@ /@ %t" (pp_atomic_expr e1) (pp_mul_expr e2)
+  | Mul (e1, e2) -> Format.dprintf "%t@ *@ %t" (pp_mul_expr e1) (pp_atomic_expr e2)
+  | Div (e1, e2) -> Format.dprintf "%t@ /@ %t" (pp_mul_expr e1) (pp_atomic_expr e2)
   | e -> pp_atomic_expr e
 and pp_atomic_expr e =
   match e with
