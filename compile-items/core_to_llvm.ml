@@ -44,7 +44,7 @@ let translate_expr
   let current_instrs = Dynarray.create () in
 
   (* Bind an instruction to variable in the current block *)
-  let bind_instr name (instr : Llvm.value_instr) : Llvm.opr =
+  let assign_instr name (instr : Llvm.value_instr) : Llvm.opr =
     let id = fresh_local_id name in
     Dynarray.add_last current_instrs Llvm.(Assign (id, instr));
     Local id
@@ -76,7 +76,7 @@ let translate_expr
         let args = Option.value args ~default:[||] |> Iarray.map @@ fun arg ->
           translate_ty (Core.Expr.ty_of arg), go_expr local_env "arg" arg
         in
-        bind_instr result_name Llvm.(Call (translate_ty result_ty, Global item_id, args))
+        assign_instr result_name Llvm.(Call (translate_ty result_ty, Global item_id, args))
 
     | Core.Expr.Var (index, _) ->
         Core.Local.Env.lookup index local_env
@@ -112,7 +112,7 @@ let translate_expr
            variable using a phi-node. *)
         start_block end_label;
         let result_ty = translate_ty (Core.Expr.ty_of expr) in
-        bind_instr result_name Llvm.(Phi (result_ty, [|
+        assign_instr result_name Llvm.(Phi (result_ty, [|
           true_result, true_end_label;
           false_result, false_end_label;
         |]))
@@ -121,12 +121,12 @@ let translate_expr
 
     | Core.Expr.Prim (op, args) ->
         begin match op, args |> Iarray.map (go_expr local_env "arg") with
-        | Prim.Op.Bool_eq, [|x; y|] -> bind_instr result_name Llvm.(Icmp (Eq, I1, x, y))
-        | Prim.Op.I32_eq, [|x; y|] -> bind_instr result_name Llvm.(Icmp (Eq, I32, x, y))
-        | Prim.Op.I32_add, [|x; y|] -> bind_instr result_name Llvm.(Add (I32, x, y))
-        | Prim.Op.I32_sub, [|x; y|] -> bind_instr result_name Llvm.(Sub (I32, x, y))
-        | Prim.Op.I32_mul, [|x; y|] -> bind_instr result_name Llvm.(Mul (I32, x, y))
-        | Prim.Op.I32_neg, [|x|] -> bind_instr result_name Llvm.(Sub (I32, I32 0l, x))
+        | Prim.Op.Bool_eq, [|x; y|] -> assign_instr result_name Llvm.(Icmp (Eq, I1, x, y))
+        | Prim.Op.I32_eq, [|x; y|] -> assign_instr result_name Llvm.(Icmp (Eq, I32, x, y))
+        | Prim.Op.I32_add, [|x; y|] -> assign_instr result_name Llvm.(Add (I32, x, y))
+        | Prim.Op.I32_sub, [|x; y|] -> assign_instr result_name Llvm.(Sub (I32, x, y))
+        | Prim.Op.I32_mul, [|x; y|] -> assign_instr result_name Llvm.(Mul (I32, x, y))
+        | Prim.Op.I32_neg, [|x|] -> assign_instr result_name Llvm.(Sub (I32, I32 0l, x))
         | _, _ -> Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
         end
   in

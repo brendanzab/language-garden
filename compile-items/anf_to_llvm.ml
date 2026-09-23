@@ -56,7 +56,7 @@ let translate_expr
   let join_blocks = ref Anf.Join_map.empty in (* Join blocks *)
   let blocks = Dynarray.create () in (* Finished blocks *)
 
-  let bind_instr instrs name (instr : Llvm.value_instr) : Llvm.opr =
+  let assign_instr instrs name (instr : Llvm.value_instr) : Llvm.opr =
     let id = fresh_local_id name in
     Dynarray.add_last instrs Llvm.(Assign (id, instr));
     Local id
@@ -123,16 +123,16 @@ let translate_expr
         let args = args |> Iarray.map @@ fun arg ->
           translate_ty (Anf.Expr.ty_of_atom arg), go_atom local_env instrs "arg" arg
         in
-        bind_instr instrs result_name Llvm.(Call (translate_ty result_ty, Global item_id, args))
+        assign_instr instrs result_name Llvm.(Call (translate_ty result_ty, Global item_id, args))
 
     | Anf.Expr.Prim (op, args) ->
         begin match op, args |> Iarray.map (go_atom local_env instrs "arg") with
-        | Prim.Op.Bool_eq, [|x; y|] -> bind_instr instrs result_name Llvm.(Icmp (Eq, I1, x, y))
-        | Prim.Op.I32_eq, [|x; y|] -> bind_instr instrs result_name Llvm.(Icmp (Eq, I32, x, y))
-        | Prim.Op.I32_add, [|x; y|] -> bind_instr instrs result_name Llvm.(Add (I32, x, y))
-        | Prim.Op.I32_sub, [|x; y|] -> bind_instr instrs result_name Llvm.(Sub (I32, x, y))
-        | Prim.Op.I32_mul, [|x; y|] -> bind_instr instrs result_name Llvm.(Mul (I32, x, y))
-        | Prim.Op.I32_neg, [|x|] -> bind_instr instrs result_name Llvm.(Sub (I32, I32 0l, x))
+        | Prim.Op.Bool_eq, [|x; y|] -> assign_instr instrs result_name Llvm.(Icmp (Eq, I1, x, y))
+        | Prim.Op.I32_eq, [|x; y|] -> assign_instr instrs result_name Llvm.(Icmp (Eq, I32, x, y))
+        | Prim.Op.I32_add, [|x; y|] -> assign_instr instrs result_name Llvm.(Add (I32, x, y))
+        | Prim.Op.I32_sub, [|x; y|] -> assign_instr instrs result_name Llvm.(Sub (I32, x, y))
+        | Prim.Op.I32_mul, [|x; y|] -> assign_instr instrs result_name Llvm.(Mul (I32, x, y))
+        | Prim.Op.I32_neg, [|x|] -> assign_instr instrs result_name Llvm.(Sub (I32, I32 0l, x))
         | _, _ -> Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
         end
 
@@ -143,7 +143,7 @@ let translate_expr
     match expr with
     | Anf.Expr.Item (name, ty) ->
         let item_id = Anf.Item_map.find name item_env in
-        bind_instr instrs result_name Llvm.(Call (translate_ty ty, Global item_id, [||]))
+        assign_instr instrs result_name Llvm.(Call (translate_ty ty, Global item_id, [||]))
     | Anf.Expr.Var (id, _) -> Anf.Local_map.find id local_env
     | Anf.Expr.Bool b -> Llvm.I1 b
     | Anf.Expr.I32 i -> Llvm.I32 i
