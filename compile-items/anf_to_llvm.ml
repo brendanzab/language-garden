@@ -172,7 +172,7 @@ let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
   (* Top-level items might be mutually recursive, so we need to process their
      declarations before we can translate them to definitions. *)
   let item_env =
-    mod_ |> Anf.Item_map.mapi @@ fun name item ->
+    mod_ |> Anf.Item_map.mapi @@ fun name _ ->
       fresh_global_id (Anf.Item_name.to_string name)
   in
 

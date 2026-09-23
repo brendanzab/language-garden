@@ -150,7 +150,7 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   (* Top-level items might be mutually recursive, so we need to process their
      declarations before we can translate them to definitions. *)
   let item_env =
-    mod_ |> Core.Item_map.mapi @@ fun name item ->
+    mod_ |> Core.Item_map.mapi @@ fun name _ ->
       fresh_global_id (Core.Item_name.to_string name)
   in
 

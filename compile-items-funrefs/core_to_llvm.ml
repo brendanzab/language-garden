@@ -174,8 +174,8 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
   let item_env =
     mod_ |> Core.Item_map.mapi @@ fun name item ->
       match item with
-      | Core.Item.Val (_, _, _) -> Val (fresh_global_id (Core.Item_name.to_string name))
-      | Core.Item.Fun (_, _, _, _) -> Fun (fresh_global_id (Core.Item_name.to_string name))
+      | Core.Item.Val _ -> Val (fresh_global_id (Core.Item_name.to_string name))
+      | Core.Item.Fun _ -> Fun (fresh_global_id (Core.Item_name.to_string name))
   in
 
   let funs = Dynarray.create () in
