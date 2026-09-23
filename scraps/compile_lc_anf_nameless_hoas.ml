@@ -85,10 +85,10 @@ end
 (** De Bruijn indexed lambda terms in A-normal form *)
 module Anf = struct
 
-  (** De Bruijn index*)
+  (** De Bruijn index *)
   type index = int
 
-  (** De Bruijn level*)
+  (** De Bruijn level *)
   type level = int
 
   type tm =
@@ -149,7 +149,7 @@ module Anf = struct
 
     let let_join (name, param_name, def) (body : (atom_tm t -> tm t) -> tm t) : tm t =
       fun ~size ->
-        Let_join (name, param_name, def (var size) ~size,
+        Let_join (name, param_name, def (var size) ~size:(size + 1),
           body (join_app size) ~size:(size + 1))
 
     let fun_lit name (body : atom_tm t -> tm t) : atom_tm t =

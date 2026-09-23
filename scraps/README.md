@@ -121,8 +121,11 @@ Compilation:
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
 - [**compile_lc_anf_fresh.ml**](compile_lc_anf_fresh.ml):
   Compiling de Bruijn indexed lambda terms to freshly named lambda terms in A-normal form.
-- [**compile_lc_anf_nameless.ml**](compile_lc_anf_nameless.ml):
+- [**compile_lc_anf_nameless_hoas.ml**](compile_lc_anf_nameless_hoas.ml):
   Compiling de Bruijn indexed lambda terms to de Bruijn indexed lambda terms in A-normal form.
+- [**compile_lc_anf_nameless_levels.ml**](compile_lc_anf_nameless_levels.ml):
+  Compiling de Bruijn indexed lambda terms to de Bruijn indexed lambda terms in
+  A-normal form, using de Bruijn levels to generate fresh variables.
 - [**compile_lc_nested_actions.ml**](compile_lc_nested_actions.ml):
   Translating “!-notation”/“nested actions” to monadic bind operations.
 - [**compile_lc_secd.ml**](compile_lc_secd.ml):
