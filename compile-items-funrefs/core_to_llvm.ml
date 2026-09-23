@@ -142,8 +142,7 @@ let translate_expr
     | Core.Expr.I32 i -> Llvm.I32 i
 
     | Core.Expr.Prim (op, args) ->
-        let args =  args |> Iarray.map (go_expr local_env "arg") in
-        begin match op, args with
+        begin match op, args |> Iarray.map (go_expr local_env "arg") with
         | Prim.Op.Bool_eq, [|x; y|] -> bind_instr result_name Llvm.(Icmp (Eq, I1, x, y))
         | Prim.Op.I32_eq, [|x; y|] -> bind_instr result_name Llvm.(Icmp (Eq, I32, x, y))
         | Prim.Op.I32_add, [|x; y|] -> bind_instr result_name Llvm.(Add (I32, x, y))

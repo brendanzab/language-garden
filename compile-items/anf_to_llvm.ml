@@ -126,8 +126,7 @@ let translate_expr
         bind_instr instrs result_name Llvm.(Call (translate_ty result_ty, Global item_id, args))
 
     | Anf.Expr.Prim (op, args) ->
-        let args =  args |> Iarray.map (go_atom local_env instrs "arg") in
-        begin match op, args with
+        begin match op, args |> Iarray.map (go_atom local_env instrs "arg") with
         | Prim.Op.Bool_eq, [|x; y|] -> bind_instr instrs result_name Llvm.(Icmp (Eq, I1, x, y))
         | Prim.Op.I32_eq, [|x; y|] -> bind_instr instrs result_name Llvm.(Icmp (Eq, I32, x, y))
         | Prim.Op.I32_add, [|x; y|] -> bind_instr instrs result_name Llvm.(Add (I32, x, y))
