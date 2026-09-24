@@ -252,6 +252,7 @@ end = struct
           let@ tms = translate_defs src_env name src_tms in
           k (tm :: tms)
 
+  (** Translate a closed term *)
   let translate (src_tm : Core.tm) : Anf.tm =
     B.run (translate [] src_tm comp_k)
 
