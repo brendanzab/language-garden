@@ -25,7 +25,7 @@ module Label_supply = Name.Supply (Llvm.Label)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
-(** Translate a type in the core language into an LLVM type *)
+(** Translate a core language type into an LLVM type *)
 let translate_ty (ty : Core.Ty.t) : Llvm.ty =
   match ty with
   | Core.Ty.Bool -> Llvm.I1
