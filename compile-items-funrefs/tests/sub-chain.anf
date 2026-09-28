@@ -1,0 +1,3 @@
+priv fun sub-chain(x : I32) : I32 :=
+  let arg : I32 := #i32-sub(x, 1);
+  #i32-sub(arg, 2);

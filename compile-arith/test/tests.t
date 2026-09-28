@@ -127,6 +127,22 @@ Multiple operators
   $ cat test-multiple-ops | executable exec --target=anf
   -13
 
+Chained subtraction is left associative
+  $ cat >test-sub-chain <<< "1 - 2 - 3"
+  $ cat test-sub-chain | executable compile --target=anf
+  let e0 := sub 1 2;
+  sub e0 3
+  $ cat test-sub-chain | executable exec --target=tree
+  -4
+
+Chained division is left associative
+  $ cat >test-div-chain <<< "8 / 4 / 2"
+  $ cat test-div-chain | executable compile --target=anf
+  let e0 := div 8 4;
+  div e0 2
+  $ cat test-div-chain | executable exec --target=tree
+  1
+
 Complicated stuff
   $ cat >test-complicated <<< "1 * -2 + (3 + 4) - 8 / 4"
   $ cat test-complicated | executable compile --target=stack
@@ -137,18 +153,18 @@ Complicated stuff
   int 3;
   int 4;
   add;
+  add;
   int 8;
   int 4;
   div;
   sub;
-  add;
   $ cat test-complicated | executable compile --target=anf
   let e0 := neg 2;
   let e1 := mul 1 e0;
   let e2 := add 3 4;
-  let e3 := div 8 4;
-  let e4 := sub e2 e3;
-  add e1 e4
+  let e3 := add e1 e2;
+  let e4 := div 8 4;
+  sub e3 e4
   $ cat test-complicated | executable exec --target=tree
   3
   $ cat test-complicated | executable exec --target=stack

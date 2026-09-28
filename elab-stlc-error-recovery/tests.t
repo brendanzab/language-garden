@@ -249,3 +249,11 @@ Unsupported equality
     = expected `Bool` or `Int`
   
   [1]
+
+Subtraction is left associative
+  $ executable elab <<< "1 - 2 - 3"
+  #int-sub (#int-sub 1 2) 3 : Int
+
+Equality is left associative
+  $ executable elab <<< "1 = 2 = false"
+  #bool-eq (#int-eq 1 2) false : Bool
