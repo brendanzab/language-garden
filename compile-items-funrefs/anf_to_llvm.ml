@@ -40,20 +40,27 @@ type item_decl =
   | Val of Llvm.Global_id.t
   | Fun of Llvm.Global_id.t
 
+let translate_vis (vis : Core.Item.vis) :  [`Private] option =
+  match vis with
+  | Pub -> None
+  | Priv -> Some `Private
+
 type join_phi = {
   id : Llvm.Local_id.t;
   ty : Llvm.ty;
   args : (Llvm.opr * Llvm.Label.t) Dynarray.t;
 }
 
-(** Translate an expression into a control flow graph. *)
-let translate_expr
-  ~(fresh_local_id : string -> Llvm.Local_id.t)
-  ~(fresh_label : string -> Llvm.Label.t)
+let translate_fun
   (item_env : item_decl Anf.Item_map.t)
-  (local_env : Llvm.opr Anf.Local_map.t)
+  (vis : Anf.Item.vis)
+  (params : (Anf.Local_id.t * Core.Ty.t) Iarray.t)
+  (result_ty : Anf.Ty.t)
   (expr : Anf.Expr.t)
-: Llvm.cfg =
+: Llvm.fun_ =
+  let fresh_local_id = Local_supply.(fresh (create ())) in
+  let fresh_label = Label_supply.(fresh (create ())) in
+
   let join_blocks = ref Anf.Join_map.empty in (* Join blocks *)
   let blocks = Dynarray.create () in (* Finished blocks *)
 
@@ -156,23 +163,41 @@ let translate_expr
     | Anf.Expr.I32 i -> Llvm.I32 i
   in
 
-  (* Compile the entry block *)
-  let entry = go_expr local_env (fresh_label "entry") (Dynarray.create ()) "result" expr in
+  let visibility = translate_vis vis in
+  let result_ty = translate_ty result_ty in
+  let param_ids =
+    Iarray.to_seq params
+    |> Seq.map (fun (id, _) -> id, fresh_local_id (Anf.Local_id.to_string id))
+    |> Anf.Local_map.of_seq
+  in
+  let params =
+    params |> Iarray.map @@ fun (id, ty) ->
+      translate_ty ty, Anf.Local_map.find id param_ids
+  in
 
-  (* Finish constructing the join blocks *)
-  !join_blocks |> Anf.Join_map.iter begin fun _ (phi, block) ->
-    let result = Llvm.Assign (phi.id, Phi (phi.ty, make_iarray phi.args)) in
-    Dynarray.add_last blocks Llvm.{ block with instrs = Iarray.append [|result|] block.instrs };
-  end;
+  let cfg =
+    let local_env = param_ids |> Anf.Local_map.map (fun id -> Llvm.Local id) in
 
-  Llvm.{ blocks = Iarray.append [|entry|] (make_iarray blocks) }
+    (* Compile the entry block *)
+    let entry = go_expr local_env (fresh_label "entry") (Dynarray.create ()) "result" expr in
+
+    (* Finish constructing the join blocks *)
+    !join_blocks |> Anf.Join_map.iter begin fun _ (phi, block) ->
+      let result = Llvm.Assign (phi.id, Phi (phi.ty, make_iarray phi.args)) in
+      Dynarray.add_last blocks Llvm.{ block with instrs = Iarray.append [|result|] block.instrs };
+    end;
+
+    Llvm.{ blocks = Iarray.append [|entry|] (make_iarray blocks) }
+  in
+
+  Llvm.{ visibility; result_ty; params; cfg }
 
 let translate_vis (vis : Anf.Item.vis) :  [`Private] option =
   match vis with
   | Pub -> None
   | Priv -> Some `Private
 
-(** Translate a core language module into an LLVM module  *)
+(** Translate an ANF module into an LLVM module *)
 let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
   let fresh_global_id = Global_supply.(fresh (create ())) in
 
@@ -187,32 +212,12 @@ let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
 
   let funs = Dynarray.create () in
 
-  (* Translate items in the core language into LLVM function definitions *)
   item_env |> Anf.Item_map.iter begin fun name item_decl ->
-    let fresh_local_id = Local_supply.(fresh (create ())) in
-    let fresh_label = Label_supply.(fresh (create ())) in
-    let translate_expr = translate_expr item_env ~fresh_local_id ~fresh_label in
-
     match Anf.Item_map.find name mod_, item_decl with
-    | Anf.Item.Val (vis, ty, def), Val id ->
-        let visibility = translate_vis vis in
-        let cfg = translate_expr Anf.Local_map.empty def in
-        let result_ty = translate_ty ty in
-        Dynarray.add_last funs Llvm.(id, { visibility; result_ty; params = [||]; cfg });
-
+    | Anf.Item.Val (vis, ty, body), Val id ->
+        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis [||] ty body);
     | Anf.Item.Fun (vis, params, result_ty, body), Fun id ->
-        let visibility = translate_vis vis in
-        let param_ids =
-          Iarray.to_seq params
-          |> Seq.map (fun (id, _) -> id, fresh_local_id (Anf.Local_id.to_string id))
-          |> Anf.Local_map.of_seq
-        in
-        let params = params |> Iarray.map (fun (id, ty) -> translate_ty ty, Anf.Local_map.find id param_ids) in
-        let result_ty = translate_ty result_ty in
-        let local_env = param_ids |> Anf.Local_map.map (fun id -> Llvm.Local id) in
-        let cfg = translate_expr local_env body in
-        Dynarray.add_last funs Llvm.(id, { visibility; result_ty; params; cfg });
-
+        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis params result_ty body);
     | _, _ ->
         failwith "mismatched items"
   end;
