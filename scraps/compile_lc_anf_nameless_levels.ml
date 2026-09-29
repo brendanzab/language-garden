@@ -68,8 +68,9 @@ module Anf_conv : sig
 end = struct
 
   type 'a k = size:Anf.level -> 'a -> Anf.tm
-  (** Continuation. The [size] parameter is used for generating fresh levels
-      in the target term. *)
+  (** Continuation. The [size] parameter tracks the number of entries in the
+      target environment, and is used for generating fresh levels in the target
+      term. *)
 
   let comp : Anf.comp_tm k =
     fun ~size:_ tm -> Anf.Comp tm
@@ -78,12 +79,9 @@ end = struct
     fun ~size:_ tm -> Anf.Join_app (level, tm)
 
   (** Translate a term to A-normal form. The environment records the level of
-      the bindings in the source terms we have passed over.
-
-      Note that we only add to this when passing over bindings in the source
-      language, in order to keep it consistent with how the source terms are
-      indexed.
-  *)
+      the bindings in the source terms we have passed over. Note that we only
+      need to extend this environment when passing over bindings in the source
+      language. *)
   let rec translate (env : Anf.level list) (tm : Core.tm) : Anf.comp_tm k k =
     fun ~size k ->
       match tm with
