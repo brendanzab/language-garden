@@ -24,7 +24,7 @@ module Core = struct
     | Int_lit of int
     | Bool_lit of bool
     | Bool_elim of tm * tm * tm
-    | Prim_app of string * tm list
+    | Prim_app of [`Neg | `Add | `Mul] * tm list
 
   (* TODO: Pretty printing *)
 
@@ -46,7 +46,7 @@ module Anf = struct
 
   and comp_tm =
     | Fun_app of atom_tm * atom_tm
-    | Prim_app of string * atom_tm list
+    | Prim_app of [`Neg | `Add | `Mul] * atom_tm list
     | Atom of atom_tm
 
   and atom_tm =
@@ -54,6 +54,55 @@ module Anf = struct
     | Fun_lit of string * tm
     | Int_lit of int
     | Bool_lit of bool
+
+  type value =
+    | Fun_lit of env * tm
+    | Int_lit of int
+    | Bool_lit of bool
+    | Join of level * tm
+
+  and env = value list
+
+  let eval_atom (env : env) (tm : atom_tm) : value =
+    match tm with
+    | Var level -> List.nth env (List.length env - level - 1)
+    | Fun_lit (_, body) -> Fun_lit (env, body)
+    | Int_lit b -> Int_lit b
+    | Bool_lit b -> Bool_lit b
+
+  let eval_comp (env : env) (tm : comp_tm) : value =
+    match tm with
+    | Fun_app (fn, arg) -> eval_atom (eval_atom env arg :: env) fn
+    | Prim_app (prim, args) ->
+        begin match prim, args |> List.map (eval_atom env) with
+        | `Neg, [Int_lit i] -> Int_lit (Int.neg i)
+        | `Add, [Int_lit i1; Int_lit i2] -> Int_lit (Int.add i1 i2)
+        | `Mul, [Int_lit i1; Int_lit i2] -> Int_lit (Int.mul i1 i2)
+        | _ -> invalid_arg "Anf.eval_comp"
+        end
+    | Atom tm -> eval_atom env tm
+
+  let rec eval (env : env) (tm : tm) : value =
+    match tm with
+    | Let_comp (_, def, body) ->
+        eval (eval_comp env def :: env) body
+    | Let_join (_, _, cont, body) ->
+        eval (Join (List.length env, cont) :: env) body
+    | Join_app (level, arg) ->
+        begin match List.nth env (List.length env - level - 1) with
+        (* TODO: Implement evaluation for join points. We should be able to
+           reuse the current environment, but I'm not sure how this works given
+           we are using levels *)
+        | Join (level, body) -> failwith "TODO"
+        | _ -> invalid_arg "Anf.eval"
+        end
+    | Bool_elim (cond, tm1, tm2) ->
+        begin match eval_atom env cond with
+        | Bool_lit true -> eval env tm1
+        | Bool_lit false -> eval env tm2
+        | _ -> invalid_arg "Anf.eval"
+        end
+    | Comp tm -> eval_comp env tm
 
   (* TODO: Pretty printing *)
 
