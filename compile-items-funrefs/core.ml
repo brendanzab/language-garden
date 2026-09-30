@@ -11,21 +11,6 @@ module Ty = struct
     | I32
     | Fun of t Iarray.t * t
 
-  let rec pp (ty : t) : Format.formatter -> unit =
-    match ty with
-    | Fun (param_tys, result_ty) ->
-        Format.dprintf "@[fun@ (%t)@ ->@]@ %t"
-          (fun ppf ->
-            Format.pp_print_iter Iarray.iter (Fun.flip pp) ppf param_tys
-              ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
-          (pp result_ty)
-    | ty -> pp_atomic ty
-  and pp_atomic (ty : t) : Format.formatter -> unit =
-    match ty with
-    | Bool -> Format.dprintf "Bool"
-    | I32 -> Format.dprintf "I32"
-    | Fun _ as ty -> Format.dprintf "@[(%t)@]" (pp ty)
-
   let of_prim (ty : Prim.Ty.t) : t =
     match ty with
     | Prim.Ty.Bool -> Bool
@@ -131,5 +116,32 @@ end = Item
 module Module = struct
 
   type t = Item.t Item_map.t  (* TODO: Preserve order? *)
+
+end
+
+(** Pretty printing *)
+module Pretty : sig
+
+  val pp_ty : Ty.t -> Format.formatter -> unit
+
+end = struct
+
+  let rec pp_ty (ty : Ty.t) : Format.formatter -> unit =
+    match ty with
+    | Ty.Fun (param_tys, result_ty) ->
+        Format.dprintf "@[fun@ (%t)@ ->@]@ %t"
+          (fun ppf ->
+            Format.pp_print_iter Iarray.iter (Fun.flip pp_ty) ppf param_tys
+              ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
+          (pp_ty result_ty)
+    | ty -> pp_atomic_ty ty
+
+  and pp_atomic_ty (ty : Ty.t) : Format.formatter -> unit =
+    match ty with
+    | Ty.Bool -> Format.dprintf "Bool"
+    | Ty.I32 -> Format.dprintf "I32"
+    | Ty.Fun _ as ty -> Format.dprintf "@[(%t)@]" (pp_ty ty)
+
+  (* TODO: Pretty print expressions and modules *)
 
 end

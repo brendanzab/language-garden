@@ -56,8 +56,6 @@ module rec Expr : sig
 
   val eval : Item.t Item_map.t -> t -> value
 
-  val pp : t -> Format.formatter -> unit
-
 end = struct
 
   include Expr
@@ -134,64 +132,6 @@ end = struct
 
     eval Join_map.empty Local_map.empty expr
 
-
-  (* Pretty printing *)
-
-  let pp_atom (expr : atom) =
-    match expr with
-    | Item (id, _) -> Format.dprintf "%t" (Item_name.pp id)
-    | Var (id, _) -> Format.dprintf "%t" (Local_id.pp id)
-    | Bool true -> Format.dprintf "true"
-    | Bool false -> Format.dprintf "false"
-    | I32 int -> Format.dprintf "%li" int
-
-  let pp_args (args : atom Iarray.t) (ppf : Format.formatter) =
-    (* TODO: trailing comma *)
-    let pp_sep ppf () = Format.fprintf ppf ",@ " in
-    Format.pp_print_iter Iarray.iter (Fun.flip pp_atom) ppf args ~pp_sep
-
-  let pp_comp (expr : comp) =
-    match expr with
-    | Item (id, args, _) -> Format.dprintf "%t(%t)" (Item_name.pp id) (pp_args args)
-    | Prim (op, args) -> Format.dprintf "%t(%t)" (Prim.Op.pp op) (pp_args args)
-    | Atom expr -> pp_atom expr
-
-  let rec pp (expr : t) =
-    match expr with
-    | Let (_, _, _, _) | Join (_, _, _, _) ->
-        let rec go expr =
-          match expr with
-          | Let (id, def_ty, def, body) ->
-              Format.dprintf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
-                (Format.dprintf "@[<2>@[%t :@]@ %t@]"
-                  (Local_id.pp id)
-                  (Ty.pp def_ty))
-                (pp_comp def)
-                (go body)
-          | Join (id, (param_id, param_ty), cont, body) ->
-              Format.dprintf "@[<2>@[join %s@ %t@ :=@]@ @[%t;@]@]@ %t"
-                (Join_id.to_string id)
-                (Format.dprintf "@[<2>(@[%t@ :@]@ %t)@]"
-                  (Local_id.pp param_id)
-                  (Ty.pp param_ty))
-                (pp cont)
-                (go body)
-          | _ ->
-              Format.dprintf "@[%t@]" (pp expr)
-        in
-        Format.dprintf "@[<v>%t@]" (go expr)
-    | Jump (id, arg) ->
-        Format.dprintf "@[<2>@[jump@ %s@]@ %t@]"
-          (Join_id.to_string id)
-          (pp_atom arg)
-    | Bool_if (expr1, expr2, expr3) ->
-        Format.dprintf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
-          (pp_atom expr1)
-          (pp expr2) (* FIXME: precedence *)
-          (pp expr3)
-    | Return expr ->
-        pp_comp expr
-
 end
 
 and Item : sig
@@ -211,18 +151,85 @@ module Module = struct
 
   type t = Item.t Item_map.t
 
+end
+
+(** Pretty printing *)
+module Pretty : sig
+
+  val pp_ty : Ty.t -> Format.formatter -> unit
+  val pp_module : Module.t -> Format.formatter -> unit
+
+end = struct
+
+  let pp_ty = Core.Pretty.pp_ty
+
+  let pp_atom (expr : Expr.atom) =
+    match expr with
+    | Expr.Item (id, _) -> Format.dprintf "%t" (Item_name.pp id)
+    | Expr.Var (id, _) -> Format.dprintf "%t" (Local_id.pp id)
+    | Expr.Bool true -> Format.dprintf "true"
+    | Expr.Bool false -> Format.dprintf "false"
+    | Expr.I32 int -> Format.dprintf "%li" int
+
+  let pp_args (args : Expr.atom Iarray.t) (ppf : Format.formatter) =
+    (* TODO: trailing comma *)
+    let pp_sep ppf () = Format.fprintf ppf ",@ " in
+    Format.pp_print_iter Iarray.iter (Fun.flip pp_atom) ppf args ~pp_sep
+
+  let pp_comp (expr : Expr.comp) =
+    match expr with
+    | Expr.Item (id, args, _) -> Format.dprintf "%t(%t)" (Item_name.pp id) (pp_args args)
+    | Expr.Prim (op, args) -> Format.dprintf "%t(%t)" (Prim.Op.pp op) (pp_args args)
+    | Expr.Atom expr -> pp_atom expr
+
+  let rec pp_expr (expr : Expr.t) =
+    match expr with
+    | Expr.Let (_, _, _, _) | Expr.Join (_, _, _, _) ->
+        let rec go expr =
+          match expr with
+          | Expr.Let (id, def_ty, def, body) ->
+              Format.dprintf "@[<2>@[let %t@ :=@]@ @[%t;@]@]@ %t"
+                (Format.dprintf "@[<2>@[%t :@]@ %t@]"
+                  (Local_id.pp id)
+                  (pp_ty def_ty))
+                (pp_comp def)
+                (go body)
+          | Expr.Join (id, (param_id, param_ty), cont, body) ->
+              Format.dprintf "@[<2>@[join %s@ %t@ :=@]@ @[%t;@]@]@ %t"
+                (Join_id.to_string id)
+                (Format.dprintf "@[<2>(@[%t@ :@]@ %t)@]"
+                  (Local_id.pp param_id)
+                  (pp_ty param_ty))
+                (pp_expr cont)
+                (go body)
+          | _ ->
+              Format.dprintf "@[%t@]" (pp_expr expr)
+        in
+        Format.dprintf "@[<v>%t@]" (go expr)
+    | Expr.Jump (id, arg) ->
+        Format.dprintf "@[<2>@[jump@ %s@]@ %t@]"
+          (Join_id.to_string id)
+          (pp_atom arg)
+    | Expr.Bool_if (expr1, expr2, expr3) ->
+        Format.dprintf "@[<hv>@[if@ %t@ then@]@;<1 2>@[%t@]@ else@;<1 2>@[%t@]@]"
+          (pp_atom expr1)
+          (pp_expr expr2) (* FIXME: precedence *)
+          (pp_expr expr3)
+    | Expr.Return expr ->
+        pp_comp expr
+
   let pp_params (args : (Local_id.t * Ty.t) Iarray.t) (ppf : Format.formatter) =
     (* TODO: trailing comma *)
     let pp_sep ppf () = Format.fprintf ppf ",@ " in
     let pp_param ppf (id, ty) =
-      Format.fprintf ppf "%t@ :@ %t" (Local_id.pp id) (Ty.pp ty)
+      Format.fprintf ppf "%t@ :@ %t" (Local_id.pp id) (pp_ty ty)
     in
     Format.pp_print_iter Iarray.iter pp_param ppf args ~pp_sep
 
   let pp_vis (vis : Item.vis) =
     match vis with
-    | Pub -> Format.dprintf "pub"
-    | Priv -> Format.dprintf "priv"
+    | Item.Pub -> Format.dprintf "pub"
+    | Item.Priv -> Format.dprintf "priv"
 
   let rec pp_item (name, item : Item_name.t * Item.t) =
     match item with
@@ -230,18 +237,18 @@ module Module = struct
         Format.dprintf "@[<2>@[%t@ val %t@ :@ %t@ :=@]@ @[%t;@]@]\n"
           (pp_vis vis)
           (Item_name.pp name)
-          (Ty.pp ty)
-          (Expr.pp expr)
+          (pp_ty ty)
+          (pp_expr expr)
 
     | Item.Fun (vis, params, ty, expr) ->
         Format.dprintf "@[<2>@[%t@ fun %t(%t)@ :@ %t@ :=@]@ @[%t;@]@]\n"
           (pp_vis vis)
           (Item_name.pp name)
           (pp_params params)
-          (Ty.pp ty)
-          (Expr.pp expr)
+          (pp_ty ty)
+          (pp_expr expr)
 
-  let rec pp (mod_ : t) (ppf : Format.formatter) =
+  let rec pp_module (mod_ : Module.t) (ppf : Format.formatter) =
     Format.pp_print_seq (Fun.flip pp_item) ppf (Item_map.to_seq mod_)
       ~pp_sep:Format.pp_print_newline
 

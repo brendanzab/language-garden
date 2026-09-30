@@ -81,7 +81,7 @@ let compile_anf_cmd () : unit =
   parse_module source
   |> elab_module source
   |> Core_to_anf.translate_module
-  |> Anf.Module.pp
+  |> Anf.Pretty.pp_module
   |> Format.printf "%t"
 
 let compile_anf_llvm (output_format : [`Ll | `Dot]) : unit =

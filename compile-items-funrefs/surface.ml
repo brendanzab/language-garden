@@ -189,8 +189,8 @@ end = struct
       error span "mismatched types"
         ~details:[
           Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
-            (Core.Ty.pp expected)
-            (Core.Ty.pp found);
+            (Core.Pretty.pp_ty expected)
+            (Core.Pretty.pp_ty found);
         ]
 
 
@@ -254,7 +254,7 @@ end = struct
         begin match ty1 with
         | Core.Ty.Bool -> Core.Expr.Prim (Prim.Op.Bool_eq, [|expr1; expr2|]), Core.Ty.Bool
         | Core.Ty.I32 -> Core.Expr.Prim (Prim.Op.I32_eq, [|expr1; expr2|]), Core.Ty.Bool
-        | ty -> error expr.span "equality not supported for `%t`" (Core.Ty.pp ty)
+        | ty -> error expr.span "equality not supported for `%t`" (Core.Pretty.pp_ty ty)
         end
 
     | Expr.Infix ((`Add | `Sub | `Mul) as op, expr1, expr2) ->

@@ -10,11 +10,6 @@ module Ty = struct
     | Bool
     | I32
 
-  let pp (ty : t) : Format.formatter -> unit =
-    match ty with
-    | Bool -> Format.dprintf "Bool"
-    | I32 -> Format.dprintf "I32"
-
   let of_prim (ty : Prim.Ty.t) : t =
     match ty with
     | Prim.Ty.Bool -> Bool
@@ -110,5 +105,21 @@ end = Item
 module Module = struct
 
   type t = Item.t Item_map.t  (* TODO: Preserve order? *)
+
+end
+
+(** Pretty printing *)
+module Pretty : sig
+
+  val pp_ty : Ty.t -> Format.formatter -> unit
+
+end = struct
+
+  let pp_ty (ty : Ty.t) : Format.formatter -> unit =
+    match ty with
+    | Ty.Bool -> Format.dprintf "Bool"
+    | Ty.I32 -> Format.dprintf "I32"
+
+  (* TODO: Pretty print expressions and modules *)
 
 end

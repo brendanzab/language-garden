@@ -198,8 +198,8 @@ end = struct
       error span "mismatched types"
         ~details:[
           Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
-            (Core.Ty.pp expected)
-            (Core.Ty.pp found);
+            (Core.Pretty.pp_ty expected)
+            (Core.Pretty.pp_ty found);
         ]
 
 
