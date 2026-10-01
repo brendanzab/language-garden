@@ -127,6 +127,33 @@ let translate_expr
 
   make_iarray locals, make_iarray instrs
 
+let translate_fun
+  ~(enable_tail_call : bool)
+  ~(add_type_def : string -> Wasm.comp_type -> Wasm.Type_id.t)
+  ~(add_func_ref : Wasm.Func_id.t -> unit)
+  (item_env : item_decl Core.Item_map.t)
+  (id : Wasm.Func_id.t)
+  (params : (string option * Core.Ty.t) Iarray.t)
+  (result_ty : Core.Ty.t)
+  (body : Core.Expr.t)
+: Wasm.func =
+  let fresh_local_id = Local_supply.(fresh (create ())) in
+
+  let param_id name = fresh_local_id (Option.value name ~default:"_") in
+  let params = params |> Iarray.map (Pair.map param_id (translate_ty ~add_type_def)) in
+  let result_ty = translate_ty result_ty ~add_type_def in
+
+  let locals, body =
+    let local_env = Iarray.to_seq params |> Seq.map Pair.fst |> Core.Local.Env.of_seq in
+    translate_expr item_env local_env body
+      ~enable_tail_call
+      ~add_type_def
+      ~add_func_ref
+      ~fresh_local_id
+  in
+
+  Wasm.{ id; params; results = [|result_ty|]; locals; body }
+
 let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.module_ =
   (* Arrays to store exports and functions *)
   let exports : Wasm.export Dynarray.t = Dynarray.create () in
@@ -169,10 +196,6 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
   in
 
   item_env |> Core.Item_map.iter begin fun name item_decl ->
-    let fresh_local_id = Local_supply.(fresh (create ())) in
-    let translate_ty = translate_ty ~add_type_def in
-    let translate_expr = translate_expr item_env ~add_type_def ~add_func_ref ~fresh_local_id in
-
     match Core.Item_map.find name mod_, item_decl with
     (* FIXME: re-evaluation of top-level values.
 
@@ -180,23 +203,15 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
         - normalise expressions (using NbE) and store in global
         - create a global and initialise with a startup function
     *)
-    | Core.Item.Val (vis, ty, expr), Val (_, id) ->
-        let result_ty = translate_ty ty in
-
-        let locals, body = translate_expr Core.Local.Env.empty expr ~enable_tail_call in
+    | Core.Item.Val (vis, ty, body), Val (_, id) ->
         if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        Dynarray.add_last funcs Wasm.{ id; params = [||]; results = [|result_ty|]; locals; body }
+        let func = translate_fun item_env id [||] ty body ~enable_tail_call ~add_type_def ~add_func_ref in
+        Dynarray.add_last funcs func
 
     | Core.Item.Fun (vis, params, ty, body), Fun (_, id) ->
-        let param_id name = fresh_local_id (Option.value name ~default:"_") in
-        let params = params |> Iarray.map (fun (name, ty) -> param_id name, translate_ty ty) in
-        let result_ty = translate_ty ty in
-        let locals, body =
-          let local_env = Iarray.to_seq params |> Seq.map fst |> Core.Local.Env.of_seq in
-          translate_expr local_env body ~enable_tail_call
-        in
         if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        Dynarray.add_last funcs Wasm.{ id; params; results = [|result_ty|]; locals; body }
+        let func = translate_fun item_env id params ty body ~enable_tail_call ~add_type_def ~add_func_ref in
+        Dynarray.add_last funcs func
 
     | _, _ ->
         failwith "mismatched items"

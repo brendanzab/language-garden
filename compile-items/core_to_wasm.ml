@@ -81,6 +81,27 @@ let translate_expr
 
   make_iarray locals, make_iarray instrs
 
+let translate_fun
+  ~(enable_tail_call : bool)
+  (item_env : Wasm.Func_id.t Core.Item_map.t)
+  (id : Wasm.Func_id.t)
+  (params : (string option * Core.Ty.t) Iarray.t)
+  (result_ty : Core.Ty.t)
+  (body : Core.Expr.t)
+: Wasm.func =
+  let fresh_local_id = Local_supply.(fresh (create ())) in
+
+  let param_id name = fresh_local_id (Option.value name ~default:"_") in
+  let params = params |> Iarray.map (Pair.map param_id translate_ty) in
+  let result_ty = translate_ty result_ty in
+
+  let locals, body =
+    let local_env = Iarray.to_seq params |> Seq.map Pair.fst |> Core.Local.Env.of_seq in
+    translate_expr item_env local_env body ~enable_tail_call ~fresh_local_id
+  in
+
+  Wasm.{ id; params; results = [|result_ty|]; locals; body }
+
 let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.module_ =
   (* Arrays to store exports and functions *)
   let exports = Dynarray.create () in
@@ -94,9 +115,6 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
   in
 
   item_env |> Core.Item_map.iter begin fun name id ->
-    let fresh_local_id = Local_supply.(fresh (create ())) in
-    let translate_expr = translate_expr item_env ~enable_tail_call ~fresh_local_id in
-
     match Core.Item_map.find name mod_ with
     (** FIXME: re-evaluation of top-level values.
 
@@ -104,22 +122,13 @@ let translate_module ~(enable_tail_call : bool) (mod_ : Core.Module.t) : Wasm.mo
         - normalise expressions (using NbE) and store in global
         - create a global and initialise with a startup function
     *)
-    | Core.Item.Val (vis, ty, expr) ->
-        let result_ty = translate_ty ty in
-
-        let locals, body = translate_expr Core.Local.Env.empty expr in
+    | Core.Item.Val (vis, ty, body) ->
         if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        Dynarray.add_last funcs Wasm.{ id; params = [||]; results = [|result_ty|]; locals; body }
+        Dynarray.add_last funcs (translate_fun item_env id [||] ty body ~enable_tail_call)
 
     | Core.Item.Fun (vis, params, ty, body) ->
-        let param_id name = fresh_local_id (Option.value name ~default:"_") in
-        let params = params |> Iarray.map (Pair.map param_id translate_ty) in
-        let result_ty = translate_ty ty in
-
-        let local_env = Iarray.to_seq params |> Seq.map Pair.fst |> Core.Local.Env.of_seq in
-        let locals, body = translate_expr local_env body in
         if vis = Pub then Dynarray.add_last exports (Core.Item_name.to_string name, Wasm.Func id);
-        Dynarray.add_last funcs Wasm.{ id; params; results = [|result_ty|]; locals; body }
+        Dynarray.add_last funcs (translate_fun item_env id params ty body ~enable_tail_call)
   end;
 
   Wasm.{
