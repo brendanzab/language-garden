@@ -48,7 +48,7 @@ end = struct
 
 end
 
-and Item : sig
+module Item = struct
 
   (** Visibility of an item *)
   type vis =
@@ -59,7 +59,7 @@ and Item : sig
     | Val of vis * Ty.t * Expr.t
     | Fun of vis * (string option * Ty.t) Iarray.t * Ty.t * Expr.t
 
-end = Item
+end
 
 module Module = struct
 
