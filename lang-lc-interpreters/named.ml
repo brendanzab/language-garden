@@ -84,11 +84,11 @@ let rec subst (x, s : string * expr) (e : expr) : expr =
   let rec go e =
     match e with
     | Var y -> if x = y then s else e
-    | Let (y, _, _) when x = y -> e
+    | Let (y, def, body) when x = y -> Let (y, go def, body)
     | Let (y, def, body) when String_set.mem y fvs ->
         let y', body' = freshen_body y body in
         Let (y', go def, go body')
-    | Let (y, def, body) -> Let (y, def, go body)
+    | Let (y, def, body) -> Let (y, go def, go body)
     | Fun_lit (y, _) when x = y -> e
     | Fun_lit (y, body) when String_set.mem y fvs ->
         let y', body' = freshen_body y body in
