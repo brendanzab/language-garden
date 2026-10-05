@@ -47,15 +47,8 @@ module rec Expr : sig
     | Bool of bool
     | I32 of int32
 
-  type value =
-    | Item of Item.t
-    | Bool of bool
-    | I32 of int32
-
   val ty_of_comp : comp -> Ty.t
   val ty_of_atom : atom -> Ty.t
-
-  val eval : Item.t Item_map.t -> t -> value
 
 end = struct
 
@@ -78,38 +71,74 @@ end = struct
     | Prim (op, _) -> Ty.of_prim (snd (Prim.Op.ty op))
     | Atom expr -> ty_of_atom expr
 
-  (* Evaluation *)
+end
 
-  let eval (items : Item.t Item_map.t) (expr : t) : value =
-    let rec eval (joins : (Local_id.t * t) Join_map.t) (locals : value Local_map.t) (expr : t) : value =
+module Item = struct
+
+  (** Visibility of an item *)
+  type vis = Core.Item.vis =
+    | Pub
+    | Priv
+
+  type t =
+    | Val of vis * Ty.t * Expr.t
+    | Fun of vis * (Local_id.t * Ty.t) Iarray.t * Ty.t * Expr.t
+
+end
+
+module Module = struct
+
+  type t = Item.t Item_map.t
+
+end
+
+(** Tree-walking interpreter *)
+module Interpret : sig
+
+  type value =
+    | Item of Item.t
+    | Bool of bool
+    | I32 of int32
+
+  val eval_expr : Module.t -> Expr.t -> value
+
+end = struct
+
+  type value =
+    | Item of Item.t
+    | Bool of bool
+    | I32 of int32
+
+  let eval_expr (items : Module.t) (expr : Expr.t) : value =
+    let rec eval_expr (joins : (Local_id.t * Expr.t) Join_map.t) (locals : value Local_map.t) (expr : Expr.t) : value =
       match expr with
-      | Let (id, _, def, body) ->
+      | Expr.Let (id, _, def, body) ->
           let def = eval_comp joins locals def in
-          eval joins (Local_map.add id def locals) body
-      | Join (id, (param_id, _), cont, body) ->
-          eval (Join_map.add id (param_id, cont) joins) locals body
-      | Jump (id, arg) ->
+          eval_expr joins (Local_map.add id def locals) body
+      | Expr.Join (id, (param_id, _), cont, body) ->
+          eval_expr (Join_map.add id (param_id, cont) joins) locals body
+      | Expr.Jump (id, arg) ->
           let param_id, def = Join_map.find id joins in
-          eval joins (Local_map.add param_id (eval_atom locals arg) locals) def
-      | Bool_if (expr1, expr2, expr3) ->
+          eval_expr joins (Local_map.add param_id (eval_atom locals arg) locals) def
+      | Expr.Bool_if (expr1, expr2, expr3) ->
           begin match eval_atom locals expr1 with
-          | Bool true -> eval joins locals expr2
-          | Bool false -> eval joins locals expr3
+          | Bool true -> eval_expr joins locals expr2
+          | Bool false -> eval_expr joins locals expr3
           | _ -> failwith "Expr.eval"
           end
-      | Return expr -> eval_comp joins locals expr
+      | Expr.Return expr -> eval_comp joins locals expr
 
-    and eval_comp (joins : (Local_id.t * t) Join_map.t) (locals : value Local_map.t) (expr : comp) : value =
+    and eval_comp (joins : (Local_id.t * Expr.t) Join_map.t) (locals : value Local_map.t) (expr : Expr.comp) : value =
       match expr with
-      | Fun_app (fun_, args) ->
+      | Expr.Fun_app (fun_, args) ->
           begin match eval_atom locals fun_ with
           | Item (Item.Fun (_, params, _, body)) ->
               let eval_arg (id, _) arg = id, eval_atom locals arg in
               let args = Seq.map2 eval_arg (Iarray.to_seq params) (Iarray.to_seq args) in
-              eval joins (Local_map.add_seq args locals) body
+              eval_expr joins (Local_map.add_seq args locals) body
           | _ -> failwith "Expr.eval"
           end
-      | Prim (op, args) ->
+      | Expr.Prim (op, args) ->
           let args =
             args |> Iarray.map @@ fun arg ->
               match eval_atom locals arg with
@@ -121,41 +150,22 @@ end = struct
           | Prim.Value.Bool bool -> Bool bool
           | Prim.Value.I32 int -> I32 int
           end
-      | Atom expr ->
+      | Expr.Atom expr ->
           eval_atom locals expr
 
-    and eval_atom (locals : value Local_map.t) (expr : atom) : value =
+    and eval_atom (locals : value Local_map.t) (expr : Expr.atom) : value =
       match expr with
-      | Item (name, _) ->
+      | Expr.Item (name, _) ->
           begin match Item_map.find name items with
-          | Item.Val (_, _, body) -> eval (Join_map.empty) locals body
+          | Item.Val (_, _, body) -> eval_expr (Join_map.empty) locals body
           | Item.Fun _ as fun_ -> Item fun_
           end
-      | Var (id, _) -> Local_map.find id locals
-      | Bool bool -> Bool bool
-      | I32 int -> I32 int
+      | Expr.Var (id, _) -> Local_map.find id locals
+      | Expr.Bool bool -> Bool bool
+      | Expr.I32 int -> I32 int
     in
 
-    eval Join_map.empty Local_map.empty expr
-
-end
-
-and Item : sig
-
-  (** Visibility of an item *)
-  type vis = Core.Item.vis =
-    | Pub
-    | Priv
-
-  type t =
-    | Val of vis * Ty.t * Expr.t
-    | Fun of vis * (Local_id.t * Ty.t) Iarray.t * Ty.t * Expr.t
-
-end = Item
-
-module Module = struct
-
-  type t = Item.t Item_map.t
+    eval_expr Join_map.empty Local_map.empty expr
 
 end
 
