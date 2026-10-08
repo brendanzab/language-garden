@@ -29,9 +29,9 @@ let item :=
     { Surface_syntax.Def { label; ty; tm } }
 
 let tm :=
-| lhs = atomic_tm; "+"; rhs = tm;
+| lhs = tm; "+"; rhs = atomic_tm;
     { Surface_syntax.Binop (lhs, Surface_syntax.Add, rhs) }
-| lhs = atomic_tm; "-"; rhs = tm;
+| lhs = tm; "-"; rhs = atomic_tm;
     { Surface_syntax.Binop (lhs, Surface_syntax.Sub, rhs) }
 | t = atomic_tm;
     { t }

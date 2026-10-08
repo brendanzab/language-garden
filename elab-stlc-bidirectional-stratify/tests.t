@@ -24,6 +24,16 @@ Integer Addition
   $ executable elab <<< "1 + 2"
   #int-add 1 2 : Int
 
+Infix operator associativity
+  $ executable elab <<< "true = false = true"
+  > executable elab <<< "1 + 2 + 3"
+  > executable elab <<< "1 - 2 - 3"
+  > executable elab <<< "1 * 2 * 3"
+  #bool-eq (#bool-eq true false) true : Bool
+  #int-add (#int-add 1 2) 3 : Int
+  #int-sub (#int-sub 1 2) 3 : Int
+  #int-mul (#int-mul 1 2) 3 : Int
+
 Add two function
   $ executable elab <<< "fun (x : Int) => x + 2"
   fun (x : Int) => #int-add x 2 : Int -> Int

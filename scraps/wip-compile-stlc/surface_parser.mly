@@ -68,29 +68,29 @@ let expr :=
 | or_expr
 
 let or_expr :=
-| expr1 = spanned(add_expr); "||"; expr2 = spanned(or_expr);
+| expr1 = spanned(or_expr); "||"; expr2 = spanned(add_expr);
     { Surface.Infix (`Or, expr1, expr2) }
 | and_expr
 
 let and_expr :=
-| expr1 = spanned(add_expr); "&&"; expr2 = spanned(and_expr);
+| expr1 = spanned(and_expr); "&&"; expr2 = spanned(add_expr);
     { Surface.Infix (`And, expr1, expr2) }
 | eq_expr
 
 let eq_expr :=
-| expr1 = spanned(add_expr); "="; expr2 = spanned(eq_expr);
+| expr1 = spanned(eq_expr); "="; expr2 = spanned(add_expr);
     { Surface.Infix (`Eq, expr1, expr2) }
 | add_expr
 
 let add_expr :=
-| expr1 = spanned(mul_expr); "+"; expr2 = spanned(add_expr);
+| expr1 = spanned(add_expr); "+"; expr2 = spanned(mul_expr);
     { Surface.Infix (`Add, expr1, expr2) }
-| expr1 = spanned(mul_expr); "-"; expr2 = spanned(add_expr);
+| expr1 = spanned(add_expr); "-"; expr2 = spanned(mul_expr);
     { Surface.Infix (`Sub, expr1, expr2) }
 | mul_expr
 
 let mul_expr :=
-| expr1 = spanned(app_expr); "*"; expr2 = spanned(mul_expr);
+| expr1 = spanned(mul_expr); "*"; expr2 = spanned(app_expr);
     { Surface.Infix (`Mul, expr1, expr2) }
 | app_expr
 

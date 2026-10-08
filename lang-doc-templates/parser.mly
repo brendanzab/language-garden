@@ -68,7 +68,7 @@ let tm :=
 | add_tm
 
 let add_tm :=
-| tm1 = spanned(atomic_tm); "+"; tm2 = spanned(add_tm);
+| tm1 = spanned(add_tm); "+"; tm2 = spanned(app_tm);
     { Surface.Infix (`Add, tm1, tm2) }
 | app_tm
 

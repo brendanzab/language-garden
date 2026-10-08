@@ -61,14 +61,14 @@ let tm :=
 | add_tm
 
 let add_tm :=
-| e1 = mul_tm; "+"; e2 = add_tm;
+| e1 = add_tm; "+"; e2 = mul_tm;
     { fun names -> Lang__fun.Prim_app (`Add, [e1 names; e2 names]) }
-| e1 = mul_tm; "-"; e2 = add_tm;
+| e1 = add_tm; "-"; e2 = mul_tm;
     { fun names -> Lang__fun.Prim_app (`Sub, [e1 names; e2 names]) }
 | mul_tm
 
 let mul_tm :=
-| e1 = app_tm; "*"; e2 = mul_tm;
+| e1 = mul_tm; "*"; e2 = app_tm;
     { fun names -> Lang__fun.Prim_app (`Mul, [e1 names; e2 names]) }
 | app_tm
 
