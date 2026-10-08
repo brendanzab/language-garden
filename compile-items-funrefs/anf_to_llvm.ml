@@ -33,9 +33,7 @@ let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
   | Anf.Ty.Bool -> Llvm.I1
   | Anf.Ty.I32 -> Llvm.I32
   | Anf.Ty.Fun (_, _) -> Llvm.Ptr
-  | Anf.Ty.Tuple tys ->
-      (* Llvm.Struct (tys |> Iarray.map translate_ty) *)
-      failwith "TODO"
+  | Anf.Ty.Tuple _ -> Llvm.Ptr
 
 (** Item declarations *)
 type item_decl =
@@ -192,7 +190,7 @@ let translate_fun
   in
   let params =
     params |> Iarray.map @@ fun (id, ty) ->
-      translate_ty ty, Anf.Local_map.find id param_ids
+      translate_ty ty, Some (Anf.Local_map.find id param_ids)
   in
 
   let cfg =
@@ -226,18 +224,19 @@ let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
       | Anf.Item.Fun _ -> Fun (fresh_global_id (Anf.Item_name.to_string name))
   in
 
-  let funs = Dynarray.create () in
+  let fun_defs = Dynarray.create () in
 
   item_env |> Anf.Item_map.iter begin fun name item_decl ->
     match Anf.Item_map.find name mod_, item_decl with
     | Anf.Item.Val (vis, ty, body), Val id ->
-        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis [||] ty body);
+        Dynarray.add_last fun_defs Llvm.(id, translate_fun item_env vis [||] ty body);
     | Anf.Item.Fun (vis, params, result_ty, body), Fun id ->
-        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis params result_ty body);
+        Dynarray.add_last fun_defs Llvm.(id, translate_fun item_env vis params result_ty body);
     | _, _ ->
         failwith "mismatched items"
   end;
 
   Llvm.{
-    funs = make_iarray funs;
+    fun_decls = [||];
+    fun_defs = make_iarray fun_defs;
   }
