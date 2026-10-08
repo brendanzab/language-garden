@@ -26,6 +26,10 @@ let rec translate_ty
           params = Iarray.map go param_tys;
           results = [|go result_ty|];
         })))
+    | Core.Ty.Tuple elem_tys ->
+        let _elem_tys = elem_tys |> Iarray.map go in
+        (* Wasm.Ref (None, Id (add_type_def "Tuple" (Wasm.Struct elem_tys))) *)
+        failwith "TODO"
   in
   go ty
 
@@ -75,6 +79,26 @@ let translate_expr
     | Core.Expr.Fun_app (fun_, args) ->
         args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         go_indirect_call local_env instrs fun_ ~tail_call;
+
+    | Core.Expr.Tuple exprs ->
+        let _ty_id =
+          match translate_ty (Core.Expr.ty_of expr) with
+          | Wasm.Ref (_, Id id) -> id
+          | _ -> failwith "expected reference to type id"
+        in
+        exprs |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
+        (* Dynarray.add_last instrs (Wasm.Struct_new ty_id); *)
+        failwith "TODO"
+
+    | Core.Expr.Tuple_proj (tuple, index) ->
+        let _ty_id =
+          match translate_ty (Core.Expr.ty_of tuple) with
+          | Wasm.Ref (_, Id id) -> id
+          | _ -> failwith "expected reference to type id"
+        in
+        go_expr instrs ~tail_call:false local_env tuple;
+        (* Dynarray.add_last instrs (Wasm.Struct_get (ty_id, index)); *)
+        failwith "TODO"
 
     | Core.Expr.Bool true -> Dynarray.add_last instrs (Wasm.I32_const 1l);
     | Core.Expr.Bool false -> Dynarray.add_last instrs (Wasm.I32_const 0l);

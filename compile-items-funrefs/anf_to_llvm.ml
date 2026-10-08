@@ -33,6 +33,9 @@ let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
   | Anf.Ty.Bool -> Llvm.I1
   | Anf.Ty.I32 -> Llvm.I32
   | Anf.Ty.Fun (_, _) -> Llvm.Ptr
+  | Anf.Ty.Tuple tys ->
+      (* Llvm.Struct (tys |> Iarray.map translate_ty) *)
+      failwith "TODO"
 
 (** Item declarations *)
 type item_decl =
