@@ -31,10 +31,10 @@ let translate_ty (ty : Core.Ty.t) : Llvm.ty =
   | Core.Ty.Bool -> Llvm.I1
   | Core.Ty.I32 -> Llvm.I32
 
-let translate_vis (vis : Core.Item.vis) :  [`Private] option =
+let translate_vis (vis : Core.Item.vis) :  Llvm.linkage option =
   match vis with
   | Pub -> None
-  | Priv -> Some `Private
+  | Priv -> Some Llvm.Private
 
 let translate_fun
   (item_env : Llvm.Global_id.t Core.Item_map.t)
@@ -138,7 +138,7 @@ let translate_fun
         end
   in
 
-  let visibility = translate_vis vis in
+  let linkage = translate_vis vis in
   let result_ty = translate_ty result_ty in
   let params =
     params |> Iarray.map @@ fun (name, ty) ->
@@ -159,7 +159,7 @@ let translate_fun
     Llvm.{ blocks = make_iarray blocks }
   in
 
-  Llvm.{ visibility; result_ty; params; cfg }
+  Llvm.{ linkage; result_ty; params; cfg }
 
 (** Translate a core language module into an LLVM module  *)
 let translate_module (mod_ : Core.Module.t) : Llvm.module_ =

@@ -33,6 +33,11 @@ let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
   | Anf.Ty.Bool -> Llvm.I1
   | Anf.Ty.I32 -> Llvm.I32
 
+let translate_vis (vis : Core.Item.vis) :  Llvm.linkage option =
+  match vis with
+  | Pub -> None
+  | Priv -> Some Llvm.Private
+
 type partial_phi = {
   id : Llvm.Local_id.t;
   ty : Llvm.ty;
@@ -43,11 +48,6 @@ type partial_block = {
   label : Llvm.Label.t;
   instrs : Llvm.instr Dynarray.t;
 }
-
-let translate_vis (vis : Core.Item.vis) :  [`Private] option =
-  match vis with
-  | Pub -> None
-  | Priv -> Some `Private
 
 let translate_fun
   (item_env : Llvm.Global_id.t Anf.Item_map.t)
@@ -163,7 +163,7 @@ let translate_fun
     | Anf.Expr.I32 i -> Llvm.I32 i
   in
 
-  let visibility = translate_vis vis in
+  let linkage = translate_vis vis in
   let result_ty = translate_ty result_ty in
   let param_ids =
     Iarray.to_seq params
@@ -191,7 +191,7 @@ let translate_fun
     Llvm.{ blocks = Iarray.append [|entry_block|] (make_iarray blocks) }
   in
 
-  Llvm.{ visibility; result_ty; params; cfg }
+  Llvm.{ linkage; result_ty; params; cfg }
 
 (** Translate an ANF module into an LLVM module *)
 let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
