@@ -31,9 +31,7 @@ let rec translate_ty (ty : Core.Ty.t) : Llvm.ty =
   | Core.Ty.Bool -> Llvm.I1
   | Core.Ty.I32 -> Llvm.I32
   | Core.Ty.Fun (_, _) -> Llvm.Ptr
-  | Core.Ty.Tuple tys ->
-      (* Llvm.Struct (tys |> Iarray.map translate_ty) *)
-      failwith "TODO"
+  | Core.Ty.Tuple _ -> Llvm.Ptr
 
 (** Item declarations *)
 type item_decl =
@@ -46,12 +44,13 @@ let translate_vis (vis : Core.Item.vis) :  Llvm.linkage option =
   | Priv -> Some Llvm.Private
 
 let translate_fun
+  ~(malloc : Llvm.Global_id.t Lazy.t)
   (item_env : item_decl Core.Item_map.t)
   (vis : Core.Item.vis)
   (params : (string option * Core.Ty.t) Iarray.t)
   (result_ty : Core.Ty.t)
   (expr : Core.Expr.t)
-: Llvm.fun_ =
+: Llvm.fun_def =
   let fresh_local_id = Local_supply.(fresh (create ())) in
   let fresh_label = Label_supply.(fresh (create ())) in
 
@@ -64,6 +63,10 @@ let translate_fun
     let id = fresh_local_id name in
     Dynarray.add_last current_instrs Llvm.(Assign (id, instr));
     Local id
+  in
+
+  let command_instr (instr : Llvm.command_instr) : unit =
+    Dynarray.add_last current_instrs Llvm.(Command instr);
   in
 
   (* Set the label of the current block *)
@@ -81,6 +84,23 @@ let translate_fun
     current_label := None;
     Dynarray.clear current_instrs;
     label
+  in
+
+  let assign_getelementptr name ty src path =
+    assign_instr name Llvm.(Getelementptr (ty, src, path))
+  in
+
+  (* Compute the size of a type in a portable way *)
+  let assign_size_of name (ty : Llvm.ty) : Llvm.opr =
+    (* Pretend that there is an array of elements at the null pointer. Compute
+       the pointer to the first element of that array then cast it to an integer.
+
+        - https://nondot.org/sabre/LLVMNotes/SizeOf-OffsetOf-VariableSizedStructs.txt
+        - https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl10.html#implementing-portable-offsetof-sizeof
+        - https://llvm.org/doxygen/classllvm_1_1ConstantExpr.html#a778163e6ec80716a12ab3282cb97f0d9
+    *)
+    let offset = assign_getelementptr (name ^ ".offset") ty Null [|I32, I32 1l|] in
+    assign_instr name Llvm.(Ptrtoint (Ptr, offset, I32))
   in
 
   (* Translate a sub-expression in the current block. While doing this, more
@@ -110,24 +130,47 @@ let translate_fun
         let args = args |> Iarray.map (go_expr local_env "arg") in
         assign_instr result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
-    | Core.Expr.Tuple exprs ->
-        let _tys = exprs |> Iarray.map (fun expr -> translate_ty (Core.Expr.ty_of expr)) in
-        (* FIXME: malloc(size) *)
-        let _tuple = (* %tuple = alloca %Tuple *)
-          (* assign_instr result_name Llvm.(Alloca (Struct tys, None)) *)
-          failwith "TODO"
-        in
-        let _exprs = exprs |> Iarray.map @@ fun expr ->
-          (* %1 = getelementptr %Tuple, %Tuple* %tuple, i32 0, i32 1 *)
-          (* store ... *)
-          go_expr local_env "elem" expr
-        in
-        failwith "TODO"
+    | Core.Expr.Tuple elems ->
+        (* TODO: cache global type *)
+        let elem_tys = elems |> Iarray.map (fun elem -> translate_ty (Core.Expr.ty_of elem)) in
+        let tuple_ty = Llvm.Struct elem_tys in
+
+        (* Allocate space for the tuple *)
+        let malloc = Llvm.Global (Lazy.force malloc) in
+        let size = assign_size_of "size" tuple_ty in
+        let tuple = assign_instr result_name Llvm.(Call (Ptr, malloc, [|I32, size|])) in
+
+        (* Initialise elements of the tuple in the allocated space *)
+        elem_tys |> Iarray.iteri begin fun i ty ->
+          let elem = go_expr local_env "elem" (Iarray.get elems i) in
+          let elem_ptr = assign_getelementptr "elem.dst" tuple_ty tuple [|
+            I32, I32 0l;                  (* 0th offset *)
+            I32, I32 (Int32.of_int i);    (* field index *)
+          |] in
+          command_instr Llvm.(Store (ty, elem, elem_ptr));
+        end;
+
+        (* Return a pointer to the tuple *)
+        tuple
 
     | Core.Expr.Tuple_proj (tuple, index) ->
-        let _tuple = go_expr local_env "tuple" tuple in
-        (* %1 = getelementptr %Tuple, %Tuple* %tuple, i32 0, i32 1 *)
-        failwith "TODO"
+        (* TODO: cache global type *)
+        let elem_tys =
+          match Core.Expr.ty_of tuple with
+          | Tuple elem_tys -> elem_tys |> Iarray.map translate_ty
+          | _ -> failwith "tuple type expected"
+        in
+
+        let tuple = go_expr local_env "tuple" tuple in
+
+        (* Get the pointer to the projected element *)
+        let ptr = assign_getelementptr (result_name ^ ".ptr") (Llvm.Struct elem_tys) tuple [|
+          I32, I32 0l;                      (* 0th offset *)
+          I32, I32 (Int32.of_int index);    (* field index *)
+        |] in
+
+        (* Load the value from the pointer*)
+        assign_instr result_name Llvm.(Load (Iarray.get elem_tys index, ptr))
 
     | Core.Expr.Bool b -> Llvm.I1 b
 
@@ -177,15 +220,13 @@ let translate_fun
 
   let linkage = translate_vis vis in
   let result_ty = translate_ty result_ty in
-  let params =
-    params |> Iarray.map @@ fun (name, ty) ->
-      translate_ty ty, fresh_local_id (Option.value name ~default:"_")
-  in
+  let param_ids = params |> Iarray.map @@ fun (name, _) -> fresh_local_id (Option.value name ~default:"_") in
+  let params = Iarray.map2 (fun (_, ty) id -> translate_ty ty, Some id) params param_ids in
 
   let cfg =
     let local_env =
-      Iarray.to_seq params
-      |> Seq.map (fun (_, id) -> Llvm.Local id)
+      Iarray.to_seq param_ids
+      |> Seq.map (fun id -> Llvm.Local id)
       |> Core.Local.Env.of_seq
     in
 
@@ -211,19 +252,32 @@ let translate_module (mod_ : Core.Module.t) : Llvm.module_ =
       | Core.Item.Fun _ -> Fun (fresh_global_id (Core.Item_name.to_string name))
   in
 
-  let funs = Dynarray.create () in
+  let fun_decls = Dynarray.create () in
+
+  let malloc = lazy begin
+    let name = fresh_global_id "malloc" in
+    Dynarray.add_last fun_decls (name, Llvm.{
+      linkage = None;
+      result_ty = Ptr;
+      params = [|I32, None|];
+    });
+    name
+  end in
+
+  let fun_defs = Dynarray.create () in
 
   (* Translate items in the core language into LLVM function definitions *)
   item_env |> Core.Item_map.iter begin fun name item_decl ->
     match Core.Item_map.find name mod_, item_decl with
     | Core.Item.Val (vis, ty, body), Val id ->
-        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis [||] ty body);
+        Dynarray.add_last fun_defs Llvm.(id, translate_fun item_env vis [||] ty body ~malloc);
     | Core.Item.Fun (vis, params, result_ty, body), Fun id ->
-        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis params result_ty body);
+        Dynarray.add_last fun_defs Llvm.(id, translate_fun item_env vis params result_ty body ~malloc);
     | _, _ ->
         failwith "mismatched items"
   end;
 
   Llvm.{
-    funs = make_iarray funs;
+    fun_decls = make_iarray fun_decls;
+    fun_defs = make_iarray fun_defs;
   }

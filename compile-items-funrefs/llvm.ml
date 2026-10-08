@@ -22,12 +22,14 @@ type ty =
   | I1                                      (* https://llvm.org/docs/LangRef.html#integer-type *)
   | I32                                     (* https://llvm.org/docs/LangRef.html#integer-type *)
   | Ptr                                     (* https://llvm.org/docs/LangRef.html#pointer-type *)
+  | Struct of ty Iarray.t                   (* https://llvm.org/docs/LangRef.html#structure-type *)
   (* ... *)
 
 (** Operands *)
 type opr =
-  | I1 of bool
-  | I32 of Int32.t
+  | I1 of bool                              (* https://llvm.org/docs/LangRef.html#simple-constants *)
+  | I32 of Int32.t                          (* https://llvm.org/docs/LangRef.html#simple-constants *)
+  | Null                                    (* https://llvm.org/docs/LangRef.html#simple-constants *)
   (* ... *)
   | Global of Global_id.t
   | Local of Local_id.t
@@ -39,18 +41,37 @@ type icmp_cond =    (* https://llvm.org/docs/LangRef.html#icmp-instruction *)
 
 (** Instructions that produce values *)
 type value_instr =
+  (* Binary Operations *)
   | Add of ty * opr * opr                   (* https://llvm.org/docs/LangRef.html#add-instruction *)
   | Sub of ty * opr * opr                   (* https://llvm.org/docs/LangRef.html#sub-instruction *)
   | Mul of ty * opr * opr                   (* https://llvm.org/docs/LangRef.html#mul-instruction *)
+  (* ... *)
+
+  (* Memory Access and Addressing Operations *)
+  | Load of ty * opr                        (* https://llvm.org/docs/LangRef.html#load-instruction *)
+  | Getelementptr of ty * opr * (ty * opr) Iarray.t   (* https://llvm.org/docs/LangRef.html#getelementptr-instruction *)
+  (* ... *)
+
+  (* Conversion Operations *)
+  | Ptrtoint of ty * opr * ty               (* https://llvm.org/docs/LangRef.html#ptrtoint-to-instruction *)
+  (* ... *)
+
+  (* Other Operations *)
   | Icmp of icmp_cond * ty * opr * opr      (* https://llvm.org/docs/LangRef.html#icmp-instruction *)
   | Phi of ty * (opr * Label.t) Iarray.t    (* https://llvm.org/docs/LangRef.html#phi-instruction *)
   | Call of ty * opr * (ty * opr) Iarray.t  (* https://llvm.org/docs/LangRef.html#call-instruction *)
   (* ... *)
 
+(** Instructions that do not produce values *)
+type command_instr =
+  (* Memory Access and Addressing Operations *)
+  | Store of ty * opr * opr                 (* https://llvm.org/docs/LangRef.html#store-instruction *)
+  (* ... *)
+
 (** Non-terminator instructions *)
 type instr =
   | Assign of Local_id.t * value_instr
-  (* ... *)
+  | Command of command_instr
 
 (** Terminator instructions *)
 type term_instr =                           (* Terminator instructions  https://llvm.org/docs/LangRef.html#terminator-instructions *)
@@ -71,22 +92,32 @@ type cfg = {
   blocks : block Iarray.t;
 }
 
+type param = ty * Local_id.t option
+
 (** Linkage types *)
 type linkage =                              (* https://llvm.org/docs/LangRef.html#linkage-types *)
   | Private
   (* ... *)
 
-(** Function definitions *)
-type fun_ = {                               (* https://llvm.org/docs/LangRef.html#functions *)
+(** Function declarations *)
+type fun_decl = {                           (* https://llvm.org/docs/LangRef.html#functions *)
   linkage : linkage option;
   result_ty : ty;
-  params : (ty * Local_id.t) Iarray.t;
+  params : param Iarray.t;
+}
+
+(** Function definitions *)
+type fun_def = {                            (* https://llvm.org/docs/LangRef.html#functions *)
+  linkage : linkage option;
+  result_ty : ty;
+  params : param Iarray.t;
   cfg : cfg;
 }
 
 (** Modules *)
 type module_ = {                            (* https://llvm.org/docs/LangRef.html#id2033 *)
-  funs : (Global_id.t * fun_) Iarray.t;
+  fun_decls : (Global_id.t * fun_decl) Iarray.t;
+  fun_defs : (Global_id.t * fun_def) Iarray.t;
 }
 
 (** Output the AST in LLVM’s human readable assembly language representation *)
@@ -94,6 +125,7 @@ module Output_ll : sig
 
   val pp_module : module_ -> Format.formatter -> unit
   val pp_block : block -> Format.formatter -> unit
+  val pp_param : param -> Format.formatter -> unit
   val pp_ty : ty -> Format.formatter -> unit
 
   val pp_global_id : Global_id.t -> Format.formatter -> unit
@@ -104,6 +136,8 @@ end = struct
   let pp_comma_sep ppf () = Format.fprintf ppf ",@ "
   let pp_iarray ?pp_sep f list ppf =
     Format.pp_print_iter Iarray.iter (Fun.flip f) ppf list ?pp_sep
+  let pp_seq ?pp_sep f list ppf =
+    Format.pp_print_seq (Fun.flip f) ppf list ?pp_sep
 
   let pp_global_id (id : Global_id.t) = Format.dprintf "%s%t" "@" (Global_id.pp id)
   let pp_local_id (id : Local_id.t) = Format.dprintf "%s%t" "%" (Local_id.pp id)
@@ -114,12 +148,14 @@ end = struct
     | I1 -> Format.dprintf "i1"
     | I32 -> Format.dprintf "i32"
     | Ptr -> Format.dprintf "ptr"
+    | Struct tys -> Format.dprintf "@[{%t}@]" (pp_iarray pp_ty tys ~pp_sep:pp_comma_sep)
 
   let pp_opr (opr : opr) =
     match opr with
     | I1 true -> Format.dprintf "true"
     | I1 false -> Format.dprintf "false"
     | I32 int -> Format.dprintf "%li" int
+    | Null -> Format.dprintf "null"
     | Global id -> pp_global_id id
     | Local id -> pp_local_id id
 
@@ -133,6 +169,16 @@ end = struct
     | Add (ty, opr1, opr2) -> pp_binop_instr ("add", ty, opr1, opr2)
     | Sub (ty, opr1, opr2) -> pp_binop_instr ("sub", ty, opr1, opr2)
     | Mul (ty, opr1, opr2) -> pp_binop_instr ("mul", ty, opr1, opr2)
+    | Ptrtoint (ty1, opr, ty2) ->
+        Format.dprintf "@[ptrtoint@ %t@ %t@ to@ %t@]" (pp_ty ty1) (pp_opr opr) (pp_ty ty2)
+    | Load (ty, ptr) ->
+        Format.dprintf "@[load@ %t,@ ptr@ %t@]" (pp_ty ty) (pp_opr ptr)
+    | Getelementptr (ty, ptr, elems) ->
+        let pp_elem (ty, idx) = Format.dprintf "%t@ %t" (pp_ty ty) (pp_opr idx) in
+        Format.dprintf "@[<hv 2>@[getelementptr@ %t,@ @[ptr@ %t@]@],@ @[%t@]@]"
+          (pp_ty ty)
+          (pp_opr ptr)
+          (elems |> pp_iarray pp_elem ~pp_sep:pp_comma_sep)
     | Icmp (cond, ty, opr1, opr2) ->
         let cond =
           match cond with
@@ -149,6 +195,12 @@ end = struct
           (pp_opr fn)
           (args |> pp_iarray pp_arg ~pp_sep:pp_comma_sep)
 
+  let pp_command_instr (instr : command_instr) =
+    match instr with
+    | Store (ty, value, ptr) ->
+        Format.dprintf "@[<2>@[store@ %t@ %t@],@ @[ptr@ %t@]@]"
+          (pp_ty ty) (pp_opr value) (pp_opr ptr)
+
   let pp_term_instr (term : term_instr) =
     match term with
     | Br dest -> Format.dprintf "@[  @[br@ label@ %t@]@]" (pp_label dest)
@@ -161,6 +213,8 @@ end = struct
     match instr with
     | Assign (id, instr) ->
         Format.dprintf "@[  @[<2>@[%t@ =@]@ %t@]@]" (pp_local_id id) (pp_value_instr instr)
+    | Command instr ->
+        Format.dprintf "@[  %t@]" (pp_command_instr instr)
 
   let rec pp_block ({ label; instrs; term } : block) =
     if Iarray.length instrs = 0 then
@@ -177,10 +231,21 @@ end = struct
     match linkage with
     | Private -> Format.dprintf "private"
 
-  let pp_fun (id, { linkage; result_ty; params; cfg } : Global_id.t * fun_) =
-    let pp_param (ty, id) =
-      Format.dprintf "@[%t@ %t@]" (pp_ty ty) (pp_local_id id)
-    in
+  let pp_param (ty, id : param) =
+    match id with
+    | None -> pp_ty ty
+    | Some id -> Format.dprintf "@[%t@ %t@]" (pp_ty ty) (pp_local_id id)
+
+  let pp_fun_decl (id, { linkage; result_ty; params } : Global_id.t * fun_decl) =
+    Format.dprintf "@[<v>@[declare@ %t%t@ %t(%t)@."
+      (match linkage with
+        | None -> Format.dprintf ""
+        | Some linkage -> Format.dprintf "%t@ " (pp_linkage linkage))
+      (pp_ty result_ty)
+      (pp_global_id id)
+      (pp_iarray pp_param params ~pp_sep:pp_comma_sep)
+
+  let pp_fun_def (id, { linkage; result_ty; params; cfg } : Global_id.t * fun_def) =
     Format.dprintf "@[<v>@[define@ %t%t@ %t(%t)@ {@]@ %t@ }@]@."
       (match linkage with
         | None -> Format.dprintf ""
@@ -190,8 +255,11 @@ end = struct
       (pp_iarray pp_param params ~pp_sep:pp_comma_sep)
       (cfg.blocks |> pp_iarray pp_block)
 
-  let pp_module ({ funs } : module_) =
-    funs |> pp_iarray pp_fun ~pp_sep:Format.pp_print_newline
+  let pp_module ({ fun_decls; fun_defs } : module_) =
+    pp_seq ( @@ ) (Seq.concat @@ Iarray.to_seq [|
+      Iarray.to_seq fun_decls |> Seq.map pp_fun_decl;
+      Iarray.to_seq fun_defs |> Seq.map pp_fun_def;
+    |])
 
 end
 
@@ -230,7 +298,7 @@ module Output_dot = struct
     end;
   end
 
-  let pp_module ({ funs } : module_) (out : Out_channel.t) = begin
+  let pp_module ({ fun_defs; _ } : module_) (out : Out_channel.t) = begin
     Printf.fprintf out "digraph llvm_ir {\n";
     Printf.fprintf out "  graph [\n";
     Printf.fprintf out "    fontname=\"Monaco, monospace\";\n";
@@ -249,7 +317,7 @@ module Output_dot = struct
     Printf.fprintf out "\n";
 
     (* Functions *)
-    funs |> Iarray.iter begin fun (id, { result_ty; params; cfg }) ->
+    fun_defs |> Iarray.iter begin fun (id, { result_ty; params; cfg }) ->
       Printf.fprintf out "  subgraph \"%s\" {\n" (Global_id.to_string id);
 
       (* Function signature *)
@@ -259,11 +327,9 @@ module Output_dot = struct
         (Output_ll.pp_ty result_ty |> Format.asprintf "%t")
         (Output_ll.pp_global_id id |> Format.asprintf "%t")
         (fun out ->
-          params |> Iarray.iteri begin fun i (ty, id) ->
+          params |> Iarray.iteri begin fun i param ->
             if i <> 0 then Printf.fprintf out ", ";
-            Printf.fprintf out "%s %s"
-              (Output_ll.pp_ty ty |> Format.asprintf "%t")
-              (Output_ll.pp_local_id id |> Format.asprintf "%t");
+            Printf.fprintf out "%s" (Format.asprintf "%t" (Output_ll.pp_param param));
           end);
       Printf.fprintf out "      </td></th>\n";
       Printf.fprintf out "    </table>>;\n";
