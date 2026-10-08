@@ -64,7 +64,7 @@ let translate_fun
   (params : (Anf.Local_id.t * Core.Ty.t) Iarray.t)
   (result_ty : Anf.Ty.t)
   (expr : Anf.Expr.t)
-: Llvm.fun_ =
+: Llvm.fun_def =
   let fresh_local_id = Local_supply.(fresh (create ())) in
   let fresh_label = Label_supply.(fresh (create ())) in
 
@@ -152,6 +152,9 @@ let translate_fun
         let args = args |> Iarray.map (go_atom local_env block "arg") in
         assign_instr block result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
+    | Anf.Expr.Tuple_proj (head, index) ->
+        failwith "TODO"
+
     | Anf.Expr.Prim (op, args) ->
         begin match op, args |> Iarray.map (go_atom local_env block "arg") with
         | Prim.Op.Bool_eq, [|x; y|] -> assign_instr block result_name Llvm.(Icmp (Eq, I1, x, y))
@@ -174,6 +177,8 @@ let translate_fun
         | Fun item_id -> Llvm.Global item_id
         end
     | Anf.Expr.Var (id, _) -> Anf.Local_map.find id local_env
+    | Anf.Expr.Tuple elems ->
+        failwith "TODO"
     | Anf.Expr.Bool b -> Llvm.I1 b
     | Anf.Expr.I32 i -> Llvm.I32 i
   in

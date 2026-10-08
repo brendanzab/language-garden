@@ -37,6 +37,7 @@ module rec Expr : sig
   (** Computation expressions *)
   and comp =
     | Fun_app of atom * atom Iarray.t
+    | Tuple_proj of atom * int
     | Prim of Prim.Op.t * atom Iarray.t
     | Atom of atom
 
@@ -44,6 +45,7 @@ module rec Expr : sig
   and atom =
     | Item of Item_name.t * Ty.t
     | Var of Local_id.t * Ty.t
+    | Tuple of atom Iarray.t
     | Bool of bool
     | I32 of int32
 
@@ -58,6 +60,7 @@ end = struct
     match expr with
     | Item (_, ty) -> ty
     | Var (_, ty) -> ty
+    | Tuple exprs -> Ty.Tuple (exprs |> Iarray.map ty_of_atom)
     | Bool _ -> Ty.Bool
     | I32 _ -> Ty.I32
 
@@ -67,6 +70,11 @@ end = struct
         begin match ty_of_atom head with
         | Ty.Fun (_, result_ty) -> result_ty
         | _ -> invalid_arg "Core.Expr.ty_of: type error"
+        end
+    | Tuple_proj (tuple, index) ->
+        begin match ty_of_atom tuple with
+        | Tuple tys -> Iarray.get tys index
+        | _ -> invalid_arg "Expr.ty_of"
         end
     | Prim (op, _) -> Ty.of_prim (snd (Prim.Op.ty op))
     | Atom expr -> ty_of_atom expr
@@ -97,6 +105,7 @@ module Interpret : sig
 
   type value =
     | Item of Item.t
+    | Tuple of value Iarray.t
     | Bool of bool
     | I32 of int32
 
@@ -106,6 +115,7 @@ end = struct
 
   type value =
     | Item of Item.t
+    | Tuple of value Iarray.t
     | Bool of bool
     | I32 of int32
 
@@ -138,6 +148,11 @@ end = struct
               eval_expr joins (Local_map.add_seq args locals) body
           | _ -> failwith "Expr.eval"
           end
+      | Expr.Tuple_proj (tuple, index) ->
+          begin match eval_atom locals tuple with
+          | Tuple values -> Iarray.get values index
+          | _ -> failwith "Expr.eval"
+          end
       | Expr.Prim (op, args) ->
           let args =
             args |> Iarray.map @@ fun arg ->
@@ -160,6 +175,8 @@ end = struct
           | Item.Val (_, _, body) -> eval_expr (Join_map.empty) locals body
           | Item.Fun _ as fun_ -> Item fun_
           end
+      | Expr.Tuple exprs ->
+          Tuple (exprs |> Iarray.map (eval_atom locals))
       | Expr.Var (id, _) -> Local_map.find id locals
       | Expr.Bool bool -> Bool bool
       | Expr.I32 int -> I32 int
@@ -178,10 +195,18 @@ module Pretty : sig
 end = struct
 
   let pp_ty = Core.Pretty.pp_ty
-  let pp_atom (expr : Expr.atom) =
+
+  let rec pp_atom (expr : Expr.atom) =
     match expr with
     | Expr.Item (id, _) -> Format.dprintf "%t" (Item_name.pp id)
     | Expr.Var (id, _) -> Format.dprintf "%t" (Local_id.pp id)
+    | Expr.Tuple [||] -> Format.dprintf "()"
+    | Expr.Tuple [|elem|] -> Format.dprintf "@[(%t,)@]" (pp_atom elem)
+    | Expr.Tuple elems ->
+        Format.dprintf "@[(%a)@]"
+          (Format.pp_print_iter Iarray.iter (Fun.flip pp_atom)
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
+          elems
     | Expr.Bool true -> Format.dprintf "true"
     | Expr.Bool false -> Format.dprintf "false"
     | Expr.I32 int -> Format.dprintf "%li" int
@@ -194,6 +219,7 @@ end = struct
   let pp_comp (expr : Expr.comp) =
     match expr with
     | Expr.Fun_app (fun_, args) -> Format.dprintf "%t(%t)" (pp_atom fun_) (pp_args args)
+    | Expr.Tuple_proj (head, label) -> Format.dprintf "%t@,.%i" (pp_atom head) label
     | Expr.Prim (op, args) -> Format.dprintf "%t(%t)" (Prim.Op.pp op) (pp_args args)
     | Expr.Atom expr -> pp_atom expr
 
