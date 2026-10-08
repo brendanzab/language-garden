@@ -46,6 +46,16 @@ end = struct
             let body = go_expr (Core.Local.Env.extend id local_ids) body k in
             Anf.Expr.Let (id, def_ty, def, body)
 
+        | Core.Expr.Tuple elems ->
+            let@ elems = go_named_exprs local_ids "elem" (Iarray.to_list elems) in
+            (* k (Anf.Expr.Atom (Tuple (Iarray.of_list elems))) *)
+            failwith "TODO"
+
+        | Core.Expr.Tuple_proj (tuple, index) ->
+            let@ tuple = go_named_expr local_ids "tuple" tuple in
+            (* k (Anf.Expr.Tuple_proj (tuple, index)) *)
+            failwith "TODO"
+
         | Core.Expr.Bool bool ->
             k (Anf.Expr.Atom (Bool bool))
 
