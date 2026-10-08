@@ -31,6 +31,9 @@ let rec translate_ty (ty : Core.Ty.t) : Llvm.ty =
   | Core.Ty.Bool -> Llvm.I1
   | Core.Ty.I32 -> Llvm.I32
   | Core.Ty.Fun (_, _) -> Llvm.Ptr
+  | Core.Ty.Tuple tys ->
+      (* Llvm.Struct (tys |> Iarray.map translate_ty) *)
+      failwith "TODO"
 
 (** Item declarations *)
 type item_decl =
@@ -106,6 +109,25 @@ let translate_fun
         let fun_ = go_expr local_env "fun" fun_ in
         let args = args |> Iarray.map (go_expr local_env "arg") in
         assign_instr result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
+
+    | Core.Expr.Tuple exprs ->
+        let _tys = exprs |> Iarray.map (fun expr -> translate_ty (Core.Expr.ty_of expr)) in
+        (* FIXME: malloc(size) *)
+        let _tuple = (* %tuple = alloca %Tuple *)
+          (* assign_instr result_name Llvm.(Alloca (Struct tys, None)) *)
+          failwith "TODO"
+        in
+        let _exprs = exprs |> Iarray.map @@ fun expr ->
+          (* %1 = getelementptr %Tuple, %Tuple* %tuple, i32 0, i32 1 *)
+          (* store ... *)
+          go_expr local_env "elem" expr
+        in
+        failwith "TODO"
+
+    | Core.Expr.Tuple_proj (tuple, index) ->
+        let _tuple = go_expr local_env "tuple" tuple in
+        (* %1 = getelementptr %Tuple, %Tuple* %tuple, i32 0, i32 1 *)
+        failwith "TODO"
 
     | Core.Expr.Bool b -> Llvm.I1 b
 

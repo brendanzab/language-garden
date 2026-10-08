@@ -14,6 +14,7 @@
 %token COLON_EQUALS ":="
 %token COMMA ","
 %token EQUALS "="
+%token FULL_STOP "."
 %token HYPHEN "-"
 %token HYPHEN_GREATER "->"
 %token SEMICOLON ";"
@@ -41,6 +42,12 @@ let ty :=
 let atomic_ty :=
 | "("; ty = ty; ")";
     { ty }
+| "("; ")";
+    { Surface.Ty.Tuple [||] }
+| "("; ty = spanned(ty); ","; ")";
+    { Surface.Ty.Tuple [|ty|] }
+| "("; ty = spanned(ty); ","; tys = trailing_nonempty_list(",", spanned(ty)); ")";
+    { Surface.Ty.Tuple (Iarray.of_list (ty :: tys)) }
 | n = NAME;
     { Surface.Ty.Name n }
 
@@ -75,15 +82,26 @@ let mul_tm :=
 | app_tm
 
 let app_tm :=
-| "-"; tm = spanned(atomic_tm);
+| "-"; tm = spanned(proj_tm);
     { Surface.Expr.Prefix (`Neg, tm) }
 | tm = spanned(app_tm); "("; args = trailing_list(",", spanned(tm)); ")";
     { Surface.Expr.App (tm, Iarray.of_list args) }
+| proj_tm
+
+let proj_tm :=
+| tm = spanned(proj_tm); "."; i = spanned(NUMBER);
+      { Surface.Expr.Proj (tm, Surface.Spanned.{ i with data = Int32.to_int i.data }) (* FIXME: Handle error *) }
 | atomic_tm
 
 let atomic_tm :=
 | "("; tm = tm; ")";
     { tm }
+| "("; ")";
+    { Surface.Expr.Tuple [||] }
+| "("; tm = spanned(tm); ","; ")";
+    { Surface.Expr.Tuple [|tm|] }
+| "("; tm = spanned(tm); ","; tms = trailing_nonempty_list(",", spanned(tm)); ")";
+    { Surface.Expr.Tuple (Iarray.of_list (tm :: tms)) }
 | n = spanned(NAME);
     { Surface.Expr.Name n }
 | n = spanned(PRIM); "("; args = trailing_list(",", spanned(tm)); ")";
