@@ -1,0 +1,33 @@
+priv fun fst(p : (I32, I32)) : I32 := p.0;
+
+priv fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
+  let arg : I32 := v1.0;
+  let arg_1 : I32 := v2.0;
+  let elem : I32 := #i32-mul(arg, arg_1);
+  let arg_2 : I32 := v1.1;
+  let arg_3 : I32 := v2.1;
+  let elem_1 : I32 := #i32-mul(arg_2, arg_3);
+  let arg_4 : I32 := v1.2;
+  let arg_5 : I32 := v2.2;
+  let elem_2 : I32 := #i32-mul(arg_4, arg_5);
+  (elem, elem_1, elem_2);
+
+priv fun mul-scalar(v : (I32, I32, I32), s : I32) : (I32, I32, I32) :=
+  let arg : I32 := v.0;
+  let elem : I32 := #i32-mul(arg, s);
+  let arg_1 : I32 := v.1;
+  let elem_1 : I32 := #i32-mul(arg_1, s);
+  let arg_2 : I32 := v.2;
+  let elem_2 : I32 := #i32-mul(arg_2, s);
+  (elem, elem_1, elem_2);
+
+priv val nested : (I32, (Bool, (I32, Bool)), Bool) :=
+  (33, (true, pair), false);
+
+priv val pair : (I32, Bool) := (33, false);
+
+priv val singleton : (I32) := (33,);
+
+priv fun snd(p : (I32, I32)) : I32 := p.1;
+
+priv val unit : () := ();
