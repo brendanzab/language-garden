@@ -33,19 +33,20 @@ module Ctx : sig
 
   val build_module : [`Module] t -> Llvm.module_
 
-  val build_fun :
+  val build_fun_def :
     [`Module] t ->
     Llvm.linkage ->
     Llvm.ty ->
     (Llvm.ty * string) Iarray.t ->
     ([`Module | `Cfg] t -> Llvm.Local_id.t Iarray.t -> Llvm.block) ->
-    Llvm.fun_
+    Llvm.fun_def
 
   (** Module-level operations *)
 
   val fresh_global_id : [> `Module] t -> string -> Llvm.Global_id.t
 
-  val emit_fun : [> `Module ] t -> Llvm.Global_id.t -> Llvm.fun_ -> unit
+  val emit_fun_decl : [> `Module ] t -> Llvm.Global_id.t -> Llvm.fun_decl -> unit
+  val emit_fun_def : [> `Module ] t -> Llvm.Global_id.t -> Llvm.fun_def -> unit
 
   (** Control flow graph operations *)
 
@@ -65,7 +66,9 @@ end = struct
     local_id_supply : Local_id_supply.t;
     label_supply : Label_supply.t;
 
-    funs : (Llvm.Global_id.t * Llvm.fun_) Dynarray.t;
+    fun_decls : (Llvm.Global_id.t * Llvm.fun_decl) Dynarray.t;
+    fun_defs : (Llvm.Global_id.t * Llvm.fun_def) Dynarray.t;
+
     blocks : Llvm.block Dynarray.t;
   }
 
@@ -74,7 +77,8 @@ end = struct
     local_id_supply = Local_id_supply.create ();
     label_supply = Label_supply.create ();
 
-    funs = Dynarray.create ();
+    fun_decls = Dynarray.create ();
+    fun_defs = Dynarray.create ();
     blocks = Dynarray.create ();
   }
 
@@ -87,28 +91,34 @@ end = struct
   let fresh_local_id (ctx : [> `Cfg] t) = Local_id_supply.fresh ctx.local_id_supply
   let fresh_label (ctx : [> `Cfg] t) = Label_supply.fresh ctx.label_supply
 
-  let emit_fun (ctx : [> `Module] t) (name : Llvm.Global_id.t) (fun_ : Llvm.fun_) =
-    Dynarray.add_last ctx.funs (name, fun_)
+  let emit_fun_decl (ctx : [> `Module] t) (name : Llvm.Global_id.t) (fun_decl : Llvm.fun_decl) =
+    Dynarray.add_last ctx.fun_decls (name, fun_decl)
+
+  let emit_fun_def (ctx : [> `Module] t) (name : Llvm.Global_id.t) (fun_def : Llvm.fun_def) =
+    Dynarray.add_last ctx.fun_defs (name, fun_def)
 
   let emit_block (ctx : [> `Cfg] t) = Dynarray.add_last ctx.blocks
 
-  let build_module (ctx : [`Module] t) =
-    Llvm.{ funs = take_iarray ctx.funs }
+  let build_module (ctx : [`Module] t) = Llvm.{
+    fun_decls = take_iarray ctx.fun_decls;
+    fun_defs = take_iarray ctx.fun_defs;
+  }
 
-  let build_fun
+  let build_fun_def
     (ctx : [`Module] t)
     (linkage : Llvm.linkage)
     (result_ty : Llvm.ty)
     (params : (Llvm.ty * string) Iarray.t)
     (f : [`Module | `Cfg] t -> Llvm.Local_id.t Iarray.t -> Llvm.block)
-  : Llvm.fun_ =
+  : Llvm.fun_def =
     let ctx = (ctx :> [`Module | `Cfg] t) in
 
     (* Create fresh ids for the parameter names *)
-    let params = params |> Iarray.map (Pair.map_snd (fresh_local_id ctx)) in
+    let param_ids = params |> Iarray.map (fun (_, n) -> fresh_local_id ctx n) in
+    let params = Iarray.map2 (fun (ty, _) id -> ty, Some id) params param_ids in
 
     (* Construct the control flow graph *)
-    let entry = f ctx (params |> Iarray.map Pair.snd) in
+    let entry = f ctx param_ids in
     let cfg = Llvm.{ blocks = Iarray.append [|entry|] (take_iarray ctx.blocks) } in
 
     Label_supply.reset ctx.label_supply;
@@ -134,13 +144,13 @@ let create_phi (ctx : [> `Cfg] Ctx.t) (name : string) (ty : Llvm.ty) =
 type join_block = {
   label : Llvm.Label.t;
   phi : partial_phi;
-  instrs : Llvm.instr Iarray.t;
+  instrs : Llvm.(Local_id.t option * value_instr) Iarray.t;
   term : Llvm.term_instr;
 }
 
 type partial_block = {
   label : Llvm.Label.t;
-  instrs : Llvm.instr Dynarray.t;
+  instrs : Llvm.(Local_id.t option * value_instr) Dynarray.t;
 }
 
 let create_block (label : Llvm.Label.t) : partial_block =
@@ -153,8 +163,14 @@ let assign_instr
   (instr : Llvm.value_instr)
 : Llvm.opr =
   let id = Ctx.fresh_local_id ctx name in
-  Dynarray.add_last block.instrs Llvm.(Assign (id, instr));
+  Dynarray.add_last block.instrs (Some id, instr);
   Llvm.Local id
+
+let command_instr
+  (block : partial_block)
+  (instr : Llvm.value_instr)
+: unit =
+  Dynarray.add_last block.instrs (None, instr)
 
 let finish_block (block : partial_block) (term : Llvm.term_instr) : Llvm.block =
   Llvm.{ label = block.label; instrs = make_iarray block.instrs; term }
@@ -168,9 +184,7 @@ let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
   | Anf.Ty.Bool -> Llvm.I1
   | Anf.Ty.I32 -> Llvm.I32
   | Anf.Ty.Fun (_, _) -> Llvm.Ptr
-  | Anf.Ty.Tuple tys ->
-      (* Llvm.Struct (tys |> Iarray.map translate_ty) *)
-      failwith "TODO"
+  | Anf.Ty.Tuple _ -> Llvm.Ptr
 
 (** Item declarations *)
 type item_decl =
@@ -183,6 +197,7 @@ let translate_vis (vis : Core.Item.vis) : Llvm.linkage =
   | Priv -> Llvm.Private
 
 let translate_expr
+  ~(malloc : Llvm.Global_id.t Lazy.t)
   (ctx : [> `Cfg] Ctx.t)
   (item_env : item_decl Anf.Item_map.t)
   (local_env : Llvm.opr Anf.Local_map.t)
@@ -191,6 +206,23 @@ let translate_expr
   (result_name : string)
   (expr : Anf.Expr.t)
 : Llvm.block =
+  let assign_getelementptr (block : partial_block) name ty src path =
+    assign_instr ctx block name Llvm.(Getelementptr (ty, src, path))
+  in
+
+  (* Compute the size of a type in a portable way *)
+  let assign_size_of (block : partial_block) name (ty : Llvm.ty) : Llvm.opr =
+    (* Pretend that there is an array of elements at the null pointer. Compute
+       the pointer to the first element of that array then cast it to an integer.
+
+        - https://nondot.org/sabre/LLVMNotes/SizeOf-OffsetOf-VariableSizedStructs.txt
+        - https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl10.html#implementing-portable-offsetof-sizeof
+        - https://llvm.org/doxygen/classllvm_1_1ConstantExpr.html#a778163e6ec80716a12ab3282cb97f0d9
+    *)
+    let offset = assign_getelementptr block (name ^ ".offset") ty Null [|I32, I32 1l|] in
+    assign_instr ctx block name Llvm.(Ptrtoint (Ptr, offset, I32))
+  in
+
   (* Translate a sub-expression in the current block. While doing this, more
      blocks might be added to the control flow graph. *)
   let rec go_expr local_env (block : partial_block) (result_name : string) (expr : Anf.Expr.t) : Llvm.block =
@@ -256,8 +288,24 @@ let translate_expr
         let args = args |> Iarray.map (go_atom local_env block "arg") in
         assign_instr ctx block result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
-    | Anf.Expr.Tuple_proj (head, index) ->
-        failwith "TODO"
+    | Anf.Expr.Tuple_proj (tuple, index) ->
+        (* TODO: cache global type *)
+        let elem_tys =
+          match Anf.Expr.ty_of_atom tuple with
+          | Tuple elem_tys -> elem_tys |> Iarray.map translate_ty
+          | _ -> failwith "tuple type expected"
+        in
+
+        let tuple = go_atom local_env block "tuple" tuple in
+
+        (* Get the pointer to the projected element *)
+        let ptr = assign_getelementptr block (result_name ^ ".ptr") (Llvm.Struct elem_tys) tuple [|
+          I32, I32 0l;                      (* 0th offset *)
+          I32, I32 (Int32.of_int index);    (* field index *)
+        |] in
+
+        (* Load the value from the pointer*)
+        assign_instr ctx block result_name Llvm.(Load (Iarray.get elem_tys index, ptr))
 
     | Anf.Expr.Prim (op, args) ->
         begin match op, args |> Iarray.map (go_atom local_env block "arg") with
@@ -282,7 +330,28 @@ let translate_expr
         end
     | Anf.Expr.Var (id, _) -> Anf.Local_map.find id local_env
     | Anf.Expr.Tuple elems ->
-        failwith "TODO"
+        (* TODO: cache global type *)
+        let elem_tys = elems |> Iarray.map (fun elem -> translate_ty (Anf.Expr.ty_of_atom elem)) in
+        let tuple_ty = Llvm.Struct elem_tys in
+
+        (* Allocate space for the tuple *)
+        let malloc = Llvm.Global (Lazy.force malloc) in
+        let size = assign_size_of block "size" tuple_ty in
+        let tuple = assign_instr ctx block result_name Llvm.(Call (Ptr, malloc, [|I32, size|])) in
+
+        (* Initialise elements of the tuple in the allocated space *)
+        elem_tys |> Iarray.iteri begin fun i ty ->
+          let elem = go_atom local_env block "elem" (Iarray.get elems i) in
+          let elem_ptr = assign_getelementptr block "elem.dst" tuple_ty tuple [|
+            I32, I32 0l;                  (* 0th offset *)
+            I32, I32 (Int32.of_int i);    (* field index *)
+          |] in
+          command_instr block Llvm.(Store (ty, elem, elem_ptr));
+        end;
+
+        (* Return a pointer to the tuple *)
+        tuple
+
     | Anf.Expr.Bool b -> Llvm.I1 b
     | Anf.Expr.I32 i -> Llvm.I32 i
   in
@@ -290,13 +359,14 @@ let translate_expr
   go_expr local_env block result_name expr
 
 let translate_fun
+  ~(malloc : Llvm.Global_id.t Lazy.t)
   (ctx : [> `Module] Ctx.t)
   (item_env : item_decl Anf.Item_map.t)
   (vis : Anf.Item.vis)
   (params : (Anf.Local_id.t * Core.Ty.t) Iarray.t)
   (result_ty : Anf.Ty.t)
   (expr : Anf.Expr.t)
-: Llvm.fun_ =
+: Llvm.fun_def =
   let linkage = translate_vis vis in
   let result_ty = translate_ty result_ty in
   let params' =
@@ -304,7 +374,7 @@ let translate_fun
       translate_ty ty, Anf.Local_id.to_string id
   in
 
-  Ctx.build_fun ctx linkage result_ty params' @@ fun ctx param_ids ->
+  Ctx.build_fun_def ctx linkage result_ty params' @@ fun ctx param_ids ->
     let join_blocks = ref Anf.Join_map.empty in
 
     (* Compile the entry block *)
@@ -316,11 +386,12 @@ let translate_fun
       in
       let entry_label = Ctx.fresh_label ctx "entry" in
       translate_expr ctx item_env local_env join_blocks (create_block entry_label) "result" expr
+        ~malloc
     in
 
     (* Finish constructing the join blocks *)
     !join_blocks |> Anf.Join_map.iter begin fun _ { label; phi; instrs; term } ->
-      let result = Llvm.Assign (phi.id, Phi (phi.ty, make_iarray phi.args)) in
+      let result = Some phi.id, Llvm.Phi (phi.ty, make_iarray phi.args) in
       Ctx.emit_block ctx Llvm.{ label; instrs = Iarray.append [|result|] instrs; term };
     end;
 
@@ -328,6 +399,16 @@ let translate_fun
 
 let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
   let ctx = Ctx.create () in
+
+  let malloc = lazy begin
+    let name = Ctx.fresh_global_id ctx "malloc" in
+    Ctx.emit_fun_decl ctx name Llvm.{
+      linkage = Llvm.External;
+      result_ty = Ptr;
+      params = [|I32, None|];
+    };
+    name
+  end in
 
   (* Top-level items might be mutually recursive, so we need to process their
      declarations before we can translate them to definitions. *)
@@ -342,9 +423,9 @@ let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
   item_env |> Anf.Item_map.iter begin fun name item_decl ->
     match Anf.Item_map.find name mod_, item_decl with
     | Anf.Item.Val (vis, ty, body), Val id ->
-        Ctx.emit_fun ctx id (translate_fun ctx item_env vis [||] ty body);
+        Ctx.emit_fun_def ctx id (translate_fun ctx item_env vis [||] ty body ~malloc);
     | Anf.Item.Fun (vis, params, result_ty, body), Fun id ->
-        Ctx.emit_fun ctx id (translate_fun ctx item_env vis params result_ty body);
+        Ctx.emit_fun_def ctx id (translate_fun ctx item_env vis params result_ty body ~malloc);
     | _, _ ->
         failwith "mismatched items"
   end;
