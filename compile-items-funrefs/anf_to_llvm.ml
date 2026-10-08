@@ -256,6 +256,9 @@ let translate_expr
         let args = args |> Iarray.map (go_atom local_env block "arg") in
         assign_instr ctx block result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
+    | Anf.Expr.Tuple_proj (head, index) ->
+        failwith "TODO"
+
     | Anf.Expr.Prim (op, args) ->
         begin match op, args |> Iarray.map (go_atom local_env block "arg") with
         | Prim.Op.Bool_eq, [|x; y|] -> assign_instr ctx block result_name Llvm.(Icmp (Eq, I1, x, y))
@@ -278,6 +281,8 @@ let translate_expr
         | Fun item_id -> Llvm.Global item_id
         end
     | Anf.Expr.Var (id, _) -> Anf.Local_map.find id local_env
+    | Anf.Expr.Tuple elems ->
+        failwith "TODO"
     | Anf.Expr.Bool b -> Llvm.I1 b
     | Anf.Expr.I32 i -> Llvm.I32 i
   in
