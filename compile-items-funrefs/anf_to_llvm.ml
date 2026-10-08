@@ -32,8 +32,7 @@ let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
   match ty with
   | Anf.Ty.Bool -> Llvm.I1
   | Anf.Ty.I32 -> Llvm.I32
-  | Anf.Ty.Fun (param_tys, result_ty) ->
-      Llvm.Ptr (Fun (translate_ty result_ty, Iarray.map translate_ty param_tys))
+  | Anf.Ty.Fun (_, _) -> Llvm.Ptr
 
 (** Item declarations *)
 type item_decl =

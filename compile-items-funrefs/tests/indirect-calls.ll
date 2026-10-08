@@ -1,10 +1,10 @@
 define i32 @caller() {
 entry:
-  %result = call i32 @hof(i32(i32)* @inc)
+  %result = call i32 @hof(ptr @inc)
   ret i32 %result
 }
 
-define private i32 @hof(i32(i32)* %f) {
+define private i32 @hof(ptr %f) {
 entry:
   %arg = call i32 %f(i32 42)
   %result = add i32 10, %arg

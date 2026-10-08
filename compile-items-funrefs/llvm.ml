@@ -19,10 +19,9 @@ module Local_id = Name.Make ()
 module Label = Name.Make ()
 
 type ty =
-  | I1
-  | I32
-  | Ptr of ty
-  | Fun of ty * ty Iarray.t
+  | I1                                      (* https://llvm.org/docs/LangRef.html#integer-type *)
+  | I32                                     (* https://llvm.org/docs/LangRef.html#integer-type *)
+  | Ptr                                     (* https://llvm.org/docs/LangRef.html#pointer-type *)
   (* ... *)
 
 (** Operands *)
@@ -107,21 +106,9 @@ end = struct
 
   let rec pp_ty (ty : ty) =
     match ty with
-    | Ptr ty -> Format.dprintf "@[%t@]*" (pp_ty ty)
-    | Fun (result_ty, param_tys) ->
-        Format.dprintf "%t(%t)"
-          (pp_ty result_ty)
-          (fun ppf ->
-            Format.pp_print_iter Iarray.iter (Fun.flip pp_ty) ppf param_tys
-              ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
-    | ty -> pp_atomic_ty ty
-  and pp_atomic_ty (ty : ty) =
-    match ty with
     | I1 -> Format.dprintf "i1"
     | I32 -> Format.dprintf "i32"
-    | Ptr _ | Fun _ as ty -> Format.dprintf "@[(%t)@]" (pp_ty ty)
-
-
+    | Ptr -> Format.dprintf "ptr"
 
   let pp_opr (opr : opr) =
     match opr with
