@@ -10,6 +10,7 @@ module Ty = struct
     | Bool
     | I32
     | Fun of t Iarray.t * t
+    | Tuple of t Iarray.t
 
   let of_prim (ty : Prim.Ty.t) : t =
     match ty with
@@ -25,6 +26,8 @@ module rec Expr : sig
     | Var of Local.Index.t * Ty.t
     | Let of def * t
     | Fun_app of t * t Iarray.t
+    | Tuple of t Iarray.t
+    | Tuple_proj of t * int
     | Bool of bool
     | Bool_if of t * t * t
     | I32 of int32
@@ -47,6 +50,12 @@ end = struct
         begin match ty_of head with
         | Ty.Fun (_, result_ty) -> result_ty
         | _ -> invalid_arg "Core.Expr.ty_of: type error"
+        end
+    | Tuple exprs -> Ty.Tuple (exprs |> Iarray.map ty_of)
+    | Tuple_proj (tuple, index) ->
+        begin match ty_of tuple with
+        | Tuple tys -> Iarray.get tys index
+        | _ -> invalid_arg "Expr.ty_of"
         end
     | Bool _ -> Ty.Bool
     | Bool_if (_, expr2, _) -> ty_of expr2
@@ -79,6 +88,7 @@ module Interpret : sig
 
   type value =
     | Item of Item.t
+    | Tuple of value Iarray.t
     | Bool of bool
     | I32 of int32
 
@@ -88,6 +98,7 @@ end = struct
 
   type value =
     | Item of Item.t
+    | Tuple of value Iarray.t
     | Bool of bool
     | I32 of int32
 
@@ -107,6 +118,13 @@ end = struct
         | Item (Item.Fun (_, _, _, body)) ->
             let env = Iarray.to_seq args |> Seq.map (eval_expr items locals) |> Local.Env.of_seq in
             eval_expr items env body
+        | _ -> failwith "Expr.eval"
+        end
+    | Expr.Tuple exprs ->
+        Tuple (exprs |> Iarray.map (eval_expr items locals))
+    | Expr.Tuple_proj (tuple, index) ->
+        begin match eval_expr items locals tuple with
+        | Tuple values -> Iarray.get values index
         | _ -> failwith "Expr.eval"
         end
     | Expr.Bool bool -> Bool bool
@@ -156,6 +174,13 @@ end = struct
     | Ty.Bool -> Format.dprintf "Bool"
     | Ty.I32 -> Format.dprintf "I32"
     | Ty.Fun _ as ty -> Format.dprintf "@[(%t)@]" (pp_ty ty)
+    | Tuple [||] -> Format.dprintf "()"
+    | Tuple [|ty|] -> Format.dprintf "(%t)" (pp_ty ty)
+    | Tuple elem_tys ->
+        Format.dprintf "@[(%a)@]"
+          (Format.pp_print_iter Iarray.iter (Fun.flip pp_ty)
+            ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ "))
+          elem_tys
 
   (* TODO: Pretty print expressions and modules *)
 

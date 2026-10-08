@@ -34,6 +34,7 @@ module Ty = struct
   and data =
     | Name of string
     | Fun of t Iarray.t * t
+    | Tuple of t Iarray.t
 
 end
 
@@ -48,6 +49,8 @@ module Expr = struct
     | Prim of string Spanned.t * t Iarray.t
     | Let of def * t
     | Ann of t * Ty.t
+    | Tuple of t Iarray.t
+    | Proj of t * int Spanned.t
     | App of t * t Iarray.t
     | I32 of int32
     | If_then_else of t * t * t
@@ -203,6 +206,7 @@ end = struct
     | Ty.Name name -> error t.span "unbound type name `%s`" name
     | Ty.Fun (param_tys, result_ty) ->
         Core.Ty.Fun (Iarray.map check_ty param_tys, check_ty result_ty)
+    | Ty.Tuple tys -> Core.Ty.Tuple (tys |> Iarray.map check_ty)
 
   let rec infer_expr (env : Env.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
     match expr.data with
@@ -229,6 +233,18 @@ end = struct
     | Expr.Ann (expr, ty) ->
         let ty = check_ty ty in
         check_expr env expr ty, ty
+
+    | Expr.Tuple elems ->
+        let elems, elem_tys = Iarray.split (Iarray.map (infer_expr env) elems) in
+        Core.Expr.Tuple elems, Core.Ty.Tuple elem_tys
+
+    | Expr.Proj ({ span = head_span; _ } as head, index) ->
+        begin match infer_expr env head with
+        | head, Core.Ty.Tuple elem_tys when index.data < Iarray.length elem_tys ->
+            Core.Expr.Tuple_proj (head, index.data), Iarray.get elem_tys index.data
+        | head, Core.Ty.Tuple _ -> error index.span "unknown field `%i`" index.data
+        | _, head_ty -> error head_span "@[expected tuple, found: %t@]" (Core.Pretty.pp_ty head_ty)
+        end
 
     | Expr.App (head, args) ->
         begin match infer_expr env head with
@@ -278,6 +294,18 @@ end = struct
         let env, def = check_def env def in
         let body = check_expr env body ty in
         Core.Expr.Let (def, body)
+
+    | Expr.Tuple elems ->
+        begin match ty with
+        | Core.Ty.Tuple elem_tys when Iarray.length elems = Iarray.length elem_tys ->
+            Core.Expr.Tuple (Iarray.map2 (check_expr env) elems elem_tys)
+        | Core.Ty.Tuple elem_tys ->
+            error expr.span "expected %i elements, found %i elements"
+              (Iarray.length elem_tys)
+              (Iarray.length elems);
+        | _ ->
+            error expr.span "@[expected: %t, found tuple@]" (Core.Pretty.pp_ty ty)
+        end
 
     | Expr.If_then_else (expr1, expr2, expr3) ->
         let expr1 = check_expr env expr1 Core.Ty.Bool in
