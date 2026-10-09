@@ -48,12 +48,12 @@ let translate_vis (vis : Core.Item.vis) :  Llvm.linkage option =
 type partial_phi = {
   id : Llvm.Local_id.t;
   ty : Llvm.ty;
-  args : (Llvm.opr * Llvm.Label.t) Dynarray.t;
+  args : Llvm.(opr * Label.t) Dynarray.t;
 }
 
 type partial_block = {
   label : Llvm.Label.t;
-  instrs : Llvm.instr Dynarray.t;
+  instrs : Llvm.(Local_id.t option * value_instr) Dynarray.t;
 }
 
 let translate_fun
@@ -75,7 +75,7 @@ let translate_fun
 
   let assign_instr (block : partial_block) (name : string) (instr : Llvm.value_instr) : Llvm.opr =
     let id = fresh_local_id name in
-    Dynarray.add_last block.instrs Llvm.(Assign (id, instr));
+    Dynarray.add_last block.instrs (Some id, instr);
     Local id
   in
 
@@ -202,7 +202,7 @@ let translate_fun
 
     (* Finish constructing the join blocks *)
     !join_blocks |> Anf.Join_map.iter begin fun _ (phi, block) ->
-      let result = Llvm.Assign (phi.id, Phi (phi.ty, make_iarray phi.args)) in
+      let result = Some phi.id, Llvm.Phi (phi.ty, make_iarray phi.args) in
       Dynarray.add_last blocks Llvm.{ block with instrs = Iarray.append [|result|] block.instrs };
     end;
 

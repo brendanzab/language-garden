@@ -49,6 +49,7 @@ type value_instr =
 
   (* Memory Access and Addressing Operations *)
   | Load of ty * opr                        (* https://llvm.org/docs/LangRef.html#load-instruction *)
+  | Store of ty * opr * opr                 (* https://llvm.org/docs/LangRef.html#store-instruction *)
   | Getelementptr of ty * opr * (ty * opr) Iarray.t   (* https://llvm.org/docs/LangRef.html#getelementptr-instruction *)
   (* ... *)
 
@@ -62,17 +63,6 @@ type value_instr =
   | Call of ty * opr * (ty * opr) Iarray.t  (* https://llvm.org/docs/LangRef.html#call-instruction *)
   (* ... *)
 
-(** Instructions that do not produce values *)
-type command_instr =
-  (* Memory Access and Addressing Operations *)
-  | Store of ty * opr * opr                 (* https://llvm.org/docs/LangRef.html#store-instruction *)
-  (* ... *)
-
-(** Non-terminator instructions *)
-type instr =
-  | Assign of Local_id.t * value_instr
-  | Command of command_instr
-
 (** Terminator instructions *)
 type term_instr =                           (* Terminator instructions  https://llvm.org/docs/LangRef.html#terminator-instructions *)
   | Br of Label.t                           (* Unconditional branch     https://llvm.org/docs/LangRef.html#i-br *)
@@ -83,7 +73,7 @@ type term_instr =                           (* Terminator instructions  https://
 (** Basic blocks *)
 type block = {
   label : Label.t;
-  instrs : instr Iarray.t;
+  instrs : (Local_id.t option * value_instr) Iarray.t;
   term : term_instr;
 }
 
@@ -173,6 +163,9 @@ end = struct
         Format.dprintf "@[ptrtoint@ %t@ %t@ to@ %t@]" (pp_ty ty1) (pp_opr opr) (pp_ty ty2)
     | Load (ty, ptr) ->
         Format.dprintf "@[load@ %t,@ ptr@ %t@]" (pp_ty ty) (pp_opr ptr)
+    | Store (ty, value, ptr) ->
+        Format.dprintf "@[<2>@[store@ %t@ %t@],@ @[ptr@ %t@]@]"
+          (pp_ty ty) (pp_opr value) (pp_opr ptr)
     | Getelementptr (ty, ptr, elems) ->
         let pp_elem (ty, idx) = Format.dprintf "%t@ %t" (pp_ty ty) (pp_opr idx) in
         Format.dprintf "@[<hv 2>@[getelementptr@ %t,@ @[ptr@ %t@]@],@ @[%t@]@]"
@@ -195,12 +188,6 @@ end = struct
           (pp_opr fn)
           (args |> pp_iarray pp_arg ~pp_sep:pp_comma_sep)
 
-  let pp_command_instr (instr : command_instr) =
-    match instr with
-    | Store (ty, value, ptr) ->
-        Format.dprintf "@[<2>@[store@ %t@ %t@],@ @[ptr@ %t@]@]"
-          (pp_ty ty) (pp_opr value) (pp_opr ptr)
-
   let pp_term_instr (term : term_instr) =
     match term with
     | Br dest -> Format.dprintf "@[  @[br@ label@ %t@]@]" (pp_label dest)
@@ -209,12 +196,12 @@ end = struct
           (pp_opr cond) (pp_label if_true) (pp_label if_false)
     | Ret (ty, opr) -> Format.dprintf "@[  @[ret@ %t@ %t@]@]" (pp_ty ty) (pp_opr opr)
 
-  let pp_instr (instr : instr) =
-    match instr with
-    | Assign (id, instr) ->
+  let pp_instr (id, instr : Local_id.t option * value_instr) =
+    match id, instr with
+    | Some id, instr ->
         Format.dprintf "@[  @[<2>@[%t@ =@]@ %t@]@]" (pp_local_id id) (pp_value_instr instr)
-    | Command instr ->
-        Format.dprintf "@[  %t@]" (pp_command_instr instr)
+    | None, instr ->
+        Format.dprintf "@[  %t@]" (pp_value_instr instr)
 
   let rec pp_block ({ label; instrs; term } : block) =
     if Iarray.length instrs = 0 then

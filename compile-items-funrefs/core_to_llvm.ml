@@ -61,12 +61,12 @@ let translate_fun
   (* Assign an instruction to a variable in the current block *)
   let assign_instr name (instr : Llvm.value_instr) : Llvm.opr =
     let id = fresh_local_id name in
-    Dynarray.add_last current_instrs Llvm.(Assign (id, instr));
+    Dynarray.add_last current_instrs (Some id, instr);
     Local id
   in
 
-  let command_instr (instr : Llvm.command_instr) : unit =
-    Dynarray.add_last current_instrs Llvm.(Command instr);
+  let command_instr (instr : Llvm.value_instr) : unit =
+    Dynarray.add_last current_instrs (None, instr);
   in
 
   (* Set the label of the current block *)
