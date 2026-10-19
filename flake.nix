@@ -73,13 +73,13 @@
         final: prev: {
           compile-items = prev.compile-items.overrideAttrs (previousAttrs: {
             nativeCheckInputs = [
-              pkgs.wabt
+              pkgs.wasm-tools
               pkgs.llvm
             ];
           });
           compile-items-funrefs = prev.compile-items.overrideAttrs (previousAttrs: {
             nativeCheckInputs = [
-              pkgs.wabt
+              pkgs.wasm-tools
               pkgs.llvm
             ];
           });
