@@ -73,7 +73,7 @@
 
           # Inputs for `compile-items` projects
           compileItemsNativeCheckInputs = [
-            pkgs.wabt
+            pkgs.wasm-tools
             pkgs.llvm
 
             # FIXME: Clang is not needed for these projects yet, but can be a
