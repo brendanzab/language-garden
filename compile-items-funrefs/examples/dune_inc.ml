@@ -68,9 +68,8 @@ let generate_rules base = begin
 
   (* compile-wat *)
 
-  let generate_wat_rules ~base ~compile_args ~wat2wasm_args ~wasm_validate_args =
+  let generate_wat_rules ~base ~compile_args ~wasm_tools_args =
     let wat_file = Printf.sprintf "%s.wat" base in
-    let wasm_file = Printf.sprintf "%s.wasm" base in
 
     Printf.printf "(rule\n";
     Printf.printf " (with-stdin-from ../%s\n" txt_file;
@@ -85,27 +84,18 @@ let generate_rules base = begin
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
-    Printf.printf " (target %s)\n" wasm_file;
-    Printf.printf " (action (run wat2wasm %%{dep:%s.tmp} -o %%{target}%s)))\n" wat_file wat2wasm_args;
-    Printf.printf "\n";
-    Printf.printf "(rule\n";
-    Printf.printf " (alias runtest)\n";
-    Printf.printf " (package %s)\n" package;
-    Printf.printf " (action (run wasm-validate %%{dep:%s}%s)))\n" wasm_file wasm_validate_args;
-    Printf.printf "\n";
+    Printf.printf " (action (run wasm-tools validate %%{dep:%s.tmp}%s)))\n" wat_file wasm_tools_args;
   in
 
   generate_wat_rules
     ~base:base
     ~compile_args:""
-    ~wat2wasm_args:" --enable-function-references"
-    ~wasm_validate_args:" --enable-function-references";
+    ~wasm_tools_args:" --features=function-references";
 
   generate_wat_rules
     ~base:(Printf.sprintf "%s.tail-call" base)
     ~compile_args:" --enable-tail-call"
-    ~wat2wasm_args:" --enable-tail-call --enable-function-references"
-    ~wasm_validate_args:" --enable-tail-call --enable-function-references";
+    ~wasm_tools_args:" --features=tail-call,function-references";
 
 end
 
