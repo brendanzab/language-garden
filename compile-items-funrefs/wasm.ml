@@ -25,6 +25,7 @@ type func_type = {
 
 (* https://webassembly.github.io/spec/core/text/types.html#composite-types *)
 type comp_type =
+  | Struct of value_type Iarray.t
   | Func of func_type
 
 (* https://webassembly.github.io/spec/core/text/types.html#text-rectype *)
@@ -46,6 +47,10 @@ type instr =
 
   (* Reference instructions *)
   | Ref_func of Func_id.t
+
+  (* Aggregate Instructions *)
+  | Struct_new of Type_id.t
+  | Struct_get of Type_id.t * int
 
   (* Numeric instructions *)
   | I32_const of int32
@@ -137,6 +142,11 @@ module Output_wat = struct
 
   let pp_comp_type (ty : comp_type) =
     match ty with
+    | Struct [||] -> pp_sexpr_cmd "struct" []
+    | Struct fields ->
+        pp_sexpr_cmd "struct" [
+          pp_sexpr_cmd_seq "field" (Iarray.to_seq fields |> Seq.map pp_value_type);
+        ]
     | Func { params; results } ->
         pp_sexpr_cmd "func" [
           pp_sexpr_cmd_seq "param" (Iarray.to_seq params |> Seq.map pp_value_type);
@@ -166,6 +176,8 @@ module Output_wat = struct
     | Local_set id -> pp_sexpr_cmd "local.set" [pp_local_id id]
     | Local_get id -> pp_sexpr_cmd "local.get" [pp_local_id id]
     | Ref_func id -> pp_sexpr_cmd "ref.func" [pp_func_id id]
+    | Struct_new id -> pp_sexpr_cmd "struct.new" [pp_type_id id];
+    | Struct_get (id, index) -> pp_sexpr_cmd "struct.get" [pp_type_id id; Format.dprintf "%i" index];
     | I32_const i -> pp_sexpr_cmd "i32.const" [pp_i32 i]
     | I32_eq -> Format.dprintf "i32.eq"
     | I32_add -> Format.dprintf "i32.add"
