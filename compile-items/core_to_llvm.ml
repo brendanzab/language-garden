@@ -31,10 +31,10 @@ let translate_ty (ty : Core.Ty.t) : Llvm.ty =
   | Core.Ty.Bool -> Llvm.I1
   | Core.Ty.I32 -> Llvm.I32
 
-let translate_vis (vis : Core.Item.vis) :  Llvm.linkage option =
+let translate_vis (vis : Core.Item.vis) : Llvm.linkage =
   match vis with
-  | Pub -> None
-  | Priv -> Some Llvm.Private
+  | Pub -> Llvm.External
+  | Priv -> Llvm.Private
 
 let translate_fun
   (item_env : Llvm.Global_id.t Core.Item_map.t)

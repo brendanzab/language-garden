@@ -37,10 +37,10 @@ type item_decl =
   | Val of Llvm.Global_id.t
   | Fun of Llvm.Global_id.t
 
-let translate_vis (vis : Core.Item.vis) :  Llvm.linkage option =
+let translate_vis (vis : Core.Item.vis) : Llvm.linkage =
   match vis with
-  | Pub -> None
-  | Priv -> Some Llvm.Private
+  | Pub -> Llvm.External
+  | Priv -> Llvm.Private
 
 let translate_fun
   (item_env : item_decl Core.Item_map.t)

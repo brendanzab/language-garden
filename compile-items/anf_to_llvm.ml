@@ -33,10 +33,10 @@ let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
   | Anf.Ty.Bool -> Llvm.I1
   | Anf.Ty.I32 -> Llvm.I32
 
-let translate_vis (vis : Core.Item.vis) :  Llvm.linkage option =
+let translate_vis (vis : Core.Item.vis) : Llvm.linkage =
   match vis with
-  | Pub -> None
-  | Priv -> Some Llvm.Private
+  | Pub -> Llvm.External
+  | Priv -> Llvm.Private
 
 type partial_phi = {
   id : Llvm.Local_id.t;

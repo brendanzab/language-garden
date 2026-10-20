@@ -74,10 +74,11 @@ type cfg = {
 type linkage =                              (* https://llvm.org/docs/LangRef.html#linkage-types *)
   | Private
   (* ... *)
+  | External                                (* Default *)
 
 (** Function definitions *)
 type fun_ = {                               (* https://llvm.org/docs/LangRef.html#functions *)
-  linkage : linkage option;
+  linkage : linkage;
   result_ty : ty;
   params : (ty * Local_id.t) Iarray.t;
   cfg : cfg;
@@ -174,6 +175,7 @@ end = struct
   let pp_linkage (linkage : linkage) =
     match linkage with
     | Private -> Format.dprintf "private"
+    | External -> Format.dprintf "external"
 
   let pp_fun (id, { linkage; result_ty; params; cfg } : Global_id.t * fun_) =
     let pp_param (ty, id) =
@@ -181,8 +183,8 @@ end = struct
     in
     Format.dprintf "@[<v>@[define@ %t%t@ %t(%t)@ {@]@ %t@ }@]@."
       (match linkage with
-        | None -> Format.dprintf ""
-        | Some linkage -> Format.dprintf "%t@ " (pp_linkage linkage))
+        | External -> Format.dprintf ""
+        | linkage -> Format.dprintf "%t@ " (pp_linkage linkage))
       (pp_ty result_ty)
       (pp_global_id id)
       (pp_iarray pp_param params ~pp_sep:pp_comma_sep)
