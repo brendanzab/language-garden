@@ -43,8 +43,8 @@ type index = int
 type expr =
   | Var of index                    (* variable occurrences *)
   | Let of string * expr * expr     (* let bindings *)
-  | Fun_lit of string * expr         (* function literals *)
-  | Fun_app of expr * expr           (* function applications *)
+  | Fun_lit of string * expr        (* function literals *)
+  | Fun_app of expr * expr          (* function applications *)
 
 
 (** {1 Semantics} *)
@@ -52,7 +52,7 @@ type expr =
 (** {2 Semantic domain} *)
 
 type value =
-  | Fun_lit of string * clos         (* function literals *)
+  | Fun_lit of string * clos        (* function literals *)
 
 and clos =
   | Clos of env * expr
@@ -69,9 +69,9 @@ and env = value list
     evaluation strategy.
 *)
 type frame =
-  | Let_body of (string * unit * expr) * env     (* let x := [.]; expr *)
-  | Fun_app1 of (unit * expr) * env              (* [.] expr *)
-  | Fun_app2 of (value * unit)                   (* value [.] *)
+  | Let_body of (string * unit * expr) * env    (* let x := [.]; expr *)
+  | Fun_app1 of (unit * expr) * env             (* [.] expr *)
+  | Fun_app2 of (value * unit)                  (* value [.] *)
 
 (** Continuation (i.e. a call-stack)
 
@@ -117,8 +117,8 @@ let step (s : state) : state =
 
   (* Evaluate a let binding *)
   | Eval (Let (name, def, body), env, k) ->
-      Eval (def, env,                         (* evaluate the definition *)
-        Let_body ((name, (), body), env) :: k) (* continue evaluating the body later *)
+      Eval (def, env,                           (* evaluate the definition *)
+        Let_body ((name, (), body), env) :: k)  (* continue evaluating the body later *)
 
   (* Evaluate a function literal *)
   | Eval (Fun_lit (name, body), env, k) ->
@@ -126,8 +126,8 @@ let step (s : state) : state =
 
   (* Evaluate a function application *)
   | Eval (Fun_app (head, arg), env, k) ->
-      Eval (head, env,                        (* evaluate the head of the application *)
-        Fun_app1 (((), arg), env) :: k)        (* continue evaluating the argument later *)
+      Eval (head, env,                          (* evaluate the head of the application *)
+        Fun_app1 (((), arg), env) :: k)         (* continue evaluating the argument later *)
 
 
   (* Resume evaluating the body of a let binding, now that the definition has
@@ -142,8 +142,8 @@ let step (s : state) : state =
   | Apply (Fun_app1 (((), arg), env) :: k, head) ->
       (*              ▲                    │
                       └────────────────────┘ *)
-      Eval (arg, env,                         (* evaluate the argument *)
-        Fun_app2 (head, ()) :: k)              (* continue applying the function later *)
+      Eval (arg, env,                           (* evaluate the argument *)
+        Fun_app2 (head, ()) :: k)               (* continue applying the function later *)
 
   (* Resume applying a function, now that the head of the application and the
      argument have been evaluated *)
