@@ -39,19 +39,26 @@ module Supply (A : S) : sig
 
   val create : ?names:string list -> unit -> t
   val fresh : t -> string -> A.t
+  val reset : t -> unit
 
 end = struct
 
   type t = {
+    initial_names : string list;
     counts : (string, int) Hashtbl.t;
   }
 
-  let create ?(names = []) () : t = {
-    counts =
-      List.to_seq names
-      |> Seq.map (fun n -> n, 1)
-      |> Hashtbl.of_seq;
-  }
+  let reset (state : t) =
+    Hashtbl.clear state.counts;
+    state.initial_names |> List.iter (fun n -> Hashtbl.add state.counts n 1)
+
+  let create ?(names = []) () : t =
+    let state = {
+      initial_names = names;
+      counts = Hashtbl.create 16;
+    } in
+    reset state;
+    state
 
   let make_name (base_name : string) (count : int) =
     if count = 0 then base_name else
