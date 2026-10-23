@@ -104,7 +104,7 @@ let translate_expr
         | Prim.Op.I32_neg -> Dynarray.add_last instrs (Wasm.I32_const 0l);
         | _ -> ()
         end;
-        args |> Iarray.iter (fun arg -> ignore (go_expr instrs local_env ~tail_call:false arg));
+        args |> Iarray.iter (go_expr instrs local_env ~tail_call:false);
         begin match op with
         | Prim.Op.Bool_eq -> Dynarray.add_last instrs Wasm.I32_eq;
         | Prim.Op.I32_eq -> Dynarray.add_last instrs Wasm.I32_eq;
