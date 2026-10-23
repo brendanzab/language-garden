@@ -86,7 +86,7 @@ let shift (diff : int) (e : expr) : expr =
   map_vars (fun size i -> if i >= size then Var (i + diff) else Var i) 0 e
 
 let subst (i, s : int * expr) (e : expr) : expr =
-  map_vars (fun size j -> if i = j + size then shift size s else e) 0 e
+  map_vars (fun size j -> if j = i + size then shift size s else Var j) 0 e
 
 let subst_top (s : expr) (e : expr) : expr =
   shift (-1) (subst (0, shift 1 s) e)
