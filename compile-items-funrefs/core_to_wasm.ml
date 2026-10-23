@@ -47,6 +47,10 @@ let translate_expr
     | Core.Expr.Item (name, _) ->
         begin match Core.Item_map.find name item_env with
         | Val (_, id) -> go_direct_call instrs id ~tail_call
+
+        (* Create a reference to a function definition. If the function is never
+           exported then Wasm requires us to add it to an element declaration at
+           the top-level of the module. *)
         | Fun (vis, id) ->
             if vis = Priv then add_func_ref id;
             Dynarray.add_last instrs (Wasm.Ref_func id);
