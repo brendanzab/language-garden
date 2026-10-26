@@ -29,8 +29,9 @@ module Layout = struct
 
   end
 
-  (** Packed struct layout. This could result in unaligned fields that require
-      multiple reads to access. For example:
+  (** Computes a packed struct layout, along with a list of field offsets. This
+      could result in unaligned fields that require multiple reads to access.
+      For example:
 
       {@text[
 
@@ -61,8 +62,9 @@ module Layout = struct
 
     go 0 [] fields
 
-  (** Aligned, C-style struct layout. This inserts padding between fields in to
-      avoid unaligned field accesses.
+  (** Computes an aligned, C-style struct layout, along with a list of field
+      offsets. Padding is added between fields in to avoid unaligned field
+      accesses.
 
       {@text[
 
@@ -85,22 +87,22 @@ module Layout = struct
       Resources:
 
       - https://en.wikipedia.org/wiki/Data_structure_alignment
+      - https://cs.brown.edu/courses/csci0300/2021/notes/l05.html
+      - https://developer.ibm.com/articles/pa-dalign/
       - https://doc.rust-lang.org/reference/type-layout.html#r-layout.repr.c.struct.size-field-offset
       - https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.extend
       - https://doc.rust-lang.org/nomicon/other-reprs.html#reprc
-      - https://developer.ibm.com/articles/pa-dalign/
       - https://en.cppreference.com/c/language/object#Alignment
-      - https://cs.brown.edu/courses/csci0300/2021/notes/l05.html
   *)
   let aligned_struct (fields : t list) : t * offsets:int list =
-    (* The padding to add between the current offset and a field of the given alignment:
-       https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding *)
+    (* The padding to add between the current offset and a field of the given
+       alignment. Based on https://en.wikipedia.org/wiki/Data_structure_alignment#Computing_padding *)
     let padding (offset : int) (align : int) : int =
       (align - (offset mod align)) mod align
     in
 
     (* Based on https://doc.rust-lang.org/reference/type-layout.html#r-layout.repr.c.struct.size-field-offset *)
-    let rec go offset align offsets fields =
+    let rec go offset align (offsets : int list) (fields : t list) =
       match fields with
       | field :: fields ->
           let align = Int.max align field.align in
