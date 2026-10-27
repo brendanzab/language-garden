@@ -189,7 +189,7 @@ Miscellaneous:
 - [**misc_set_objects.ml**](./misc_set_objects.ml):
   Comparing set ADTs vs. set objects in OCaml.
 - [**misc_struct_layout.ml**](./misc_struct_layout.ml):
-  Computing packed and aligned data layouts for structures.
+  Computing packed and aligned data structure layouts.
 - [**misc_trampoline.ml**](./misc_trampoline.ml):
   Stepped, stack-safe computations with free monads.
 - [**misc_unembedding_hoas**](./misc_unembedding_hoas.ml):
