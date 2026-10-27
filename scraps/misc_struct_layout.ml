@@ -167,13 +167,33 @@ let () = begin
   begin
     let layout, ~offsets = Layout.packed_struct Target.Aarch64.[i16; i16; i64] in
     assert (layout = { size = 12; align = 1 });
-    assert (offsets = Layout.[0; 2; 4]);
+    assert (offsets = [0; 2; 4]);
   end;
 
   begin
     let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i16; i16; i64] in
     assert (layout = { size = 16; align = 8 });
-    assert (offsets = Layout.[0; 2; 8]);
+    assert (offsets = [0; 2; 8]);
+  end;
+
+  (* More examples *)
+
+  begin
+    let layout, ~offsets = Layout.aligned_struct [] in
+    assert (layout = { size = 0; align = 1 });
+    assert (offsets = []);
+  end;
+
+  begin
+    let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i8; i64; i16] in
+    assert (layout = { size = 24; align = 8 });
+    assert (offsets = [0; 8; 16]);
+  end;
+
+  begin
+    let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i64; i8; i16] in
+    assert (layout = { size = 16; align = 8 });
+    assert (offsets = [0; 8; 10]);
   end;
 
   (* Randomised tests *)
@@ -183,15 +203,13 @@ let () = begin
 
     try
 
-      (* The overall alignment is the maximum alignment of the fields *)
-      assert (layout.align = (fields |> List.fold_left (fun acc (f : Layout.t) -> Int.max acc f.align) 1));
-
-      (* Structures are padded to a size that is a multiple of their alignment *)
+      (* Structures are padded to be a multiple of their alignment *)
       assert (layout.size mod layout.align = 0);
 
-      (* Each field should be offset to a multiple of its alignment *)
       List.combine fields offsets |> List.iter begin fun ((f : Layout.t), offset) ->
-        assert (offset mod f.align = 0);
+        assert (offset mod f.align = 0);          (* Each field should be offset to a multiple of its alignment *)
+        assert (offset + f.size <= layout.size);  (* Fields should not escape the size of the structure *)
+        assert (f.align <= layout.align);         (* The field’s alignment should not exceed the max alignment *)
       end;
 
     with
