@@ -110,14 +110,26 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  let expr = Tree.Int 1 in
+  let assert_compile_equiv expr =
+    let list_result = Compile_list.compile_expr expr in
+    assert (list_result = Compile_diff_list.compile_expr expr);
+    assert (list_result = Compile_dynarray.compile_expr expr);
+  in
 
-  assert (Compile_list.compile_expr expr = Compile_diff_list.compile_expr expr);
-  assert (Compile_list.compile_expr expr = Compile_dynarray.compile_expr expr);
+  assert_compile_equiv Tree.(Int 1);
+  assert_compile_equiv Tree.(Add (Int 2, Mul (Int 3, Int 4)));
 
-  let expr = Tree.(Add (Int 2, Mul (Int 3, Int 4))) in
+  let rec random_expr n =
+    if n <= 0 then Tree.Int (Random.int 1000) else
+      match Random.int 3 with
+      | 0 -> Tree.Int (Random.int 1000)
+      | 1 -> Tree.Add (random_expr (n - 1), random_expr (n - 1))
+      | 2 -> Tree.Mul (random_expr (n - 1), random_expr (n - 1))
+      | _ -> failwith "unreachable"
+  in
 
-  assert (Compile_list.compile_expr expr = Compile_diff_list.compile_expr expr);
-  assert (Compile_list.compile_expr expr = Compile_dynarray.compile_expr expr);
+  Seq.repeat () |> Seq.take 100 |> Seq.iter begin fun () ->
+    assert_compile_equiv (random_expr 10);
+  end;
 
 end
