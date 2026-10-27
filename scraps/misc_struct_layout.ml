@@ -7,8 +7,7 @@
     - https://developer.ibm.com/articles/pa-dalign/
     - https://doc.rust-lang.org/reference/type-layout.html#r-layout.repr.c.struct.size-field-offset
     - https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.extend
-    - https://doc.rust-lang.org/nomicon/other-reprs.html#reprc
-    - https://doc.rust-lang.org/nomicon/other-reprs.html#reprpacked-reprpackedn
+    - https://doc.rust-lang.org/nomicon/other-reprs.html
     - https://en.cppreference.com/c/language/object#Alignment
     - https://compcert.org/doc/html/compcert.cfrontend.Ctypes.html
 *)
@@ -157,102 +156,72 @@ let () = begin
 
   Printexc.record_backtrace true;
 
-  (* let print_layout ~offsets (layout : Layout.t) =
+  let print_layout ~offsets (layout : Layout.t) =
     Printf.printf "{ size = %i; align = %i }; offsets = [" layout.size layout.align;
     offsets |> List.iteri (function 0 -> Printf.printf "%i" | _ -> Printf.printf "; %i");
     Printf.printf "]\n";
-  in *)
+  in
 
   (* Documentation examples *)
 
   begin
-    let layout, ~offsets = Layout.aligned_struct Target.X86.[i16; i16; i64] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 12; align = 4 });
-    assert (offsets = Layout.[0; 2; 4]);
-  end;
-
-  begin
     let layout, ~offsets = Layout.packed_struct Target.Aarch64.[i16; i16; i64] in
-    (* print_layout layout ~offsets; *)
     assert (layout = { size = 12; align = 1 });
     assert (offsets = Layout.[0; 2; 4]);
   end;
 
   begin
     let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i16; i16; i64] in
-    (* print_layout layout ~offsets; *)
     assert (layout = { size = 16; align = 8 });
     assert (offsets = Layout.[0; 2; 8]);
   end;
 
-  (* x86 *)
+  (* Randomised tests *)
 
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.X86.[i8; i8] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 2; align = 1 });
-    assert (offsets = Layout.[0; 1]);
+  let test_aligned_struct (fields : Layout.t list) =
+    let layout, ~offsets = Layout.aligned_struct fields in
+
+    try
+
+      (* The overall alignment is the maximum alignment of the fields *)
+      assert (layout.align = (fields |> List.fold_left (fun acc (f : Layout.t) -> Int.max acc f.align) 1));
+
+      (* Structures are padded to a size that is a multiple of their alignment *)
+      assert (layout.size mod layout.align = 0);
+
+      (* Each field should be offset to a multiple of its alignment *)
+      List.combine fields offsets |> List.iter begin fun ((f : Layout.t), offset) ->
+        assert (offset mod f.align = 0);
+      end;
+
+    with
+    | Assert_failure _ as exn ->
+        print_layout layout ~offsets;
+        Printexc.(raise_with_backtrace exn (get_raw_backtrace ()));
+  in
+
+  let random_layout (module T : Target.S) =
+    match Random.int 9 with
+    | 0 -> T.ptr
+    | 1 -> T.i8
+    | 2 -> T.i16
+    | 3 -> T.i32
+    | 4 -> T.i64
+    | 5 -> T.i128
+    | 6 -> T.f32
+    | 7 -> T.f64
+    | 8 -> T.f128
+    | _ -> failwith "unreachable"
+  in
+
+  let random_fields (module T : Target.S) =
+    List.init (Random.int 100) (fun _ -> random_layout (module T))
+  in
+
+  Target.[(module X86); (module Aarch64)] |> List.iter begin fun (module T : Target.S) ->
+    Seq.forever (fun () -> random_fields (module T))
+    |> Seq.take 100
+    |> Seq.iter test_aligned_struct;
   end;
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.X86.[i8; i16; i8] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 6; align = 2 });
-    assert (offsets = Layout.[0; 2; 4]);
-  end;
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.X86.[i64; i32] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 12; align = 4 });
-    assert (offsets = Layout.[0; 8]);
-  end;
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.X86.[i8; i8; i64] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 12; align = 4 });
-    assert (offsets = Layout.[0; 1; 4]);
-  end;
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.X86.[i16; i8; i32; i64; i32] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 20; align = 4 });
-    assert (offsets = Layout.[0; 2; 4; 8; 16]);
-  end;
-
-  (* AArch64 *)
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i64; i32] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 16; align = 8 });
-    assert (offsets = Layout.[0; 8]);
-  end;
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i8; i8; i64] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 16; align = 8 });
-    assert (offsets = Layout.[0; 1; 8]);
-  end;
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i16; i8; i32; i64; i32] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 24; align = 8 });
-    assert (offsets = Layout.[0; 2; 4; 8; 16]);
-  end;
-
-  begin
-    let layout, ~offsets = Layout.aligned_struct Target.Aarch64.[i8; i32; i64] in
-    (* print_layout layout ~offsets; *)
-    assert (layout = { size = 16; align = 8 });
-    assert (offsets = [0; 4; 8]);
-  end;
-
-  (* ... *)
 
 end
