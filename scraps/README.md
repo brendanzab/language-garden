@@ -119,6 +119,9 @@ Compilation:
   Arithmetic expression evaluators and compilers in Rust.
 - [**compile-arith-verified**](./compile-arith-verified/):
   A formally verified arithmetic expression compiler and decompiler in Lean 4.
+- [**compile_arith_stack_listreps.ml**](./compile_arith_stack_listreps.ml):
+  Compile arithmetic expressions to stack machine instructions using various
+  list representations.
 - [**compile_lc_anf_fresh.ml**](compile_lc_anf_fresh.ml):
   Compiling de Bruijn indexed lambda terms to freshly named lambda terms in A-normal form.
 - [**compile_lc_anf_nameless_hoas.ml**](compile_lc_anf_nameless_hoas.ml):

@@ -39,7 +39,7 @@
 (test (name elab_poly_generics_lettype_params))
 (test (name elab_poly_algorithm_j))
 
-(test (name compile_lc_anf_fresh))
+(test (name compile_arith_stack_listreps))
 (test (name compile_lc_anf_nameless_hoas))
 (test (name compile_lc_anf_nameless_levels))
 (test (name compile_lc_nested_actions))
