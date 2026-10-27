@@ -1,4 +1,4 @@
-(** Genralised derivatives of data structures and tail-recursive transformations,
+(** Generalised derivatives of data structures and tail-recursive transformations,
     based on Conor McBride’s “Clowns to the Left of me, Jokers to the Right” paper.
 
     - https://doi.org/10.1145/1328438.1328474
