@@ -1,53 +1,64 @@
-(** Computing packed and aligned data structure layouts.
+(** A demonstration of computing packed and aligned data structure layouts.
 
-    This could be used to to emit LLVM IR that does not relying on LLVM's
-    built-in struct types. For example the following code:
+    This could be used to to emit LLVM IR that does not rely on LLVM's built-in
+    struct types, which will possibly be phased out in the future. For example
+    the following code:
 
     {@text[
-      struct Test {
+      struct Foo {
         x : I16;
         y : I16;
         z : I64;
       }
 
-      fun create() : Test :=
+      fun example() : Foo :=
         { x = 3; y = 4; z = 100 };
 
-      fun get-z(test : Test) : I64 :=
-        test.z;
+      fun get-z(foo : Foo) : I64 :=
+        foo.z;
     ]}
 
-    ...could be translated to the following LLVM IR:
+    Could be translated to the following LLVM IR:
 
     {@text[
       declare ptr @malloc(i64)
 
-      define ptr @create() {
+      define ptr @example() {
         %res = @malloc(i64 16)
-        %x.ptr = getelementptr i8, ptr %res, i64 0
-        %y.ptr = getelementptr i8, ptr %res, i64 2
-        %z.ptr = getelementptr i8, ptr %res, i64 8
-        store i16 3, ptr %x.ptr, align 2
-        store i16 4, ptr %y.ptr, align 2
-        store i64 100, ptr %z.ptr, align 8
+        %x = getelementptr i8, ptr %res, i64 0
+        %y = getelementptr i8, ptr %res, i64 2
+        %z = getelementptr i8, ptr %res, i64 8
+        store i16 3, ptr %x, align 2
+        store i16 4, ptr %y, align 2
+        store i64 100, ptr %z, align 8
         ret ptr %res
       }
 
-      define i64 @get-z(ptr %test) {
-        %z.ptr = getelementptr i8, ptr %res, i64 8
-        %z = load i64, ptr %z.ptr, align 8
-        ret i64 %z
+      define i64 @get-z(ptr %foo) {
+        %z = getelementptr i8, ptr %foo, i64 8
+        %res = load i64, ptr %z, align 8
+        ret i64 %res
       }
     ]}
 
-    Resources:
+    Note the use of [getelementptr i8]. This could be replaced with [ptradd] in
+    the future. See https://discourse.llvm.org/t/rfc-replacing-getelementptr-with-ptradd/68699
+    for more details.
+
+    {1 Resources}
 
     - https://en.wikipedia.org/wiki/Data_structure_alignment
     - https://cs.brown.edu/courses/csci0300/2021/notes/l05.html
     - https://developer.ibm.com/articles/pa-dalign/
-    - https://doc.rust-lang.org/reference/type-layout.html#r-layout.repr.c.struct.size-field-offset
+
+    Rust resources:
+
+    - https://doc.rust-lang.org/reference/type-layout.html
     - https://doc.rust-lang.org/core/alloc/struct.Layout.html#method.extend
     - https://doc.rust-lang.org/nomicon/other-reprs.html
+
+    C resources:
+
     - https://en.cppreference.com/c/language/object#Alignment
     - https://compcert.org/doc/html/compcert.cfrontend.Ctypes.html
 *)
@@ -142,6 +153,13 @@ end
 (** Target specifications *)
 module Target = struct
 
+  (*
+    - https://llvm.org/docs/LangRef.html#data-layout
+    - https://github.com/rust-lang/rust/tree/main/compiler/rustc_target/src/spec/targets
+    - https://github.com/rust-lang/rust/blob/aaf324d50a7dcb17aae7f2a37e15ff143d980c6e/compiler/rustc_abi/src/lib.rs#L447-L655
+    - https://github.com/llvm/llvm-project/tree/main/clang/lib/Basic/Targets
+  *)
+
   module type S = sig
 
     val ptr : Layout.t
@@ -158,7 +176,9 @@ module Target = struct
 
   end
 
-  (* Aligned to 32-bit word boundaries (like x86) *)
+  (* TODO: Find links to vendor-specific references for these *)
+
+  (** Aligned to 32-bit word boundaries (like x86) *)
   module X86 : S = struct
 
     let ptr = Layout.{ size = 4; align = 4 }
@@ -175,7 +195,7 @@ module Target = struct
 
   end
 
-  (* Aligned to 128-bit word boundaries (like x86-64 or AArch64) *)
+  (** Aligned to 128-bit word boundaries (like x86-64 or AArch64) *)
   module Aarch64 : S = struct
 
     let ptr = Layout.{ size = 8; align = 8 }
@@ -194,6 +214,8 @@ module Target = struct
 
 end
 
+
+(* Tests *)
 
 let () = begin
 
@@ -245,7 +267,7 @@ let () = begin
     let layout, ~offsets = Layout.aligned_struct fields in
 
     try
-      (* The size of a structure should be padded to a a multiple of its alignment *)
+      (* The size of a structure should be padded to a multiple of its alignment *)
       assert (layout.size mod layout.align = 0);
 
       let rec check_fields fields offsets =
