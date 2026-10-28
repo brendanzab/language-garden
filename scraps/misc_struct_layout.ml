@@ -158,19 +158,6 @@ module Target = struct
 
   end
 
-  (* https://llvm.org/docs/LangRef.html#data-layout *)
-  let llvm_data_layout (module T : S) : string =
-    Format.asprintf "%a-%a"
-      (Format.pp_print_list
-        (fun ppf Layout.{ size; align } -> Format.fprintf ppf "i%i:%i" size align)
-        ~pp_sep:(fun ppf () -> Format.fprintf ppf "-"))
-      T.[i8; i16; i32; i64; i128]
-
-      (Format.pp_print_list
-        (fun ppf Layout.{ size; align } -> Format.fprintf ppf "f%i:%i" size align)
-        ~pp_sep:(fun ppf () -> Format.fprintf ppf "-"))
-      T.[f32; f64; f128]
-
   (* Aligned to 32-bit word boundaries (like x86) *)
   module X86 : S = struct
 
