@@ -1,5 +1,45 @@
 (** Computing packed and aligned data structure layouts.
 
+    This could be used to to emit LLVM IR that does not relying on LLVM's
+    built-in struct types. For example the following code:
+
+    {@text[
+      struct Test {
+        x : I16;
+        y : I16;
+        z : I64;
+      }
+
+      fun create() : Test :=
+        { x = 3; y = 4; z = 100 };
+
+      fun get-z(test : Test) : I64 :=
+        test.z;
+    ]}
+
+    ...could be translated to the following LLVM IR:
+
+    {@text[
+      declare ptr @malloc(i64)
+
+      define ptr @create() {
+        %res = @malloc(i64 16)
+        %x.ptr = getelementptr i8, ptr %res, i64 0
+        %y.ptr = getelementptr i8, ptr %res, i64 2
+        %z.ptr = getelementptr i8, ptr %res, i64 8
+        store i16 3, ptr %x.ptr, align 2
+        store i16 4, ptr %y.ptr, align 2
+        store i64 100, ptr %z.ptr, align 8
+        ret ptr %res
+      }
+
+      define i64 @get-z(ptr %test) {
+        %z.ptr = getelementptr i8, ptr %res, i64 8
+        %z = load i64, ptr %z.ptr, align 8
+        ret i64 %z
+      }
+    ]}
+
     Resources:
 
     - https://en.wikipedia.org/wiki/Data_structure_alignment
@@ -114,6 +154,17 @@ module Target = struct
   end
 
   (* https://llvm.org/docs/LangRef.html#data-layout *)
+  let llvm_data_layout (module T : S) : string =
+    Format.asprintf "%a-%a"
+      (Format.pp_print_list
+        (fun ppf Layout.{ size; align } -> Format.fprintf ppf "i%i:%i" size align)
+        ~pp_sep:(fun ppf () -> Format.fprintf ppf "-"))
+      T.[i8; i16; i32; i64; i128]
+
+      (Format.pp_print_list
+        (fun ppf Layout.{ size; align } -> Format.fprintf ppf "f%i:%i" size align)
+        ~pp_sep:(fun ppf () -> Format.fprintf ppf "-"))
+      T.[f32; f64; f128]
 
   (* Aligned to 32-bit word boundaries (like x86) *)
   module X86 : S = struct
