@@ -202,16 +202,29 @@ let () = begin
     let layout, ~offsets = Layout.aligned_struct fields in
 
     try
-
-      (* Structures are padded to be a multiple of their alignment *)
+      (* The size of a structure should be padded to a a multiple of its alignment *)
       assert (layout.size mod layout.align = 0);
 
-      List.combine fields offsets |> List.iter begin fun ((f : Layout.t), offset) ->
-        assert (offset mod f.align = 0);          (* Each field should be offset to a multiple of its alignment *)
-        assert (offset + f.size <= layout.size);  (* Fields should not escape the size of the structure *)
-        assert (f.align <= layout.align);         (* The field’s alignment should not exceed the max alignment *)
-      end;
+      let rec check_fields fields offsets =
+        match fields, offsets with
+        | (field : Layout.t) :: fields, offset :: offsets ->
+            assert (offset mod field.align = 0);    (* Offset fields to a multiple of their alignment *)
+            assert (field.align <= layout.align);   (* Alignment of fields should not exceed the max alignment *)
 
+            begin match offsets with
+            | next_offset :: _ ->
+                assert (offset + field.size <= next_offset);  (* Fields should not overlap *)
+                assert (offset <= next_offset);               (* Offsets should increase monotonically *)
+            | [] ->
+                assert (offset + field.size <= layout.size);  (* Final field should not exceed the size of the structure *)
+            end;
+
+        | [], [] -> ()
+        | [], _ :: _ | _ :: _, [] ->
+            assert false; (* Mismatched lengths *)
+      in
+
+      check_fields fields offsets
     with
     | Assert_failure _ as exn ->
         print_layout layout ~offsets;
