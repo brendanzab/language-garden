@@ -107,6 +107,10 @@ module Layout = struct
 
       ]}
 
+      The alignment of the entire struct will be the maximum alignment of any of
+      its fields. This means that when the struct is aligned, any primitive
+      datatypes contained within the struct will also be properly aligned.
+
       Note that this implementation does not handle edge cases such as integer
       overflow, etc.
   *)
@@ -118,16 +122,17 @@ module Layout = struct
     in
 
     (* Based on https://doc.rust-lang.org/reference/type-layout.html#r-layout.repr.c.struct.size-field-offset *)
-    let rec go offset align (offsets : int list) (fields : t list) =
+    let rec go offset align (rev_offsets : int list) (fields : t list) =
       match fields with
       | field :: fields ->
           let align = Int.max align field.align in
           let offset = offset + padding offset field.align in
-          go (offset + field.size) align (offset :: offsets) fields
+          go (offset + field.size) align (offset :: rev_offsets) fields
       | [] ->
-          (* Add additional padding at the end of the struct *)
+          (* Add additional padding at the end of the struct so that its size
+             is a multiple of its overall alignment *)
           let size = offset + padding offset align in
-          { size; align }, ~offsets:(List.rev offsets)
+          { size; align }, ~offsets:(List.rev rev_offsets)
     in
 
     go 0 1 [] fields
