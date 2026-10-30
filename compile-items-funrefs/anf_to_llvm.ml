@@ -18,14 +18,149 @@
       assignment form}.
 *)
 
-module Global_supply = Name.Supply (Llvm.Global_id)
-module Local_supply = Name.Supply (Llvm.Local_id)
-module Label_supply = Name.Supply (Llvm.Label)
-
 (* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
     See: https://github.com/ocaml/ocaml/pull/14693 *)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
+
+(** Context for emitting LLVM modules *)
+module Ctx : sig
+
+  (** The state of the context, parameterised by the capabilities it supports. *)
+  type 'a t
+
+  val create : unit -> [`Module] t
+
+  val build_module : [`Module] t -> Llvm.module_
+
+  val build_fun :
+    [`Module] t ->
+    Llvm.linkage ->
+    Llvm.ty ->
+    (Llvm.ty * string) Iarray.t ->
+    ([`Module | `Cfg] t -> Llvm.Local_id.t Iarray.t -> Llvm.block) ->
+    Llvm.fun_
+
+  (** Module-level operations *)
+
+  val fresh_global_id : [> `Module] t -> string -> Llvm.Global_id.t
+
+  val emit_fun : [> `Module ] t -> Llvm.Global_id.t -> Llvm.fun_ -> unit
+
+  (** Control flow graph operations *)
+
+  val fresh_local_id : [> `Cfg] t -> string -> Llvm.Local_id.t
+  val fresh_label : [> `Cfg] t -> string -> Llvm.Label.t
+
+  val emit_block : [> `Cfg] t -> Llvm.block -> unit
+
+end = struct
+
+  module Global_id_supply = Name.Supply (Llvm.Global_id)
+  module Local_id_supply = Name.Supply (Llvm.Local_id)
+  module Label_supply = Name.Supply (Llvm.Label)
+
+  type 'a t = {
+    global_id_supply : Global_id_supply.t;
+    local_id_supply : Local_id_supply.t;
+    label_supply : Label_supply.t;
+
+    funs : (Llvm.Global_id.t * Llvm.fun_) Dynarray.t;
+    blocks : Llvm.block Dynarray.t;
+  }
+
+  let create () : [`Module] t = {
+    global_id_supply = Global_id_supply.create ();
+    local_id_supply = Local_id_supply.create ();
+    label_supply = Label_supply.create ();
+
+    funs = Dynarray.create ();
+    blocks = Dynarray.create ();
+  }
+
+  let take_iarray xs =
+    let old_xs = make_iarray xs in
+    Dynarray.clear xs;
+    old_xs
+
+  let fresh_global_id (ctx : [> `Module] t) = Global_id_supply.fresh ctx.global_id_supply
+  let fresh_local_id (ctx : [> `Cfg] t) = Local_id_supply.fresh ctx.local_id_supply
+  let fresh_label (ctx : [> `Cfg] t) = Label_supply.fresh ctx.label_supply
+
+  let emit_fun (ctx : [> `Module] t) (name : Llvm.Global_id.t) (fun_ : Llvm.fun_) =
+    Dynarray.add_last ctx.funs (name, fun_)
+
+  let emit_block (ctx : [> `Cfg] t) = Dynarray.add_last ctx.blocks
+
+  let build_module (ctx : [`Module] t) =
+    Llvm.{ funs = take_iarray ctx.funs }
+
+  let build_fun
+    (ctx : [`Module] t)
+    (linkage : Llvm.linkage)
+    (result_ty : Llvm.ty)
+    (params : (Llvm.ty * string) Iarray.t)
+    (f : [`Module | `Cfg] t -> Llvm.Local_id.t Iarray.t -> Llvm.block)
+  : Llvm.fun_ =
+    let ctx = (ctx :> [`Module | `Cfg] t) in
+
+    (* Create fresh ids for the parameter names *)
+    let params = params |> Iarray.map (Pair.map_snd (fresh_local_id ctx)) in
+
+    (* Construct the control flow graph *)
+    let entry = f ctx (params |> Iarray.map Pair.snd) in
+    let cfg = Llvm.{ blocks = Iarray.append [|entry|] (take_iarray ctx.blocks) } in
+
+    Label_supply.reset ctx.label_supply;
+    Local_id_supply.reset ctx.local_id_supply;
+
+    Llvm.{ linkage; result_ty; params; cfg }
+
+end
+
+
+(** Partially constructed LLVM datatypes *)
+
+type partial_phi = {
+  id : Llvm.Local_id.t;
+  ty : Llvm.ty;
+  args : (Llvm.opr * Llvm.Label.t) Dynarray.t;
+}
+
+let create_phi (ctx : [> `Cfg] Ctx.t) (name : string) (ty : Llvm.ty) =
+  let id = Ctx.fresh_local_id ctx name in
+  { id; ty; args = Dynarray.create () }
+
+type join_block = {
+  label : Llvm.Label.t;
+  phi : partial_phi;
+  instrs : Llvm.instr Iarray.t;
+  term : Llvm.term_instr;
+}
+
+type partial_block = {
+  label : Llvm.Label.t;
+  instrs : Llvm.instr Dynarray.t;
+}
+
+let create_block (label : Llvm.Label.t) : partial_block =
+  { label; instrs = Dynarray.create () }
+
+let assign_instr
+  (ctx : [> `Cfg] Ctx.t)
+  (block : partial_block)
+  (name : string)
+  (instr : Llvm.value_instr)
+: Llvm.opr =
+  let id = Ctx.fresh_local_id ctx name in
+  Dynarray.add_last block.instrs Llvm.(Assign (id, instr));
+  Llvm.Local id
+
+let finish_block (block : partial_block) (term : Llvm.term_instr) : Llvm.block =
+  Llvm.{ label = block.label; instrs = make_iarray block.instrs; term }
+
+
+(** Translation *)
 
 (** Translate an ANF type into an LLVM type *)
 let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
@@ -44,44 +179,15 @@ let translate_vis (vis : Core.Item.vis) : Llvm.linkage =
   | Pub -> Llvm.External
   | Priv -> Llvm.Private
 
-type partial_phi = {
-  id : Llvm.Local_id.t;
-  ty : Llvm.ty;
-  args : (Llvm.opr * Llvm.Label.t) Dynarray.t;
-}
-
-type partial_block = {
-  label : Llvm.Label.t;
-  instrs : Llvm.instr Dynarray.t;
-}
-
-let translate_fun
+let translate_expr
+  (ctx : [> `Cfg] Ctx.t)
   (item_env : item_decl Anf.Item_map.t)
-  (vis : Anf.Item.vis)
-  (params : (Anf.Local_id.t * Core.Ty.t) Iarray.t)
-  (result_ty : Anf.Ty.t)
+  (local_env : Llvm.opr Anf.Local_map.t)
+  (join_blocks : join_block Anf.Join_map.t ref)
+  (block : partial_block)
+  (result_name : string)
   (expr : Anf.Expr.t)
-: Llvm.fun_ =
-  let fresh_local_id = Local_supply.(fresh (create ())) in
-  let fresh_label = Label_supply.(fresh (create ())) in
-
-  let join_blocks = ref Anf.Join_map.empty in (* Join blocks *)
-  let blocks = Dynarray.create () in (* Finished blocks *)
-
-  let begin_block (label : Llvm.Label.t) : partial_block =
-    { label; instrs = Dynarray.create () }
-  in
-
-  let assign_instr (block : partial_block) (name : string) (instr : Llvm.value_instr) : Llvm.opr =
-    let id = fresh_local_id name in
-    Dynarray.add_last block.instrs Llvm.(Assign (id, instr));
-    Local id
-  in
-
-  let finish_block (block : partial_block) (term : Llvm.term_instr) : Llvm.block =
-    Llvm.{ label = block.label; instrs = make_iarray block.instrs; term }
-  in
-
+: Llvm.block =
   (* Translate a sub-expression in the current block. While doing this, more
      blocks might be added to the control flow graph. *)
   let rec go_expr local_env (block : partial_block) (result_name : string) (expr : Anf.Expr.t) : Llvm.block =
@@ -93,14 +199,14 @@ let translate_fun
     | Anf.Expr.Bool_if (expr1, expr2, expr3) ->
         (* Generate some fresh labels to allow us to wire together the basic
            blocks of the if expression *)
-        let true_label = fresh_label "if_true" in
-        let false_label = fresh_label "if_false" in
+        let true_label = Ctx.fresh_label ctx "if_true" in
+        let false_label = Ctx.fresh_label ctx "if_false" in
 
-        let true_block = go_expr local_env (begin_block true_label) "true_result" expr2 in
-        let false_block = go_expr local_env (begin_block false_label) "false_result" expr3 in
+        let true_block = go_expr local_env (create_block true_label) "true_result" expr2 in
+        let false_block = go_expr local_env (create_block false_label) "false_result" expr3 in
 
-        Dynarray.add_last blocks true_block;
-        Dynarray.add_last blocks false_block;
+        Ctx.emit_block ctx true_block;
+        Ctx.emit_block ctx false_block;
 
         (* Translate the entrypoint of the if expression *)
         let cond = go_atom local_env block "cond" expr1 in
@@ -112,26 +218,24 @@ let translate_fun
         finish_block block Llvm.(Ret (result_ty, result))
 
     | Anf.Expr.Join (join_id, (result_id, result_ty), cont, body) ->
-        (* An empty phi instruction at the start of the join block *)
-        let join_phi = {
-          id = fresh_local_id (Anf.Local_id.to_string result_id);
-          ty = translate_ty result_ty;
-          args = Dynarray.create ();
-        } in
-        (* The block that the phi instruction will be added to *)
-        let join_block =
-          let label = fresh_label (Anf.Join_id.to_string join_id) in
-          let local_env = local_env |> Anf.Local_map.add result_id (Llvm.Local join_phi.id) in
-          go_expr local_env (begin_block label) result_name cont
+        (* Create a join block that we can jump to later *)
+        let phi = create_phi ctx (Anf.Local_id.to_string result_id) (translate_ty result_ty) in
+        let Llvm.{ label; instrs; term } =
+          let label = Ctx.fresh_label ctx (Anf.Join_id.to_string join_id) in
+          let local_env = local_env |> Anf.Local_map.add result_id (Llvm.Local phi.id) in
+          go_expr local_env (create_block label) result_name cont
         in
-        join_blocks := Anf.Join_map.add join_id (join_phi, join_block) !join_blocks;
+        join_blocks := Anf.Join_map.add join_id { label; phi; instrs; term } !join_blocks;
+
+        (* Continue compiling the body of the expression, updating the join
+           block whenever we see a jump instruction *)
         go_expr local_env block result_name body
 
     | Anf.Expr.Jump (join_id, arg) ->
         (* Find the corresponding join block and add the argument to its phi instruction *)
-        let join_phi, join_block = Anf.Join_map.find join_id !join_blocks in
+        let join_block = Anf.Join_map.find join_id !join_blocks in
         let result = go_atom local_env block result_name arg in
-        Dynarray.add_last join_phi.args (result, block.label);
+        Dynarray.add_last join_block.phi.args (result, block.label);
 
         (* Break to the corresponding join block *)
         finish_block block Llvm.(Br join_block.label)
@@ -147,16 +251,16 @@ let translate_fun
         in
         let fun_ = go_atom local_env block "fun" fun_ in
         let args = args |> Iarray.map (go_atom local_env block "arg") in
-        assign_instr block result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
+        assign_instr ctx block result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
     | Anf.Expr.Prim (op, args) ->
         begin match op, args |> Iarray.map (go_atom local_env block "arg") with
-        | Prim.Op.Bool_eq, [|x; y|] -> assign_instr block result_name Llvm.(Icmp (Eq, I1, x, y))
-        | Prim.Op.I32_eq, [|x; y|] -> assign_instr block result_name Llvm.(Icmp (Eq, I32, x, y))
-        | Prim.Op.I32_add, [|x; y|] -> assign_instr block result_name Llvm.(Add (I32, x, y))
-        | Prim.Op.I32_sub, [|x; y|] -> assign_instr block result_name Llvm.(Sub (I32, x, y))
-        | Prim.Op.I32_mul, [|x; y|] -> assign_instr block result_name Llvm.(Mul (I32, x, y))
-        | Prim.Op.I32_neg, [|x|] -> assign_instr block result_name Llvm.(Sub (I32, I32 0l, x))
+        | Prim.Op.Bool_eq, [|x; y|] -> assign_instr ctx block result_name Llvm.(Icmp (Eq, I1, x, y))
+        | Prim.Op.I32_eq, [|x; y|] -> assign_instr ctx block result_name Llvm.(Icmp (Eq, I32, x, y))
+        | Prim.Op.I32_add, [|x; y|] -> assign_instr ctx block result_name Llvm.(Add (I32, x, y))
+        | Prim.Op.I32_sub, [|x; y|] -> assign_instr ctx block result_name Llvm.(Sub (I32, x, y))
+        | Prim.Op.I32_mul, [|x; y|] -> assign_instr ctx block result_name Llvm.(Mul (I32, x, y))
+        | Prim.Op.I32_neg, [|x|] -> assign_instr ctx block result_name Llvm.(Sub (I32, I32 0l, x))
         | _, _ -> Format.kasprintf failwith "mismatched arity for %t" (Prim.Op.pp op)
         end
 
@@ -167,7 +271,7 @@ let translate_fun
     match expr with
     | Anf.Expr.Item (name, ty) ->
         begin match Anf.Item_map.find name item_env with
-        | Val item_id -> assign_instr block result_name Llvm.(Call (translate_ty ty, Global item_id, [||]))
+        | Val item_id -> assign_instr ctx block result_name Llvm.(Call (translate_ty ty, Global item_id, [||]))
         | Fun item_id -> Llvm.Global item_id
         end
     | Anf.Expr.Var (id, _) -> Anf.Local_map.find id local_env
@@ -175,61 +279,66 @@ let translate_fun
     | Anf.Expr.I32 i -> Llvm.I32 i
   in
 
+  go_expr local_env block result_name expr
+
+let translate_fun
+  (ctx : [> `Module] Ctx.t)
+  (item_env : item_decl Anf.Item_map.t)
+  (vis : Anf.Item.vis)
+  (params : (Anf.Local_id.t * Core.Ty.t) Iarray.t)
+  (result_ty : Anf.Ty.t)
+  (expr : Anf.Expr.t)
+: Llvm.fun_ =
   let linkage = translate_vis vis in
   let result_ty = translate_ty result_ty in
-  let param_ids =
-    Iarray.to_seq params
-    |> Seq.map (fun (id, _) -> id, fresh_local_id (Anf.Local_id.to_string id))
-    |> Anf.Local_map.of_seq
-  in
-  let params =
+  let params' =
     params |> Iarray.map @@ fun (id, ty) ->
-      translate_ty ty, Anf.Local_map.find id param_ids
+      translate_ty ty, Anf.Local_id.to_string id
   in
 
-  let cfg =
+  Ctx.build_fun ctx linkage result_ty params' @@ fun ctx param_ids ->
+    let join_blocks = ref Anf.Join_map.empty in
+
     (* Compile the entry block *)
     let entry_block =
-      let local_env = param_ids |> Anf.Local_map.map (fun id -> Llvm.Local id) in
-      go_expr local_env (begin_block (fresh_label "entry")) "result" expr
+      let local_env =
+        Seq.zip (Iarray.to_seq params) (Iarray.to_seq param_ids)
+        |> Seq.map (fun ((id, _), id') -> id, Llvm.Local id')
+        |> Anf.Local_map.of_seq
+      in
+      let entry_label = Ctx.fresh_label ctx "entry" in
+      translate_expr ctx item_env local_env join_blocks (create_block entry_label) "result" expr
     in
 
     (* Finish constructing the join blocks *)
-    !join_blocks |> Anf.Join_map.iter begin fun _ (phi, block) ->
+    !join_blocks |> Anf.Join_map.iter begin fun _ { label; phi; instrs; term } ->
       let result = Llvm.Assign (phi.id, Phi (phi.ty, make_iarray phi.args)) in
-      Dynarray.add_last blocks Llvm.{ block with instrs = Iarray.append [|result|] block.instrs };
+      Ctx.emit_block ctx Llvm.{ label; instrs = Iarray.append [|result|] instrs; term };
     end;
 
-    Llvm.{ blocks = Iarray.append [|entry_block|] (make_iarray blocks) }
-  in
+    entry_block
 
-  Llvm.{ linkage; result_ty; params; cfg }
-
-(** Translate an ANF module into an LLVM module *)
 let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
-  let fresh_global_id = Global_supply.(fresh (create ())) in
+  let ctx = Ctx.create () in
 
   (* Top-level items might be mutually recursive, so we need to process their
      declarations before we can translate them to definitions. *)
   let item_env =
     mod_ |> Anf.Item_map.mapi @@ fun name item ->
       match item with
-      | Anf.Item.Val _ -> Val (fresh_global_id (Anf.Item_name.to_string name))
-      | Anf.Item.Fun _ -> Fun (fresh_global_id (Anf.Item_name.to_string name))
+      | Anf.Item.Val _ -> Val (Ctx.fresh_global_id ctx (Anf.Item_name.to_string name))
+      | Anf.Item.Fun _ -> Fun (Ctx.fresh_global_id ctx (Anf.Item_name.to_string name))
   in
 
-  let funs = Dynarray.create () in
-
+  (* Translate items in the core language into LLVM function definitions *)
   item_env |> Anf.Item_map.iter begin fun name item_decl ->
     match Anf.Item_map.find name mod_, item_decl with
     | Anf.Item.Val (vis, ty, body), Val id ->
-        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis [||] ty body);
+        Ctx.emit_fun ctx id (translate_fun ctx item_env vis [||] ty body);
     | Anf.Item.Fun (vis, params, result_ty, body), Fun id ->
-        Dynarray.add_last funs Llvm.(id, translate_fun item_env vis params result_ty body);
+        Ctx.emit_fun ctx id (translate_fun ctx item_env vis params result_ty body);
     | _, _ ->
         failwith "mismatched items"
   end;
 
-  Llvm.{
-    funs = make_iarray funs;
-  }
+  Ctx.build_module ctx
