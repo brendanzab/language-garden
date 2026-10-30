@@ -1,8 +1,21 @@
 (** A demonstration of computing packed and aligned data structure layouts.
 
-    This could be used to to emit LLVM IR that does not rely on LLVM's built-in
-    struct types, which will possibly be phased out in the future. For example
-    the following code:
+    Aligning the fields offsets of structures with the processor’s “natural
+    alignment” has historically been good for performance on some platforms,
+    and is required on others to avoid exceptions (e.g. on 32-bit ARM), or
+    worse: silent memory access bugs.
+
+    The main functions of note in this file are:
+
+    - {!Layout.packed_struct}: Optimises memory footprint at the expense of
+      introducing non-aligned fields.
+    - {!Layout.aligned_struct}: Results in worse memory footprint, but align
+      fields to the processor’s natural alignment.
+
+    The offsets returned by these functions could be used to emit LLVM IR that
+    does not rely on LLVM's built-in struct types.
+
+    For example the following code:
 
     {@text[
       struct Foo {
@@ -50,6 +63,7 @@
     - https://en.wikipedia.org/wiki/Data_structure_alignment
     - https://cs.brown.edu/courses/csci0300/2021/notes/l05.html
     - https://developer.ibm.com/articles/pa-dalign/
+    - https://docs.kernel.org/core-api/unaligned-memory-access.html
 
     Rust resources:
 
@@ -72,7 +86,7 @@ module Layout = struct
 
   (** Computes a packed struct layout, along with a list of field offsets. This
       could result in unaligned primitive values that require multiple reads to
-      access. For example:
+      access, or worse, result in exceptions or hard-to-detect bugs. For example:
 
       {@text[
 
@@ -147,6 +161,8 @@ module Layout = struct
     in
 
     go 0 1 [] fields
+
+  (* TODO: Add an example of re-ordering fields to optimise memory footprint *)
 
 end
 
