@@ -10,14 +10,18 @@ module Trampoline : sig
   type 'a t
   (** A computation that can be stepped through *)
 
-  (** {1 Operations }*)
+  (** {1 Operations} *)
 
   val defer : (unit -> 'a t) -> 'a t
   (** Defer the next step of the computation *)
 
   (** {1 Running computations} *)
 
-  val resume : 'a t -> (unit -> 'a t, 'a) Either.t
+  type 'a resumption =
+    | Done of 'a
+    | Defer of (unit -> 'a t)
+
+  val resume : 'a t -> 'a resumption
   (** Advance to the next step of the computation *)
 
   val result : 'a t -> 'a
@@ -32,6 +36,7 @@ module Trampoline : sig
 end = struct
 
   type 'a t =
+    (* A thunk representing the “rest” of the computation *)
     | Defer : (unit -> 'a t) -> 'a t
     (* Free monad *)
     | Bind : 'a t * ('a -> 'b t) -> 'b t
@@ -53,21 +58,33 @@ end = struct
   let map (type a b) (f : a -> b) (mx : a t) : b t =
     bind mx (fun x -> Defer (fun () -> Pure (f x)))
 
-  let rec resume : type a b. a t -> (unit -> a t, a) Either.t =
+  type 'a resumption =
+    | Done of 'a
+    | Defer of (unit -> 'a t)
+
+  let rec resume : type a b. a t -> a resumption =
     function
-    | Pure x -> Right x
-    | Defer rest -> Left rest
-    | Bind (Pure x, f) -> (resume [@tail_call]) (f x)
-    | Bind (Defer rest, f) -> Left (fun () -> bind (rest ()) f)
+    | Pure x -> Done x
+    | Defer rest -> Defer rest
+    | Bind (Defer rest, f) -> Defer (fun () -> bind (rest ()) f)
     | Bind (Bind (mx, f'), f) -> (resume [@tail_call]) (bind mx (fun x -> bind (f' x) f))
+    | Bind (Pure x, f) -> (resume [@tail_call]) (f x)
 
   let rec result : type a. a t -> a =
     fun mx ->
-      (* The call to resume could be inlined for performance, like in the Scala
-         standard library. *)
-      match resume mx with
-      | Right x -> x
-      | Left rest -> (result [@tail_call]) (rest ())
+      (* This implementation is equivalent to the following, with the call to
+         [resume] inlined, then fused with the match:
+
+          match resume mx with
+          | Done x -> x
+          | Defer rest -> (result [@tail_call]) (rest ())
+      *)
+      match mx with
+      | Pure x -> x
+      | Defer rest -> (result [@tail_call]) (rest ())
+      | Bind (Pure x, f) -> (result [@tail_call]) (f x)
+      | Bind (Defer rest, f) -> (result [@tail_call]) (bind (rest ()) f)
+      | Bind (Bind (mx, f'), f) -> (result [@tail_call]) (bind mx (fun x -> bind (f' x) f))
 
 end
 
@@ -118,3 +135,6 @@ module _ = struct
   end
 
 end
+
+let () =
+  let x, .. = 3, ~hello:(), ~hi:"hello" in ()
