@@ -27,6 +27,30 @@ module Label_supply = Name.Supply (Llvm.Label)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
 
+
+(** Partially constructed LLVM datatypes *)
+
+type partial_phi = {
+  id : Llvm.Local_id.t;
+  ty : Llvm.ty;
+  args : (Llvm.opr * Llvm.Label.t) Dynarray.t;
+}
+
+type join_block = {
+  label : Llvm.Label.t;
+  phi : partial_phi;
+  instrs : Llvm.instr Iarray.t;
+  term : Llvm.term_instr;
+}
+
+type partial_block = {
+  label : Llvm.Label.t;
+  instrs : Llvm.instr Dynarray.t;
+}
+
+
+(** Translation *)
+
 (** Translate an ANF type into an LLVM type *)
 let rec translate_ty (ty : Anf.Ty.t) : Llvm.ty =
   match ty with
@@ -37,17 +61,6 @@ let translate_vis (vis : Core.Item.vis) : Llvm.linkage =
   match vis with
   | Pub -> Llvm.External
   | Priv -> Llvm.Private
-
-type partial_phi = {
-  id : Llvm.Local_id.t;
-  ty : Llvm.ty;
-  args : (Llvm.opr * Llvm.Label.t) Dynarray.t;
-}
-
-type partial_block = {
-  label : Llvm.Label.t;
-  instrs : Llvm.instr Dynarray.t;
-}
 
 let translate_fun
   (item_env : Llvm.Global_id.t Anf.Item_map.t)
@@ -107,25 +120,28 @@ let translate_fun
 
     | Anf.Expr.Join (join_id, (result_id, result_ty), cont, body) ->
         (* An empty phi instruction at the start of the join block *)
-        let join_phi = {
+        let phi = {
           id = fresh_local_id (Anf.Local_id.to_string result_id);
           ty = translate_ty result_ty;
           args = Dynarray.create ();
         } in
         (* The block that the phi instruction will be added to *)
-        let join_block =
+        let Llvm.{ label; instrs; term } =
           let label = fresh_label (Anf.Join_id.to_string join_id) in
-          let local_env = local_env |> Anf.Local_map.add result_id (Llvm.Local join_phi.id) in
+          let local_env = local_env |> Anf.Local_map.add result_id (Llvm.Local phi.id) in
           go_expr local_env (begin_block label) result_name cont
         in
-        join_blocks := Anf.Join_map.add join_id (join_phi, join_block) !join_blocks;
+        join_blocks := Anf.Join_map.add join_id { label; phi; instrs; term } !join_blocks;
+
+        (* Continue compiling the body of the expression, updating the join
+           block whenever we see a jump instruction *)
         go_expr local_env block result_name body
 
     | Anf.Expr.Jump (join_id, arg) ->
         (* Find the corresponding join block and add the argument to its phi instruction *)
-        let join_phi, join_block = Anf.Join_map.find join_id !join_blocks in
+        let join_block = Anf.Join_map.find join_id !join_blocks in
         let result = go_atom local_env block result_name arg in
-        Dynarray.add_last join_phi.args (result, block.label);
+        Dynarray.add_last join_block.phi.args (result, block.label);
 
         (* Break to the corresponding join block *)
         finish_block block Llvm.(Br join_block.label)
@@ -183,9 +199,9 @@ let translate_fun
     in
 
     (* Finish constructing the join blocks *)
-    !join_blocks |> Anf.Join_map.iter begin fun _ (phi, block) ->
+    !join_blocks |> Anf.Join_map.iter begin fun _ { label; phi; instrs; term } ->
       let result = Llvm.Assign (phi.id, Phi (phi.ty, make_iarray phi.args)) in
-      Dynarray.add_last blocks Llvm.{ block with instrs = Iarray.append [|result|] block.instrs };
+      Dynarray.add_last blocks Llvm.{ label; instrs = Iarray.append [|result|] instrs; term };
     end;
 
     Llvm.{ blocks = Iarray.append [|entry_block|] (make_iarray blocks) }
