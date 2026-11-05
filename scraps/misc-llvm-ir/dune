@@ -12,3 +12,9 @@
  (action
   (with-accepted-exit-codes 1
    (run lli %{ll}))))
+
+(rule
+ (alias runtest)
+ (deps (:ll ./point.ll))
+ (action
+  (run lli %{ll})))
