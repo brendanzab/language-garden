@@ -1,0 +1,6 @@
+; Test with `lli` https://llvm.org/docs/CommandGuide/lli.html
+
+(rule
+ (alias runtest)
+ (deps (:ll ./assert.ll))
+ (action (run lli %{ll})))

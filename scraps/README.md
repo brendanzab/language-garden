@@ -149,6 +149,8 @@ Languages and embedded DSLs:
 
 Miscellaneous:
 
+- [**misc-llvm-ir**](./misc-llvm-ir):
+  Experiments with LLVM IR
 - [**misc_adt_properties.ml**](./misc_adt_properties.ml):
   Some examples of abstract data types with their associated properties.
 - [**misc_algebraic_graphs.ml**](./misc_algebraic_graphs.ml):
