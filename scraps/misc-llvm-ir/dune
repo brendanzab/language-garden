@@ -3,4 +3,12 @@
 (rule
  (alias runtest)
  (deps (:ll ./assert.ll))
- (action (run lli %{ll})))
+ (action
+  (run lli %{ll})))
+
+(rule
+ (alias runtest)
+ (deps (:ll ./exit.ll))
+ (action
+  (with-accepted-exit-codes 1
+   (run lli %{ll}))))
