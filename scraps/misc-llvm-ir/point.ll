@@ -1,6 +1,8 @@
-; Example of using `@malloc` to dynamically allocate memory
+; Example of using libc’s `malloc` to dynamically allocate memory
+;
+; https://en.cppreference.com/c/program/malloc
 
-; NOTE: this could break on 32 bit platforms:
+; NOTE: this could break on 32 bit platforms
 declare ptr @malloc(i64)
 
 define ptr @point16-new(i16 %x, i16 %y) {

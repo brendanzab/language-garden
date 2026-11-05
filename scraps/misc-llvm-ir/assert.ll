@@ -1,4 +1,4 @@
-; Example of implementing assert with `@llvm.trap`
+; Example of implementing assert with the `@llvm.trap` intrinsic
 ;
 ; https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic
 
