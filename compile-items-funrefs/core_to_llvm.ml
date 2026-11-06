@@ -45,11 +45,11 @@ module Ctx : sig
   val fresh_local_id : [> `Cfg] t -> string -> Llvm.Local_id.t
   val fresh_label : [> `Cfg] t -> string -> Llvm.Label.t
 
-  val start_block :  [> `Cfg] t -> Llvm.Label.t -> unit
-  val close_block :  [> `Cfg] t -> Llvm.term_instr -> unit
-  val current_label :  [> `Cfg] t -> Llvm.Label.t
+  val start_block : [> `Cfg] t -> Llvm.Label.t -> unit
+  val close_block : [> `Cfg] t -> Llvm.term_instr -> unit
+  val current_label : [> `Cfg] t -> Llvm.Label.t
 
-  val assign_instr :  [> `Cfg] t -> string -> Llvm.value_instr -> Llvm.opr
+  val assign_instr : [> `Cfg] t -> string -> Llvm.value_instr -> Llvm.opr
 
 end = struct
 
