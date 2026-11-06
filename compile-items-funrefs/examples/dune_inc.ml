@@ -39,8 +39,7 @@ let generate_rules base = begin
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
     Printf.printf " (target %s)\n" bc_file;
-    Printf.printf " (deps (:ll %s.tmp))\n" ll_file;
-    Printf.printf " (action (run llvm-as %%{ll} -o %%{target})))\n";
+    Printf.printf " (action (run llvm-as %%{dep:%s.tmp} -o %%{target})))\n" ll_file;
     Printf.printf "\n";
   end;
 
@@ -63,8 +62,7 @@ let generate_rules base = begin
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
     Printf.printf " (target %s)\n" bc_file;
-    Printf.printf " (deps (:ll %s.tmp))\n" ll_file;
-    Printf.printf " (action (run llvm-as %%{ll} -o %%{target})))\n";
+    Printf.printf " (action (run llvm-as %%{dep:%s.tmp} -o %%{target})))\n" ll_file;
     Printf.printf "\n";
   end;
 
@@ -88,14 +86,12 @@ let generate_rules base = begin
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
     Printf.printf " (target %s)\n" wasm_file;
-    Printf.printf " (deps (:wat %s.tmp))\n" wat_file;
-    Printf.printf " (action (run wat2wasm %%{wat} -o %%{target}%s)))\n" wat2wasm_args;
+    Printf.printf " (action (run wat2wasm %%{dep:%s.tmp} -o %%{target}%s)))\n" wat_file wat2wasm_args;
     Printf.printf "\n";
     Printf.printf "(rule\n";
     Printf.printf " (alias runtest)\n";
     Printf.printf " (package %s)\n" package;
-    Printf.printf " (deps (:wasm %s))\n" wasm_file;
-    Printf.printf " (action (run wasm-validate %%{wasm}%s)))\n" wasm_validate_args;
+    Printf.printf " (action (run wasm-validate %%{dep:%s}%s)))\n" wasm_file wasm_validate_args;
     Printf.printf "\n";
   in
 

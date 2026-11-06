@@ -1,8 +1,7 @@
 (rule
- (deps garden.dot)
  (action
   (with-stdout-to garden.svg.tmp
-   (run dot -Tsvg garden.dot))))
+   (run dot -Tsvg %{dep:garden.dot}))))
 
 (rule
  (alias all)
