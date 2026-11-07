@@ -3,6 +3,8 @@
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:assert.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 1 (run lli %{dep:exit.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 1 (run lli %{dep:fail.ll}))))
+(rule (alias runtest) (enabled_if (= %{ocaml-config:system} macosx)) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-fputs-macos.ll}))))
+(rule (alias runtest) (enabled_if (= %{ocaml-config:system} linux)) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-fputs-linux.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-puts.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-write.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:point.ll}))))
