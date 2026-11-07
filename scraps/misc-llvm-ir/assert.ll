@@ -1,6 +1,6 @@
 ; Example of implementing assert with the `@llvm.trap` intrinsic
 ;
-; https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic
+; - https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic
 
 define i32 @square(i32) local_unnamed_addr #0 {
   %2 = mul nsw i32 %0, %0

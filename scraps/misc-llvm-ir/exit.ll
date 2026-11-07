@@ -1,6 +1,6 @@
 ; Example of returning a non-zero exit code
 ;
-; https://en.cppreference.com/c/program/exit
+; - https://en.cppreference.com/c/program/exit
 
 declare void @exit(i32)
 
