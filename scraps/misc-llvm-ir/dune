@@ -3,8 +3,25 @@
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:assert.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 1 (run lli %{dep:exit.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 1 (run lli %{dep:fail.ll}))))
-(rule (alias runtest) (enabled_if (= %{ocaml-config:system} macosx)) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-fputs-macos.ll}))))
-(rule (alias runtest) (enabled_if (= %{ocaml-config:system} linux)) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-fputs-linux.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-puts.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-write.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:point.ll}))))
+
+; Select the a version of `hello-fputs-%{system}.ll` for the current system
+;
+; More systems that OCaml might run on can be found here:
+; https://github.com/ocaml/ocaml/blob/5bcdbd4612a75f7ae88b4d66398d2be284309ea9/configure#L19704-L19825
+;
+; This variable is then substituted into the OCaml implementation here:
+; https://github.com/ocaml/ocaml/blob/5bcdbd4612a75f7ae88b4d66398d2be284309ea9/utils/config.generated.ml.in#L81
+;
+; The value of this can then be queried with:
+;
+;   $ ocamlc -config-var system
+;
+(rule (alias runtest)
+ (deps (:src hello-fputs-%{system}.ll))
+ (enabled_if
+  (or (= %{system} linux)
+      (= %{system} macosx)))
+ (action (with-accepted-exit-codes 0 (run lli %{src}))))
