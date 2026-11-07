@@ -1,0 +1,12 @@
+(cram
+ (deps (glob_files *.wat)))
+
+; (rule (alias runtest)
+;  (action
+;   (with-accepted-exit-codes 1
+;    (run wasmtime --invoke main --wasm exceptions=y %{dep:assert-throw.wat}))))
+
+; (rule (alias runtest)
+;  (action
+;   (with-accepted-exit-codes 134
+;    (run wasmtime --invoke main %{dep:assert-unreachable.wat}))))

@@ -153,6 +153,7 @@
               pkgs.graphviz
               pkgs.lychee # Link checking https://github.com/lycheeverse/lychee
               pkgs.nixpkgs-fmt
+              pkgs.wasmtime
             ];
           };
         });
