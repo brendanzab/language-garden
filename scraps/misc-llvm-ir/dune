@@ -2,4 +2,5 @@
 
 (rule (alias runtest) (action (run lli %{dep:assert.ll})))
 (rule (alias runtest) (action (with-accepted-exit-codes 1 (run lli %{dep:exit.ll}))))
+(rule (alias runtest) (action (with-accepted-exit-codes 1 (run lli %{dep:fail.ll}))))
 (rule (alias runtest) (action (run lli %{dep:point.ll})))
