@@ -10,18 +10,6 @@ This is part of my ongoing work at [YesLogic](https://yeslogic.com/)[^fathom],
 but is also deeply rooted in my long-term interest in programming languages as
 tools for thought, and as works of computational world building.
 
-The projects in this repository are implemented by myself, but are based on the
-work of others, and are a result of what I’ve learned from other people’s code,
-from academic papers, blog posts, discussions online etc. I find that the
-process of implementing things forces me to learn things more deeply than if I
-were just reading.
-
-Where possible, I've tried my best to provide references to the resources I’ve
-learned from, as I think this is important for future people, including myself!
-If you post your own work online, I'd ask that you consider doing the same. I
-strongly believe that sharing your influences is an important part of
-maintaining healthy, sustainable information ecosystems.
-
 [^fathom]: [yeslogic/fathom](https://github.com/yeslogic/fathom):
   A declarative data definition language for formally specifying binary data formats.
 
@@ -146,10 +134,17 @@ myself in the position of:
 My hope is that by collecting some of these projects and experiments together
 into a single repository they might be useful to others and my future self.
 
-I’m also trying to get better at interleaved breadth-first/depth-first search as part of my learning process -
-somewhat like the search strategy employed by [miniKanren](http://minikanren.org/).
-My goal is not to become an expert of one thing,
-but to be able to be good at combining ideas from different places and perspective.
+The projects in this repository are implemented by myself, but mostly based on
+things I have learned from other people. I find that the process of implementing
+things  myself forces me to learn and understand them more deeply than if I were
+just reading a paper, or nodding along to somebody explaining something to me.
+
+Where possible, I’ve tried my best to provide references to the resources I’ve
+learned from. I’d recommend checking these out to see a different perspective on
+what I’ve done. In addition, if you post your own work online, I'd ask that you
+consider linking back to what inspires you as well! I strongly believe that
+sharing connections to what inspires and influences us is an important part of
+maintaining healthy, sustainable information ecosystems.
 
 ## Related work
 
