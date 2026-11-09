@@ -69,19 +69,34 @@
       overlay = eachSystem (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+
+          # Inputs for `compile-items` projects
+          compileItemsNativeCheckInputs = [
+            pkgs.wabt
+            pkgs.llvm
+
+            # FIXME: Clang is not needed for these projects yet, but can be a
+            # useful tool when working with LLVM IR.
+            #
+            # Unfortunately the wrapped version of clang from nixpkgs currently
+            # spits out a bunch of `-Wunused-command-line-argument` warnings on
+            # macOS, which makes it a bit difficult to use for testing. For now,
+            # just assume that `clang` comes from the system environment.
+
+            # pkgs.clang
+
+            # or
+
+            # pkgs.llvmPackages.clang-unwrapped
+            # pkgs.llvmPackages.bintools-unwrapped   # NOTE: could be used to assemble .s files from llc
+          ];
         in
         final: prev: {
           compile-items = prev.compile-items.overrideAttrs (previousAttrs: {
-            nativeCheckInputs = [
-              pkgs.wabt
-              pkgs.llvm
-            ];
+            nativeCheckInputs = compileItemsNativeCheckInputs;
           });
           compile-items-funrefs = prev.compile-items.overrideAttrs (previousAttrs: {
-            nativeCheckInputs = [
-              pkgs.wabt
-              pkgs.llvm
-            ];
+            nativeCheckInputs = compileItemsNativeCheckInputs;
           });
           lang-shader-graphics = prev.lang-shader-graphics.overrideAttrs (previousAttrs: {
             nativeCheckInputs = [
@@ -147,7 +162,7 @@
               });
         in
         {
-          default = pkgs.mkShell {
+          default = pkgs.mkShellNoCC {
             inputsFrom = lib.attrValues packages;
             buildInputs = lib.attrValues devPackages.${system} ++ [
               pkgs.graphviz
