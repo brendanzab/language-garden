@@ -10,10 +10,11 @@ This is part of my ongoing work at [YesLogic](https://yeslogic.com/)[^fathom],
 but is also deeply rooted in my long-term interest in programming languages as
 tools for thought, and as works of computational world building.
 
-The projects in this repository are implemented by myself, based on what I’ve
-learned from other people’s code, from academic papers, blog posts, discussions
-online etc. I find that the process of implementing things forces me to learn
-things more deeply than if I were just reading.
+The projects in this repository are implemented by myself, but are based on the
+work of others, and are a result of what I’ve learned from other people’s code,
+from academic papers, blog posts, discussions online etc. I find that the
+process of implementing things forces me to learn things more deeply than if I
+were just reading.
 
 Where possible, I've tried my best to provide references to the resources I’ve
 learned from, as I think this is important for future people, including myself!
