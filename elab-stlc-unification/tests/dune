@@ -5,4 +5,4 @@
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:stlc-unification}"))
+  "alias executable=stlc-unification"))

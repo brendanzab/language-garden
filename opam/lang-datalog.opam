@@ -8,8 +8,8 @@ depends: [
   "dune" {>= "3.21"}
   "menhir" {>= "20260209" & build}
   "menhirLib" {>= "20260209"}
-  "mdx" {>= "2.5" & with-test}
-  "sedlex" {>= "3.7"}
+  "mdx" {= "2.5.2" & with-test}
+  "sedlex" {>= "3.8"}
   "odoc" {with-doc}
 ]
 build: [

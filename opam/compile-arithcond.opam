@@ -8,12 +8,12 @@ depends: [
   "dune" {>= "3.21"}
   "alcotest" {>= "1.9" & with-test}
   "cmdliner" {>= "2.1"}
-  "mdx" {>= "2.5" & with-test}
+  "mdx" {= "2.5.2" & with-test}
   "menhir" {>= "20260209" & build}
   "menhirLib" {>= "20260209"}
   "qcheck-core" {>= "0.91" & with-test}
   "qcheck-alcotest" {>= "0.91" & with-test}
-  "sedlex" {>= "3.7"}
+  "sedlex" {>= "3.8"}
   "odoc" {with-doc}
 ]
 build: [

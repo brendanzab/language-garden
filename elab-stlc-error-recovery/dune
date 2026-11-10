@@ -24,4 +24,4 @@
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:stlc-error-recovery}"))
+  "alias executable=stlc-error-recovery"))

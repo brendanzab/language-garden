@@ -5,7 +5,7 @@
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:arithcond}"))
+  "alias executable=arithcond"))
 
 (tests
  (names properties)

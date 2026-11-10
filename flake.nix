@@ -52,7 +52,8 @@
       # Development package versions.
       devPackagesQuery = {
         ocaml-lsp-server = "*";
-        ocamlformat = "*";
+        # Prevents upgrading dune when `resolveArgs.with-test` is `true` :(
+        # ocamlformat = "*";
         utop = "*";
       };
 

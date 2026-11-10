@@ -24,4 +24,4 @@
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:stlc-bidirectional-stratify}"))
+  "alias executable=stlc-bidirectional-stratify"))

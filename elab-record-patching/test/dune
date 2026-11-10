@@ -18,4 +18,4 @@
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:record-patching}"))
+  "alias executable=record-patching"))

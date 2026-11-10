@@ -21,42 +21,44 @@
  (depends
   (alcotest (and (>= "1.9") :with-test))
   (cmdliner (>= "2.1"))
-  (mdx (and (>= "2.5") :with-test))
+  ; Can upgrade once we move to dune 2.5
+  ; https://github.com/ocaml/dune/commit/6f7d131bf5dc6a793aab3839911cf45055f3235c
+  (mdx (and (= "2.5.2") :with-test))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
   (qcheck-core (and (>= "0.91") :with-test))
   (qcheck-alcotest (and (>= "0.91") :with-test))
-  (sedlex (>= "3.7"))))
+  (sedlex (>= "3.8"))))
 
 (package
  (name compile-arithcond)
  (depends
   (alcotest (and (>= "1.9") :with-test))
   (cmdliner (>= "2.1"))
-  (mdx (and (>= "2.5") :with-test))
+  (mdx (and (= "2.5.2") :with-test))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
   (qcheck-core (and (>= "0.91") :with-test))
   (qcheck-alcotest (and (>= "0.91") :with-test))
-  (sedlex (>= "3.7"))))
+  (sedlex (>= "3.8"))))
 
 (package
  (name compile-items)
  (depends
   (cmdliner (>= "2.1"))
-  (mdx (and (>= "2.5") :with-test))
+  (mdx (and (= "2.5.2") :with-test))
   (menhir (and (>= "20250912") :build))
   (menhirLib (>= "20250912"))
-  (sedlex (>= "3.7"))))
+  (sedlex (>= "3.8"))))
 
 (package
  (name compile-items-funrefs)
  (depends
   (cmdliner (>= "2.1"))
-  (mdx (and (>= "2.5") :with-test))
+  (mdx (and (= "2.5.2") :with-test))
   (menhir (and (>= "20250912") :build))
   (menhirLib (>= "20250912"))
-  (sedlex (>= "3.7"))))
+  (sedlex (>= "3.8"))))
 
 
 ; Elaboration
@@ -67,8 +69,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-dependent-sugar)
@@ -76,8 +78,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-generics)
@@ -85,8 +87,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-generics-lettype)
@@ -94,8 +96,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-stlc-abstract)
@@ -103,8 +105,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  ; (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  ; (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-stlc-bidirectional)
@@ -112,8 +114,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-stlc-error-recovery)
@@ -121,8 +123,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-stlc-bidirectional-stratify)
@@ -130,8 +132,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-stlc-letrec-unification)
@@ -139,8 +141,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-stlc-unification)
@@ -148,8 +150,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-stlc-row-unification)
@@ -157,8 +159,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-system-f-bidirectional)
@@ -166,8 +168,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-system-f-unification)
@@ -175,8 +177,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name elab-record-patching)
@@ -184,8 +186,8 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 
 ; Languages
@@ -195,51 +197,51 @@
  (depends
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name lang-declarative-graphics)
  (depends
-  (js_of_ocaml-compiler (>= "6.3"))
-  (js_of_ocaml (>= "6.3"))
-  (js_of_ocaml-ppx (>= "6.3"))))
+  (js_of_ocaml-compiler (>= "6.5"))
+  (js_of_ocaml (>= "6.5"))
+  (js_of_ocaml-ppx (>= "6.5"))))
 
 (package
  (name lang-doc-templates)
  (depends
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name lang-fractal-growth)
  (depends
   (cmdliner (>= "2.1"))
-  (mdx (and (>= "2.5") :with-test))))
+  (mdx (and (= "2.5.2") :with-test))))
 
 (package
  (name lang-fractal-tree-rewriting)
  (allow_empty)
  (depends
   lang-declarative-graphics
-  (js_of_ocaml-compiler (>= "6.3"))
-  (js_of_ocaml (>= "6.3"))
-  (js_of_ocaml-ppx (>= "6.3"))))
+  (js_of_ocaml-compiler (>= "6.5"))
+  (js_of_ocaml (>= "6.5"))
+  (js_of_ocaml-ppx (>= "6.5"))))
 
 (package
  (name lang-lc-interpreters)
  (depends
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (sedlex (>= "3.7"))))
+  (sedlex (>= "3.8"))))
 
 (package
  (name lang-shader-graphics)
  (depends
   (cmdliner (>= "2.1"))
-  (mdx (and (>= "2.5") :with-test))))
+  (mdx (and (= "2.5.2") :with-test))))
 
 
 ; Work in progress projects
@@ -250,16 +252,16 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name wip-compile-stlc)
  (depends
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))
-  (sedlex (>= "3.7"))))
+  (mdx (and (= "2.5.2") :with-test))
+  (sedlex (>= "3.8"))))
 
 (package
  (name wip-compile-stratify))
@@ -273,4 +275,4 @@
   (cmdliner (>= "2.1"))
   (menhir (and (>= "20260209") :build))
   (menhirLib (>= "20260209"))
-  (mdx (and (>= "2.5") :with-test))))
+  (mdx (and (= "2.5.2") :with-test))))

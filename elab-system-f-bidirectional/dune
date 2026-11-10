@@ -24,4 +24,4 @@
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:system-f-bidirectional}"))
+  "alias executable=system-f-bidirectional"))

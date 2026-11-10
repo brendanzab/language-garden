@@ -5,7 +5,7 @@
 
 (rule
  (write-file cram_setup.sh
-  "alias executable=%{bin:items-funrefs}"))
+  "alias executable=items-funrefs"))
 
 (executable
  (name dune_inc))
