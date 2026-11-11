@@ -2,6 +2,10 @@
 
 Hand-written Wasm experiments.
 
+## Todo
+
+- [ ] Example of printing with external functions
+
 ## Resources
 
 - [wat2wasm demo](https://webassembly.github.io/wabt/demo/wat2wasm/): Online wat2wasm tester
