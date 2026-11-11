@@ -60,6 +60,15 @@
   (menhirLib (>= "20250912"))
   (sedlex (>= "3.8"))))
 
+(package
+ (name compile-items-tuples)
+ (depends
+  (cmdliner (>= "2.1"))
+  (mdx (and (= "2.5.2") :with-test))
+  (menhir (and (>= "20250912") :build))
+  (menhirLib (>= "20250912"))
+  (sedlex (>= "3.8"))))
+
 
 ; Elaboration
 

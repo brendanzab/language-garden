@@ -80,6 +80,8 @@ related to compiling functional programming languages.
   Compiling a language with top-level, mutually recursive definitions to Wasm and LLVM IR.
 - [**compile-items-funrefs**](./compile-items-funrefs/):
   Compiling a language with top-level definitions and function references to Wasm and LLVM IR.
+- [**compile-items-tuples**](./compile-items-tuples/):
+  Compiling a language with top-level definitions and tuples to Wasm and LLVM IR.
 
 ### Languages
 

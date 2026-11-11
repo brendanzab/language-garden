@@ -1,0 +1,105 @@
+let bin = "items-tuples"
+let package = "compile-items-tuples"
+
+let generate_rules base = begin
+  let txt_file = Printf.sprintf "%s.txt" base in
+
+  (* compile-anf *)
+  begin
+    let anf_file = Printf.sprintf "%s.anf" base in
+
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" anf_file;
+    Printf.printf "   (run %%{bin:%s} compile-anf))))\n" bin;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)" package;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" anf_file anf_file;
+    Printf.printf "\n";
+  end;
+
+  (* compile-llvm *)
+  begin
+    let ll_file = Printf.sprintf "%s.ll" base in  (* LLVM IR *)
+    let bc_file = Printf.sprintf "%s.bc" base in  (* LLVM bitcode *)
+
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" ll_file;
+    Printf.printf "   (run %%{bin:%s} compile-llvm))))\n" bin;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)" package;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" ll_file ll_file;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)\n" package;
+    Printf.printf " (target %s)\n" bc_file;
+    Printf.printf " (action (run llvm-as %%{dep:%s.tmp} -o %%{target})))\n" ll_file;
+    Printf.printf "\n";
+  end;
+
+  (* compile-anf-llvm *)
+  begin
+    let ll_file = Printf.sprintf "%s.anf.ll" base in  (* LLVM IR *)
+    let bc_file = Printf.sprintf "%s.anf.bc" base in  (* LLVM bitcode *)
+
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" ll_file;
+    Printf.printf "   (run %%{bin:%s} compile-anf-llvm))))\n" bin;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)" package;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" ll_file ll_file;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)\n" package;
+    Printf.printf " (target %s)\n" bc_file;
+    Printf.printf " (action (run llvm-as %%{dep:%s.tmp} -o %%{target})))\n" ll_file;
+    Printf.printf "\n";
+  end;
+
+  (* compile-wat *)
+
+  let generate_wat_rules ~base ~compile_args ~wasm_tools_args =
+    let wat_file = Printf.sprintf "%s.wat" base in
+
+    Printf.printf "(rule\n";
+    Printf.printf " (with-stdin-from ../%s\n" txt_file;
+    Printf.printf "  (with-stdout-to %s.tmp\n" wat_file;
+    Printf.printf "   (run %%{bin:%s} compile-wat%s))))\n" bin compile_args;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)" package;
+    Printf.printf " (action (diff ../%s %s.tmp)))\n" wat_file wat_file;
+    Printf.printf "\n";
+    Printf.printf "(rule\n";
+    Printf.printf " (alias runtest)\n";
+    Printf.printf " (package %s)\n" package;
+    Printf.printf " (action (run wasm-tools validate %%{dep:%s.tmp}%s)))\n" wat_file wasm_tools_args;
+  in
+
+  generate_wat_rules
+    ~base:base
+    ~compile_args:""
+    ~wasm_tools_args:" --features=function-references";
+
+  generate_wat_rules
+    ~base:(Printf.sprintf "%s.tail-call" base)
+    ~compile_args:" --enable-tail-call"
+    ~wasm_tools_args:" --features=tail-call,function-references";
+
+end
+
+let () =
+  Sys.readdir ".." |> Array.iter @@ fun name ->
+    Filename.chop_suffix_opt name ~suffix:".txt"
+    |> Option.iter generate_rules

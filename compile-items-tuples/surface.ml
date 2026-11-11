@@ -1,0 +1,384 @@
+(** {0 Surface language}
+
+    The surface language closely mirrors what the programmer originally wrote,
+    including syntactic sugar and higher level language features that make
+    programming more convenient (in comparison to the {!Core}).
+*)
+
+(** {1 Syntax} *)
+
+(** The start and end position in a source file *)
+module Span = struct
+
+  type t =
+    Lexing.position * Lexing.position
+
+end
+
+(** Spanned nodes *)
+module Spanned = struct
+
+  type 'a t = {
+    span : Span.t;
+    data : 'a;
+  }
+
+end
+
+(** Types in the surface language *)
+module Ty = struct
+
+  type t =
+    data Spanned.t
+
+  and data =
+    | Name of string
+    | Fun of t Iarray.t * t
+    | Tuple of t Iarray.t
+
+end
+
+(** Terms in the surface language *)
+module Expr = struct
+
+  type t =
+    data Spanned.t
+
+  and data =
+    | Name of string Spanned.t
+    | Prim of string Spanned.t * t Iarray.t
+    | Let of def * t
+    | Ann of t * Ty.t
+    | Tuple of t Iarray.t
+    | Proj of t * int Spanned.t
+    | App of t * t Iarray.t
+    | I32 of int32
+    | If_then_else of t * t * t
+    | Infix of [`Eq | `Add | `Sub | `Mul] * t * t
+    | Prefix of [`Neg] * t
+
+  and pattern =
+    string option Spanned.t
+
+  and param =
+    pattern * Ty.t
+
+  and def =
+    pattern * Ty.t option * t
+
+end
+
+module Item = struct
+
+  type t =
+    | Val of [`Pub] option * binder * Ty.t * Expr.t
+    | Fun of [`Pub] option * binder * Expr.param Iarray.t * Ty.t * Expr.t
+
+  and binder =
+    string Spanned.t
+
+  let name item =
+    match item with
+    | Val (_, name, _, _) -> name
+    | Fun (_, name, _, _, _) -> name
+
+end
+
+module Module = struct
+
+  type t = Item.t list
+
+end
+
+
+(** {1 User-facing diagnostics} *)
+
+(** An error message that should be reported to the programmer *)
+module Error = struct
+
+  type t = {
+    span : Span.t;
+    message : string;
+    details : string list;
+  }
+
+  let make ?(details = ([] : string list)) (span : Span.t) (message : string) : t =
+    { span; message; details }
+
+end
+
+
+(** Elaboration from the surface language into the core language *)
+module Elab : sig
+
+  val check_module : Module.t -> (Core.Module.t, Error.t) result
+
+end = struct
+
+  (** {2 Elaboration context} *)
+
+  module Env : sig
+
+    type t
+
+    val empty : t
+
+    val add_local : t -> string option -> Core.Ty.t -> t
+    val add_item : t -> string -> Core.Ty.t -> t
+
+    val lookup_item : t -> string -> (Core.Item_name.t * Core.Ty.t) option
+    val lookup_local : t -> string -> (Core.Expr.t * Core.Ty.t) option
+
+    val lookup : t -> string -> (Core.Expr.t * Core.Ty.t) option
+
+  end = struct
+
+    type t = {
+      item_decls : Core.Ty.t Core.Item_map.t;
+      local_names : string option Core.Local.Env.t;
+      local_tys : Core.Ty.t Core.Local.Env.t;
+    }
+
+    let empty : t = {
+      item_decls = Core.Item_map.empty;
+      local_names = Core.Local.Env.empty;
+      local_tys = Core.Local.Env.empty;
+    }
+
+    let add_local (env : t) (name : string option) (ty : Core.Ty.t) : t =
+      { env with
+        local_names = Core.Local.Env.extend name env.local_names;
+        local_tys = Core.Local.Env.extend ty env.local_tys;
+      }
+
+    let add_item (env : t) (name : string) (decl : Core.Ty.t) : t =
+      let name = Core.Item_name.make name in
+      { env with
+        item_decls = env.item_decls |> Core.Item_map.add name decl;
+      }
+
+    let lookup_item (env : t) (name : string) : (Core.Item_name.t * Core.Ty.t) option =
+      let name = Core.Item_name.make name in
+      Core.Item_map.find_opt name env.item_decls
+      |> Option.map (fun item -> name, item)
+
+    let lookup_local (env : t) (name : string) : (Core.Expr.t * Core.Ty.t) option =
+      match Core.Local.Env.find_index ((=) (Some name)) env.local_names with
+      | Some index ->
+          let ty = Core.Local.Env.lookup index env.local_tys in
+          Some (Core.(Expr.Var (index, ty), ty))
+      | None when name = "true" -> Some (Core.(Expr.Bool true, Ty.Bool))
+      | None when name = "false" -> Some (Core.(Expr.Bool false, Ty.Bool))
+      | None -> None
+
+    let lookup (env : t) (name : string) : (Core.Expr.t * Core.Ty.t) option =
+      match lookup_item env name with
+      | Some (name, ty) -> Some (Item (name, ty), ty)
+      | None -> lookup_local env name |> Option.map (fun (expr, ty) -> expr, ty)
+
+  end
+
+
+  (** {2 Elaboration errors} *)
+
+  exception Error of Error.t
+
+  (** Raise an elaboration error with a formatted message *)
+  let error (type a b) ?(details : string list option) (span : Span.t) : (a, Format.formatter, unit, b) format4 -> a =
+    Format.kasprintf (fun message -> raise (Error (Error.make span message ?details)))
+
+  let unify_tys (span : Span.t) ~(found : Core.Ty.t) ~(expected : Core.Ty.t) =
+    if found = expected then () else
+      error span "mismatched types"
+        ~details:[
+          Format.asprintf "@[<v>@[expected: %t@]@ @[   found: %t@]@]"
+            (Core.Pretty.pp_ty expected)
+            (Core.Pretty.pp_ty found);
+        ]
+
+
+  (** {2 Bidirectional type checking} *)
+
+  let rec check_ty (t : Ty.t) : Core.Ty.t =
+    match t.data with
+    | Ty.Name "Bool" -> Core.Ty.Bool
+    | Ty.Name "I32" -> Core.Ty.I32
+    | Ty.Name name -> error t.span "unbound type name `%s`" name
+    | Ty.Fun (param_tys, result_ty) ->
+        Core.Ty.Fun (Iarray.map check_ty param_tys, check_ty result_ty)
+    | Ty.Tuple tys -> Core.Ty.Tuple (tys |> Iarray.map check_ty)
+
+  let rec infer_expr (env : Env.t) (expr : Expr.t) : Core.Expr.t * Core.Ty.t =
+    match expr.data with
+    | Expr.Name name ->
+        begin match Env.lookup env name.data with
+        | Some (expr, ty) -> expr, ty
+        | None -> error name.span "unbound name"
+        end
+
+    | Expr.Prim (name, args) ->
+        begin match Prim.Op.lookup name.data |> Option.map (fun op -> op, Prim.Op.ty op) with
+        | Some (op, (param_tys, ty)) when Iarray.length param_tys = Iarray.length args ->
+            let param_tys = Iarray.map Core.Ty.of_prim param_tys in
+            Core.Expr.Prim (op, Iarray.map2 (check_expr env) args param_tys), Core.Ty.of_prim ty
+        | Some _ -> error name.span "mismatched arity" (* FIXME: Improve error *)
+        | None -> error name.span "unknown primitive operation `#%s`" name.data
+        end
+
+    | Expr.Let (def, body) ->
+        let env, def = check_def env def in
+        let body, ty = infer_expr env body in
+        Core.(Expr.Let (def, body), ty)
+
+    | Expr.Ann (expr, ty) ->
+        let ty = check_ty ty in
+        check_expr env expr ty, ty
+
+    | Expr.Tuple elems ->
+        let elems, elem_tys = Iarray.split (Iarray.map (infer_expr env) elems) in
+        Core.Expr.Tuple elems, Core.Ty.Tuple elem_tys
+
+    | Expr.Proj ({ span = head_span; _ } as head, index) ->
+        begin match infer_expr env head with
+        | head, Core.Ty.Tuple elem_tys when index.data < Iarray.length elem_tys ->
+            Core.Expr.Tuple_proj (head, index.data), Iarray.get elem_tys index.data
+        | head, Core.Ty.Tuple _ -> error index.span "unknown field `%i`" index.data
+        | _, head_ty -> error head_span "@[expected tuple, found: %t@]" (Core.Pretty.pp_ty head_ty)
+        end
+
+    | Expr.App (head, args) ->
+        begin match infer_expr env head with
+        | head, Fun (param_tys, result_ty) when Iarray.length param_tys = Iarray.length args ->
+            Core.Expr.Fun_app (head, Iarray.map2 (check_expr env) args param_tys), result_ty
+        | _, Fun (_, _) -> error head.span "mismatched arity" (* FIXME: Improve error *)
+        | _, _ -> error head.span "not a function"
+        end
+
+    | Expr.I32 int ->
+        Core.Expr.I32 int, Core.Ty.I32
+
+    | Expr.If_then_else (expr1, expr2, expr3) ->
+        let expr1 = check_expr env expr1 Core.Ty.Bool in
+        let expr2, ty = infer_expr env expr2 in
+        let expr3 = check_expr env expr3 ty in
+        Core.Expr.Bool_if (expr1, expr2, expr3), ty
+
+    | Expr.Infix (`Eq, expr1, expr2) ->
+        let expr1, ty1 = infer_expr env expr1 in
+        let expr2, ty2 = infer_expr env expr2 in
+        unify_tys expr.span ~found:ty2 ~expected:ty1;
+        begin match ty1 with
+        | Core.Ty.Bool -> Core.Expr.Prim (Prim.Op.Bool_eq, [|expr1; expr2|]), Core.Ty.Bool
+        | Core.Ty.I32 -> Core.Expr.Prim (Prim.Op.I32_eq, [|expr1; expr2|]), Core.Ty.Bool
+        | ty -> error expr.span "equality not supported for `%t`" (Core.Pretty.pp_ty ty)
+        end
+
+    | Expr.Infix ((`Add | `Sub | `Mul) as op, expr1, expr2) ->
+        let op =
+          match op with
+          | `Add -> Prim.Op.I32_add
+          | `Sub -> Prim.Op.I32_sub
+          | `Mul -> Prim.Op.I32_mul
+        in
+        let expr1 = check_expr env expr1 Core.Ty.I32 in
+        let expr2 = check_expr env expr2 Core.Ty.I32 in
+        Core.Expr.Prim (op, [|expr1; expr2|]), Core.Ty.I32
+
+    | Expr.Prefix (`Neg, expr) ->
+        let expr = check_expr env expr Core.Ty.I32 in
+        Core.Expr.Prim (Prim.Op.I32_neg, [|expr|]), Core.Ty.I32
+
+  and check_expr (env : Env.t) (expr : Expr.t) (ty : Core.Ty.t) : Core.Expr.t =
+    match expr.data with
+    | Expr.Let (def, body) ->
+        let env, def = check_def env def in
+        let body = check_expr env body ty in
+        Core.Expr.Let (def, body)
+
+    | Expr.Tuple elems ->
+        begin match ty with
+        | Core.Ty.Tuple elem_tys when Iarray.length elems = Iarray.length elem_tys ->
+            Core.Expr.Tuple (Iarray.map2 (check_expr env) elems elem_tys)
+        | Core.Ty.Tuple elem_tys ->
+            error expr.span "expected %i elements, found %i elements"
+              (Iarray.length elem_tys)
+              (Iarray.length elems);
+        | _ ->
+            error expr.span "@[expected: %t, found tuple@]" (Core.Pretty.pp_ty ty)
+        end
+
+    | Expr.If_then_else (expr1, expr2, expr3) ->
+        let expr1 = check_expr env expr1 Core.Ty.Bool in
+        let expr2 = check_expr env expr2 ty in
+        let expr3 = check_expr env expr3 ty in
+        Core.Expr.Bool_if (expr1, expr2, expr3)
+
+    | _ ->
+        let expr', found_ty = infer_expr env expr in
+        unify_tys expr.span ~found:found_ty ~expected:ty;
+        expr'
+
+  and check_def (env : Env.t) ((name, ty, expr) : Expr.def) : Env.t * Core.Expr.def =
+    let expr, ty =
+      match ty with
+      | Some ty ->
+          let ty = check_ty ty in
+          check_expr env expr ty, ty
+      | None ->
+          infer_expr env expr
+    in
+    Env.add_local env name.data ty, (name.data, ty, expr)
+
+  let check_module (prog : Module.t) : Core.Module.t =
+    let elab_vis vis =
+      match vis with
+      | Some `Pub -> Core.Item.Pub
+      | None -> Core.Item.Priv
+    in
+
+    let check_item_decl (env : Env.t) (item : Item.t) : Env.t =
+      let name = Item.name item in
+      if Option.is_some (Env.lookup_item env name.data) then
+        error name.span "item name already used";
+
+      match item with
+      | Item.Val (_, _, ty, _) ->
+          Env.add_item env name.data (check_ty ty)
+      | Item.Fun (_, _, params, ty, _) ->
+          let params =
+            let seen = Dynarray.create () in
+            params |> Iarray.map @@ fun (name, ty : Expr.param) ->
+              match name.data with
+              | Some n when Dynarray.mem n seen -> error name.span "parameter name already used"
+              | Some n -> Dynarray.add_last seen n; check_ty ty
+              | None -> check_ty ty
+          in
+          Env.add_item env name.data (Core.Ty.Fun (params, check_ty ty))
+
+    and check_item (env : Env.t) (item : Item.t) : Core.Item_name.t * Core.Item.t =
+      match item, Env.lookup_item env (Item.name item).data with
+      | Item.Val (vis, _, _, expr), Some (name, ty) ->
+          name, Core.Item.Val (elab_vis vis, ty, check_expr env expr ty)
+      | Item.Fun (vis, _, params, _, expr), Some (name, Core.Ty.Fun (param_tys, ty)) ->
+          let params = Iarray.map2 (fun (name, _ : Expr.param) ty -> name.data, ty) params param_tys in
+          let env = Iarray.fold_right (fun (name, ty) env -> Env.add_local env name ty) params env in
+          let expr = check_expr env expr ty in
+          name, Core.Item.Fun (elab_vis vis, params, ty, expr)
+      | _, _ ->
+          failwith "item does not match item signature"
+    in
+
+    let env = List.fold_left check_item_decl Env.empty prog in
+
+    List.to_seq prog
+    |> Seq.map (check_item env)
+    |> Core.Item_map.of_seq
+
+
+  (** {2 Public API} *)
+
+  let check_module (mod_ : Module.t) : (Core.Module.t, Error.t) result =
+    try Ok (check_module mod_) with
+    | Error error -> Error error
+
+end

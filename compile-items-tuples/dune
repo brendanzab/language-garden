@@ -1,0 +1,17 @@
+(executable
+ (name main)
+ (public_name items-tuples)
+ (package compile-items-tuples)
+ (preprocess
+  (per_module
+   ((pps sedlex.ppx) lexer)))
+ (libraries
+  cmdliner
+  menhirLib))
+
+(menhir
+ (modules parser)
+ (flags --strict))
+
+(mdx
+ (package compile-items-tuples))
