@@ -45,6 +45,8 @@ module Ctx : sig
   val fresh_local_id : [> `Cfg] t -> string -> Llvm.Local_id.t
   val fresh_label : [> `Cfg] t -> string -> Llvm.Label.t
 
+  val emit_block : [> `Cfg] t -> Llvm.block -> unit
+
   val start_block : [> `Cfg] t -> Llvm.Label.t -> unit
   val close_block : [> `Cfg] t -> Llvm.term_instr -> unit
   val current_label : [> `Cfg] t -> Llvm.Label.t
@@ -93,6 +95,9 @@ end = struct
   let emit_fun (ctx : [> `Module] t) (name : Llvm.Global_id.t) (fun_ : Llvm.fun_) =
     Dynarray.add_last ctx.funs (name, fun_)
 
+  let emit_block (ctx : [> `Cfg] t) =
+    Dynarray.add_last ctx.blocks
+
   let ensure_closed (ctx : [> `Cfg] t) =
     assert (Option.is_none !(ctx.current_label));
     assert (Dynarray.is_empty ctx.current_instrs)
@@ -112,7 +117,7 @@ end = struct
   let close_block (ctx : [> `Cfg] t) (term : Llvm.term_instr) =
     let label = current_label ctx in
     let instrs = take_iarray ctx.current_instrs in
-    Dynarray.add_last ctx.blocks Llvm.{ label; instrs; term };
+    emit_block ctx Llvm.{ label; instrs; term };
 
     (* Reset the current block *)
     ctx.current_label := None;
