@@ -3,6 +3,9 @@
 ; Unlike `point-struct.ll`, this uses opaque pointers to represent tuples (see:
 ; https://llvm.org/docs/OpaquePointers.html).
 ;
+; The layout of struct types could be computed during compilation using the
+; algorithm in `../misc_struct_layout.ml`.
+;
 ; - https://en.cppreference.com/c/program/malloc
 
 ; NOTE: this could break on 32 bit platforms
