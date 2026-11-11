@@ -1,4 +1,7 @@
-; Example of using libc’s `malloc` to dynamically allocate memory
+; Example of using libc’s `malloc` to dynamically allocate memory.
+;
+; Unlike `point-struct.ll`, this uses opaque pointers to represent tuples (see:
+; https://llvm.org/docs/OpaquePointers.html).
 ;
 ; - https://en.cppreference.com/c/program/malloc
 

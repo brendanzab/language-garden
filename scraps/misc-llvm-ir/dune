@@ -5,7 +5,8 @@
 (rule (alias runtest) (action (with-accepted-exit-codes 1 (run lli %{dep:fail.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-puts.ll}))))
 (rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:hello-write.ll}))))
-(rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:point.ll}))))
+(rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:point-struct.ll}))))
+(rule (alias runtest) (action (with-accepted-exit-codes 0 (run lli %{dep:point-opaque.ll}))))
 
 ; Select the a version of `hello-fputs-%{system}.ll` for the current system
 ;
