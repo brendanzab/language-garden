@@ -50,9 +50,9 @@ module Expr = struct
     | Let of def * t
     | Ann of t * Ty.t
     | Tuple of t Iarray.t
-    | Proj of t * int Spanned.t
+    | Proj of t * string Spanned.t
     | App of t * t Iarray.t
-    | I32 of int32
+    | I32 of string
     | If_then_else of t * t * t
     | Infix of [`Eq | `Add | `Sub | `Mul] * t * t
     | Prefix of [`Neg] * t
@@ -238,11 +238,15 @@ end = struct
         let elems, elem_tys = Iarray.split (Iarray.map (infer_expr env) elems) in
         Core.Expr.Tuple elems, Core.Ty.Tuple elem_tys
 
-    | Expr.Proj ({ span = head_span; _ } as head, index) ->
+    | Expr.Proj ({ span = head_span; _ } as head, label) ->
         begin match infer_expr env head with
-        | head, Core.Ty.Tuple elem_tys when index.data < Iarray.length elem_tys ->
-            Core.Expr.Tuple_proj (head, index.data), Iarray.get elem_tys index.data
-        | head, Core.Ty.Tuple _ -> error index.span "unknown field `%i`" index.data
+        | head, Core.Ty.Tuple elem_tys ->
+            let index =
+              match int_of_string_opt label.data with
+              | Some index when index < Iarray.length elem_tys -> index
+              | Some _ | None -> error label.span "unknown field `%s`" label.data
+            in
+            Core.Expr.Tuple_proj (head, index), Iarray.get elem_tys index
         | _, head_ty -> error head_span "@[expected tuple, found: %t@]" (Core.Pretty.pp_ty head_ty)
         end
 
@@ -255,7 +259,10 @@ end = struct
         end
 
     | Expr.I32 int ->
-        Core.Expr.I32 int, Core.Ty.I32
+        begin match Int32.of_string_opt int with
+        | Some int -> Core.Expr.I32 int, Core.Ty.I32
+        | None -> error expr.span "invalid integer literal"
+        end
 
     | Expr.If_then_else (expr1, expr2, expr3) ->
         let expr1 = check_expr env expr1 Core.Ty.Bool in

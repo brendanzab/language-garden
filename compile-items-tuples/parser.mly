@@ -1,6 +1,6 @@
 %token <string> NAME
 %token <string> PRIM
-%token <int32> NUMBER
+%token <string> NUMBER
 %token KEYWORD_ELSE "else"
 %token KEYWORD_FUN "fun"
 %token KEYWORD_IF "if"
@@ -90,7 +90,7 @@ let app_tm :=
 
 let proj_tm :=
 | tm = spanned(proj_tm); "."; i = spanned(NUMBER);
-      { Surface.Expr.Proj (tm, Surface.Spanned.{ i with data = Int32.to_int i.data }) (* FIXME: Handle error *) }
+      { Surface.Expr.Proj (tm, Surface.Spanned.{ i with data = i.data }) }
 | atomic_tm
 
 let atomic_tm :=
