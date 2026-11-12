@@ -7,6 +7,18 @@ entry:
   ret i32 %result
 }
 
+define private i1 @lookup-nested() {
+entry:
+  %tuple = call ptr @nested()
+  %tuple.ptr = getelementptr {i32, i32, ptr, i1}, ptr %tuple, i32 0, i32 2
+  %tuple_1 = load ptr, ptr %tuple.ptr
+  %tuple.ptr_1 = getelementptr {ptr, i1}, ptr %tuple_1, i32 0, i32 0
+  %tuple_2 = load ptr, ptr %tuple.ptr_1
+  %result.ptr = getelementptr {i32, i1}, ptr %tuple_2, i32 0, i32 1
+  %result = load i1, ptr %result.ptr
+  ret i1 %result
+}
+
 define private ptr @mul(ptr %v1, ptr %v2) {
 entry:
   %size.offset = getelementptr {i32, i32, i32}, ptr null, i32 1
@@ -61,23 +73,25 @@ entry:
 
 define private ptr @nested() {
 entry:
-  %size.offset = getelementptr {i32, ptr, i1}, ptr null, i32 1
+  %size.offset = getelementptr {i32, i32, ptr, i1}, ptr null, i32 1
   %size = ptrtoint ptr %size.offset to i32
   %result = call ptr @malloc(i32 %size)
-  %elem.dst = getelementptr {i32, ptr, i1}, ptr %result, i32 0, i32 0
+  %elem.dst = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 0
   store i32 33, ptr %elem.dst
-  %size.offset_1 = getelementptr {i1, ptr}, ptr null, i32 1
+  %elem.dst_1 = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 1
+  store i32 4, ptr %elem.dst_1
+  %size.offset_1 = getelementptr {ptr, i1}, ptr null, i32 1
   %size_1 = ptrtoint ptr %size.offset_1 to i32
   %elem = call ptr @malloc(i32 %size_1)
-  %elem.dst_1 = getelementptr {i1, ptr}, ptr %elem, i32 0, i32 0
-  store i1 true, ptr %elem.dst_1
   %elem_1 = call ptr @pair()
-  %elem.dst_2 = getelementptr {i1, ptr}, ptr %elem, i32 0, i32 1
+  %elem.dst_2 = getelementptr {ptr, i1}, ptr %elem, i32 0, i32 0
   store ptr %elem_1, ptr %elem.dst_2
-  %elem.dst_3 = getelementptr {i32, ptr, i1}, ptr %result, i32 0, i32 1
-  store ptr %elem, ptr %elem.dst_3
-  %elem.dst_4 = getelementptr {i32, ptr, i1}, ptr %result, i32 0, i32 2
-  store i1 false, ptr %elem.dst_4
+  %elem.dst_3 = getelementptr {ptr, i1}, ptr %elem, i32 0, i32 1
+  store i1 true, ptr %elem.dst_3
+  %elem.dst_4 = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 2
+  store ptr %elem, ptr %elem.dst_4
+  %elem.dst_5 = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 3
+  store i1 false, ptr %elem.dst_5
   ret ptr %result
 }
 

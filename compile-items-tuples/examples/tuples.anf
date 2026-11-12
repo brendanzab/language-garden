@@ -1,5 +1,10 @@
 priv fun fst(p : (I32, I32)) : I32 := p.0;
 
+priv val lookup-nested : Bool :=
+  let tuple : ((I32, Bool), Bool) := nested.2;
+  let tuple_1 : (I32, Bool) := tuple.0;
+  tuple_1.1;
+
 priv fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
   let arg : I32 := v1.0;
   let arg_1 : I32 := v2.0;
@@ -21,8 +26,8 @@ priv fun mul-scalar(v : (I32, I32, I32), s : I32) : (I32, I32, I32) :=
   let elem_2 : I32 := #i32-mul(arg_2, s);
   (elem, elem_1, elem_2);
 
-priv val nested : (I32, (Bool, (I32, Bool)), Bool) :=
-  (33, (true, pair), false);
+priv val nested : (I32, I32, ((I32, Bool), Bool), Bool) :=
+  (33, 4, (pair, true), false);
 
 priv val pair : (I32, Bool) := (33, false);
 

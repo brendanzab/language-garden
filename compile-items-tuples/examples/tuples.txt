@@ -2,8 +2,11 @@ val unit : () := ();
 val singleton : (I32,) := (33,);
 val pair : (I32, Bool) := (33, false);
 
-val nested : (I32, (Bool, (I32, Bool)), Bool) :=
-  (33, (true, pair), false);
+val nested : (I32, I32, ((I32, Bool), Bool), Bool) :=
+  (33, 4, (pair, true), false);
+
+val lookup-nested : Bool :=
+  nested.2.0.1;
 
 fun fst(p : (I32, I32)) : I32 := p.0;
 fun snd(p : (I32, I32)) : I32 := p.1;

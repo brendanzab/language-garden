@@ -15,8 +15,11 @@ val unit : () := ();
 val singleton : (I32,) := (33,);
 val pair : (I32, Bool) := (33, false);
 
-val nested : (I32, (Bool, (I32, Bool)), Bool) :=
-  (33, (true, pair), false);
+val nested : (I32, I32, ((I32, Bool), Bool), Bool) :=
+  (33, 4, (pair, true), false);
+
+val lookup-nested : Bool :=
+  nested.2.0.1;
 
 fun fst(p : (I32, I32)) : I32 := p.0;
 fun snd(p : (I32, I32)) : I32 := p.1;
@@ -35,9 +38,9 @@ fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
 ```wat
 (module
   (type $Tuple (struct (field i32 i32)))
-  (type $Tuple_1 (struct (field i32 i32 i32)))
-  (type $Tuple_2 (struct (field i32 (ref $Tuple))))
-  (type $Tuple_3 (struct (field i32 (ref $Tuple_2) i32)))
+  (type $Tuple_1 (struct (field (ref $Tuple) i32)))
+  (type $Tuple_2 (struct (field i32 i32 (ref $Tuple_1) i32)))
+  (type $Tuple_3 (struct (field i32 i32 i32)))
   (type $Tuple_4 (struct (field i32)))
   (type $Tuple_5 (struct ))
   (func
@@ -47,53 +50,61 @@ fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
     (local.get $p)
     (struct.get $Tuple 0))
   (func
+    $lookup-nested
+    (result i32)
+    (call $nested)
+    (struct.get $Tuple_2 2)
+    (struct.get $Tuple_1 0)
+    (struct.get $Tuple 1))
+  (func
     $mul
-    (param $v1 (ref $Tuple_1))
-    (param $v2 (ref $Tuple_1))
-    (result (ref $Tuple_1))
+    (param $v1 (ref $Tuple_3))
+    (param $v2 (ref $Tuple_3))
+    (result (ref $Tuple_3))
     (local.get $v1)
-    (struct.get $Tuple_1 0)
+    (struct.get $Tuple_3 0)
     (local.get $v2)
-    (struct.get $Tuple_1 0)
+    (struct.get $Tuple_3 0)
     i32.mul
     (local.get $v1)
-    (struct.get $Tuple_1 1)
+    (struct.get $Tuple_3 1)
     (local.get $v2)
-    (struct.get $Tuple_1 1)
+    (struct.get $Tuple_3 1)
     i32.mul
     (local.get $v1)
-    (struct.get $Tuple_1 2)
+    (struct.get $Tuple_3 2)
     (local.get $v2)
-    (struct.get $Tuple_1 2)
+    (struct.get $Tuple_3 2)
     i32.mul
-    (struct.new $Tuple_1))
+    (struct.new $Tuple_3))
   (func
     $mul-scalar
-    (param $v (ref $Tuple_1))
+    (param $v (ref $Tuple_3))
     (param $s i32)
-    (result (ref $Tuple_1))
+    (result (ref $Tuple_3))
     (local.get $v)
-    (struct.get $Tuple_1 0)
+    (struct.get $Tuple_3 0)
     (local.get $s)
     i32.mul
     (local.get $v)
-    (struct.get $Tuple_1 1)
+    (struct.get $Tuple_3 1)
     (local.get $s)
     i32.mul
     (local.get $v)
-    (struct.get $Tuple_1 2)
+    (struct.get $Tuple_3 2)
     (local.get $s)
     i32.mul
-    (struct.new $Tuple_1))
+    (struct.new $Tuple_3))
   (func
     $nested
-    (result (ref $Tuple_3))
+    (result (ref $Tuple_2))
     (i32.const 33)
-    (i32.const 1)
+    (i32.const 4)
     (call $pair)
-    (struct.new $Tuple_2)
+    (i32.const 1)
+    (struct.new $Tuple_1)
     (i32.const 0)
-    (struct.new $Tuple_3))
+    (struct.new $Tuple_2))
   (func
     $pair
     (result (ref $Tuple))
@@ -123,9 +134,9 @@ fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
 ```wat
 (module
   (type $Tuple (struct (field i32 i32)))
-  (type $Tuple_1 (struct (field i32 i32 i32)))
-  (type $Tuple_2 (struct (field i32 (ref $Tuple))))
-  (type $Tuple_3 (struct (field i32 (ref $Tuple_2) i32)))
+  (type $Tuple_1 (struct (field (ref $Tuple) i32)))
+  (type $Tuple_2 (struct (field i32 i32 (ref $Tuple_1) i32)))
+  (type $Tuple_3 (struct (field i32 i32 i32)))
   (type $Tuple_4 (struct (field i32)))
   (type $Tuple_5 (struct ))
   (func
@@ -135,53 +146,61 @@ fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
     (local.get $p)
     (struct.get $Tuple 0))
   (func
+    $lookup-nested
+    (result i32)
+    (call $nested)
+    (struct.get $Tuple_2 2)
+    (struct.get $Tuple_1 0)
+    (struct.get $Tuple 1))
+  (func
     $mul
-    (param $v1 (ref $Tuple_1))
-    (param $v2 (ref $Tuple_1))
-    (result (ref $Tuple_1))
+    (param $v1 (ref $Tuple_3))
+    (param $v2 (ref $Tuple_3))
+    (result (ref $Tuple_3))
     (local.get $v1)
-    (struct.get $Tuple_1 0)
+    (struct.get $Tuple_3 0)
     (local.get $v2)
-    (struct.get $Tuple_1 0)
+    (struct.get $Tuple_3 0)
     i32.mul
     (local.get $v1)
-    (struct.get $Tuple_1 1)
+    (struct.get $Tuple_3 1)
     (local.get $v2)
-    (struct.get $Tuple_1 1)
+    (struct.get $Tuple_3 1)
     i32.mul
     (local.get $v1)
-    (struct.get $Tuple_1 2)
+    (struct.get $Tuple_3 2)
     (local.get $v2)
-    (struct.get $Tuple_1 2)
+    (struct.get $Tuple_3 2)
     i32.mul
-    (struct.new $Tuple_1))
+    (struct.new $Tuple_3))
   (func
     $mul-scalar
-    (param $v (ref $Tuple_1))
+    (param $v (ref $Tuple_3))
     (param $s i32)
-    (result (ref $Tuple_1))
+    (result (ref $Tuple_3))
     (local.get $v)
-    (struct.get $Tuple_1 0)
+    (struct.get $Tuple_3 0)
     (local.get $s)
     i32.mul
     (local.get $v)
-    (struct.get $Tuple_1 1)
+    (struct.get $Tuple_3 1)
     (local.get $s)
     i32.mul
     (local.get $v)
-    (struct.get $Tuple_1 2)
+    (struct.get $Tuple_3 2)
     (local.get $s)
     i32.mul
-    (struct.new $Tuple_1))
+    (struct.new $Tuple_3))
   (func
     $nested
-    (result (ref $Tuple_3))
+    (result (ref $Tuple_2))
     (i32.const 33)
-    (i32.const 1)
+    (i32.const 4)
     (call $pair)
-    (struct.new $Tuple_2)
+    (i32.const 1)
+    (struct.new $Tuple_1)
     (i32.const 0)
-    (struct.new $Tuple_3))
+    (struct.new $Tuple_2))
   (func
     $pair
     (result (ref $Tuple))
@@ -211,6 +230,11 @@ fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
 ```text
 priv fun fst(p : (I32, I32)) : I32 := p.0;
 
+priv val lookup-nested : Bool :=
+  let tuple : ((I32, Bool), Bool) := nested.2;
+  let tuple_1 : (I32, Bool) := tuple.0;
+  tuple_1.1;
+
 priv fun mul(v1 : (I32, I32, I32), v2 : (I32, I32, I32)) : (I32, I32, I32) :=
   let arg : I32 := v1.0;
   let arg_1 : I32 := v2.0;
@@ -232,8 +256,8 @@ priv fun mul-scalar(v : (I32, I32, I32), s : I32) : (I32, I32, I32) :=
   let elem_2 : I32 := #i32-mul(arg_2, s);
   (elem, elem_1, elem_2);
 
-priv val nested : (I32, (Bool, (I32, Bool)), Bool) :=
-  (33, (true, pair), false);
+priv val nested : (I32, I32, ((I32, Bool), Bool), Bool) :=
+  (33, 4, (pair, true), false);
 
 priv val pair : (I32, Bool) := (33, false);
 
@@ -258,6 +282,18 @@ entry:
   %result.ptr = getelementptr {i32, i32}, ptr %p, i32 0, i32 0
   %result = load i32, ptr %result.ptr
   ret i32 %result
+}
+
+define private i1 @lookup-nested() {
+entry:
+  %tuple = call ptr @nested()
+  %tuple.ptr = getelementptr {i32, i32, ptr, i1}, ptr %tuple, i32 0, i32 2
+  %tuple_1 = load ptr, ptr %tuple.ptr
+  %tuple.ptr_1 = getelementptr {ptr, i1}, ptr %tuple_1, i32 0, i32 0
+  %tuple_2 = load ptr, ptr %tuple.ptr_1
+  %result.ptr = getelementptr {i32, i1}, ptr %tuple_2, i32 0, i32 1
+  %result = load i1, ptr %result.ptr
+  ret i1 %result
 }
 
 define private ptr @mul(ptr %v1, ptr %v2) {
@@ -314,23 +350,25 @@ entry:
 
 define private ptr @nested() {
 entry:
-  %size.offset = getelementptr {i32, ptr, i1}, ptr null, i32 1
+  %size.offset = getelementptr {i32, i32, ptr, i1}, ptr null, i32 1
   %size = ptrtoint ptr %size.offset to i32
   %result = call ptr @malloc(i32 %size)
-  %elem.dst = getelementptr {i32, ptr, i1}, ptr %result, i32 0, i32 0
+  %elem.dst = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 0
   store i32 33, ptr %elem.dst
-  %size.offset_1 = getelementptr {i1, ptr}, ptr null, i32 1
+  %elem.dst_1 = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 1
+  store i32 4, ptr %elem.dst_1
+  %size.offset_1 = getelementptr {ptr, i1}, ptr null, i32 1
   %size_1 = ptrtoint ptr %size.offset_1 to i32
   %elem = call ptr @malloc(i32 %size_1)
-  %elem.dst_1 = getelementptr {i1, ptr}, ptr %elem, i32 0, i32 0
-  store i1 true, ptr %elem.dst_1
   %elem_1 = call ptr @pair()
-  %elem.dst_2 = getelementptr {i1, ptr}, ptr %elem, i32 0, i32 1
+  %elem.dst_2 = getelementptr {ptr, i1}, ptr %elem, i32 0, i32 0
   store ptr %elem_1, ptr %elem.dst_2
-  %elem.dst_3 = getelementptr {i32, ptr, i1}, ptr %result, i32 0, i32 1
-  store ptr %elem, ptr %elem.dst_3
-  %elem.dst_4 = getelementptr {i32, ptr, i1}, ptr %result, i32 0, i32 2
-  store i1 false, ptr %elem.dst_4
+  %elem.dst_3 = getelementptr {ptr, i1}, ptr %elem, i32 0, i32 1
+  store i1 true, ptr %elem.dst_3
+  %elem.dst_4 = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 2
+  store ptr %elem, ptr %elem.dst_4
+  %elem.dst_5 = getelementptr {i32, i32, ptr, i1}, ptr %result, i32 0, i32 3
+  store i1 false, ptr %elem.dst_5
   ret ptr %result
 }
 
