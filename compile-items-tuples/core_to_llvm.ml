@@ -175,18 +175,23 @@ end
     [scraps/misc_struct_layout.ml].
 *)
 
-let size_of (ty : Core.Ty.t) : int =
-  match ty with
-  | Core.Ty.Bool -> 1
-  | Core.Ty.I32 -> 4
-  (* Assume 64-bit pointers *)
-  | Core.Ty.Fun (_, _) -> 8
-  | Core.Ty.Tuple _ -> 8
+(* TODO:
+  - target-specific layout
+  - aligned offsets
+  - cache layouts
+*)
 
-let size_of_fields (tys : Core.Ty.t Iarray.t) : int =
+let size_of (ty : Llvm.ty) : int =
+  match ty with
+  | Llvm.I1 -> 1
+  | Llvm.I8 -> 1
+  | Llvm.I32 -> 4
+  | Llvm.Ptr -> 8   (* Assume 64-bit pointers *)
+
+let size_of_fields (tys : Llvm.ty Iarray.t) : int =
   Iarray.fold_left (fun acc ty -> acc + size_of ty) 0 tys
 
-let offset_of (tys : Core.Ty.t Iarray.t) (i : int) =
+let offset_of (tys : Llvm.ty Iarray.t) (i : int) =
   let rec go acc i =
     if i <= 0 then acc else
       go (acc + size_of (Iarray.get tys i)) (i - 1)
@@ -256,7 +261,7 @@ let translate_expr
         Ctx.assign_instr ctx result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
     | Core.Expr.Tuple elems ->
-        let elem_tys = elems |> Iarray.map Core.Expr.ty_of in
+        let elem_tys = elems |> Iarray.map (fun ty -> translate_ty (Core.Expr.ty_of ty)) in
 
         (* Allocate space for the tuple *)
         let malloc = Llvm.Global (Lazy.force malloc) in
@@ -268,7 +273,7 @@ let translate_expr
           let elem = go_expr local_env "elem" (Iarray.get elems i) in
           let elem_offset = Int32.of_int (offset_of elem_tys i) in
           let elem_ptr = assign_gep "elem.dst" Llvm.I8 tuple [|I32, I32 elem_offset|] in
-          Ctx.command_instr ctx Llvm.(Store (translate_ty ty, elem, elem_ptr));
+          Ctx.command_instr ctx Llvm.(Store (ty, elem, elem_ptr));
         end;
 
         (* Return a pointer to the tuple *)
@@ -277,7 +282,7 @@ let translate_expr
     | Core.Expr.Tuple_proj (tuple, index) ->
         let elem_tys =
           match Core.Expr.ty_of tuple with
-          | Tuple elem_tys -> elem_tys
+          | Tuple elem_tys -> elem_tys |> Iarray.map translate_ty
           | _ -> failwith "tuple type expected"
         in
 
@@ -286,7 +291,7 @@ let translate_expr
         (* Get the pointer to the projected element *)
         let elem_offset = Int32.of_int (offset_of elem_tys index) in
         let elem_ptr = assign_gep (result_name ^ ".ptr") Llvm.I8 tuple [|I32, I32 elem_offset|] in
-        let elem_ty = translate_ty (Iarray.get elem_tys index) in
+        let elem_ty = Iarray.get elem_tys index in
 
         (* Load the value from the pointer*)
         Ctx.assign_instr ctx result_name Llvm.(Load (elem_ty, elem_ptr))
