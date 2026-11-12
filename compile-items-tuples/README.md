@@ -426,3 +426,10 @@ The resulting program is then translated to Wasm or LLVM.
                                       ▼
                                 Llvm.program
 ```
+
+## Todo list
+
+- [x] Structural tuple types
+- [ ] Nominal record types
+- [ ] Target-specific type sizes
+- [ ] Aligned data layouts (see [`scraps/misc_struct_layout.ml`](../scraps/misc_struct_layout.ml))

@@ -175,12 +175,6 @@ end
     [scraps/misc_struct_layout.ml].
 *)
 
-(* TODO:
-  - target-specific layout
-  - aligned offsets
-  - cache layouts
-*)
-
 let size_of (ty : Llvm.ty) : int =
   match ty with
   | Llvm.I1 -> 1
