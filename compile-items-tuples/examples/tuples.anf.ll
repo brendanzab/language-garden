@@ -10,11 +10,11 @@ entry:
 define private i1 @lookup-nested() {
 entry:
   %tuple = call ptr @nested()
-  %tuple.ptr = getelementptr i8, ptr %tuple, i32 12
+  %tuple.ptr = getelementptr i8, ptr %tuple, i32 8
   %tuple_1 = load ptr, ptr %tuple.ptr
   %tuple_1.ptr = getelementptr i8, ptr %tuple_1, i32 0
   %tuple_1_1 = load ptr, ptr %tuple_1.ptr
-  %result.ptr = getelementptr i8, ptr %tuple_1_1, i32 1
+  %result.ptr = getelementptr i8, ptr %tuple_1_1, i32 4
   %result = load i1, ptr %result.ptr
   ret i1 %result
 }
@@ -78,11 +78,11 @@ entry:
   %elem_1 = call ptr @pair()
   %elem.dst_2 = getelementptr i8, ptr %elem, i32 0
   store ptr %elem_1, ptr %elem.dst_2
-  %elem.dst_3 = getelementptr i8, ptr %elem, i32 1
+  %elem.dst_3 = getelementptr i8, ptr %elem, i32 8
   store i1 true, ptr %elem.dst_3
-  %elem.dst_4 = getelementptr i8, ptr %result, i32 12
+  %elem.dst_4 = getelementptr i8, ptr %result, i32 8
   store ptr %elem, ptr %elem.dst_4
-  %elem.dst_5 = getelementptr i8, ptr %result, i32 13
+  %elem.dst_5 = getelementptr i8, ptr %result, i32 16
   store i1 false, ptr %elem.dst_5
   ret ptr %result
 }
@@ -92,7 +92,7 @@ entry:
   %result = call ptr @malloc(i32 5)
   %elem.dst = getelementptr i8, ptr %result, i32 0
   store i32 33, ptr %elem.dst
-  %elem.dst_1 = getelementptr i8, ptr %result, i32 1
+  %elem.dst_1 = getelementptr i8, ptr %result, i32 4
   store i1 false, ptr %elem.dst_1
   ret ptr %result
 }

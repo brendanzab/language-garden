@@ -185,12 +185,8 @@ let size_of (ty : Llvm.ty) : int =
 let size_of_fields (tys : Llvm.ty Iarray.t) : int =
   Iarray.fold_left (fun acc ty -> acc + size_of ty) 0 tys
 
-let offset_of (tys : Llvm.ty Iarray.t) (i : int) =
-  let rec go acc i =
-    if i <= 0 then acc else
-      go (acc + size_of (Iarray.get tys i)) (i - 1)
-  in
-  go 0 i
+let offset_of (tys : Llvm.ty Iarray.t) (index : int) =
+  size_of_fields (Iarray.sub tys ~pos:0 ~len:index)
 
 
 (** Translation *)
