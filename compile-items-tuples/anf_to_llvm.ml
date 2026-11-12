@@ -129,6 +129,31 @@ end = struct
 end
 
 
+(** Packed layout computation for 64-bit architectures
+
+    For a demonstration of computing aligned layouts, see
+    [scraps/misc_struct_layout.ml].
+*)
+
+let size_of (ty : Anf.Ty.t) : int =
+  match ty with
+  | Anf.Ty.Bool -> 1
+  | Anf.Ty.I32 -> 4
+  (* Assume 64-bit pointers *)
+  | Anf.Ty.Fun (_, _) -> 8
+  | Anf.Ty.Tuple _ -> 8
+
+let size_of_fields (tys : Anf.Ty.t Iarray.t) : int =
+  Iarray.fold_left (fun acc ty -> acc + size_of ty) 0 tys
+
+let offset_of (tys : Anf.Ty.t Iarray.t) (i : int) =
+  let rec go acc i =
+    if i <= 0 then acc else
+      go (acc + size_of (Iarray.get tys i)) (i - 1)
+  in
+  go 0 i
+
+
 (** Partially constructed LLVM datatypes *)
 
 type partial_phi = {
@@ -206,21 +231,8 @@ let translate_expr
   (result_name : string)
   (expr : Anf.Expr.t)
 : Llvm.block =
-  let assign_getelementptr (block : partial_block) name ty src path =
+  let assign_gep (block : partial_block) name ty src path =
     assign_instr ctx block name Llvm.(Getelementptr (ty, src, path))
-  in
-
-  (* Compute the size of a type in a portable way *)
-  let assign_size_of (block : partial_block) name (ty : Llvm.ty) : Llvm.opr =
-    (* Pretend that there is an array of elements at the null pointer. Compute
-       the pointer to the first element of that array then cast it to an integer.
-
-        - https://nondot.org/sabre/LLVMNotes/SizeOf-OffsetOf-VariableSizedStructs.txt
-        - https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl10.html#implementing-portable-offsetof-sizeof
-        - https://llvm.org/doxygen/classllvm_1_1ConstantExpr.html#a778163e6ec80716a12ab3282cb97f0d9
-    *)
-    let offset = assign_getelementptr block (name ^ ".offset") ty Null [|I32, I32 1l|] in
-    assign_instr ctx block name Llvm.(Ptrtoint (Ptr, offset, I32))
   in
 
   (* Translate a sub-expression in the current block. While doing this, more
@@ -289,23 +301,21 @@ let translate_expr
         assign_instr ctx block result_name Llvm.(Call (result_ty, fun_, Iarray.combine param_tys args))
 
     | Anf.Expr.Tuple_proj (tuple, index) ->
-        (* TODO: cache global type *)
         let elem_tys =
           match Anf.Expr.ty_of_atom tuple with
-          | Tuple elem_tys -> elem_tys |> Iarray.map translate_ty
+          | Tuple elem_tys -> elem_tys
           | _ -> failwith "tuple type expected"
         in
 
         let tuple = go_atom local_env block "tuple" tuple in
 
         (* Get the pointer to the projected element *)
-        let ptr = assign_getelementptr block (result_name ^ ".ptr") (Llvm.Struct elem_tys) tuple [|
-          I32, I32 0l;                      (* 0th offset *)
-          I32, I32 (Int32.of_int index);    (* field index *)
-        |] in
+        let elem_offset = Int32.of_int (offset_of elem_tys index) in
+        let elem_ptr = assign_gep block (result_name ^ ".ptr") Llvm.I8 tuple [|I32, I32 elem_offset|] in
+        let elem_ty = translate_ty (Iarray.get elem_tys index) in
 
         (* Load the value from the pointer*)
-        assign_instr ctx block result_name Llvm.(Load (Iarray.get elem_tys index, ptr))
+        assign_instr ctx block result_name Llvm.(Load (elem_ty, elem_ptr))
 
     | Anf.Expr.Prim (op, args) ->
         begin match op, args |> Iarray.map (go_atom local_env block "arg") with
@@ -330,23 +340,19 @@ let translate_expr
         end
     | Anf.Expr.Var (id, _) -> Anf.Local_map.find id local_env
     | Anf.Expr.Tuple elems ->
-        (* TODO: cache global type *)
-        let elem_tys = elems |> Iarray.map (fun elem -> translate_ty (Anf.Expr.ty_of_atom elem)) in
-        let tuple_ty = Llvm.Struct elem_tys in
+        let elem_tys = elems |> Iarray.map Anf.Expr.ty_of_atom in
 
         (* Allocate space for the tuple *)
         let malloc = Llvm.Global (Lazy.force malloc) in
-        let size = assign_size_of block "size" tuple_ty in
-        let tuple = assign_instr ctx block result_name Llvm.(Call (Ptr, malloc, [|I32, size|])) in
+        let size = Int32.of_int (size_of_fields elem_tys) in
+        let tuple = assign_instr ctx block result_name Llvm.(Call (Ptr, malloc, [|I32, I32 size|])) in
 
         (* Initialise elements of the tuple in the allocated space *)
         elem_tys |> Iarray.iteri begin fun i ty ->
           let elem = go_atom local_env block "elem" (Iarray.get elems i) in
-          let elem_ptr = assign_getelementptr block "elem.dst" tuple_ty tuple [|
-            I32, I32 0l;                  (* 0th offset *)
-            I32, I32 (Int32.of_int i);    (* field index *)
-          |] in
-          command_instr block Llvm.(Store (ty, elem, elem_ptr));
+          let elem_offset = Int32.of_int (offset_of elem_tys i) in
+          let elem_ptr = assign_gep block "elem.dst" Llvm.I8 tuple [|I32, I32 elem_offset|] in
+          command_instr block Llvm.(Store (translate_ty ty, elem, elem_ptr));
         end;
 
         (* Return a pointer to the tuple *)

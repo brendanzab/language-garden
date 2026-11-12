@@ -20,9 +20,9 @@ module Label = Name.Make ()
 
 type ty =
   | I1                                      (* https://llvm.org/docs/LangRef.html#integer-type *)
+  | I8                                      (* https://llvm.org/docs/LangRef.html#integer-type *)
   | I32                                     (* https://llvm.org/docs/LangRef.html#integer-type *)
   | Ptr                                     (* https://llvm.org/docs/LangRef.html#pointer-type *)
-  | Struct of ty Iarray.t                   (* https://llvm.org/docs/LangRef.html#structure-type *)
   (* ... *)
 
 (** Operands *)
@@ -137,9 +137,9 @@ end = struct
   let rec pp_ty (ty : ty) =
     match ty with
     | I1 -> Format.dprintf "i1"
+    | I8 -> Format.dprintf "i8"
     | I32 -> Format.dprintf "i32"
     | Ptr -> Format.dprintf "ptr"
-    | Struct tys -> Format.dprintf "@[{%t}@]" (pp_iarray pp_ty tys ~pp_sep:pp_comma_sep)
 
   let pp_opr (opr : opr) =
     match opr with
