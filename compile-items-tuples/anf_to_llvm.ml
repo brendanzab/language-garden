@@ -140,6 +140,7 @@ let size_of (ty : Llvm.ty) : int =
   | Llvm.I1 -> 1
   | Llvm.I8 -> 1
   | Llvm.I32 -> 4
+  | Llvm.I64 -> 8
   | Llvm.Ptr -> 8   (* Assume 64-bit pointers *)
 
 let size_of_fields (tys : Llvm.ty Iarray.t) : int =
@@ -406,7 +407,7 @@ let translate_module (mod_ : Anf.Module.t) : Llvm.module_ =
     Ctx.emit_fun_decl ctx name Llvm.{
       linkage = Llvm.External;
       result_ty = Ptr;
-      params = [|I32, None|];
+      params = [|I64, None|];   (* Assume 64 bits *)
     };
     name
   end in

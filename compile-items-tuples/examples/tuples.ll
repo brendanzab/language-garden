@@ -1,4 +1,4 @@
-declare ptr @malloc(i32)
+declare ptr @malloc(i64)
 
 define private i32 @fst(ptr %p) {
 entry:

@@ -22,6 +22,7 @@ type ty =
   | I1                                      (* https://llvm.org/docs/LangRef.html#integer-type *)
   | I8                                      (* https://llvm.org/docs/LangRef.html#integer-type *)
   | I32                                     (* https://llvm.org/docs/LangRef.html#integer-type *)
+  | I64                                     (* https://llvm.org/docs/LangRef.html#integer-type *)
   | Ptr                                     (* https://llvm.org/docs/LangRef.html#pointer-type *)
   (* ... *)
 
@@ -139,6 +140,7 @@ end = struct
     | I1 -> Format.dprintf "i1"
     | I8 -> Format.dprintf "i8"
     | I32 -> Format.dprintf "i32"
+    | I64 -> Format.dprintf "i64"
     | Ptr -> Format.dprintf "ptr"
 
   let pp_opr (opr : opr) =
