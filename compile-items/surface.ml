@@ -47,7 +47,7 @@ module Expr = struct
     | Prim of string Spanned.t * t Iarray.t
     | Let of def * t
     | Ann of t * Ty.t
-    | I32 of int32
+    | Int of string
     | If_then_else of t * t * t
     | Infix of [`Eq | `Add | `Sub | `Mul] * t * t
     | Prefix of [`Neg] * t
@@ -242,8 +242,13 @@ end = struct
         let ty = check_ty ty in
         check_expr env expr ty, ty
 
-    | Expr.I32 int ->
-        Core.Expr.I32 int, Core.Ty.I32
+    | Expr.Int int ->
+        begin match Int32.of_string_opt int with
+        | Some int -> Core.Expr.I32 int, Core.Ty.I32
+        | None ->
+            error expr.span "literal out of range for `%t`"
+              (Core.Pretty.pp_ty Core.Ty.I32)
+        end
 
     | Expr.If_then_else (expr1, expr2, expr3) ->
         let expr1 = check_expr env expr1 Core.Ty.Bool in

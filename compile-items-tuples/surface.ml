@@ -52,7 +52,7 @@ module Expr = struct
     | Tuple of t Iarray.t
     | Proj of t * string Spanned.t
     | App of t * t Iarray.t
-    | I32 of string
+    | Int of string
     | If_then_else of t * t * t
     | Infix of [`Eq | `Add | `Sub | `Mul] * t * t
     | Prefix of [`Neg] * t
@@ -258,10 +258,12 @@ end = struct
         | _, _ -> error head.span "not a function"
         end
 
-    | Expr.I32 int ->
+    | Expr.Int int ->
         begin match Int32.of_string_opt int with
         | Some int -> Core.Expr.I32 int, Core.Ty.I32
-        | None -> error expr.span "invalid integer literal"
+        | None ->
+            error expr.span "literal out of range for `%t`"
+              (Core.Pretty.pp_ty Core.Ty.I32)
         end
 
     | Expr.If_then_else (expr1, expr2, expr3) ->

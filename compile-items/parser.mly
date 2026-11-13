@@ -1,6 +1,6 @@
 %token <string> NAME
 %token <string> PRIM
-%token <int32> NUMBER
+%token <string> INT
 %token KEYWORD_ELSE "else"
 %token KEYWORD_FUN "fun"
 %token KEYWORD_IF "if"
@@ -80,8 +80,8 @@ let atomic_tm :=
     { Surface.Expr.Name (n, Some (Iarray.of_list args)) }
 | n = spanned(PRIM); "("; args = trailing_list(",", spanned(tm)); ")";
     { Surface.Expr.Prim (n, Iarray.of_list args) }
-| i = NUMBER;
-    { Surface.Expr.I32 i }
+| i = INT;
+    { Surface.Expr.Int i }
 
 
 (* Items *)

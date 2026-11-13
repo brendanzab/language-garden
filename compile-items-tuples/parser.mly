@@ -1,6 +1,6 @@
 %token <string> NAME
 %token <string> PRIM
-%token <string> NUMBER
+%token <string> INT
 %token KEYWORD_ELSE "else"
 %token KEYWORD_FUN "fun"
 %token KEYWORD_IF "if"
@@ -89,7 +89,7 @@ let app_tm :=
 | proj_tm
 
 let proj_tm :=
-| tm = spanned(proj_tm); "."; i = spanned(NUMBER);
+| tm = spanned(proj_tm); "."; i = spanned(INT);
       { Surface.Expr.Proj (tm, Surface.Spanned.{ i with data = i.data }) }
 | atomic_tm
 
@@ -106,8 +106,8 @@ let atomic_tm :=
     { Surface.Expr.Name n }
 | n = spanned(PRIM); "("; args = trailing_list(",", spanned(tm)); ")";
     { Surface.Expr.Prim (n, Iarray.of_list args) }
-| i = NUMBER;
-    { Surface.Expr.I32 i }
+| i = INT;
+    { Surface.Expr.Int i }
 
 
 (* Items *)
