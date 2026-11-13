@@ -4,11 +4,11 @@ let apex_diameter = 3.0
 let fork_angle = 45.0 *. Float.pi /. 180.0
 let branch_length = 6.0
 
-let tree (type t) (module D : Diagram.S with type t = t) ~(iters : int) : t =
+let tree (module D : Diagram.S) ~(iters : int) : D.t =
   let rec  apex =
     D.circle ~diameter:apex_diameter
 
-  and branch ~(iters : int) : t =
+  and branch ~(iters : int) : D.t =
     let len = branch_length *. Float.pow 2.0 (float_of_int iters) in
     D.stack [
       D.line (0.0, 0.0) (0.0, -.len) |> D.stroke `solid;

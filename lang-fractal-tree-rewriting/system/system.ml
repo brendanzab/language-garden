@@ -26,9 +26,9 @@ module Deterministic = struct
     let generations ?(axiom = axiom) () =
       Seq.unfold (fun t -> Some (t, step t)) axiom
 
-    let render (type d) (module D : Diagram.S with type t = d) : t -> d =
+    let render (module D : Diagram.S) : t -> D.t =
       let draw = draw (module D) in
-      let rec render (tree : t) : d =
+      let rec render (tree : t) : D.t =
         draw render tree
       in
       render

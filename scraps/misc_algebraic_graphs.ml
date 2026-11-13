@@ -307,7 +307,7 @@ module Graph = struct
       with type t := t
       with type vertex := vertex
 
-    val fold : (module Core with type t = 'g and type vertex = vertex) -> t -> 'g [@@warning "-unused-value-declaration"]
+    val fold : (module G : Core with type vertex = vertex) -> t -> G.t [@@warning "-unused-value-declaration"]
     val equal : (module Compare.S with type t = vertex) -> t -> t -> bool [@@warning "-unused-value-declaration"]
 
   end = struct
@@ -333,7 +333,7 @@ module Graph = struct
     include Make (T)
     include T
 
-    let fold (type g) (module G : Core with type t = g and type vertex = vertex) : t -> g =
+    let fold (module G : Core with type vertex = vertex) : t -> G.t =
       let rec fold = function
         | Empty -> G.empty
         | Vertex x -> G.vertex x

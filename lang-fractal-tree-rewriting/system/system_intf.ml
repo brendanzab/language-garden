@@ -8,7 +8,7 @@ module Deterministic = struct
 
     val axiom : t
     val rules : (t -> t) -> t -> t
-    val draw : 'd. (module Diagram.S with type t = 'd) -> (t -> 'd) -> t -> 'd
+    val draw : (module D : Diagram.S) -> (t -> D.t) -> t -> D.t
 
   end
 
@@ -19,7 +19,7 @@ module Deterministic = struct
     val step : t -> t
     val grow : ?axiom:t -> int -> t
     val generations : ?axiom:t -> unit -> t Seq.t
-    val render : 'd. (module Diagram.S with type t = 'd) -> t -> 'd
+    val render : (module D : Diagram.S) -> t -> D.t
 
   end
 

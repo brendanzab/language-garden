@@ -55,7 +55,7 @@ let apex_diameter = 3.0
 let fork_angle = 45.0 *. Float.pi /. 180.0
 let branch_length = 6.0
 
-let draw (type d) (module D : Diagram.S with type t = d) (draw : t -> d) : t -> d =
+let draw (module D : Diagram.S) (draw : t -> D.t) : t -> D.t =
   function
   | Apex ->
       D.circle ~diameter:apex_diameter
