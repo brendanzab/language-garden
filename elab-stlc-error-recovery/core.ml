@@ -208,7 +208,7 @@ let rec equate_tys (ty1 : ty) (ty2 : ty) : bool =
     inferring the type of conditionals. This was inspired by section 2.1.6 of
     “Total Type Error Localization and Recovery with Holes” by Zhao et. al. *)
 let rec meet_tys (ty1 : ty) (ty2 : ty) : ty option =
-  let ( let* ) = Option.bind in
+  let open Option.Syntax in
   match ty1, ty2 with
   | Unknown_type, ty | ty, Unknown_type -> Some ty
   | Fun_type (param_ty1, body_ty1), Fun_type (param_ty2, body_ty2) ->

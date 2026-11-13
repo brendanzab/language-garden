@@ -127,10 +127,9 @@ end = struct
 
   let create rules = { rules }
 
-  let ( let* ) = Option.bind
-  let ( let+ ) x f = Option.map f x
-
   let rec consume_expr (e : expr) (pos : int) (input : string) : int option =
+    let open Option.Syntax in
+
     (* TODO: Would be more efficient to use derivatives or compile this to a DFA.
 
        - Regular-expression derivatives re-examined https://doi.org/10.1017/S0956796808007090
@@ -182,6 +181,8 @@ end = struct
   exception Error of { pos : int }
 
   let tokenise (lexer : t) (input : string) =
+    let open Option.Syntax in
+
     let[@tail_mod_cons] rec go (lexer : t) (start : int) (input : string) () =
       match
         lexer.rules |> Array.find_map @@ function

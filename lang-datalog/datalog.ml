@@ -179,7 +179,7 @@ end
 
 (** Unification between a body atom and a ground atom *)
 let unify (atom1 : atom) (atom2 : atom) : Subst.t option =
-  let ( let* ) = Option.bind in
+  let open Option.Syntax in
 
   let rec go (terms1 : term list) (terms2 : term list) : Subst.t option =
     match terms1, terms2 with

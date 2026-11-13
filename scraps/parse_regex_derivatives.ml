@@ -354,7 +354,7 @@ module Regex = struct
 
       (** Match a sequence of characters using a DFA (See section 2.2) *)
       let match_seq (dfa : t) (cs : Symbol.t Seq.t) =
-        let ( let* ) = Option.bind in
+        let open Option.Syntax in
 
         let rec trans q cs =
           match Seq.uncons cs with
