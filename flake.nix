@@ -63,7 +63,9 @@
         # # Use the OCaml compiler from nixpkgs
         # ocaml-system = "*";
         # Use OCaml compiler from opam-repository
-        ocaml-base-compiler = "5.4.0";
+        ocaml-base-compiler = "5.5.2";
+        # Fix for `error: attribute 'ocaml-config' missing` when building OCaml 5.5
+        ocaml-config = "*";
       };
 
       # Package-specific derivation overrides.
