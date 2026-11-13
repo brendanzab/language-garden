@@ -82,7 +82,7 @@ end = struct
   }
 
   let take_iarray xs =
-    (* NOTE: Use [Dynarray.to_iarray] when moving to OCaml 5.5.
+    (* NOTE: Use [Dynarray.to_iarray] when moving to OCaml 5.6.
        See: https://github.com/ocaml/ocaml/pull/14693 *)
     let old_xs = Iarray.init (Dynarray.length xs) (Dynarray.get xs) in
     Dynarray.clear xs;

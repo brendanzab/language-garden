@@ -18,7 +18,7 @@
       assignment form}.
 *)
 
-(* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
+(* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.6.
     See: https://github.com/ocaml/ocaml/pull/14693 *)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)

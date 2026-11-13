@@ -20,7 +20,7 @@ module Global_supply = Name.Supply (Llvm.Global_id)
 module Local_supply = Name.Supply (Llvm.Local_id)
 module Label_supply = Name.Supply (Llvm.Label)
 
-(* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.5.
+(* NOTE: Replace with [Dynarray.to_iarray] when moving to OCaml 5.6.
     See: https://github.com/ocaml/ocaml/pull/14693 *)
 let make_iarray xs =
   Iarray.init (Dynarray.length xs) (Dynarray.get xs)
