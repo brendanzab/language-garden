@@ -14,7 +14,7 @@ module Var_set = Set.Make (Var)
 
 (** {1 Syntax} *)
 
-type ty = Lang__fun.ty =
+type ty = Fun.ty =
   | Bool_type
   | Int_type
   | Fun_type of ty * ty
@@ -43,7 +43,7 @@ let rec fvs : tm -> Var_set.t =
 
 (** {1 Pretty printing} *)
 
-let pp_ty = Lang__fun.pp_ty
+let pp_ty = Fun.pp_ty
 
 let pp_var (ppf : Format.formatter) (var : Var.t) =
   Format.fprintf ppf "%s%i"

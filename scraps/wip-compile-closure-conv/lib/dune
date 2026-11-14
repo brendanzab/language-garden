@@ -1,9 +1,10 @@
+(include_subdirs qualified)
+
 (library
  (name closure_conv)
  (public_name wip-compile-closure-conv)
  (preprocess
-  (per_module
-   ((pps sedlex.ppx) lang__fun__lexer))))
-
-(menhir
- (modules lang__fun__parser))
+   ; TODO: Requires https://github.com/ocaml/dune/pull/15633
+   ; (per_module
+   ; ((pps sedlex.ppx) lang.fun.lexer))))
+  (pps sedlex.ppx)))

@@ -29,10 +29,10 @@
 
 %}
 
-%start <Lang__fun.tm> main
+%start <Base.tm> main
 
 (* The name environment is used to assign De Bruijn indices during parsing. *)
-%type <string list -> Lang__fun.tm> tm
+%type <string list -> Base.tm> tm
 
 %%
 
@@ -42,41 +42,41 @@ let main :=
 
 let ty :=
 | t1 = atomic_ty; "->"; t2 = ty;
-    { Lang__fun.Fun_type (t1, t2) }
+    { Base.Fun_type (t1, t2) }
 | atomic_ty
 
 let atomic_ty :=
 | "Bool";
-    { Lang__fun.Bool_type }
+    { Base.Bool_type }
 | "Int";
-    { Lang__fun.Int_type }
+    { Base.Int_type }
 | "("; t = ty; ")";
     { t }
 
 let tm :=
 | "let"; n = NAME; ":"; t = ty; ":="; e1 = tm; ";"; e2 = tm;
-    { fun names -> Lang__fun.Let (n, t, e1 names, e2 (n :: names)) }
+    { fun names -> Base.Let (n, t, e1 names, e2 (n :: names)) }
 | "fun"; "("; n = NAME; ":"; t = ty; ")"; "=>"; e = tm;
-    { fun names -> Lang__fun.Fun_lit (n, t, e (n :: names)) }
+    { fun names -> Base.Fun_lit (n, t, e (n :: names)) }
 | add_tm
 
 let add_tm :=
 | e1 = add_tm; "+"; e2 = mul_tm;
-    { fun names -> Lang__fun.Prim_app (`Add, [e1 names; e2 names]) }
+    { fun names -> Base.Prim_app (`Add, [e1 names; e2 names]) }
 | e1 = add_tm; "-"; e2 = mul_tm;
-    { fun names -> Lang__fun.Prim_app (`Sub, [e1 names; e2 names]) }
+    { fun names -> Base.Prim_app (`Sub, [e1 names; e2 names]) }
 | mul_tm
 
 let mul_tm :=
 | e1 = mul_tm; "*"; e2 = app_tm;
-    { fun names -> Lang__fun.Prim_app (`Mul, [e1 names; e2 names]) }
+    { fun names -> Base.Prim_app (`Mul, [e1 names; e2 names]) }
 | app_tm
 
 let app_tm :=
 | e1 = app_tm; e2 = atomic_tm;
-    { fun names -> Lang__fun.Fun_app (e1 names, e2 names) }
+    { fun names -> Base.Fun_app (e1 names, e2 names) }
 | "-"; e = atomic_tm;
-    { fun names -> Lang__fun.Prim_app (`Neg, [e names]) }
+    { fun names -> Base.Prim_app (`Neg, [e names]) }
 | atomic_tm
 
 let atomic_tm :=
@@ -86,12 +86,12 @@ let atomic_tm :=
     { fun names ->
         (* Assign a de Bruijn index for the variable *)
         match elem_index n names with
-        | Some n -> Lang__fun.Var n
-        | None -> raise (Lang__fun.Unbound_name n)
+        | Some n -> Base.Var n
+        | None -> raise (Base.Unbound_name n)
     }
 | i = NUMBER;
-    { fun _ -> Lang__fun.Int_lit i }
+    { fun _ -> Base.Int_lit i }
 | "true";
-    { fun _ -> Lang__fun.Bool_lit true }
+    { fun _ -> Base.Bool_lit true }
 | "false";
-    { fun _ -> Lang__fun.Bool_lit false }
+    { fun _ -> Base.Bool_lit false }

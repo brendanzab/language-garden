@@ -47,11 +47,11 @@ Translation.Fun_to_clos     Translation.Fun_to_fun_a
 | [`Lang.Clos_a`]    | Closure converted functional language (alpha-renamed) |
 | [`Lang.Lifted_a`]  | Lambda lifted functional language (alpha-renamed)     |
 
-[`Lang.Fun`]: ./lib/lang__fun.ml
-[`Lang.Clos`]: ./lib/lang__clos.ml
-[`Lang.Fun_a`]: ./lib/lang__fun_a.ml
-[`Lang.Clos_a`]: ./lib/lang__clos_a.ml
-[`Lang.Lifted_a`]: ./lib/lang__lifted_a.ml
+[`Lang.Fun`]: ./lib/lang/fun/fun.ml
+[`Lang.Clos`]: ./lib/lang/clos.ml
+[`Lang.Fun_a`]: ./lib/lang/fun_a.ml
+[`Lang.Clos_a`]: ./lib/lang/clos_a.ml
+[`Lang.Lifted_a`]: ./lib/lang/lifted_a.ml
 
 | Translation                       |   | Source          |   | Target            | Description
 | --------------------------------- | - | --------------- | - | ----------------- | ---------------------------------
@@ -60,10 +60,10 @@ Translation.Fun_to_clos     Translation.Fun_to_fun_a
 | [`Translation.Fun_a_to_clos_a`]   | : | [`Lang.Fun_a`]  | → | [`Lang.Clos_a`]   | Closure conversion (alpha renamed)
 | [`Translation.Fun_a_to_lifted_a`] | : | [`Lang.Fun_a`]  | → | [`Lang.Lifted_a`] | Lambda lifting (alpha renamed)
 
-[`Translation.Fun_to_clos`]: ./lib/translation__fun_to_clos.ml
-[`Translation.Fun_to_fun_a`]: ./lib/translation__fun_to_fun_a.ml
-[`Translation.Fun_a_to_clos_a`]: ./lib/translation__fun_a_to_clos_a.ml
-[`Translation.Fun_a_to_lifted_a`]: ./lib/translation__fun_a_to_lifted_a.ml
+[`Translation.Fun_to_clos`]: ./lib/translation/fun_to_clos.ml
+[`Translation.Fun_to_fun_a`]: ./lib/translation/fun_to_fun_a.ml
+[`Translation.Fun_a_to_clos_a`]: ./lib/translation/fun_a_to_clos_a.ml
+[`Translation.Fun_a_to_lifted_a`]: ./lib/translation/fun_a_to_lifted_a.ml
 
 An evaluator and type checker is implemented for each intermediate language.
 Every translation pass should produce well-typed programs in the target language.
