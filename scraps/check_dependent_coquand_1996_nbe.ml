@@ -1,5 +1,5 @@
-(** An altered version of [check_dependent_coquand_1996.ml] that is tweaked to
-    follow more up-to-date conventions with respect to values and closures.
+(** A version of [check_dependent_coquand_1996.ml] that is altered to follow
+    more up-to-date conventions with respect to values and closures.
     This is closer to the approach used in the Mini-TT paper, and in the
     implementations in Andras Kovacs’ elaboration zoo.
 
