@@ -29,12 +29,10 @@ end
 (** Classes from Section 1.14 *)
 let () = begin
 
-  let open struct
-    type t = {
-      bump : unit -> int;
-      read : unit -> int;
-    }
-  end in
+  let type t = {
+    bump : unit -> int;
+    read : unit -> int;
+  } in
 
   let new_counter () =
     let c = ref 0 in

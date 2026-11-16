@@ -29,9 +29,7 @@ end = struct
   let defs : def Dynarray.t = Dynarray.create ()
 
   let define (type a) (v : a) : a t =
-    let open struct
-      type _ t += Global : a t
-    end in
+    let type _ t += Global : a t in
     Dynarray.add_last defs {
       run = fun (type a) (g : a t) : a option ->
         match g with

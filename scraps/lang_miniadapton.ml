@@ -298,23 +298,20 @@ let () = begin
 
   let open Miniadapton in
 
-  let open struct
+  let type cell =
+    formula Ref.t
+  and formula =
+    | Num of int
+    | Plus of cell * cell
+  in
 
-    type cell =
-      formula Ref.t
-
-    and formula =
-      | Num of int
-      | Plus of cell * cell
-
-    let rec eval (c : cell) : int Thunk.t =
-      Thunk.create @@ fun () ->
-        match Ref.get c with
-        | Num x -> x
-        | Plus (c1, c2) ->
-            Thunk.force (eval c1) + Thunk.force (eval c2)
-
-  end in
+  let rec eval (c : cell) : int Thunk.t =
+    Thunk.create @@ fun () ->
+      match Ref.get c with
+      | Num x -> x
+      | Plus (c1, c2) ->
+          Thunk.force (eval c1) + Thunk.force (eval c2)
+  in
 
   let n1 = Ref.create (Num 1) in
   let n2 = Ref.create (Num 2) in
