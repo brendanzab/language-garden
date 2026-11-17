@@ -16,4 +16,4 @@
 
 (mdx
  (package elab-dependent-sugar)
- (deps %{bin:dependent}))
+ (deps %{bin:dependent-sugar}))

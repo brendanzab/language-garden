@@ -67,7 +67,7 @@ Explicit return type
   f 3 : Int
 
 Unused parameter
-  $ stlc-unification elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
+  $ executable elab <<< "let f (x : Int) (_ : Int) : Int := x; f 3"
   let f : Int -> Int -> Int := fun (x : Int) => fun (_ : Int) => x;
   f 3 : Int -> Int
 
