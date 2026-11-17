@@ -10,4 +10,5 @@
   (func $main (export "main")
     (call $assert (i32.eq (call $square (i32.const 2)) (i32.const 4)))
     (call $assert (i32.eq (call $square (i32.const 2)) (i32.const 5)))
-))
+  )
+)

@@ -20,3 +20,6 @@ Assert with `unreachable` instruction:
       2: wasm trap: wasm `unreachable` instruction executed
   
   [134]
+
+Join point example:
+  $ wasmtime --invoke main join-point.wat
