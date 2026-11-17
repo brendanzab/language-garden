@@ -126,8 +126,8 @@ let rec check_exp (k, rho, gamma : int * env * env) (e : exp) (v : value) : bool
              evaluating [a] until it is needed. Unfortunately this could result
              in repeated evaluations of [a], as the result is not stored for
              later use. *)
-          check_type (k, rho, gamma) a
-            && check_type (k + 1, update rho x (V_gen k), update gamma x (V_clos (rho, a))) b
+          check_type (k, rho, gamma) a &&
+            check_type (k + 1, update rho x (V_gen k), update gamma x (V_clos (rho, a))) b
       | _ -> failwith "expected Type"
       end
   | Let (x, e1, e2, e3) ->
@@ -135,8 +135,8 @@ let rec check_exp (k, rho, gamma : int * env * env) (e : exp) (v : value) : bool
         (* NOTE: [e1] is not checked in paper, nor is [k] incremented when
            checking the body of the let expression! *)
         let a = eval rho e2 in
-        check_exp (k, rho, gamma) e1 a
-          && check_exp (k + 1, update rho x (eval rho e1), update gamma x a) e3 v
+        check_exp (k, rho, gamma) e1 a &&
+          check_exp (k + 1, update rho x (eval rho e1), update gamma x a) e3 v
   | _ -> eq_val k (infer_exp (k, rho, gamma) e) v
 
 and check_type (k, rho, gamma : int * env * env) (e : exp) : bool =
@@ -159,8 +159,8 @@ and infer_exp (k, rho, gamma : int * env * env) (e : exp) : value =
   | _ -> failwith "cannot infer type"
 
 let type_check (m : exp) (a : exp) : bool =
-  check_type (0, [], []) a
-    && check_exp (0, [], []) m (V_clos ([], a))
+  check_type (0, [], []) a &&
+    check_exp (0, [], []) m (V_clos ([], a))
 
 let () =
   let a = Pi ("A", Type, Pi ("x", Var "A", Var "A")) in

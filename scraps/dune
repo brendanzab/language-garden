@@ -28,6 +28,7 @@
 (test (name check_plain_data))
 (test (name check_linear_lc))
 (test (name check_graded_lc))
+(test (name check_dependent))
 (test (name check_dependent_coquand_1996))
 (test (name check_dependent_coquand_1996_nbe))
 

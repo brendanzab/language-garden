@@ -19,12 +19,14 @@ type exp =
   | Pi of id * exp * exp
   | Type
 
-(** Values, in weak head normal form.
+(** Values, i.e. open expressions in weak head normal form.
 
     Compared with the original paper, we move [V_gen] and [V_app] into
     [V_neu], and replace [V_clos] with [V_abs] and [V_pi] variants. *)
 type value =
+  (* Neutral values values *)
   | V_neu of neu
+  (* Canonical values *)
   | V_type
   | V_abs of clos
   | V_pi of value * clos
@@ -122,15 +124,15 @@ let rec check_exp (ctx : ctx) (e : exp) (v : value) : bool =
   | Pi (x, a, b) ->
       begin match v with
       | V_type ->
-          check_type ctx a
-            && check_type (update_ctx ctx x (eval ctx.value_env a) (V_neu (N_gen ctx.size))) b
+          check_type ctx a &&
+            check_type (update_ctx ctx x (eval ctx.value_env a) (V_neu (N_gen ctx.size))) b
       | _ -> failwith "expected Type"
       end
   | Let (x, e1, e2, e3) ->
       check_type ctx e2 &&
         let a = eval ctx.value_env e2 in
-        check_exp ctx e1 a
-          && check_exp (update_ctx ctx x a (eval ctx.value_env e1)) e3 v
+        check_exp ctx e1 a &&
+          check_exp (update_ctx ctx x a (eval ctx.value_env e1)) e3 v
   | _ -> eq_val ctx.size (infer_exp ctx e) v
 
 and check_type (ctx : ctx) (e : exp) : bool =
@@ -153,8 +155,8 @@ and infer_exp (ctx : ctx) (e : exp) : value =
   | _ -> failwith "cannot infer type"
 
 let type_check (m : exp) (a : exp) : bool =
-  check_type empty_ctx a
-    && check_exp empty_ctx m (eval [] a)
+  check_type empty_ctx a &&
+    check_exp empty_ctx m (eval [] a)
 
 let () =
   let a = Pi ("A", Type, Pi ("x", Var "A", Var "A")) in

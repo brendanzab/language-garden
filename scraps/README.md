@@ -72,13 +72,16 @@ Type checking:
   Type inference for a polymorphic polymorphic functional language using
   in-place, imperative unification (i.e. Algorithm J). Levels are used to
   improve the performance of generalisation.
-- [**check_dependent.pl**](./check_dependent.pl):
-  A small dependent type system, implemented in SWI-Prolog using normalisation-by-evaluation.
+- [**check_dependent.ml**](./check_dependent.ml):
+  A cleaned up version of [check_dependent_coquand_1996_nbe.ml](./check_dependent_coquand_1996_nbe.ml)
+  that further departs from the original paper.
 - [**check_dependent_coquand_1996.ml**](./check_dependent_coquand_1996.ml):
   Implementation of “An algorithm for type-checking dependent types” by Thierry Coquand.
 - [**check_dependent_coquand_1996_nbe.ml**](./check_dependent_coquand_1996_nbe.ml):
   Altered version of [check_dependent_coquand_1996.ml](./check_dependent_coquand_1996.ml)
   that brings it more in line with NbE-style approaches.
+- [**check_dependent.pl**](./check_dependent.pl):
+  A small dependent type system, implemented in SWI-Prolog using normalisation-by-evaluation.
 - [**check_plain_data.ml**](./check_plain_data.ml):
   A simple implementation of type inference for JSON-style objects.
 - [**check_linear_lc.ml**](./check_linear_lc.ml):
