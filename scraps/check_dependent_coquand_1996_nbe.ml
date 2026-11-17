@@ -1,12 +1,17 @@
 (** A version of [check_dependent_coquand_1996.ml] that is altered to follow
-    more up-to-date conventions with respect to values and closures.
-    This is closer to the approach used in the Mini-TT paper, and in the
-    implementations in Andras Kovacs’ elaboration zoo.
+    more up-to-date conventions with respect to values and closures. This is
+    closer to the implementations in Andras Kovacs’ elaboration zoo (see:
+    https://github.com/AndrasKovacs/elaboration-zoo).
 
     I feel like the changes make evaluation, conversion, and type checking
-    easier to follow. They might however make it harder to formalise compared to
-    the original paper, due to the additional mutual recursion and partial
-    functions involved.
+    easier to follow and less error-prone. A normalisation-by-evaluation
+    approach might however make it harder to formalise compared to the original
+    paper, due to the additional mutual recursion and partial functions
+    involved. From what I can gather, this approach was developed and formalised
+    by Andreas Abel and collaborators in the late 2000s/early 2010s.
+
+    I’ve made further tweaks the implementation for clarity and readability in
+    [check_dependent.ml].
 *)
 
 type id = string
@@ -19,12 +24,14 @@ type exp =
   | Pi of id * exp * exp
   | Type
 
-(** Values, i.e. open expressions in weak head normal form.
+(** Open expressions in weak head normal form.
 
-    Compared with the original paper, we move [V_gen] and [V_app] into
-    [V_neu], and replace [V_clos] with [V_abs] and [V_pi] variants. *)
+    Note that we now make a distinction between neutral and canonical values
+    (see section 6.4.1 of the Mini-TT paper), and move closures under the
+    [V_abs] and [V_pi] variants. I believe these changes enforce weak-head
+    normal form? *)
 type value =
-  (* Neutral values values *)
+  (* Neutral values *)
   | V_neu of neu
   (* Canonical values *)
   | V_type

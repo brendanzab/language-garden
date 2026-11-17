@@ -159,7 +159,7 @@ and infer_exp (ctx : Ctx.t) (e : exp) : D.value =
   match e with
   | Var x ->
       begin match Ctx.lookup ctx x with
-      | Some a -> a
+      | Some t -> t
       | None -> type_error "unbound variable %s" [x]
       end
   | Let (x, e1, e2, e3) ->
@@ -182,9 +182,9 @@ and infer_exp (ctx : Ctx.t) (e : exp) : D.value =
   | Type -> D.Type
   | _ -> type_error "cannot infer type" []
 
-let type_check (m : exp) (a : exp) =
-  check_type Ctx.empty a;
-  check_exp Ctx.empty m (eval [] a)
+let type_check (e : exp) (t : exp) =
+  check_type Ctx.empty t;
+  check_exp Ctx.empty e (eval [] t)
 
 let () =
   let a = Fun_type ("A", Type, Fun_type ("x", Var "A", Var "A")) in
