@@ -162,6 +162,11 @@ and infer_exp (ctx : Ctx.t) (e : exp) : D.value =
       | Some a -> a
       | None -> type_error "unbound variable %s" [x]
       end
+  | Let (x, e1, e2, e3) ->
+      check_type ctx e2;
+      let a = Ctx.eval ctx e2 in
+      check_exp ctx e1 a;
+      infer_exp (Ctx.extend ctx x a (Ctx.eval ctx e1)) e3
   | Fun_type (x, a, b) ->
       check_type ctx a;
       check_type (Ctx.extend ctx x (Ctx.eval ctx a) (Ctx.next_var ctx)) b;
