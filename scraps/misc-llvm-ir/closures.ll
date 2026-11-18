@@ -1,25 +1,25 @@
-; A demonstration of implementing closures in LLVM IR
+; A demonstration of implementing anonymous functions in LLVM IR using closures.
+; This is the kind of code we would generate after _closure conversion_.
 ;
 ; This file uses techniques from:
 ;
 ; - `./fail.ll`
 ; - `./point-opaque.ll`
 ;
-; Closure representation:
+; Closures are made up of two parts: a pointer to some some code, and the
+; an environment of bindings that the closure captures. The environment is
+; stored inline with the code pointer in a single dynamic allocation:
 ;
 ; ```
-;     ┌─────┐
-;     │  ●  │
-;     └──│──┘
-;        │
-;        ▼
 ;     ┌─────┬─────┬ - - ┬─────┐
 ;     │  ●  │  x₁          xₙ │  closure  (dynamically allocated)
 ;     └──│──┴─────┴ - - ┴─────┘
 ;        │  └────── env ──────┘
 ;        │
 ;        ▼
-;      (env, args...) -> ret
+;     ┌───────────────────────┐
+;     │ (env, args...) -> ret │  code  (statically allocated in binary)
+;     └───────────────────────┘
 ; ```
 ;
 ; Resources:
@@ -83,25 +83,6 @@ if_false:
   unreachable
 }
 
-
-; Non-capturing closures
-;
-; ```
-; fun h() : fun () -> I32 :=
-;   fun () -> 3;
-; ```
-
-define private i32 @h.res.code(ptr %env) {
-  ret i32 3
-}
-
-define ptr @h() {
-  %res = call ptr @malloc(i64 8)   ; sizeof(ptr) = 4
-  %res.code.ptr = getelementptr i8, ptr %res, i32 0
-  store ptr @h.res.code, ptr %res.code.ptr
-  ret ptr %res
-}
-
 ; Closures with captures
 ;
 ; ```
@@ -117,14 +98,39 @@ define private i32 @f.g.code(ptr %env) {
 }
 
 define ptr @f(i32 %x) {
+  ; Allocate space for the code pointer and environment
   %g = call ptr @malloc(i64 16)   ; sizeof(ptr) + sizeof(i32) + pad = 8 + 4 + 4
   %g.code.ptr = getelementptr i8, ptr %g, i32 0
+
+  ; Store the code pointer
   store ptr @f.g.code, ptr %g.code.ptr
 
+  ; Populate the environment
   %g.x.ptr = getelementptr i8, ptr %g, i32 8
   store i32 %x, ptr %g.x.ptr
 
   ret ptr %g
+}
+
+
+; Non-capturing closures
+;
+; ```
+; fun h() : fun () -> I32 :=
+;   fun () -> 3;
+; ```
+
+define private i32 @h.res.code(ptr %env) {
+  ;                            ^^^^^^^^ unused, but included in order to
+  ;                                     follow the same calling convention
+  ret i32 3
+}
+
+define ptr @h() {
+  %res = call ptr @malloc(i64 8)   ; sizeof(ptr) = 4
+  %res.code.ptr = getelementptr i8, ptr %res, i32 0
+  store ptr @h.res.code, ptr %res.code.ptr
+  ret ptr %res
 }
 
 
@@ -161,8 +167,8 @@ define i32 @main() {
 
   %clos1 = call ptr @f(i32 4)
   %clos1.code.ptr = getelementptr i8, ptr %clos1, i32 0
-  %clos1.env.ptr = getelementptr i8, ptr %clos1, i32 8
   %clos1.code = load ptr, ptr %clos1.code.ptr
+  %clos1.env.ptr = getelementptr i8, ptr %clos1, i32 8
   %res1 = call i32 %clos1.code(ptr %clos1.env.ptr)
 
   %res1-is-4 = icmp eq i32 %res1, 4
@@ -172,8 +178,8 @@ define i32 @main() {
 
   %clos2 = call ptr @h()
   %clos2.code.ptr = getelementptr i8, ptr %clos2, i32 0
-  %clos2.env.ptr = getelementptr i8, ptr %clos2, i32 8
   %clos2.code = load ptr, ptr %clos2.code.ptr
+  %clos2.env.ptr = getelementptr i8, ptr %clos2, i32 8
   %res2 = call i32 %clos2.code(ptr %clos2.env.ptr)
 
   %res2-is-3 = icmp eq i32 %res2, 3
@@ -183,8 +189,8 @@ define i32 @main() {
 
   %clos3 = call ptr @curried-add(i32 3)
   %clos3.code.ptr = getelementptr i8, ptr %clos3, i32 0
-  %clos3.env.ptr = getelementptr i8, ptr %clos3, i32 8
   %clos3.code = load ptr, ptr %clos3.code.ptr
+  %clos3.env.ptr = getelementptr i8, ptr %clos3, i32 8
   %res3 = call i32 %clos3.code(ptr %clos3.env.ptr, i32 5)
 
   %res3-is-8 = icmp eq i32 %res3, 8
