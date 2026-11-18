@@ -66,10 +66,17 @@ define void @fail() {
 ; fun curried-add(x : I32) : fun (I32) -> I32 :=
 ;   fun(y) -> x + y;
 ;
+; -- From https://github.com/WebAssembly/gc/blob/main/proposals/gc/Overview.md#closures
+; fun local-capture(x : I32) : fun (I32) -> I32 {
+;   let a := x + 1;
+;   let inner := fun (y : I32) -> y + a + x;
+;   inner;
+;
 ; fun main() :=
 ;   let () = assert (f(4)() = 4);
 ;   let () = assert (f()() = 3);
 ;   let () = assert (curried-add(3)(5) = 8);
+;   let () = assert (local-capture(1)(2) = 5);
 ;   ()
 ; ```
 
@@ -159,6 +166,40 @@ define ptr @curried-add(i32 %x) {
   ret ptr %res
 }
 
+; Closures capturing local definitions
+;
+; ```
+; fun local-capture(x : I32) : fun (I32) -> I32 {
+;   let a := x + 1;
+;   let inner := fun (y : I32) -> y + a + x;
+;   inner;
+; ```
+
+define private i32 @local-capture.inner.code(ptr %env, i32 %y) {
+  %x.ptr = getelementptr i8, ptr %env, i32 0
+  %a.ptr = getelementptr i8, ptr %env, i32 4
+  %x = load i32, ptr %x.ptr
+  %a = load i32, ptr %a.ptr
+
+  %res1 = add i32 %y, %a
+  %res2 = add i32 %res1, %x
+
+  ret i32 %res2
+}
+
+define ptr @local-capture(i32 %x) {
+  %a = add i32 %x, 1
+  %inner = call ptr @malloc(i64 16)   ; sizeof(ptr) + sizeof(i32) + sizeof(i32) = 8 + 4 + 4
+  %inner.code.ptr = getelementptr i8, ptr %inner, i32 0
+  store ptr @local-capture.inner.code, ptr %inner.code.ptr
+
+  %inner.x.ptr = getelementptr i8, ptr %inner, i32 8
+  %inner.a.ptr = getelementptr i8, ptr %inner, i32 12 ; 8 + 4
+  store i32 %x, ptr %inner.x.ptr
+  store i32 %a, ptr %inner.a.ptr
+
+  ret ptr %inner
+}
 
 ; Main entrypoint
 
@@ -195,6 +236,17 @@ define i32 @main() {
 
   %res3-is-8 = icmp eq i32 %res3, 8
   call void @assert(i1 %res3-is-8)
+
+  ; let () = assert (local-capture(1)(2) = 5);
+
+  %clos4 = call ptr @local-capture(i32 1)
+  %clos4.code.ptr = getelementptr i8, ptr %clos4, i32 0
+  %clos4.code = load ptr, ptr %clos4.code.ptr
+  %clos4.env.ptr = getelementptr i8, ptr %clos4, i32 8
+  %res4 = call i32 %clos4.code(ptr %clos4.env.ptr, i32 2)
+
+  %res4-is-5 = icmp eq i32 %res4, 5
+  call void @assert(i1 %res4-is-5)
 
   ret i32 0
 }
