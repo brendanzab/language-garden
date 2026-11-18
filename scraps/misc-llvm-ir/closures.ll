@@ -91,14 +91,14 @@ if_false:
 ;   fun () -> 3;
 ; ```
 
-define i32 @h.code(ptr %env) {
+define private i32 @h.res.code(ptr %env) {
   ret i32 3
 }
 
 define ptr @h() {
   %res = call ptr @malloc(i64 8)   ; sizeof(ptr) = 4
   %res.code.ptr = getelementptr i8, ptr %res, i32 0
-  store ptr @h.code, ptr %res.code.ptr
+  store ptr @h.res.code, ptr %res.code.ptr
   ret ptr %res
 }
 
@@ -110,7 +110,7 @@ define ptr @h() {
 ;   g;
 ; ```
 
-define i32 @f.g.code(ptr %env) {
+define private i32 @f.g.code(ptr %env) {
   %x.ptr = getelementptr i8, ptr %env, i32 0
   %x = load i32, ptr %x.ptr
   ret i32 %x
@@ -135,7 +135,7 @@ define ptr @f(i32 %x) {
 ;   fun (y) -> x + y;
 ; ```
 
-define i32 @curried-add.res.code(ptr %env, i32 %y) {
+define private i32 @curried-add.res.code(ptr %env, i32 %y) {
   %x.ptr = getelementptr i8, ptr %env, i32 0
   %x = load i32, ptr %x.ptr
   %res = add i32 %x, %y
