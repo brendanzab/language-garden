@@ -72,11 +72,15 @@ define void @fail() {
 ;   let inner := fun (y : I32) -> y + a + x;
 ;   inner;
 ;
+; fun add-i32(x : I32, y : I32) : I32 := x + y;
+; fun add-i32-indirect() : fun (I32, I32) -> I32 := add-i32;
+;
 ; fun main() :=
-;   let () = assert (f(4)() = 4);
-;   let () = assert (f()() = 3);
-;   let () = assert (curried-add(3)(5) = 8);
-;   let () = assert (local-capture(1)(2) = 5);
+;   let () := assert (f(4)() = 4);
+;   let () := assert (f()() = 3);
+;   let () := assert (curried-add(3)(5) = 8);
+;   let () := assert (local-capture(1)(2) = 5);
+;   let () := assert (add-i32-indirect()(3, 4) = 7);
 ;   ()
 ; ```
 
@@ -201,10 +205,38 @@ define ptr @local-capture(i32 %x) {
   ret ptr %inner
 }
 
+; References to top-level functions will be wrapped in closures (i.e.
+; eta-expanded) to ensure that all closures follow the same calling convention.
+;
+; ```
+; fun add-i32(x : I32, y : I32) : I32 := x + y;
+; fun add-i32-indirect() : fun (I32, I32) -> I32 := add-i32;
+; ```
+
+define i32 @add-i32(i32 %x, i32 %y) {
+  %res = add i32 %x, %y
+  ret i32 %res
+}
+
+define private i32 @add-i32.res.code(ptr %env, i32 %x, i32 %y) {
+  %res = call i32 @add-i32(i32 %x, i32 %y)
+  ret i32 %res
+}
+
+define ptr @add-i32-indirect() {
+  %res = call ptr @malloc(i64 8)   ; sizeof(ptr) = 4
+  %res.code.ptr = getelementptr i8, ptr %res, i32 0
+  store ptr @add-i32.res.code, ptr %res.code.ptr
+  ret ptr %res
+}
+
 ; Main entrypoint
 
 define i32 @main() {
-  ; let () = assert (f(4)() = 4);
+  ; Note that each closure is called in exactly the same way, other than the
+  ; number of arguments supplied to the closure.
+
+  ; let () := assert (f(4)() = 4);
 
   %clos1 = call ptr @f(i32 4)
   %clos1.code.ptr = getelementptr i8, ptr %clos1, i32 0
@@ -215,7 +247,7 @@ define i32 @main() {
   %res1-is-4 = icmp eq i32 %res1, 4
   call void @assert(i1 %res1-is-4)
 
-  ; let () = assert (h()() = 3);
+  ; let () := assert (h()() = 3);
 
   %clos2 = call ptr @h()
   %clos2.code.ptr = getelementptr i8, ptr %clos2, i32 0
@@ -226,7 +258,7 @@ define i32 @main() {
   %res2-is-3 = icmp eq i32 %res2, 3
   call void @assert(i1 %res2-is-3)
 
-  ; let () = assert (curried-add(3)(5) = 8);
+  ; let () := assert (curried-add(3)(5) = 8);
 
   %clos3 = call ptr @curried-add(i32 3)
   %clos3.code.ptr = getelementptr i8, ptr %clos3, i32 0
@@ -237,7 +269,7 @@ define i32 @main() {
   %res3-is-8 = icmp eq i32 %res3, 8
   call void @assert(i1 %res3-is-8)
 
-  ; let () = assert (local-capture(1)(2) = 5);
+  ; let () := assert (local-capture(1)(2) = 5);
 
   %clos4 = call ptr @local-capture(i32 1)
   %clos4.code.ptr = getelementptr i8, ptr %clos4, i32 0
@@ -247,6 +279,17 @@ define i32 @main() {
 
   %res4-is-5 = icmp eq i32 %res4, 5
   call void @assert(i1 %res4-is-5)
+
+  ; let () := assert (add-i32-indirect()(3, 4) = 7);
+
+  %clos5 = call ptr @add-i32-indirect()
+  %clos5.code.ptr = getelementptr i8, ptr %clos5, i32 0
+  %clos5.code = load ptr, ptr %clos5.code.ptr
+  %clos5.env.ptr = getelementptr i8, ptr %clos5, i32 8
+  %res5 = call i32 %clos5.code(ptr %clos2.env.ptr, i32 3, i32 4)
+
+  %res5-is-7 = icmp eq i32 %res5, 7
+  call void @assert(i1 %res5-is-7)
 
   ret i32 0
 }
