@@ -170,10 +170,15 @@ end
 module Target = struct
 
   (*
-    - https://llvm.org/docs/LangRef.html#data-layout
-    - https://github.com/rust-lang/rust/tree/main/compiler/rustc_target/src/spec/targets
-    - https://github.com/rust-lang/rust/blob/aaf324d50a7dcb17aae7f2a37e15ff143d980c6e/compiler/rustc_abi/src/lib.rs#L447-L655
-    - https://github.com/llvm/llvm-project/tree/main/clang/lib/Basic/Targets
+    - LLVM:
+      - https://llvm.org/docs/LangRef.html#data-layout
+      - https://llvm.org/doxygen/classllvm_1_1DataLayout.html
+    - Clang:
+      - https://github.com/llvm/llvm-project/tree/main/clang/lib/Basic/Targets
+      - https://github.com/llvm/llvm-project/blob/main/clang/test/CodeGen/target-data.c
+    - Rust:
+      - https://github.com/rust-lang/rust/tree/main/compiler/rustc_target/src/spec/targets
+      - https://github.com/rust-lang/rust/blob/aaf324d50a7dcb17aae7f2a37e15ff143d980c6e/compiler/rustc_abi/src/lib.rs#L447-L655
   *)
 
   module type S = sig
