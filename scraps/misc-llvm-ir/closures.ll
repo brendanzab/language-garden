@@ -116,7 +116,7 @@ define i32 @h.clos.code(ptr %env) {
   ret i32 3
 }
 
-define ptr @h(i32 %x) {
+define ptr @h() {
   %clos = call ptr @clos-new(ptr @h.clos.code, ptr null)
   ret ptr %clos
 }
