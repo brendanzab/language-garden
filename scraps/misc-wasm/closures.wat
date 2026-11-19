@@ -34,16 +34,16 @@
   (tag $fail (export "fail"))
 
   ;; fun () -> I32
-  (type $code-to-I32 (func (param $env (ref any)) (result i32)))
-  (type $clos-to-I32 (struct (field $code (ref $code-to-I32)) (field $env (ref any))))
+  (type $code-to-i32 (func (param $env (ref any)) (result i32)))
+  (type $clos-to-i32 (struct (field $code (ref $code-to-i32)) (field $env (ref any))))
 
   ;; fun (I32) -> I32
-  (type $code-I32-to-I32 (func (param $env (ref any)) (param i32) (result i32)))
-  (type $clos-I32-to-I32 (struct (field $code (ref $code-I32-to-I32)) (field $env (ref any))))
+  (type $code-i32-to-i32 (func (param $env (ref any)) (param i32) (result i32)))
+  (type $clos-i32-to-i32 (struct (field $code (ref $code-i32-to-i32)) (field $env (ref any))))
 
   ;; fun (I32, I32) -> I32
-  (type $code-I32-I32-to-I32 (func (param $env (ref any)) (param i32) (param i32) (result i32)))
-  (type $clos-I32-I32-to-I32 (struct (field $code (ref $code-I32-I32-to-I32)) (field $env (ref any))))
+  (type $code-i32-i32-to-i32 (func (param $env (ref any)) (param i32) (param i32) (result i32)))
+  (type $clos-i32-i32-to-i32 (struct (field $code (ref $code-i32-i32-to-i32)) (field $env (ref any))))
 
 
   ;; Main Code
@@ -102,8 +102,8 @@
     (struct.get $f.g.env $x)
   )
 
-  (func $f (export "f") (param $x i32) (result (ref $clos-to-I32))
-    (struct.new $clos-to-I32
+  (func $f (export "f") (param $x i32) (result (ref $clos-to-i32))
+    (struct.new $clos-to-i32
       (ref.func $f.g.code)
       (struct.new $f.g.env (local.get $x))
     )
@@ -124,8 +124,8 @@
     (i32.const 3)
   )
 
-  (func $h (export "h") (result (ref $clos-to-I32))
-    (struct.new $clos-to-I32
+  (func $h (export "h") (result (ref $clos-to-i32))
+    (struct.new $clos-to-i32
       (ref.func $h.res.code)
       (struct.new $h.res.env)
     )
@@ -151,8 +151,8 @@
     )
   )
 
-  (func $curried-add (export "curried-add") (param $x i32) (result (ref $clos-I32-to-I32))
-    (struct.new $clos-I32-to-I32
+  (func $curried-add (export "curried-add") (param $x i32) (result (ref $clos-i32-to-i32))
+    (struct.new $clos-i32-to-i32
       (ref.func $curried-add.res.code)
       (struct.new $curried-add.res.env (local.get $x))
     )
@@ -184,12 +184,12 @@
     )
   )
 
-  (func $local-capture (export "local-capture") (param $x i32) (result (ref $clos-I32-to-I32))
+  (func $local-capture (export "local-capture") (param $x i32) (result (ref $clos-i32-to-i32))
     (local $a i32)
-    (local $inner (ref $clos-I32-to-I32))
+    (local $inner (ref $clos-i32-to-i32))
     (local.set $a (i32.add (local.get $x) (i32.const 1)))
     (local.set $inner
-      (struct.new $clos-I32-to-I32
+      (struct.new $clos-i32-to-i32
         (ref.func $local-capture.inner.code)
         (struct.new $local-capture.inner.env (local.get $x) (local.get $a))
       )
@@ -208,18 +208,18 @@
   ;; TODO
 
   (func $main (export "main")
-    (local $clos1 (ref $clos-to-I32))
-    (local $clos2 (ref $clos-to-I32))
-    (local $clos3 (ref $clos-I32-to-I32))
+    (local $clos1 (ref $clos-to-i32))
+    (local $clos2 (ref $clos-to-i32))
+    (local $clos3 (ref $clos-i32-to-i32))
 
     ;; let () := assert (f(4)() = 4);
 
     (local.set $clos1 (call $f (i32.const 4)))
     (call $assert
       (i32.eq
-        (call_ref $code-to-I32
-          (struct.get $clos-to-I32 $env (local.get $clos1))
-          (struct.get $clos-to-I32 $code (local.get $clos1))
+        (call_ref $code-to-i32
+          (struct.get $clos-to-i32 $env (local.get $clos1))
+          (struct.get $clos-to-i32 $code (local.get $clos1))
         )
         (i32.const 4)
       )
@@ -230,9 +230,9 @@
     (local.set $clos2 (call $h))
     (call $assert
       (i32.eq
-        (call_ref $code-to-I32
-          (struct.get $clos-to-I32 $env (local.get $clos2))
-          (struct.get $clos-to-I32 $code (local.get $clos2))
+        (call_ref $code-to-i32
+          (struct.get $clos-to-i32 $env (local.get $clos2))
+          (struct.get $clos-to-i32 $code (local.get $clos2))
         )
         (i32.const 3)
       )
@@ -243,10 +243,10 @@
     (local.set $clos3 (call $curried-add (i32.const 3)))
     (call $assert
       (i32.eq
-        (call_ref $code-I32-to-I32
-          (struct.get $clos-I32-to-I32 $env (local.get $clos3))
+        (call_ref $code-i32-to-i32
+          (struct.get $clos-i32-to-i32 $env (local.get $clos3))
           (i32.const 5)
-          (struct.get $clos-I32-to-I32 $code (local.get $clos3))
+          (struct.get $clos-i32-to-i32 $code (local.get $clos3))
         )
         (i32.const 8)
       )
@@ -257,10 +257,10 @@
     (local.set $clos3 (call $local-capture (i32.const 1)))
     (call $assert
       (i32.eq
-        (call_ref $code-I32-to-I32
-          (struct.get $clos-I32-to-I32 $env (local.get $clos3))
+        (call_ref $code-i32-to-i32
+          (struct.get $clos-i32-to-i32 $env (local.get $clos3))
           (i32.const 2)
-          (struct.get $clos-I32-to-I32 $code (local.get $clos3))
+          (struct.get $clos-i32-to-i32 $code (local.get $clos3))
         )
         (i32.const 5)
       )
