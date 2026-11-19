@@ -19,8 +19,10 @@
 ;; ```
 ;;
 ;; Note that the full closure (including the code pointer) is passed to the code
-;; function. This is unconventional, but seems necessary due to us not being
-;; able to take a pointer partway through a struct in Wasm.
+;; function. This is  unconventional, but seems necessary due to us not being
+;; able to take a pointer partway through a struct in Wasm (unlike in LLVM for
+;; example). This approach was adapted from the example given the Wasm GC
+;; proposal linked below.
 ;;
 ;; Resources:
 ;;
