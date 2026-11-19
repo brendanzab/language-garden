@@ -37,6 +37,7 @@
   ;; fun () -> I32
   (type $code-to-i32 (func (param $clos (ref any)) (result i32)))
   (type $clos-to-i32 (sub (struct (field $code (ref $code-to-i32)))))
+  ;;                  ^^^ allow future subtypes to be defined
 
   ;; fun (I32) -> I32
   (type $code-i32-to-i32 (func (param $clos (ref any)) (param i32) (result i32)))
@@ -94,6 +95,7 @@
   ;; ```
 
   (type $f.g.clos (sub $clos-to-i32 (struct
+    ;;                 ^^^^^^^^^^^^ defined as a subtype of the appropriate closure type
     (field $code (ref $code-to-i32))
     (field $x i32)
   )))
@@ -101,9 +103,9 @@
   (elem declare func $f.g.code)
 
   (func $f.g.code (param $clos (ref any)) (result i32)
-    (local.get $clos)
-    (ref.cast (ref $f.g.clos))
-    (struct.get $f.g.clos $x)
+    (struct.get $f.g.clos $x
+      (ref.cast (ref $f.g.clos) ;; cast to the appropriate environment type
+        (local.get $clos)))
   )
 
   (func $f (export "f") (param $x i32) (result (ref $clos-to-i32))
