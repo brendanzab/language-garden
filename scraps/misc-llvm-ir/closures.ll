@@ -1,5 +1,5 @@
 ; A demonstration of implementing anonymous functions in LLVM IR using closures.
-; This is the kind of code we would generate after _closure conversion_.
+; This is the kind of code we could generate after closure conversion.
 ;
 ; This file uses techniques from:
 ;

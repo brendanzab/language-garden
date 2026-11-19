@@ -1,16 +1,34 @@
-;; Example of compiling closures with Wasm
+;; A demonstration of implementing anonymous functions in Wasm using closures.
+;; This is the kind of code we could generate after closure conversion.
+;;
+;; Closures are made up of two parts: a pointer to some some code, and the
+;; an environment of bindings that the closure captures:
+;;
+;; ```
+;;     ┌─────┬─────┐
+;;     │  ●  │  ●  │  closure  (dynamically allocated)
+;;     └──│──┴──│──┘
+;;        │     │     ┌─────┬ - - ┬─────┐
+;;        │     └────▶︎│  x₁          xₙ │  env  (dynamically allocated)
+;;        │           └─────┴ - - ┴─────┘
+;;        ▼
+;;     ┌───────────────────────┐
+;;     │ (env, args...) -> ret │  code
+;;     └───────────────────────┘
+;; ```
 ;;
 ;; Resources:
 ;;
-;; - https://github.com/WebAssembly/gc/blob/main/proposals/gc/Overview.md#closures
-;;
+;; - Matt Might. Closure conversion: How to compile lambda.
+;;   https://matt.might.net/articles/closure-conversion/
+;; - Wasm GC Proposal: Closures.
+;;   https://github.com/WebAssembly/spec/blob/main/proposals/gc/Overview.md#closures
 
 ;; TODO: Remove double indirection, as demonstrated in the GC proposal:
 ;; https://github.com/WebAssembly/gc/blob/main/proposals/gc/Overview.md#closures
 ;; Unfortunately my previous attempts at this have been unsuccessful.
 
 (module
-
   ;; Base definitions
 
   (tag $fail (export "fail"))
