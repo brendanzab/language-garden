@@ -2,20 +2,25 @@
 ;; This is the kind of code we could generate after closure conversion.
 ;;
 ;; Closures are made up of two parts: a pointer to some some code, and the
-;; an environment of bindings that the closure captures:
+;; an environment of bindings that the closure captures. Unlike
+;;  `closures-nested-env.wat`, the environment is stored inline with the code
+;; pointer in a single dynamic allocation:
 ;;
 ;; ```
-;;     ┌─────┬─────┐
-;;     │  ●  │  ●  │  closure  (dynamically allocated)
-;;     └──│──┴──│──┘
-;;        │     │     ┌─────┬ - - ┬─────┐
-;;        │     └────▶︎│  x₁          xₙ │  env  (dynamically allocated)
-;;        │           └─────┴ - - ┴─────┘
+;;     ┌─────┬─────┬ - - ┬─────┐
+;;     │  ●  │  x₁          xₙ │  closure  (dynamically allocated)
+;;     └──│──┴─────┴ - - ┴─────┘
+;;        │  └────── env ──────┘
+;;        │
 ;;        ▼
-;;     ┌───────────────────────┐
-;;     │ (env, args...) -> ret │  code
-;;     └───────────────────────┘
+;;     ┌────────────────────────┐
+;;     │ (clos, args...) -> ret │  code
+;;     └────────────────────────┘
 ;; ```
+;;
+;; Note that the full closure (including the code pointer) is passed to the code
+;; function. This is unconventional, but seems necessary due to us not being
+;; able to take a pointer partway through a struct in Wasm.
 ;;
 ;; Resources:
 ;;
@@ -24,26 +29,22 @@
 ;; - Wasm GC Proposal: Closures.
 ;;   https://github.com/WebAssembly/spec/blob/main/proposals/gc/Overview.md#closures
 
-;; TODO: Remove double indirection, as demonstrated in the GC proposal:
-;; https://github.com/WebAssembly/gc/blob/main/proposals/gc/Overview.md#closures
-;; Unfortunately my previous attempts at this have been unsuccessful.
-
 (module
   ;; Base definitions
 
   (tag $fail (export "fail"))
 
   ;; fun () -> I32
-  (type $code-to-i32 (func (param $env (ref any)) (result i32)))
-  (type $clos-to-i32 (struct (field $code (ref $code-to-i32)) (field $env (ref any))))
+  (type $code-to-i32 (func (param $clos (ref any)) (result i32)))
+  (type $clos-to-i32 (sub (struct (field $code (ref $code-to-i32)))))
 
   ;; fun (I32) -> I32
-  (type $code-i32-to-i32 (func (param $env (ref any)) (param i32) (result i32)))
-  (type $clos-i32-to-i32 (struct (field $code (ref $code-i32-to-i32)) (field $env (ref any))))
+  (type $code-i32-to-i32 (func (param $clos (ref any)) (param i32) (result i32)))
+  (type $clos-i32-to-i32 (sub (struct (field $code (ref $code-i32-to-i32)))))
 
   ;; fun (I32, I32) -> I32
-  (type $code-i32-i32-to-i32 (func (param $env (ref any)) (param i32) (param i32) (result i32)))
-  (type $clos-i32-i32-to-i32 (struct (field $code (ref $code-i32-i32-to-i32)) (field $env (ref any))))
+  (type $code-i32-i32-to-i32 (func (param $clos (ref any)) (param i32) (param i32) (result i32)))
+  (type $clos-i32-i32-to-i32 (sub (struct (field $code (ref $code-i32-i32-to-i32)))))
 
 
   ;; Main Code
@@ -62,7 +63,7 @@
   ;; fun curried-add(x : I32) : fun (I32) -> I32 :=
   ;;   fun(y) -> x + y;
   ;;
-  ;; -- From https://github.com/WebAssembly/gc/blob/main/proposals/gc/Overview.md#closures
+  ;; -- https://github.com/WebAssembly/spec/blob/main/proposals/gc/Overview.md#closures
   ;; fun local-capture(x : I32) : fun (I32) -> I32 {
   ;;   let a := x + 1;
   ;;   let inner := fun (y : I32) -> y + a + x;
@@ -92,20 +93,23 @@
   ;;   g;
   ;; ```
 
-  (type $f.g.env (struct (field $x i32)))
+  (type $f.g.clos (sub $clos-to-i32 (struct
+    (field $code (ref $code-to-i32))
+    (field $x i32)
+  )))
 
   (elem declare func $f.g.code)
 
-  (func $f.g.code (param $env (ref any)) (result i32)
-    (local.get $env)
-    (ref.cast (ref $f.g.env))
-    (struct.get $f.g.env $x)
+  (func $f.g.code (param $clos (ref any)) (result i32)
+    (local.get $clos)
+    (ref.cast (ref $f.g.clos))
+    (struct.get $f.g.clos $x)
   )
 
   (func $f (export "f") (param $x i32) (result (ref $clos-to-i32))
-    (struct.new $clos-to-i32
+    (struct.new $f.g.clos
       (ref.func $f.g.code)
-      (struct.new $f.g.env (local.get $x))
+      (local.get $x)
     )
   )
 
@@ -116,18 +120,19 @@
   ;;   fun () -> 3;
   ;; ```
 
-  (type $h.res.env (struct))
+  (type $h.res.clos (sub $clos-to-i32 (struct
+    (field $code (ref $code-to-i32))
+  )))
 
   (elem declare func $h.res.code)
 
-  (func $h.res.code (param $env (ref any)) (result i32)
+  (func $h.res.code (param $clos (ref any)) (result i32)
     (i32.const 3)
   )
 
   (func $h (export "h") (result (ref $clos-to-i32))
-    (struct.new $clos-to-i32
+    (struct.new $h.res.clos
       (ref.func $h.res.code)
-      (struct.new $h.res.env)
     )
   )
 
@@ -138,23 +143,26 @@
   ;;   fun (y) -> x + y;
   ;; ```
 
-  (type $curried-add.res.env (struct (field $x i32)))
+  (type $curried-add.res.clos (sub $clos-i32-to-i32 (struct
+    (field $code (ref $code-i32-to-i32))
+    (field $x i32)
+  )))
 
   (elem declare func $curried-add.res.code)
 
-  (func $curried-add.res.code (param $env (ref any)) (param $y i32) (result i32)
+  (func $curried-add.res.code (param $clos (ref any)) (param $y i32) (result i32)
     (i32.add
-      (struct.get $curried-add.res.env $x
-        (ref.cast (ref $curried-add.res.env)
-          (local.get $env)))
+      (struct.get $curried-add.res.clos $x
+        (ref.cast (ref $curried-add.res.clos)
+          (local.get $clos)))
       (local.get $y)
     )
   )
 
   (func $curried-add (export "curried-add") (param $x i32) (result (ref $clos-i32-to-i32))
-    (struct.new $clos-i32-to-i32
+    (struct.new $curried-add.res.clos
       (ref.func $curried-add.res.code)
-      (struct.new $curried-add.res.env (local.get $x))
+      (local.get $x)
     )
   )
 
@@ -167,20 +175,24 @@
   ;;   inner;
   ;; ```
 
-  (type $local-capture.inner.env (struct (field $x i32) (field $a i32)))
+  (type $local-capture.inner.clos (sub $clos-i32-to-i32 (struct
+    (field $code (ref $code-i32-to-i32))
+    (field $x i32)
+    (field $a i32)
+  )))
 
   (elem declare func $local-capture.inner.code)
 
-  (func $local-capture.inner.code (param $env (ref any)) (param $y i32) (result i32)
+  (func $local-capture.inner.code (param $clos (ref any)) (param $y i32) (result i32)
     (i32.add
       (i32.add
         (local.get $y)
-        (struct.get $local-capture.inner.env $a
-          (ref.cast (ref $local-capture.inner.env)
-            (local.get $env))))
-      (struct.get $local-capture.inner.env $x
-        (ref.cast (ref $local-capture.inner.env)
-          (local.get $env)))
+        (struct.get $local-capture.inner.clos $a
+          (ref.cast (ref $local-capture.inner.clos)
+            (local.get $clos))))
+      (struct.get $local-capture.inner.clos $x
+        (ref.cast (ref $local-capture.inner.clos)
+          (local.get $clos)))
     )
   )
 
@@ -189,9 +201,10 @@
     (local $inner (ref $clos-i32-to-i32))
     (local.set $a (i32.add (local.get $x) (i32.const 1)))
     (local.set $inner
-      (struct.new $clos-i32-to-i32
+      (struct.new $local-capture.inner.clos
         (ref.func $local-capture.inner.code)
-        (struct.new $local-capture.inner.env (local.get $x) (local.get $a))
+        (local.get $x)
+        (local.get $a)
       )
     )
     (local.get $inner)
@@ -218,7 +231,7 @@
     (call $assert
       (i32.eq
         (call_ref $code-to-i32
-          (struct.get $clos-to-i32 $env (local.get $clos1))
+          (local.get $clos1)
           (struct.get $clos-to-i32 $code (local.get $clos1))
         )
         (i32.const 4)
@@ -231,7 +244,7 @@
     (call $assert
       (i32.eq
         (call_ref $code-to-i32
-          (struct.get $clos-to-i32 $env (local.get $clos2))
+          (local.get $clos2)
           (struct.get $clos-to-i32 $code (local.get $clos2))
         )
         (i32.const 3)
@@ -244,7 +257,7 @@
     (call $assert
       (i32.eq
         (call_ref $code-i32-to-i32
-          (struct.get $clos-i32-to-i32 $env (local.get $clos3))
+          (local.get $clos3)
           (i32.const 5)
           (struct.get $clos-i32-to-i32 $code (local.get $clos3))
         )
@@ -258,7 +271,7 @@
     (call $assert
       (i32.eq
         (call_ref $code-i32-to-i32
-          (struct.get $clos-i32-to-i32 $env (local.get $clos3))
+          (local.get $clos3)
           (i32.const 2)
           (struct.get $clos-i32-to-i32 $code (local.get $clos3))
         )

@@ -66,7 +66,7 @@ define void @fail() {
 ; fun curried-add(x : I32) : fun (I32) -> I32 :=
 ;   fun(y) -> x + y;
 ;
-; -- From https://github.com/WebAssembly/gc/blob/main/proposals/gc/Overview.md#closures
+; -- https://github.com/WebAssembly/spec/blob/main/proposals/gc/Overview.md#closures
 ; fun local-capture(x : I32) : fun (I32) -> I32 {
 ;   let a := x + 1;
 ;   let inner := fun (y : I32) -> y + a + x;
