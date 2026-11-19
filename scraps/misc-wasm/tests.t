@@ -21,5 +21,8 @@ Assert with `unreachable` instruction:
   
   [134]
 
+Closure example
+  $ wasmtime --invoke main --wasm gc=y --wasm function-references --wasm exceptions=y closures.wat 
+
 Join point example:
   $ wasmtime --invoke main join-point.wat

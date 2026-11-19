@@ -173,7 +173,7 @@ define ptr @curried-add(i32 %x) {
 ; Closures capturing local definitions
 ;
 ; ```
-; fun local-capture(x : I32) : fun (I32) -> I32 {
+; fun local-capture(x : I32) : fun (I32) -> I32 :=
 ;   let a := x + 1;
 ;   let inner := fun (y : I32) -> y + a + x;
 ;   inner;
@@ -205,8 +205,8 @@ define ptr @local-capture(i32 %x) {
   ret ptr %inner
 }
 
-; References to top-level functions will be wrapped in closures (i.e.
-; eta-expanded) to ensure that all closures follow the same calling convention.
+; References to top-level functions will be wrapped in closures (eta-expanded)
+; to ensure that all function values follow the same calling convention.
 ;
 ; ```
 ; fun add-i32(x : I32, y : I32) : I32 := x + y;
