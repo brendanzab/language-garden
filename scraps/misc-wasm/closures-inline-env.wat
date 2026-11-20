@@ -1,9 +1,9 @@
 ;; A demonstration of implementing anonymous functions in Wasm using closures.
 ;; This is the kind of code we could generate after closure conversion.
 ;;
-;; Closures are made up of two parts: a pointer to some some code, and the
-;; an environment of bindings that the closure captures. Unlike
-;;  `closures-nested-env.wat`, the environment is stored inline with the code
+;; Closures are made up of two parts: a pointer to some some code, and an
+;; environment of bindings that the closure captures. Unlike
+;; `./closures-nested-env.wat`, the environment is stored inline with the code
 ;; pointer in a single dynamic allocation:
 ;;
 ;; ```
@@ -19,12 +19,13 @@
 ;; ```
 ;;
 ;; Note that the full closure (including the code pointer) is passed to the code
-;; function. This seems necessary due to us not being able to take a pointer
-;; partway through a struct, as you would in LLVM (see `../llvm-ir/closures.ll).
+;; function, instead of just the environment. This seems necessary due to not
+;; being able to take a pointer partway through a struct, as you would in LLVM
+;; (see `../llvm-ir/closures.ll for an example of this).
 ;;
 ;; This approach was adapted from a motivating example given the Wasm GC
 ;; proposal linked below. It was a little challenging to adapt, to it using
-;; “dream” features that were ultimately implemented in a slightly different way.
+;; “dream” features that were ultimately implemented in a different way.
 ;;
 ;; Resources:
 ;;
@@ -40,11 +41,10 @@
 
   ;; fun () -> I32
   (type $code-to-i32 (func (param $clos (ref any)) (result i32)))
-  ;;                                     ^^^^^^^ The GC proposal uses the closure type here, but
-  ;;                                             I haven’t been able to get this to work yet. We
-  ;;                                             might be able to use a recursion group with `rec`,
-  ;;                                             but this seems to prevent the use of `ref.cast`
-  ;;                                             closure later on.
+  ;;                                     ^^^^^^^ The GC proposal uses the closure type here. We
+  ;;                                             might be able to define a recursion group with
+  ;;                                             `rec`, but this seems to prevent the use of
+  ;;                                             `ref.cast` on closures later on.
   (type $clos-to-i32 (sub (struct (field $code (ref $code-to-i32)))))
   ;;                  ^^^ Allow future subtypes to be defined. This will allow
   ;;                      us to add new captured bindings later on.

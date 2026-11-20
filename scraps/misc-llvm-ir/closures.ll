@@ -6,9 +6,9 @@
 ; - `./fail.ll`
 ; - `./point-opaque.ll`
 ;
-; Closures are made up of two parts: a pointer to some some code, and the
-; an environment of bindings that the closure captures. The environment is
-; stored inline with the code pointer in a single dynamic allocation:
+; Closures are made up of two parts: a pointer to some some code, and an
+; environment of bindings that the closure captures. The environment is stored
+; inline with the code pointer in a single dynamic allocation:
 ;
 ; ```
 ;     ┌─────┬─────┬ - - ┬─────┐

@@ -1,8 +1,8 @@
 ;; A demonstration of implementing anonymous functions in Wasm using closures.
 ;; This is the kind of code we could generate after closure conversion.
 ;;
-;; Closures are made up of two parts: a pointer to some some code, and the
-;; an environment of bindings that the closure captures:
+;; Closures are made up of two parts: a pointer to some some code, and an
+;; environment of bindings that the closure captures:
 ;;
 ;; ```
 ;;     ┌─────┬─────┐
