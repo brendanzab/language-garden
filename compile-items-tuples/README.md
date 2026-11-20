@@ -7,6 +7,19 @@
 This project extends the [compile-items-funrefs](../compile-items-funrefs)
 project with support for tuples.
 
+## Implementation notes
+
+In the LLVM backend every closure is allocated on the heap using `malloc` from
+libc. These are never freed, which would be something that would need to be
+addressed in a real language. The elements of tuples are currently packed, but
+we should align them properly in future. See [../scraps/misc_struct_layout.ml](../scraps/misc_struct_layout.ml)
+for an example of how we might do this.
+
+The Wasm backend on the other hand allocates tuples in memory using the [GC
+feature](https://github.com/WebAssembly/spec/blob/main/proposals/gc/Overview.md).
+This reduces the number of [Wasm implementations](https://webassembly.org/features/)
+we can target. It might be interesting to explore other techniques in the future.
+
 ## Example
 
 <!-- $MDX file=examples/tuples.txt -->
