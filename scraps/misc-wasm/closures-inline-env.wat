@@ -19,10 +19,12 @@
 ;; ```
 ;;
 ;; Note that the full closure (including the code pointer) is passed to the code
-;; function. This is  unconventional, but seems necessary due to us not being
-;; able to take a pointer partway through a struct in Wasm (unlike in LLVM for
-;; example). This approach was adapted from the example given the Wasm GC
-;; proposal linked below.
+;; function. This seems necessary due to us not being able to take a pointer
+;; partway through a struct, as you would in LLVM (see `../llvm-ir/closures.ll).
+;;
+;; This approach was adapted from a motivating example given the Wasm GC
+;; proposal linked below. It was a little challenging to adapt, to it using
+;; “dream” features that were ultimately implemented in a slightly different way.
 ;;
 ;; Resources:
 ;;
@@ -38,8 +40,14 @@
 
   ;; fun () -> I32
   (type $code-to-i32 (func (param $clos (ref any)) (result i32)))
+  ;;                                     ^^^^^^^ The GC proposal uses the closure type here, but
+  ;;                                             I haven’t been able to get this to work yet. We
+  ;;                                             might be able to use a recursion group with `rec`,
+  ;;                                             but this seems to prevent the use of `ref.cast`
+  ;;                                             closure later on.
   (type $clos-to-i32 (sub (struct (field $code (ref $code-to-i32)))))
-  ;;                  ^^^ allow future subtypes to be defined
+  ;;                  ^^^ Allow future subtypes to be defined. This will allow
+  ;;                      us to add new captured bindings later on.
 
   ;; fun (I32) -> I32
   (type $code-i32-to-i32 (func (param $clos (ref any)) (param i32) (result i32)))
@@ -97,7 +105,7 @@
   ;; ```
 
   (type $f.g.clos (sub $clos-to-i32 (struct
-    ;;                 ^^^^^^^^^^^^ defined as a subtype of the appropriate closure type
+    ;;                 ^^^^^^^^^^^^ Defined as a subtype of the appropriate closure type
     (field $code (ref $code-to-i32))
     (field $x i32)
   )))
@@ -106,11 +114,13 @@
 
   (func $f.g.code (param $clos (ref any)) (result i32)
     (struct.get $f.g.clos $x
-      (ref.cast (ref $f.g.clos) ;; cast to the appropriate environment type
+      (ref.cast (ref $f.g.clos) ;; Expose the local environment with a dynamic cast
         (local.get $clos)))
   )
 
   (func $f (export "f") (param $x i32) (result (ref $clos-to-i32))
+    ;;                                          ^^^^^^^^^^^^^^^^ Return an abstract closure type,
+    ;;                                                           hiding the local environment
     (struct.new $f.g.clos
       (ref.func $f.g.code)
       (local.get $x)
