@@ -65,7 +65,7 @@
   ;;   if b then () else fail();
   ;;
   ;; fun f(x : I32) : fun () -> I32 :=
-  ;;   let g = fun() -> x;
+  ;;   let g := fun () -> x;
   ;;   g;
   ;;
   ;; fun h() : fun () -> I32 :=
@@ -75,7 +75,7 @@
   ;;   fun(y) -> x + y;
   ;;
   ;; -- https://github.com/WebAssembly/spec/blob/main/proposals/gc/Overview.md#closures
-  ;; fun local-capture(x : I32) : fun (I32) -> I32 {
+  ;; fun local-capture(x : I32) : fun (I32) -> I32 :=
   ;;   let a := x + 1;
   ;;   let inner := fun (y : I32) -> y + a + x;
   ;;   inner;
@@ -85,7 +85,7 @@
   ;;
   ;; fun main() :=
   ;;   let () := assert (f(4)() = 4);
-  ;;   let () := assert (f()() = 3);
+  ;;   let () := assert (h()() = 3);
   ;;   let () := assert (curried-add(3)(5) = 8);
   ;;   let () := assert (local-capture(1)(2) = 5);
   ;;   let () := assert (add-i32-indirect()(3, 4) = 7);
@@ -100,7 +100,7 @@
   ;;
   ;; ```
   ;; fun f(x : I32) : fun () -> I32 :=
-  ;;   let g = fun () -> x;
+  ;;   let g := fun () -> x;
   ;;   g;
   ;; ```
 
